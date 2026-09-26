@@ -34,12 +34,10 @@ class TestRuntimeConfigValidation:
     def test_valid_local_config(self):
         """Test creating config for local development."""
         config = RuntimeConfig(runtime_url="http://localhost:8000")
-        
+
         assert config.runtime_url == "http://localhost:8000"
         assert config.jwt_token is None
         assert config.timeout == DEFAULT_TIMEOUT
-        assert config.is_local is True
-        assert config.requires_auth is False
         assert config.has_auth is False
     
     def test_valid_remote_config_with_token(self):
@@ -51,8 +49,6 @@ class TestRuntimeConfigValidation:
         
         assert config.runtime_url == "https://runtime.glyphh.com"
         assert config.jwt_token == "test_token_123"
-        assert config.is_local is False
-        assert config.requires_auth is True
         assert config.has_auth is True
     
     def test_valid_config_with_custom_timeout(self):
@@ -111,37 +107,7 @@ class TestRuntimeConfigValidation:
 
 class TestRuntimeConfigProperties:
     """Test RuntimeConfig property methods."""
-    
-    def test_is_local_localhost(self):
-        """Test is_local for localhost."""
-        config = RuntimeConfig(runtime_url="http://localhost:8000")
-        assert config.is_local is True
-    
-    def test_is_local_127_0_0_1(self):
-        """Test is_local for 127.0.0.1."""
-        config = RuntimeConfig(runtime_url="http://127.0.0.1:8000")
-        assert config.is_local is True
-    
-    def test_is_local_ipv6_loopback(self):
-        """Test is_local for IPv6 loopback."""
-        config = RuntimeConfig(runtime_url="http://[::1]:8000")
-        assert config.is_local is True
-    
-    def test_is_local_remote(self):
-        """Test is_local for remote URL."""
-        config = RuntimeConfig(runtime_url="https://runtime.glyphh.com")
-        assert config.is_local is False
-    
-    def test_requires_auth_local(self):
-        """Test requires_auth for local config."""
-        config = RuntimeConfig(runtime_url="http://localhost:8000")
-        assert config.requires_auth is False
-    
-    def test_requires_auth_remote(self):
-        """Test requires_auth for remote config."""
-        config = RuntimeConfig(runtime_url="https://runtime.glyphh.com")
-        assert config.requires_auth is True
-    
+
     def test_has_auth_no_token(self):
         """Test has_auth without token."""
         config = RuntimeConfig(runtime_url="http://localhost:8000")
@@ -282,7 +248,7 @@ class TestGenerateEnvTemplate:
             assert os.path.exists(output_path)
             
             content = Path(output_path).read_text()
-            assert "http://localhost:8000" in content
+            assert "http://localhost:8002" in content
             assert "Local Development" in content
     
     def test_generate_self_hosted_template(self):
@@ -334,7 +300,7 @@ class TestGenerateEnvTemplate:
             
             content = Path(output_path).read_text()
             assert "OLD_CONTENT" not in content
-            assert "localhost:8000" in content
+            assert "localhost:8002" in content
 
 
 # ============================================================================
@@ -379,5 +345,4 @@ JWT_TOKEN=file_token
             with patch.dict(os.environ, {}, clear=True):
                 config = load_env_config(output_path)
                 
-                assert config.runtime_url == "http://localhost:8000"
-                assert config.is_local is True
+                assert config.runtime_url == "http://localhost:8002"

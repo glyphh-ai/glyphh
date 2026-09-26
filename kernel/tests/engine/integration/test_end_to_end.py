@@ -18,7 +18,7 @@ from glyphh.edges.generator import EdgeGenerator
 from glyphh.temporal.delta import TemporalEncoder
 from glyphh.temporal.predictor import BeamSearchPredictor
 from glyphh.model.package import GlyphhModel
-from tests.fixtures.loader import load_sample_concepts, get_config_by_name
+from tests.engine.fixtures.loader import load_sample_concepts, get_config_by_name
 
 
 class TestEndToEndEncoding:

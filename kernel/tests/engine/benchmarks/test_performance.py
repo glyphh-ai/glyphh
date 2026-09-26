@@ -19,7 +19,7 @@ from glyphh.similarity.calculator import SimilarityCalculator
 from glyphh.edges.generator import EdgeGenerator
 from glyphh.temporal.predictor import BeamSearchPredictor
 from glyphh.core.ops import bind, bundle, cosine_similarity, generate_symbol
-from tests.fixtures.loader import load_sample_concepts, get_config_by_name
+from tests.engine.fixtures.loader import load_sample_concepts, get_config_by_name
 
 
 class BenchmarkTimer:
