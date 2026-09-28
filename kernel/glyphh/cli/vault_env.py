@@ -33,7 +33,7 @@ _VAULT_TO_ENV = {
 def load_vault_env() -> None:
     """Load secrets from vault into os.environ."""
     try:
-        from domains.brain.skills.vault import get_vault
+        from .vault import get_vault
         vault = get_vault()
 
         for vault_key, env_key in _VAULT_TO_ENV.items():
@@ -58,7 +58,7 @@ def require_api_key() -> bool:
 
 def setup_key(quiet: bool = False) -> None:
     """Set or update the Anthropic API key."""
-    from domains.brain.skills.vault import get_vault
+    from .vault import get_vault
 
     vault = get_vault()
     current = os.environ.get("ANTHROPIC_API_KEY") or vault.get("anthropic_api_key") or ""

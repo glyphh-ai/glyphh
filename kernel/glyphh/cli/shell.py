@@ -4,7 +4,7 @@ Interactive REPL shell for Glyphh CLI.
 After login, starts the runtime server in a daemon thread (dies when
 the shell exits — no PID files, no background daemon, no state files).
 
-Default mode: free text goes to Ada's brain via the /mcp think tool.
+Headless glyphh runtime shell: prefixed admin commands + serve.
 Commands (auth, token, setup, etc.) are still available as prefixed words.
 """
 
@@ -18,10 +18,9 @@ from pathlib import Path
 
 from .banner import print_banner
 from .auth import is_logged_in, device_login, register_runtime
-from .vault_env import load_vault_env, require_api_key
+from .vault_env import load_vault_env
 from .commands.auth import handle_auth
 from .commands.token import handle_token
-from .commands.ada import handle_dream, handle_memory, handle_derivative, handle_recall
 from .commands.config import handle_config
 from .commands.license import handle_license
 from . import theme
@@ -40,10 +39,6 @@ HISTORY_FILE = Path.home() / ".glyphh" / "history"
 COMMAND_HANDLERS = {
     "auth": handle_auth,
     "token": handle_token,
-    "dream": handle_dream,
-    "memory": handle_memory,
-    "derivative": handle_derivative,
-    "recall": handle_recall,
     "config": handle_config,
     "license": handle_license,
 }
@@ -53,10 +48,6 @@ COMMAND_HANDLERS = {
 _SUBCOMMANDS = {
     "auth": ["login", "logout", "status"],
     "token": ["create", "list", "revoke"],
-    "dream": ["status", "start", "stop", "insights"],
-    "memory": ["reset"],
-    "derivative": ["status"],
-    "recall": [],
     "config": ["show", "set", "clear"],
     "license": ["show", "activate", "deactivate", "refresh"],
     "setup": ["key", "model", "claude"],
@@ -307,134 +298,19 @@ def _provision_runtime_token(port: int) -> str | None:
         return None
 
 
-# ── Ada brain interface ──────────────────────────────────────────────────────
+# ── Headless runtime notice ─────────────────────────────────────────────────
 
 
 def _think(text: str, port: int) -> None:
-    """Send free text to Ada's brain via the MCP think tool."""
-    import httpx
-    import json
-
-    try:
-        # Call MCP endpoint directly via HTTP POST
-        with GridSpinner("  ada> "):
-            with httpx.Client(timeout=30) as client:
-                res = client.post(
-                    f"http://127.0.0.1:{port}/mcp",
-                    json={
-                        "jsonrpc": "2.0",
-                        "id": 1,
-                        "method": "tools/call",
-                        "params": {
-                            "name": "think",
-                            "arguments": {"input": text, "tool": "cli"},
-                        },
-                    },
-                    headers={"Accept": "application/json", "Content-Type": "application/json"},
-                )
-
-        if res.status_code != 200:
-            click.secho(f"  Error: server returned {res.status_code}", fg=theme.ERROR)
-            return
-
-        body = res.json()
-
-        # MCP response: result.content[0].text contains JSON
-        result = body.get("result", {})
-        content = result.get("content", [])
-        if not content:
-            click.secho("  No response from Ada.", fg=theme.MUTED)
-            return
-
-        response_text = content[0].get("text", "")
-        try:
-            data = json.loads(response_text)
-        except json.JSONDecodeError:
-            data = {"response": response_text}
-
-        response = data.get("response", "")
-        capability = data.get("capability", "")
-        confidence = data.get("confidence", 0)
-        elapsed = data.get("elapsed_ms", 0)
-        tokens_in = data.get("tokens_in", 0)
-        tokens_out = data.get("tokens_out", 0)
-        tokens_saved = data.get("tokens_saved", 0)
-
-        if data.get("error"):
-            click.secho(f"  Error: {data['error']}", fg=theme.ERROR)
-            return
-
-        # Accumulate the session token meter (actual Claude vs saved-free).
-        _SESSION["claude_in"] += tokens_in
-        _SESSION["claude_out"] += tokens_out
-        _SESSION["saved"] += tokens_saved
-
-        # Print response
-        click.echo()
-        click.secho("  ada", fg=theme.ACCENT, bold=True)
-
-        # The runtime only ever returns a fact tree (dict). Render it as
-        # an indented tree; the shell is a dev surface, not a chatbot.
-        if isinstance(response, dict):
-            response = _render_fact_tree(response)
-
-        # Word-wrap the response at ~80 cols
-        if response:
-            for line in response.split("\n"):
-                col = 2
-                click.echo("  ", nl=False)
-                words = line.split(" ")
-                for i, word in enumerate(words):
-                    if col + len(word) + 1 > 80 and col > 2:
-                        click.echo()
-                        click.echo("  ", nl=False)
-                        col = 2
-                    if i > 0 and col > 2:
-                        sys.stdout.write(" ")
-                        col += 1
-                    sys.stdout.write(word)
-                    col += len(word)
-                click.echo()
-        else:
-            click.secho("  (no response)", fg=theme.MUTED)
-
-        # Debug line: [in/out] [capability · confidence · ms]
-        # The token bracket sits next to the confidence/latency bracket.
-        # in/out = LLM tokens for THIS call; 0/0 = answered without the LLM.
-        if capability or confidence or tokens_in or tokens_out:
-            meta_parts = []
-            if capability:
-                meta_parts.append(capability)
-            if confidence:
-                meta_parts.append(f"{confidence:.0%}")
-            if elapsed:
-                meta_parts.append(f"{elapsed:.0f}ms")
-            tok = f"[{tokens_in}/{tokens_out}]"
-            meta = f"[{' · '.join(meta_parts)}]" if meta_parts else ""
-            click.secho(f"  {tok} {meta}".rstrip(), fg=theme.TEXT_DIM)
-
-        # Session footer: cumulative Claude spend vs estimated free (saved).
-        def _fmt(n: int) -> str:
-            return f"{n/1000:.1f}k" if n >= 1000 else str(n)
-        click.secho(
-            f"  session · claude {_fmt(_SESSION['claude_in'])} in / "
-            f"{_fmt(_SESSION['claude_out'])} out · "
-            f"~{_fmt(_SESSION['saved'])} free",
-            fg=theme.TEXT_DIM,
-        )
-        click.echo()
-
-    except httpx.ConnectError:
-        click.secho("  Error: cannot reach runtime server", fg=theme.ERROR)
-    except Exception as e:
-        click.secho(f"  Error: {e}", fg=theme.ERROR)
+    """Free text has no chat endpoint — this runtime is headless glyphh."""
+    click.echo()
+    click.secho("  This runtime is headless glyphh — there is no chat.", fg=theme.MUTED)
+    click.secho(f"  Deploy models and call their tools via MCP at "
+                f"http://127.0.0.1:{port}/mcp", fg=theme.MUTED)
+    click.secho("  (tools: deploy_model, seed_model, decide, and whatever "
+                "your models export)", fg=theme.MUTED)
 
 
-# ── Shell entry point ────────────────────────────────────────────────────────
-
-
-@click.command()
-@click.pass_context
 def shell(ctx):
     """Start an interactive Glyphh shell."""
     setup_readline()
@@ -462,10 +338,6 @@ def shell(ctx):
     # Load vault secrets (API key, etc.) into os.environ
     load_vault_env()
 
-    # Require Anthropic API key before starting
-    if not require_api_key():
-        click.secho("  Cannot start without an API key.", fg=theme.MUTED)
-        return
 
     # Start embedded runtime server
     click.secho("  Starting runtime...", fg=theme.MUTED)
@@ -481,16 +353,9 @@ def shell(ctx):
         click.secho("  Warning: could not provision runtime token — using Platform JWT", fg=theme.WARNING)
 
     url = f"http://localhost:{port}"
-    model = os.environ.get("ADA_MODEL", "claude-haiku-4-5-20251001")
-    has_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
     click.echo()
     click.secho(f"  MCP        {url}/mcp", fg=theme.ACCENT)
-    click.secho(f"  Tool       think(input)", fg=theme.TEXT_DIM)
-    click.secho(f"  LLM        {model}", fg=theme.TEXT_DIM)
-    if has_key:
-        click.echo(click.style("  Key        ", fg=theme.TEXT_DIM) + click.style("●", fg="green") + click.style(" set", fg=theme.TEXT_DIM))
-    else:
-        click.echo(click.style("  Key        ", fg=theme.TEXT_DIM) + click.style("○", fg=theme.WARNING) + click.style(" not set (run setup key)", fg=theme.TEXT_DIM))
+    click.secho(f"  Tools      deploy_model · seed_model · decide · + model-exported", fg=theme.TEXT_DIM)
     if os.environ.get("ENABLE_DOCS") == "true":
         click.secho(f"  Docs       {url}/docs", fg=theme.TEXT_DIM)
     click.secho(f"  Logs       ~/.glyphh/runtime.log", fg=theme.TEXT_DIM)

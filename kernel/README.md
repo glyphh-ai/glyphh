@@ -1,91 +1,61 @@
 # Glyphh Runtime
 
-Ada's cognitive brain — a hyperdimensional computing runtime that gives LLMs persistent memory, deterministic routing, and background reasoning.
+A hyperdimensional computing runtime. Glyphh, period: host models, stream
+data in, query out — and the only thing it ever returns is a fact tree.
 
-Ada sits between the user and any LLM (Claude, Gemini, GPT). She absorbs everything, recalls what's relevant, and controls what the LLM sees. The LLM is Ada's language center — she is the information boundary.
+There is no chat, no LLM, no embeddings model anywhere in the runtime.
+Deploy a model and its capabilities appear as MCP tools; import data over
+a websocket and the manifest defines how it encodes (structure, temporal
+flags, weights). What a model does is inherent to the model, not the
+runtime. Language models live on the CLIENT side: they call the tools,
+receive fact trees, and do the phrasing — the runtime is the information
+boundary, and it cannot confabulate because it never generates.
 
 ## Architecture
 
 ```
-User input
+.glyphh package (zip: manifest.yaml + encoder.py + data/*.jsonl)
     |
-    v
+    v  deploy_model / seed_model (MCP)
 +---------------------------------------------------+
-|  Ada's Think Pipeline (per request, 1-3 cycles)   |
+|  Glyphh Runtime                                    |
 |                                                    |
-|  1. PERCEIVE   CognitiveGlyph classification       |
-|                 STORE | RECALL | FEEL | CONTRADICT |
+|  MODELS      (org_id, model_id) registry           |
+|              manifest-defined encoder config       |
+|              exemplars staged + encoded on deploy  |
 |                                                    |
-|  2. RECALL     Cognitive gradient search            |
-|                 Multi-step vector descent through    |
-|                 thought space (see below)            |
+|  INGEST      websocket listeners                   |
+|              data -> glyphs per the manifest        |
+|              temporal flags + weights from config  |
 |                                                    |
-|  3. REASON     Brain router — which capability?     |
-|                 HDC routing, sub-10ms deterministic  |
+|  QUERY       similarity search -> FACT TREE        |
+|              citations, per-layer breakdown        |
 |                                                    |
-|  4. ACT        Execute capability query             |
+|  DECIDE      precedent engine -> FACT TREE         |
+|              outcome distribution + confidence     |
 |                                                    |
-|  5. EVALUATE   Confidence scoring                   |
-|                 explicit gate node in the tree       |
-|                                                    |
-|  6. RESPOND    Assemble the fact tree               |
-|                 stored facts · recalled facts with   |
-|                 similarities · model subtrees · gate |
+|  TOOLS       each model's MCP_TOOLS surface        |
+|              automatically on /mcp                 |
 +---------------------------------------------------+
     |
     v
-Absorb input + response → persist queue → SQLite
-Record observation → dream loop
+SQLite (single node) or PostgreSQL + pgvector (scale)
 ```
-
-### The Cognitive Gradient
-
-The RECALL step is not one-shot similarity search. It's gradient descent through HDC vector space:
-
-1. Encode the query into a search vector
-2. Find the best matching thought in memory
-3. Compute the **residual** — the part of the query that wasn't answered
-4. Update the search vector toward the residual
-5. Search again with the updated vector
-6. Stop when the residual norm < 0.15 (converged) or 5 steps exhausted
-
-This is how Ada *thinks through* a question rather than just pattern-matching. Example: "who am i?" first matches identity patterns broadly, then the residual captures the self-referential "me, not you" signal, and the next step finds the user's name.
 
 ### The Fact Tree Contract
 
-`think` only ever returns a **fact tree** — grounded, cited structure,
-never prose. The tree carries the stored facts from this turn, the
-recalled facts with their similarities and provenance, any deployed
-model's result as a subtree, and an explicit gate node
-(DONE / ASK / "Insufficient memory: no grounded answer — do not
-fabricate one"). Phrasing is the caller's job: the LLM on the client
-side (Claude, or whatever speaks MCP) turns the tree into language.
-The runtime is the information boundary; it cannot confabulate because
-it never generates.
-
-### The Dream Loop
-
-Ada dreams continuously in the background while awake:
-
-- **REM phase** (every 3s) — Local pattern mining. Discovers connections between recent thoughts, reinforces frequently-accessed memories (Hebbian strengthening), decays unused ones.
-- **Slow-Wave phase** (every 30s) — Deep reasoning. Multi-hop inference, contradiction detection, knowledge gap identification. Can crystallize new compound primitives from discovered patterns.
-
-Dreams produce **insights** — connections, contradictions, convergences, questions, crystallizations — that accumulate and can be drained via the CLI.
-
-### Memory
-
-Ada's memory is a `ThoughtGlyphSpace` — an in-memory HDC vector store backed by SQLite for persistence:
-
-- **Absorb** — Natural language is encoded into 5-layer Thought Glyphs (perspective, semantic, relational, temporal, direction) with 2000-dimensional vectors
-- **Recall** — Three-signal search: content cosine (0.50 weight), per-layer role cosine (0.35), structural Jaccard overlap (0.15). Pure HDC — no embeddings model anywhere in the think economy
-- **Persistence** — Background worker flushes new thoughts to SQLite every 2 seconds. Strengths are flushed on shutdown.
-- **Hebbian reinforcement** — Recalled memories get stronger. Unused ones decay. Strength caps at 3.0, decay floor at 0.01 (archived, never deleted).
+Every answer the runtime gives — a model query, a decision, a
+model-exported tool — is a **fact tree**: grounded, cited structure,
+never prose. Similarities, provenance, per-layer breakdowns, explicit
+confidence. Phrasing is the caller's job: the LLM on the client side
+(Claude, or whatever speaks MCP) turns the tree into language. The
+runtime is the information boundary; it cannot confabulate because it
+never generates.
 
 ### Models
 
 The runtime ships with ZERO models installed — it is a clean substrate.
-Every behavior beyond memory and language lives in a model the user
-deploys (via the MCP `deploy_model`/`seed_model` tools or a `.glyphh`
+Every behavior lives in a model the user deploys (via the MCP `deploy_model`/`seed_model` tools or a `.glyphh`
 package). What a model does is inherent to the model, not the runtime:
 deploy the firewall model and ask "is this a prompt injection?"; deploy
 the code-index model and ask about your codebase.
@@ -97,9 +67,7 @@ Bundled example models in `capabilities/` (deployable, never auto-installed):
 - **speaker-id** — Voice identification via MFCC encoding
 - **code-index** — Semantic codebase search with 4-layer encoding
 
-Ada can also build new models autonomously: "build a capability for X"
-triggers the capability builder, which generates exemplars via LLM,
-encodes them into HDC vectors, and hot-loads the new model.
+
 
 ## Trajectory Intelligence
 
@@ -136,15 +104,11 @@ State is in-memory; persistence and per-tenant isolation are deployment concerns
 
 ## MCP Interface
 
-The MCP server is the runtime's control plane — conversation, memory,
-guardrails, and model administration all live behind one authenticated,
-metered, self-describing surface:
+The MCP server is the runtime's control plane — decisions, the model
+lifecycle, and every deployed model's own tools behind one
+authenticated, metered, self-describing surface:
 
 ```
-think(input)                        natural language in -> FACT TREE out
-                                    (never prose; the caller's LLM phrases it)
-remember(text) / recall(query)      LLM-free memory tools for harness hooks
-
 decide(situation, events?)         outcome distribution + confidence + the
                                     fact tree citing every matched precedent
 record_decision(situation, outcome) store a decided case as precedent
@@ -186,7 +150,7 @@ Create `.mcp.json` in your project root:
 ```json
 {
   "mcpServers": {
-    "ada": {
+    "glyphh": {
       "type": "http",
       "url": "http://localhost:8002/mcp"
     }
@@ -196,7 +160,7 @@ Create `.mcp.json` in your project root:
 
 ### Connect from other tools
 
-Any MCP-compatible client can connect to the same endpoint. Ada maintains shared memory across all connected tools — context flows between them.
+Any MCP-compatible client can connect to the same endpoint and drive the same runtime: deploy from one tool, query from another.
 
 ## Install
 
@@ -209,7 +173,7 @@ pip install glyphh[runtime]
 ## Quick Start
 
 ```bash
-# Start the interactive shell (boots Ada's brain)
+# Start the interactive shell (boots the embedded runtime)
 glyphh
 
 # Or start as a headless server
@@ -224,23 +188,19 @@ docker run -p 8002:8002 -v glyphh-data:/data glyphh/runtime
 # (docker compose up runs the pgvector sidecar for you)
 ```
 
-Ada boots in sequence: validate config → load license → init database → load capabilities → encode exemplars → seed identity memories → load persisted thoughts → start dream loop → open MCP endpoint.
+Boot sequence: validate config → load license → init database → open the MCP endpoint. Models deploy afterwards, through the surface.
 
 ## CLI Commands
 
-The interactive shell (`glyphh`) accepts natural language — everything goes through Ada's think pipeline. Prefixed commands:
+The CLI exists only to start things — administration is MCP. The
+interactive shell (`glyphh`) boots the embedded runtime and offers
+prefixed admin commands:
 
 ```
-dream status          Background reasoning stats
-dream start           Start the dream loop
-dream stop            Stop the dream loop
-dream insights        Show recent insights
-
-memory reset          Clear all memory (in-memory + SQLite)
-
 config show           Show current configuration
 auth login            Authenticate with Glyphh platform
 auth logout           Log out
+token create          Mint a runtime API token
 ```
 
 ## Testing
@@ -250,11 +210,9 @@ pip install glyphh[dev]
 pytest tests/unit/ -v
 ```
 
-The brain pipeline test suite covers:
-- **ThoughtGlyphSpace** — absorb, dedup, recall ranking, user vs Ada identity isolation
-- **AdaCognitive** — StoredThought returns, sentence splitting, recall gating, dream lifecycle
-- **ThoughtProcess** — STORE/FEEL/RECALL paths, confidence gate, hallucination prevention
-- **Brain** — seed loading, user identity, persistence queue, end-to-end think
+The test suite covers:
+- **Engine** — encoder hierarchy, ops, similarity, edges, property tests
+- **Memory (SDK)** — ThoughtGlyphSpace absorb/dedup/recall, atoms, bindings
 - **Strand** — permute-bind chains, lossless duplex/transcription, splice, k-mer profiles, predictor, loop anticipation/drift
 - **DecisionSpace** — precedent matching, fact-tree citations, insufficient-precedent gate, /v1/decide and /v1/strand routes
 

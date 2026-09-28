@@ -578,7 +578,12 @@ class GlyphDreamLoop:
         The bridge glyph is encoded from the combined content, so it
         participates in future recall and dream cycles naturally.
         """
-        from domains.brain.context_thread import ContextThread
+        # Thread bridging requires a runtime thread store; the removed
+        # brain domain provided ContextThread. Without one, skip quietly.
+        try:
+            from domains.brain.context_thread import ContextThread
+        except ImportError:
+            return None
 
         merged_entities = list(dict.fromkeys(t_a.entities + t_b.entities))
         topics = sorted(set(filter(None, [t_a.topic, t_b.topic])))

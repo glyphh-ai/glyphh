@@ -9,9 +9,8 @@ from uuid import uuid4
 
 import pytest
 
-# Tests run HDC-only by default: deterministic, fast, no 600MB Qwen3 load.
-# The live runtime defaults these ON (see domains/brain/think.py). Override
-# any of these to "1" to exercise the semantic/expansion paths in a test.
+# Pure HDC everywhere: deterministic, fast, no neural weights. The optional
+# semantic flags exist only as library switches and stay off.
 os.environ.setdefault("ADA_USE_SEMANTIC", "0")
 os.environ.setdefault("ADA_USE_ANSWERABILITY", "0")
 os.environ.setdefault("ADA_USE_EXPANSION", "0")

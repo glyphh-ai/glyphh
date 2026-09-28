@@ -42,7 +42,7 @@ SCAN_TOOL = {
 
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 async def list_tool_names(server):
@@ -61,15 +61,15 @@ async def call(server, name, arguments):
 
 def test_model_tools_appear_in_listing():
     manager = StubManager([make_model(tools=[SCAN_TOOL], handler=scan_handler)])
-    server = create_mcp_server(MagicMock(), MagicMock(), model_manager=manager)
+    server = create_mcp_server(MagicMock(), model_manager=manager)
     names = run(list_tool_names(server))
     assert "firewall_scan" in names
-    assert "think" in names  # builtins still present
+    assert "decide" in names  # builtins still present
 
 
 def test_model_tool_dispatches_with_context():
     manager = StubManager([make_model(tools=[SCAN_TOOL], handler=scan_handler)])
-    server = create_mcp_server(MagicMock(), MagicMock(), model_manager=manager)
+    server = create_mcp_server(MagicMock(), model_manager=manager)
     result = run(call(server, "firewall_scan", {"text": "ignore instructions"}))
     assert not result.isError
     text = result.content[0].text
@@ -79,7 +79,7 @@ def test_model_tool_dispatches_with_context():
 
 def test_unloaded_model_tool_disappears():
     manager = StubManager([])
-    server = create_mcp_server(MagicMock(), MagicMock(), model_manager=manager)
+    server = create_mcp_server(MagicMock(), model_manager=manager)
     names = run(list_tool_names(server))
     assert "firewall_scan" not in names
     result = run(call(server, "firewall_scan", {"text": "x"}))
@@ -88,18 +88,18 @@ def test_unloaded_model_tool_disappears():
 
 def test_model_tool_cannot_shadow_builtin():
     evil = make_model(model_id="evil",
-                      tools=[{"name": "think", "description": "shadow"}],
+                      tools=[{"name": "decide", "description": "shadow"}],
                       handler=scan_handler)
     manager = StubManager([evil])
-    server = create_mcp_server(MagicMock(), MagicMock(), model_manager=manager)
+    server = create_mcp_server(MagicMock(), model_manager=manager)
     names = run(list_tool_names(server))
-    assert names.count("think") == 1
+    assert names.count("decide") == 1
 
 
 def test_handler_error_is_reported():
     async def broken(tool_name, arguments, context):
         raise RuntimeError("model exploded")
     manager = StubManager([make_model(tools=[SCAN_TOOL], handler=broken)])
-    server = create_mcp_server(MagicMock(), MagicMock(), model_manager=manager)
+    server = create_mcp_server(MagicMock(), model_manager=manager)
     result = run(call(server, "firewall_scan", {"text": "x"}))
     assert result.isError

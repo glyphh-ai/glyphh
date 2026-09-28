@@ -31,10 +31,27 @@ class TestGlyphStorage:
         assert result.model_id == sample_model_id
     
     @pytest.mark.asyncio
-    async def test_create_glyph_invalid_embedding_dimension(self, test_db, sample_org_id, sample_model_id):
-        """Test that invalid embedding dimension raises ValidationException."""
+    async def test_create_glyph_invalid_embedding_dimension(
+            self, test_db, sample_org_id, sample_model_id, monkeypatch):
+        """Test that invalid embedding dimension raises ValidationException.
+
+        The resolved limit depends on the storage backend (sqlite has no
+        practical cap), so pin the pgvector limit the check exists for.
+        """
+        from types import SimpleNamespace
+
+        import domains.models.storage as storage_module
+
+        monkeypatch.setattr(
+            storage_module,
+            "settings",
+            SimpleNamespace(
+                resolved_max_vector_dimension=2000,
+                resolved_storage_backend="sqlite",
+            ),
+        )
         storage = GlyphStorage(test_db)
-        
+
         with pytest.raises(ValidationException) as exc_info:
             await storage.create_glyph(
                 org_id=sample_org_id,

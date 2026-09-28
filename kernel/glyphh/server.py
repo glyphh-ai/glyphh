@@ -1,8 +1,8 @@
 """
-Glyphh Runtime Server — Ada's brain with production infrastructure.
+Glyphh Runtime Server — host models, ingest data, query fact trees.
 
-Single FastAPI application combining Ada's cognitive pipeline with
-Glyphh's auth, licensing, metering, and deployment infrastructure.
+Single FastAPI application: model hosting, ingest, query, decisions,
+with auth, licensing, metering, and deployment infrastructure.
 
 Importable as ``glyphh.server:app`` for both pip-installed CLI usage and
 Docker/production deployments.  The repo-root ``main.py`` is a thin shim
@@ -45,7 +45,6 @@ _start_time = datetime.utcnow()
 
 model_manager: Optional[ModelManager] = None
 resource_manager: Optional[ResourceManager] = None
-brain: Optional[object] = None  # domains.brain.think.Brain — set in lifespan
 
 
 def get_model_manager() -> ModelManager:
@@ -58,9 +57,6 @@ def get_resource_manager() -> ResourceManager:
     return resource_manager
 
 
-def get_brain():
-    """Dependency for getting the brain"""
-    return brain
 
 
 # ── Capabilities directory ──────────────────────────────────────────────────
@@ -69,8 +65,8 @@ def get_brain():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Boot Ada's brain with Glyphh production infrastructure."""
-    global model_manager, resource_manager, brain
+    """Boot the glyphh runtime."""
+    global model_manager, resource_manager
 
     logger.info("Waking up...")
 
@@ -116,60 +112,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ── Models ──────────────────────────────────────────────────────────
     # The runtime ships with ZERO models installed. Users deploy models
-    # (including the bundled examples under capabilities/) via the MCP
-    # deploy_model / seed_model tools or a .glyphh package. Previously
-    # deployed models lazy-restore from the database on first use.
-    from domains.brain.loader import BrainState
-
-    brain_state = BrainState()
-    app.state.brain_state = brain_state
-
-    # ── Initialize Ada's LLM ───────────────────────────────────────────
-    from domains.brain.llm import AdaLLM
-
-    llm = AdaLLM()
-    app.state.llm = llm
-
-    # ── Initialize the think pipeline ──────────────────────────────────
-    from domains.brain.think import Brain
-
-    global brain
-    brain = Brain(
-        brain_state=brain_state,
-        model_manager=model_manager,
-        llm=llm,
-        session_factory=async_session_maker,
-    )
-    app.state.brain = brain
-
-    # ── Load persistent memories ───────────────────────────────────────
-    from glyphh.memory.thought_persistence import load_thoughts
-    loaded = await load_thoughts(async_session_maker, brain.cognitive.thought_space)
-    if loaded:
-        logger.info(f"Restored {loaded} memories from database")
-    else:
-        logger.info(f"No persisted memories — using {brain.cognitive.thought_space.count} seed memories")
-
-    # ── Load persistent threads ───────────────────────────────────────
-    from domains.brain.thread_persistence import load_threads
-    thread_count = await load_threads(async_session_maker, brain.thread_store)
-    if thread_count:
-        logger.info(f"Restored {thread_count} context threads from database")
-
-    # ── Seed user identity from auth ──────────────────────────────────
-    try:
-        from glyphh.cli.auth import get_user
-        user = get_user()
-        if user:
-            name = user.get("first_name", user.get("email", ""))
-            email = user.get("email")
-            if name:
-                brain.seed_user_identity(name, email)
-                logger.info(f"Seeded user identity: {name}")
-    except Exception:
-        pass  # server may run without CLI auth context
-
-    logger.info("Think pipeline online")
+    # via the MCP deploy_model / seed_model tools or a .glyphh package;
+    # previously deployed models lazy-restore from the database on use.
 
     # ── Initialize MCP ─────────────────────────────────────────────────
     from domains.auth.service import AuthService
@@ -177,7 +121,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     auth_service = AuthService()
     json_manager, sse_manager = create_mcp_session_managers(
-        brain, auth_service, model_manager=model_manager)
+        auth_service, model_manager=model_manager)
     app.state.mcp_session_managers = (json_manager, sse_manager)
     logger.info("MCP endpoint online at /mcp")
 
@@ -197,32 +141,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await asyncio.sleep(1.0)
         logger.info("All exemplars encoded")
 
-    # ── Start dream loop ───────────────────────────────────────────────
-    brain.start_dreaming()
-    logger.info("Dream loop active")
-
-    # ── Start background persistence worker ────────────────────────────
-    async def _persist_worker():
-        """Flush thought + thread queues to SQLite every 2 seconds."""
-        from domains.brain.thread_persistence import save_thread
-        while True:
-            try:
-                saved = await brain.flush_persist_queue()
-                if saved:
-                    logger.debug(f"Persisted {saved} thoughts")
-            except Exception:
-                pass
-            # Persist any dirty threads
-            try:
-                for thread in brain.thread_store.all_threads():
-                    await save_thread(async_session_maker, thread)
-            except Exception:
-                pass
-            await asyncio.sleep(2.0)
-
-    persist_task = asyncio.create_task(_persist_worker())
-
-    logger.info("Ada is awake.")
+    logger.info("Glyphh runtime online.")
 
     # Run MCP session managers
     async with json_manager.run():
@@ -230,33 +149,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             yield
 
     # ── Shutdown ────────────────────────────────────────────────────────
-    logger.info("Going to sleep...")
-    persist_task.cancel()
-    await brain.flush_persist_queue()
-    brain.stop_dreaming()
-
-    # Flush memory strengths to DB
-    from glyphh.memory.thought_persistence import flush_all_strengths
-    await flush_all_strengths(async_session_maker, brain.cognitive.thought_space)
-
-    # Flush all threads to DB
-    from domains.brain.thread_persistence import save_thread
-    for thread in brain.thread_store.all_threads():
-        try:
-            await save_thread(async_session_maker, thread)
-        except Exception:
-            pass
-
+    logger.info("Shutting down...")
     meter.flush()
     await close_db()
-    logger.info("Ada is asleep.")
+    logger.info("Glyphh runtime stopped.")
     logging.shutdown()
 
 
 # Create FastAPI application
 app = FastAPI(
     title="Glyphh Runtime",
-    description="Ada's cognitive brain with production infrastructure",
+    description="Glyphh runtime: host models, ingest data, query fact trees.",
     version="2.6.7",
     docs_url="/docs" if settings.enable_docs else None,
     redoc_url="/redoc" if settings.enable_docs else None,

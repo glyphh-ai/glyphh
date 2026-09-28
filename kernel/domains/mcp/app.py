@@ -1,7 +1,7 @@
 """
 MCP ASGI Application for Glyphh Runtime.
 
-Single /mcp endpoint. No org_id, no model_id. One door into the brain.
+Single /mcp endpoint. No org_id, no model_id. One door into the runtime.
 
 Transport selection:
 - Accept: application/json → JSON transport (Studio, Platform)
@@ -33,7 +33,7 @@ def _wants_json(scope: Scope) -> bool:
 
 class MCPRoutingMiddleware:
     """ASGI middleware that intercepts /mcp requests and forwards to
-    the MCP session manager. No org/model scoping — Ada is the brain."""
+    the MCP session manager. No org/model scoping — one runtime surface."""
 
     def __init__(
         self,
@@ -82,11 +82,10 @@ class MCPRoutingMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_mcp_session_managers(brain, auth_service, model_manager=None):
+def create_mcp_session_managers(auth_service, model_manager=None):
     """Create dual MCP session managers (JSON + SSE).
 
     Args:
-        brain: The Brain instance (domains.brain.think.Brain)
         auth_service: AuthService for token validation
         model_manager: ModelManager enabling the model admin tools
     """
@@ -95,7 +94,7 @@ def create_mcp_session_managers(brain, auth_service, model_manager=None):
     from mcp.server.transport_security import TransportSecuritySettings
 
     security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-    server = create_mcp_server(brain, auth_service, model_manager=model_manager)
+    server = create_mcp_server(auth_service, model_manager=model_manager)
 
     json_manager = StreamableHTTPSessionManager(
         app=server,
