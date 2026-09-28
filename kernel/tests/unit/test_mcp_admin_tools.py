@@ -52,7 +52,7 @@ class StubManager:
 
 @pytest.fixture
 def manager(monkeypatch, tmp_path):
-    monkeypatch.setattr(admin, "MODELS_HOME", tmp_path / "models")
+    monkeypatch.setenv("GLYPHH_MODELS_HOME", str(tmp_path / "models"))
     monkeypatch.setattr(admin, "_default_org_id", lambda: "test-org")
     return StubManager()
 
@@ -118,6 +118,62 @@ def test_seed_model_requires_exemplars(manager):
     with pytest.raises(ValueError):
         run(handle_admin_tool(manager, "seed_model",
                               {"model_id": "x", "exemplars": []}))
+
+
+def _make_package(tmp_path, model_id="packaged"):
+    from glyphh.cli.packaging import package_model
+    src = tmp_path / "src" / model_id
+    (src / "data").mkdir(parents=True)
+    (src / "manifest.yaml").write_text(
+        f"model_id: {model_id}\nname: Packaged\nversion: 1.0.0\n")
+    (src / "encoder.py").write_text(
+        "from glyphh.core.config import EncoderConfig\n"
+        "ENCODER_CONFIG = EncoderConfig(dimension=1024, seed=1)\n")
+    (src / "data" / "exemplars.jsonl").write_text('{"text": "hi"}\n')
+    return package_model(src)
+
+
+def test_deploy_model_from_package_b64(manager, tmp_path):
+    import base64
+    package = _make_package(tmp_path)
+    result = run(handle_admin_tool(manager, "deploy_model", {
+        "package_b64": base64.b64encode(package.read_bytes()).decode(),
+    }))
+    model_dir, org, model_id = manager.deploys[-1]
+    assert (org, model_id) == ("test-org", "packaged")  # id from manifest
+    assert (model_dir / "manifest.yaml").exists()
+    assert (model_dir / "data" / "exemplars.jsonl").exists()
+    assert str(model_dir).startswith(str(tmp_path / "models"))
+    assert result["deployed"]["model_id"] == "packaged"
+
+
+def test_deploy_model_from_package_path(manager, tmp_path):
+    package = _make_package(tmp_path, "onserver")
+    run(handle_admin_tool(manager, "deploy_model",
+                          {"package_path": str(package)}))
+    assert manager.deploys[-1][2] == "onserver"
+
+
+def test_deploy_model_requires_exactly_one_source(manager, tmp_path):
+    with pytest.raises(ValueError):
+        run(handle_admin_tool(manager, "deploy_model", {
+            "model_dir": "/a", "package_path": "/b.glyphh"}))
+
+
+def test_deploy_model_rejects_bad_base64(manager):
+    with pytest.raises(ValueError):
+        run(handle_admin_tool(manager, "deploy_model",
+                              {"package_b64": "not-base64!!!"}))
+
+
+def test_unpack_rejects_zip_slip(tmp_path):
+    import zipfile
+    from glyphh.cli.packaging import unpack_model
+    evil = tmp_path / "evil.glyphh"
+    with zipfile.ZipFile(evil, "w") as zf:
+        zf.writestr("../escape.txt", "gotcha")
+    with pytest.raises(ValueError):
+        unpack_model(evil, dest=tmp_path / "out")
 
 
 def test_unload_model(manager):

@@ -144,8 +144,11 @@ record_decision(situation, outcome) store a decided case as precedent
                                     (one-shot, persisted, shared with /v1/decide)
 
 list_models()                       models loaded in this runtime
-deploy_model(model_dir, model_id?)  deploy/redeploy a model directory;
-                                    data/*.jsonl exemplars encode automatically
+deploy_model(package_b64 |          deploy/redeploy a .glyphh package (zip
+             package_path |         with manifest.yaml) shipped inline as
+             model_dir)             base64, from a server path, or from an
+                                    unpacked directory; data/*.jsonl
+                                    exemplars encode automatically
 seed_model(model_id, exemplars, …)  create + deploy a new model from inline
                                     exemplars — no files needed; calling again
                                     appends exemplars and redeploys
@@ -198,6 +201,14 @@ glyphh
 
 # Or start as a headless server
 glyphh serve
+
+# Or run the self-contained Docker image — SQLite, decisions, and
+# deployed models all live on the /data volume; no external services
+docker build -t glyphh/runtime .
+docker run -p 8002:8002 -v glyphh-data:/data glyphh/runtime
+
+# Scale up: point DATABASE_URL at PostgreSQL + pgvector
+# (docker compose up runs the pgvector sidecar for you)
 ```
 
 Ada boots in sequence: validate config → load license → init database → load capabilities → encode exemplars → seed identity memories → load persisted thoughts → start dream loop → open MCP endpoint.

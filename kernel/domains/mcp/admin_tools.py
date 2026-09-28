@@ -15,8 +15,11 @@ and encodes the exemplars exactly as any other deploy.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -25,7 +28,16 @@ from mcp.types import Tool
 
 logger = logging.getLogger(__name__)
 
-MODELS_HOME = Path.home() / ".glyphh" / "models"
+# Decoded .glyphh package size cap for inline (base64) deploys
+MAX_PACKAGE_BYTES = 64 * 1024 * 1024
+
+
+def models_home() -> Path:
+    """Where deployed/seeded model directories live on this runtime."""
+    return Path(os.environ.get(
+        "GLYPHH_MODELS_HOME",
+        str(Path.home() / ".glyphh" / "models"),
+    ))
 
 
 def admin_tool_definitions() -> List[Tool]:
@@ -41,24 +53,36 @@ def admin_tool_definitions() -> List[Tool]:
         Tool(
             name="deploy_model",
             description=(
-                "Deploy (or redeploy) a glyphh model from a model directory "
-                "on the server (manifest.yaml + encoder.py/config.yaml + "
-                "data/*.jsonl). Exemplars in data/ are staged and encoded "
-                "automatically."
+                "Deploy (or redeploy) a glyphh model. Provide exactly one "
+                "source: package_b64 (a .glyphh package — zip with "
+                "manifest.yaml — base64-encoded, so remote clients can ship "
+                "a model inline), package_path (a .glyphh file already on "
+                "the server), or model_dir (an unpacked model directory on "
+                "the server). Exemplars in data/*.jsonl are staged and "
+                "encoded automatically; model_id defaults to the package "
+                "manifest's model_id."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "package_b64": {
+                        "type": "string",
+                        "description": "Base64-encoded .glyphh package",
+                    },
+                    "package_path": {
+                        "type": "string",
+                        "description": "Path to a .glyphh file on the server",
+                    },
                     "model_dir": {
                         "type": "string",
-                        "description": "Absolute path to the model directory",
+                        "description": "Absolute path to an unpacked model directory",
                     },
                     "model_id": {
                         "type": "string",
-                        "description": "Model ID (defaults to the directory name)",
+                        "description": ("Override the model ID (defaults to the "
+                                        "manifest's model_id or directory name)"),
                     },
                 },
-                "required": ["model_dir"],
             },
         ),
         Tool(
@@ -152,6 +176,59 @@ def _model_summary(model: Any) -> Dict[str, Any]:
     }
 
 
+def _unpack_package(glyphh_file: Path, model_id: Optional[str]) -> tuple:
+    """Unpack a .glyphh package into models_home; return (dir, model_id)."""
+    from glyphh.cli.packaging import read_manifest, unpack_model
+
+    staging = Path(tempfile.mkdtemp(prefix="glyphh_deploy_"))
+    unpack_model(glyphh_file, dest=staging)
+    manifest = read_manifest(staging)
+    resolved_id = model_id or manifest.get("model_id") or glyphh_file.stem
+    model_dir = models_home() / resolved_id
+    model_dir.parent.mkdir(parents=True, exist_ok=True)
+    if model_dir.exists():
+        import shutil
+        shutil.rmtree(model_dir)
+    staging.rename(model_dir)
+    return model_dir, resolved_id
+
+
+def _resolve_deploy_source(args: Dict[str, Any]) -> tuple:
+    """(model_dir, model_id) from exactly one of the three deploy sources."""
+    sources = [k for k in ("package_b64", "package_path", "model_dir")
+               if args.get(k)]
+    if len(sources) != 1:
+        raise ValueError(
+            "Provide exactly one of 'package_b64', 'package_path', "
+            f"or 'model_dir' (got {sources or 'none'})")
+
+    if args.get("model_dir"):
+        model_dir = Path(str(args["model_dir"])).expanduser()
+        return model_dir, args.get("model_id") or model_dir.name
+
+    if args.get("package_path"):
+        package = Path(str(args["package_path"])).expanduser()
+        if not package.is_file():
+            raise ValueError(f"Package not found: {package}")
+        return _unpack_package(package, args.get("model_id"))
+
+    try:
+        raw = base64.b64decode(args["package_b64"], validate=True)
+    except Exception as e:
+        raise ValueError(f"Invalid base64 package: {e}")
+    if len(raw) > MAX_PACKAGE_BYTES:
+        raise ValueError(
+            f"Package too large ({len(raw)} bytes; "
+            f"limit {MAX_PACKAGE_BYTES})")
+    with tempfile.NamedTemporaryFile(suffix=".glyphh", delete=False) as f:
+        f.write(raw)
+        tmp = Path(f.name)
+    try:
+        return _unpack_package(tmp, args.get("model_id"))
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 def _materialize_seed_dir(
     model_id: str,
     exemplars: List[Dict[str, Any]],
@@ -161,7 +238,7 @@ def _materialize_seed_dir(
     seed: int,
 ) -> Path:
     """Write/extend a standard model directory for a seeded model."""
-    model_dir = MODELS_HOME / model_id
+    model_dir = models_home() / model_id
     data_dir = model_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -204,10 +281,7 @@ async def handle_admin_tool(
                 "count": len(models)}
 
     if name == "deploy_model":
-        model_dir = Path(str(args.get("model_dir") or "")).expanduser()
-        if not args.get("model_dir"):
-            raise ValueError("Missing 'model_dir'")
-        model_id = args.get("model_id") or model_dir.name
+        model_dir, model_id = _resolve_deploy_source(args)
         loaded = await model_manager.load_model_from_directory(
             model_dir=model_dir,
             org_id=_default_org_id(),

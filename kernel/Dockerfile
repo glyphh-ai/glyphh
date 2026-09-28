@@ -1,10 +1,12 @@
 # Glyphh Runtime Dockerfile
 #
-# Usage:
+# Self-contained by default: SQLite lives on the /data volume, so this
+# starts with no external services:
 #   docker build -t glyphh/runtime .
-#   docker run -p 8002:8002 -e DATABASE_URL=... glyphh/runtime
+#   docker run -p 8002:8002 -v glyphh-data:/data glyphh/runtime
 #
-# Or use docker compose:
+# Scale up to PostgreSQL + pgvector by overriding DATABASE_URL, or use
+# docker compose (which runs the pgvector sidecar):
 #   docker compose up
 
 FROM python:3.11-slim AS base
@@ -44,6 +46,15 @@ dest = os.path.expanduser('~glyphh/.local/share/glyphh/models'); \
 os.makedirs(dest, exist_ok=True); \
 hf_hub_download('unsloth/Qwen3-1.7B-GGUF', 'Qwen3-1.7B-Q4_K_M.gguf', \
     local_dir=dest, local_dir_use_symlinks=False)"
+
+# Persistent data volume: SQLite database, decision store, deployed models.
+# Overriding DATABASE_URL (e.g. to postgres) switches the backend; the
+# decision store and models stay on the volume either way.
+RUN mkdir -p /data && chown glyphh:glyphh /data
+ENV DATABASE_URL=sqlite+aiosqlite:////data/glyphh.db \
+    GLYPHH_DECISIONS_DB=/data/decisions.db \
+    GLYPHH_MODELS_HOME=/data/models
+VOLUME /data
 
 USER glyphh
 

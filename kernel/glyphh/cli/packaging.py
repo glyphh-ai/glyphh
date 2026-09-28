@@ -140,6 +140,13 @@ def unpack_model(glyphh_file: Path, dest: Optional[Path] = None) -> Path:
         Path to the unpacked model directory
     """
     with zipfile.ZipFile(glyphh_file, "r") as zf:
+        # Zip-slip guard: refuse entries that would escape the destination
+        for entry in zf.namelist():
+            entry_path = Path(entry)
+            if entry_path.is_absolute() or ".." in entry_path.parts:
+                raise ValueError(
+                    f"Refusing to unpack unsafe path in package: {entry}")
+
         # Read manifest to get model_id
         if "manifest.yaml" in zf.namelist():
             manifest = yaml.safe_load(zf.read("manifest.yaml")) or {}
