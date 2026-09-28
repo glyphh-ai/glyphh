@@ -29,7 +29,7 @@ def _make_brain():
     state = MagicMock(); state.capabilities = {}; state.capability_names = []
     mm = MagicMock(); mm._models = {}; mm._encoding_in_progress = []
     llm = MagicMock(); llm.available = False
-    llm.set_firewall = MagicMock(); llm.ask = AsyncMock(return_value=None)
+    llm.ask = AsyncMock(return_value=None)
     llm.usage = LLMUsage()
     brain = Brain(brain_state=state, model_manager=mm, llm=llm,
                   session_factory=MagicMock())

@@ -30,7 +30,6 @@ class LLMUsage:
     calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
-    blocked: int = 0  # prompts blocked by firewall
 
 
 class AdaLLM:
@@ -76,7 +75,6 @@ class AdaLLM:
         "FACTS about you (never contradict these):\n"
         "- You persist memories in SQLite. You NEVER lose memories across sessions.\n"
         "- You have a dream loop running RIGHT NOW (REM + Slow-Wave phases).\n"
-        "- Your firewall checks every input AND every LLM prompt. 200+ attack types.\n"
         "- You can build new capabilities autonomously and test them in isolation.\n"
         "- You encode any structured data into HDC vectors for instant semantic search.\n"
         "- You index codebases with 4-layer HDC encoding.\n"
@@ -85,38 +83,15 @@ class AdaLLM:
         "Be concise. 1-2 sentences max. Use the memories provided as context."
     )
 
-    def set_firewall(self, firewall_fn) -> None:
-        """Set the firewall function. Called by Brain after init.
-
-        The firewall checks every prompt before it reaches the LLM.
-        """
-        self._firewall_fn = firewall_fn
-
     async def ask(
         self,
         prompt: str,
         system: str = "",
         max_tokens: int = 256,
     ) -> Optional[str]:
-        """Ask Haiku a question. Returns the text response or None if unavailable.
-
-        Every prompt is firewalled before it reaches the LLM. If the firewall
-        blocks it, returns None. No exceptions — Ada's immune system protects
-        her own language center.
-        """
+        """Ask Haiku a question. Returns the text response or None if unavailable."""
         if not self._available or self._client is None:
             return None
-
-        # Firewall EVERY prompt before it touches the LLM
-        if hasattr(self, '_firewall_fn') and self._firewall_fn:
-            try:
-                blocked = await self._firewall_fn(prompt)
-                if blocked:
-                    logger.warning(f"Firewall blocked LLM prompt: {blocked[:100]}")
-                    self.usage.blocked += 1
-                    return None
-            except Exception as e:
-                logger.warning(f"Firewall check failed, allowing prompt: {e}")
 
         try:
             import asyncio

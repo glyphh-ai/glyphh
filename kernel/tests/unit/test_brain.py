@@ -37,7 +37,6 @@ def _make_mock_llm():
     from domains.brain.llm import LLMUsage
     llm = MagicMock()
     llm.available = False
-    llm.set_firewall = MagicMock()
     llm.ask = AsyncMock(return_value=None)
     llm.usage = LLMUsage()  # real counters so per-call token delta is a clean int
     return llm
@@ -294,13 +293,6 @@ class TestThinkPipeline:
         await brain.think("remember this fact please")
         # Should have queued the input + possibly the response
         assert len(brain._persist_queue) >= initial_len
-
-    @pytest.mark.asyncio
-    async def test_think_firewall_pass_default(self):
-        brain = _make_brain()
-        result = await brain.think("normal question")
-        assert result.firewall_pass is True
-
 
 # ── End-to-end recall accuracy ──────────────────────────────────────────
 

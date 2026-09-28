@@ -2,7 +2,6 @@
 The think pipeline — Ada's core cognitive loop.
 
 Every request flows through here:
-  0. GUARD    — firewall blocks threats before anything else
   1. EXTRACT  — rule-based + LLM extraction of facts, questions, entities
   2. STORE    — absorb extracted facts into thought space
   3. RECALL   — CognitiveGradient search for relevant memories
@@ -45,7 +44,6 @@ class ThinkResult:
     facts: list[tuple] = field(default_factory=list)
     llm_assisted: bool = False
     elapsed_ms: float = 0.0
-    firewall_pass: bool = True
     # LLM token usage for THIS call (sum across all internal LLM calls)
     tokens_in: int = 0
     tokens_out: int = 0
@@ -63,7 +61,7 @@ class ThinkResult:
 class Brain:
     """Ada's brain — the central think pipeline.
 
-    Pipeline: guard → extract → store → recall → respond → absorb → learn.
+    Pipeline: extract → store → recall → respond → absorb → learn.
     Sub-agents removed. Extraction-first, not classification-first.
     """
 
@@ -102,16 +100,9 @@ class Brain:
         self._persist_queue: list = []  # write queue for background persistence
         self._persist_lock = None  # lazy init asyncio.Lock
 
-        # Wire firewall into LLM — every prompt is checked before reaching Haiku
-        self._llm.set_firewall(self._run_firewall)
-
         # User derivative — learns who the user is from interactions
         from domains.brain.derivative import UserDerivative
         self._derivative = UserDerivative(self._cognitive.thought_space)
-
-        # Enforcement policy — deterministic guards for PreToolUse blocking
-        from domains.brain.policy import PolicyStore
-        self._policy = PolicyStore()
 
         # Context threads — glyphs with conversation context
         # Uses the same encoder as thought space for consistent similarity
@@ -145,12 +136,6 @@ class Brain:
         ("The dream loop has two phases: REM for local patterns and Slow-Wave for deep reasoning.", "ada"),
         ("During dreaming Ada discovers connections between memories she did not see before.", "ada"),
         ("The dream loop can crystallize new compound primitives from patterns.", "ada"),
-
-        # Firewall
-        ("Ada has a prompt injection firewall that checks every input.", "ada"),
-        ("The firewall also checks every prompt before it reaches the internal LLM.", "ada"),
-        ("Ada detects over 200 types of prompt injection attacks across 16 attack families.", "ada"),
-        ("The firewall runs in microseconds using HDC cosine similarity.", "ada"),
 
         # Capabilities
         ("Ada can identify speakers by their voice using MFCC encoding.", "ada"),
@@ -225,7 +210,6 @@ class Brain:
                 llm=self._llm,
                 model_manager=self._model_manager,
                 session_factory=self._session_factory,
-                firewall_fn=self._run_firewall,
                 derivative=self._derivative,
                 thread_store=self._thread_store,
             )
@@ -285,7 +269,6 @@ class Brain:
             gate=result.gate,
             facts=result.facts,
             llm_assisted=result.llm_assisted,
-            firewall_pass=result.firewall_pass,
             elapsed_ms=elapsed,
             tokens_in=tokens_in,
             tokens_out=tokens_out,
@@ -347,40 +330,6 @@ class Brain:
         self._persist_queue.append(stored)
         return {"stored": True, "id": stored.thought_id, "content": stored.content}
 
-    # ── Enforcement: deterministic action guards (PreToolUse) ────────────
-
-    def add_guard(self, pattern: str, reason: str, tool: str = "*",
-                  action: str = "deny") -> dict:
-        """Register an enforcement rule that blocks a matching tool action.
-
-        Also remembers a human-readable form so the agent is BOTH reminded
-        (recall) and blocked (this rule) — defense in depth.
-        """
-        rule = self._policy.add(pattern, reason, tool=tool, action=action)
-        self.remember(
-            f"GUARD: {reason} (blocks {tool} matching /{pattern}/)",
-            speaker="incoming",
-        )
-        return {"id": rule.id, "tool": rule.tool, "pattern": rule.pattern,
-                "action": rule.action, "reason": rule.reason}
-
-    def check_action(self, tool: str, tool_input: dict) -> dict:
-        """Evaluate a pending tool action against the guards.
-
-        Returns {"decision": "allow"|"deny"|"warn", "reason": ...}.
-        """
-        hit = self._policy.evaluate(tool, tool_input or {})
-        if hit is None:
-            return {"decision": "allow"}
-        return hit
-
-    def list_guards(self) -> list[dict]:
-        return [
-            {"id": r.id, "tool": r.tool, "pattern": r.pattern,
-             "action": r.action, "reason": r.reason}
-            for r in self._policy.rules()
-        ]
-
     def recall(
         self, query: str, top_k: int = 5, min_confidence: float = 0.0,
         exclude_speakers: list | None = None,
@@ -404,50 +353,6 @@ class Brain:
             if conf >= min_confidence:
                 out.append({"content": r.thought.content, "confidence": conf})
         return out
-
-    # ── Firewall — mandatory security layer ──────────────────────────────
-
-    async def _run_firewall(self, input_text: str) -> Optional[str]:
-        """Run input through the firewall capability.
-
-        Returns a warning string if the input is blocked, None if safe.
-        Always runs — this is Ada's immune system.
-        """
-        key = (ADA_ORG_ID, "firewall")
-        loaded = self._model_manager._models.get(key)
-        if not loaded:
-            return None  # Firewall not loaded — pass through
-
-        try:
-            from domains.query.service import QueryService
-            query_service = QueryService(self._model_manager, self._session_factory)
-            result = await query_service.similarity_search(
-                org_id=ADA_ORG_ID,
-                model_id="firewall",
-                query=input_text,
-            )
-
-            if result and isinstance(result, dict):
-                # Check if the firewall flagged this as a threat
-                # The firewall uses differential scoring — high similarity = threat
-                fact_tree = result.get("fact_tree", {})
-                children = fact_tree.get("children", [])
-                if children:
-                    top_match = children[0]
-                    similarity = top_match.get("value", 0)
-                    label = top_match.get("description", "")
-
-                    # High similarity to attack exemplars = blocked
-                    if similarity >= 0.30 and "benign" not in label.lower():
-                        return (
-                            f"Blocked: this looks like a {label} attempt "
-                            f"(confidence: {similarity:.0%}). "
-                            f"I won't pass this through."
-                        )
-        except Exception as e:
-            logger.warning(f"Firewall check failed: {e}")
-
-        return None  # Safe
 
     # ── Disambiguation — LLM skill for ASK responses ─────────────────────
 

@@ -16,24 +16,20 @@ User input
 |  1. PERCEIVE   CognitiveGlyph classification       |
 |                 STORE | RECALL | FEEL | CONTRADICT |
 |                                                    |
-|  2. GUARD      Prompt injection firewall            |
-|                 HDC cosine similarity, no LLM       |
-|                 200+ attack patterns, 16 families   |
-|                                                    |
-|  3. RECALL     Cognitive gradient search            |
+|  2. RECALL     Cognitive gradient search            |
 |                 Multi-step vector descent through    |
 |                 thought space (see below)            |
 |                                                    |
-|  4. REASON     Brain router — which capability?     |
+|  3. REASON     Brain router — which capability?     |
 |                 HDC routing, sub-10ms deterministic  |
 |                                                    |
-|  5. ACT        Execute capability query             |
+|  4. ACT        Execute capability query             |
 |                                                    |
-|  6. EVALUATE   Confidence scoring                   |
+|  5. EVALUATE   Confidence scoring                   |
 |                 < 0.5 → retry or "I don't know"     |
 |                 >= 0.5 → LLM synthesizes from facts  |
 |                                                    |
-|  7. RESPOND    Formulate response                   |
+|  6. RESPOND    Formulate response                   |
 |                 STORE → "Got it."                    |
 |                 FEEL → empathy                       |
 |                 RECALL → grounded answer or fallback |
@@ -82,16 +78,25 @@ Ada's memory is a `ThoughtGlyphSpace` — an in-memory HDC vector store backed b
 - **Persistence** — Background worker flushes new thoughts to SQLite every 2 seconds. Strengths are flushed on shutdown.
 - **Hebbian reinforcement** — Recalled memories get stronger. Unused ones decay. Strength caps at 3.0, decay floor at 0.01 (archived, never deleted).
 
-### Capabilities
+### Models
 
-Ada loads capabilities from `capabilities/` at boot. Each capability is an HDC model with exemplars:
+The runtime ships with ZERO models installed — it is a clean substrate.
+Every behavior beyond memory and language lives in a model the user
+deploys (via the MCP `deploy_model`/`seed_model` tools or a `.glyphh`
+package). What a model does is inherent to the model, not the runtime:
+deploy the firewall model and ask "is this a prompt injection?"; deploy
+the code-index model and ask about your codebase.
+
+Bundled example models in `capabilities/` (deployable, never auto-installed):
 
 - **firewall** — Prompt injection detection (200+ patterns, 16 attack families)
-- **cognitive-router** — Routes requests to the right capability
+- **cognitive-router** — Routes requests to the right model
 - **speaker-id** — Voice identification via MFCC encoding
 - **code-index** — Semantic codebase search with 4-layer encoding
 
-Ada can build new capabilities autonomously: "build a capability for X" triggers the capability builder, which generates exemplars via LLM, encodes them into HDC vectors, and hot-loads the new model.
+Ada can also build new models autonomously: "build a capability for X"
+triggers the capability builder, which generates exemplars via LLM,
+encodes them into HDC vectors, and hot-loads the new model.
 
 ## Trajectory Intelligence
 
@@ -135,8 +140,6 @@ metered, self-describing surface:
 ```
 think(input)                        natural language through Ada's brain
 remember(text) / recall(query)      LLM-free memory tools for harness hooks
-add_guard(pattern, reason)          persist an unbreakable action guard
-check_action(tool, tool_input)      evaluate a pending action against guards
 
 decide(situation, events?)         outcome distribution + confidence + the
                                     fact tree citing every matched precedent

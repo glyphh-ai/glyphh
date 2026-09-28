@@ -7,7 +7,6 @@ extracted and what was recalled — not which bucket the input
 was classified into.
 
 Steps:
-  1. GUARD    — Is this safe? (firewall, always first)
   2. EXTRACT  — What's in this input? (facts, questions, entities, emotions)
   3. STORE    — Absorb any new facts into thought space
   4. RECALL   — Search thought space for relevant memories
@@ -40,7 +39,6 @@ class ThoughtResult:
     facts: list[tuple] = field(default_factory=list)
     capability: Optional[str] = None
     llm_assisted: bool = False
-    firewall_pass: bool = True
     elapsed_ms: float = 0.0
     # Extraction results
     extracted_question: Optional[str] = None
@@ -54,7 +52,7 @@ class ThoughtProcess:
     """Ada's thought process.
 
     Every input goes through the same pipeline:
-    guard → extract → store → recall → respond → absorb → learn.
+    extract → store → recall → respond → absorb → learn.
 
     No classification buckets. No sub-agent routing.
     The LLM handles language. Facts drive content.
@@ -67,7 +65,6 @@ class ThoughtProcess:
         llm,             # AdaLLM
         model_manager,   # ModelManager
         session_factory, # async_session_maker
-        firewall_fn,     # async callable(str) -> Optional[str]
         derivative=None, # UserDerivative (optional)
         thread_store=None,  # ThreadStore (optional)
     ):
@@ -76,7 +73,6 @@ class ThoughtProcess:
         self._llm = llm
         self._model_manager = model_manager
         self._session_factory = session_factory
-        self._firewall = firewall_fn
         self._derivative = derivative
         self._thread_store = thread_store
 
@@ -95,22 +91,10 @@ class ThoughtProcess:
         """Run the full thought process."""
         start = time.monotonic()
 
-        # ── 1. GUARD ────────────────────────────────────────────
-        blocked = await self._firewall(input_text)
-        if blocked:
-            return ThoughtResult(
-                response=blocked,
-                capability="firewall",
-                confidence=1.0,
-                gate="DONE",
-                firewall_pass=False,
-                elapsed_ms=(time.monotonic() - start) * 1000,
-            )
-
-        # ── 2. EXTRACT ──────────────────────────────────────────
+        # ── 1. EXTRACT ──────────────────────────────────────────
         extraction = await self._extractor.extract(input_text, llm=self._llm)
 
-        # ── 3. STORE (threads) ──────────────────────────────────
+        # ── 2. STORE (threads) ──────────────────────────────────
         # Store facts into a context thread tagged by tool + topic.
         # Also absorb into thought space for HDC fallback.
         thread = None
@@ -127,7 +111,7 @@ class ThoughtProcess:
             for fact in extraction.facts:
                 self._cognitive.absorb(fact)
 
-        # ── 4. RECALL ───────────────────────────────────────────
+        # ── 3. RECALL ───────────────────────────────────────────
         # Primary: thread-based structured recall (entity + topic)
         # Fallback: HDC cosine similarity on thought space
         search_text = extraction.question or input_text
@@ -152,7 +136,7 @@ class ThoughtProcess:
                 route.capability, input_text
             )
 
-        # ── 5. RESPOND ──────────────────────────────────────────
+        # ── 4. RESPOND ──────────────────────────────────────────
         response = await self._respond(
             input_text=input_text,
             extraction=extraction,
@@ -162,7 +146,7 @@ class ThoughtProcess:
             capability_result=capability_result,
         )
 
-        # ── 6. ABSORB ───────────────────────────────────────────
+        # ── 5. ABSORB ───────────────────────────────────────────
         if response:
             self._cognitive.absorb(response, speaker="ada")
 
@@ -181,7 +165,7 @@ class ThoughtProcess:
                 emotion=extraction.emotion,
             )
 
-        # ── 7. LEARN ────────────────────────────────────────────
+        # ── 6. LEARN ────────────────────────────────────────────
         if self._derivative:
             self._derivative.observe(
                 input_text=input_text,
@@ -202,7 +186,6 @@ class ThoughtProcess:
             facts=facts,
             capability=capability,
             llm_assisted=True,
-            firewall_pass=True,
             elapsed_ms=elapsed,
             extracted_question=extraction.question,
             extracted_facts=extraction.facts,

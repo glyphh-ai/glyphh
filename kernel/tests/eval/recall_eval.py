@@ -44,7 +44,6 @@ KB = [
     # Ada self-facts
     "Ada persists memories in a SQLite database.",
     "Ada has a dream loop with REM and Slow-Wave phases.",
-    "Ada's firewall checks every input for prompt injection.",
 ]
 
 

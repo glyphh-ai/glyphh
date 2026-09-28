@@ -65,7 +65,6 @@ def get_brain():
 
 # ── Capabilities directory ──────────────────────────────────────────────────
 
-CAPABILITIES_DIR = Path(__file__).resolve().parent.parent / "capabilities"
 
 
 @asynccontextmanager
@@ -115,14 +114,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     model_manager = ModelManager(async_session_maker)
     resource_manager = ResourceManager(async_session_maker)
 
-    # ── Load innate capabilities ────────────────────────────────────────
-    from domains.brain.loader import CapabilityLoader, register_capabilities_in_db
+    # ── Models ──────────────────────────────────────────────────────────
+    # The runtime ships with ZERO models installed. Users deploy models
+    # (including the bundled examples under capabilities/) via the MCP
+    # deploy_model / seed_model tools or a .glyphh package. Previously
+    # deployed models lazy-restore from the database on first use.
+    from domains.brain.loader import BrainState
 
-    brain_state = CapabilityLoader.boot(CAPABILITIES_DIR)
+    brain_state = BrainState()
     app.state.brain_state = brain_state
-
-    # Register capabilities in DB (loads exemplars, creates encoders)
-    await register_capabilities_in_db(brain_state, model_manager)
 
     # ── Initialize Ada's LLM ───────────────────────────────────────────
     from domains.brain.llm import AdaLLM
