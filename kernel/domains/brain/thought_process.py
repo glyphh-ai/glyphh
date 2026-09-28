@@ -96,7 +96,8 @@ class ThoughtProcess:
         start = time.monotonic()
 
         # ── 1. EXTRACT ──────────────────────────────────────────
-        extraction = await self._extractor.extract(input_text, llm=self._llm)
+        # Pure glyphh: rule-based extraction, no LLM translation
+        extraction = await self._extractor.extract(input_text)
 
         # ── 2. STORE (threads) ──────────────────────────────────
         # Store facts into a context thread tagged by tool + topic.
@@ -133,7 +134,7 @@ class ThoughtProcess:
         # Also try capability routing
         capability = None
         capability_result = None
-        route = await self._router.route_with_fallback(input_text, self._llm)
+        route = await self._router.route_with_fallback(input_text)
         if route.capability:
             capability = route.capability
             capability_result = await self._execute_capability(

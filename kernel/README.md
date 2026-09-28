@@ -77,7 +77,7 @@ Dreams produce **insights** — connections, contradictions, convergences, quest
 Ada's memory is a `ThoughtGlyphSpace` — an in-memory HDC vector store backed by SQLite for persistence:
 
 - **Absorb** — Natural language is encoded into 5-layer Thought Glyphs (perspective, semantic, relational, temporal, direction) with 2000-dimensional vectors
-- **Recall** — Three-signal search: content cosine (0.50 weight), per-layer role cosine (0.35), structural Jaccard overlap (0.15)
+- **Recall** — Three-signal search: content cosine (0.50 weight), per-layer role cosine (0.35), structural Jaccard overlap (0.15). Pure HDC — no embeddings model anywhere in the think economy
 - **Persistence** — Background worker flushes new thoughts to SQLite every 2 seconds. Strengths are flushed on shutdown.
 - **Hebbian reinforcement** — Recalled memories get stronger. Unused ones decay. Strength caps at 3.0, decay floor at 0.01 (archived, never deleted).
 
@@ -165,6 +165,12 @@ delete_model(model_id, confirm)     permanently delete a model and its data
 
 Decision precedent persists in SQLite (`GLYPHH_DECISIONS_DB`, default
 `~/.glyphh/decisions.db`) and survives restarts.
+
+Deployed models expose their OWN tools: a model's encoder.py can export
+MCP_TOOLS and handle_mcp_tool, and those tools appear on this surface
+automatically — deploy the firewall model and `firewall_scan` shows up;
+unload it and the tool disappears. Capabilities belong to models, not
+the runtime.
 
 Any MCP client can therefore stand up, seed, and query a glyphh model in
 a single conversation. The CLI intentionally keeps only what must work

@@ -77,22 +77,10 @@ class Brain:
         self._llm = llm
         self._session_factory = session_factory
 
-        # Cognitive infrastructure
+        # Cognitive infrastructure — pure HDC. No embeddings model in the
+        # think economy: recall is glyphh similarity, period. (The optional
+        # semantic flags in ThoughtGlyphSpace default OFF and stay off.)
         self._cognitive = AdaCognitive()
-        # Live recall uses the local Qwen3 semantic signal + slot/type
-        # answerability gate by default (the runtime accepts the model-load
-        # cost for paraphrase-robust recall). Env can disable for pure-HDC
-        # determinism. Library/test default stays OFF (set in ThoughtGlyphSpace).
-        import os as _os
-        self._cognitive.thought_space.use_semantic = (
-            _os.environ.get("ADA_USE_SEMANTIC", "1") != "0"
-        )
-        self._cognitive.thought_space.use_answerability = (
-            _os.environ.get("ADA_USE_ANSWERABILITY", "1") != "0"
-        )
-        self._cognitive.thought_space.use_expansion = (
-            _os.environ.get("ADA_USE_EXPANSION", "1") != "0"
-        )
         self._router = BrainRouter(brain_state, model_manager)
         self._observations = ObservationLog()
         self._router_ready = False

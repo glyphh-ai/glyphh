@@ -112,6 +112,23 @@ def create_mcp_server(
         tools.extend(decision_tool_definitions())
         if model_manager is not None:
             tools.extend(admin_tool_definitions())
+            # Deployed models expose their own tools (MCP_TOOLS +
+            # handle_mcp_tool in the model's encoder.py). Capabilities
+            # belong to models; the runtime just surfaces them.
+            builtin = {t.name for t in tools}
+            for model in model_manager.list_models():
+                for spec in getattr(model, "mcp_tools", []) or []:
+                    name = spec.get("name")
+                    if not name or name in builtin:
+                        continue
+                    tools.append(Tool(
+                        name=name,
+                        description=spec.get("description", ""),
+                        inputSchema=spec.get("input_schema")
+                        or spec.get("inputSchema")
+                        or {"type": "object", "properties": {}},
+                    ))
+                    builtin.add(name)
         return tools
 
     def _ok(payload: dict) -> CallToolResult:
@@ -173,6 +190,27 @@ def create_mcp_server(
             except Exception as e:
                 logger.error(f"{name}() failed: {e}", exc_info=True)
                 return _err(str(e))
+
+        # Model-exported tools: dispatch to the owning model's handler
+        if model_manager is not None and name != "think":
+            for model in model_manager.list_models():
+                specs = getattr(model, "mcp_tools", []) or []
+                if any(spec.get("name") == name for spec in specs):
+                    handler = getattr(model, "handle_mcp_tool_fn", None)
+                    if handler is None:
+                        return _err(f"Model {model.model_id} exports "
+                                    f"{name} but has no handler")
+                    try:
+                        result = await handler(name, args, {
+                            "model_manager": model_manager,
+                            "model_id": model.model_id,
+                            "org_id": model.org_id,
+                        })
+                        return _ok(result if isinstance(result, dict)
+                                   else {"result": result})
+                    except Exception as e:
+                        logger.error(f"{name}() failed: {e}", exc_info=True)
+                        return _err(str(e))
 
         if name != "think":
             return _err(f"Unknown tool: {name}")
