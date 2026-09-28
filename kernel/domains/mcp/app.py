@@ -82,19 +82,20 @@ class MCPRoutingMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_mcp_session_managers(brain, auth_service):
+def create_mcp_session_managers(brain, auth_service, model_manager=None):
     """Create dual MCP session managers (JSON + SSE).
 
     Args:
         brain: The Brain instance (domains.brain.think.Brain)
         auth_service: AuthService for token validation
+        model_manager: ModelManager enabling the model admin tools
     """
     from domains.mcp.server import create_mcp_server
     from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from mcp.server.transport_security import TransportSecuritySettings
 
     security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-    server = create_mcp_server(brain, auth_service)
+    server = create_mcp_server(brain, auth_service, model_manager=model_manager)
 
     json_manager = StreamableHTTPSessionManager(
         app=server,

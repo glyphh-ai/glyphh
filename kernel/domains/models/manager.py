@@ -604,10 +604,14 @@ class ModelManager:
             logger.debug(f"Could not restore entry_to_record for {model_id}: {e}")
         return None
 
+    def list_models(self) -> List[LoadedModel]:
+        """All models currently loaded in memory."""
+        return list(self._models.values())
+
     async def get_model(self, org_id: str, model_id: str) -> Optional[LoadedModel]:
         """
         Retrieve a loaded model by (org_id, model_id).
-        
+
         Checks in-memory cache first. If not present, attempts to
         restore from the database (lazy-load on first request after restart).
         """

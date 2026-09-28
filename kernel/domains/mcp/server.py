@@ -22,18 +22,30 @@ from domains.auth.service import AuthService
 logger = logging.getLogger(__name__)
 
 
-def create_mcp_server(brain: Any, auth_service: AuthService) -> Server:
-    """Create the MCP server with a single `think` tool.
+def create_mcp_server(
+    brain: Any,
+    auth_service: AuthService,
+    model_manager: Any = None,
+) -> Server:
+    """Create the MCP server: think + memory/guard tools + model admin.
 
     Args:
         brain: The Brain instance (domains.brain.think.Brain)
         auth_service: AuthService for token validation
+        model_manager: ModelManager for the admin tools (list_models,
+            deploy_model, seed_model); omitted -> admin tools not listed
     """
+    from domains.mcp.admin_tools import (
+        ADMIN_TOOL_NAMES,
+        admin_tool_definitions,
+        handle_admin_tool,
+    )
+
     app = Server("glyphh")
 
     @app.list_tools()
     async def list_tools() -> list[Tool]:
-        return [
+        tools = [
             Tool(
                 name="think",
                 description=(
@@ -127,6 +139,9 @@ def create_mcp_server(brain: Any, auth_service: AuthService) -> Server:
                 },
             ),
         ]
+        if model_manager is not None:
+            tools.extend(admin_tool_definitions())
+        return tools
 
     def _ok(payload: dict) -> CallToolResult:
         return CallToolResult(content=[TextContent(
@@ -193,6 +208,15 @@ def create_mcp_server(brain: Any, auth_service: AuthService) -> Server:
                 return _ok(brain.check_action(tool, args.get("tool_input") or {}))
             except Exception as e:
                 logger.error(f"check_action() failed: {e}", exc_info=True)
+                return _err(str(e))
+
+        if name in ADMIN_TOOL_NAMES:
+            try:
+                return _ok(await handle_admin_tool(model_manager, name, args))
+            except ValueError as e:
+                return _err(str(e))
+            except Exception as e:
+                logger.error(f"{name}() failed: {e}", exc_info=True)
                 return _err(str(e))
 
         if name != "think":

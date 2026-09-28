@@ -128,11 +128,28 @@ State is in-memory; persistence and per-tenant isolation are deployment concerns
 
 ## MCP Interface
 
-Ada exposes a single MCP tool:
+The MCP server is the runtime's control plane — conversation, memory,
+guardrails, and model administration all live behind one authenticated,
+metered, self-describing surface:
 
 ```
-think(input: string) → response
+think(input)                        natural language through Ada's brain
+remember(text) / recall(query)      LLM-free memory tools for harness hooks
+add_guard(pattern, reason)          persist an unbreakable action guard
+check_action(tool, tool_input)      evaluate a pending action against guards
+
+list_models()                       models loaded in this runtime
+deploy_model(model_dir, model_id?)  deploy/redeploy a model directory;
+                                    data/*.jsonl exemplars encode automatically
+seed_model(model_id, exemplars, …)  create + deploy a new model from inline
+                                    exemplars — no files needed; calling again
+                                    appends exemplars and redeploys
 ```
+
+Any MCP client can therefore stand up, seed, and query a glyphh model in
+a single conversation. The CLI intentionally keeps only what must work
+when the server is down: the interactive shell, `glyphh serve`, and
+offline bootstrap (config, auth). Administration is MCP.
 
 Available at `http://localhost:8002/mcp` via Streamable HTTP.
 

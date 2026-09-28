@@ -176,7 +176,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from domains.mcp.app import create_mcp_session_managers
 
     auth_service = AuthService()
-    json_manager, sse_manager = create_mcp_session_managers(brain, auth_service)
+    json_manager, sse_manager = create_mcp_session_managers(
+        brain, auth_service, model_manager=model_manager)
     app.state.mcp_session_managers = (json_manager, sse_manager)
     logger.info("MCP endpoint online at /mcp")
 
