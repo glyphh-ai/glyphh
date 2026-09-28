@@ -30,6 +30,8 @@ def make_loaded(model_id="m1", org_id="org"):
 class StubManager:
     def __init__(self):
         self.deploys = []
+        self.unloads = []
+        self.deletes = []
         self._loaded = [make_loaded("firewall")]
 
     def list_models(self):
@@ -38,6 +40,14 @@ class StubManager:
     async def load_model_from_directory(self, model_dir, org_id, model_id):
         self.deploys.append((Path(model_dir), org_id, model_id))
         return make_loaded(model_id, org_id)
+
+    def unload_model(self, org_id, model_id):
+        self.unloads.append((org_id, model_id))
+        return model_id == "firewall"
+
+    async def delete_model(self, org_id, model_id):
+        self.deletes.append((org_id, model_id))
+        return {"unloaded": True, "glyphs_deleted": 3, "edges_deleted": 1}
 
 
 @pytest.fixture
@@ -108,3 +118,24 @@ def test_seed_model_requires_exemplars(manager):
     with pytest.raises(ValueError):
         run(handle_admin_tool(manager, "seed_model",
                               {"model_id": "x", "exemplars": []}))
+
+
+def test_unload_model(manager):
+    result = run(handle_admin_tool(manager, "unload_model",
+                                   {"model_id": "firewall"}))
+    assert result == {"model_id": "firewall", "unloaded": True}
+    assert manager.unloads == [("test-org", "firewall")]
+
+
+def test_delete_model_requires_confirm(manager):
+    with pytest.raises(ValueError):
+        run(handle_admin_tool(manager, "delete_model",
+                              {"model_id": "firewall"}))
+    assert manager.deletes == []
+
+
+def test_delete_model_with_confirm(manager):
+    result = run(handle_admin_tool(
+        manager, "delete_model", {"model_id": "firewall", "confirm": True}))
+    assert result["glyphs_deleted"] == 3
+    assert manager.deletes == [("test-org", "firewall")]

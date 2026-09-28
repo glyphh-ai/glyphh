@@ -41,15 +41,12 @@ class RecordRequest(BaseModel):
     events: Optional[List[Dict[str, str]]] = None
 
 
-_space: Optional[DecisionSpace] = None
 _lock = threading.Lock()
 
 
 def get_space() -> DecisionSpace:
-    global _space
-    if _space is None:
-        _space = DecisionSpace(dimension=DIMENSION)
-    return _space
+    from glyphh.decision.store import get_default_space
+    return get_default_space(dimension=DIMENSION)
 
 
 @router.post("")

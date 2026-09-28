@@ -16,11 +16,14 @@ _spec.loader.exec_module(decide_routes)
 
 
 @pytest.fixture
-def client(monkeypatch):
-    monkeypatch.setattr(decide_routes, "_space", None)
+def client(monkeypatch, tmp_path):
+    import glyphh.decision.store as store
+    monkeypatch.setenv("GLYPHH_DECISIONS_DB", str(tmp_path / "decisions.db"))
+    store.reset_default_space()
     app = FastAPI()
     app.include_router(decide_routes.router)
-    return TestClient(app)
+    yield TestClient(app)
+    store.reset_default_space()
 
 
 def record(client, situation, outcome):

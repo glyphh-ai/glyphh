@@ -40,6 +40,11 @@ def create_mcp_server(
         admin_tool_definitions,
         handle_admin_tool,
     )
+    from domains.mcp.decision_tools import (
+        DECISION_TOOL_NAMES,
+        decision_tool_definitions,
+        handle_decision_tool,
+    )
 
     app = Server("glyphh")
 
@@ -139,6 +144,7 @@ def create_mcp_server(
                 },
             ),
         ]
+        tools.extend(decision_tool_definitions())
         if model_manager is not None:
             tools.extend(admin_tool_definitions())
         return tools
@@ -213,6 +219,15 @@ def create_mcp_server(
         if name in ADMIN_TOOL_NAMES:
             try:
                 return _ok(await handle_admin_tool(model_manager, name, args))
+            except ValueError as e:
+                return _err(str(e))
+            except Exception as e:
+                logger.error(f"{name}() failed: {e}", exc_info=True)
+                return _err(str(e))
+
+        if name in DECISION_TOOL_NAMES:
+            try:
+                return _ok(await handle_decision_tool(name, args))
             except ValueError as e:
                 return _err(str(e))
             except Exception as e:

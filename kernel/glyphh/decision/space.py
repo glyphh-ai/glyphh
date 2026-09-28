@@ -18,9 +18,11 @@ Confidence semantics (all three numbers ride in the fact tree):
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -80,6 +82,7 @@ class DecisionSpace:
         k: int = 10,
         min_precedent_sim: float = 0.15,
         decay: float = 0.7,
+        persist_path: Optional[str] = None,
     ):
         self.dimension = dimension
         self.k = k
@@ -88,6 +91,62 @@ class DecisionSpace:
         self._symbols: Dict[str, np.ndarray] = {}
         self._decisions: List[Decision] = []
         self._matrix: Optional[np.ndarray] = None  # rebuilt lazily
+        self._db = None
+        if persist_path:
+            self._open_store(persist_path)
+
+    # ── persistence ─────────────────────────────────────────────────
+
+    def _open_store(self, persist_path: str) -> None:
+        """Open (creating if needed) the SQLite decision store and load it."""
+        import sqlite3
+
+        path = Path(persist_path).expanduser()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._db = sqlite3.connect(str(path))
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS decisions ("
+            " decision_id TEXT PRIMARY KEY,"
+            " situation TEXT NOT NULL,"
+            " outcome TEXT NOT NULL,"
+            " facts TEXT NOT NULL,"
+            " timestamp TEXT NOT NULL,"
+            " dimension INTEGER NOT NULL,"
+            " glyph BLOB NOT NULL)"
+        )
+        self._db.commit()
+        rows = self._db.execute(
+            "SELECT decision_id, situation, outcome, facts, timestamp, "
+            "dimension, glyph FROM decisions ORDER BY timestamp"
+        ).fetchall()
+        for decision_id, situation, outcome, facts, ts, dim, glyph in rows:
+            if dim != self.dimension:
+                raise ValueError(
+                    f"Persisted decision {decision_id} has dimension {dim}, "
+                    f"space is {self.dimension}")
+            self._decisions.append(Decision(
+                decision_id=decision_id,
+                situation=json.loads(situation),
+                outcome=outcome,
+                facts=json.loads(facts),
+                timestamp=datetime.fromisoformat(ts),
+                glyph=np.frombuffer(glyph, dtype=np.int8).copy(),
+            ))
+
+    def _persist(self, decision: Decision) -> None:
+        if self._db is None:
+            return
+        self._db.execute(
+            "INSERT OR REPLACE INTO decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (decision.decision_id,
+             json.dumps(decision.situation, ensure_ascii=False),
+             decision.outcome,
+             json.dumps(decision.facts, ensure_ascii=False),
+             decision.timestamp.isoformat(),
+             self.dimension,
+             decision.glyph.tobytes()),
+        )
+        self._db.commit()
 
     # ── encoding ────────────────────────────────────────────────────
 
@@ -137,14 +196,16 @@ class DecisionSpace:
     ) -> str:
         """One-shot: store a decided case as precedent. No training run."""
         decision_id = decision_id or str(uuid.uuid4())[:12]
-        self._decisions.append(Decision(
+        decision = Decision(
             decision_id=decision_id,
             situation=dict(situation),
             outcome=outcome,
             facts=dict(facts or {}),
             timestamp=datetime.now(),
             glyph=self.encode(situation, events),
-        ))
+        )
+        self._decisions.append(decision)
+        self._persist(decision)
         self._matrix = None
         return decision_id
 

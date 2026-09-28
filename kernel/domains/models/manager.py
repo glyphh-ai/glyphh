@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, select, text
 
 from domains.models.db_models import ModelConfig
 from domains.models.schemas import ModelConfigResponse
@@ -607,6 +607,46 @@ class ModelManager:
     def list_models(self) -> List[LoadedModel]:
         """All models currently loaded in memory."""
         return list(self._models.values())
+
+    def unload_model(self, org_id: str, model_id: str) -> bool:
+        """Remove a model from memory (its stored glyphs are untouched).
+
+        Returns True if the model was loaded. Cleans up any materialized
+        deploy directory.
+        """
+        model = self._models.pop((org_id, model_id), None)
+        if model is None:
+            return False
+        if model.deploy_dir:
+            shutil.rmtree(model.deploy_dir, ignore_errors=True)
+        logger.info(f"Unloaded model {org_id}/{model_id}")
+        return True
+
+    async def delete_model(self, org_id: str, model_id: str) -> Dict[str, Any]:
+        """Unload a model AND permanently delete its stored data.
+
+        Removes glyphs, vectors, edges, and the model config row.
+        Irreversible.
+        """
+        from domains.models.storage import GlyphStorage
+
+        unloaded = self.unload_model(org_id, model_id)
+        async with self._db_session_factory() as session:
+            storage = GlyphStorage(session)
+            glyphs_deleted, edges_deleted = await storage.delete_model_data(
+                org_id, model_id)
+            await session.execute(
+                delete(ModelConfig).where(
+                    ModelConfig.org_id == org_id,
+                    ModelConfig.model_id == model_id,
+                )
+            )
+            await session.commit()
+        logger.info(
+            f"Deleted model {org_id}/{model_id}: "
+            f"{glyphs_deleted} glyphs, {edges_deleted} edges")
+        return {"unloaded": unloaded, "glyphs_deleted": glyphs_deleted,
+                "edges_deleted": edges_deleted}
 
     async def get_model(self, org_id: str, model_id: str) -> Optional[LoadedModel]:
         """

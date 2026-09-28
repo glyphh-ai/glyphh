@@ -95,10 +95,44 @@ def admin_tool_definitions() -> List[Tool]:
                 "required": ["model_id", "exemplars"],
             },
         ),
+        Tool(
+            name="unload_model",
+            description=(
+                "Remove a model from memory. Its stored glyphs are kept and "
+                "the model can be redeployed or lazily restored later."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"model_id": {"type": "string"}},
+                "required": ["model_id"],
+            },
+        ),
+        Tool(
+            name="delete_model",
+            description=(
+                "Permanently delete a model: unload it AND remove its "
+                "stored glyphs, vectors, edges, and config. Irreversible — "
+                "requires confirm=true."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "model_id": {"type": "string"},
+                    "confirm": {
+                        "type": "boolean",
+                        "description": "Must be true to actually delete",
+                    },
+                },
+                "required": ["model_id", "confirm"],
+            },
+        ),
     ]
 
 
-ADMIN_TOOL_NAMES = {"list_models", "deploy_model", "seed_model"}
+ADMIN_TOOL_NAMES = {
+    "list_models", "deploy_model", "seed_model",
+    "unload_model", "delete_model",
+}
 
 
 def _default_org_id() -> str:
@@ -204,5 +238,23 @@ async def handle_admin_tool(
         summary = _model_summary(loaded)
         summary["exemplars_added"] = len(exemplars)
         return {"seeded": summary}
+
+    if name == "unload_model":
+        model_id = (args.get("model_id") or "").strip()
+        if not model_id:
+            raise ValueError("Missing 'model_id'")
+        unloaded = model_manager.unload_model(_default_org_id(), model_id)
+        return {"model_id": model_id, "unloaded": unloaded}
+
+    if name == "delete_model":
+        model_id = (args.get("model_id") or "").strip()
+        if not model_id:
+            raise ValueError("Missing 'model_id'")
+        if args.get("confirm") is not True:
+            raise ValueError(
+                "delete_model is irreversible; pass confirm=true to proceed")
+        result = await model_manager.delete_model(_default_org_id(), model_id)
+        result["model_id"] = model_id
+        return result
 
     raise ValueError(f"Unknown admin tool: {name}")

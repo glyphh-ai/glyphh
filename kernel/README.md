@@ -138,13 +138,23 @@ remember(text) / recall(query)      LLM-free memory tools for harness hooks
 add_guard(pattern, reason)          persist an unbreakable action guard
 check_action(tool, tool_input)      evaluate a pending action against guards
 
+decide(situation, events?)         outcome distribution + confidence + the
+                                    fact tree citing every matched precedent
+record_decision(situation, outcome) store a decided case as precedent
+                                    (one-shot, persisted, shared with /v1/decide)
+
 list_models()                       models loaded in this runtime
 deploy_model(model_dir, model_id?)  deploy/redeploy a model directory;
                                     data/*.jsonl exemplars encode automatically
 seed_model(model_id, exemplars, …)  create + deploy a new model from inline
                                     exemplars — no files needed; calling again
                                     appends exemplars and redeploys
+unload_model(model_id)              remove from memory, keep stored glyphs
+delete_model(model_id, confirm)     permanently delete a model and its data
 ```
+
+Decision precedent persists in SQLite (`GLYPHH_DECISIONS_DB`, default
+`~/.glyphh/decisions.db`) and survives restarts.
 
 Any MCP client can therefore stand up, seed, and query a glyphh model in
 a single conversation. The CLI intentionally keeps only what must work
