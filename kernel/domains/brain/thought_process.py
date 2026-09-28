@@ -32,8 +32,12 @@ CONFIDENCE_THRESHOLD = 0.5
 
 @dataclass
 class ThoughtResult:
-    """Final output of the thought process."""
-    response: str
+    """Final output of the thought process.
+
+    response is ALWAYS a fact tree (dict): grounded, cited structure.
+    The runtime never authors prose — the caller's LLM phrases answers.
+    """
+    response: dict
     confidence: float = 0.0
     gate: str = "ASK"
     facts: list[tuple] = field(default_factory=list)
@@ -136,8 +140,8 @@ class ThoughtProcess:
                 route.capability, input_text
             )
 
-        # ── 4. RESPOND ──────────────────────────────────────────
-        response = await self._respond(
+        # ── 4. RESPOND: assemble the fact tree ──────────────────
+        response = self._build_fact_tree(
             input_text=input_text,
             extraction=extraction,
             facts=facts,
@@ -146,13 +150,9 @@ class ThoughtProcess:
             capability_result=capability_result,
         )
 
-        # ── 5. ABSORB ───────────────────────────────────────────
-        if response:
-            self._cognitive.absorb(response, speaker="ada")
-
         # Record Q→A pattern for gradient search shortcuts
-        if response and confidence >= CONFIDENCE_THRESHOLD:
-            self._record_pattern(input_text, response)
+        if facts and confidence >= CONFIDENCE_THRESHOLD:
+            self._record_pattern(input_text, facts[0][0])
 
         # If this was a question, also record it in the active thread
         if self._thread_store and extraction.has_question and not thread:
@@ -169,7 +169,7 @@ class ThoughtProcess:
         if self._derivative:
             self._derivative.observe(
                 input_text=input_text,
-                response_text=response,
+                response_text="",
                 extracted_facts=extraction.facts,
                 extracted_question=extraction.question,
                 extracted_emotion=extraction.emotion,
@@ -185,7 +185,7 @@ class ThoughtProcess:
             gate="DONE" if confidence >= CONFIDENCE_THRESHOLD else "ASK",
             facts=facts,
             capability=capability,
-            llm_assisted=True,
+            llm_assisted=False,
             elapsed_ms=elapsed,
             extracted_question=extraction.question,
             extracted_facts=extraction.facts,
@@ -261,140 +261,90 @@ class ThoughtProcess:
 
     # ── Response generation ─────────────────────────────────────
 
-    async def _respond(
+    def _build_fact_tree(
         self,
         input_text: str,
         extraction,
         facts: list[tuple],
         confidence: float,
         capability: Optional[str],
-        capability_result: Optional[str],
-    ) -> str:
-        """Generate a response. The LLM handles language, facts drive content.
+        capability_result,
+    ) -> dict:
+        """Assemble the response fact tree.
 
-        Hallucination gate: question + no relevant facts = "I don't know."
-        Everything else: LLM responds naturally, grounded by available facts.
+        The only thing the runtime ever returns: grounded facts with
+        their similarities and provenance, model results as subtrees,
+        and an explicit gate. No prose — the caller's LLM (or UI)
+        decides how to phrase it.
         """
-        # ── Capability result takes priority
-        if capability_result:
-            return await self._respond_capability(
-                input_text, capability, capability_result
+        from glyphh.fact_tree.builder import FactTree
+
+        tree = FactTree()
+        tree.root.description = "Thought"
+
+        tree.add_fact(
+            path=["input"],
+            description="Input",
+            value=input_text,
+            data_context={
+                "question": extraction.question,
+                "emotion": extraction.emotion,
+                "is_greeting": extraction.is_greeting,
+                "is_correction": extraction.is_correction,
+            },
+        )
+
+        for fact in extraction.facts:
+            tree.add_fact(
+                path=["stored"],
+                description=fact,
+                value=True,
+                data_context={"speaker": "incoming"},
             )
 
-        # ── Hallucination gate: question + low confidence = block LLM
-        if extraction.has_question and confidence < CONFIDENCE_THRESHOLD:
-            return "I don't have information about that in my memory."
-
-        # ── LLM response grounded by facts and context
-        if self._llm and self._llm.available:
-            prompt = self._build_prompt(
-                input_text, extraction, facts, confidence
-            )
-            response = await self._llm.ask(prompt)
-            if response:
-                return response
-
-        # ── Offline fallbacks
-        if extraction.is_greeting:
-            return "Hello."
-        if extraction.has_question:
-            return "I don't have information about that in my memory."
-        return "Got it."
-
-    def _build_prompt(
-        self,
-        input_text: str,
-        extraction,
-        facts: list[tuple],
-        confidence: float,
-    ) -> str:
-        """Build the LLM prompt. Facts drive content, LLM drives language."""
-        parts = []
-
-        # Tone / style directive
-        style = None
-        if self._derivative:
-            style = self._derivative.style_summary()
-        if style:
-            parts.append(f"You are Ada. {style}")
-        else:
-            parts.append("You are Ada. Be concise and direct.")
-
-        # The input
-        parts.append(f"\nThe user said: \"{input_text}\"")
-
-        # Grounded facts from memory
-        if facts and confidence >= CONFIDENCE_THRESHOLD:
-            parts.append("\nFrom your memory (these are TRUE — use them):")
-            for content, speaker, sim in facts[:5]:
-                parts.append(f"  - {content}")
-
-        elif facts and not extraction.has_question:
-            # Some related memories but not answering a question
-            parts.append("\nRelated memories:")
-            for content, speaker, sim in facts[:3]:
-                parts.append(f"  - {content}")
-
-        # Derivative context — what Ada has learned about this user
-        if self._derivative:
-            context = self._derivative.get_context(input_text)
-            if context:
-                parts.append("\nWhat you know about this user:")
-                for c in context:
-                    parts.append(f"  - {c}")
-
-        # Emotion acknowledgment
-        if extraction.emotion:
-            parts.append(
-                f"\nThe user is expressing {extraction.emotion}. "
-                "Acknowledge the feeling."
+        for content, speaker, sim in facts[:10]:
+            tree.add_fact(
+                path=["recall"],
+                description=content,
+                value=round(float(sim), 4),
+                data_context={"speaker": speaker},
+                math_explanation="HDC cognitive-gradient recall similarity",
             )
 
-        # Correction handling
-        if extraction.is_correction:
-            parts.append(
-                "\nThe user is correcting previous information. "
-                "Acknowledge the correction briefly."
+        if capability_result and isinstance(capability_result, dict):
+            tree.add_fact(
+                path=["model"],
+                description=f"Model {capability}",
+                value=capability,
+                data_sample=capability_result.get("fact_tree")
+                or capability_result,
             )
 
-        # Response instructions
-        if extraction.has_question and facts:
-            parts.append(
-                "\nAnswer using ONLY the facts above. "
-                "Do not add information that isn't in your memory. "
-                "1-2 sentences."
-            )
-        elif extraction.is_greeting:
-            parts.append(
-                "\nThis is a greeting. Respond naturally. 1 sentence."
+        if extraction.has_question and confidence < CONFIDENCE_THRESHOLD \
+                and not capability_result:
+            tree.add_fact(
+                path=["gate"],
+                description=("Insufficient memory: no grounded answer — "
+                             "do not fabricate one"),
+                value=round(confidence, 4),
             )
         else:
-            parts.append("\nRespond naturally. 1-2 sentences.")
-
-        return "\n".join(parts)
-
-    async def _respond_capability(
-        self, input_text: str, capability: str, result: str,
-    ) -> str:
-        """Respond using capability results."""
-        if self._llm and self._llm.available:
-            prompt = (
-                f"You are Ada.\n"
-                f"User asked: \"{input_text}\"\n"
-                f"Capability [{capability}] returned:\n{result}\n\n"
-                f"Summarize in 1-2 sentences. Be direct."
+            tree.add_fact(
+                path=["gate"],
+                description="DONE" if confidence >= CONFIDENCE_THRESHOLD
+                else "ASK",
+                value=round(confidence, 4),
+                data_context={"threshold": CONFIDENCE_THRESHOLD},
             )
-            response = await self._llm.ask(prompt)
-            if response:
-                return response
-        return result
+
+        return tree.to_json()
 
     # ── Capability execution ────────────────────────────────────
 
     async def _execute_capability(
         self, capability_name: str, query: str,
-    ) -> Optional[str]:
-        """Execute a query against a capability's vector space."""
+    ) -> Optional[dict]:
+        """Execute a query against a deployed model; returns the raw result."""
         from domains.brain.loader import ADA_ORG_ID
 
         key = (ADA_ORG_ID, capability_name)
@@ -411,29 +361,11 @@ class ThoughtProcess:
                 query=query,
             )
             if result and isinstance(result, dict):
-                return self._extract_result_text(result)
+                return result
         except Exception as e:
             logger.error(f"Capability {capability_name} error: {e}")
 
         return None
-
-    def _extract_result_text(self, result: dict) -> str:
-        """Extract meaningful text from a capability query result."""
-        ft = result.get("fact_tree", {})
-        children = ft.get("children", [])
-        if not children:
-            return ""
-
-        lines = []
-        for child in children[:5]:
-            desc = child.get("description", "")
-            val = child.get("value", 0)
-            if desc:
-                lines.append(f"{desc} ({val:.2f})")
-
-        return "\n".join(lines) if lines else ""
-
-    # ── Pattern recording ───────────────────────────────────────
 
     def _record_pattern(self, input_text: str, response: str) -> None:
         """Record a successful Q→A pattern for gradient search shortcuts."""

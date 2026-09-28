@@ -111,7 +111,9 @@ class TestGreetingHandling:
             session_factory=mock_session_factory,
         )
         result = await tp.think("hi")
-        assert result.response == "Hello."
+        import json
+        tree = json.dumps(result.response)
+        assert '"is_greeting": true' in tree
 
 
 # ── Statement handling ────────────────────────────────────────────
@@ -165,7 +167,8 @@ class TestHallucinationGate:
             session_factory=mock_session_factory,
         )
         result = await tp.think("what is the meaning of life?")
-        assert "don't have information" in result.response.lower()
+        import json
+        assert "Insufficient memory" in json.dumps(result.response)
 
     @pytest.mark.asyncio
     async def test_threshold_value(self):
@@ -196,7 +199,8 @@ class TestResponseStructure:
     async def test_result_has_all_fields(self, tp):
         result = await tp.think("test input")
         assert isinstance(result, ThoughtResult)
-        assert isinstance(result.response, str)
+        assert isinstance(result.response, dict)  # ALWAYS a fact tree
+        assert result.response["description"] == "Thought"
         assert isinstance(result.confidence, float)
         assert result.gate in ("DONE", "ASK")
         assert isinstance(result.facts, list)

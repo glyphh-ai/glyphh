@@ -26,13 +26,11 @@ User input
 |  4. ACT        Execute capability query             |
 |                                                    |
 |  5. EVALUATE   Confidence scoring                   |
-|                 < 0.5 → retry or "I don't know"     |
-|                 >= 0.5 → LLM synthesizes from facts  |
+|                 explicit gate node in the tree       |
 |                                                    |
-|  6. RESPOND    Formulate response                   |
-|                 STORE → "Got it."                    |
-|                 FEEL → empathy                       |
-|                 RECALL → grounded answer or fallback |
+|  6. RESPOND    Assemble the fact tree               |
+|                 stored facts · recalled facts with   |
+|                 similarities · model subtrees · gate |
 +---------------------------------------------------+
     |
     v
@@ -53,12 +51,17 @@ The RECALL step is not one-shot similarity search. It's gradient descent through
 
 This is how Ada *thinks through* a question rather than just pattern-matching. Example: "who am i?" first matches identity patterns broadly, then the residual captures the self-referential "me, not you" signal, and the next step finds the user's name.
 
-### The Hallucination Gate
+### The Fact Tree Contract
 
-Ada's confidence threshold (0.5) controls whether the LLM is involved:
-
-- **confidence >= 0.5** — LLM synthesizes a natural response from grounded facts. The LLM only sees facts that survived the cognitive gradient. It cannot add information.
-- **confidence < 0.5** — LLM is cut out entirely. Ada returns the top fact raw, or says "I don't have information about that in my memory." No confabulation possible.
+`think` only ever returns a **fact tree** — grounded, cited structure,
+never prose. The tree carries the stored facts from this turn, the
+recalled facts with their similarities and provenance, any deployed
+model's result as a subtree, and an explicit gate node
+(DONE / ASK / "Insufficient memory: no grounded answer — do not
+fabricate one"). Phrasing is the caller's job: the LLM on the client
+side (Claude, or whatever speaks MCP) turns the tree into language.
+The runtime is the information boundary; it cannot confabulate because
+it never generates.
 
 ### The Dream Loop
 
@@ -138,7 +141,8 @@ guardrails, and model administration all live behind one authenticated,
 metered, self-describing surface:
 
 ```
-think(input)                        natural language through Ada's brain
+think(input)                        natural language in -> FACT TREE out
+                                    (never prose; the caller's LLM phrases it)
 remember(text) / recall(query)      LLM-free memory tools for harness hooks
 
 decide(situation, events?)         outcome distribution + confidence + the

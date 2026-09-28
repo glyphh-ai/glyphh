@@ -37,7 +37,7 @@ def _est_tokens(text: str) -> int:
 @dataclass
 class ThinkResult:
     """The response from a think() call."""
-    response: str
+    response: dict
     capability: Optional[str] = None
     confidence: float = 0.0
     gate: str = "ASK"  # DONE or ASK
@@ -219,8 +219,18 @@ class Brain:
         if build_result:
             elapsed = (time.monotonic() - start) * 1000
             self._record_observation(input_text, "builder", 1.0, build_result, False, elapsed)
+            build_tree = {
+                "description": "Thought",
+                "value": None,
+                "children": [{
+                    "description": "Model build",
+                    "value": build_result,
+                    "children": [], "citations": [], "data_context": {},
+                }],
+                "citations": [], "data_context": {},
+            }
             return ThinkResult(
-                response=build_result,
+                response=build_tree,
                 capability="builder",
                 confidence=1.0,
                 gate="DONE",
@@ -233,33 +243,31 @@ class Brain:
         result = await self._thought_process.think(input_text, tool=tool)
 
         # Queue thoughts for background persistence (never blocks think)
-        # Only persist extracted facts — questions are queries, not knowledge.
+        # Only persist extracted facts — questions are queries, not
+        # knowledge, and the fact-tree response is derived, not new.
         if result.extracted_facts:
             for fact in result.extracted_facts:
                 self._queue_persist(fact, "incoming")
-        if result.response:
-            self._queue_persist(result.response, "ada")
 
         # Observe for dream loop + metrics
         elapsed = (time.monotonic() - start) * 1000
+        top_fact = result.facts[0][0] if result.facts else ""
         self._record_observation(
             input_text, result.capability, result.confidence,
-            result.response, result.llm_assisted, elapsed,
+            top_fact, result.llm_assisted, elapsed,
         )
 
         tokens_in = self._llm.usage.input_tokens - tok_in0
         tokens_out = self._llm.usage.output_tokens - tok_out0
-        # If Ada answered without the LLM, estimate what it would have cost —
-        # the system prompt + facts she'd have sent, plus an answer the length
-        # of the one she produced. That's the "free" work the LLM didn't do.
+        # Estimate what an LLM round would have cost for the grounding the
+        # fact tree carries — the "free" work the substrate did instead.
         tokens_saved = 0
-        if tokens_in == 0 and tokens_out == 0 and result.response:
-            facts_text = " ".join(f[0] for f in result.facts[:5]) if result.facts else ""
+        if tokens_in == 0 and tokens_out == 0 and result.facts:
+            facts_text = " ".join(f[0] for f in result.facts[:5])
             tokens_saved = (
                 _SYSTEM_PROMPT_EST
                 + _est_tokens(input_text)
                 + _est_tokens(facts_text)
-                + _est_tokens(result.response)
             )
 
         return ThinkResult(
@@ -353,47 +361,6 @@ class Brain:
             if conf >= min_confidence:
                 out.append({"content": r.thought.content, "confidence": conf})
         return out
-
-    # ── Disambiguation — LLM skill for ASK responses ─────────────────────
-
-    async def _disambiguate(self, input_text: str, state_name: str, facts: list, route) -> Any:
-        """When the cognitive router says ASK, use the LLM to disambiguate."""
-        from domains.brain.router import RouteResult
-
-        cap_names = list(self._state.capabilities.keys())
-        if not cap_names:
-            return route
-
-        prompt = (
-            f"You are Ada's internal disambiguation skill.\n"
-            f"The user said: \"{input_text}\"\n"
-            f"Ada's cognitive state: {state_name}\n"
-        )
-
-        if facts:
-            prompt += "Relevant memories:\n"
-            for content, speaker, sim in facts[:3]:
-                prompt += f"  - {content} ({sim:.2f})\n"
-
-        prompt += (
-            f"\nAvailable capabilities: {', '.join(cap_names)}\n"
-            f"Also available: memory (recall/store from Ada's thought space)\n"
-            f"\nWhich capability should handle this? Reply with ONLY the capability name, "
-            f"or 'memory' for memory operations, or 'none' if unclear."
-        )
-
-        chosen = await self._llm.ask(prompt, max_tokens=32)
-        if chosen:
-            chosen = chosen.strip().lower().replace(" ", "")
-            if chosen in self._state.capabilities:
-                return RouteResult(capability=chosen, confidence=0.5, llm_fallback=True)
-            if chosen == "memory":
-                # Memory is handled by AdaCognitive, not a routed capability
-                return RouteResult(capability=None, confidence=0.5, llm_fallback=True)
-
-        return route
-
-    # ── Capability execution ─────────────────────────────────────────────
 
     async def _execute_capability(self, capability_name: str, query: str) -> Optional[str]:
         """Execute a query against a specific capability's vector space."""

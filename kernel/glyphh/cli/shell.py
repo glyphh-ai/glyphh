@@ -69,6 +69,22 @@ _CATEGORIES = list(_SUBCOMMANDS.keys()) + ["help", "clear", "home", "exit", "qui
 _SESSION = {"claude_in": 0, "claude_out": 0, "saved": 0}
 
 
+
+def _render_fact_tree(node: dict, depth: int = 0) -> str:
+    """Render a fact-tree dict as an indented outline for the shell."""
+    lines = []
+    desc = node.get("description", "")
+    value = node.get("value")
+    label = desc if value in (None, True, "") else f"{desc}: {value}"
+    if depth == 0:
+        lines.append(label)
+    else:
+        lines.append("  " * (depth - 1) + "- " + label)
+    for child in node.get("children", []) or []:
+        lines.append(_render_fact_tree(child, depth + 1))
+    return "\n".join(lines)
+
+
 def _completer(text, state):
     """Tab completer: commands and subcommands."""
     line = readline.get_line_buffer()
@@ -356,6 +372,11 @@ def _think(text: str, port: int) -> None:
         # Print response
         click.echo()
         click.secho("  ada", fg=theme.ACCENT, bold=True)
+
+        # The runtime only ever returns a fact tree (dict). Render it as
+        # an indented tree; the shell is a dev surface, not a chatbot.
+        if isinstance(response, dict):
+            response = _render_fact_tree(response)
 
         # Word-wrap the response at ~80 cols
         if response:
