@@ -71,14 +71,15 @@ class AutonomousEntity:
         dimension: int = 2048,
         act_threshold: float = 0.6,
         k: int = 7,
+        min_sim: float = 0.55,
     ):
         self._proposer = proposer
         self._actions = actions
         self._threshold = act_threshold
         self._space = DecisionSpace(dimension=dimension, k=k,
-                                    min_precedent_sim=0.55)
+                                    min_precedent_sim=min_sim)
         self._failures = DecisionSpace(dimension=dimension, k=k,
-                                       min_precedent_sim=0.55)
+                                       min_precedent_sim=min_sim)
         self.history: List[StepResult] = []
 
     # ── the loop ────────────────────────────────────────────────────
