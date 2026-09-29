@@ -1,116 +1,107 @@
 # glyphh
 
-**A kernel for software whose user is an AI.**
-
-An agent's context window is mortal — it fills, compacts, and ends.
-glyphh is the state and execution layer that survives it: graded
-memory, calibrated decisions, and receipts for everything, in one
-Python file with one dependency (numpy). State lives in SQLite files
-the agent owns — carried between contexts, shared between agents, and
-versioned like any other file. There is no server, no service, no
-protocol. You import it.
+A memory and decision kernel for AI agents. One Python file, one
+dependency (numpy). An agent records graded experience — what it did
+and whether it worked — and queries it by similarity before deciding
+again. State is plain SQLite files: they persist across sessions, can
+be shared between agents, and version like any other file. There is
+no server or service; you import the module.
 
 ```
-glyphh_kernel.py    the kernel (single file, numpy + stdlib)
-test_kernel.py      its invariants, as tests
-dogfood/            the authoring agent's own working memory, built on
-                    the kernel and committed as ordinary repo state
+glyphh_kernel.py    the kernel
+test_kernel.py      its tests
+dogfood/            working memory of the agent that develops this repo
 ```
-
-Everything this was distilled from — the full HDC substrate, a
-runtime, the experiments and evals behind every number below — lives
-in git history on the `archive/full-history` branch.
 
 ## Install
 
 ```bash
-pip install numpy   # that's all
+pip install numpy
 ```
 
-Copy `glyphh_kernel.py` into your project, or hand it to an agent as
-context. **The file carries its own manual**: `spec()` returns the
-substrate guidance (the primitives, the grounded loop, the trust
-rules), so an agent that receives only the file — via pip, a copy, or
-a paste — still gets the full guidance:
+Copy `glyphh_kernel.py` into your project. The module embeds its own
+usage guide: `spec()` returns the full guidance (primitives, the
+decision loop, thresholds), so the file is self-documenting wherever
+it ends up:
 
 ```python
 from glyphh_kernel import spec
-print(spec())   # read this before recording or querying anything
+print(spec())
 ```
 
-This README is the human-readable superset of the same spec.
+This README covers the same material with more context.
 
-## Sixty seconds
+## Quick start
 
 ```python
 from glyphh_kernel import Space, symbol
 
 wins = Space(author="my-agent", path="wins.db")
 
-# Record graded experience: one write, permanent, no training run.
+# Record an outcome that worked. One write, no training step.
 wins.record({"kind": "db_latency", "sev": "high"}, "failover",
             events=[symbol("timeout"), symbol("retry_storm")])
 
-# Ask: is there precedent for this situation?
+# Later: is there precedent for a similar situation?
 a = wins.query({"kind": "db_latency", "sev": "high"},
                events=[symbol("timeout"), symbol("retry_storm")])
-a.sufficient   # is any precedent close enough to speak?
-a.confidence   # do the close precedents agree?
-a.count        # how many actually voted?
-a.top          # the leading outcome
-a.receipts     # (id, similarity, outcome, hash, author) — the proof
+a.sufficient   # any precedent close enough to count?
+a.confidence   # how strongly do the close precedents agree?
+a.count        # how many cleared the similarity bar
+a.top          # leading outcome
+a.receipts     # (id, similarity, outcome, hash, author) per precedent
 ```
 
-## The five primitives
+## Primitives
 
-All vectors ("glyphs") are bipolar ±1 arrays of one fixed dimension
+All vectors ("glyphs") are ±1 int8 arrays of one fixed dimension
 (default 4096). Every operation returns the same type it takes, so
-composites nest indefinitely.
+composed structures can be composed again.
 
-| primitive | what it does |
+| primitive | behavior |
 |---|---|
-| `symbol(key, seed=42, dim=4096)` | deterministic glyph for a key — same inputs give the identical vector on any machine, forever. Shared seed = shared vocabulary between agents; different seeds are mutually random noise |
-| `bind(a, b)` | associate (elementwise multiply). Self-inverse; the result resembles neither input. Use for role–filler pairs |
-| `bundle(parts)` | superpose (majority vote). The result resembles ALL inputs. Capacity is finite: past a few dozen parts, detail fades and gist survives — that is abstraction, so keep receipts for the detail |
-| `roll(v, k)` | rotate — encodes order, position, depth. `roll(v, 1)` is "v, one step ago"; undo with `roll(v, -k)` |
-| `sim(a, b)` | cosine in [−1, 1]. Random glyphs sit near 0. For situations, sim tracks the **fraction of shared attribute pairs** — two 4-attribute situations sharing 2 attributes measure ~0.4–0.5 even when the shared attributes are irrelevant. Understand this before choosing thresholds |
+| `symbol(key, seed=42, dim=4096)` | Deterministic glyph for a key: same inputs produce the identical vector on any machine. Agents that share a seed share a vocabulary; different seeds produce unrelated vectors. |
+| `bind(a, b)` | Elementwise multiply. Self-inverse; the result is dissimilar to both inputs. Used for role–value pairs. |
+| `bundle(parts)` | Majority vote. The result is similar to every input. Capacity is limited: past a few dozen parts, individual contributions fade. Keep the source data if you need it back exactly. |
+| `roll(v, k)` | Rotate. Encodes order and position; `roll(v, -k)` inverts it. |
+| `sim(a, b)` | Cosine in [−1, 1]. Random glyphs measure near 0. For encoded situations, sim roughly tracks the fraction of shared attribute pairs: two 4-attribute situations sharing 2 attributes measure ~0.4–0.5 even if the shared attributes are irrelevant to the decision. Set thresholds with this in mind. |
 
-## The two constructs
+## Constructs
 
-**`Strand`** — ordered meaning. Append glyphs; `state(decay=0.7)`
-folds the sequence into one glyph where recent items dominate and
-order matters: same items, different order → different state. Use it
-for trajectories. Detail is recoverable a few steps back; the *kind*
-of trajectory is recognizable much longer.
+**`Strand`** — an ordered sequence of glyphs. `state(decay=0.7)` folds
+it into a single glyph where recent items dominate and order matters:
+the same items in a different order produce a different state. Use it
+for event trails. Individual items are recoverable a few steps back;
+the overall shape of the sequence is distinguishable much longer.
 
-**`Space`** — graded precedent memory.
+**`Space`** — precedent storage and lookup.
 
 ```python
 Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
       author="anon", path=None)
 ```
 
-- `record(situation, outcome, events=None)` — one write, permanent. A
-  situation is a flat dict of attributes; optional `events` (a list of
-  glyphs) fold in as a strand so order-carrying situations keep their
-  order.
+- `record(situation, outcome, events=None)` — store one case. A
+  situation is a flat dict of attributes; optional `events` (a list
+  of glyphs) are folded in as a strand so order is part of the match.
 - `query(situation, events=None)` → `Answer` with `sufficient`,
   `confidence`, `support`, `count`, `top`, `outcomes`, `receipts`.
-  Only precedents clearing `min_sim` get a vote.
+  Only precedents at or above `min_sim` contribute to the vote.
 - `matches(situation, outcome, events=None)` — max similarity among
-  precedents with *that exact outcome*. A direct nearest-case check no
-  consensus vote can dilute: the veto primitive.
-- `refresh()` — pull in rows other agents wrote to a shared file.
-- `merge(other_path)` — union another Space file by precedent id;
-  authors preserved, result persisted.
-- Files open in WAL mode, so several agents can share one. `close()`
-  or use as a context manager.
+  precedents with that exact outcome. A direct nearest-case check
+  that a consensus vote cannot dilute; used for vetoes.
+- `refresh()` — load rows other agents wrote to a shared file since
+  it was opened.
+- `merge(other_path)` — union another Space file by precedent id.
+  Authors are preserved and the result is persisted.
+- Files open in WAL mode, so several processes can share one. Call
+  `close()` or use the Space as a context manager.
 
-## The contract: nothing ungraded
+## The decision loop
 
-Every domain decision flows through one loop. Wins become reflexes;
-failures become vetoes; the world — not a human, not the LLM — is the
-judge.
+Route decisions through precedent, fall back when precedent is thin,
+and record the graded result either way. Wins become future answers;
+failures become vetoes.
 
 ```python
 wins, vetoes = Space(path="wins.db"), Space(path="vetoes.db")
@@ -118,68 +109,60 @@ wins, vetoes = Space(path="wins.db"), Space(path="vetoes.db")
 def decide(situation, events, fallback):
     a = wins.query(situation, events)
     if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
-        # veto: is the nearest recorded FAILURE of this action as
-        # close as the wins recommending it? Then don't trust it.
+        # Veto check: a recorded failure of this action as close as
+        # the wins recommending it blocks the shortcut.
         if vetoes.matches(situation, a.top, events) < a.support:
-            return a.top, "reflex"              # free, cited
-    return fallback(situation, events), "consult"   # LLM / human / rule
+            return a.top, "reflex"
+    return fallback(situation, events), "consult"
 
 action, mode = decide(situation, events, fallback)
-success = world_grades(action)
+success = world_grades(action)     # graded by outcome, not self-assessed
 (wins if success else vetoes).record(situation, action, events)
 ```
 
-The fallback chain is the cost model: reflex (free) → smarter
-consultant (paid) → human (last resort, and the answer is itself a
-grade). Over a lifetime, the consult rate should fall as precedent
-covers the world — that curve is the product metric.
+The fallback can be anything: a rule, an LLM call, a human. As
+precedent accumulates, the fallback is consulted less.
 
-## Rules that decide whether it works
+## Usage rules
 
-1. **Trust needs three gates.** `sufficient` gates on similarity,
-   `confidence` on consensus, `count` on population — a consensus of
-   one is confidence 1.0 and means almost nothing. Gate on all three.
-2. **Attribute hygiene.** Encode ONLY decision-relevant attributes.
-   Incidental ones (regions, ids, timestamps) make unrelated
-   situations measure alike and poison neighborhoods; keep them in
-   receipts instead. Size `min_sim` as the attribute-overlap fraction
-   that should count as "the same kind of situation."
-3. **Vetoes suppress; they don't erase.** A veto blocks a reflex once
-   a recorded failure sits as close as the wins recommending it. After
-   the world changes, a reflex can fire wrongly a few times while
-   failures accumulate to parity — use `matches`, never a consensus
-   vote, or unrelated failures dilute the veto.
-4. **Precedent never overrides a proof.** Auth, money conservation,
-   state-machine legality stay as hand-written checks.
+1. **Check three fields before trusting an answer**: `sufficient`
+   (similarity), `confidence` (consensus), `count` (population). One
+   precedent yields confidence 1.0; require `count >= 3`.
+2. **Encode only decision-relevant attributes.** Incidental fields
+   (ids, regions, timestamps) make unrelated situations measure
+   similar. Set `min_sim` to the attribute-overlap fraction that
+   should count as the same kind of situation.
+3. **Vetoes suppress; they don't erase.** A blocked action can fire
+   again after conditions change until failures accumulate to parity
+   with wins. Use `matches()` for veto checks, not `query()` — a
+   consensus vote lets unrelated failures dilute the veto.
+4. **Don't use precedent for invariants.** Auth checks, money
+   conservation, and state-machine legality stay as ordinary code.
 
-## More than one agent
+## Multiple agents
 
-Each agent keeps a private kernel (its own wins/vetoes); the team
-keeps a shared one. Construct with `author="<name>"` — every receipt
-shows who grounded it. Share a file live (WAL + `refresh()`) or ship
-files and `merge()` — and verify before you trust: replay incoming
-receipts against your own world first. Two agents share *meaning* by
-sharing `(seed, dim)`. A concept is meaningful exactly to the degree
-that its glyph's neighborhood predicts the world; a teammate's
-precedent is trustworthy exactly to the degree its receipts replay.
+Give each agent its own Space files and the team one shared set.
+Construct with `author=` so receipts show who recorded each
+precedent. Share a file directly (WAL plus `refresh()`) or exchange
+files and `merge()`. Before merging another agent's file, replay its
+receipts against your own data to check the outcomes hold. Agents
+share a vocabulary by sharing `(seed, dim)`.
 
-## Measured, not promised
+## Measurements
 
-The numbers behind the design, from replays preserved on
-`archive/full-history`:
+Numbers from the replays this design was validated on:
 
-- **Calibration on public data** — 2,591 kubernetes/kubernetes issues
-  replayed chronologically: precedent answers at confidence ≥ 0.5 were
-  **86% accurate** (91% at ≥ 0.6); ungated answers were 50%.
-- **The grounded loop, live** — an agent consulting a real LLM only
-  where precedent was thin reached **0.862 accuracy vs 0.599** for a
-  continuously retrained TF-IDF baseline on that replay; in a closed
-  world, world-graded reflexes (0.94) beat their own teacher (0.45).
-- **Order is signal** — strand state 0.710 next-step accuracy vs 0.595
-  unordered; trajectory-anomaly detection AUC 0.748.
-- **Cold-agent test** — a fresh agent handed only the kernel and spec
-  built a working application unaided; its adversarial findings were
-  fixed and are pinned in `test_kernel.py`.
+- 2,591 Kubernetes GitHub issues replayed in chronological order,
+  predicting SIG labels: precedent answers at confidence ≥ 0.5 were
+  86% accurate (91% at ≥ 0.6); ungated answers were 50%.
+- On the same replay, the decision loop with a live LLM fallback
+  reached 0.862 accuracy versus 0.599 for a continuously retrained
+  TF-IDF + logistic regression baseline.
+- Ordered strand state predicted next steps at 0.710 versus 0.595 for
+  an unordered bundle; sequence-anomaly detection reached AUC 0.748.
+- A separate agent, given only this file and the spec, built a
+  working application on the kernel unaided. The problems it found
+  are fixed and covered in `test_kernel.py`.
 
 ## Tests
 
