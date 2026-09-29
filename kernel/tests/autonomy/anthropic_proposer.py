@@ -47,9 +47,11 @@ class AnthropicProposer:
             f"Best action:"
         )
         try:
+            # Thinking is always on for this model and bills as output —
+            # give it headroom or the one-word answer gets truncated.
             response = self._client.messages.create(
                 model=self._model,
-                max_tokens=256,
+                max_tokens=2000,
                 system=SYSTEM,
                 output_config={"effort": "low"},
                 messages=[{"role": "user", "content": prompt}],
