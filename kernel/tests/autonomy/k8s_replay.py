@@ -40,6 +40,8 @@ from tests.autonomy.entity import AutonomousEntity  # noqa: E402
 DATA = Path(os.environ.get(
     "K8S_ISSUES_JSONL",
     Path(__file__).parent / "data" / "k8s_closed_sig_issues.jsonl"))
+STATUS_FILE = Path(os.environ.get("K8S_REPLAY_STATUS",
+                                  "/tmp/k8s_replay_status.json"))
 
 STOP = set("""a an the and or of to in for is are was were be been on at by
 with from as it this that these those not no can will would should could has
@@ -208,7 +210,7 @@ def replay(issues: List[dict], proposer, actions: List[str],
     entity = AutonomousEntity(
         proposer=proposer, actions=actions,
         dimension=4096, act_threshold=0.5, k=15, min_sim=0.10)
-    for issue in issues[:limit]:
+    for step, issue in enumerate(issues[:limit], 1):
         truth = set(issue["sigs"])
         if hasattr(proposer, "set_truth"):
             proposer.set_truth(truth)
@@ -216,6 +218,28 @@ def replay(issues: List[dict], proposer, actions: List[str],
             proposer.set_issue(issue)
         entity.step(situation_of(issue), events=[],
                     grade=lambda action, t=truth: action in t)
+        if step % 25 == 0:
+            recent = entity.history[-100:]
+            line = (f"{step}/{len(issues[:limit])}: "
+                    f"consult(last100) "
+                    f"{sum(r.mode == 'consult' for r in recent)/len(recent):.2f} "
+                    f"acc(last100) "
+                    f"{sum(r.success for r in recent)/len(recent):.2f} "
+                    f"calls {proposer.calls} "
+                    f"~${getattr(proposer, 'cost_usd', 0.0):.2f}")
+            print(line, flush=True)
+            status = {
+                "step": step,
+                "total": len(issues[:limit]),
+                "overall_acc": sum(r.success for r in entity.history)
+                / len(entity.history),
+                "overall_consult": sum(r.mode == "consult"
+                                       for r in entity.history)
+                / len(entity.history),
+                "llm_calls": proposer.calls,
+                "cost_usd": round(getattr(proposer, "cost_usd", 0.0), 3),
+            }
+            STATUS_FILE.write_text(json.dumps(status, indent=2))
     return entity
 
 
