@@ -1,0 +1,2 @@
+{"name": "fact_part_of_c9944e5", "def": "(fact :subj dictionary.py :rel part_of :obj unknown)", "by": "lexicon", "ts": 1790715337.073011}
+{"name": "query_depends_on_c283938", "def": "(query :subj talk.py :rel depends_on :obj ?)", "by": "lexicon", "ts": 1790715337.073607}

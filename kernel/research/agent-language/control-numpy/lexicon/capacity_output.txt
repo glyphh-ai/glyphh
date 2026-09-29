@@ -1,0 +1,73 @@
+
+[1] flat frame, N=1000 words, 256 roles: exact-match rate vs k (pairs) and D
+    plain = one-pass reader (peel=0); peel = explaining-away reader (peel=4, the default)
+   D    reader      4     8    16    24    32    48    64    96   128   160   192   256
+    1024 plain   1.00  1.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+    1024 peel    1.00  1.00  1.00  0.03  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+    2048 plain   1.00  1.00  0.97  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+    2048 peel    1.00  1.00  1.00  1.00  1.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+    4096 plain   1.00  1.00  1.00  1.00  0.93  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+    4096 peel    1.00  1.00  1.00  1.00  1.00  1.00  1.00  0.00  0.00  0.00  0.00  0.00
+    8192 plain   1.00  1.00  1.00  1.00  1.00  1.00  0.93  0.00  0.00  0.00  0.00  0.00
+    8192 peel    1.00  1.00  1.00  1.00  1.00  1.00  1.00  1.00  1.00  1.00  0.00  0.00
+
+[2] nesting, D=8192, N=1000, 64 roles: exact-match, v1 (sign once) vs v0 (sign each level)
+   branch=2 depth=1 leaves=  3:  v1=1.00  v0=1.00
+   branch=2 depth=2 leaves=  5:  v1=1.00  v0=1.00
+   branch=2 depth=3 leaves=  7:  v1=1.00  v0=0.35
+   branch=2 depth=4 leaves=  9:  v1=1.00  v0=0.05
+   branch=2 depth=5 leaves= 11:  v1=1.00  v0=0.00
+   branch=2 depth=6 leaves= 13:  v1=1.00  v0=0.00
+   branch=3 depth=1 leaves=  4:  v1=1.00  v0=1.00
+   branch=3 depth=2 leaves=  7:  v1=1.00  v0=1.00
+   branch=3 depth=3 leaves= 10:  v1=1.00  v0=0.00
+   branch=3 depth=4 leaves= 13:  v1=1.00  v0=0.00
+   branch=3 depth=5 leaves= 16:  v1=1.00  v0=0.00
+   branch=3 depth=6 leaves= 19:  v1=1.00  v0=0.00
+   branch=4 depth=1 leaves=  5:  v1=1.00  v0=1.00
+   branch=4 depth=2 leaves=  9:  v1=1.00  v0=1.00
+   branch=4 depth=3 leaves= 13:  v1=1.00  v0=0.00
+   branch=4 depth=4 leaves= 17:  v1=1.00  v0=0.00
+   branch=4 depth=5 leaves= 21:  v1=1.00  v0=0.00
+   branch=4 depth=6 leaves= 25:  v1=1.00  v0=0.00
+
+[3] vocabulary size, D=8192, flat k=16 and k=32
+   N=   100: k16=1.00  k32=1.00
+   N=  1000: k16=1.00  k32=1.00
+   N=  5000: k16=1.00  k32=1.00
+   N= 20000: k16=1.00  k32=1.00
+
+[4] bit-flip noise on the wire, D=8192, N=1000, message = 8 slots with 1 nested frame of 4
+   flip=0.00: exact=1.00
+   flip=0.05: exact=1.00
+   flip=0.10: exact=1.00
+   flip=0.20: exact=1.00
+   flip=0.30: exact=0.93
+   flip=0.40: exact=0.00
+
+[5] false positives, D=8192, real shared-style lexicon
+   random 1024-byte payloads decoded as a meaning: 0/200
+   spurious slots in k=12 frames: 0/5650 empty-role probes
+
+[6] graded similarity, D=8192: sim(encode(m), encode(m with j of 8 slots changed))
+   changed 0/8: sim=1.000
+   changed 1/8: sim=0.726
+   changed 2/8: sim=0.592
+   changed 4/8: sim=0.389
+   changed 6/8: sim=0.228
+   changed 8/8: sim=0.072
+
+[8] nested proofs, D=8192, shared-style roles: (answer :content fact :because [n facts] :rule r)
+   premises= 4 leaves= 29: plain=1.00  peel=1.00
+   premises= 8 leaves= 49: plain=0.93  peel=1.00
+   premises=12 leaves= 69: plain=0.00  peel=1.00
+   premises=16 leaves= 89: plain=0.00  peel=1.00
+   premises=20 leaves=109: plain=0.00  peel=1.00
+   premises=24 leaves=129: plain=0.00  peel=0.00
+   premises=28 leaves=149: plain=0.00  peel=0.00
+   premises=31 leaves=164: plain=0.00  peel=0.00
+
+[7] speed (depth 3, branch 4, N=1000, 64+32 roles): encode 0.1 ms, decode 35.4 ms (plain one-pass 19.5 ms)
+
+total 128s
+wrote control-numpy/lexicon/capacity.json
