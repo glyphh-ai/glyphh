@@ -194,3 +194,37 @@ def test_kernel_carries_its_own_spec():
     for anchor in ("NOTHING UNGRADED", "three gates", "matches()",
                    "Attribute hygiene", "merge("):
         assert anchor in SPEC, f"spec lost its guidance on: {anchor}"
+
+
+def test_small_situations_not_correlated_by_tiebreak():
+    """Two-attribute situations with NO shared attributes must sit
+    near zero similarity. A shared global tie-break vector used to
+    inject a common component into every even-count bundle."""
+    space = Space()
+    a = space.encode({"person": "chris", "topic": "fishing"}).astype(float)
+    b = space.encode({"person": "dana", "topic": "sailing"}).astype(float)
+    c = space.encode({"kind": "deploy", "env": "prod"}).astype(float)
+    assert abs(float(a @ b) / len(a)) < 0.08
+    assert abs(float(a @ c) / len(a)) < 0.08
+
+
+def test_reencode_store_restores_matching(tmp_path):
+    from glyphh_kernel import reencode_store
+    import sqlite3
+    path = str(tmp_path / "wins.db")
+    with Space(path=path) as space:
+        space.record({"person": "chris", "topic": "fishing"}, "gold_spoon")
+    # simulate a stale encoding: corrupt the stored glyph
+    db = sqlite3.connect(path)
+    stale = np.zeros(4096, dtype=np.int8)
+    db.execute("UPDATE precedents SET glyph = ?", (stale.tobytes(),))
+    db.commit(); db.close()
+    broken = Space(path=path)
+    assert not broken.query({"person": "chris", "topic": "fishing"}).sufficient
+    broken.close()
+    assert reencode_store(path) == 1
+    fixed = Space(path=path)
+    answer = fixed.query({"person": "chris", "topic": "fishing"})
+    assert answer.sufficient and answer.top == "gold_spoon"
+    assert answer.receipts[0][1] > 0.99
+    fixed.close()

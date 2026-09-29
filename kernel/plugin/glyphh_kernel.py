@@ -106,6 +106,32 @@ def spec() -> str:
     return SPEC
 
 
+def reencode_store(path: str, dim: int = DIM, k: int = 15,
+                   min_sim: float = 0.10, seed: int = 42,
+                   decay: float = 0.7) -> int:
+    """Re-encode every precedent's glyph from its stored situation,
+    under the current encoding. Run after an encoding change so old
+    stores keep matching fresh queries. Returns rows re-encoded.
+
+    Limitation: events are folded into glyphs at record time but not
+    persisted, so a precedent recorded WITH events is re-encoded
+    without them and loses its trajectory component. Only run this on
+    stores whose precedents were recorded without events (or accept
+    the loss)."""
+    import sqlite3 as _sqlite3
+
+    db = _sqlite3.connect(str(Path(path).expanduser()))
+    space = Space(dim=dim, k=k, min_sim=min_sim, seed=seed, decay=decay)
+    rows = db.execute("SELECT id, situation FROM precedents").fetchall()
+    for rid, situation_json in rows:
+        glyph = space.encode(json.loads(situation_json))
+        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?",
+                   (glyph.tobytes(), dim, rid))
+    db.commit()
+    db.close()
+    return len(rows)
+
+
 # ── primitives ──────────────────────────────────────────────────────
 
 def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
@@ -126,6 +152,19 @@ def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return (a * b).astype(np.int8)
 
 
+def _tiebreak(parts: Sequence[np.ndarray]) -> np.ndarray:
+    """Tie-break vector derived from the input (the first part,
+    rotated): deterministic, unbiased, and different for every
+    distinct input. A shared global tie-break vector would inject a
+    common component into every even-count bundle, inflating
+    similarity between unrelated small situations — and the parts'
+    elementwise product fails the same way (at two-part ties the
+    parts disagree, making the product constantly -1). Note ties are
+    therefore resolved order-dependently via parts[0]; Space.encode
+    sorts attributes, so encodings stay deterministic."""
+    return np.roll(parts[0], 1)
+
+
 def bundle(parts: Sequence[np.ndarray]) -> np.ndarray:
     """Superpose glyphs (majority vote). The result resembles ALL
     inputs. Capacity is finite: past a few dozen items, individual
@@ -136,8 +175,8 @@ def bundle(parts: Sequence[np.ndarray]) -> np.ndarray:
     total = np.sum(np.stack(parts).astype(np.int32), axis=0)
     signs = np.sign(total)
     ties = signs == 0
-    if ties.any():  # deterministic, unbiased, works at any dimension
-        signs[ties] = symbol("tie-break", 0, len(signs))[ties]
+    if ties.any():
+        signs[ties] = _tiebreak(parts)[ties]
     return signs.astype(np.int8)
 
 
@@ -178,12 +217,15 @@ class Strand:
         if not self.codons:
             raise ValueError("empty strand has no state")
         acc = np.zeros(len(self.codons[0]), dtype=np.float64)
+        rolled = []
         for age, codon in enumerate(reversed(self.codons)):
-            acc += (decay ** age) * roll(codon, age).astype(np.float64)
+            shifted = roll(codon, age)
+            rolled.append(shifted)
+            acc += (decay ** age) * shifted.astype(np.float64)
         signs = np.sign(acc)
         ties = signs == 0
         if ties.any():
-            signs[ties] = symbol("tie-break", 0, len(signs))[ties]
+            signs[ties] = _tiebreak(rolled)[ties]
         return signs.astype(np.int8)
 
     def __len__(self) -> int:
