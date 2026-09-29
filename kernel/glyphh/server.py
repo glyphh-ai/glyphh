@@ -112,18 +112,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ── Models ──────────────────────────────────────────────────────────
     # The runtime ships with ZERO models installed. Users deploy models
-    # via the MCP deploy_model / seed_model tools or a .glyphh package;
-    # previously deployed models lazy-restore from the database on use.
-
-    # ── Initialize MCP ─────────────────────────────────────────────────
-    from domains.auth.service import AuthService
-    from domains.mcp.app import create_mcp_session_managers
-
-    auth_service = AuthService()
-    json_manager, sse_manager = create_mcp_session_managers(
-        auth_service, model_manager=model_manager)
-    app.state.mcp_session_managers = (json_manager, sse_manager)
-    logger.info("MCP endpoint online at /mcp")
+    # as .glyphh packages; previously deployed models lazy-restore from
+    # the database on use.
 
     # ── Resume any incomplete encoding from previous boot ──────────────
     try:
@@ -143,10 +133,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("Glyphh runtime online.")
 
-    # Run MCP session managers
-    async with json_manager.run():
-        async with sse_manager.run():
-            yield
+    yield
 
     # ── Shutdown ────────────────────────────────────────────────────────
     logger.info("Shutting down...")
@@ -259,10 +246,3 @@ app.include_router(decide_router)
 app.include_router(health_router)
 app.include_router(strand_router)
 app.include_router(tokens_router)
-
-
-# MCP routing middleware — intercepts /mcp requests and forwards to the
-# MCP SDK's Streamable HTTP handler. Single endpoint, no org/model.
-from domains.mcp.app import MCPRoutingMiddleware
-
-app.add_middleware(MCPRoutingMiddleware, mcp_app_getter=lambda: getattr(app.state, "mcp_session_managers", None))

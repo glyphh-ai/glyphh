@@ -305,10 +305,8 @@ def _think(text: str, port: int) -> None:
     """Free text has no chat endpoint — this runtime is headless glyphh."""
     click.echo()
     click.secho("  This runtime is headless glyphh — there is no chat.", fg=theme.MUTED)
-    click.secho(f"  Deploy models and call their tools via MCP at "
-                f"http://127.0.0.1:{port}/mcp", fg=theme.MUTED)
-    click.secho("  (tools: deploy_model, seed_model, decide, and whatever "
-                "your models export)", fg=theme.MUTED)
+    click.secho(f"  HTTP API at http://127.0.0.1:{port} — but the product "
+                "is the kernel: see kernel/KERNEL.md", fg=theme.MUTED)
 
 
 def shell(ctx):
@@ -354,8 +352,8 @@ def shell(ctx):
 
     url = f"http://localhost:{port}"
     click.echo()
-    click.secho(f"  MCP        {url}/mcp", fg=theme.ACCENT)
-    click.secho(f"  Tools      deploy_model · seed_model · decide · + model-exported", fg=theme.TEXT_DIM)
+    click.secho(f"  API        {url}", fg=theme.ACCENT)
+    click.secho(f"  Kernel     kernel/KERNEL.md — the spec is the interface", fg=theme.TEXT_DIM)
     if os.environ.get("ENABLE_DOCS") == "true":
         click.secho(f"  Docs       {url}/docs", fg=theme.TEXT_DIM)
     click.secho(f"  Logs       ~/.glyphh/runtime.log", fg=theme.TEXT_DIM)

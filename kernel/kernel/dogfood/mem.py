@@ -24,8 +24,9 @@ from glyphh_kernel import Space  # noqa: E402
 HERE = Path(__file__).parent
 # Session situations are small (2-3 attrs), so "same kind of situation"
 # means most attributes shared: min_sim 0.4 per KERNEL.md sizing rule.
-WINS = dict(min_sim=0.40, k=7, path=str(HERE / "wins.db"))
-VETOES = dict(min_sim=0.40, k=7, path=str(HERE / "vetoes.db"))
+AUTHOR = "claude-main"
+WINS = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(HERE / "wins.db"))
+VETOES = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(HERE / "vetoes.db"))
 
 
 def main() -> None:

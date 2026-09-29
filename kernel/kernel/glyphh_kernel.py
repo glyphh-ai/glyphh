@@ -128,7 +128,7 @@ class Answer:
     count: int                 # how many precedents cleared min_sim
     top: Optional[str]         # leading outcome, None if insufficient
     outcomes: Dict[str, float]  # similarity-weighted distribution
-    receipts: List[Tuple[str, float, str, str]]
+    receipts: List[Tuple[str, float, str, str, str]]  # +author
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -139,8 +139,9 @@ class Answer:
             "top": self.top,
             "outcomes": {k: round(v, 4) for k, v in self.outcomes.items()},
             "receipts": [
-                {"id": i, "sim": round(s, 4), "outcome": o, "hash": h}
-                for i, s, o, h in self.receipts
+                {"id": i, "sim": round(s, 4), "outcome": o, "hash": h,
+                 "author": a}
+                for i, s, o, h, a in self.receipts
             ],
         }
 
@@ -166,12 +167,14 @@ class Space:
     """
 
     def __init__(self, dim: int = DIM, k: int = 15, min_sim: float = 0.10,
-                 seed: int = 42, decay: float = 0.7,
+                 seed: int = 42, decay: float = 0.7, author: str = "anon",
                  path: Optional[str] = None):
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
         self.decay = decay
+        self.author = author
         self._ids: List[str] = []
         self._outcomes: List[str] = []
+        self._authors: List[str] = []
         self._glyphs: List[np.ndarray] = []
         self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
         self._n = 0
@@ -193,9 +196,11 @@ class Space:
             raise ValueError("cannot encode an empty situation")
         return bundle(parts)
 
-    def _append(self, rid: str, outcome: str, glyph: np.ndarray) -> None:
+    def _append(self, rid: str, outcome: str, glyph: np.ndarray,
+                author: str) -> None:
         self._ids.append(rid)
         self._outcomes.append(outcome)
+        self._authors.append(author)
         self._glyphs.append(glyph)
         if self._n == len(self._matrix):  # amortized O(1) growth
             grown = np.empty((max(64, 2 * len(self._matrix)), self.dim),
@@ -210,12 +215,12 @@ class Space:
                rid: Optional[str] = None) -> str:
         rid = rid or str(uuid.uuid4())[:12]
         glyph = self.encode(situation, events)
-        self._append(rid, outcome, glyph)
+        self._append(rid, outcome, glyph, self.author)
         if self._db is not None:
             self._db.execute(
-                "INSERT OR REPLACE INTO precedents VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO precedents VALUES (?, ?, ?, ?, ?, ?)",
                 (rid, json.dumps(situation, ensure_ascii=False), outcome,
-                 self.dim, glyph.tobytes()))
+                 self.dim, glyph.tobytes(), self.author))
             self._db.commit()
         return rid
 
@@ -233,7 +238,8 @@ class Space:
         top = self._top(situation, events)
         receipts = [
             (self._ids[i], s, self._outcomes[i],
-             hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16])
+             hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16],
+             self._authors[i])
             for i, s in top]
         # only precedents that clear the similarity bar get a vote
         voters = [(i, s) for i, s in top if s >= self.min_sim]
@@ -269,24 +275,84 @@ class Space:
     def __len__(self) -> int:
         return self._n
 
-    # persistence: one portable file
+    # persistence: one portable file; WAL so several agents can share it
     def _open(self, path: str) -> None:
         p = Path(path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(p))
+        self._db = sqlite3.connect(str(p), timeout=10.0)
+        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA busy_timeout=10000")
         self._db.execute(
             "CREATE TABLE IF NOT EXISTS precedents ("
             " id TEXT PRIMARY KEY, situation TEXT NOT NULL,"
             " outcome TEXT NOT NULL, dim INTEGER NOT NULL,"
-            " glyph BLOB NOT NULL)")
+            " glyph BLOB NOT NULL, author TEXT NOT NULL DEFAULT 'anon')")
+        cols = [r[1] for r in self._db.execute(
+            "PRAGMA table_info(precedents)")]
+        if "author" not in cols:  # migrate pre-author files in place
+            self._db.execute("ALTER TABLE precedents ADD COLUMN author "
+                             "TEXT NOT NULL DEFAULT 'anon'")
         self._db.commit()
-        for rid, _, outcome, dim, blob in self._db.execute(
-                "SELECT id, situation, outcome, dim, glyph FROM precedents"):
+        for rid, _, outcome, dim, blob, author in self._db.execute(
+                "SELECT id, situation, outcome, dim, glyph, author "
+                "FROM precedents"):
             if dim != self.dim:
                 raise ValueError(
                     f"precedent {rid} has dim {dim}, space is {self.dim}")
             self._append(rid, outcome,
-                         np.frombuffer(blob, dtype=np.int8).copy())
+                         np.frombuffer(blob, dtype=np.int8).copy(), author)
+
+    def refresh(self) -> int:
+        """Pull in rows other agents wrote to this file since open.
+        Returns how many new precedents arrived."""
+        if self._db is None:
+            return 0
+        known = set(self._ids)
+        added = 0
+        for rid, _, outcome, dim, blob, author in self._db.execute(
+                "SELECT id, situation, outcome, dim, glyph, author "
+                "FROM precedents"):
+            if rid in known:
+                continue
+            if dim != self.dim:
+                raise ValueError(
+                    f"precedent {rid} has dim {dim}, space is {self.dim}")
+            self._append(rid, outcome,
+                         np.frombuffer(blob, dtype=np.int8).copy(), author)
+            added += 1
+        return added
+
+    def merge(self, other_path: str) -> int:
+        """Union another Space file into this one (by precedent id).
+        The exchange primitive between agents: ship the file, verify
+        its receipts against your own world, then merge. Returns how
+        many precedents were new."""
+        other = sqlite3.connect(str(Path(other_path).expanduser()))
+        cols = [r[1] for r in other.execute("PRAGMA table_info(precedents)")]
+        select = ("SELECT id, situation, outcome, dim, glyph, author "
+                  "FROM precedents" if "author" in cols else
+                  "SELECT id, situation, outcome, dim, glyph, 'anon' "
+                  "FROM precedents")
+        known = set(self._ids)
+        added = 0
+        for rid, situation, outcome, dim, blob, author in other.execute(select):
+            if rid in known:
+                continue
+            if dim != self.dim:
+                raise ValueError(
+                    f"precedent {rid} has dim {dim}, space is {self.dim}")
+            glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            self._append(rid, outcome, glyph, author)
+            if self._db is not None:
+                self._db.execute(
+                    "INSERT OR REPLACE INTO precedents "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (rid, situation, outcome, dim, glyph.tobytes(), author))
+            added += 1
+        if self._db is not None:
+            self._db.commit()
+        other.close()
+        return added
 
     def close(self) -> None:
         if self._db is not None:

@@ -44,3 +44,15 @@ count=1 is below the count>=3 gate — so right now this store is a
 It earns calibration the same way the k8s replay did: by accumulating
 graded repeats. Verdict on bootstrap: **helped** (setup cost ~5 min;
 the veto check alone would have saved one real 2-hour-run loss today).
+
+## 2026-09-29 · retiring the MCP surface
+
+- `query {task: retire_subsystem, constraint: large_deletion}` →
+  **insufficient, count 0** (best sim 0.27, below the 0.40 bar). First
+  genuinely novel situation since seeding, and the kernel correctly
+  declined instead of pattern-matching something irrelevant. Verdict:
+  **helped** (a correct "I don't know" is the calibration property
+  working; receipts showed exactly why nothing qualified).
+- Proceeded by footprint-mapping (grep) → delete wiring, domain,
+  tests, dependency pins. Worked; recorded as a win so the next
+  retirement starts from precedent instead of insufficiency.

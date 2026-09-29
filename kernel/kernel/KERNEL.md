@@ -7,7 +7,17 @@ or configuration.
 
 ## What this is
 
-A kernel for software whose user is an AI. Human software optimizes for
+A kernel for software whose user is an AI: **your state and execution
+layer beyond the context window.** Your context is mortal — it fills,
+compacts, and ends. What you record here does not. A Space file is the
+part of you that survives into your next context: reopen it and your
+graded experience, your vetoes, and your receipts are simply there,
+with no re-reading of transcripts and no summarization loss. Record as
+you work; the next context (yours, or another agent's) inherits ground
+truth instead of prose about it.
+
+There is no service, no server, no protocol between you and this —
+you import it and you own the files. Human software optimizes for
 legibility (screens, names, dashboards) because humans trust by
 looking. You cannot be reassured, only checked — so this kernel's
 surfaces are receipts, grades, and calibrated confidence. Five rules
@@ -152,11 +162,40 @@ covers the world.
 - Long exact recall inside vectors. The vector keeps the gist; exact
   reconstruction comes from the receipts and the SQLite rows.
 
-## Interop between agents
+## More than one agent: the three-kernel topology
 
-Two agents share meaning by sharing (seed, dim) — their `symbol()`
-calls then produce identical vocabularies. Experience is exchanged by
-shipping the SQLite file; the receiver can verify it by replaying
-receipts against its own world before merging. Meaning here has an
-operational definition: a concept is meaningful exactly to the degree
-that its glyph's neighborhood predicts the world.
+The kernel is built for teams of agents, and the working pattern is:
+**each agent keeps its own kernel, and the team keeps a shared one.**
+
+- **Private kernels** (per agent): your own wins/vetoes — your
+  competence, your mistakes, tuned to your role. Nobody else writes
+  here; your reflexes stay yours.
+- **The shared kernel** (one per team/task): Spaces every agent reads
+  and writes. Construct with `author="<your name>"` — every precedent
+  carries its author, and every receipt shows who contributed it, so
+  a surprising answer is checkable back to the agent that grounded it.
+
+Sharing works two ways, both first-class:
+
+1. **Same file, live.** Spaces open in WAL mode; several agents can
+   write one file concurrently. Call `refresh()` to pull in rows other
+   agents wrote since you opened — do it before querying if teammates
+   are active.
+2. **Separate files, exchanged.** `merge(other_path)` unions another
+   Space file into yours by precedent id (duplicates skipped, authors
+   preserved, result persisted). Verify before you trust: replay the
+   incoming receipts against your own world first; merge is adoption,
+   not belief.
+
+Two agents share *meaning* by sharing (seed, dim) — their `symbol()`
+calls then produce identical vocabularies; different seeds are
+mutually random noise. The escalation path mirrors the fallback
+chain: consult your private kernel first (free, yours), then the
+shared kernel (free, the team's), then a live consultant. Record your
+graded outcome back to whichever kernel should carry it — team-useful
+lessons go to the shared one, with your name on them.
+
+Meaning here has an operational definition at every scale: a concept
+is meaningful exactly to the degree that its glyph's neighborhood
+predicts the world — and a *teammate's* precedent is trustworthy
+exactly to the degree its receipts replay.

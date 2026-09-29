@@ -48,7 +48,7 @@ def test_space_answers_with_receipts():
     space.record({"kind": "spike"}, "scale_up")
     answer = space.query({"kind": "db", "sev": "high"})
     assert answer.sufficient and answer.top == "failover"
-    assert answer.receipts and all(len(r) == 4 for r in answer.receipts)
+    assert answer.receipts and all(len(r) == 5 for r in answer.receipts)
 
 
 def test_empty_space_is_insufficient():
@@ -135,3 +135,61 @@ def test_bundle_tiebreak_unbiased_at_any_dim():
     out = bundle([a, b])
     assert abs(int(out.sum())) < 200, "tie-break must not bias toward +1"
     assert np.array_equal(out, bundle([a, b]))  # and stay deterministic
+
+
+def test_authorship_carried_in_receipts(tmp_path):
+    path = str(tmp_path / "shared.db")
+    a = Space(author="agent-a", path=path)
+    a.record({"k": "v"}, "out")
+    a.close()
+    b = Space(author="agent-b", path=path)
+    b.record({"k": "v"}, "out")
+    receipt_authors = {r[4] for r in b.query({"k": "v"}).receipts}
+    assert receipt_authors == {"agent-a", "agent-b"}
+    b.close()
+
+
+def test_refresh_sees_other_writers(tmp_path):
+    path = str(tmp_path / "shared.db")
+    a = Space(author="agent-a", path=path)
+    b = Space(author="agent-b", path=path)
+    a.record({"k": "v"}, "out")
+    assert not b.query({"k": "v"}).sufficient
+    assert b.refresh() == 1
+    assert b.query({"k": "v"}).top == "out"
+    a.close(); b.close()
+
+
+def test_merge_unions_by_id(tmp_path):
+    pa, pb = str(tmp_path / "a.db"), str(tmp_path / "b.db")
+    a = Space(author="agent-a", path=pa)
+    shared_id = a.record({"k": "v"}, "out")
+    a.close()
+    b = Space(author="agent-b", path=pb)
+    b.record({"k": "v"}, "out", rid=shared_id)  # same id: no duplicate
+    b.record({"x": "y"}, "other")
+    b.close()
+    a2 = Space(author="agent-a", path=pa)
+    assert a2.merge(pb) == 1                    # only the new one
+    assert len(a2) == 2
+    assert a2.query({"x": "y"}).receipts[0][4] == "agent-b"
+    a2.close()
+    a3 = Space(path=pa)                          # merge persisted
+    assert len(a3) == 2
+    a3.close()
+
+
+def test_pre_author_file_migrates(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE precedents (id TEXT PRIMARY KEY,"
+               " situation TEXT NOT NULL, outcome TEXT NOT NULL,"
+               " dim INTEGER NOT NULL, glyph BLOB NOT NULL)")
+    glyph = Space().encode({"k": "v"})
+    db.execute("INSERT INTO precedents VALUES (?, ?, ?, ?, ?)",
+               ("old-row", "{}", "out", 4096, glyph.tobytes()))
+    db.commit(); db.close()
+    space = Space(path=path)
+    assert space.query({"k": "v"}).receipts[0][4] == "anon"
+    space.close()
