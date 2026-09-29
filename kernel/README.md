@@ -93,11 +93,13 @@ python3 -m pytest tests/autonomy -q   # the entity, deterministic world
 
 Everything outside `kernel/` is reference material and history: the
 `glyphh/` package (the original substrate the kernel distills — lattice
-ops, strands, the DecisionSpace precedent engine), a headless FastAPI
-runtime (`glyphh.server`) with `/v1/strand` and `/v1/decide` surfaces,
-model hosting for `.glyphh` packages, and the evals that produced every
-number above. The former MCP control plane has been retired: agents
-import the kernel; they don't call a service.
+ops, strands, the DecisionSpace precedent engine, cognitive loops) and
+the evals that produced every number above. There is no runtime, no
+server, no service surface: they were retired once it was clear the
+kernel never needed them. An agent imports the kernel where it already
+runs, and its state is SQLite files it owns — shared between agents by
+sharing the file (WAL + `refresh()`) or shipping it (`merge()`),
+versioned by whatever already versions your files (this repo uses git).
 
 ## License
 
