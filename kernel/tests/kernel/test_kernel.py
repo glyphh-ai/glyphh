@@ -79,3 +79,59 @@ def test_dimension_mismatch_refused(tmp_path):
     Space(dim=2048, path=path).record({"k": "v"}, "out")
     with pytest.raises(ValueError):
         Space(dim=4096, path=path)
+
+
+def test_below_min_sim_rows_carry_no_vote():
+    """The nearest row clears the bar; distant rows must not vote."""
+    space = Space(min_sim=0.5)
+    space.record({"a": "1", "b": "2", "c": "3", "d": "4"}, "right")
+    for i in range(5):
+        space.record({"w": f"x{i}", "y": f"z{i}"}, "wrong")
+    answer = space.query({"a": "1", "b": "2", "c": "3", "d": "9"})
+    assert answer.top == "right"
+    assert answer.count == 1
+    assert "wrong" not in answer.outcomes
+
+
+def test_matches_is_undilutable():
+    """One failure of the exact action is visible however many
+    unrelated failures surround it."""
+    vetoes = Space()
+    situation = {"kind": "db", "sev": "high"}
+    vetoes.record(situation, "restart")
+    for i in range(20):
+        vetoes.record({"kind": f"other{i}"}, "scale_up")
+    assert vetoes.matches(situation, "restart") > 0.9
+    assert vetoes.matches(situation, "failover") == 0.0
+    assert Space().matches(situation, "restart") == 0.0
+
+
+def test_count_exposes_sparse_consensus():
+    space = Space()
+    space.record({"k": "v"}, "out")
+    answer = space.query({"k": "v"})
+    assert answer.confidence == 1.0 and answer.count == 1  # consensus of one
+
+
+def test_close_and_context_manager(tmp_path):
+    path = str(tmp_path / "wins.db")
+    with Space(path=path) as space:
+        space.record({"k": "v"}, "out")
+    reopened = Space(path=path)
+    assert len(reopened) == 1
+    reopened.close()
+
+
+def test_space_decay_configurable():
+    events = [symbol("a"), symbol("b"), symbol("c")]
+    fast = Space(decay=0.2).encode({"k": "v"}, events=events)
+    slow = Space(decay=0.9).encode({"k": "v"}, events=events)
+    assert not np.array_equal(fast, slow)
+
+
+def test_bundle_tiebreak_unbiased_at_any_dim():
+    a = symbol("a", dim=1000)
+    b = symbol("b", dim=1000)
+    out = bundle([a, b])
+    assert abs(int(out.sum())) < 200, "tie-break must not bias toward +1"
+    assert np.array_equal(out, bundle([a, b]))  # and stay deterministic

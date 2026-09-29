@@ -21,11 +21,16 @@ shaped it:
    shaped by recording outcomes the world confirmed.
 4. **Small enough to hold.** The entire semantics fits in your context
    window. The spec is the interface.
-5. **It knows what it doesn't know.** Every query returns confidence,
-   and below threshold it says "insufficient" instead of guessing.
-   Measured on a 2,591-case public replay (GitHub issue triage):
-   answers at confidence >= 0.5 were 86% accurate, >= 0.6 were 91%,
-   while ungated answers were 50%. The gate is real.
+5. **It knows what it doesn't know — behind TWO gates, not one.**
+   `sufficient`/`support` gate on *similarity* (is any precedent close
+   enough to speak? controlled by `min_sim`); `confidence` gates on
+   *consensus* (do the close precedents agree?). You must check both,
+   plus `count`: a consensus of one precedent is confidence 1.0 and
+   means almost nothing. Measured on a 2,591-case public replay
+   (GitHub issue triage), answers at confidence >= 0.5 were 86%
+   accurate versus 50% ungated — but that calibration holds for
+   *populated* neighborhoods, not sparse ones. Early in a Space's
+   life, gate on `count >= 3` as well.
 
 ## The five primitives
 
@@ -49,8 +54,12 @@ indefinitely.
 - `roll(v, k)` — rotate. Encodes order, position, nesting depth.
   `roll(v, 1)` means "v, one step ago"; orthogonal to `v`; undo with
   `roll(v, -k)`.
-- `sim(a, b)` — cosine in [-1, 1]. Random glyphs sit near 0; above
-  ~0.1 is signal at dim 4096. This is the only comparison operator.
+- `sim(a, b)` — cosine in [-1, 1]. Random glyphs sit near 0. For
+  situation glyphs, sim approximately tracks the FRACTION OF SHARED
+  ATTRIBUTE PAIRS: two 4-attribute situations sharing 2 attributes
+  measure ~0.4-0.5 even when the shared attributes are irrelevant to
+  the decision. This is the only comparison operator; understand what
+  it measures before choosing thresholds.
 
 ## The two constructs
 
@@ -77,8 +86,26 @@ answer = space.query({"kind": "db_latency", "sev": "high"},
 ```
 
 A situation is a flat dict of attributes. Optional `events` (a list of
-glyphs) fold in as a strand, so order-carrying situations keep their
-order. `record` is one write, permanent, no training run.
+glyphs) fold in as a strand (decay set by `Space(decay=...)`), so
+order-carrying situations keep their order. `record` is one write,
+permanent, no training run.
+
+**Attribute hygiene — the rule that decides whether a Space works:**
+encode ONLY decision-relevant attributes. Because sim tracks attribute
+overlap, incidental attributes (regions, hostnames, timestamps, ids)
+make unrelated situations measure alike and poison neighborhoods; a
+situation sharing only its noise attributes with a precedent can
+outscore one sharing the attributes that matter. If you are unsure
+whether an attribute is relevant, leave it out and keep it in the
+receipts instead. Set `min_sim` to the overlap fraction that should
+count as "the same kind of situation" — with 4 attributes of which 3
+must match, that is ~0.5-0.75, and the default 0.10 only excludes
+near-strangers. Only precedents clearing `min_sim` get a vote;
+`count` tells you how many did.
+
+`matches(situation, outcome, events)` returns the max similarity among
+precedents with that exact outcome — a direct nearest-case check that
+no consensus vote can dilute. It exists because vetoes need it (below).
 
 ## The one contract: the grounded loop
 
@@ -90,9 +117,10 @@ wins, vetoes = Space(path="wins.db"), Space(path="vetoes.db")
 
 def decide(situation, events, fallback):
     a = wins.query(situation, events)
-    if a.sufficient and a.confidence >= 0.5:
-        v = vetoes.query(situation, events)
-        if not (v.sufficient and v.top == a.top and v.confidence >= 0.5):
+    if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
+        # veto: is the nearest recorded FAILURE of this exact action
+        # as close as the wins that recommend it? Then don't trust it.
+        if vetoes.matches(situation, a.top, events) < a.support:
             return a.top, "reflex"            # free, cited, calibrated
     return fallback(situation, events), "consult"  # LLM / human / rule
 
@@ -101,12 +129,19 @@ success = world_grades(action)                # the world, not a human
 (wins if success else vetoes).record(situation, action, events)
 ```
 
-Wins become permanent reflexes. Failures become vetoes: a discredited
-reflex does not fire again — the entity consults instead of being
-confidently wrong twice. The fallback chain is the cost model: reflex
-(free) → smarter consultant (paid) → human (last resort, and the
-answer is itself a grade). Over a lifetime the consult rate is your
-product metric; it should fall as precedent covers the world.
+Wins become permanent reflexes. Failures become vetoes. Be precise
+about what a veto is: it SUPPRESSES a reflex whenever a recorded
+failure of that action sits as close to the situation as the wins
+recommending it — it is not a guarantee that a discredited reflex
+never fires again. Old wins for the same action remain precedent, so
+after the world changes (drift), a reflex can fire wrongly a few more
+times while failures accumulate to parity; use `matches` (above)
+rather than a `vetoes.query` consensus vote, or unrelated failures
+will dilute the veto and stretch that window. The fallback chain is
+the cost model: reflex (free) → smarter consultant (paid) → human
+(last resort, and the answer is itself a grade). Over a lifetime the
+consult rate is your product metric; it should fall as precedent
+covers the world.
 
 ## What this kernel is NOT for
 

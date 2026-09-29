@@ -58,10 +58,9 @@ def bundle(parts: Sequence[np.ndarray]) -> np.ndarray:
         raise ValueError("cannot bundle nothing")
     total = np.sum(np.stack(parts).astype(np.int32), axis=0)
     signs = np.sign(total)
-    # break ties deterministically
     ties = signs == 0
-    if ties.any():
-        signs[ties] = symbol("tie-break")[ties] if len(signs) == DIM else 1
+    if ties.any():  # deterministic, unbiased, works at any dimension
+        signs[ties] = symbol("tie-break", 0, len(signs))[ties]
     return signs.astype(np.int8)
 
 
@@ -73,7 +72,9 @@ def roll(v: np.ndarray, k: int = 1) -> np.ndarray:
 
 def sim(a: np.ndarray, b: np.ndarray) -> float:
     """Cosine similarity for bipolar glyphs, in [-1, 1]. Two random
-    symbols sit near 0. Above ~0.1 is signal at dim 4096."""
+    symbols sit near 0. For situation glyphs, sim approximately tracks
+    the FRACTION OF SHARED ATTRIBUTE PAIRS — two 4-attribute
+    situations sharing 2 attributes measure ~0.4-0.5, not ~0."""
     return float(np.dot(a.astype(np.float32), b.astype(np.float32))) / len(a)
 
 
@@ -103,7 +104,9 @@ class Strand:
         for age, codon in enumerate(reversed(self.codons)):
             acc += (decay ** age) * roll(codon, age).astype(np.float64)
         signs = np.sign(acc)
-        signs[signs == 0] = 1
+        ties = signs == 0
+        if ties.any():
+            signs[ties] = symbol("tie-break", 0, len(signs))[ties]
         return signs.astype(np.int8)
 
     def __len__(self) -> int:
@@ -115,13 +118,14 @@ class Strand:
 @dataclass
 class Answer:
     """What a Space says. Trust `top` only when `sufficient` is True
-    and `confidence` clears your threshold; otherwise fall back
-    (consult something smarter, or ask). receipts = the precedents
-    behind the answer: (id, similarity, outcome, glyph_hash)."""
+    AND `confidence` clears your threshold AND `count` is more than a
+    couple — a consensus of one is not consensus. receipts = the
+    precedents behind the answer: (id, similarity, outcome, hash)."""
 
     sufficient: bool
-    confidence: float          # consensus of the k nearest precedents
-    support: float             # how CLOSE that precedent is (mean sim)
+    confidence: float          # consensus among qualifying precedents
+    support: float             # how CLOSE they are (mean similarity)
+    count: int                 # how many precedents cleared min_sim
     top: Optional[str]         # leading outcome, None if insufficient
     outcomes: Dict[str, float]  # similarity-weighted distribution
     receipts: List[Tuple[str, float, str, str]]
@@ -131,6 +135,7 @@ class Answer:
             "sufficient": self.sufficient,
             "confidence": round(self.confidence, 4),
             "support": round(self.support, 4),
+            "count": self.count,
             "top": self.top,
             "outcomes": {k: round(v, 4) for k, v in self.outcomes.items()},
             "receipts": [
@@ -145,22 +150,31 @@ class Space:
 
     The contract that makes this safe for a machine caller:
       - record() is one write, permanent, no training run
-      - query() returns calibrated confidence — on real-world text
-        replay, answers at confidence >= 0.5 measured 86% accurate
-        while ungated answers measured 50%
+      - query() returns calibrated confidence over the precedents that
+        clear min_sim — rows below the bar carry no vote
       - every answer cites the precedents it stands on
-      - below min_sim the Space says 'insufficient' instead of guessing
+      - with nothing above min_sim the Space says 'insufficient'
+        instead of guessing
 
-    Use two Spaces per decision: one for wins, one for failures
-    (vetoes). A confident answer that the failure space also endorses
-    is a veto — do not act on it; fall back instead.
+    Encode ONLY decision-relevant attributes: sim tracks attribute
+    overlap, so incidental attributes (region, timestamps, ids) make
+    unrelated situations look alike and poison neighborhoods. Set
+    min_sim to the overlap fraction that should count as 'the same
+    kind of situation' — with a 4-attribute situation, requiring 3
+    shared attributes means min_sim ~0.5-0.75, and the default 0.10
+    only excludes near-strangers.
     """
 
     def __init__(self, dim: int = DIM, k: int = 15, min_sim: float = 0.10,
-                 seed: int = 42, path: Optional[str] = None):
+                 seed: int = 42, decay: float = 0.7,
+                 path: Optional[str] = None):
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
-        self._rows: List[Tuple[str, str, np.ndarray]] = []  # id, outcome, glyph
-        self._matrix: Optional[np.ndarray] = None
+        self.decay = decay
+        self._ids: List[str] = []
+        self._outcomes: List[str] = []
+        self._glyphs: List[np.ndarray] = []
+        self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
+        self._n = 0
         self._db = None
         if path:
             self._open(path)
@@ -174,18 +188,29 @@ class Space:
                  for a, v in sorted(situation.items())]
         if events:
             parts.append(bind(symbol("trajectory", self.seed, self.dim),
-                              Strand(list(events)).state()))
+                              Strand(list(events)).state(self.decay)))
         if not parts:
             raise ValueError("cannot encode an empty situation")
         return bundle(parts)
+
+    def _append(self, rid: str, outcome: str, glyph: np.ndarray) -> None:
+        self._ids.append(rid)
+        self._outcomes.append(outcome)
+        self._glyphs.append(glyph)
+        if self._n == len(self._matrix):  # amortized O(1) growth
+            grown = np.empty((max(64, 2 * len(self._matrix)), self.dim),
+                             dtype=np.float32)
+            grown[:self._n] = self._matrix[:self._n]
+            self._matrix = grown
+        self._matrix[self._n] = glyph.astype(np.float32)
+        self._n += 1
 
     def record(self, situation: Dict[str, str], outcome: str,
                events: Optional[List[np.ndarray]] = None,
                rid: Optional[str] = None) -> str:
         rid = rid or str(uuid.uuid4())[:12]
         glyph = self.encode(situation, events)
-        self._rows.append((rid, outcome, glyph))
-        self._matrix = None
+        self._append(rid, outcome, glyph)
         if self._db is not None:
             self._db.execute(
                 "INSERT OR REPLACE INTO precedents VALUES (?, ?, ?, ?, ?)",
@@ -194,36 +219,55 @@ class Space:
             self._db.commit()
         return rid
 
+    def _top(self, situation: Dict[str, str],
+             events: Optional[List[np.ndarray]]) -> List[Tuple[int, float]]:
+        q = self.encode(situation, events).astype(np.float32)
+        sims = (self._matrix[:self._n] @ q) / self.dim
+        order = np.argsort(sims)[::-1][:self.k]
+        return [(int(i), float(sims[i])) for i in order]
+
     def query(self, situation: Dict[str, str],
               events: Optional[List[np.ndarray]] = None) -> Answer:
-        if not self._rows:
-            return Answer(False, 0.0, 0.0, None, {}, [])
-        q = self.encode(situation, events).astype(np.float32)
-        if self._matrix is None:
-            self._matrix = np.stack(
-                [g for _, _, g in self._rows]).astype(np.float32)
-        sims = (self._matrix @ q) / self.dim
-        order = np.argsort(sims)[::-1][:self.k]
-        top_rows = [(self._rows[i], float(sims[i])) for i in order]
+        if self._n == 0:
+            return Answer(False, 0.0, 0.0, 0, None, {}, [])
+        top = self._top(situation, events)
         receipts = [
-            (rid, s, outcome,
-             hashlib.sha256(glyph.tobytes()).hexdigest()[:16])
-            for (rid, outcome, glyph), s in top_rows]
-        best = top_rows[0][1]
-        if best < self.min_sim:
-            return Answer(False, 0.0, max(best, 0.0), None, {}, receipts)
-        weights = np.array([max(s, 0.0) for _, s in top_rows])
+            (self._ids[i], s, self._outcomes[i],
+             hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16])
+            for i, s in top]
+        # only precedents that clear the similarity bar get a vote
+        voters = [(i, s) for i, s in top if s >= self.min_sim]
+        if not voters:
+            return Answer(False, 0.0, max(top[0][1], 0.0), 0,
+                          None, {}, receipts)
+        weights = np.array([s for _, s in voters])
         wsum = float(weights.sum()) or 1.0
         outcomes: Dict[str, float] = {}
-        for ((_, outcome, _), _), w in zip(top_rows, weights):
-            outcomes[outcome] = outcomes.get(outcome, 0.0) + float(w)
+        for (i, _), w in zip(voters, weights):
+            outcomes[self._outcomes[i]] = (
+                outcomes.get(self._outcomes[i], 0.0) + float(w))
         outcomes = {o: w / wsum for o, w in outcomes.items()}
-        top = max(outcomes, key=outcomes.get)
-        return Answer(True, outcomes[top], float(weights.mean()),
-                      top, outcomes, receipts)
+        top_outcome = max(outcomes, key=outcomes.get)
+        return Answer(True, outcomes[top_outcome], float(weights.mean()),
+                      len(voters), top_outcome, outcomes, receipts)
+
+    def matches(self, situation: Dict[str, str], outcome: str,
+                events: Optional[List[np.ndarray]] = None) -> float:
+        """Max similarity among precedents with THIS outcome (0.0 if
+        none). The veto primitive: 'how close is the nearest recorded
+        failure of this exact action?' — a direct check that no
+        consensus vote can dilute."""
+        if self._n == 0:
+            return 0.0
+        q = self.encode(situation, events).astype(np.float32)
+        mask = np.array([o == outcome for o in self._outcomes[:self._n]])
+        if not mask.any():
+            return 0.0
+        sims = (self._matrix[:self._n][mask] @ q) / self.dim
+        return float(sims.max())
 
     def __len__(self) -> int:
-        return len(self._rows)
+        return self._n
 
     # persistence: one portable file
     def _open(self, path: str) -> None:
@@ -241,5 +285,16 @@ class Space:
             if dim != self.dim:
                 raise ValueError(
                     f"precedent {rid} has dim {dim}, space is {self.dim}")
-            self._rows.append(
-                (rid, outcome, np.frombuffer(blob, dtype=np.int8).copy()))
+            self._append(rid, outcome,
+                         np.frombuffer(blob, dtype=np.int8).copy())
+
+    def close(self) -> None:
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+
+    def __enter__(self) -> "Space":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
