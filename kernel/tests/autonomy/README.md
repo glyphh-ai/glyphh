@@ -142,6 +142,67 @@ assembly, and the "intelligence as capex" economics it produces, appears
 to be new. (Treat that as a claim to challenge, not a settled fact —
 the literature moves fast.)
 
+## The public-data test: Kubernetes SIG triage (no bullshit)
+
+The toy world above is a world small enough to memorize. So we replayed
+public, unsanitized reality: every sig-labeled issue closed on
+kubernetes/kubernetes in the GH Archive's ClickHouse mirror (2023-2026,
+2,591 unique issues, 26 SIGs), in close order. Situation = issue title;
+action = route to one SIG; the world's grade = the SIG labels the k8s
+triage process itself had assigned by close (multi-label; any assigned
+SIG counts). Data: `data/k8s_closed_sig_issues.jsonl`; harness:
+`k8s_replay.py` (not test_*-named — live modes spend API money).
+
+All numbers prequential (predict first, learn after), same replay:
+
+| system | accuracy | cost |
+|---|---|---|
+| majority label | 0.276 | free |
+| TF-IDF + LogisticRegression, continuously retrained | 0.599 | free |
+| **the entity** (Claude consultant, 2,091 calls) | **0.862** | **$6.64** |
+| Claude alone, every issue (200-issue sample) | 0.920 | ~$8.30 |
+
+Entity internals: reflex share grew 16% → 22% across quartiles, consult
+rate fell only 0.84 → 0.78, reflex accuracy 0.794, consult accuracy
+0.878, success per quartile 0.85 / 0.88 / 0.85 / 0.87.
+
+**The honest verdict, both halves:**
+
+What survived contact with reality:
+- **The confidence gate is real calibration.** Fed clean labels, the
+  precedent store's confident answers (consensus ≥ 0.5) are right 86%
+  of the time on 17% coverage — 91% at ≥ 0.6 — while its ungated
+  answers are right 50%. On data we did not design, the store knows
+  when it knows. This is the architectural claim, and it held.
+- The entity crushes the classical online baseline (+26 points over
+  TF-IDF+LR) and holds accuracy flat while replacing a fifth of its
+  LLM calls with free reflexes.
+
+What did not:
+- **The student did not beat the teacher.** Claude alone scores 0.92
+  here — 45% on the toy world, 92% on this one. Two reasons, honestly:
+  Kubernetes triage is squarely inside the LLM's competence, and these
+  are public pre-cutoff issues, so training-set contamination of the
+  teacher cannot be ruled out. Against a ~92% teacher, reflexes at
+  ~79% buy cost savings, not accuracy.
+- **Weaning was shallow.** 2,591 issues across 26 evolving SIGs is
+  thin precedent coverage; consults fell six points over the whole
+  life, not the toy world's 68 → 4. Real-world diversity keeps the
+  consultant employed far longer than a closed world does.
+
+So the transferable claim is narrower than the toy result and worth
+stating exactly: the entity converts LLM competence into free, citable,
+confidence-gated reflexes wherever situations recur, and its economics
+improve with recurrence density. On a task with high novelty per
+situation and a near-ceiling teacher, it is a cost optimization
+(~19% of calls saved at ~6 points of accuracy) — not a way to surpass
+the LLM. The toy world's student-beats-teacher result needs a domain
+where the teacher is genuinely weak and outcomes are cheap to grade;
+that remains to be demonstrated on public data.
+
+Reproduce: `python3 tests/autonomy/k8s_replay.py --mode dry` (free),
+`--mode llm-sample` (~$0.65), `--mode live` (~$7).
+
 ## Honest limits
 
 - Works where the world grades **cheaply, quickly, and unambiguously**.
