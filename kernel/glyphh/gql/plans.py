@@ -87,6 +87,10 @@ class SimilaritySearchPlan(ExecutionPlan):
                 search_vector = context.get_embedding_for_scope(
                     self.target_glyph_id, layer=self.scope_layer, segment=self.scope_segment
                 )
+                if search_vector is None:
+                    # Storage may not support scoped embeddings (contract
+                    # allows None) — fall back to the primary embedding.
+                    search_vector = context.get_embedding(self.target_glyph_id)
             else:
                 search_vector = context.get_embedding(self.target_glyph_id)
             if search_vector is None:
