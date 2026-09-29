@@ -32,7 +32,7 @@ def main() -> None:
     })
 
     kernel = Path(__file__).resolve().parents[1] / "glyphh_kernel.py"
-    lines = [f"glyphh memory at {mem} — {len(wins)} wins, "
+    lines = [f"ada memory at {mem} — {len(wins)} wins, "
              f"{len(vetoes)} vetoes. Kernel: {kernel}."]
     kinds = Counter()
     for situation, _, _ in wins:

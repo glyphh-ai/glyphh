@@ -161,7 +161,7 @@ def main() -> None:
         return
 
     scored.sort(key=lambda x: -x[0])
-    lines = ["glyphh memory hits for this prompt (lexical doorbell; run a "
+    lines = ["ada memory hits for this prompt (lexical doorbell; run a "
              "similarity query for anything borderline):"]
     for score, situation, entry in scored[:MAX_INJECT]:
         parts = []

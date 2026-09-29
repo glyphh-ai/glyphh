@@ -1,4 +1,4 @@
-"""Hook behavior tests for the glyphh plugin. Each hook is run as a
+"""Hook behavior tests for the Ada plugin. Each hook is run as a
 subprocess with synthetic stdin, the way Claude Code runs it."""
 
 import json
@@ -37,7 +37,7 @@ def workspace(tmp_path):
     session = f"pytest-{tmp_path.name}"
     yield tmp_path, session
     import tempfile
-    shutil.rmtree(Path(tempfile.gettempdir()) / "glyphh-hooks",
+    shutil.rmtree(Path(tempfile.gettempdir()) / "ada-hooks",
                   ignore_errors=True)
 
 

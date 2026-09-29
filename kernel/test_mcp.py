@@ -1,4 +1,4 @@
-"""MCP server tests for the glyphh plugin. The server runs as a
+"""MCP server tests for the Ada plugin. The server runs as a
 subprocess speaking newline-delimited JSON-RPC over stdio, the way
 Claude Code launches it from plugin/.mcp.json."""
 
@@ -139,7 +139,7 @@ def test_unknown_tool_and_method(home):
 
 def test_mcp_json_points_at_the_server():
     config = json.loads((REPO / "plugin" / ".mcp.json").read_text())
-    args = config["mcpServers"]["glyphh"]["args"]
+    args = config["mcpServers"]["ada"]["args"]
     assert args == ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"]
     assert (REPO / "plugin" / "mcp" / "server.py").exists()
 

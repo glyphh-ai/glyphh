@@ -49,7 +49,7 @@ def main() -> None:
 
     marker["nagged"] = True
     write_marker(session_id, marker)
-    print("glyphh memory: nothing has been recorded this session. If any "
+    print("ada memory: nothing has been recorded this session. If any "
           "decision was graded by its outcome (a command worked or "
           "failed, a fix held, the user accepted or corrected an "
           "approach), record it to wins/vetoes now per the glyphh-think "

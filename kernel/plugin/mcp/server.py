@@ -1,4 +1,4 @@
-"""The glyphh memory as an MCP server (stdio, JSON-RPC 2.0, stdlib only).
+"""The Ada memory as an MCP server (stdio, JSON-RPC 2.0, stdlib only).
 
 Claude Code launches this from the plugin's .mcp.json, outside the
 agent's shell sandbox — so the agent can read AND write the one memory
@@ -183,7 +183,7 @@ def handle(memory: Memory, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         version = (msg.get("params") or {}).get("protocolVersion") or PROTOCOL
         return ok({"protocolVersion": version,
                    "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "glyphh", "version": "1.0.0"}})
+                   "serverInfo": {"name": "ada", "version": "1.1.0"}})
     if method == "ping":
         return ok({})
     if method == "tools/list":
@@ -197,7 +197,7 @@ def handle(memory: Memory, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
             text, is_error = json.dumps(call(memory, name, args)), False
         except ImportError as e:
-            text, is_error = (f"glyphh kernel unavailable ({e}); "
+            text, is_error = (f"Ada kernel unavailable ({e}); "
                               "install numpy for python3"), True
         except Exception as e:  # tool errors go back to the model, not the wire
             text, is_error = f"{type(e).__name__}: {e}", True

@@ -1,4 +1,4 @@
-"""Shared helpers for the glyphh hooks.
+"""Shared helpers for the Ada hooks.
 
 Hooks read the memory's SQLite files directly — no numpy, no kernel
 import — so they run in milliseconds and cannot fail on dependencies.
@@ -17,7 +17,7 @@ from typing import Dict, List, Tuple
 
 # per-session markers live in the system temp dir ($TMPDIR on macOS),
 # not a hard-coded /tmp: sandboxed hosts may only allow writes there
-MARKER_DIR = Path(tempfile.gettempdir()) / "glyphh-hooks"
+MARKER_DIR = Path(tempfile.gettempdir()) / "ada-hooks"
 
 
 def memory_dir() -> Path:

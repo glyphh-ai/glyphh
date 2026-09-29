@@ -1,10 +1,10 @@
-# glyphh
+# Ada
 
 An algebra of thought for AI. One Python file, one dependency (numpy).
 
 Models reason in prose, and prose doesn't compose: you can't take two
 conclusions, combine them into a third, and hand that to the next step
-as a value. glyphh gives a model values it can do that with. A meaning
+as a value. Ada gives a model values it can do that with. A meaning
 is a vector (a "glyph"). Five operations build glyphs out of glyphs,
 and every operation returns the type it takes, so anything built can
 be taken apart, compared, abstracted, and built on again. That closure
@@ -320,7 +320,7 @@ Install:
 
 ```
 /plugin marketplace add glyphh-ai/ada
-/plugin install glyphh@glyphh
+/plugin install ada@ada
 ```
 
 The memory is one store, the same in every session and directory:

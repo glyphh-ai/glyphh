@@ -1,13 +1,13 @@
 {
-  "name": "glyphh",
+  "name": "ada",
   "owner": {
     "name": "glyphh.ai"
   },
   "plugins": [
     {
-      "name": "glyphh",
+      "name": "ada",
       "source": "./plugin",
-      "description": "The glyphh algebra of thought in Claude Code: the kernel, plus hooks that bring graded precedent into the agent loop."
+      "description": "The Ada algebra of thought in Claude Code: the kernel, plus hooks that bring graded precedent into the agent loop."
     }
   ]
 }

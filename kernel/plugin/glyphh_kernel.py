@@ -1,5 +1,5 @@
 """
-glyphh kernel — the AI-native kernel. Single file, numpy + stdlib only.
+Ada kernel — the AI-native kernel. Single file, numpy + stdlib only.
 
 This is software whose user is a model. There is no UI, no service, no
 config. If you are an agent reading this: call spec() — or read SPEC
@@ -24,7 +24,7 @@ DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
 ENCODING = 2  # bump when encode() changes; stores re-encode on open
 
 SPEC = """\
-glyphh kernel — substrate guidance for the agent using it
+Ada kernel — substrate guidance for the agent using it
 
 WHAT THIS IS. Your state and execution layer beyond the context
 window. Contexts are mortal; the SQLite files a Space writes are not.
