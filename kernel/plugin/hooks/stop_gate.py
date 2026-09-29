@@ -24,7 +24,7 @@ def main() -> None:
     session_id = data.get("session_id", "unknown")
     marker = read_marker(session_id)
     if not marker or marker.get("nagged"):
-        sys.exit(0)  # no glyphh workspace this session, or already asked
+        sys.exit(0)  # session never started the memory, or already asked
 
     mem = Path(marker.get("memory_dir", ""))
     if not mem.exists():

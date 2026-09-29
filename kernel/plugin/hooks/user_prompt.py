@@ -119,9 +119,7 @@ def main() -> None:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
         return
-    mem = memory_dir(data.get("cwd", "."))
-    if mem is None:
-        return
+    mem = memory_dir()
     prompt_tokens = tokens(data.get("prompt", ""))
     if not prompt_tokens:
         return

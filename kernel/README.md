@@ -21,11 +21,21 @@ dogfood/            working state of the agent that develops this repo
 
 ## Install
 
+Install into a virtual environment. Homebrew and Debian Pythons refuse
+a bare `pip install` (`externally-managed-environment`, PEP 668):
+
 ```bash
-pip install numpy
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
 ```
 
-Copy `glyphh_kernel.py` into your project. The module embeds its own
+`-e` keeps the install pointed at this checkout, so edits take effect
+without reinstalling. Activate with `source .venv/bin/activate`, or call
+`.venv/bin/python` directly. With uv, `uv venv && uv pip install -e
+'.[dev]'` does the same.
+
+Or skip packaging: copy `glyphh_kernel.py` into your project and
+install `numpy` into that project's environment. The module embeds its own
 usage guide: `spec()` returns the full guidance (primitives,
 constructs, thresholds), so the file is self-documenting wherever it
 ends up:
@@ -238,7 +248,8 @@ Numbers from the replays this design was validated on:
 ## Claude Code integration
 
 The repo doubles as a plugin marketplace. `plugin/` bundles the
-kernel, a `glyphh-think` skill, and three hooks for one use of the
+kernel, a `glyphh-think` skill, an MCP server, and three hooks for one
+use of the
 algebra: a `Space` of graded precedent kept alongside the agent, wired
 into its loop rather than left to discretion:
 
@@ -250,6 +261,14 @@ into its loop rather than left to discretion:
   exists and nothing was recorded, asking for graded outcomes to be
   written or an explicit "nothing was graded."
 
+The **MCP server** (`plugin/mcp/server.py`, registered by
+`plugin/.mcp.json`) is how the agent reads and writes the memory:
+tools `query`, `record`, `veto`, `check` and `status`. Claude Code
+launches it over stdio, outside the agent's shell sandbox, so writes
+land without a sandbox exception, a port, or a token. It is stdlib
+plus the kernel, and refreshes from disk before every read so rows
+other sessions wrote count.
+
 Install:
 
 ```
@@ -257,13 +276,14 @@ Install:
 /plugin install glyphh@glyphh
 ```
 
-Hooks read the SQLite files directly and stay silent in workspaces
-that don't use glyphh.
+The memory is one store, the same in every session and directory:
+`$GLYPHH_HOME/ada`, else `~/.glyphh/ada`. Hooks read its SQLite files
+directly; the MCP server opens it through the kernel.
 
 ## Tests
 
 ```bash
-python3 -m pytest test_kernel.py test_plugin.py -q
+.venv/bin/python -m pytest test_kernel.py test_plugin.py test_mcp.py -q
 ```
 
 ## License

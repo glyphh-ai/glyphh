@@ -4,8 +4,9 @@ Session memory for the agent working on this repo, built on the kernel.
 The agent (Claude, in the session that wrote this) records graded
 operational experience — what worked and what failed while working on
 this codebase — and queries it before repeating a kind of decision.
-Usage is journaled in LOG.md; the stores are wins.db / vetoes.db next
-to this file (committed: they ARE the experience).
+Usage is journaled in LOG.md; the stores are wins.db / vetoes.db in the
+one always-on memory, $GLYPHH_HOME/ada (else ~/.glyphh/ada) — the same
+store the plugin hooks read in every session.
 
   python3 kernel/dogfood/mem.py record '{"task": "push"}' outcome_name
   python3 kernel/dogfood/mem.py record '{"task": "push"}' bad_idea --fail
@@ -15,18 +16,19 @@ to this file (committed: they ARE the experience).
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from glyphh_kernel import Space  # noqa: E402
 
-HERE = Path(__file__).parent
+MEM = Path(os.environ.get("GLYPHH_HOME") or Path.home() / ".glyphh") / "ada"
 # Session situations are small (2-3 attrs), so "same kind of situation"
 # means most attributes shared: min_sim 0.4 per KERNEL.md sizing rule.
 AUTHOR = "claude-main"
-WINS = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(HERE / "wins.db"))
-VETOES = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(HERE / "vetoes.db"))
+WINS = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(MEM / "wins.db"))
+VETOES = dict(min_sim=0.40, k=7, author=AUTHOR, path=str(MEM / "vetoes.db"))
 
 
 def main() -> None:

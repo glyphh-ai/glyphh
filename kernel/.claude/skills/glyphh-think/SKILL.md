@@ -1,6 +1,6 @@
 ---
 name: glyphh-think
-description: Think with the glyphh kernel, an algebra of thought. Use this skill whenever a workspace contains glyphh_kernel.py or a dogfood/ directory; whenever a problem calls for structured reasoning you want to compose and reuse — comparing plans or designs by structure, abstracting a concept from cases, spotting analogies, nesting one conclusion inside the next, or telling orderings apart; and whenever the user wants you to learn from outcomes, build precedent, or "always/never do X" for situations that recur — including before repeating any kind of decision you have made earlier in this workspace (how to run something, how to fix a recurring error, which approach worked). Also use it when the user asks how glyphh works or asks you to record, veto, or recall an operational lesson.
+description: Think with the glyphh kernel, an algebra of thought. Use this skill in every session — the memory is always on; whenever a problem calls for structured reasoning you want to compose and reuse — comparing plans or designs by structure, abstracting a concept from cases, spotting analogies, nesting one conclusion inside the next, or telling orderings apart; and whenever the user wants you to learn from outcomes, build precedent, or "always/never do X" for situations that recur — including before repeating any kind of decision you have made earlier in this workspace (how to run something, how to fix a recurring error, which approach worked). Also use it when the user asks how glyphh works or asks you to record, veto, or recall an operational lesson.
 ---
 
 # glyphh-think
@@ -62,23 +62,34 @@ files do not. The next session — yours or another agent's — inherits
 graded results instead of prose. Composed thoughts can ride along as
 `events=[...]`.
 
-### Setup (once per workspace)
+### Setup
 
-1. Locate `glyphh_kernel.py`. If the workspace has a `dogfood/` or
-   `memory/` directory with `wins.db` / `vetoes.db`, use it — that is
-   existing precedent, possibly written by earlier sessions or other
-   agents. Never start a parallel store when one exists.
-2. If no store exists and the task warrants one, create it:
+There is one memory, the same in every session and every directory:
+`$GLYPHH_HOME/ada`, else `~/.glyphh/ada` (`wins.db`, `vetoes.db`,
+`aliases.json`). The session-start note names it. Never start a
+parallel store.
+
+Reach it through the plugin's `glyphh` MCP server — tools `query`,
+`record`, `veto`, `check`, `status`. The server runs outside your
+shell sandbox, so reads and writes work even where the memory
+directory is not writable from Bash. It uses `min_sim=0.40, k=7`,
+which suits small operational situations (2–3 attributes): "most
+attributes shared." Pass your real agent name as `author` on writes —
+receipts carry it, so teammates can see who grounded what.
+
+Without the MCP server (another harness, or the server failed to
+connect), open the stores with the kernel directly — writes then need
+the memory directory to be writable:
 
 ```python
+import os, sys
+from pathlib import Path
+sys.path.insert(0, "<kernel directory from the session-start note>")
 from glyphh_kernel import Space
-wins   = Space(author="<your-agent-name>", min_sim=0.40, k=7, path="dogfood/wins.db")
-vetoes = Space(author="<your-agent-name>", min_sim=0.40, k=7, path="dogfood/vetoes.db")
+mem = Path(os.environ.get("GLYPHH_HOME") or Path.home() / ".glyphh") / "ada"
+wins   = Space(author="<your-agent-name>", min_sim=0.40, k=7, path=str(mem / "wins.db"))
+vetoes = Space(author="<your-agent-name>", min_sim=0.40, k=7, path=str(mem / "vetoes.db"))
 ```
-
-`min_sim=0.40` suits small operational situations (2–3 attributes);
-it means "most attributes shared." Set your real agent name as
-`author` — receipts carry it, so teammates can see who grounded what.
 
 ### The loop
 
@@ -86,23 +97,26 @@ it means "most attributes shared." Set your real agent name as
 a long job, how to fix a recurring error, which approach the user
 prefers — query first:
 
-```python
-a = wins.query({"task": "long_background_run",
-                "constraint": "exceeds_tool_timeout"})
+```
+query  situation={"task": "long_background_run",
+                  "constraint": "exceeds_tool_timeout"}
 ```
 
-Act on `a.top` only when all three hold: `a.sufficient`,
-`a.confidence >= 0.5`, and the veto check passes —
-`vetoes.matches(situation, a.top) < a.support`. With `a.count < 3`
-treat the answer as a cited reminder, not a settled rule: precedent
-of one is a note, not calibration.
+Act on `top` only when `act` is true — it means all three hold:
+`sufficient`, `confidence >= 0.5`, and the nearest veto of that
+outcome (`veto_match`) is below `support`. (Kernel equivalent:
+`vetoes.matches(situation, a.top) < a.support`.) With `calibrated`
+false (`count < 3`) treat the answer as a cited reminder, not a
+settled rule: precedent of one is a note, not calibration. To vet an
+approach you are considering rather than asking what worked, use
+`check` with that `outcome`.
 
 **After** the outcome is known — the command worked, the fix held, the
 user accepted or corrected it — record it:
 
-```python
-wins.record(situation, "setsid_nohup_with_status_file")     # worked
-vetoes.record(situation, "run_in_background_tool")          # failed
+```
+record  situation=... outcome="setsid_nohup_with_status_file" author=...  # worked
+veto    situation=... outcome="run_in_background_tool"        author=...  # failed
 ```
 
 Record at the moment of grading, not at session end. A directive from
@@ -151,7 +165,7 @@ that is the write-time semantic layer doing its job.
 
 ### Logging
 
-If the workspace keeps a usage log (`dogfood/LOG.md`), append an
+The memory keeps a usage log (`LOG.md` beside the stores); append an
 entry when memory materially entered a decision: the query, the
 answer, what you did, and a verdict — helped / neutral / hindered /
 memory-was-wrong. Log misses and wrong answers as prominently as

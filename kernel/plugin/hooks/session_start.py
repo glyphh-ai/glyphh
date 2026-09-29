@@ -1,8 +1,8 @@
 """SessionStart: inject the memory's state into context at boot.
 
 Recall is not left to the agent's discretion — the session starts
-already knowing what its memory holds. Silent in workspaces that
-don't use glyphh.
+already knowing what its memory holds. The memory is one store
+($GLYPHH_HOME/ada, else ~/.glyphh/ada), the same in every session.
 """
 
 import json
@@ -12,7 +12,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import has_kernel, memory_dir, rows, write_marker
+from common import memory_dir, rows, write_marker
 
 
 def main() -> None:
@@ -20,15 +20,7 @@ def main() -> None:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
         return
-    cwd = data.get("cwd", ".")
-    mem = memory_dir(cwd)
-    if mem is None:
-        if has_kernel(cwd):
-            print("This workspace contains glyphh_kernel.py but no memory "
-                  "store yet. The glyphh-think skill covers creating one "
-                  "when graded, recurring decisions appear.")
-        return
-
+    mem = memory_dir()
     wins = rows(mem / "wins.db")
     vetoes = rows(mem / "vetoes.db")
     write_marker(data.get("session_id", "unknown"), {
@@ -39,8 +31,9 @@ def main() -> None:
         "nagged": False,
     })
 
+    kernel = Path(__file__).resolve().parents[1] / "glyphh_kernel.py"
     lines = [f"glyphh memory at {mem} — {len(wins)} wins, "
-             f"{len(vetoes)} vetoes."]
+             f"{len(vetoes)} vetoes. Kernel: {kernel}."]
     kinds = Counter()
     for situation, _, _ in wins:
         for key in ("task", "kind", "topic"):

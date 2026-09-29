@@ -9,26 +9,19 @@ queries and writes.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 MARKER_DIR = Path("/tmp/glyphh-hooks")
 
 
-def memory_dir(cwd: str) -> Optional[Path]:
-    """The workspace's memory directory, or None if this workspace
-    doesn't use glyphh (the plugin then stays silent)."""
-    root = Path(cwd)
-    for name in ("dogfood", ".glyphh", "memory"):
-        candidate = root / name
-        if (candidate / "wins.db").exists() or (candidate / "vetoes.db").exists():
-            return candidate
-    return None
-
-
-def has_kernel(cwd: str) -> bool:
-    return (Path(cwd) / "glyphh_kernel.py").exists()
+def memory_dir() -> Path:
+    """The one memory, the same in every session wherever it runs:
+    $GLYPHH_HOME/ada, else ~/.glyphh/ada."""
+    home = os.environ.get("GLYPHH_HOME") or str(Path.home() / ".glyphh")
+    return Path(home) / "ada"
 
 
 def rows(db_path: Path) -> List[Tuple[Dict[str, str], str, str]]:
