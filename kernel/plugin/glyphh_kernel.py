@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
+ENCODING = 2  # bump when encode() changes; stores re-encode on open
 
 SPEC = """\
 glyphh kernel — substrate guidance for the agent using it
@@ -39,13 +41,15 @@ so composites nest indefinitely.
   bind(a, b)     associate (elementwise multiply). Self-inverse; the
       result resembles neither input. Use for role-filler pairs.
   bundle(parts)  superpose (majority vote); resembles ALL inputs.
+      Order-free: the same parts in any order give the same glyph.
       Capacity is finite: past a few dozen parts detail fades and gist
       survives — that is abstraction; keep receipts for the detail.
   roll(v, k)     rotate: order, position, depth. Undo with roll(v,-k).
   sim(a, b)      cosine in [-1, 1]. Random glyphs sit near 0. For
-      situations, sim tracks the FRACTION OF SHARED ATTRIBUTE PAIRS —
-      two 4-attribute situations sharing 2 attributes measure ~0.4-0.5
-      even when the shared attributes are decision-irrelevant.
+      situations, sim tracks the FRACTION OF SHARED ATTRIBUTE PAIRS,
+      whichever attributes they are (measured, 4 attributes: sharing
+      1/2/3 -> 0.14/0.28/0.44; 2 attributes sharing 1 -> 0.25), even
+      when the shared attributes are decision-irrelevant.
 
 THE TWO CONSTRUCTS.
   Strand: ordered meaning. append() glyphs; state(decay) folds the
@@ -53,18 +57,23 @@ THE TWO CONSTRUCTS.
       matters. Detail recoverable a few steps back; the KIND of
       trajectory recognizable much longer.
   Space(dim, k, min_sim, seed, decay, author, path): graded precedent.
-      record(situation, outcome, events=None) — one write, permanent.
+      record(situation, outcome, events=None, ts=None) — one write,
+      permanent, time-stamped.
       query(...) -> Answer(sufficient, confidence, support, count,
       top, outcomes, receipts); only precedents clearing min_sim vote.
+      answers(...) -> [Evidence] for EVERY outcome with qualifying
+      precedent: the read for situations with more than one true
+      outcome. evidence(situation, outcome) grades one candidate.
       matches(situation, outcome) — max sim among precedents with THAT
       outcome: the veto primitive, undilutable by consensus.
       refresh() pulls rows other agents wrote to a shared WAL file;
       merge(other_path) unions another Space file by id, authors kept.
 
-THE CONTRACT: NOTHING UNGRADED. Route every domain decision through:
+THE CONTRACT: NOTHING UNGRADED. Route every domain decision through
+decide(wins, vetoes, situation, events) -> Decision. It is:
   a = wins.query(situation, events)
   if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
-      if vetoes.matches(situation, a.top, events) < a.support:
+      if not vetoed(a.top):               # see rule 3
           act(a.top)                      # reflex: free, cited
       else: consult fallback              # vetoed
   else: consult fallback                  # insufficient precedent
@@ -82,11 +91,20 @@ RULES THAT DECIDE WHETHER IT WORKS.
      incidental ones (ids, regions, timestamps) poison neighborhoods.
      Size min_sim as the attribute-overlap fraction that should count
      as 'the same kind of situation'.
-  3. Vetoes suppress, they don't erase: a reflex is blocked once a
-     recorded failure sits as close as the wins recommending it.
-     After drift, expect a few wrong firings while failures reach
-     parity. Use matches(), never a consensus vote, for vetoes.
-  4. Precedent never overrides a proof: auth, money conservation,
+  3. Vetoes suppress, they don't erase, and the newest evidence wins:
+     a reflex is blocked while a recorded failure sits as close as the
+     wins recommending it AND is newer than the newest such win. A
+     later reproduction lifts an older veto; a later failure
+     re-imposes it. After drift, expect a few wrong firings while
+     failures arrive. Use matches(), never a consensus vote, for
+     vetoes. decide(min_veto_count=2) demands corroborated failures:
+     harder to sabotage, slower to stop.
+  4. One question, several true answers: when a situation genuinely
+     has many outcomes (a file imports five modules), confidence
+     splits across them and no single one clears 0.5. That is not
+     disagreement. Read answers() and gate each outcome on its own
+     count instead of on its share.
+  5. Precedent never overrides a proof: auth, money conservation,
      state-machine legality stay hand-written.
 
 MORE THAN ONE AGENT. Private kernel per agent; one shared kernel per
@@ -97,6 +115,13 @@ Meaning is operational at every scale: a concept is meaningful exactly
 to the degree its glyph's neighborhood predicts the world; a
 teammate's precedent is trustworthy exactly to the degree its
 receipts replay.
+
+STORES OUTLIVE ENCODINGS. Every file records the encoding it was
+written under. Opening (or merging) a file from an older encoding
+re-encodes its glyphs from the stored situations and events, so old
+precedent keeps matching fresh queries. Events are stored with each
+precedent, so re-encoding is lossless (rows written before events
+were stored re-encode without their trajectory).
 """
 
 
@@ -109,27 +134,21 @@ def spec() -> str:
 def reencode_store(path: str, dim: int = DIM, k: int = 15,
                    min_sim: float = 0.10, seed: int = 42,
                    decay: float = 0.7) -> int:
-    """Re-encode every precedent's glyph from its stored situation,
-    under the current encoding. Run after an encoding change so old
-    stores keep matching fresh queries. Returns rows re-encoded.
+    """Re-encode every precedent's glyph from its stored situation and
+    events, under the current encoding, and stamp the file with it.
+    Opening a Space does this automatically for files from an older
+    encoding; call it directly to force a rebuild (e.g. after changing
+    seed or decay). Returns rows re-encoded.
 
-    Limitation: events are folded into glyphs at record time but not
-    persisted, so a precedent recorded WITH events is re-encoded
-    without them and loses its trajectory component. Only run this on
-    stores whose precedents were recorded without events (or accept
-    the loss)."""
-    import sqlite3 as _sqlite3
-
-    db = _sqlite3.connect(str(Path(path).expanduser()))
+    Rows recorded before events were persisted re-encode without their
+    trajectory component."""
+    db = sqlite3.connect(str(Path(path).expanduser()))
+    _ensure_schema(db)
     space = Space(dim=dim, k=k, min_sim=min_sim, seed=seed, decay=decay)
-    rows = db.execute("SELECT id, situation FROM precedents").fetchall()
-    for rid, situation_json in rows:
-        glyph = space.encode(json.loads(situation_json))
-        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?",
-                   (glyph.tobytes(), dim, rid))
+    n = _reencode_rows(db, space)
     db.commit()
     db.close()
-    return len(rows)
+    return n
 
 
 # ── primitives ──────────────────────────────────────────────────────
@@ -153,16 +172,23 @@ def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def _tiebreak(parts: Sequence[np.ndarray]) -> np.ndarray:
-    """Tie-break vector derived from the input (the first part,
-    rotated): deterministic, unbiased, and different for every
-    distinct input. A shared global tie-break vector would inject a
-    common component into every even-count bundle, inflating
-    similarity between unrelated small situations — and the parts'
-    elementwise product fails the same way (at two-part ties the
-    parts disagree, making the product constantly -1). Note ties are
-    therefore resolved order-dependently via parts[0]; Space.encode
-    sorts attributes, so encodings stay deterministic."""
-    return np.roll(parts[0], 1)
+    """Tie-break vector for a majority vote: a pseudo-random glyph
+    seeded by the hash of the parts as a SET (their bytes, sorted).
+
+    Why this shape. A shared global tie-break vector injects a common
+    component into every even-count bundle, so unrelated small
+    situations look alike. Deriving it from one part (encoding 1 used
+    roll(parts[0])) made similarity depend on which attribute differed:
+    changing the attribute that sorts first cost twice as much as
+    changing the one that sorts last (0.26 vs 0.50 at two attributes).
+    A hash of the whole multiset is deterministic, different for every
+    distinct input, uncorrelated with any single part, and independent
+    of part order — so tied positions carry no bias at all."""
+    h = hashlib.sha256()
+    for b in sorted(np.ascontiguousarray(p).tobytes() for p in parts):
+        h.update(b)
+    rng = np.random.RandomState(np.frombuffer(h.digest()[:4], dtype=np.uint32))
+    return (rng.randint(0, 2, len(parts[0]), dtype=np.int8) * 2 - 1)
 
 
 def bundle(parts: Sequence[np.ndarray]) -> np.ndarray:
@@ -190,7 +216,7 @@ def sim(a: np.ndarray, b: np.ndarray) -> float:
     """Cosine similarity for bipolar glyphs, in [-1, 1]. Two random
     symbols sit near 0. For situation glyphs, sim approximately tracks
     the FRACTION OF SHARED ATTRIBUTE PAIRS — two 4-attribute
-    situations sharing 2 attributes measure ~0.4-0.5, not ~0."""
+    situations sharing 3 attributes measure ~0.44, not ~0."""
     return float(np.dot(a.astype(np.float32), b.astype(np.float32))) / len(a)
 
 
@@ -265,6 +291,28 @@ class Answer:
         }
 
 
+@dataclass
+class Evidence:
+    """How well one outcome is supported in one situation, judged on
+    its own — not as a share of a vote. `count` precedents with this
+    outcome clear min_sim, at mean similarity `support` (nearest:
+    `nearest`); the newest of them was recorded at `latest` (epoch
+    seconds, 0.0 for rows written before time-stamping)."""
+
+    outcome: str
+    count: int
+    support: float
+    nearest: float
+    latest: float
+    authors: List[str]
+
+    def to_json(self) -> Dict[str, Any]:
+        return {"outcome": self.outcome, "count": self.count,
+                "support": round(self.support, 4),
+                "nearest": round(self.nearest, 4),
+                "latest": self.latest, "authors": self.authors}
+
+
 class Space:
     """Precedent memory: record graded experience, answer by similarity.
 
@@ -281,8 +329,8 @@ class Space:
     unrelated situations look alike and poison neighborhoods. Set
     min_sim to the overlap fraction that should count as 'the same
     kind of situation' — with a 4-attribute situation, requiring 3
-    shared attributes means min_sim ~0.5-0.75, and the default 0.10
-    only excludes near-strangers.
+    shared attributes means min_sim ~0.4 (sharing 2 measures ~0.28),
+    and the default 0.10 only excludes near-strangers.
     """
 
     def __init__(self, dim: int = DIM, k: int = 15, min_sim: float = 0.10,
@@ -294,6 +342,7 @@ class Space:
         self._ids: List[str] = []
         self._outcomes: List[str] = []
         self._authors: List[str] = []
+        self._ts: List[float] = []
         self._glyphs: List[np.ndarray] = []
         self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
         self._n = 0
@@ -316,10 +365,11 @@ class Space:
         return bundle(parts)
 
     def _append(self, rid: str, outcome: str, glyph: np.ndarray,
-                author: str) -> None:
+                author: str, ts: float) -> None:
         self._ids.append(rid)
         self._outcomes.append(outcome)
         self._authors.append(author)
+        self._ts.append(float(ts))
         self._glyphs.append(glyph)
         if self._n == len(self._matrix):  # amortized O(1) growth
             grown = np.empty((max(64, 2 * len(self._matrix)), self.dim),
@@ -331,22 +381,32 @@ class Space:
 
     def record(self, situation: Dict[str, str], outcome: str,
                events: Optional[List[np.ndarray]] = None,
-               rid: Optional[str] = None) -> str:
+               rid: Optional[str] = None,
+               ts: Optional[float] = None) -> str:
         rid = rid or str(uuid.uuid4())[:12]
+        ts = time.time() if ts is None else float(ts)
         glyph = self.encode(situation, events)
-        self._append(rid, outcome, glyph, self.author)
+        self._append(rid, outcome, glyph, self.author, ts)
         if self._db is not None:
+            blob = (np.stack(events).astype(np.int8).tobytes()
+                    if events else None)
             self._db.execute(
-                "INSERT OR REPLACE INTO precedents VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
+                " dim, glyph, author, ts, events)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (rid, json.dumps(situation, ensure_ascii=False), outcome,
-                 self.dim, glyph.tobytes(), self.author))
+                 self.dim, glyph.tobytes(), self.author, ts, blob))
             self._db.commit()
         return rid
 
+    def _sims(self, situation: Dict[str, str],
+              events: Optional[List[np.ndarray]]) -> np.ndarray:
+        q = self.encode(situation, events).astype(np.float32)
+        return (self._matrix[:self._n] @ q) / self.dim
+
     def _top(self, situation: Dict[str, str],
              events: Optional[List[np.ndarray]]) -> List[Tuple[int, float]]:
-        q = self.encode(situation, events).astype(np.float32)
-        sims = (self._matrix[:self._n] @ q) / self.dim
+        sims = self._sims(situation, events)
         order = np.argsort(sims)[::-1][:self.k]
         return [(int(i), float(sims[i])) for i in order]
 
@@ -376,6 +436,45 @@ class Space:
         return Answer(True, outcomes[top_outcome], float(weights.mean()),
                       len(voters), top_outcome, outcomes, receipts)
 
+    def _evidence(self, sims: np.ndarray, outcome: str,
+                  bar: float) -> Evidence:
+        idx = [i for i in range(self._n)
+               if self._outcomes[i] == outcome and sims[i] >= bar]
+        if not idx:
+            return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
+        close = sims[idx]
+        return Evidence(outcome, len(idx), float(close.mean()),
+                        float(close.max()),
+                        max(self._ts[i] for i in idx),
+                        sorted({self._authors[i] for i in idx}))
+
+    def evidence(self, situation: Dict[str, str], outcome: str,
+                 events: Optional[List[np.ndarray]] = None,
+                 min_sim: Optional[float] = None) -> Evidence:
+        """Support for ONE candidate outcome, over every precedent (not
+        just the top k), judged on its own: how many precedents with
+        this outcome clear the bar, how close, how recent, by whom."""
+        if self._n == 0:
+            return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
+        bar = self.min_sim if min_sim is None else min_sim
+        return self._evidence(self._sims(situation, events), outcome, bar)
+
+    def answers(self, situation: Dict[str, str],
+                events: Optional[List[np.ndarray]] = None,
+                min_count: int = 1) -> List[Evidence]:
+        """Every outcome with qualifying precedent in this situation,
+        strongest first. The read for situations that genuinely have
+        several true outcomes: gate each on its own count, not on its
+        share of a vote (see SPEC rule 4)."""
+        if self._n == 0:
+            return []
+        sims = self._sims(situation, events)
+        found = {self._outcomes[i] for i in range(self._n)
+                 if sims[i] >= self.min_sim}
+        out = [self._evidence(sims, o, self.min_sim) for o in found]
+        out = [e for e in out if e.count >= min_count]
+        return sorted(out, key=lambda e: (-e.count, -e.support, e.outcome))
+
     def matches(self, situation: Dict[str, str], outcome: str,
                 events: Optional[List[np.ndarray]] = None) -> float:
         """Max similarity among precedents with THIS outcome (0.0 if
@@ -384,11 +483,10 @@ class Space:
         consensus vote can dilute."""
         if self._n == 0:
             return 0.0
-        q = self.encode(situation, events).astype(np.float32)
         mask = np.array([o == outcome for o in self._outcomes[:self._n]])
         if not mask.any():
             return 0.0
-        sims = (self._matrix[:self._n][mask] @ q) / self.dim
+        sims = self._sims(situation, events)[mask]
         return float(sims.max())
 
     def __len__(self) -> int:
@@ -401,25 +499,11 @@ class Space:
         self._db = sqlite3.connect(str(p), timeout=10.0)
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA busy_timeout=10000")
-        self._db.execute(
-            "CREATE TABLE IF NOT EXISTS precedents ("
-            " id TEXT PRIMARY KEY, situation TEXT NOT NULL,"
-            " outcome TEXT NOT NULL, dim INTEGER NOT NULL,"
-            " glyph BLOB NOT NULL, author TEXT NOT NULL DEFAULT 'anon')")
-        cols = [r[1] for r in self._db.execute(
-            "PRAGMA table_info(precedents)")]
-        if "author" not in cols:  # migrate pre-author files in place
-            self._db.execute("ALTER TABLE precedents ADD COLUMN author "
-                             "TEXT NOT NULL DEFAULT 'anon'")
+        _ensure_schema(self._db)
+        if _file_encoding(self._db) < ENCODING:
+            _reencode_rows(self._db, self)
         self._db.commit()
-        for rid, _, outcome, dim, blob, author in self._db.execute(
-                "SELECT id, situation, outcome, dim, glyph, author "
-                "FROM precedents"):
-            if dim != self.dim:
-                raise ValueError(
-                    f"precedent {rid} has dim {dim}, space is {self.dim}")
-            self._append(rid, outcome,
-                         np.frombuffer(blob, dtype=np.int8).copy(), author)
+        self.refresh()
 
     def refresh(self) -> int:
         """Pull in rows other agents wrote to this file since open.
@@ -428,45 +512,57 @@ class Space:
             return 0
         known = set(self._ids)
         added = 0
-        for rid, _, outcome, dim, blob, author in self._db.execute(
-                "SELECT id, situation, outcome, dim, glyph, author "
-                "FROM precedents"):
+        for rid, outcome, dim, blob, author, ts in self._db.execute(
+                "SELECT id, outcome, dim, glyph, author, ts "
+                "FROM precedents ORDER BY ts, rowid"):
             if rid in known:
                 continue
             if dim != self.dim:
                 raise ValueError(
                     f"precedent {rid} has dim {dim}, space is {self.dim}")
             self._append(rid, outcome,
-                         np.frombuffer(blob, dtype=np.int8).copy(), author)
+                         np.frombuffer(blob, dtype=np.int8).copy(),
+                         author, ts)
             added += 1
         return added
 
     def merge(self, other_path: str) -> int:
         """Union another Space file into this one (by precedent id).
         The exchange primitive between agents: ship the file, verify
-        its receipts against your own world, then merge. Returns how
-        many precedents were new."""
+        its receipts against your own world, then merge. Rows from a
+        file written under an older encoding are re-encoded from their
+        situations on the way in. Returns how many precedents were
+        new."""
         other = sqlite3.connect(str(Path(other_path).expanduser()))
         cols = [r[1] for r in other.execute("PRAGMA table_info(precedents)")]
-        select = ("SELECT id, situation, outcome, dim, glyph, author "
-                  "FROM precedents" if "author" in cols else
-                  "SELECT id, situation, outcome, dim, glyph, 'anon' "
-                  "FROM precedents")
+        stale = _file_encoding(other) < ENCODING
+        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} " \
+                 "FROM precedents".format(
+                     a="author" if "author" in cols else "'anon'",
+                     t="ts" if "ts" in cols else "0.0",
+                     e="events" if "events" in cols else "NULL")
         known = set(self._ids)
         added = 0
-        for rid, situation, outcome, dim, blob, author in other.execute(select):
+        for rid, situation, outcome, dim, blob, author, ts, ev in \
+                other.execute(select):
             if rid in known:
                 continue
             if dim != self.dim:
                 raise ValueError(
                     f"precedent {rid} has dim {dim}, space is {self.dim}")
-            glyph = np.frombuffer(blob, dtype=np.int8).copy()
-            self._append(rid, outcome, glyph, author)
+            if stale:
+                glyph = self.encode(json.loads(situation),
+                                    _events_from_blob(ev, dim))
+            else:
+                glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            self._append(rid, outcome, glyph, author, ts)
             if self._db is not None:
                 self._db.execute(
-                    "INSERT OR REPLACE INTO precedents "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (rid, situation, outcome, dim, glyph.tobytes(), author))
+                    "INSERT OR REPLACE INTO precedents (id, situation,"
+                    " outcome, dim, glyph, author, ts, events)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (rid, situation, outcome, dim, glyph.tobytes(), author,
+                     ts, ev))
             added += 1
         if self._db is not None:
             self._db.commit()
@@ -483,3 +579,135 @@ class Space:
 
     def __exit__(self, *exc) -> None:
         self.close()
+
+
+# ── the contract as a function ──────────────────────────────────────
+
+@dataclass
+class Decision:
+    """What decide() concluded. Act on `outcome` only when `act`.
+
+    reason: 'reflex' (act), 'insufficient' (nothing clears min_sim),
+    'uncalibrated' (fewer than min_count precedents), 'low_confidence'
+    (no consensus), or 'vetoed' (a recorded failure is as close as the
+    wins and newer than them). `lifted` is True when a close veto
+    exists but a newer win outranks it."""
+
+    act: bool
+    outcome: Optional[str]
+    reason: str
+    answer: Answer
+    veto: Optional[Evidence]
+    lifted: bool
+
+    def to_json(self) -> Dict[str, Any]:
+        return {"act": self.act, "outcome": self.outcome,
+                "reason": self.reason, "lifted": self.lifted,
+                "veto": self.veto.to_json() if self.veto else None,
+                "answer": self.answer.to_json()}
+
+
+def decide(wins: Space, vetoes: Space, situation: Dict[str, str],
+           events: Optional[List[np.ndarray]] = None, *,
+           min_confidence: float = 0.5, min_count: int = 3,
+           min_veto_count: int = 1) -> Decision:
+    """THE CONTRACT (see SPEC): the three trust gates on the wins, then
+    the veto check, with the newest evidence winning.
+
+    A veto of the top outcome counts when a recorded failure is at
+    least as close as the wins recommending it (sim >= answer.support).
+    It blocks while at least `min_veto_count` such failures exist AND
+    the newest of them is newer than the newest qualifying win; a later
+    reproduction lifts it. min_veto_count=1 is fail-closed (one failure
+    stops the reflex); 2+ demands corroboration (harder to sabotage)."""
+    answer = wins.query(situation, events)
+    if not answer.sufficient:
+        return Decision(False, None, "insufficient", answer, None, False)
+    top = answer.top
+    veto = vetoes.evidence(situation, top, events,
+                           min_sim=max(answer.support, 1e-9))
+    win = wins.evidence(situation, top, events)
+    close = veto.count >= min_veto_count
+    lifted = close and win.latest > veto.latest
+    if close and not lifted:
+        return Decision(False, top, "vetoed", answer, veto, False)
+    if answer.count < min_count:
+        return Decision(False, top, "uncalibrated", answer,
+                        veto if veto.count else None, lifted)
+    if answer.confidence < min_confidence:
+        return Decision(False, top, "low_confidence", answer,
+                        veto if veto.count else None, lifted)
+    return Decision(True, top, "reflex", answer,
+                    veto if veto.count else None, lifted)
+
+
+# ── store schema and migration ──────────────────────────────────────
+
+def _ensure_schema(db: sqlite3.Connection) -> None:
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS precedents ("
+        " id TEXT PRIMARY KEY, situation TEXT NOT NULL,"
+        " outcome TEXT NOT NULL, dim INTEGER NOT NULL,"
+        " glyph BLOB NOT NULL, author TEXT NOT NULL DEFAULT 'anon',"
+        " ts REAL NOT NULL DEFAULT 0, events BLOB)")
+    db.execute("CREATE TABLE IF NOT EXISTS meta ("
+               " key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    cols = [r[1] for r in db.execute("PRAGMA table_info(precedents)")]
+    # migrate older files in place
+    if "author" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN author "
+                   "TEXT NOT NULL DEFAULT 'anon'")
+    if "ts" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN ts "
+                   "REAL NOT NULL DEFAULT 0")
+    if "events" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN events BLOB")
+    rows = db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0]
+    stamped = db.execute(
+        "SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+    if stamped is None:
+        # an empty file starts on the current encoding; a populated
+        # file without a stamp predates stamping (encoding 1)
+        db.execute("INSERT INTO meta VALUES ('encoding', ?)",
+                   (str(ENCODING if rows == 0 else 1),))
+
+
+def _file_encoding(db: sqlite3.Connection) -> int:
+    try:
+        row = db.execute(
+            "SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+    except sqlite3.Error:
+        row = None
+    if row is not None:
+        return int(row[0])
+    try:
+        rows = db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0]
+    except sqlite3.Error:
+        rows = 0
+    return ENCODING if rows == 0 else 1
+
+
+def _events_from_blob(blob: Optional[bytes],
+                      dim: int) -> Optional[List[np.ndarray]]:
+    if not blob:
+        return None
+    flat = np.frombuffer(blob, dtype=np.int8)
+    return [row.copy() for row in flat.reshape(-1, dim)]
+
+
+def _reencode_rows(db: sqlite3.Connection, space: "Space") -> int:
+    rows = db.execute(
+        "SELECT id, situation, dim, events FROM precedents").fetchall()
+    done = 0
+    for rid, situation_json, dim, ev in rows:
+        try:
+            glyph = space.encode(json.loads(situation_json),
+                                 _events_from_blob(ev, space.dim))
+        except (ValueError, TypeError, json.JSONDecodeError):
+            continue  # no usable situation stored: keep the old glyph
+        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?",
+                   (glyph.tobytes(), space.dim, rid))
+        done += 1
+    db.execute("INSERT OR REPLACE INTO meta VALUES ('encoding', ?)",
+               (str(ENCODING),))
+    return done

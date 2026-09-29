@@ -51,15 +51,20 @@ class Memory:
         return self._spaces
 
     def query(self, situation: Dict[str, str]) -> Dict[str, Any]:
+        from glyphh_kernel import decide
         s = self.spaces()
-        answer = s["wins"].query(situation)
-        out = answer.to_json()
-        veto = s["vetoes"].matches(situation, answer.top) if answer.top else 0.0
+        # the kernel's contract, with count reported (not gated) so a
+        # precedent of one still surfaces as a cited reminder
+        d = decide(s["wins"], s["vetoes"], situation,
+                   min_confidence=ACT_CONFIDENCE, min_count=1)
+        out = d.answer.to_json()
+        veto = (s["vetoes"].matches(situation, d.answer.top)
+                if d.answer.top else 0.0)
         out["veto_match"] = round(veto, 4)
-        out["act"] = bool(answer.sufficient
-                          and answer.confidence >= ACT_CONFIDENCE
-                          and veto < answer.support)
-        out["calibrated"] = answer.count >= CALIBRATED_COUNT
+        out["act"] = d.act
+        out["reason"] = d.reason
+        out["lifted"] = d.lifted  # a newer win outranks a close veto
+        out["calibrated"] = d.answer.count >= CALIBRATED_COUNT
         return out
 
     def record(self, store: str, situation: Dict[str, str], outcome: str,
@@ -99,9 +104,11 @@ TOOLS = [
      "description": "Ask the wins store what worked in similar situations. "
                     "Returns the top outcome with confidence, support, "
                     "count, receipts, the nearest veto of that outcome, "
-                    "and `act` (sufficient, confidence >= 0.5, veto below "
-                    "support). With `calibrated` false treat it as a cited "
-                    "reminder, not a settled rule.",
+                    "and `act` (sufficient, confidence >= 0.5, and no veto "
+                    "as close as the wins unless a newer win outranks it; "
+                    "`reason` says which gate decided, `lifted` whether a "
+                    "newer win lifted a veto). With `calibrated` false "
+                    "treat it as a cited reminder, not a settled rule.",
      "inputSchema": {"type": "object", "properties": {"situation": SITUATION},
                      "required": ["situation"]}},
     {"name": "record",

@@ -142,3 +142,25 @@ def test_mcp_json_points_at_the_server():
     args = config["mcpServers"]["glyphh"]["args"]
     assert args == ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"]
     assert (REPO / "plugin" / "mcp" / "server.py").exists()
+
+
+def test_query_reports_reason_and_a_newer_win_lifts_a_veto(home):
+    """A veto of the recommended outcome blocks `act` until a newer win
+    for it arrives — vetoes are outranked by later evidence, not
+    permanent."""
+    (first,) = session(home, tool(1, "query", situation=SITUATION))
+    assert payload(first)["reason"] == "reflex"
+    (_, blocked) = session(
+        home,
+        tool(1, "veto", situation=SITUATION,
+             outcome="canary_then_full_rollout", author="grader"),
+        tool(2, "query", situation=SITUATION))
+    assert payload(blocked)["act"] is False
+    assert payload(blocked)["reason"] == "vetoed"
+    (_, lifted) = session(
+        home,
+        tool(1, "record", situation=SITUATION,
+             outcome="canary_then_full_rollout", author="reproducer"),
+        tool(2, "query", situation=SITUATION))
+    answer = payload(lifted)
+    assert answer["act"] is True and answer["lifted"] is True

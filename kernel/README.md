@@ -141,9 +141,9 @@ composed structures can be composed again.
 |---|---|
 | `symbol(key, seed=42, dim=4096)` | Deterministic glyph for a key: same inputs produce the identical vector on any machine. Agents that share a seed share a vocabulary; different seeds produce unrelated vectors. |
 | `bind(a, b)` | Elementwise multiply. Self-inverse; the result is dissimilar to both inputs. Used for role–value pairs. |
-| `bundle(parts)` | Majority vote. The result is similar to every input. Capacity is limited: past a few dozen parts, individual contributions fade. Keep the source data if you need it back exactly. |
+| `bundle(parts)` | Majority vote. The result is similar to every input, and independent of the order the parts come in (ties are broken by a hash of the parts as a set). Capacity is limited: past a few dozen parts, individual contributions fade. Keep the source data if you need it back exactly. |
 | `roll(v, k)` | Rotate. Encodes order and position; `roll(v, -k)` inverts it. |
-| `sim(a, b)` | Cosine in [−1, 1]. Random glyphs measure near 0. For encoded situations, sim roughly tracks the fraction of shared attribute pairs: two 4-attribute situations sharing 2 attributes measure ~0.4–0.5 even if the shared attributes are irrelevant to the decision. Set thresholds with this in mind. |
+| `sim(a, b)` | Cosine in [−1, 1]. Random glyphs measure near 0. For encoded situations, sim tracks the fraction of shared attribute pairs, whichever attributes they are. Measured for 4-attribute situations: sharing 1, 2 or 3 gives 0.14, 0.28 or 0.44. For 2-attribute situations, sharing 1 gives 0.25. That holds even if the shared attributes are irrelevant to the decision. Set thresholds with this in mind. |
 
 ## Constructs
 
@@ -161,12 +161,23 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
       author="anon", path=None)
 ```
 
-- `record(situation, outcome, events=None)` — store one case. A
-  situation is a flat dict of attributes; optional `events` (a list
-  of glyphs) are folded in as a strand so order is part of the match.
+- `record(situation, outcome, events=None, ts=None)` stores one
+  case, time-stamped (now, unless `ts` is given).
+  - A situation is a flat dict of attributes.
+  - The optional `events` (a list of glyphs) are folded in as a strand,
+    so order is part of the match. They are stored with the row, so
+    re-encoding is lossless.
 - `query(situation, events=None)` → `Answer` with `sufficient`,
   `confidence`, `support`, `count`, `top`, `outcomes`, `receipts`.
   Only precedents at or above `min_sim` contribute to the vote.
+- `answers(situation, events=None, min_count=1)` → `[Evidence]` for
+  every outcome with qualifying precedent, strongest first. Use it
+  when a situation genuinely has several true outcomes (a file that
+  imports five modules): gate each outcome on its own `count` instead
+  of its share of the vote.
+- `evidence(situation, outcome, events=None)` → `Evidence(count,
+  support, nearest, latest, authors)` for one candidate. It is judged
+  over every precedent, not just the top `k`.
 - `matches(situation, outcome, events=None)` — max similarity among
   precedents with that exact outcome. A direct nearest-case check
   that a consensus vote cannot dilute; used for vetoes.
@@ -176,6 +187,13 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
   Authors are preserved and the result is persisted.
 - Files open in WAL mode, so several processes can share one. Call
   `close()` or use the Space as a context manager.
+- **Stores outlive encodings.** Each file records the encoding it was
+  written under (`ENCODING`, currently 2).
+  - Opening or merging a file from an older encoding re-encodes its
+    glyphs from the stored situations and events.
+  - Files from before time-stamping read `ts = 0`.
+  - `reencode_store(path)` forces a rebuild, for example after changing
+    `seed` or `decay`.
 
 ## The decision loop
 
@@ -185,21 +203,33 @@ and record the graded result either way. Wins become future answers;
 failures become vetoes.
 
 ```python
+from glyphh_kernel import Space, decide
+
 wins, vetoes = Space(path="wins.db"), Space(path="vetoes.db")
 
-def decide(situation, events, fallback):
-    a = wins.query(situation, events)
-    if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
-        # Veto check: a recorded failure of this action as close as
-        # the wins recommending it blocks the shortcut.
-        if vetoes.matches(situation, a.top, events) < a.support:
-            return a.top, "reflex"
-    return fallback(situation, events), "consult"
-
-action, mode = decide(situation, events, fallback)
+d = decide(wins, vetoes, situation, events)   # the contract, as code
+action = d.outcome if d.act else fallback(situation, events)
 success = world_grades(action)     # graded by outcome, not self-assessed
 (wins if success else vetoes).record(situation, action, events)
 ```
+
+`decide()` applies the three trust gates and then the veto check, and
+reports `reason`: `reflex`, `insufficient`, `uncalibrated`,
+`low_confidence` or `vetoed`.
+
+The three gates:
+- `sufficient`: something clears `min_sim`;
+- `confidence >= 0.5`;
+- `count >= 3`.
+
+The veto check:
+- A recorded failure of the recommended action blocks the reflex when
+  it is as close as the wins **and newer than the newest win**.
+- A later reproduction lifts an older veto (`lifted=True`), and a later
+  failure re-imposes it.
+- `min_veto_count=2` demands corroborated failures before blocking.
+  That makes it harder for one bad grader to erase a true fact, at the
+  cost of reacting more slowly.
 
 The fallback can be anything: a rule, an LLM call, a human. As
 precedent accumulates, the fallback is consulted less.
@@ -213,11 +243,16 @@ precedent accumulates, the fallback is consulted less.
    (ids, regions, timestamps) make unrelated situations measure
    similar. Set `min_sim` to the attribute-overlap fraction that
    should count as the same kind of situation.
-3. **Vetoes suppress; they don't erase.** A blocked action can fire
-   again after conditions change until failures accumulate to parity
-   with wins. Use `matches()` for veto checks, not `query()` — a
-   consensus vote lets unrelated failures dilute the veto.
-4. **Don't use precedent for invariants.** Auth checks, money
+3. **Vetoes suppress; they don't erase, and the newest evidence
+   wins.** A close failure blocks the reflex until a newer success for
+   the same action outranks it. Use `matches()` / `decide()` for veto
+   checks, not `query()`, because a consensus vote lets unrelated
+   failures dilute the veto.
+4. **One question can have several true answers.** When confidence
+   splits across outcomes that are all correct, that is not
+   disagreement. Read `answers()` and gate each outcome on its own
+   count.
+5. **Don't use precedent for invariants.** Auth checks, money
    conservation, and state-machine legality stay as ordinary code.
 
 ## Multiple agents
@@ -244,6 +279,18 @@ Numbers from the replays this design was validated on:
 - A separate agent, given only this file and the spec, built a
   working application on the kernel unaided. The problems it found
   are fixed and covered in `test_kernel.py`.
+- Four agents given only the kernel built a shared language, a glyph
+  protocol, a knowledge base that trusts only independent
+  reproductions, and a reasoning layer. A second swarm then used that
+  stack to audit a multi-repo codebase: 632 claims and 1,737 grades,
+  with all 7 planted claims (3 true, 4 false) judged correctly.
+  - A numpy-only control reached comparable tooling.
+  - The kernel's contribution was its trust defaults and its fixed
+    encoding.
+  - The kernel fixes in encoding 2 (time-ordered vetoes, `answers()`,
+    `decide()`, unbiased tie-breaks) came from what those agents hit.
+
+  See [`research/agent-language/`](research/agent-language/).
 
 ## Claude Code integration
 
@@ -285,6 +332,9 @@ directly; the MCP server opens it through the kernel.
 ```bash
 .venv/bin/python -m pytest test_kernel.py test_plugin.py test_mcp.py -q
 ```
+
+The research stacks carry their own tests; see
+`research/agent-language/README.md`.
 
 ## License
 

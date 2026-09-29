@@ -103,9 +103,10 @@ query  situation={"task": "long_background_run",
 ```
 
 Act on `top` only when `act` is true — it means all three hold:
-`sufficient`, `confidence >= 0.5`, and the nearest veto of that
-outcome (`veto_match`) is below `support`. (Kernel equivalent:
-`vetoes.matches(situation, a.top) < a.support`.) With `calibrated`
+`sufficient`, `confidence >= 0.5`, and no veto of that outcome is as
+close as the wins unless a NEWER win outranks it (`reason` says which
+gate decided; `lifted` is true when a later win lifted an older veto).
+(Kernel equivalent: `decide(wins, vetoes, situation)`.) With `calibrated`
 false (`count < 3`) treat the answer as a cited reminder, not a
 settled rule: precedent of one is a note, not calibration. To vet an
 approach you are considering rather than asking what worked, use

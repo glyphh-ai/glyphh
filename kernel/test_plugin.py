@@ -36,7 +36,9 @@ def workspace(tmp_path):
                       "big_bang_deploy")
     session = f"pytest-{tmp_path.name}"
     yield tmp_path, session
-    shutil.rmtree("/tmp/glyphh-hooks", ignore_errors=True)
+    import tempfile
+    shutil.rmtree(Path(tempfile.gettempdir()) / "glyphh-hooks",
+                  ignore_errors=True)
 
 
 def test_session_start_injects_state(workspace):

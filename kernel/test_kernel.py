@@ -75,8 +75,10 @@ def test_dimension_mismatch_refused(tmp_path):
 
 
 def test_below_min_sim_rows_carry_no_vote():
-    """The nearest row clears the bar; distant rows must not vote."""
-    space = Space(min_sim=0.5)
+    """The nearest row clears the bar; distant rows must not vote.
+    3 of 4 shared attributes measure ~0.44 under the unbiased
+    tie-break, so the bar for 'same kind of situation' is 0.4."""
+    space = Space(min_sim=0.4)
     space.record({"a": "1", "b": "2", "c": "3", "d": "4"}, "right")
     for i in range(5):
         space.record({"w": f"x{i}", "y": f"z{i}"}, "wrong")
@@ -228,3 +230,171 @@ def test_reencode_store_restores_matching(tmp_path):
     assert answer.sufficient and answer.top == "gold_spoon"
     assert answer.receipts[0][1] > 0.99
     fixed.close()
+
+
+# ── encoding 2: unbiased tie-breaks, time, events, many answers ─────
+
+def test_tiebreak_has_no_position_bias():
+    """Which attribute differs must not change similarity. Encoding 1
+    derived tie-breaks from the first sorted part: differing in the
+    first attribute cost ~2x more than differing in the last."""
+    space = Space()
+    for n in (2, 4, 6):
+        base = {f"a{i}": f"v{i}" for i in range(n)}
+        first, last = dict(base), dict(base)
+        first["a0"] = "X"
+        last[f"a{n - 1}"] = "X"
+        g = space.encode(base)
+        gap = abs(sim(g, space.encode(first)) - sim(g, space.encode(last)))
+        assert gap < 0.06, f"n={n}: position bias {gap:.3f}"
+
+
+def test_bundle_is_order_free():
+    parts = [symbol(k) for k in ("a", "b", "c", "d")]
+    assert np.array_equal(bundle(parts), bundle(parts[::-1]))
+
+
+def test_old_encoding_store_reencodes_on_open(tmp_path):
+    """A populated file with no encoding stamp predates encoding 2:
+    opening it re-encodes the glyphs so fresh queries still match."""
+    import sqlite3
+    path = str(tmp_path / "v1.db")
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE precedents (id TEXT PRIMARY KEY,"
+               " situation TEXT NOT NULL, outcome TEXT NOT NULL,"
+               " dim INTEGER NOT NULL, glyph BLOB NOT NULL,"
+               " author TEXT NOT NULL DEFAULT 'anon')")
+    stale = np.ones(4096, dtype=np.int8)       # an encoding-1 glyph, say
+    db.execute("INSERT INTO precedents VALUES (?, ?, ?, ?, ?, ?)",
+               ("r1", '{"task": "x", "constraint": "y"}', "out", 4096,
+                stale.tobytes(), "a"))
+    db.commit(); db.close()
+    space = Space(path=path)
+    answer = space.query({"task": "x", "constraint": "y"})
+    assert answer.top == "out" and answer.receipts[0][1] > 0.99
+    space.close()
+    db = sqlite3.connect(path)
+    assert db.execute("SELECT value FROM meta WHERE key='encoding'"
+                      ).fetchone()[0] == "2"
+    assert db.execute("SELECT ts FROM precedents").fetchone()[0] == 0.0
+    db.close()
+
+
+def test_events_persist_so_reencoding_is_lossless(tmp_path):
+    from glyphh_kernel import reencode_store
+    import sqlite3
+    path = str(tmp_path / "ev.db")
+    events = [symbol("up"), symbol("down")]
+    with Space(path=path) as space:
+        space.record({"kind": "flap"}, "scale_down", events=events)
+    db = sqlite3.connect(path)
+    db.execute("UPDATE precedents SET glyph = ?",
+               (np.ones(4096, dtype=np.int8).tobytes(),))
+    db.commit(); db.close()
+    assert reencode_store(path) == 1
+    with Space(path=path) as space:
+        answer = space.query({"kind": "flap"}, events=events)
+        assert answer.receipts[0][1] > 0.99   # trajectory survived
+
+
+def test_records_are_time_stamped(tmp_path):
+    path = str(tmp_path / "t.db")
+    with Space(path=path) as space:
+        space.record({"k": "v"}, "a", ts=100.0)
+        space.record({"k": "v"}, "a", ts=200.0)
+    with Space(path=path) as space:
+        assert space.evidence({"k": "v"}, "a").latest == 200.0
+
+
+def test_answers_reads_many_true_outcomes():
+    """A file that imports three modules is not a disagreement: each
+    outcome is gated on its own count, not its share of the vote."""
+    space = Space(min_sim=0.4)
+    situation = {"file": "app.py", "relation": "imports"}
+    for module in ("os", "json", "numpy"):
+        for grader in ("a", "b", "c"):
+            space.author = grader
+            space.record(situation, module)
+    answer = space.query(situation)
+    assert answer.confidence < 0.5            # the vote splits three ways
+    got = space.answers(situation, min_count=3)
+    assert sorted(e.outcome for e in got) == ["json", "numpy", "os"]
+    assert all(e.count == 3 and e.authors == ["a", "b", "c"] for e in got)
+    assert space.answers({"file": "other.py", "relation": "x"}) == []
+
+
+def test_evidence_sees_past_top_k():
+    space = Space(k=3)
+    situation = {"k": "v"}
+    for _ in range(5):
+        space.record(situation, "crowd")
+    space.record({"k": "v", "near": "miss"}, "rare")         # close, not top
+    assert "rare" not in space.query(situation).outcomes   # crowded out
+    assert space.evidence(situation, "rare").count == 1
+
+
+# ── decide(): the contract, with the newest evidence winning ────────
+
+def _stores(n_wins=3, t0=10.0):
+    wins, vetoes = Space(min_sim=0.4), Space(min_sim=0.4)
+    for i in range(n_wins):
+        wins.record({"task": "deploy", "env": "prod"}, "canary", ts=t0 + i)
+    return wins, vetoes
+
+
+def test_decide_reflex_needs_three_gates():
+    from glyphh_kernel import decide
+    wins, vetoes = _stores(3)
+    d = decide(wins, vetoes, {"task": "deploy", "env": "prod"})
+    assert d.act and d.reason == "reflex" and d.outcome == "canary"
+    one, _ = _stores(1)
+    assert decide(one, vetoes, {"task": "deploy", "env": "prod"}
+                  ).reason == "uncalibrated"
+    assert decide(wins, vetoes, {"task": "cook", "env": "home"}
+                  ).reason == "insufficient"
+
+
+def test_decide_newer_veto_blocks_newer_win_lifts():
+    from glyphh_kernel import decide
+    situation = {"task": "deploy", "env": "prod"}
+    wins, vetoes = _stores(3)                   # wins at t=10..12
+    vetoes.record(situation, "canary", ts=20.0)  # the world changed
+    d = decide(wins, vetoes, situation)
+    assert not d.act and d.reason == "vetoed"
+    wins.record(situation, "canary", ts=30.0)    # reproduced again later
+    d = decide(wins, vetoes, situation)
+    assert d.act and d.lifted and d.reason == "reflex"
+    vetoes.record(situation, "canary", ts=40.0)  # and it failed again
+    assert decide(wins, vetoes, situation).reason == "vetoed"
+
+
+def test_decide_min_veto_count_resists_a_lone_saboteur():
+    from glyphh_kernel import decide
+    situation = {"task": "deploy", "env": "prod"}
+    wins, vetoes = _stores(3)
+    vetoes.author = "newcomer"
+    vetoes.record(situation, "canary", ts=20.0)
+    assert decide(wins, vetoes, situation).reason == "vetoed"   # fail-closed
+    assert decide(wins, vetoes, situation, min_veto_count=2).act
+    vetoes.author = "second"
+    vetoes.record(situation, "canary", ts=21.0)
+    assert decide(wins, vetoes, situation,
+                  min_veto_count=2).reason == "vetoed"
+
+
+def test_decide_legacy_rows_stay_fail_closed():
+    """Rows from before time-stamping carry ts=0: a legacy veto still
+    blocks legacy wins, exactly as encoding 1 behaved."""
+    from glyphh_kernel import decide
+    situation = {"task": "deploy", "env": "prod"}
+    wins, vetoes = _stores(3, t0=0.0)
+    wins._ts = [0.0] * len(wins._ts)
+    vetoes.record(situation, "canary", ts=0.0)
+    assert decide(wins, vetoes, situation).reason == "vetoed"
+
+
+def test_decision_serializes():
+    from glyphh_kernel import decide
+    wins, vetoes = _stores(3)
+    out = decide(wins, vetoes, {"task": "deploy", "env": "prod"}).to_json()
+    assert out["act"] is True and out["answer"]["count"] == 3

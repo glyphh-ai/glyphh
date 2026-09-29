@@ -11,10 +11,13 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-MARKER_DIR = Path("/tmp/glyphh-hooks")
+# per-session markers live in the system temp dir ($TMPDIR on macOS),
+# not a hard-coded /tmp: sandboxed hosts may only allow writes there
+MARKER_DIR = Path(tempfile.gettempdir()) / "glyphh-hooks"
 
 
 def memory_dir() -> Path:
