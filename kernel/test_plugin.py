@@ -111,3 +111,15 @@ def test_plugin_kernel_copy_in_sync():
 def test_plugin_skill_copy_in_sync():
     assert (REPO / "plugin" / "skills" / "glyphh-memory" / "SKILL.md").read_text() == \
         (REPO / ".claude" / "skills" / "glyphh-memory" / "SKILL.md").read_text()
+
+
+def test_user_prompt_matches_morphology_and_typos(workspace):
+    """'deploying'/'deploy' and suffix typos must still surface the
+    precedent — the miss that motivated prefix matching was a prompt
+    saying 'fish'/'Christ' against stored 'fishing'/'chris'."""
+    cwd, session = workspace
+    result = run_hook("user_prompt.py", {
+        "session_id": session, "cwd": str(cwd),
+        "prompt": "we're deploying the servicey thing, canary env is up"})
+    assert result.returncode == 0
+    assert "canary_then_full_rollout" in result.stdout

@@ -29,6 +29,23 @@ def tokens(text: str) -> set:
             if t not in STOP_WORDS}
 
 
+def overlap(stored: set, prompt: set) -> int:
+    """Tokens match exactly OR on a shared prefix of >= 4 chars when
+    one extends the other ('fishing'/'fish', 'chris'/'christ') —
+    morphology and typos-by-suffix without a stemmer. Counts each
+    stored token at most once."""
+    hits = 0
+    for s in stored:
+        if s in prompt:
+            hits += 1
+            continue
+        if any(len(s) >= 4 and len(p) >= 4
+               and (p.startswith(s) or s.startswith(p))
+               for p in prompt):
+            hits += 1
+    return hits
+
+
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -60,9 +77,9 @@ def main() -> None:
 
     for key, entry in grouped.items():
         situation = json.loads(key)
-        overlap = situation_tokens(situation) & prompt_tokens
-        if len(overlap) >= 2:
-            scored.append((len(overlap), situation, entry))
+        hits = overlap(situation_tokens(situation), prompt_tokens)
+        if hits >= 2:
+            scored.append((hits, situation, entry))
     if not scored:
         return
 
