@@ -27,9 +27,18 @@ in git history on the `archive/full-history` branch.
 pip install numpy   # that's all
 ```
 
-Copy `glyphh_kernel.py` into your project, or hand this README plus
-that file to an agent as context. The file and this document together
-are the complete interface.
+Copy `glyphh_kernel.py` into your project, or hand it to an agent as
+context. **The file carries its own manual**: `spec()` returns the
+substrate guidance (the primitives, the grounded loop, the trust
+rules), so an agent that receives only the file — via pip, a copy, or
+a paste — still gets the full guidance:
+
+```python
+from glyphh_kernel import spec
+print(spec())   # read this before recording or querying anything
+```
+
+This README is the human-readable superset of the same spec.
 
 ## Sixty seconds
 

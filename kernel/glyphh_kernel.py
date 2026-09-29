@@ -2,16 +2,9 @@
 glyphh kernel — the AI-native kernel. Single file, numpy + stdlib only.
 
 This is software whose user is a model. There is no UI, no service, no
-config. There are five primitives, two constructs, and one contract:
-
-  primitives   symbol · bind · bundle · roll · sim
-  constructs   Strand (ordered meaning) · Space (graded precedent)
-  contract     nothing enters a Space ungraded; every answer carries
-               receipts; confidence tells the caller when to trust it.
-
-State is a SQLite file the agent can carry, diff, merge, and hand to
-another agent. The full semantics is in KERNEL.md, written for a model
-reader. The spec is the interface.
+config. If you are an agent reading this: call spec() — or read SPEC
+below — before using the kernel. The file carries its own manual so
+the guidance can never be separated from the code.
 """
 
 from __future__ import annotations
@@ -27,6 +20,90 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
+
+SPEC = """\
+glyphh kernel — substrate guidance for the agent using it
+
+WHAT THIS IS. Your state and execution layer beyond the context
+window. Contexts are mortal; the SQLite files a Space writes are not.
+Record graded experience as you work; the next context (yours or
+another agent's) reopens the files and inherits ground truth instead
+of prose about it.
+
+THE FIVE PRIMITIVES. All glyphs are bipolar +/-1 vectors of one fixed
+dimension (default 4096); every operation returns the type it takes,
+so composites nest indefinitely.
+  symbol(key, seed=42, dim)  deterministic glyph: same inputs -> the
+      identical vector on any machine, forever. Shared seed = shared
+      vocabulary between agents; different seeds are mutual noise.
+  bind(a, b)     associate (elementwise multiply). Self-inverse; the
+      result resembles neither input. Use for role-filler pairs.
+  bundle(parts)  superpose (majority vote); resembles ALL inputs.
+      Capacity is finite: past a few dozen parts detail fades and gist
+      survives — that is abstraction; keep receipts for the detail.
+  roll(v, k)     rotate: order, position, depth. Undo with roll(v,-k).
+  sim(a, b)      cosine in [-1, 1]. Random glyphs sit near 0. For
+      situations, sim tracks the FRACTION OF SHARED ATTRIBUTE PAIRS —
+      two 4-attribute situations sharing 2 attributes measure ~0.4-0.5
+      even when the shared attributes are decision-irrelevant.
+
+THE TWO CONSTRUCTS.
+  Strand: ordered meaning. append() glyphs; state(decay) folds the
+      sequence into one glyph where recent items dominate and order
+      matters. Detail recoverable a few steps back; the KIND of
+      trajectory recognizable much longer.
+  Space(dim, k, min_sim, seed, decay, author, path): graded precedent.
+      record(situation, outcome, events=None) — one write, permanent.
+      query(...) -> Answer(sufficient, confidence, support, count,
+      top, outcomes, receipts); only precedents clearing min_sim vote.
+      matches(situation, outcome) — max sim among precedents with THAT
+      outcome: the veto primitive, undilutable by consensus.
+      refresh() pulls rows other agents wrote to a shared WAL file;
+      merge(other_path) unions another Space file by id, authors kept.
+
+THE CONTRACT: NOTHING UNGRADED. Route every domain decision through:
+  a = wins.query(situation, events)
+  if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
+      if vetoes.matches(situation, a.top, events) < a.support:
+          act(a.top)                      # reflex: free, cited
+      else: consult fallback              # vetoed
+  else: consult fallback                  # insufficient precedent
+  success = the WORLD grades the action   # never self-graded
+  (wins if success else vetoes).record(situation, action, events)
+Fallback chain by cost: reflex (free) -> consultant (paid) -> human
+(last resort; the answer is itself a grade). Consult rate should fall
+over the Space's life — that curve is the product metric.
+
+RULES THAT DECIDE WHETHER IT WORKS.
+  1. Trust needs three gates: sufficient (similarity), confidence
+     (consensus), count (population). A consensus of one is
+     confidence 1.0 and means almost nothing — gate count >= 3.
+  2. Attribute hygiene: encode ONLY decision-relevant attributes;
+     incidental ones (ids, regions, timestamps) poison neighborhoods.
+     Size min_sim as the attribute-overlap fraction that should count
+     as 'the same kind of situation'.
+  3. Vetoes suppress, they don't erase: a reflex is blocked once a
+     recorded failure sits as close as the wins recommending it.
+     After drift, expect a few wrong firings while failures reach
+     parity. Use matches(), never a consensus vote, for vetoes.
+  4. Precedent never overrides a proof: auth, money conservation,
+     state-machine legality stay hand-written.
+
+MORE THAN ONE AGENT. Private kernel per agent; one shared kernel per
+team, author= set so receipts show who grounded what. Share a file
+live (WAL + refresh) or ship and merge(). Verify before you trust:
+replay incoming receipts against your own world before merging.
+Meaning is operational at every scale: a concept is meaningful exactly
+to the degree its glyph's neighborhood predicts the world; a
+teammate's precedent is trustworthy exactly to the degree its
+receipts replay.
+"""
+
+
+def spec() -> str:
+    """The substrate guidance. An agent that imports this kernel cold
+    should read spec() before recording or querying anything."""
+    return SPEC
 
 
 # ── primitives ──────────────────────────────────────────────────────

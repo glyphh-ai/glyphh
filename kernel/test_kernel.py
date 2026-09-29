@@ -186,3 +186,11 @@ def test_pre_author_file_migrates(tmp_path):
     space = Space(path=path)
     assert space.query({"k": "v"}).receipts[0][4] == "anon"
     space.close()
+
+
+def test_kernel_carries_its_own_spec():
+    from glyphh_kernel import SPEC, spec
+    assert spec() == SPEC
+    for anchor in ("NOTHING UNGRADED", "three gates", "matches()",
+                   "Attribute hygiene", "merge("):
+        assert anchor in SPEC, f"spec lost its guidance on: {anchor}"
