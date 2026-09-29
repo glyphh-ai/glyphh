@@ -164,10 +164,34 @@ Numbers from the replays this design was validated on:
   working application on the kernel unaided. The problems it found
   are fixed and covered in `test_kernel.py`.
 
+## Claude Code integration
+
+The repo doubles as a plugin marketplace. `plugin/` bundles the
+kernel, a `glyphh-memory` skill, and three hooks that wire memory
+into the agent loop rather than leaving it to discretion:
+
+- **SessionStart** injects the memory's state (counts, known
+  situation kinds, vetoed approaches) into context at boot.
+- **UserPromptSubmit** matches each incoming prompt against stored
+  situations and injects relevant precedent, wins and vetoes both.
+- **Stop** blocks the end of a turn once per session if the memory
+  exists and nothing was recorded, asking for graded outcomes to be
+  written or an explicit "nothing was graded."
+
+Install:
+
+```
+/plugin marketplace add glyphh-ai/ada
+/plugin install glyphh@glyphh
+```
+
+Hooks read the SQLite files directly and stay silent in workspaces
+that don't use glyphh.
+
 ## Tests
 
 ```bash
-python3 -m pytest test_kernel.py -q
+python3 -m pytest test_kernel.py test_plugin.py -q
 ```
 
 ## License

@@ -1,0 +1,13 @@
+{
+  "name": "glyphh",
+  "owner": {
+    "name": "glyphh.ai"
+  },
+  "plugins": [
+    {
+      "name": "glyphh",
+      "source": "./plugin",
+      "description": "Graded session memory on the glyphh kernel, forced into the agent loop via hooks."
+    }
+  ]
+}
