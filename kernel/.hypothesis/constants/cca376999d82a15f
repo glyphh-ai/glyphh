@@ -1,4 +1,0 @@
-# file: /Users/timmetim/development/glyphh-master/glyphh-sdk/glyphh/temporal/__init__.py
-# hypothesis_version: 6.151.5
-
-['BeamSearchPredictor', 'Prediction', 'PredictionResult', 'TemporalEncoder', 'TrendStatistics']

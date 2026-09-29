@@ -1,4 +1,0 @@
-# file: /Users/timmetim/development/glyphh-master/glyphh-sdk/glyphh/gql/stored_procedure.py
-# hypothesis_version: 6.151.5
-
-['StoredProcedure', 'description', 'gql_query', 'lexicons', 'name']
