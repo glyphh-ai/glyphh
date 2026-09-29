@@ -87,6 +87,19 @@ what makes recall precise:
   code or CLAUDE.md; one-off facts that will never recur; anything
   you'd need to paraphrase a paragraph to encode.
 
+## Aliases
+
+The prompt hook's doorbell is lexical. When a concept has several
+surface names, add them to `<memory>/aliases.json` so unsolicited
+recall covers the paraphrases:
+
+```json
+{"angling": ["fishing"], "postgres": ["database", "db"]}
+```
+
+Add an alias whenever you notice a recall miss caused by wording —
+that is the write-time semantic layer doing its job.
+
 ## Logging
 
 If the workspace keeps a usage log (`dogfood/LOG.md`), append an

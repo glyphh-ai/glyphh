@@ -60,7 +60,7 @@ def test_user_prompt_surfaces_relevant_precedent(workspace):
         "prompt": "ok let's deploy the service to prod, the canary env is ready"})
     assert result.returncode == 0
     assert "canary_then_full_rollout" in result.stdout
-    assert "vetoed: big_bang_deploy" in result.stdout
+    assert "VETOED: big_bang_deploy" in result.stdout
 
 
 def test_user_prompt_silent_on_unrelated(workspace):
@@ -122,4 +122,43 @@ def test_user_prompt_matches_morphology_and_typos(workspace):
         "session_id": session, "cwd": str(cwd),
         "prompt": "we're deploying the servicey thing, canary env is up"})
     assert result.returncode == 0
+    assert "canary_then_full_rollout" in result.stdout
+
+
+def test_user_prompt_outcome_tokens_ring_the_bell(workspace):
+    """A prompt mentioning only the OUTCOME vocabulary (not the
+    situation's) still surfaces the precedent."""
+    cwd, session = workspace
+    result = run_hook("user_prompt.py", {
+        "session_id": session, "cwd": str(cwd),
+        "prompt": "maybe a canary rollout then going full?"})
+    assert "canary_then_full_rollout" in result.stdout
+
+
+def test_user_prompt_veto_doorbell(workspace):
+    """Contemplating a vetoed approach surfaces the veto."""
+    cwd, session = workspace
+    result = run_hook("user_prompt.py", {
+        "session_id": session, "cwd": str(cwd),
+        "prompt": "let's do a big bang deploy of the service"})
+    assert "VETOED: big_bang_deploy" in result.stdout
+
+
+def test_user_prompt_typo_tolerance(workspace):
+    """Edit-distance-1 including transpositions."""
+    cwd, session = workspace
+    result = run_hook("user_prompt.py", {
+        "session_id": session, "cwd": str(cwd),
+        "prompt": "time to depoly the sevrice now"})
+    assert "canary_then_full_rollout" in result.stdout
+
+
+def test_user_prompt_aliases(workspace):
+    """aliases.json maps surface forms to canonical tokens."""
+    cwd, session = workspace
+    (cwd / "dogfood" / "aliases.json").write_text(
+        json.dumps({"ship": ["deploy"], "svc": ["service"]}))
+    result = run_hook("user_prompt.py", {
+        "session_id": session, "cwd": str(cwd),
+        "prompt": "ok lets ship the svc"})
     assert "canary_then_full_rollout" in result.stdout
