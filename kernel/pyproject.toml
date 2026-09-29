@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "glyphh-kernel"
 version = "1.0.0"
-description = "A kernel for software whose user is an AI: graded memory, calibrated decisions, receipts."
+description = "An algebra of thought for AI: compose, compare and abstract meanings, and build graded judgment on top."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24.0"]

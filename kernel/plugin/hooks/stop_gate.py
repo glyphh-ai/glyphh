@@ -52,7 +52,7 @@ def main() -> None:
     print("glyphh memory: nothing has been recorded this session. If any "
           "decision was graded by its outcome (a command worked or "
           "failed, a fix held, the user accepted or corrected an "
-          "approach), record it to wins/vetoes now per the glyphh-memory "
+          "approach), record it to wins/vetoes now per the glyphh-think "
           "skill. If nothing was graded, say so and finish — this "
           "reminder fires once per session.", file=sys.stderr)
     sys.exit(2)

@@ -25,7 +25,7 @@ def main() -> None:
     if mem is None:
         if has_kernel(cwd):
             print("This workspace contains glyphh_kernel.py but no memory "
-                  "store yet. The glyphh-memory skill covers creating one "
+                  "store yet. The glyphh-think skill covers creating one "
                   "when graded, recurring decisions appear.")
         return
 
@@ -57,7 +57,7 @@ def main() -> None:
     if len(authors) > 1:
         lines.append(f"Contributors: {', '.join(authors)}.")
     lines.append("Query this memory before repeating a kind of decision; "
-                 "record graded outcomes as they land (glyphh-memory "
+                 "record graded outcomes as they land (glyphh-think "
                  "skill has the loop).")
     print("\n".join(lines))
 

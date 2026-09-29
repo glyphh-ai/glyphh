@@ -1,16 +1,22 @@
 # glyphh
 
-A memory and decision kernel for AI agents. One Python file, one
-dependency (numpy). An agent records graded experience — what it did
-and whether it worked — and queries it by similarity before deciding
-again. State is plain SQLite files: they persist across sessions, can
-be shared between agents, and version like any other file. There is
-no server or service; you import the module.
+An algebra of thought for AI. One Python file, one dependency (numpy).
+
+Models reason in prose, and prose doesn't compose: you can't take two
+conclusions, combine them into a third, and hand that to the next step
+as a value. glyphh gives a model values it can do that with. A meaning
+is a vector (a "glyph"). Five operations build glyphs out of glyphs,
+and every operation returns the type it takes, so anything built can
+be taken apart, compared, abstracted, and built on again. That closure
+is the point: reasoning on top of reasoning, to any depth.
+
+There is no server or service; you import the module. When a result
+is worth keeping, it's a plain SQLite file.
 
 ```
 glyphh_kernel.py    the kernel
 test_kernel.py      its tests
-dogfood/            working memory of the agent that develops this repo
+dogfood/            working state of the agent that develops this repo
 ```
 
 ## Install
@@ -20,9 +26,9 @@ pip install numpy
 ```
 
 Copy `glyphh_kernel.py` into your project. The module embeds its own
-usage guide: `spec()` returns the full guidance (primitives, the
-decision loop, thresholds), so the file is self-documenting wherever
-it ends up:
+usage guide: `spec()` returns the full guidance (primitives,
+constructs, thresholds), so the file is self-documenting wherever it
+ends up:
 
 ```python
 from glyphh_kernel import spec
@@ -31,20 +37,83 @@ print(spec())
 
 This README covers the same material with more context.
 
-## Quick start
+## Quick start: thinking in glyphs
+
+A thought is a structure: roles bound to fillers, bundled into one
+glyph.
 
 ```python
-from glyphh_kernel import Space, symbol
+from glyphh_kernel import symbol as S, bind, bundle, sim, Strand
+
+def thought(**parts):
+    return bundle([bind(S(role), filler) for role, filler in parts.items()])
+
+migrate  = thought(goal=S("move_data"),  risk=S("downtime"),   step=S("dual_write"))
+backfill = thought(goal=S("move_data"),  risk=S("lock_table"), step=S("batch_copy"))
+refactor = thought(goal=S("clean_code"), risk=S("regression"), step=S("add_tests"))
+```
+
+**Compare.** Thoughts that share structure measure close; unrelated
+ones measure near zero.
+
+```python
+sim(migrate, backfill)             # 0.25  same goal, different plan
+sim(migrate, refactor)             # -0.03 unrelated
+```
+
+**Ask.** `bind` is its own inverse, so binding a thought with a role
+reads that role back out.
+
+```python
+sim(bind(migrate, S("risk")), S("downtime"))     # 0.50  yes
+sim(bind(migrate, S("risk")), S("lock_table"))   # 0.00  no
+```
+
+**Abstract.** Bundle cases into a concept. Detail fades, gist
+survives.
+
+```python
+data_work = bundle([migrate, backfill])
+sim(data_work, migrate)            # 0.62  an instance of the concept
+sim(data_work, refactor)           # -0.01 not one
+```
+
+**Recurse.** A concept is a value like any other, so it can be a
+filler inside a bigger thought and still be queried from inside.
+
+```python
+plan  = thought(phase=S("q3"), approach=data_work, owner=S("platform"))
+inner = bind(plan, S("approach"))
+sim(inner, data_work)                         # 0.51  the concept, recovered
+sim(bind(inner, S("goal")), S("move_data"))   # 0.28  its goal, two levels down
+sim(bind(inner, S("goal")), S("clean_code"))  # 0.04  not this one
+```
+
+**Sequence.** Order is structure too. The same thoughts in a
+different order are a different thought.
+
+```python
+sim(Strand([migrate, backfill, refactor]).state(),
+    Strand([refactor, backfill, migrate]).state())   # 0.25
+```
+
+Signal weakens as structures nest (0.50 at one level, 0.28 at two),
+which is the algebra's budget: compose freely, but compare against
+known candidates rather than expecting exact recovery from deep
+inside a bundle.
+
+**Judge.** A `Space` learns a function from graded examples: record
+what a situation led to and whether it worked, then query similar
+situations later. Composed thoughts ride along as `events`.
+
+```python
+from glyphh_kernel import Space
 
 wins = Space(author="my-agent", path="wins.db")
+wins.record({"kind": "schema_change", "size": "large"}, "dual_write",
+            events=[plan])
 
-# Record an outcome that worked. One write, no training step.
-wins.record({"kind": "db_latency", "sev": "high"}, "failover",
-            events=[symbol("timeout"), symbol("retry_storm")])
-
-# Later: is there precedent for a similar situation?
-a = wins.query({"kind": "db_latency", "sev": "high"},
-               events=[symbol("timeout"), symbol("retry_storm")])
+a = wins.query({"kind": "schema_change", "size": "large"}, events=[plan])
 a.sufficient   # any precedent close enough to count?
 a.confidence   # how strongly do the close precedents agree?
 a.count        # how many cleared the similarity bar
@@ -74,7 +143,8 @@ the same items in a different order produce a different state. Use it
 for event trails. Individual items are recoverable a few steps back;
 the overall shape of the sequence is distinguishable much longer.
 
-**`Space`** — precedent storage and lookup.
+**`Space`** — a judgment defined by example. Each graded record
+is part of the definition; each query is a call.
 
 ```python
 Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
@@ -99,7 +169,8 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
 
 ## The decision loop
 
-Route decisions through precedent, fall back when precedent is thin,
+The pattern for using a `Space` as a learned function inside a
+program. Route decisions through precedent, fall back when precedent is thin,
 and record the graded result either way. Wins become future answers;
 failures become vetoes.
 
@@ -167,8 +238,9 @@ Numbers from the replays this design was validated on:
 ## Claude Code integration
 
 The repo doubles as a plugin marketplace. `plugin/` bundles the
-kernel, a `glyphh-memory` skill, and three hooks that wire memory
-into the agent loop rather than leaving it to discretion:
+kernel, a `glyphh-think` skill, and three hooks for one use of the
+algebra: a `Space` of graded precedent kept alongside the agent, wired
+into its loop rather than left to discretion:
 
 - **SessionStart** injects the memory's state (counts, known
   situation kinds, vetoed approaches) into context at boot.

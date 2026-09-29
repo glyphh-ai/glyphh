@@ -1,0 +1,9 @@
+LICENSE
+README.md
+glyphh_kernel.py
+pyproject.toml
+glyphh_kernel.egg-info/PKG-INFO
+glyphh_kernel.egg-info/SOURCES.txt
+glyphh_kernel.egg-info/dependency_links.txt
+glyphh_kernel.egg-info/requires.txt
+glyphh_kernel.egg-info/top_level.txt

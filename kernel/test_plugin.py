@@ -109,8 +109,8 @@ def test_plugin_kernel_copy_in_sync():
 
 
 def test_plugin_skill_copy_in_sync():
-    assert (REPO / "plugin" / "skills" / "glyphh-memory" / "SKILL.md").read_text() == \
-        (REPO / ".claude" / "skills" / "glyphh-memory" / "SKILL.md").read_text()
+    assert (REPO / "plugin" / "skills" / "glyphh-think" / "SKILL.md").read_text() == \
+        (REPO / ".claude" / "skills" / "glyphh-think" / "SKILL.md").read_text()
 
 
 def test_user_prompt_matches_morphology_and_typos(workspace):

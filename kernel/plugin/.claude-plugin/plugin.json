@@ -1,6 +1,6 @@
 {
   "name": "glyphh",
-  "description": "Graded session memory on the glyphh kernel, forced into the agent loop: memory state injected at session start, relevant precedent injected per prompt, and a stop gate that asks for graded outcomes to be recorded.",
+  "description": "The glyphh algebra of thought in Claude Code: the kernel, plus hooks that bring graded precedent into the agent loop. State injected at session start, relevant precedent injected per prompt, and a stop gate that asks for graded outcomes to be recorded.",
   "version": "1.0.0",
   "author": {
     "name": "glyphh.ai"
