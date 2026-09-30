@@ -91,13 +91,16 @@ def _match_quality(stored: str, prompt_tokens: set,
     stem = _stem(stored)
     if stem in prompt_stems or stem in prompt_tokens:
         return NEAR
+    # the best match over EVERY prompt token (a set has no stable order,
+    # so stopping at the first hit made the tier depend on hash order)
+    best = 0.0
     for p in prompt_tokens:
         if (len(stored) >= 4 and len(p) >= 4
                 and (p.startswith(stored) or stored.startswith(p))):
             return NEAR
         if _edit1(stored, p):
-            return FUZZY
-    return 0.0
+            best = FUZZY
+    return best
 
 
 def _load_aliases(mem: Path) -> dict:
@@ -151,10 +154,12 @@ def main() -> None:
             outcome_tokens |= tokens(outcome)
         outcome_tokens -= situation_tokens
 
+        # summed in sorted order so float rounding can't flip the
+        # threshold between runs (or between the Python and JS hooks)
         score = sum(SITUATION_W * _match_quality(t, prompt_tokens, prompt_stems)
-                    for t in situation_tokens)
+                    for t in sorted(situation_tokens))
         score += sum(OUTCOME_W * _match_quality(t, prompt_tokens, prompt_stems)
-                     for t in outcome_tokens)
+                     for t in sorted(outcome_tokens))
         if score >= THRESHOLD:
             scored.append((score, situation, entry))
     if not scored:

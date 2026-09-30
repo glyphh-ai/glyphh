@@ -1,0 +1,8 @@
+{
+  "name": "ada",
+  "description": "The Ada algebra of thought in Claude Code, on Node: the kernel, plus hooks that bring graded precedent into the agent loop. A drop-in for the Python plugin — same MCP tools, same store, no Python needed.",
+  "version": "3.0.1",
+  "author": {
+    "name": "glyphh.ai"
+  }
+}

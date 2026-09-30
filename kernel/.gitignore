@@ -4,3 +4,6 @@ __pycache__/
 *.db-shm
 *.db-wal
 .venv/
+
+# js: local toolchain links (npm install recreates them)
+js/node_modules/

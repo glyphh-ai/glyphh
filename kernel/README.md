@@ -327,14 +327,23 @@ The memory is one store, the same in every session and directory:
 `$GLYPHH_HOME/ada`, else `~/.glyphh/ada`. Hooks read its SQLite files
 directly; the MCP server opens it through the kernel.
 
+## JavaScript
+
+`js/` is a bit-identical TypeScript port of the kernel, the MCP server
+and the hooks, for Node with no dependencies. Every symbol and store
+file is the same bytes in both languages, and the Node plugin
+(`js/plugin`) is a drop-in for the Python one. See
+[`js/README.md`](js/README.md).
+
 ## Tests
 
 ```bash
 .venv/bin/python -m pytest test_kernel.py test_plugin.py test_mcp.py -q
 ```
 
-The research stacks carry their own tests; see
-`research/agent-language/README.md`.
+The JavaScript port: `cd js && npm test`. It includes the parity tests
+against this Python kernel. The research stacks carry their own tests;
+see `research/agent-language/README.md`.
 
 ## License
 

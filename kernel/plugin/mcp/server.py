@@ -183,7 +183,7 @@ def handle(memory: Memory, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         version = (msg.get("params") or {}).get("protocolVersion") or PROTOCOL
         return ok({"protocolVersion": version,
                    "capabilities": {"tools": {}},
-                   "serverInfo": {"name": "ada", "version": "1.1.0"}})
+                   "serverInfo": {"name": "ada", "version": "3.0.1"}})
     if method == "ping":
         return ok({})
     if method == "tools/list":
