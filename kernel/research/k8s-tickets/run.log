@@ -1,0 +1,15 @@
+train 1527 (base 1406 + valid 121), held out 104 (opened 2026-09-10 or later)
+learned weights: {'kind': 1.0, 'components': 4.0, 'title': 0.25, 'paths': 0.25} (validation top-1 0.72)
+tau (exact) 0.12; SVD rank 64, tau 0.12 (validation top-1 0.69)
+plugin memory at /var/folders/lg/hkvbnfr54wdcngxtt7krnhq00000gn/T/ada-k8s-uiin9d35: {'memory_dir': '/var/folders/lg/hkvbnfr54wdcngxtt7krnhq00000gn/T/ada-k8s-uiin9d35/ada', 'wins': 1809, 'vetoes': 0}
+arm=A0 majority  top1=0.35  top3=0.62  ece=0.07  cov@0.5=0.00  acc@0.5=nan  cov@0.7=0.00  acc@0.7=nan  cov@0.9=0.00  acc@0.9=nan
+arm=A1 ada  top1=0.61  top3=0.79  ece=0.10  cov@0.5=0.53  acc@0.5=0.87  cov@0.7=0.32  acc@0.7=0.97  cov@0.9=0.13  acc@0.9=1.00
+arm=A2 ada+weights  top1=0.66  top3=0.86  ece=0.12  cov@0.5=0.71  acc@0.5=0.76  cov@0.7=0.43  acc@0.7=0.87  cov@0.9=0.16  acc@0.9=0.88
+arm=A2p ada+weights+prob  top1=0.66  top3=0.89  ece=0.13  cov@0.5=0.54  acc@0.5=0.86  cov@0.7=0.32  acc@0.7=0.94  cov@0.9=0.11  acc@0.9=1.00
+arm=A3 svd+prob  top1=0.63  top3=0.91  ece=0.12  cov@0.5=0.57  acc@0.5=0.85  cov@0.7=0.25  acc@0.7=0.92  cov@0.9=0.14  acc@0.9=0.93
+arm=S reporter's /sig  n=69  top1=0.99
+arm=A2 ada+weights | no /sig  top1=0.69  top3=0.89  ece=0.18  cov@0.5=0.74  acc@0.5=0.73  cov@0.7=0.46  acc@0.7=0.88  cov@0.9=0.14  acc@0.9=1.00  n=35
+arm=A2p ada+weights+prob | no /sig  top1=0.66  top3=0.94  ece=0.18  cov@0.5=0.51  acc@0.5=0.83  cov@0.7=0.34  acc@0.7=1.00  cov@0.9=0.11  acc@0.9=1.00  n=35
+arm=A3 svd+prob | no /sig  top1=0.69  top3=0.91  ece=0.17  cov@0.5=0.51  acc@0.5=0.83  cov@0.7=0.26  acc@0.7=0.89  cov@0.9=0.11  acc@0.9=1.00  n=35
+novelty: {'novel_acc': np.float64(0.6153846153846154), 'familiar_acc': np.float64(0.6538461538461539)}
+fix retrieval: {'precedents': 439, 'graded': 56, 'ada_top3_dir_hit': 0.7678571428571429, 'top3_common_dirs_hit': 0.3392857142857143, 'random3_precedents_hit': 0.23214285714285715}
