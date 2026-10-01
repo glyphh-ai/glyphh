@@ -78,8 +78,9 @@ THE TWO CONSTRUCTS.
       matters. Detail recoverable a few steps back; the KIND of
       trajectory recognizable much longer.
   Space(dim, k, min_sim, seed, decay, author, path): graded precedent.
-      record(situation, outcome, events=None, ts=None) — one write,
-      permanent, time-stamped. A situation is an object; values may
+      record(situation, outcome=None, events=None, ts=None) — one write,
+      permanent, time-stamped. With no outcome the row is memory: it
+      shows in facts() but never votes and never takes a probability. A situation is an object; values may
       nest (see DATA). Every read below takes weights=: weighted, it
       ranks and gates on the EXACT weighted sim (the fact-tree score),
       so min_sim means 'the weighted share of attributes that must
@@ -376,6 +377,8 @@ def _keyed(data: Dict[str, Any], weights: Optional[Dict[str, Any]],
             raise TypeError(f"object keys must be strings, got {key!r}")
         own, inner = _weight(weights.get(key) if weights else None)
         value = data[key]
+        if own == 0 or _weighs_nothing(value, inner):
+            continue  # it would carry no voice in the vote
         child = _encode(value, inner, seed, dim)
         if isinstance(value, (dict, list, tuple)):
             child = roll(child, 1)
@@ -390,6 +393,8 @@ def _encode(data: Any, weights: Optional[Dict[str, Any]],
         if not data:
             raise ValueError("cannot encode an empty object")
         parts, ws = _keyed(data, weights, seed, dim)
+        if not parts:
+            raise ValueError("cannot bundle when every weight is 0")
         return bundle(parts, ws)
     if isinstance(data, (list, tuple)):
         if not data:
@@ -480,6 +485,26 @@ def _tally(children: List[Fact]) -> float:
     return sum(c.share for c in children)
 
 
+def _weighs_nothing(data: Any, weights: Optional[Dict[str, Any]]) -> bool:
+    """True when every key of an object weighs 0 here, all the way down."""
+    if not isinstance(data, dict) or not weights:
+        return False
+    for k, v in data.items():
+        own, inner = _weight(weights.get(k))
+        if own > 0 and not _weighs_nothing(v, inner):
+            return False
+    return True
+
+
+def _side_by_side(q: Any, r: Any, weights: Optional[Dict[str, Any]],
+                  seed: int, dim: int) -> float:
+    """The glyph sim of two subtrees under the same weights; 0 when either
+    side weighs nothing there (there is no glyph to compare)."""
+    if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
+        return 0.0
+    return sim(_encode(q, weights, seed, dim), _encode(r, weights, seed, dim))
+
+
 def _explain(key: str, weight: float, q: Any, r: Any,
              weights: Optional[Dict[str, Any]], seed: int, dim: int,
              glyphs: bool = True) -> Fact:
@@ -491,8 +516,7 @@ def _explain(key: str, weight: float, q: Any, r: Any,
                     "record_only" if q is _ABSENT else "query_only",
                     q, r, [])
     if not (isinstance(q, dict) and isinstance(r, dict)):
-        leaf = sim(_encode(q, weights, seed, dim),
-                   _encode(r, weights, seed, dim))
+        leaf = _side_by_side(q, r, weights, seed, dim)
         return Fact(key, weight, leaf, 0.0, leaf, "both", q, r, [])
     children = []
     for k in sorted(set(q) | set(r)):
@@ -500,8 +524,7 @@ def _explain(key: str, weight: float, q: Any, r: Any,
         children.append(_explain(k, own, q.get(k, _ABSENT),
                                  r.get(k, _ABSENT), inner, seed, dim,
                                  glyphs))
-    glyph_sim = (sim(_encode(q, weights, seed, dim),
-                     _encode(r, weights, seed, dim)) if glyphs else 0.0)
+    glyph_sim = _side_by_side(q, r, weights, seed, dim) if glyphs else 0.0
     return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both",
                 q, r, children)
 
@@ -571,7 +594,7 @@ class Answer:
     count: int                 # how many precedents cleared min_sim
     top: Optional[str]         # leading outcome, None if insufficient
     outcomes: Dict[str, float]  # similarity-weighted distribution
-    receipts: List[Tuple[str, float, str, str, str]]  # +author
+    receipts: List[Tuple[str, float, Optional[str], str, str]]  # +author
 
     def to_json(self) -> Dict[str, Any]:
         return {
@@ -620,7 +643,7 @@ class FactTree:
     precedent."""
 
     id: str
-    outcome: str
+    outcome: Optional[str]
     author: str
     ts: float
     hash: str
@@ -640,7 +663,7 @@ class FactTree:
                 "tree": self.root.to_json()}
 
     def to_text(self) -> str:
-        return (f"{self.outcome}  p {_2(self.probability)}  score "
+        return (f"{self.outcome or '(memory)'}  p {_2(self.probability)}  score "
                 f"{_2(self.score)}  (sim "
                 f"{_2(self.sim)}, {self.id} by {self.author})\n"
                 + self.root.to_text(1))
@@ -677,7 +700,7 @@ class Space:
         self.decay = decay
         self.author = author
         self._ids: List[str] = []
-        self._outcomes: List[str] = []
+        self._outcomes: List[Optional[str]] = []
         self._authors: List[str] = []
         self._ts: List[float] = []
         self._situations: List[Any] = []
@@ -710,13 +733,13 @@ class Space:
               ) -> Optional[np.ndarray]:
         return Strand(list(events)).state(self.decay) if events else None
 
-    def _append(self, rid: str, outcome: str, glyph: np.ndarray,
+    def _append(self, rid: str, outcome: Optional[str], glyph: np.ndarray,
                 author: str, ts: float, situation: Any,
                 traj: Optional[np.ndarray]) -> None:
         self._ids.append(rid)
         self._situations.append(situation)
         self._trajs.append(traj)
-        self._outcomes.append(outcome)
+        self._outcomes.append(outcome or None)  # stored as "" in the file
         self._authors.append(author)
         self._ts.append(float(ts))
         self._glyphs.append(glyph)
@@ -728,13 +751,23 @@ class Space:
         self._matrix[self._n] = glyph.astype(np.float32)
         self._n += 1
 
-    def record(self, situation: Dict[str, str], outcome: str,
+    def _drop(self, i: int) -> None:
+        for column in (self._ids, self._situations, self._trajs, self._outcomes,
+                       self._authors, self._ts, self._glyphs):
+            del column[i]
+        self._matrix[i:self._n - 1] = self._matrix[i + 1:self._n]
+        self._n -= 1
+
+    def record(self, situation: Dict[str, Any],
+               outcome: Optional[str] = None,
                events: Optional[List[np.ndarray]] = None,
                rid: Optional[str] = None,
                ts: Optional[float] = None) -> str:
         rid = rid or str(uuid.uuid4())[:12]
         ts = time.time() if ts is None else float(ts)
         glyph = self.encode(situation, events)
+        if rid in self._ids:  # the same id again replaces the row
+            self._drop(self._ids.index(rid))
         self._append(rid, outcome, glyph, self.author, ts, situation,
                      self._traj(events))
         if self._db is not None:
@@ -744,8 +777,9 @@ class Space:
                 "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
                 " dim, glyph, author, ts, events)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (rid, json.dumps(situation, ensure_ascii=False), outcome,
-                 self.dim, glyph.tobytes(), self.author, ts, blob))
+                (rid, json.dumps(situation, ensure_ascii=False),
+                 outcome or "", self.dim, glyph.tobytes(), self.author, ts,
+                 blob))
             self._db.commit()
         return rid
 
@@ -820,7 +854,8 @@ class Space:
              self._authors[i])
             for i, s in top]
         # only precedents that clear the similarity bar get a vote
-        voters = [(i, s) for i, s in top if s >= self.min_sim]
+        voters = [(i, s) for i, s in top
+                  if s >= self.min_sim and self._outcomes[i] is not None]
         if not voters:
             return Answer(False, 0.0, max(top[0][1], 0.0), 0,
                           None, {}, receipts)
@@ -872,7 +907,7 @@ class Space:
             return []
         sims = self._scores(situation, events, weights)
         found = {self._outcomes[i] for i in range(self._n)
-                 if sims[i] >= self.min_sim}
+                 if sims[i] >= self.min_sim and self._outcomes[i] is not None}
         out = [self._evidence(sims, o, self.min_sim) for o in found]
         out = [e for e in out if e.count >= min_count]
         return sorted(out, key=lambda e: (-e.count, -e.support, e.outcome))
@@ -917,7 +952,8 @@ class Space:
                          self._ts[i], self._hash(i), float(sims[i]),
                          self._exact(i, situation, traj, weights,
                                      glyphs=True),
-                         probs.get(self._outcomes[i], 0.0))
+                         probs.get(self._outcomes[i], 0.0)
+                         if self._outcomes[i] is not None else 0.0)
                 for i in order[:self.k if top is None else top]]
 
     def probabilities(self, situation: Dict[str, Any],
@@ -936,7 +972,7 @@ class Space:
     def _probabilities(self, scores: np.ndarray, tau: float,
                        skip: int = -1) -> Dict[str, float]:
         order = [int(i) for i in np.argsort(scores, kind="stable")[::-1]
-                 if i != skip][:POOL]
+                 if i != skip and self._outcomes[i] is not None][:POOL]
         if not order:
             return {}
         top = float(scores[order[0]])
@@ -954,9 +990,10 @@ class Space:
         rest, and keep the temperature (from TAUS) with the least
         log-loss on the held-out outcomes. Saved in the file, so every
         later open uses it. Events are left out. Returns tau."""
-        if self._n < 10:
-            raise ValueError("calibrate needs at least 10 precedents")
-        held = list(range(self._n))[-sample:]
+        graded = [i for i in range(self._n) if self._outcomes[i] is not None]
+        if len(graded) < 10:
+            raise ValueError("calibrate needs at least 10 precedents with an outcome")
+        held = graded[-sample:]
         scored = [(h, self._scores(self._situations[h], None, weights or {}))
                   for h in held]
         best = (float("inf"), TAU)

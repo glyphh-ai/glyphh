@@ -5,5 +5,3 @@ __pycache__/
 *.db-wal
 .venv/
 
-# js: local toolchain links (npm install recreates them)
-js/node_modules/

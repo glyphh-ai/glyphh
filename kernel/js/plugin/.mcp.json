@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "ada": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/lib/plugin/mcp/server.js"]
-    }
-  }
-}

@@ -15,7 +15,10 @@ is worth keeping, it's a plain SQLite file.
 
 ```
 glyphh_kernel.py    the kernel
-test_kernel.py      its tests
+glyphh_spec.py      the Glyphh spec: a model's typed config (layers,
+                    segments, roles, weights, clearance) over the kernel
+glyphh_nsm.py       the NSM default model: bare text in, as semantic primes
+test_*.py           the tests
 dogfood/            working state of the agent that develops this repo
 ```
 
@@ -405,23 +408,37 @@ The memory is one store, the same in every session and directory:
 `$GLYPHH_HOME/ada`, else `~/.glyphh/ada`. Hooks read its SQLite files
 directly; the MCP server opens it through the kernel.
 
-## JavaScript
+## Models: the Glyphh spec
 
-`js/` is a bit-identical TypeScript port of the kernel, the MCP server
-and the hooks, for Node with no dependencies. Every symbol and store
-file is the same bytes in both languages, and the Node plugin
-(`js/plugin`) is a drop-in for the Python one. See
-[`js/README.md`](js/README.md).
+`glyphh_spec.py` gives a model a typed config. A spec is a cortex of
+layers, each a cortex of segments, each a cortex of roles; every level has
+a `similarity_weight` (its voice in the bundle above it) and a
+`security_weight` (the clearance a reader needs to see it). Roles may be
+`key_part`, numeric (`numeric_config`, a thermometer), text
+(`text_encoding: "bag_of_words"`) or symbols and sets, and answer to
+`lexicons`. `temporal_source` names the role that stamps a record's time.
+`output.report` picks which paths the fact trees return.
+
+```python
+from glyphh_spec import Model, Spec
+model = Model(Spec.from_json(spec_json))
+model.record(data)                     # data in the spec's shape; outcome optional
+model.facts(query, clearance=0.5)      # fact trees, cut to what the reader may see
+```
+
+Specs are validated exactly: an unknown field or a value of the wrong kind
+raises `SpecError` naming where. `glyphh_nsm.py` is the spec every
+organization starts with: bare text taken down to the 64 NSM primes, plus
+its words.
 
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest test_kernel.py test_plugin.py test_mcp.py -q
+.venv/bin/python -m pytest -q
 ```
 
-The JavaScript port: `cd js && npm test`. It includes the parity tests
-against this Python kernel. The research stacks carry their own tests;
-see `research/agent-language/README.md`.
+The research stacks carry their own tests; see
+`research/agent-language/README.md`.
 
 ## License
 

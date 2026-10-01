@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glyphh-kernel"
-version = "3.0.1"
+version = "3.1.0"
 description = "An algebra of thought for AI: compose, compare and abstract meanings, and build graded judgment on top."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ Homepage = "https://glyphh.ai"
 Repository = "https://github.com/glyphh-ai/ada"
 
 [tool.setuptools]
-py-modules = ["glyphh_kernel"]
+py-modules = ["glyphh_kernel", "glyphh_spec", "glyphh_nsm"]
 
 [tool.pytest.ini_options]
 # the research stacks carry their own suites, run from their own
