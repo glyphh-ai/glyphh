@@ -37,7 +37,9 @@ def main() -> None:
     kinds = Counter()
     for situation, _, _ in wins:
         for key in ("task", "kind", "topic"):
-            if key in situation:
+            # situations may nest; only a plain label names a kind
+            if isinstance(situation, dict) and \
+                    isinstance(situation.get(key), str):
                 kinds[situation[key]] += 1
                 break
     if kinds:

@@ -4,11 +4,13 @@
  * schemas and outputs, on the same store ($GLYPHH_HOME/ada, else
  * ~/.glyphh/ada). The spaces load once and refresh() before every read,
  * so rows other sessions (or the Python server) wrote always count.
+ * Situations may nest, and every read takes a weights tree; `facts`
+ * returns the weighted read as fact trees.
  */
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { decide, Space } from "../../kernel.js";
+import { decide, encode, Space } from "../../kernel.js";
 import { pyRound } from "../../pyjson.js";
 const PROTOCOL = "2025-06-18";
 const MIN_SIM = 0.4, K = 7;
@@ -39,19 +41,28 @@ export class Memory {
         this.spacesCache.vetoes.refresh();
         return this.spacesCache;
     }
-    query(situation) {
+    query(situation, weights = null) {
         const s = this.spaces();
         // the kernel's contract, with count reported (not gated) so a
         // precedent of one still surfaces as a cited reminder
-        const d = decide(s.wins, s.vetoes, situation, { minConfidence: ACT_CONFIDENCE, minCount: 1 });
+        const d = decide(s.wins, s.vetoes, situation, { minConfidence: ACT_CONFIDENCE, minCount: 1, weights });
         const out = d.answer.toJson();
-        const veto = d.answer.top ? s.vetoes.matches(situation, d.answer.top) : 0;
+        const veto = d.answer.top ? s.vetoes.matches(situation, d.answer.top, null, weights) : 0;
         out.veto_match = pyRound(veto, 4);
         out.act = d.act;
         out.reason = d.reason;
         out.lifted = d.lifted; // a newer win outranks a close veto
         out.calibrated = d.answer.count >= CALIBRATED_COUNT;
         return out;
+    }
+    facts(situation, weights, top) {
+        const s = this.spaces();
+        const read = (space) => space.facts(situation, { weights, top, minScore: MIN_SIM }).map((f) => f.toJson());
+        return { wins: read(s.wins), vetoes: read(s.vetoes) };
+    }
+    calibrate(weights) {
+        const wins = this.spaces().wins;
+        return { store: "wins", tau: wins.calibrate({ weights }), size: wins.size };
     }
     record(store, situation, outcome, author) {
         const space = this.spaces()[store];
@@ -73,10 +84,15 @@ export class Memory {
 const SITUATION = {
     type: "object",
     description: "Decision-relevant attributes only, e.g. " +
-        '{"task": "long_background_run", "constraint": "exceeds_tool_timeout"}. Incidental ' +
-        "attributes (ids, paths, timestamps) poison neighborhoods.",
-    additionalProperties: { type: "string" },
+        '{"task": "long_background_run", "constraint": "exceeds_tool_timeout"}. Values may nest (objects, arrays as ' +
+        "sets, numbers, booleans). Incidental attributes (ids, paths, timestamps) poison neighborhoods.",
     minProperties: 1,
+};
+const WEIGHTS = {
+    type: "object",
+    description: "How much each key decides, mirroring the situation: " +
+        '{"risk": 1, "team": 0.1, "plan": {"*": 0.5, "step": 2}}. A number weighs a key; an object weighs inside it, ' +
+        'its own weight under "*". Unlisted keys weigh 1; 0 ignores a key.',
 };
 const OUTCOME = { type: "string", description: "The approach, as a short snake_case label." };
 const AUTHOR = { type: "string", description: "Your agent name; receipts carry it." };
@@ -87,7 +103,28 @@ export const TOOLS = [
             "support, count, receipts, the nearest veto of that outcome, and `act` (sufficient, confidence >= 0.5, and no " +
             "veto as close as the wins unless a newer win outranks it; `reason` says which gate decided, `lifted` whether a " +
             "newer win lifted a veto). With `calibrated` false treat it as a cited reminder, not a settled rule.",
-        inputSchema: { type: "object", properties: { situation: SITUATION }, required: ["situation"] },
+        inputSchema: { type: "object", properties: { situation: SITUATION, weights: WEIGHTS }, required: ["situation"] },
+    },
+    {
+        name: "facts",
+        description: "Why, not just what: the nearest wins and vetoes, each explained against this situation as a fact " +
+            "tree — per key its score, weight and share of the whole — and ranked by exact weighted score, each with its " +
+            "id, author, and `probability` of its outcome. Only precedents scoring 0.4 or more.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                situation: SITUATION, weights: WEIGHTS,
+                top: { type: "integer", minimum: 1, maximum: 50, description: "Precedents per store (default 3)." },
+            },
+            required: ["situation"],
+        },
+    },
+    {
+        name: "calibrate",
+        description: "Fit the wins store's probability temperature to its own graded record (needs 10+ wins), so " +
+            "`probability` in `facts` means what it says. Saved in the store; rerun after the store grows a lot. Pass the " +
+            "weights you query with.",
+        inputSchema: { type: "object", properties: { weights: WEIGHTS } },
     },
     {
         name: "record",
@@ -116,10 +153,23 @@ function situationArg(args) {
     if (!s || typeof s !== "object" || Array.isArray(s) || Object.keys(s).length === 0) {
         throw new ValueError("situation must be a non-empty object");
     }
-    if (!Object.values(s).every((v) => typeof v === "string")) {
-        throw new ValueError("situation keys and values must be strings");
-    }
+    encode(s); // nested, non-empty, encodable — or the error says why
     return s;
+}
+function weightsArg(args) {
+    const w = args.weights;
+    if (w === undefined || w === null)
+        return null;
+    if (typeof w !== "object" || Array.isArray(w))
+        throw new ValueError("weights must be an object");
+    return w;
+}
+function topArg(args) {
+    const top = args.top ?? 3;
+    if (typeof top !== "number" || !Number.isInteger(top) || top < 1 || top > 50) {
+        throw new ValueError("top must be an integer from 1 to 50");
+    }
+    return top;
 }
 function stringArg(args, key) {
     const v = args[key];
@@ -129,7 +179,11 @@ function stringArg(args, key) {
 }
 function call(memory, name, args) {
     if (name === "query")
-        return memory.query(situationArg(args));
+        return memory.query(situationArg(args), weightsArg(args));
+    if (name === "calibrate")
+        return memory.calibrate(weightsArg(args));
+    if (name === "facts")
+        return memory.facts(situationArg(args), weightsArg(args), topArg(args));
     if (name === "record" || name === "veto") {
         return memory.record(name === "record" ? "wins" : "vetoes", situationArg(args), stringArg(args, "outcome"), stringArg(args, "author"));
     }

@@ -5,7 +5,7 @@
  * so they run in milliseconds. The kernel is only needed by the MCP
  * server, for real similarity queries and writes.
  */
-export type Row = [situation: Record<string, string>, outcome: string, author: string];
+export type Row = [situation: Record<string, unknown>, outcome: string, author: string];
 export declare const MARKER_DIR: string;
 /** The one memory, the same in every session wherever it runs:
  *  $GLYPHH_HOME/ada, else ~/.glyphh/ada. */

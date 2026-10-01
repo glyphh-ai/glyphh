@@ -70,7 +70,7 @@ There is one memory, the same in every session and every directory:
 parallel store.
 
 Reach it through the plugin's `glyphh` MCP server — tools `query`,
-`record`, `veto`, `check`, `status`. The server runs outside your
+`facts`, `record`, `veto`, `check`, `status`. The server runs outside your
 shell sandbox, so reads and writes work even where the memory
 directory is not writable from Bash. It uses `min_sim=0.40, k=7`,
 which suits small operational situations (2–3 attributes): "most
@@ -112,6 +112,23 @@ settled rule: precedent of one is a note, not calibration. To vet an
 approach you are considering rather than asking what worked, use
 `check` with that `outcome`.
 
+When you know which attributes decide, say so with `weights` — on
+`query` it ranks and gates on the exact weighted sim, so a precedent
+that agrees on what matters clears the bar even when incidentals
+differ:
+
+```
+query  situation={...} weights={"constraint": 1, "task": 1, "env": 0.1}
+```
+
+To see WHY, call `facts` (same arguments, optional `top`): the nearest
+wins and vetoes as fact trees — per key its score, weight and share of
+the whole, with id, author, and the `probability` of its outcome. Cite
+the tree when memory decides. Once the wins store holds a few dozen
+graded cases, call `calibrate` (with the weights you query with) so
+that probability is fit to this store's own record; rerun it after the
+store grows a lot.
+
 **After** the outcome is known — the command worked, the fix held, the
 user accepted or corrected it — record it:
 
@@ -134,7 +151,12 @@ what makes recall precise:
   Normalize wording — you are the semantic layer; the store is exact.
 - Include only attributes that should influence recall. Paths,
   timestamps, ticket numbers, and other incidentals make unrelated
-  situations look alike; leave them out.
+  situations look alike; leave them out. When you can't, weigh them
+  down (`weights`, 0 to ignore) instead.
+- Values may nest when a situation has parts: `{"task": "deploy",
+  "plan": {"step": "canary", "tags": ["slow", "safe"]}}`. Arrays are
+  sets. Weights mirror the shape; an object's own weight goes under
+  `"*"`.
 - Outcomes are action names, not sentences:
   `pin_less_than_2_and_purge_dist_packages`.
 - Never store secrets, credentials, or personal data in situations or

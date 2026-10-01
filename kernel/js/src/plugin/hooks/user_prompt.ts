@@ -112,11 +112,12 @@ function main(): void {
 
   const scored: [number, string, Entry][] = [];
   for (const [key, e] of grouped) {
-    const situation: Record<string, string> = JSON.parse(key);
+    const situation: Record<string, unknown> = JSON.parse(key);
     const situationTokens = new Set<string>();
     for (const [k, v] of Object.entries(situation)) {
       for (const t of tokens(String(k))) situationTokens.add(t);
-      for (const t of tokens(String(v))) situationTokens.add(t);
+      // nested values tokenize as their JSON text
+      for (const t of tokens(typeof v === "string" ? v : pyDumps(v))) situationTokens.add(t);
     }
     const outcomeTokens = new Set<string>();
     for (const o of [...e.wins.keys(), ...[...e.vetoes].sort(cmpCodePoints)]) for (const t of tokens(o)) outcomeTokens.add(t);

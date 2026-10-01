@@ -64,7 +64,8 @@ function mcp(lang, home, messages) {
 const tool = (id, name, args = {}) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } });
 const payload = (reply) => (reply.result?.content ? { isError: reply.result.isError, body: tryJson(reply.result.content[0].text) } : reply);
 const tryJson = (t) => { try { return JSON.parse(t); } catch { return t; } };
-const scrub = (x) => JSON.parse(JSON.stringify(x, (k, v) => (k === "id" && typeof v === "string" ? "<id>" : k === "memory_dir" ? "<dir>" : v)));
+const scrub = (x) => JSON.parse(JSON.stringify(x, (k, v) => (k === "id" && typeof v === "string" ? "<id>"
+  : k === "memory_dir" ? "<dir>" : k === "ts" && v > 1e9 ? "<now>" : v)));
 
 const SIT = { task: "deploy_service", constraint: "canary_required" };
 const SESSION = [
@@ -84,6 +85,17 @@ const SESSION = [
   tool(13, "record", { situation: SIT, outcome: " ", author: "a" }),
   tool(14, "nope"),
   { jsonrpc: "2.0", id: 15, method: "nope/method" },
+  tool(16, "query", { situation: SIT, weights: { constraint: 2, task: 0.5 } }),
+  tool(17, "facts", { situation: SIT }),
+  tool(18, "facts", { situation: { task: "deploy_service", constraint: "none" }, weights: { constraint: 0 }, top: 2 }),
+  tool(19, "record", { situation: { plan: { step: "canary", tags: ["slow", "safe"] }, n: 3, ok: true }, outcome: "nested", author: "a" }),
+  tool(20, "facts", { situation: { plan: { step: "canary" } }, weights: { plan: { tags: 0 }, n: 0, ok: 0 } }),
+  tool(21, "query", { situation: SIT, weights: { task: -1 } }),
+  tool(22, "record", { situation: { task: {} }, outcome: "o", author: "a" }),
+  tool(23, "facts", { situation: SIT, top: 0 }),
+  tool(24, "calibrate", {}),
+  tool(25, "calibrate", { weights: { constraint: 2 } }),
+  tool(26, "facts", { situation: SIT, weights: { constraint: 2 } }),
 ];
 
 test("MCP: the Node server answers exactly like the Python server", () => {
@@ -95,6 +107,11 @@ test("MCP: the Node server answers exactly like the Python server", () => {
   const vetoed = js[10].body;
   assert.equal(vetoed.reason, "vetoed");
   assert.equal(vetoed.act, false);
+  // replies are numbered by id - 1: the notification gets none
+  assert.ok(js[16].body.wins.length > 0 && js[16].body.wins[0].tree.children.length === 2);
+  assert.equal(js[19].body.wins[0].outcome, "nested");
+  assert.equal(js[19].body.wins[0].score, 1);
+  assert.deepEqual([20, 21, 22].map((i) => js[i].isError), [true, true, true]);
 });
 
 test("MCP: one store, both servers — JS writes, Python reads, and back", () => {

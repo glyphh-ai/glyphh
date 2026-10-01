@@ -148,7 +148,9 @@ def main() -> None:
         situation = json.loads(key)
         situation_tokens = set()
         for k, v in situation.items():
-            situation_tokens |= tokens(str(k)) | tokens(str(v))
+            # nested values tokenize as their JSON text
+            text = v if isinstance(v, str) else json.dumps(v)
+            situation_tokens |= tokens(str(k)) | tokens(text)
         outcome_tokens = set()
         for outcome in list(entry["wins"]) + sorted(entry["vetoes"]):
             outcome_tokens |= tokens(outcome)

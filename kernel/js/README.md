@@ -58,5 +58,5 @@ The parity tests call `../.venv/bin/python` (else `python3`) with numpy installe
 
 ## Known differences
 
-- **Receipt order among exact ties.** When several precedents have exactly the same similarity, their order in `receipts` can differ from numpy's `argsort`, which isn't stable on large arrays. Votes, counts and outcomes are unaffected.
+- **Numbers in stored situations.** JavaScript can't tell `3.0` from `3`, so a situation recorded from JS stores `3` where Python would store `3.0`. Both encode as the symbol `val:3`, so matching is unaffected.
 - **Aggregates in the last floating-point bit.** Float sums (confidence, support) can differ in the last bit. Both sides round to 4 places with Python's round-half-even rule, and the parity tests compare the rounded values.

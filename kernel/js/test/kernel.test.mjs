@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { Space, Strand, bind, bundle, decide, reencodeStore, roll, sim, spec, SPEC, symbol } from "../dist/index.js";
+import { ENCODING, Space, Strand, bind, bundle, decide, reencodeStore, roll, sim, spec, SPEC, symbol } from "../dist/index.js";
 
 const tmp = () => mkdtempSync(join(tmpdir(), "ada-kernel-"));
 const eq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -127,7 +127,7 @@ test("an encoding-1 store re-encodes on open; events make reencodeStore lossless
   assert.ok(a.top === "out" && a.receipts[0][1] > 0.99);
   space.close();
   const check = new DatabaseSync(path);
-  assert.equal(check.prepare("SELECT value FROM meta WHERE key='encoding'").get().value, "2");
+  assert.equal(check.prepare("SELECT value FROM meta WHERE key='encoding'").get().value, String(ENCODING));
   check.close();
 
   const evPath = join(dir, "ev.db");

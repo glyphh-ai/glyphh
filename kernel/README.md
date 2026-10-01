@@ -141,9 +141,63 @@ composed structures can be composed again.
 |---|---|
 | `symbol(key, seed=42, dim=4096)` | Deterministic glyph for a key: same inputs produce the identical vector on any machine. Agents that share a seed share a vocabulary; different seeds produce unrelated vectors. |
 | `bind(a, b)` | Elementwise multiply. Self-inverse; the result is dissimilar to both inputs. Used for role–value pairs. |
-| `bundle(parts)` | Majority vote. The result is similar to every input, and independent of the order the parts come in (ties are broken by a hash of the parts as a set). Capacity is limited: past a few dozen parts, individual contributions fade. Keep the source data if you need it back exactly. |
+| `bundle(parts, weights=None)` | Majority vote. The result is similar to every input, and independent of the order the parts come in (ties are broken by a hash of the parts as a set). With `weights` (one per part, ≥ 0), each part's vote counts that much; 0 drops it. The result is still a glyph, so weighted bundles nest and weights apply at every level. Capacity is limited: past a few dozen parts, individual contributions fade. Keep the source data if you need it back exactly. |
 | `roll(v, k)` | Rotate. Encodes order and position; `roll(v, -k)` inverts it. |
 | `sim(a, b)` | Cosine in [−1, 1]. Random glyphs measure near 0. For encoded situations, sim tracks the fraction of shared attribute pairs, whichever attributes they are. Measured for 4-attribute situations: sharing 1, 2 or 3 gives 0.14, 0.28 or 0.44. For 2-attribute situations, sharing 1 gives 0.25. That holds even if the shared attributes are irrelevant to the decision. Set thresholds with this in mind. |
+
+## Data, weights and fact trees
+
+`encode(data, weights=None)` turns any JSON-shaped value into one glyph:
+
+- an object is a weighted bundle of `bind(attr:key, child)`;
+- an array is the bundle of its items (a set; put order in a `Strand`);
+- a scalar is the symbol of its text (`3` and `"3"` match; `true` and
+  `"True"` don't).
+
+Nested objects and arrays are rolled once before they bind, so
+`{"a": {"b": x}}` and `{"b": {"a": x}}` stay apart. A flat object of
+strings encodes exactly as a `Space` situation always has.
+
+Weights mirror the data. A number weighs a key. An object weighs
+inside it, with its own weight under `"*"`. Unlisted keys weigh 1.
+
+```python
+weights = {"risk": 1.0, "team": 0.1, "region": 0,
+           "plan": {"*": 2, "owner": 0}}
+```
+
+`explain(query, record, weights)` returns the fact tree, a `Fact` per
+key:
+
+- `score`: the exact weighted sim of that subtree;
+- `weight`;
+- `share`: its part of the parent's score; shares add up to it;
+- `sim`: the glyph sim beside it, noise and all;
+- `status`: `both`, `query_only` or `record_only`.
+
+`root.score` is the weighted sim. A key on one side only scores 0 at
+full weight; weigh it 0 if its absence shouldn't count.
+
+Weights are rule 2 made explicit. Unweighted, two shared incidental
+attributes look as close as two shared decisive ones:
+
+```python
+q          = {"goal": "move_data", "risk": "downtime",   "team": "infra",    "region": "eu"}
+decisive   = {"goal": "move_data", "risk": "downtime",   "team": "platform", "region": "us"}
+incidental = {"goal": "other",     "risk": "lock_table", "team": "infra",    "region": "eu"}
+w = {"goal": 1, "risk": 1, "team": 0.1, "region": 0}
+
+sim(encode(q), encode(decisive)), sim(encode(q), encode(incidental))   # 0.29, 0.29
+explain(q, decisive, w).score, explain(q, incidental, w).score         # 0.95, 0.06
+print(explain(q, decisive, w).to_text())
+```
+```
+.  score 0.95 × w 1 → 0.95
+  goal = "move_data"  score 1.00 × w 1 → 0.48
+  region = "us" (query "eu")  score -0.02 × w 0 → 0.00
+  risk = "downtime"  score 1.00 × w 1 → 0.48
+  team = "platform" (query "infra")  score -0.01 × w 0.1 → 0.00
+```
 
 ## Constructs
 
@@ -163,7 +217,8 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
 
 - `record(situation, outcome, events=None, ts=None)` stores one
   case, time-stamped (now, unless `ts` is given).
-  - A situation is a flat dict of attributes.
+  - A situation is an object of attributes. Values may nest (see
+    Data, weights and fact trees).
   - The optional `events` (a list of glyphs) are folded in as a strand,
     so order is part of the match. They are stored with the row, so
     re-encoding is lossless.
@@ -181,6 +236,29 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
 - `matches(situation, outcome, events=None)` — max similarity among
   precedents with that exact outcome. A direct nearest-case check
   that a consensus vote cannot dilute; used for vetoes.
+- Every read above, and `decide()`, takes `weights=`. With weights,
+  reads rank and gate on the exact weighted sim (the fact-tree score)
+  instead of the glyph sim. `min_sim` then means "the weighted share of
+  attributes that must agree", and a weight can lift a match over the
+  bar, not only lower it. Unweighted reads are unchanged. A weighted
+  read scores every row: about 85 ms over 2,000 precedents, against
+  3 ms for a glyph read.
+- `facts(situation, events=None, weights=None, top=k, min_score=None)`
+  → `[FactTree]`: every precedent scored exactly. The best `top` come
+  back as fact trees, each with its outcome, glyph sim and citation
+  (`id`, `author`, `ts`, `hash`). Events appear as the key `"~events"`.
+  Ranked by score, then glyph sim, then newest. Each also carries
+  `probability`: P(its outcome | situation).
+- `probabilities(situation, events=None, weights=None)` → `{outcome:
+  P}`. It's a softmax over the 25 nearest precedents' exact scores at
+  temperature `tau`, summed per outcome.
+- `calibrate(sample=100, weights=None)` fits `tau` so the probabilities
+  mean what they say. It holds out each of the newest `sample`
+  precedents in turn, scores it against the rest, and keeps the
+  temperature with the least log-loss. The result is saved in the file
+  and used on every later open. Until then `tau` is 0.12, the value fit
+  on the Kubernetes test (`research/k8s-tickets`). Pass `tau=` to the
+  `Space` to override both.
 - `refresh()` — load rows other agents wrote to a shared file since
   it was opened.
 - `merge(other_path)` — union another Space file by precedent id.
@@ -188,7 +266,7 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
 - Files open in WAL mode, so several processes can share one. Call
   `close()` or use the Space as a context manager.
 - **Stores outlive encodings.** Each file records the encoding it was
-  written under (`ENCODING`, currently 2).
+  written under (`ENCODING`, currently 3).
   - Opening or merging a file from an older encoding re-encodes its
     glyphs from the stored situations and events.
   - Files from before time-stamping read `ts = 0`.

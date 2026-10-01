@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from glyphh_kernel import (Space, Strand, bind, bundle, decide, roll, sim,  # noqa: E402
-                           symbol)
+from glyphh_kernel import (Space, Strand, bind, bundle, decide, encode,  # noqa: E402
+                           explain, roll, sim, symbol)
 
 
 def h(g):
@@ -26,6 +26,25 @@ SITUATIONS = [
     {"é": "ü", "Z": "z", "a": "\U0001F642"},
     {f"k{i}": f"v{i}" for i in range(9)},
     {"only": "one"},
+]
+DATA = [
+    {"plan": {"step": "dual_write", "owner": "ana"}, "risk": "downtime"},
+    {"n": 3, "f": 0.1, "big": 1e21, "tiny": 1.5e-7, "neg": -2.5, "t": True,
+     "z": None, "tags": ["b", "a", "b"]},
+    {"\u00e9": {"\U0001F642": [{"x": "y"}, "w"]}, "a": {"b": {"c": "d"}}},
+    "scalar", 42, [1, "1", True],
+]
+WEIGHTS = [None, {"plan": {"*": 2, "owner": 0}, "risk": 0.5},
+           {"n": 0.3, "tags": 2.5, "nope": 9, "a": {"b": {"*": 0.1}}}]
+PAIRS = [
+    (DATA[0], {"plan": {"step": "dual_write", "owner": "bo"},
+               "risk": "downtime", "extra": [1, 2]},
+     {"plan": {"*": 2, "owner": 0}, "extra": 0}),
+    ({"goal": "move_data", "risk": "downtime", "team": "infra", "region": "eu"},
+     {"goal": "move_data", "risk": "downtime", "team": "platform",
+      "region": "us"},
+     {"goal": 1.0, "risk": 1.0, "team": 0.1, "region": 0}),
+    (DATA[1], {"n": 4, "t": True, "tags": ["a", "c"], "z": "null"}, None),
 ]
 
 
@@ -44,6 +63,15 @@ def vectors():
     out["ops"]["bundle4rev"] = h(bundle([d, c, b, a]))
     out["ops"]["bundle5"] = h(bundle([a, b, c, d, e]))
     out["ops"]["bundle_dup"] = h(bundle([a, a, b, b]))
+    out["ops"]["wbundle3"] = h(bundle([a, b, c], [0.2, 1, 0.7]))
+    out["ops"]["wbundle3rev"] = h(bundle([c, b, a], [0.7, 1, 0.2]))
+    out["ops"]["wbundle_tie"] = h(bundle([a, b, c, d], [0.5, 0.5, 0.25, 0.25]))
+    out["ops"]["wbundle_zero"] = h(bundle([a, b, c], [1, 0, 1]))
+    out["data"] = {f"{i}|{j}": h(encode(d, w))
+                   for i, d in enumerate(DATA) for j, w in enumerate(WEIGHTS)}
+    out["explain"] = [{"json": explain(q, r, w).to_json(),
+                       "text": explain(q, r, w).to_text()}
+                      for q, r, w in PAIRS]
     for decay in (0.7, 0.2, 1.0):
         out["ops"][f"strand{decay}"] = h(Strand([a, b, c, d]).state(decay))
     out["ops"]["strand1"] = h(Strand([a]).state())
@@ -73,11 +101,14 @@ def write(root: Path):
             wins.author = g
             wins.record({"file": "app.py", "rel": "imports"}, m, ts=7.0)
     vetoes.record(base, "canary", ts=20.0)
+    wins.record({"task": "deploy", "env": "prod", "plan": {"step": "canary",
+                 "tags": ["slow", "safe"]}}, "canary", ts=8.0)
     wins.close(); vetoes.close()
 
 
 def answers(root: Path, prefix: str):
-    wins = Space(min_sim=0.4, path=str(root / f"{prefix}wins.db"))
+    # tau pinned: an earlier reader's calibrate() saves into the file
+    wins = Space(min_sim=0.4, tau=0.12, path=str(root / f"{prefix}wins.db"))
     vetoes = Space(min_sim=0.4, path=str(root / f"{prefix}vetoes.db"))
     base = {"task": "deploy", "env": "prod"}
     ev = [symbol("up"), symbol("down")]
@@ -89,7 +120,22 @@ def answers(root: Path, prefix: str):
             {"file": "app.py", "rel": "imports"}, min_count=3)],
         "flap": wins.query({"kind": "flap"}, events=ev).to_json(),
         "matches": vetoes.matches(base, "canary"),
+        "weighted": wins.query(base, weights={"env": 0}).to_json(),
+        "wdecide": decide(wins, vetoes, base, weights={"env": 0.2}).to_json(),
+        "facts": [f.to_json() for f in wins.facts(
+            {"task": "deploy", "plan": {"step": "canary"}},
+            weights={"plan": {"*": 3, "tags": 0}}, top=4)],
+        "factsev": [f.to_json() for f in wins.facts(
+            {"kind": "flap"}, events=ev, top=2)],
+        "tau": wins.calibrate(sample=10, weights={"env": 0.5}),
+        "probs": {o: round(p, 4) for o, p in wins.probabilities(
+            base, weights={"env": 0.5}).items()},
     }
+    for f in out["facts"] + out["factsev"]:
+        f.pop("id"); f.pop("ts")
+    out["weighted"]["receipts"] = [
+        {k: v for k, v in r.items() if k != "id"}
+        for r in out["weighted"]["receipts"]]
     for r in out["query"]["receipts"] + out["flap"]["receipts"]:
         r.pop("id")
     return out

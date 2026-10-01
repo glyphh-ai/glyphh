@@ -5,6 +5,8 @@ agent's shell sandbox — so the agent can read AND write the one memory
 ($GLYPHH_HOME/ada, else ~/.glyphh/ada) without a sandbox exception,
 a port, or a token. The composing primitives (bind, bundle, sim) stay
 in the kernel for the agent's own shell; only the stores live here.
+Situations may nest, and every read takes a weights tree; `facts`
+returns the weighted read as fact trees.
 
 The spaces load once and refresh() before every read, so rows other
 sessions wrote since launch always count.
@@ -50,15 +52,18 @@ class Memory:
             space.refresh()
         return self._spaces
 
-    def query(self, situation: Dict[str, str]) -> Dict[str, Any]:
+    def query(self, situation: Dict[str, Any],
+              weights: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         from glyphh_kernel import decide
         s = self.spaces()
         # the kernel's contract, with count reported (not gated) so a
         # precedent of one still surfaces as a cited reminder
         d = decide(s["wins"], s["vetoes"], situation,
-                   min_confidence=ACT_CONFIDENCE, min_count=1)
+                   min_confidence=ACT_CONFIDENCE, min_count=1,
+                   weights=weights)
         out = d.answer.to_json()
-        veto = (s["vetoes"].matches(situation, d.answer.top)
+        veto = (s["vetoes"].matches(situation, d.answer.top,
+                                    weights=weights)
                 if d.answer.top else 0.0)
         out["veto_match"] = round(veto, 4)
         out["act"] = d.act
@@ -67,14 +72,27 @@ class Memory:
         out["calibrated"] = d.answer.count >= CALIBRATED_COUNT
         return out
 
-    def record(self, store: str, situation: Dict[str, str], outcome: str,
+    def facts(self, situation: Dict[str, Any],
+              weights: Optional[Dict[str, Any]], top: int) -> Dict[str, Any]:
+        s = self.spaces()
+        return {store: [f.to_json() for f in
+                        s[store].facts(situation, weights=weights, top=top,
+                                       min_score=MIN_SIM)]
+                for store in ("wins", "vetoes")}
+
+    def calibrate(self, weights: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        wins = self.spaces()["wins"]
+        return {"store": "wins", "tau": wins.calibrate(weights=weights),
+                "size": len(wins)}
+
+    def record(self, store: str, situation: Dict[str, Any], outcome: str,
                author: str) -> Dict[str, Any]:
         space = self.spaces()[store]
         space.author = author
         return {"store": store, "id": space.record(situation, outcome),
                 "size": len(space)}
 
-    def check(self, situation: Dict[str, str], outcome: str) -> Dict[str, Any]:
+    def check(self, situation: Dict[str, Any], outcome: str) -> Dict[str, Any]:
         s = self.spaces()
         return {"win_match": round(s["wins"].matches(situation, outcome), 4),
                 "veto_match": round(s["vetoes"].matches(situation, outcome), 4)}
@@ -89,10 +107,19 @@ SITUATION = {
     "type": "object",
     "description": "Decision-relevant attributes only, e.g. "
                    '{"task": "long_background_run", '
-                   '"constraint": "exceeds_tool_timeout"}. Incidental '
-                   "attributes (ids, paths, timestamps) poison neighborhoods.",
-    "additionalProperties": {"type": "string"},
+                   '"constraint": "exceeds_tool_timeout"}. Values may '
+                   "nest (objects, arrays as sets, numbers, booleans). "
+                   "Incidental attributes (ids, paths, timestamps) poison "
+                   "neighborhoods.",
     "minProperties": 1,
+}
+WEIGHTS = {
+    "type": "object",
+    "description": "How much each key decides, mirroring the situation: "
+                   '{"risk": 1, "team": 0.1, "plan": {"*": 0.5, "step": 2}}. '
+                   "A number weighs a key; an object weighs inside it, its "
+                   'own weight under "*". Unlisted keys weigh 1; 0 ignores '
+                   "a key.",
 }
 OUTCOME = {"type": "string",
            "description": "The approach, as a short snake_case label."}
@@ -109,8 +136,32 @@ TOOLS = [
                     "`reason` says which gate decided, `lifted` whether a "
                     "newer win lifted a veto). With `calibrated` false "
                     "treat it as a cited reminder, not a settled rule.",
-     "inputSchema": {"type": "object", "properties": {"situation": SITUATION},
+     "inputSchema": {"type": "object",
+                     "properties": {"situation": SITUATION,
+                                    "weights": WEIGHTS},
                      "required": ["situation"]}},
+    {"name": "facts",
+     "description": "Why, not just what: the nearest wins and vetoes, each "
+                    "explained against this situation as a fact tree — per "
+                    "key its score, weight and share of the whole — and "
+                    "ranked by exact weighted score, each with its id, "
+                    "author, and `probability` of its outcome. Only "
+                    "precedents scoring 0.4 or more.",
+     "inputSchema": {"type": "object",
+                     "properties": {"situation": SITUATION,
+                                    "weights": WEIGHTS,
+                                    "top": {"type": "integer", "minimum": 1,
+                                            "maximum": 50,
+                                            "description": "Precedents per "
+                                            "store (default 3)."}},
+                     "required": ["situation"]}},
+    {"name": "calibrate",
+     "description": "Fit the wins store's probability temperature to its "
+                    "own graded record (needs 10+ wins), so `probability` "
+                    "in `facts` means what it says. Saved in the store; "
+                    "rerun after the store grows a lot. Pass the weights "
+                    "you query with.",
+     "inputSchema": {"type": "object", "properties": {"weights": WEIGHTS}}},
     {"name": "record",
      "description": "Record a graded WIN: this outcome worked in this "
                     "situation. Only after the outcome is actually known.",
@@ -140,13 +191,29 @@ TOOLS = [
 ]
 
 
-def _situation(args: Dict[str, Any]) -> Dict[str, str]:
+def _situation(args: Dict[str, Any]) -> Dict[str, Any]:
     s = args.get("situation")
     if not isinstance(s, dict) or not s:
         raise ValueError("situation must be a non-empty object")
-    if not all(isinstance(k, str) and isinstance(v, str) for k, v in s.items()):
-        raise ValueError("situation keys and values must be strings")
+    from glyphh_kernel import encode
+    encode(s)  # nested, non-empty, encodable — or the error says why
     return s
+
+
+def _weights(args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    w = args.get("weights")
+    if w is None:
+        return None
+    if not isinstance(w, dict):
+        raise ValueError("weights must be an object")
+    return w
+
+
+def _top(args: Dict[str, Any]) -> int:
+    top = args.get("top", 3)
+    if isinstance(top, bool) or not isinstance(top, int) or not 1 <= top <= 50:
+        raise ValueError("top must be an integer from 1 to 50")
+    return top
 
 
 def _string(args: Dict[str, Any], key: str) -> str:
@@ -158,7 +225,11 @@ def _string(args: Dict[str, Any], key: str) -> str:
 
 def call(memory: Memory, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     if name == "query":
-        return memory.query(_situation(args))
+        return memory.query(_situation(args), _weights(args))
+    if name == "calibrate":
+        return memory.calibrate(_weights(args))
+    if name == "facts":
+        return memory.facts(_situation(args), _weights(args), _top(args))
     if name in ("record", "veto"):
         store = "wins" if name == "record" else "vetoes"
         return memory.record(store, _situation(args),

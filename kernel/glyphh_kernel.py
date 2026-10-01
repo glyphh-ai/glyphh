@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import time
 import uuid
@@ -21,7 +22,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
-ENCODING = 2  # bump when encode() changes; stores re-encode on open
+TAU = 0.12     # default softmax temperature (fit on Kubernetes issues; calibrate())
+POOL = 25      # nearest precedents a probability is spread over
+TAUS = (0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 1.0)
+ENCODING = 3  # bump when encode() changes; stores re-encode on open
 
 SPEC = """\
 Ada kernel — substrate guidance for the agent using it
@@ -40,16 +44,33 @@ so composites nest indefinitely.
       vocabulary between agents; different seeds are mutual noise.
   bind(a, b)     associate (elementwise multiply). Self-inverse; the
       result resembles neither input. Use for role-filler pairs.
-  bundle(parts)  superpose (majority vote); resembles ALL inputs.
-      Order-free: the same parts in any order give the same glyph.
-      Capacity is finite: past a few dozen parts detail fades and gist
-      survives — that is abstraction; keep receipts for the detail.
+  bundle(parts, weights=None)  superpose (majority vote); resembles
+      ALL inputs. Order-free: the same parts in any order give the same
+      glyph. weights (one per part, >= 0) give each part its voice in
+      the vote; the result is a glyph, so weighted bundles nest and
+      weights live at every level. Capacity is finite: past a few dozen
+      parts detail fades and gist survives — that is abstraction; keep
+      receipts for the detail.
   roll(v, k)     rotate: order, position, depth. Undo with roll(v,-k).
   sim(a, b)      cosine in [-1, 1]. Random glyphs sit near 0. For
       situations, sim tracks the FRACTION OF SHARED ATTRIBUTE PAIRS,
       whichever attributes they are (measured, 4 attributes: sharing
       1/2/3 -> 0.14/0.28/0.44; 2 attributes sharing 1 -> 0.25), even
       when the shared attributes are decision-irrelevant.
+
+DATA. encode(data, weights) is one glyph for any JSON-shaped value:
+  an object is a weighted bundle of bind(attr:key, child), an array a
+  set of its items, a scalar the symbol of its text; nested children
+  roll once so paths stay apart. weights mirror the data —
+  {"risk": 1.0, "plan": {"*": 0.5, "step": 2}}: a number weighs a key,
+  an object weighs inside it with its own weight under "*"; unlisted
+  keys weigh 1.0. explain(query, record, weights) -> Fact: the fact
+  tree — per key, its score (exact weighted sim of that subtree), its
+  weight, its share of the parent (shares sum to the parent's score),
+  and the glyph sim beside it. root.score is the weighted sim. A key on
+  one side only scores 0 at full weight: weigh it 0 if its absence
+  should not count. Weights are how you say which attributes decide;
+  that is rule 2, made explicit.
 
 THE TWO CONSTRUCTS.
   Strand: ordered meaning. append() glyphs; state(decay) folds the
@@ -58,7 +79,11 @@ THE TWO CONSTRUCTS.
       trajectory recognizable much longer.
   Space(dim, k, min_sim, seed, decay, author, path): graded precedent.
       record(situation, outcome, events=None, ts=None) — one write,
-      permanent, time-stamped.
+      permanent, time-stamped. A situation is an object; values may
+      nest (see DATA). Every read below takes weights=: weighted, it
+      ranks and gates on the EXACT weighted sim (the fact-tree score),
+      so min_sim means 'the weighted share of attributes that must
+      agree' and a weight can raise a match, not only lower it.
       query(...) -> Answer(sufficient, confidence, support, count,
       top, outcomes, receipts); only precedents clearing min_sim vote.
       answers(...) -> [Evidence] for EVERY outcome with qualifying
@@ -66,6 +91,18 @@ THE TWO CONSTRUCTS.
       outcome. evidence(situation, outcome) grades one candidate.
       matches(situation, outcome) — max sim among precedents with THAT
       outcome: the veto primitive, undilutable by consensus.
+      facts(situation, weights=None, top=k) -> [FactTree]: every
+      precedent scored exactly, the best `top` explained as fact trees
+      (events as the key "~events"), each with its glyph sim and its
+      citation, and probability: P(that outcome | situation), a
+      softmax at temperature tau over the POOL (25) nearest. The read
+      to show WHY, not just what.
+      probabilities(situation, weights=None) -> {outcome: P}.
+      calibrate(sample=100, weights=None) fits tau by holding out the
+      newest precedents one at a time; saved in the file. Until then
+      tau is TAU (0.12). Calibrated, "act at P >= 0.9" means right
+      about 9 times in 10 — on the Kubernetes test it took confident
+      answers from 87% to 94% right.
       refresh() pulls rows other agents wrote to a shared WAL file;
       merge(other_path) unions another Space file by id, authors kept.
 
@@ -160,9 +197,17 @@ def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
     Shared seeds are shared vocabulary; different seeds are mutually
     random noise. This is how two agents agree on meaning.
     """
-    digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
-    rng = np.random.RandomState(np.frombuffer(digest[:4], dtype=np.uint32))
-    return (rng.randint(0, 2, dim, dtype=np.int8) * 2 - 1)
+    cached = _SYMBOLS.get((key, seed, dim))
+    if cached is None:
+        digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
+        rng = np.random.RandomState(np.frombuffer(digest[:4],
+                                                  dtype=np.uint32))
+        cached = rng.randint(0, 2, dim, dtype=np.int8) * 2 - 1
+        _SYMBOLS[(key, seed, dim)] = cached
+    return cached.copy()
+
+
+_SYMBOLS: Dict[Tuple[str, int, int], np.ndarray] = {}
 
 
 def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -191,19 +236,51 @@ def _tiebreak(parts: Sequence[np.ndarray]) -> np.ndarray:
     return (rng.randint(0, 2, len(parts[0]), dtype=np.int8) * 2 - 1)
 
 
-def bundle(parts: Sequence[np.ndarray]) -> np.ndarray:
+def bundle(parts: Sequence[np.ndarray],
+           weights: Optional[Sequence[float]] = None) -> np.ndarray:
     """Superpose glyphs (majority vote). The result resembles ALL
     inputs. Capacity is finite: past a few dozen items, individual
     contributions fade — detail dies, gist survives. That is
-    abstraction, not failure; keep receipts if you need the detail."""
+    abstraction, not failure; keep receipts if you need the detail.
+
+    weights: one per part, finite and >= 0; a part's weight is its
+    voice in the vote (0 drops it). The result is still a glyph, so a
+    weighted bundle nests inside another — weights live at every level.
+    The weighted vote sums in a canonical order (parts by their bytes),
+    so it stays order-free and is bit-identical across machines."""
     if not parts:
         raise ValueError("cannot bundle nothing")
-    total = np.sum(np.stack(parts).astype(np.int32), axis=0)
-    signs = np.sign(total)
+    if weights is None:
+        total = np.sum(np.stack(parts).astype(np.int32), axis=0)
+        signs = np.sign(total)
+        ties = signs == 0
+        if ties.any():
+            signs[ties] = _tiebreak(parts)[ties]
+        return signs.astype(np.int8)
+    if len(weights) != len(parts):
+        raise ValueError(f"{len(parts)} parts but {len(weights)} weights")
+    pairs = [(np.ascontiguousarray(p), _check_weight(w))
+             for p, w in zip(parts, weights)]
+    pairs = sorted(((p, w) for p, w in pairs if w > 0),
+                   key=lambda pw: (pw[0].tobytes(), pw[1]))
+    if not pairs:
+        raise ValueError("cannot bundle when every weight is 0")
+    acc = np.zeros(len(pairs[0][0]), dtype=np.float64)
+    for p, w in pairs:
+        acc += w * p.astype(np.float64)
+    signs = np.sign(acc)
     ties = signs == 0
     if ties.any():
-        signs[ties] = _tiebreak(parts)[ties]
+        signs[ties] = _tiebreak([p for p, _ in pairs])[ties]
     return signs.astype(np.int8)
+
+
+def _check_weight(w: Any) -> float:
+    if isinstance(w, bool) or not isinstance(w, (int, float)):
+        raise TypeError("weight must be a number")
+    if not np.isfinite(w) or w < 0:
+        raise ValueError(f"weight must be finite and >= 0, got {_text(w)}")
+    return float(w)
 
 
 def roll(v: np.ndarray, k: int = 1) -> np.ndarray:
@@ -218,6 +295,227 @@ def sim(a: np.ndarray, b: np.ndarray) -> float:
     the FRACTION OF SHARED ATTRIBUTE PAIRS — two 4-attribute
     situations sharing 3 attributes measure ~0.44, not ~0."""
     return float(np.dot(a.astype(np.float32), b.astype(np.float32))) / len(a)
+
+
+# ── data: structure in, glyph out; weighted sim, fact trees back ────
+#
+# Any JSON-shaped value encodes. An object is a weighted bundle of
+# bind(attr:key, child); an array is a bundle of its items (a set:
+# order belongs in a Strand); a scalar is the symbol of its text. A
+# nested object or array is rolled once before it binds, so
+# {"a": {"b": x}} and {"b": {"a": x}} stay apart. A flat object of
+# strings encodes exactly as a Space situation always has.
+#
+# Weights mirror the data: {"risk": 1.0, "plan": {"*": 0.5, "step": 2}}.
+# A number weighs that key; an object weighs inside it, its own weight
+# under "*". Unlisted keys weigh 1.0; weights for absent keys are
+# ignored.
+
+def _text(v: Any) -> str:
+    """A scalar's text, the same in every language: strings as they
+    are, true/false/null, numbers as JavaScript prints them."""
+    if isinstance(v, str):
+        return v
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int) and abs(v) < 10 ** 21:
+        return str(v)
+    if isinstance(v, (int, float)):
+        return _js_number(float(v))
+    raise TypeError(f"cannot encode a {type(v).__name__}: {v!r}")
+
+
+def _js_number(x: float) -> str:
+    """Number.prototype.toString for a double: shortest round-trip
+    digits, exponent outside [1e-7, 1e21)."""
+    if x != x:
+        return "NaN"
+    if x in (float("inf"), float("-inf")):
+        return "Infinity" if x > 0 else "-Infinity"
+    if x == 0:
+        return "0"
+    sign = "-" if x < 0 else ""
+    mantissa, _, exp = repr(abs(x)).partition("e")
+    whole, _, frac = mantissa.partition(".")
+    digits = (whole + frac).lstrip("0")
+    point = len(whole) + (int(exp) if exp else 0)  # digits are 0.d * 10^point
+    point -= len(whole + frac) - len((whole + frac).lstrip("0"))
+    digits = digits.rstrip("0") or "0"
+    k = len(digits)
+    if k <= point <= 21:
+        return sign + digits + "0" * (point - k)
+    if 0 < point <= 21:
+        return sign + digits[:point] + "." + digits[point:]
+    if -6 < point <= 0:
+        return sign + "0." + "0" * -point + digits
+    e = point - 1
+    e_text = ("+" if e >= 0 else "-") + str(abs(e))
+    if k == 1:
+        return f"{sign}{digits}e{e_text}"
+    return f"{sign}{digits[0]}.{digits[1:]}e{e_text}"
+
+
+def _weight(w: Any) -> Tuple[float, Optional[Dict[str, Any]]]:
+    """(own weight, weights inside) for one entry of a weights tree."""
+    if w is None:
+        return 1.0, None
+    if isinstance(w, dict):
+        return _check_weight(w.get("*", 1.0)), w
+    return _check_weight(w), None
+
+
+def _keyed(data: Dict[str, Any], weights: Optional[Dict[str, Any]],
+           seed: int, dim: int) -> Tuple[List[np.ndarray], List[float]]:
+    """bind(attr:key, child) for every key, code-point order, with
+    each key's weight."""
+    parts, ws = [], []
+    for key in sorted(data):
+        if not isinstance(key, str):
+            raise TypeError(f"object keys must be strings, got {key!r}")
+        own, inner = _weight(weights.get(key) if weights else None)
+        value = data[key]
+        child = _encode(value, inner, seed, dim)
+        if isinstance(value, (dict, list, tuple)):
+            child = roll(child, 1)
+        parts.append(bind(symbol(f"attr:{key}", seed, dim), child))
+        ws.append(own)
+    return parts, ws
+
+
+def _encode(data: Any, weights: Optional[Dict[str, Any]],
+            seed: int, dim: int) -> np.ndarray:
+    if isinstance(data, dict):
+        if not data:
+            raise ValueError("cannot encode an empty object")
+        parts, ws = _keyed(data, weights, seed, dim)
+        return bundle(parts, ws)
+    if isinstance(data, (list, tuple)):
+        if not data:
+            raise ValueError("cannot encode an empty array")
+        return bundle([_encode(x, None, seed, dim) for x in data])
+    return symbol(f"val:{_text(data)}", seed, dim)
+
+
+def encode(data: Any, weights: Optional[Dict[str, Any]] = None,
+           seed: int = 42, dim: int = DIM) -> np.ndarray:
+    """One glyph for any JSON-shaped value — objects nest, arrays are
+    sets, scalars are symbols — with weights at every level (see the
+    note above). The glyph is what sim() compares; explain() gives the
+    exact weighted sim of two values as a fact tree."""
+    return _encode(data, weights, seed, dim)
+
+
+_ABSENT = object()
+
+
+def _2(x: float) -> str:
+    return f"{round(x, 2) + 0.0:.2f}"  # no "-0.00"
+
+
+def _4(x: float) -> float:
+    return round(x, 4) + 0.0  # no -0.0
+
+
+@dataclass
+class Fact:
+    """One node of a fact tree: how one part of a query compares with
+    the same part of a record.
+
+    score: the exact weighted sim of this subtree — the weighted mean of
+        the children's scores, or the substrate sim at a leaf.
+    share: weight * score / the siblings' total weight; the shares of a
+        node's children sum to its score, so the tree adds up.
+    sim: the substrate sim of the two encoded subtrees — what a glyph
+        sees of this node, noise and all.
+    status: 'both', 'query_only' or 'record_only'."""
+
+    key: str
+    weight: float
+    score: float
+    share: float
+    sim: float
+    status: str
+    query: Any
+    record: Any
+    children: List["Fact"]
+
+    def to_json(self) -> Dict[str, Any]:
+        out: Dict[str, Any] = {
+            "key": self.key, "weight": self.weight,
+            "score": _4(self.score), "share": _4(self.share),
+            "sim": _4(self.sim), "status": self.status}
+        if not self.children:
+            if self.query is not _ABSENT:
+                out["query"] = self.query
+            if self.record is not _ABSENT:
+                out["record"] = self.record
+        else:
+            out["children"] = [c.to_json() for c in self.children]
+        return out
+
+    def to_text(self, depth: int = 0) -> str:
+        pad = "  " * depth
+        if self.children:
+            head = f"{pad}{self.key or '.'}"
+        elif self.status == "both":
+            head = f"{pad}{self.key} = {json.dumps(self.record, ensure_ascii=False)}"
+            if self.query != self.record:
+                head += f" (query {json.dumps(self.query, ensure_ascii=False)})"
+        else:
+            missing = "record" if self.status == "query_only" else "query"
+            head = f"{pad}{self.key}: not in the {missing}"
+        line = (f"{head}  score {_2(self.score)} × w {self.weight:g}"
+                f" → {_2(self.share)}")
+        return "\n".join([line] + [c.to_text(depth + 1)
+                                   for c in self.children])
+
+
+def _tally(children: List[Fact]) -> float:
+    """Each child's share of its parent; returns the parent's score."""
+    total = sum(c.weight for c in children)
+    for c in children:
+        c.share = c.weight * c.score / total if total else 0.0
+    return sum(c.share for c in children)
+
+
+def _explain(key: str, weight: float, q: Any, r: Any,
+             weights: Optional[Dict[str, Any]], seed: int, dim: int,
+             glyphs: bool = True) -> Fact:
+    """glyphs=False skips the glyph sim at inner nodes: the score is
+    the same, only the side-by-side sim is left 0 (scoring every row
+    of a store needs the score alone)."""
+    if q is _ABSENT or r is _ABSENT:
+        return Fact(key, weight, 0.0, 0.0, 0.0,
+                    "record_only" if q is _ABSENT else "query_only",
+                    q, r, [])
+    if not (isinstance(q, dict) and isinstance(r, dict)):
+        leaf = sim(_encode(q, weights, seed, dim),
+                   _encode(r, weights, seed, dim))
+        return Fact(key, weight, leaf, 0.0, leaf, "both", q, r, [])
+    children = []
+    for k in sorted(set(q) | set(r)):
+        own, inner = _weight(weights.get(k) if weights else None)
+        children.append(_explain(k, own, q.get(k, _ABSENT),
+                                 r.get(k, _ABSENT), inner, seed, dim,
+                                 glyphs))
+    glyph_sim = (sim(_encode(q, weights, seed, dim),
+                     _encode(r, weights, seed, dim)) if glyphs else 0.0)
+    return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both",
+                q, r, children)
+
+
+def explain(query: Any, record: Any,
+            weights: Optional[Dict[str, Any]] = None,
+            seed: int = 42, dim: int = DIM) -> Fact:
+    """The fact tree for one query against one record: per key, how
+    close, with what weight, and its share of the whole. root.score is
+    the weighted sim. A key on one side only scores 0 at full weight,
+    so give it weight 0 if its absence shouldn't count."""
+    root = _explain("", 1.0, query, record, weights, seed, dim)
+    root.share = root.score
+    return root
 
 
 # ── Strand: ordered meaning ─────────────────────────────────────────
@@ -313,6 +611,41 @@ class Evidence:
                 "latest": self.latest, "authors": self.authors}
 
 
+@dataclass
+class FactTree:
+    """One precedent explained against a situation (Space.facts()).
+    score = root.score, the exact weighted sim; sim = the glyph sim
+    that found it; probability = P(this precedent's outcome | the
+    situation), calibrated (see Space.calibrate()); the rest cites the
+    precedent."""
+
+    id: str
+    outcome: str
+    author: str
+    ts: float
+    hash: str
+    sim: float
+    root: Fact
+    probability: float = 0.0
+
+    @property
+    def score(self) -> float:
+        return self.root.score
+
+    def to_json(self) -> Dict[str, Any]:
+        return {"id": self.id, "outcome": self.outcome,
+                "probability": _4(self.probability),
+                "score": _4(self.score), "sim": _4(self.sim),
+                "author": self.author, "ts": self.ts, "hash": self.hash,
+                "tree": self.root.to_json()}
+
+    def to_text(self) -> str:
+        return (f"{self.outcome}  p {_2(self.probability)}  score "
+                f"{_2(self.score)}  (sim "
+                f"{_2(self.sim)}, {self.id} by {self.author})\n"
+                + self.root.to_text(1))
+
+
 class Space:
     """Precedent memory: record graded experience, answer by similarity.
 
@@ -335,14 +668,20 @@ class Space:
 
     def __init__(self, dim: int = DIM, k: int = 15, min_sim: float = 0.10,
                  seed: int = 42, decay: float = 0.7, author: str = "anon",
-                 path: Optional[str] = None):
+                 path: Optional[str] = None, tau: Optional[float] = None):
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
+        # temperature for probabilities: given, else the file's
+        # calibrated one (calibrate()), else TAU
+        self.tau = TAU if tau is None else float(tau)
+        self._tau_given = tau is not None
         self.decay = decay
         self.author = author
         self._ids: List[str] = []
         self._outcomes: List[str] = []
         self._authors: List[str] = []
         self._ts: List[float] = []
+        self._situations: List[Any] = []
+        self._trajs: List[Optional[np.ndarray]] = []
         self._glyphs: List[np.ndarray] = []
         self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
         self._n = 0
@@ -350,23 +689,33 @@ class Space:
         if path:
             self._open(path)
 
-    # encoding: a situation is a dict of attributes; optional events
-    # fold in as a strand so order-carrying situations keep their order
-    def encode(self, situation: Dict[str, str],
-               events: Optional[List[np.ndarray]] = None) -> np.ndarray:
-        parts = [bind(symbol(f"attr:{a}", self.seed, self.dim),
-                      symbol(f"val:{v}", self.seed, self.dim))
-                 for a, v in sorted(situation.items())]
+    # encoding: a situation is an object (values may nest — see
+    # encode()); optional events fold in as a strand so order-carrying
+    # situations keep their order; weights weigh the situation's keys
+    def encode(self, situation: Dict[str, Any],
+               events: Optional[List[np.ndarray]] = None,
+               weights: Optional[Dict[str, Any]] = None) -> np.ndarray:
+        if not isinstance(situation, dict):
+            raise TypeError("a situation is an object of attributes")
+        parts, ws = _keyed(situation, weights, self.seed, self.dim)
         if events:
             parts.append(bind(symbol("trajectory", self.seed, self.dim),
                               Strand(list(events)).state(self.decay)))
+            ws.append(1.0)
         if not parts:
             raise ValueError("cannot encode an empty situation")
-        return bundle(parts)
+        return bundle(parts, ws)
+
+    def _traj(self, events: Optional[List[np.ndarray]]
+              ) -> Optional[np.ndarray]:
+        return Strand(list(events)).state(self.decay) if events else None
 
     def _append(self, rid: str, outcome: str, glyph: np.ndarray,
-                author: str, ts: float) -> None:
+                author: str, ts: float, situation: Any,
+                traj: Optional[np.ndarray]) -> None:
         self._ids.append(rid)
+        self._situations.append(situation)
+        self._trajs.append(traj)
         self._outcomes.append(outcome)
         self._authors.append(author)
         self._ts.append(float(ts))
@@ -386,7 +735,8 @@ class Space:
         rid = rid or str(uuid.uuid4())[:12]
         ts = time.time() if ts is None else float(ts)
         glyph = self.encode(situation, events)
-        self._append(rid, outcome, glyph, self.author, ts)
+        self._append(rid, outcome, glyph, self.author, ts, situation,
+                     self._traj(events))
         if self._db is not None:
             blob = (np.stack(events).astype(np.int8).tobytes()
                     if events else None)
@@ -399,25 +749,74 @@ class Space:
             self._db.commit()
         return rid
 
-    def _sims(self, situation: Dict[str, str],
-              events: Optional[List[np.ndarray]]) -> np.ndarray:
-        q = self.encode(situation, events).astype(np.float32)
+    def _sims(self, situation: Dict[str, Any],
+              events: Optional[List[np.ndarray]],
+              weights: Optional[Dict[str, Any]] = None) -> np.ndarray:
+        q = self.encode(situation, events, weights).astype(np.float32)
         return (self._matrix[:self._n] @ q) / self.dim
 
-    def _top(self, situation: Dict[str, str],
-             events: Optional[List[np.ndarray]]) -> List[Tuple[int, float]]:
-        sims = self._sims(situation, events)
-        order = np.argsort(sims)[::-1][:self.k]
+    def _exact(self, i: int, situation: Dict[str, Any],
+               traj: Optional[np.ndarray], weights: Optional[Dict[str, Any]],
+               glyphs: bool = False) -> Fact:
+        """Precedent i explained against the situation; events, when
+        either side has them, are one more key: "~events"."""
+        root = _explain("", 1.0, situation, self._situations[i], weights,
+                        self.seed, self.dim, glyphs)
+        theirs = self._trajs[i]
+        if (traj is not None or theirs is not None) and root.children:
+            own, _ = _weight(weights.get("~events") if weights else None)
+            if traj is not None and theirs is not None:
+                s = sim(traj, theirs)
+                fact = Fact("~events", own, s, 0.0, s, "both", "…", "…", [])
+            else:
+                fact = Fact("~events", own, 0.0, 0.0, 0.0,
+                            "query_only" if theirs is None else "record_only",
+                            "…" if traj is not None else _ABSENT,
+                            "…" if theirs is not None else _ABSENT, [])
+            root.children.append(fact)
+            root.score = _tally(root.children)
+        root.share = root.score
+        return root
+
+    def _scores(self, situation: Dict[str, Any],
+                events: Optional[List[np.ndarray]],
+                weights: Optional[Dict[str, Any]]) -> np.ndarray:
+        """The similarity every read ranks and gates on: the glyph sim,
+        or — when the caller weighs the keys — the exact weighted sim,
+        so a weight can raise a match as well as lower one."""
+        if weights is None:
+            return self._sims(situation, events)
+        self.encode(situation, events, weights)  # same errors either way
+        traj = self._traj(events)
+        return np.array([self._exact(i, situation, traj, weights).score
+                         for i in range(self._n)], dtype=np.float64)
+
+    def _top(self, situation: Dict[str, Any],
+             events: Optional[List[np.ndarray]],
+             weights: Optional[Dict[str, Any]] = None,
+             k: Optional[int] = None) -> List[Tuple[int, float]]:
+        sims = self._scores(situation, events, weights)
+        # highest first; equal scores, the later row first (stable, so
+        # the order holds at any size and in every language)
+        order = np.argsort(sims, kind="stable")[::-1][
+            :self.k if k is None else k]
         return [(int(i), float(sims[i])) for i in order]
 
-    def query(self, situation: Dict[str, str],
-              events: Optional[List[np.ndarray]] = None) -> Answer:
+    def _hash(self, i: int) -> str:
+        return hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16]
+
+    def query(self, situation: Dict[str, Any],
+              events: Optional[List[np.ndarray]] = None,
+              weights: Optional[Dict[str, Any]] = None) -> Answer:
+        """weights: the query's weights tree (see encode()). Weighted,
+        every similarity here is the exact weighted sim (a fact tree's
+        score), so min_sim reads as 'the weighted share of attributes
+        that must agree'. Unweighted, it is the glyph sim, as always."""
         if self._n == 0:
             return Answer(False, 0.0, 0.0, 0, None, {}, [])
-        top = self._top(situation, events)
+        top = self._top(situation, events, weights)
         receipts = [
-            (self._ids[i], s, self._outcomes[i],
-             hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16],
+            (self._ids[i], s, self._outcomes[i], self._hash(i),
              self._authors[i])
             for i, s in top]
         # only precedents that clear the similarity bar get a vote
@@ -448,35 +847,39 @@ class Space:
                         max(self._ts[i] for i in idx),
                         sorted({self._authors[i] for i in idx}))
 
-    def evidence(self, situation: Dict[str, str], outcome: str,
+    def evidence(self, situation: Dict[str, Any], outcome: str,
                  events: Optional[List[np.ndarray]] = None,
-                 min_sim: Optional[float] = None) -> Evidence:
+                 min_sim: Optional[float] = None,
+                 weights: Optional[Dict[str, Any]] = None) -> Evidence:
         """Support for ONE candidate outcome, over every precedent (not
         just the top k), judged on its own: how many precedents with
         this outcome clear the bar, how close, how recent, by whom."""
         if self._n == 0:
             return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
         bar = self.min_sim if min_sim is None else min_sim
-        return self._evidence(self._sims(situation, events), outcome, bar)
+        return self._evidence(self._scores(situation, events, weights),
+                              outcome, bar)
 
-    def answers(self, situation: Dict[str, str],
+    def answers(self, situation: Dict[str, Any],
                 events: Optional[List[np.ndarray]] = None,
-                min_count: int = 1) -> List[Evidence]:
+                min_count: int = 1,
+                weights: Optional[Dict[str, Any]] = None) -> List[Evidence]:
         """Every outcome with qualifying precedent in this situation,
         strongest first. The read for situations that genuinely have
         several true outcomes: gate each on its own count, not on its
         share of a vote (see SPEC rule 4)."""
         if self._n == 0:
             return []
-        sims = self._sims(situation, events)
+        sims = self._scores(situation, events, weights)
         found = {self._outcomes[i] for i in range(self._n)
                  if sims[i] >= self.min_sim}
         out = [self._evidence(sims, o, self.min_sim) for o in found]
         out = [e for e in out if e.count >= min_count]
         return sorted(out, key=lambda e: (-e.count, -e.support, e.outcome))
 
-    def matches(self, situation: Dict[str, str], outcome: str,
-                events: Optional[List[np.ndarray]] = None) -> float:
+    def matches(self, situation: Dict[str, Any], outcome: str,
+                events: Optional[List[np.ndarray]] = None,
+                weights: Optional[Dict[str, Any]] = None) -> float:
         """Max similarity among precedents with THIS outcome (0.0 if
         none). The veto primitive: 'how close is the nearest recorded
         failure of this exact action?' — a direct check that no
@@ -486,8 +889,90 @@ class Space:
         mask = np.array([o == outcome for o in self._outcomes[:self._n]])
         if not mask.any():
             return 0.0
-        sims = self._sims(situation, events)[mask]
+        sims = self._scores(situation, events, weights)[mask]
         return float(sims.max())
+
+    def facts(self, situation: Dict[str, Any],
+              events: Optional[List[np.ndarray]] = None,
+              weights: Optional[Dict[str, Any]] = None,
+              top: Optional[int] = None,
+              min_score: Optional[float] = None) -> List["FactTree"]:
+        """The exact read: every precedent scored by weighted sim
+        (unweighted keys weigh 1), the `top` (default k) best each
+        explained as a fact tree — per key its score, weight and share,
+        events as "~events" — with the glyph sim beside it and a
+        citation. Ranked by score, then glyph sim, newest, id; rows under
+        min_score (if given) are left out."""
+        if self._n == 0:
+            return []
+        sims = self._sims(situation, events)
+        scores = self._scores(situation, events, weights or {})
+        order = sorted((i for i in range(self._n)
+                        if min_score is None or scores[i] >= min_score),
+                       key=lambda i: (-scores[i], -sims[i], -self._ts[i],
+                                      self._ids[i]))
+        traj = self._traj(events)
+        probs = self._probabilities(scores, self.tau)
+        return [FactTree(self._ids[i], self._outcomes[i], self._authors[i],
+                         self._ts[i], self._hash(i), float(sims[i]),
+                         self._exact(i, situation, traj, weights,
+                                     glyphs=True),
+                         probs.get(self._outcomes[i], 0.0))
+                for i in order[:self.k if top is None else top]]
+
+    def probabilities(self, situation: Dict[str, Any],
+                      events: Optional[List[np.ndarray]] = None,
+                      weights: Optional[Dict[str, Any]] = None
+                      ) -> Dict[str, float]:
+        """P(outcome | situation) for every outcome among the POOL
+        nearest precedents by exact weighted sim: a softmax of their
+        scores at temperature tau, summed per outcome. Calibrated once
+        calibrate() has fit tau to this store's own graded record."""
+        if self._n == 0:
+            return {}
+        return self._probabilities(
+            self._scores(situation, events, weights or {}), self.tau)
+
+    def _probabilities(self, scores: np.ndarray, tau: float,
+                       skip: int = -1) -> Dict[str, float]:
+        order = [int(i) for i in np.argsort(scores, kind="stable")[::-1]
+                 if i != skip][:POOL]
+        if not order:
+            return {}
+        top = float(scores[order[0]])
+        mass: Dict[str, float] = {}
+        for i in order:
+            o = self._outcomes[i]
+            mass[o] = mass.get(o, 0.0) + math.exp((float(scores[i]) - top) / tau)
+        z = sum(mass.values())
+        return {o: m / z for o, m in mass.items()}
+
+    def calibrate(self, sample: int = 100,
+                  weights: Optional[Dict[str, Any]] = None) -> float:
+        """Fit tau so probabilities mean what they say: hold out each of
+        the `sample` newest precedents in turn, score it against the
+        rest, and keep the temperature (from TAUS) with the least
+        log-loss on the held-out outcomes. Saved in the file, so every
+        later open uses it. Events are left out. Returns tau."""
+        if self._n < 10:
+            raise ValueError("calibrate needs at least 10 precedents")
+        held = list(range(self._n))[-sample:]
+        scored = [(h, self._scores(self._situations[h], None, weights or {}))
+                  for h in held]
+        best = (float("inf"), TAU)
+        for tau in TAUS:
+            loss = 0.0
+            for h, scores in scored:
+                p = self._probabilities(scores, tau, skip=h)
+                loss -= math.log(max(p.get(self._outcomes[h], 0.0), 1e-6))
+            if loss < best[0]:
+                best = (loss, tau)
+        self.tau, self._tau_given = best[1], False
+        if self._db is not None:
+            self._db.execute("INSERT OR REPLACE INTO meta VALUES ('tau', ?)",
+                             (repr(self.tau),))
+            self._db.commit()
+        return self.tau
 
     def __len__(self) -> int:
         return self._n
@@ -503,6 +988,10 @@ class Space:
         if _file_encoding(self._db) < ENCODING:
             _reencode_rows(self._db, self)
         self._db.commit()
+        saved = self._db.execute(
+            "SELECT value FROM meta WHERE key = 'tau'").fetchone()
+        if saved and not self._tau_given:
+            self.tau = float(saved[0])
         self.refresh()
 
     def refresh(self) -> int:
@@ -512,9 +1001,10 @@ class Space:
             return 0
         known = set(self._ids)
         added = 0
-        for rid, outcome, dim, blob, author, ts in self._db.execute(
-                "SELECT id, outcome, dim, glyph, author, ts "
-                "FROM precedents ORDER BY ts, rowid"):
+        for rid, situation, outcome, dim, blob, author, ts, ev in \
+                self._db.execute(
+                    "SELECT id, situation, outcome, dim, glyph, author, ts,"
+                    " events FROM precedents ORDER BY ts, rowid"):
             if rid in known:
                 continue
             if dim != self.dim:
@@ -522,7 +1012,8 @@ class Space:
                     f"precedent {rid} has dim {dim}, space is {self.dim}")
             self._append(rid, outcome,
                          np.frombuffer(blob, dtype=np.int8).copy(),
-                         author, ts)
+                         author, ts, _situation_of(situation),
+                         self._traj(_events_from_blob(ev, dim)))
             added += 1
         return added
 
@@ -555,7 +1046,9 @@ class Space:
                                     _events_from_blob(ev, dim))
             else:
                 glyph = np.frombuffer(blob, dtype=np.int8).copy()
-            self._append(rid, outcome, glyph, author, ts)
+            self._append(rid, outcome, glyph, author, ts,
+                         _situation_of(situation),
+                         self._traj(_events_from_blob(ev, dim)))
             if self._db is not None:
                 self._db.execute(
                     "INSERT OR REPLACE INTO precedents (id, situation,"
@@ -607,10 +1100,11 @@ class Decision:
                 "answer": self.answer.to_json()}
 
 
-def decide(wins: Space, vetoes: Space, situation: Dict[str, str],
+def decide(wins: Space, vetoes: Space, situation: Dict[str, Any],
            events: Optional[List[np.ndarray]] = None, *,
            min_confidence: float = 0.5, min_count: int = 3,
-           min_veto_count: int = 1) -> Decision:
+           min_veto_count: int = 1,
+           weights: Optional[Dict[str, Any]] = None) -> Decision:
     """THE CONTRACT (see SPEC): the three trust gates on the wins, then
     the veto check, with the newest evidence winning.
 
@@ -619,14 +1113,16 @@ def decide(wins: Space, vetoes: Space, situation: Dict[str, str],
     It blocks while at least `min_veto_count` such failures exist AND
     the newest of them is newer than the newest qualifying win; a later
     reproduction lifts it. min_veto_count=1 is fail-closed (one failure
-    stops the reflex); 2+ demands corroboration (harder to sabotage)."""
-    answer = wins.query(situation, events)
+    stops the reflex); 2+ demands corroboration (harder to sabotage).
+    weights weigh the situation's keys in every read (see encode())."""
+    answer = wins.query(situation, events, weights)
     if not answer.sufficient:
         return Decision(False, None, "insufficient", answer, None, False)
     top = answer.top
     veto = vetoes.evidence(situation, top, events,
-                           min_sim=max(answer.support, 1e-9))
-    win = wins.evidence(situation, top, events)
+                           min_sim=max(answer.support, 1e-9),
+                           weights=weights)
+    win = wins.evidence(situation, top, events, weights=weights)
     close = veto.count >= min_veto_count
     lifted = close and win.latest > veto.latest
     if close and not lifted:
@@ -685,6 +1181,13 @@ def _file_encoding(db: sqlite3.Connection) -> int:
     except sqlite3.Error:
         rows = 0
     return ENCODING if rows == 0 else 1
+
+
+def _situation_of(text: Optional[str]) -> Any:
+    try:
+        return json.loads(text) if text else None
+    except (TypeError, json.JSONDecodeError):
+        return None
 
 
 def _events_from_blob(blob: Optional[bytes],

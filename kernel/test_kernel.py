@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from glyphh_kernel import Space, Strand, bind, bundle, roll, sim, symbol
+from glyphh_kernel import (ENCODING, Space, Strand, bind, bundle, roll, sim,
+                           symbol)
 
 
 def test_bind_self_inverse():
@@ -275,7 +276,7 @@ def test_old_encoding_store_reencodes_on_open(tmp_path):
     space.close()
     db = sqlite3.connect(path)
     assert db.execute("SELECT value FROM meta WHERE key='encoding'"
-                      ).fetchone()[0] == "2"
+                      ).fetchone()[0] == str(ENCODING)
     assert db.execute("SELECT ts FROM precedents").fetchone()[0] == 0.0
     db.close()
 
@@ -398,3 +399,181 @@ def test_decision_serializes():
     wins, vetoes = _stores(3)
     out = decide(wins, vetoes, {"task": "deploy", "env": "prod"}).to_json()
     assert out["act"] is True and out["answer"]["count"] == 3
+
+
+# ── encoding 3: data, weights at every level, fact trees ────────────
+
+from glyphh_kernel import encode, explain  # noqa: E402
+
+DECIDES = {"goal": 1.0, "risk": 1.0, "team": 0.1, "region": 0}
+QUERY = {"goal": "move_data", "risk": "downtime", "team": "infra",
+         "region": "eu"}
+DECISIVE = {"goal": "move_data", "risk": "downtime", "team": "platform",
+            "region": "us"}
+INCIDENTAL = {"goal": "other", "risk": "lock_table", "team": "infra",
+              "region": "eu"}
+
+
+def test_weighted_bundle_is_order_free_and_unit_weights_change_nothing():
+    a, b, c, d = (symbol(k) for k in "abcd")
+    for parts in ([a, b], [a, b, c], [a, b, c, d], [a, a, b, b]):
+        assert np.array_equal(bundle(parts), bundle(parts, [1] * len(parts)))
+        assert np.array_equal(bundle(parts, [3.0] * len(parts)),
+                              bundle(parts[::-1], [3.0] * len(parts)))
+    w = [0.2, 1.0, 0.7, 0.5]
+    assert np.array_equal(bundle([a, b, c, d], w),
+                          bundle([d, c, b, a], w[::-1]))
+
+
+def test_weight_is_a_voice_in_the_vote():
+    a, b, c = (symbol(k) for k in "abc")
+    heavy = bundle([a, b, c], [3.0, 1.0, 1.0])
+    assert sim(heavy, a) > 0.9 > sim(heavy, b)
+    assert np.array_equal(bundle([a, b], [1.0, 0.0]), a)  # 0 drops a part
+    with pytest.raises(ValueError):
+        bundle([a, b], [0, 0])
+    with pytest.raises(ValueError):
+        bundle([a, b], [1.0, -1.0])
+    with pytest.raises(ValueError):
+        bundle([a, b], [1.0])
+
+
+def test_flat_situation_encodes_as_it_always_has():
+    s = {"task": "deploy", "env": "prod"}
+    old = bundle([bind(symbol("attr:env"), symbol("val:prod")),
+                  bind(symbol("attr:task"), symbol("val:deploy"))])
+    assert np.array_equal(encode(s), old)
+    assert np.array_equal(Space().encode(s), old)
+
+
+def test_nested_data_keeps_paths_apart():
+    assert abs(sim(encode({"a": {"b": "x"}}), encode({"b": {"a": "x"}}))) < 0.06
+    assert sim(encode({"plan": {"step": "a", "owner": "x"}}),
+               encode({"plan": {"step": "a", "owner": "y"}})) > 0.2
+    # arrays are sets; scalars are typed text
+    assert np.array_equal(encode({"t": ["a", "b"]}), encode({"t": ["b", "a"]}))
+    assert abs(sim(encode({"n": 3}), encode({"n": "3"})) - 1.0) < 1e-9
+    assert abs(sim(encode({"n": True}), encode({"n": "True"}))) < 0.06
+    for empty in ({}, {"a": {}}, {"a": []}):
+        with pytest.raises(ValueError):
+            encode(empty)
+
+
+def test_weights_decide_which_neighbor_is_near():
+    # unweighted, sharing two incidental attributes looks as close as
+    # sharing the two that decide; weights say which ones matter
+    assert abs(sim(encode(QUERY), encode(DECISIVE))
+               - sim(encode(QUERY), encode(INCIDENTAL))) < 0.05
+    assert sim(encode(QUERY, DECIDES), encode(DECISIVE)) > \
+        sim(encode(QUERY, DECIDES), encode(INCIDENTAL)) + 0.1
+
+
+def test_fact_tree_adds_up_and_cites_every_key():
+    root = explain(QUERY, DECISIVE, DECIDES)
+    assert {c.key for c in root.children} == set(QUERY)
+    assert abs(sum(c.share for c in root.children) - root.score) < 1e-12
+    assert root.score > 0.9
+    assert explain(QUERY, INCIDENTAL, DECIDES).score < 0.1
+    by = {c.key: c for c in root.children}
+    assert by["risk"].score == pytest.approx(1.0) and by["region"].weight == 0
+
+
+def test_fact_tree_nests_and_reports_one_sided_keys():
+    q = {"plan": {"step": "dual_write", "owner": "ana"}, "risk": "downtime"}
+    r = {"plan": {"step": "dual_write", "owner": "bo"}, "risk": "downtime",
+         "extra": [1, 2]}
+    root = explain(q, r, {"plan": {"*": 2, "owner": 0}, "extra": 0})
+    assert root.score == pytest.approx(1.0)
+    by = {c.key: c for c in root.children}
+    assert by["extra"].status == "record_only" and by["extra"].score == 0
+    assert by["plan"].weight == 2 and len(by["plan"].children) == 2
+    # unweighted, the one-sided key and the differing owner both cost
+    assert explain(q, r).score < 0.7
+    doc = root.to_json()
+    assert doc["children"][0]["key"] == "extra" and "record" in doc["children"][0]
+    assert "extra: not in the query" in root.to_text()
+
+
+def test_space_reads_take_weights_and_facts_explain_them(tmp_path):
+    path = str(tmp_path / "w.db")
+    space = Space(min_sim=0.2, path=path)
+    for _ in range(3):
+        space.record(DECISIVE, "dual_write")
+        space.record(INCIDENTAL, "batch_copy")
+    assert space.query(QUERY, weights=DECIDES).top == "dual_write"
+    assert space.matches(QUERY, "dual_write", weights=DECIDES) > \
+        space.matches(QUERY, "batch_copy", weights=DECIDES)
+    facts = space.facts(QUERY, weights=DECIDES)
+    assert len(facts) == 6 and facts[0].outcome == "dual_write"
+    assert facts[0].score > 0.9 > 0.1 > facts[-1].score
+    assert facts[0].to_json()["tree"]["children"]
+    space.close()
+    # situations come back from the file, nested ones too
+    nested = {"plan": {"step": "x"}, "risk": "y"}
+    Space(path=path).record(nested, "z")
+    again = Space(path=path)
+    top = again.facts(nested, top=1)[0]
+    assert top.outcome == "z" and top.score == pytest.approx(1.0)
+
+
+def test_weights_can_raise_a_match_over_the_bar():
+    # a perfect match on the keys that decide clears a bar the glyph,
+    # diluted by incidental keys, cannot
+    space = Space(min_sim=0.4)
+    space.record(DECISIVE, "dual_write")
+    assert not space.query(QUERY).sufficient
+    weighted = space.query(QUERY, weights=DECIDES)
+    assert weighted.sufficient and weighted.support > 0.9
+    assert space.facts(QUERY, weights=DECIDES, min_score=0.99) == []
+
+
+def test_events_are_one_more_key_in_the_tree():
+    up, down = symbol("up"), symbol("down")
+    space = Space()
+    space.record({"task": "t"}, "same", events=[up, down])
+    space.record({"task": "t"}, "flipped", events=[down, up])
+    space.record({"task": "t"}, "none")
+    facts = space.facts({"task": "t"}, events=[up, down])
+    assert [f.outcome for f in facts][0] == "same"
+    by = {f.outcome: {c.key: c for c in f.root.children} for f in facts}
+    assert by["same"]["~events"].score == pytest.approx(1.0)
+    assert by["none"]["~events"].status == "query_only"
+    assert by["flipped"]["~events"].score < 0.7
+
+
+# ── calibrated probability on the fact tree ─────────────────────────
+
+def _routed_space(path=None):
+    space = Space(path=path)
+    rng = np.random.default_rng(7)
+    for i in range(60):
+        team = ["node", "net", "storage"][i % 3]
+        noise = f"n{rng.integers(0, 5)}"
+        space.record({"component": team, "noise": noise}, f"sig/{team}",
+                     ts=float(i))
+    return space
+
+
+def test_probabilities_sum_to_one_and_follow_the_evidence():
+    space = _routed_space()
+    p = space.probabilities({"component": "node", "noise": "n9"},
+                            weights={"noise": 0})
+    assert abs(sum(p.values()) - 1.0) < 1e-12
+    assert max(p, key=p.get) == "sig/node" and p["sig/node"] > 0.9
+    facts = space.facts({"component": "node", "noise": "n9"},
+                        weights={"noise": 0}, top=3)
+    assert facts[0].probability == pytest.approx(p["sig/node"])
+    assert facts[0].to_json()["probability"] == round(p["sig/node"], 4)
+    assert facts[0].to_text().startswith("sig/node  p ")
+
+
+def test_calibrate_fits_tau_and_the_file_keeps_it(tmp_path):
+    path = str(tmp_path / "c.db")
+    space = _routed_space(path)
+    tau = space.calibrate(sample=30, weights={"noise": 0})
+    assert tau in (0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 1.0)
+    space.close()
+    assert Space(path=path).tau == tau
+    assert Space(path=path, tau=0.5).tau == 0.5   # given wins
+    with pytest.raises(ValueError):
+        Space().calibrate()

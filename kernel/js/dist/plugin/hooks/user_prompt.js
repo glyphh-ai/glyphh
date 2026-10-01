@@ -124,7 +124,8 @@ function main() {
         for (const [k, v] of Object.entries(situation)) {
             for (const t of tokens(String(k)))
                 situationTokens.add(t);
-            for (const t of tokens(String(v)))
+            // nested values tokenize as their JSON text
+            for (const t of tokens(typeof v === "string" ? v : pyDumps(v)))
                 situationTokens.add(t);
         }
         const outcomeTokens = new Set();

@@ -11,7 +11,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-export type Row = [situation: Record<string, string>, outcome: string, author: string];
+export type Row = [situation: Record<string, unknown>, outcome: string, author: string];
 
 // per-session markers live in the system temp dir ($TMPDIR on macOS),
 // the same directory the Python hooks use

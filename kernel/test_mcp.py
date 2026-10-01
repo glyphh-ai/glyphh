@@ -59,7 +59,8 @@ def test_handshake_and_tool_list(home):
     assert init["result"]["protocolVersion"] == "2025-06-18"
     assert "tools" in init["result"]["capabilities"]
     names = {t["name"] for t in listed["result"]["tools"]}
-    assert names == {"query", "record", "veto", "check", "status"}
+    assert names == {"query", "facts", "calibrate", "record", "veto", "check",
+                     "status"}
 
 
 def test_query_returns_precedent_with_veto_check(home):
@@ -123,7 +124,7 @@ def test_bad_arguments_are_tool_errors(home):
     empty, bad_type, missing = session(
         home,
         tool(1, "query", situation={}),
-        tool(2, "record", situation={"task": 3}, outcome="o", author="a"),
+        tool(2, "record", situation={"task": {}}, outcome="o", author="a"),
         tool(3, "veto", situation=SITUATION, outcome="o"))
     for reply in (empty, bad_type, missing):
         assert reply["result"]["isError"] is True
@@ -164,3 +165,32 @@ def test_query_reports_reason_and_a_newer_win_lifts_a_veto(home):
         tool(2, "query", situation=SITUATION))
     answer = payload(lifted)
     assert answer["act"] is True and answer["lifted"] is True
+
+
+def test_facts_and_weighted_query(home):
+    decisive = {"goal": "move_data", "risk": "downtime",
+                "team": "platform", "region": "us"}
+    incidental = {"goal": "other", "risk": "lock_table",
+                  "team": "infra", "region": "eu"}
+    query = {"goal": "move_data", "risk": "downtime",
+             "team": "infra", "region": "eu"}
+    weights = {"goal": 1, "risk": 1, "team": 0.1, "region": 0}
+    calls = [tool(i, "record", situation=s, outcome=o, author="t")
+             for i, (s, o) in enumerate(
+                 [(decisive, "dual_write"), (incidental, "batch_copy")] * 3)]
+    replies = session(
+        home, *calls,
+        tool(10, "query", situation=query, weights=weights),
+        tool(11, "facts", situation=query, weights=weights, top=2),
+        tool(12, "facts", situation=query, weights={"risk": -1}),
+        tool(13, "record", situation={"plan": {"step": "x"}, "n": 3},
+             outcome="nested", author="t"))
+    answer = json.loads(replies[6]["result"]["content"][0]["text"])
+    assert answer["top"] == "dual_write"
+    facts = json.loads(replies[7]["result"]["content"][0]["text"])
+    assert [f["outcome"] for f in facts["wins"]] == ["dual_write"] * 2
+    assert facts["wins"][0]["score"] > 0.9 and facts["vetoes"] == []
+    keys = [c["key"] for c in facts["wins"][0]["tree"]["children"]]
+    assert keys == ["goal", "region", "risk", "team"]
+    assert replies[8]["result"]["isError"] is True
+    assert replies[9]["result"]["isError"] is False

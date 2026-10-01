@@ -29,8 +29,10 @@ function main(): void {
   const kinds = new Map<string, number>();
   for (const [situation] of wins) {
     for (const key of ["task", "kind", "topic"]) {
-      if (key in situation) {
-        kinds.set(situation[key], (kinds.get(situation[key]) ?? 0) + 1);
+      // situations may nest; only a plain label names a kind
+      const label: unknown = situation && Object.hasOwn(situation, key) ? situation[key] : undefined;
+      if (typeof label === "string") {
+        kinds.set(label, (kinds.get(label) ?? 0) + 1);
         break;
       }
     }
