@@ -10,6 +10,13 @@ erDiagram
     users ||--o{ tokens : "signs in with"
     orgs ||--o{ models : "adds"
     orgs ||--o{ api_keys : "issues"
+    orgs ||--o{ teams : "has"
+    teams ||--o{ team_members : "has"
+    users ||--o{ team_members : "is in"
+    teams ||--o{ team_models : "may use"
+    models ||--o{ team_models : "granted to"
+    teams ||--o{ team_apps : "may connect"
+    users ||--o{ connections : "connects"
 
     plans {
         uuid id PK
@@ -55,6 +62,45 @@ erDiagram
         uuid created_by FK
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    teams {
+        uuid id PK
+        uuid org_id FK
+        text name "unique in the org"
+        bool all_models "true = every org model"
+        bool all_apps "true = any app"
+        timestamptz created_at
+    }
+
+    team_members {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK
+        uuid user_id FK "unique with team_id"
+        timestamptz created_at
+    }
+
+    team_models {
+        uuid team_id PK, FK
+        uuid model_id PK, FK
+    }
+
+    team_apps {
+        uuid team_id PK, FK
+        text app PK "gmail, slack, ..."
+    }
+
+    connections {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "a connection is one person's"
+        text app "gmail, slack, ..."
+        text name
+        text mcp_url
+        bytea secret "encrypted; never returned"
+        timestamptz created_at
+        timestamptz revoked_at
     }
 
     api_keys {
@@ -124,9 +170,21 @@ Glyphh is a model runtime, not a gateway: it stores how a model is reached and n
 
 Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and the per-model flags nothing enforced.
 
+## Teams
+
+Teams only limit access: which of the org's models, and which apps, their members may use. They govern nothing else.
+
+- **An org with no teams is flat:** every member may use every org model and connect any app.
+- **An org with teams:** a member may use the models and apps of the teams they are in, together. A member in no team may use none.
+- **A team grants models** either all of them (`all_models`) or the ones listed in `team_models`, and **apps** either all of them (`all_apps`) or the ones listed in `team_apps`.
+
+## Connections
+
+A connection is one person's: their own Gmail, Slack or other account, reached as an MCP server with its sign-in, encrypted and never returned. Only its owner's super power runs use it. In an org with teams, a member may only connect the apps their teams allow.
+
 ## Scoping
 
-Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
+Every API call and MCP tool runs as a principal: the user, their org, their role and their teams. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
 
 ## tokens
 
