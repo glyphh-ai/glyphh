@@ -32,7 +32,9 @@ erDiagram
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "null = no limit"
         int monthly_credits "included each billing period"
-        int max_machines "null = no limit"
+        int included_machines "null = no limit"
+        int extra_machine_cents "per extra machine per month; null = no extras on this plan"
+        text stripe_machine_price_id UK "the Stripe price extras are billed on"
         bool active
         int sort
         timestamptz created_at
@@ -129,6 +131,7 @@ erDiagram
         text stripe_customer_id UK
         text stripe_subscription_id UK "null on Free"
         text status "trialing, active, past_due, canceled"
+        int extra_machines "bought on top of the plan's included machines"
         timestamptz current_period_start
         timestamptz current_period_end
         timestamptz created_at
@@ -251,7 +254,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 ## Machines
 
-A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept); `last_seen_at` says when it was last online. A plan caps how many machines an org may have (`max_machines`); revoking one stops it connecting.
+A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept); `last_seen_at` says when it was last online. A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
 ## Scoping
 
