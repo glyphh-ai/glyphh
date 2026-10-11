@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import Org, Plan, User
+from glyphh_server.models import OAuthClient, Org, Plan, User
 
 
 async def plan_id(engine: AsyncEngine, name: str = "Free") -> uuid.UUID:
@@ -26,3 +26,9 @@ async def make_user(engine: AsyncEngine, org_id: uuid.UUID, email: str, role: st
     values = {"org_id": org_id, "role": role, "email": email, "first_name": "Ada", "last_name": "Lovelace"}
     async with engine.begin() as conn:
         return (await conn.execute(insert(User).values(values).returning(User.id))).scalar_one()
+
+
+async def make_client(engine: AsyncEngine, client_id: str = "claude-code") -> uuid.UUID:
+    values = {"client_id": client_id, "name": "Claude Code", "redirect_uris": ["http://localhost:33418/callback"]}
+    async with engine.begin() as conn:
+        return (await conn.execute(insert(OAuthClient).values(values).returning(OAuthClient.id))).scalar_one()

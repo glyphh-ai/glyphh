@@ -35,8 +35,13 @@ def _probe_app() -> FastAPI:
 
         return StreamingResponse(body())
 
-    for path, fn in (("/probe/refuse", refuse), ("/probe/unavailable", unavailable), ("/probe/crash", crash),
-                     ("/probe/count", count), ("/probe/stream", crash_midway)):
+    for path, fn in (
+        ("/probe/refuse", refuse),
+        ("/probe/unavailable", unavailable),
+        ("/probe/crash", crash),
+        ("/probe/count", count),
+        ("/probe/stream", crash_midway),
+    ):
         app.add_api_route(path, fn, methods=["GET"])
     return app
 
@@ -107,7 +112,10 @@ async def test_an_unmapped_http_status_has_a_generic_code(probe: httpx.AsyncClie
     app.add_api_route("/probe/teapot", teapot, methods=["GET"])
     res = await probe.get("/probe/teapot")
     assert res.status_code == 418 and res.json()["error"] == {
-        "code": "E_HTTP", "message": "I'm a teapot", "trace_id": res.headers["x-request-id"]}
+        "code": "E_HTTP",
+        "message": "I'm a teapot",
+        "trace_id": res.headers["x-request-id"],
+    }
 
 
 async def test_every_request_is_logged_once_with_its_status_and_time(

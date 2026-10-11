@@ -31,8 +31,11 @@ def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
 
 async def _glyphh_error(_: Request, err: Exception) -> JSONResponse:
     assert isinstance(err, GlyphhError)
-    log.log(logging.ERROR if err.status >= 500 else logging.INFO, "refused",
-            extra=fields(code=err.code, status=err.status, reason=err.message))
+    log.log(
+        logging.ERROR if err.status >= 500 else logging.INFO,
+        "refused",
+        extra=fields(code=err.code, status=err.status, reason=err.message),
+    )
     return JSONResponse(error_body(err.code, err.message, **err.detail), status_code=err.status)
 
 

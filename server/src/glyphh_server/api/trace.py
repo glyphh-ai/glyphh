@@ -53,5 +53,6 @@ class TraceMiddleware:
                         await send({"type": "http.response.body", "body": b"", "more_body": False})
             finally:
                 ms = round((time.perf_counter() - began) * 1000, 1)
-                log.info("request", extra=fields(method=scope["method"], path=scope["path"],
-                                                 status=state["status"], ms=ms))
+                log.info(
+                    "request", extra=fields(method=scope["method"], path=scope["path"], status=state["status"], ms=ms)
+                )

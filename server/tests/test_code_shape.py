@@ -26,8 +26,11 @@ def test_every_function_and_class_is_small() -> None:
     big: dict[str, int] = {}
     for path in _sources():
         for node in ast.walk(ast.parse(path.read_text())):
-            limit = {ast.FunctionDef: MAX_FUNCTION_LINES, ast.AsyncFunctionDef: MAX_FUNCTION_LINES,
-                     ast.ClassDef: MAX_CLASS_LINES}.get(type(node))
+            limit = {
+                ast.FunctionDef: MAX_FUNCTION_LINES,
+                ast.AsyncFunctionDef: MAX_FUNCTION_LINES,
+                ast.ClassDef: MAX_CLASS_LINES,
+            }.get(type(node))
             if limit and _span(node) > limit:
                 big[f"{path.relative_to(SRC)}:{node.name}"] = _span(node)  # type: ignore[attr-defined]
     assert big == {}, f"functions over {MAX_FUNCTION_LINES} or classes over {MAX_CLASS_LINES} lines: {big}"
