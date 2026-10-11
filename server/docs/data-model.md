@@ -236,13 +236,15 @@ Seats are billed as the old server billed them (his rule, 2026-09-18):
 
 The plans carried over from the old server:
 
-| Plan | Price | Seats |
-|---|---|---|
-| Free | $0 | 1 |
-| Solo | $20 | 1 |
-| Basic | $40 | 25 |
-| Pro | $150 | 100 |
-| Enterprise | arranged | no limit |
+| Plan | Price per seat | Seats | Machines included | Extra machines |
+|---|---|---|---|---|
+| Free | $0 | 1 | 2 | none |
+| Solo | $20 | 1 | to set | to set |
+| Basic | $40 | 25 | to set | to set |
+| Pro | $150 | 100 | to set | to set |
+| Enterprise | arranged | no limit | no limit | n/a |
+
+An org that already has its included machines plus its extras cannot register another: signing in from one more machine is refused with the reason (on Free: "Free includes 2 machines. Upgrade, or remove one."), and nothing is half registered.
 
 Left behind from the old server: the margin and the dollar pool, the rate limits, the SSO and governance flags, the price history, and the machine terms. Glyphh governs nothing: limits and access belong to an AI gateway the customer puts in front of their models.
 
