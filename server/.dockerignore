@@ -1,0 +1,6 @@
+.venv
+.git
+site
+**/__pycache__
+.pytest_cache
+.coverage

@@ -1,0 +1,50 @@
+[project]
+name = "glyphh-server"
+version = "0.1.0"
+description = "The Glyphh server: headless, multi-tenant, every capability as SDK, API and MCP"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic-settings>=2.6",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "mcp>=1.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "asgi-lifespan>=2.1.0",
+]
+docs = [
+    "mkdocs-material>=9.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/glyphh_server"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "--cov=glyphh_server --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[tool.coverage.run]
+source = ["glyphh_server"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "BLE", "UP", "SIM", "RUF"]

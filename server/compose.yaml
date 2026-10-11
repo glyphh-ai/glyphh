@@ -1,0 +1,42 @@
+name: glyphh
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: glyphh
+      POSTGRES_PASSWORD: glyphh
+      POSTGRES_DB: glyphh
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphh -d glyphh"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  server:
+    build:
+      context: .
+      target: runtime
+    environment:
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    environment:
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db:
