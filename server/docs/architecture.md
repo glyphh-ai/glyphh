@@ -26,8 +26,8 @@ flowchart TB
     end
 
     subgraph Yours["Your machines: each one a rrotor VM = the fence"]
-        R1["rrotor on a desktop (lite)<br/>Glyphh's UI + super power screens,<br/>CLIs, loop, sandboxed runs,<br/>a browser once approved"]
-        R2["rrotor on a server (full)<br/>the same UI, CLIs, loop,<br/>Postgres + pgvector, Neo4j, Redis,<br/>cron, Chromium (RPA)"]
+        R1["rrotor on a hosted server<br/>Glyphh's UI + super power screens,<br/>CLIs, loop, sandboxed runs,<br/>Postgres + pgvector, Neo4j, Redis,<br/>cron, Chromium (RPA)"]
+        R2["the same rrotor, anywhere else<br/>another server, or a laptop<br/>through Docker: just another host"]
     end
 
     Hosts["Hosts, one click<br/>Fly, AWS, Azure, GCP,<br/>DigitalOcean, Hetzner, any VPS"]
@@ -40,7 +40,6 @@ flowchart TB
     Claude -- "MCP, signed in with OAuth" --> Server
     Claude -- "machine list, then a machine" --> Player
     Browser --> Player
-    Browser -- "on the machine itself" --> R1
     Relay <-. "end to end: UI, SSH, screen" .-> R1
     Relay <-. "end to end: UI, SSH, screen" .-> R2
     R1 -- "outbound WS" --> Server
@@ -52,7 +51,7 @@ flowchart TB
     R1 -- "Ada calls" --> Ada
     R2 -- "Ada calls" --> Ada
     ConnRelay -- "metered on your subscription" --> Pipedream
-    Hosts -- "runs" --> R2
+    Hosts -- "runs" --> R1
     Pages --> SignIn
     Server --> Stripe
 ```
@@ -139,7 +138,7 @@ Everything a super power needs to run, on the member's own machine:
 
 It is the agent runtime: from it, a super power reaches about 3,900 models across about 125 providers directly, never through Glyphh's servers, and about 3,500 connections, which go through the server and are counted against the member's subscription.
 
-**On a desktop, rrotor is a lite one:** the UI, the CLIs and the loop, without pgvector or Neo4j. There is no app to install: a small signed helper starts the VM on macOS (Apple's virtualization needs one), and a script sets it up in WSL2 on Windows. Every rrotor connects to the member's other machines, so they can spread super powers across them and manage them all from any one.
+**One rrotor, the full one, everywhere.** Every machine runs the same image, with everything above. There is no Glyphh app on anyone's desktop: the member already has Claude, Cursor or a CLI there, and opens Glyphh's UI from it. A laptop can run rrotor too, as just another host, through Docker (Docker Desktop, OrbStack, or WSL on Windows), when a member wants super powers on its local folders or its own internet address; Glyphh ships nothing desktop-specific for it.
 
 A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
 
@@ -149,30 +148,28 @@ Still to draw with the rrotor definition: how a super power's data is kept apart
 
 Decided 2026-10-11:
 
-- **rrotor is a small Linux VM.** On a server it is the machine; on a desktop it runs headless (Apple's Virtualization framework on macOS, WSL2 on Windows, locked down: no automounted drives, no Windows interop, no Windows PATH). Inside it, a run sees only the folders it was granted, mounted in; the rest of the desktop does not exist for it, so no shell, Bash tool or program can reach past them. On Linux desktops the same fence comes from namespaces and Landlock, without a VM.
-- **There is no Glyphh app on the desktop.** What the member drives on their own machine is their own Claude or CLI, as it already is; everything Glyphh runs is inside rrotor.
+- **rrotor is a Linux machine of its own.** On a host it is a VM; on a laptop, Docker runs it inside a Linux VM of Docker's own, and only the folders mounted into it exist for it. Inside rrotor, each run is sandboxed again (namespaces and Landlock) to only the folders its super power was granted, so no shell, Bash tool or program can reach past them.
+- **There is no Glyphh app on the desktop.** What the member drives on their own machine is their own Claude, Cursor or CLI, as it already is; everything Glyphh runs is inside rrotor.
 - **Everything reaches a machine only through its rrotor, and only by grants:** another machine, Claude, a browser, or a super power running unattended. A super power is fenced whether or not anyone is watching it.
 - **The old app's tools that touch files, shells, processes or a browser live in rrotor.**
 
 ### Runtime hosting
 
-Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
+Glyphh does not host runtimes. Members run rrotor on their own compute: a server on any infrastructure, usually by one click, or their own laptop through Docker.
 
-- rrotor ships as one Linux image: a Docker image for servers, and the same system as the VM a desktop runs.
+- rrotor ships as one Linux image, the same everywhere.
 - It connects out to the server, never in, so a remote server needs no public address, ports or firewall rules.
 - **One-click hosting:** a real VM, not a platform container (per-run sandboxes and the virtual screen need a whole machine): Fly Machines, AWS (a CloudFormation quick-create link), Azure (Deploy to Azure), GCP, DigitalOcean and Hetzner (a first-boot script), and a one-line install for any other VPS.
 - **A new host registers itself:** the button carries a one-time code the server mints already approved, for minutes and one use; on first boot the machine trades it for its own token and SSH key. The member never copies a token, and no code is minted when the plan has no machine left.
-- The server knows which machines a member has registered, what each is (desktop or remote, lite or full, its platform and rrotor version), and whether each is online.
+- The server knows which machines a member has registered, what each is (where it runs, its platform and rrotor version), and whether each is online.
 
 ### Browsers and RPA on rrotor
 
-A full rrotor runs a virtual screen (a display with no monitor) and a real Chromium in it, so a super power can work websites on a headless server: Glyphh drives the browser through Chromium's own control protocol (click, type, read, go to a page) and screenshots when it needs to see. The old app's RPA tools move here, and the old browser workers already ran this way.
+Every rrotor runs a virtual screen (a display with no monitor) and a real Chromium in it, so a super power can work websites on a headless server: Glyphh drives the browser through Chromium's own control protocol (click, type, read, go to a page) and screenshots when it needs to see. The old app's RPA tools move here, and the old browser workers already ran this way.
 
 - **Watching:** the screen streams to the member's app or the web over WebRTC, whose video is encrypted end to end by design: the server only passes the call setup over the relay, and a TURN relay used when no direct path exists cannot decrypt it. If WebRTC cannot connect, screen frames go over the SSH channel instead. The server never sees the screen.
 - **Signing into a website:** the member takes control. The bot pauses, the member's taps and keystrokes go straight into the remote browser over the encrypted channel, they type the password and do the 2FA themselves, and hand control back. While they hold it no screenshot goes to the model, so a password or a code never reaches the model or a chat. The run's log records when control changed hands.
 - **Sessions stay on the machine:** each browser profile (a `browsers` power) lives on one rrotor and is granted like a folder, so one super power's signed-in sites are never another's. Cookies never leave that machine.
-- **On a desktop:** super powers get their own Chromium and virtual screen inside the desktop's rrotor VM, fenced and watched like a remote rrotor's. The member's own browser and its sessions are never used.
-- **Fetched only with the member's approval:** the desktop's VM does not carry the browser until the first super power that needs one is placed on that desktop. Then rrotor's UI asks first and explains: what it is (a separate browser inside the fence, for super powers only, which never sees the member's own sessions), what it costs (a few hundred MB on disk, roughly 300 to 500 MB of memory while a browser is open), and why (browser work runs on this machine and its own internet address, which some sites trust more than a cloud server). Declined, the super power cannot be placed on that desktop and is offered a remote rrotor instead; approved, the browser is fetched once and kept.
 - **Later:** a password manager (1Password) can fill sign-ins without the model seeing them. Passkeys are tied to the member's own device and cannot be used remotely; such sites need a password and 2FA through take-over.
 
 ### Machine to machine: SSH over the relay
@@ -200,7 +197,7 @@ Decided 2026-10-11. Glyphh ships no desktop app and no platform web app. Every r
 
 **Where it opens:**
 
-- **In Claude (or ChatGPT):** "open my Glyphh machines" calls a plugin tool that returns a UI Claude renders in the chat: the member's machines from the server, online or not, desktop or server, in Claude's own theme (with one machine, it opens it straight away). Tapping a machine opens its rrotor's UI there, through the player. Claude keeps driving the same machine through the plugin's tools beside it. Claude Code in a terminal, which shows no UI, opens the member's browser on the same pages instead.
+- **In Claude (or ChatGPT):** "open my Glyphh machines" calls a plugin tool that returns a UI Claude renders in the chat: the member's machines from the server, online or not, where each runs, in Claude's own theme (with one machine, it opens it straight away). Tapping a machine opens its rrotor's UI there, through the player. Claude keeps driving the same machine through the plugin's tools beside it. Claude Code in a terminal, which shows no UI, opens the member's browser on the same pages instead.
 - **In any browser:** app.glyphh.ai, the player: the same machine list and the same rrotor UI, from a laptop, an iPad or a phone. On the machine itself, rrotor's UI also answers locally.
 
 **The player** carries rrotor's UI from the member's machine to wherever it opens, and never stores what passes: app.glyphh.ai serves only a small shell, which opens an encrypted channel straight to the rrotor (WebRTC, the server only setting up the call) and loads the UI through it. Where a host's sandbox blocks that, the page offers to open in the browser instead, so nothing dead-ends.

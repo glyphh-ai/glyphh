@@ -209,7 +209,7 @@ erDiagram
 
     browsers {
         uuid power_id PK, FK
-        uuid machine_id FK "the rrotor its profile lives on: a full one, or a desktop whose member approved the browser"
+        uuid machine_id FK "the rrotor its profile lives on"
         text profile "the profile's name in rrotor; its cookies and sessions never leave that machine"
     }
 
@@ -386,9 +386,7 @@ erDiagram
         uuid org_id FK
         uuid user_id FK "whose machine it is"
         text name "unique for its owner"
-        text kind "desktop or remote"
-        text edition "lite (the desktop's: no pgvector, no Neo4j) or full"
-        timestamptz browser_approved_at "on a lite machine: when the member approved fetching the browser; null = not approved. A full rrotor always has one"
+        text host "where it runs: fly, aws, azure, gcp, digitalocean, hetzner, vps, docker on a laptop; shown, never a limit"
         text platform "macos, windows, linux"
         text version "the rrotor build it runs"
         text token_hash UK "what it connects with; only the hash is kept"
@@ -581,7 +579,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
 - **An Ada model** is a member's own, like every power: the model's id on Glyphh's Ada service (`am_...`). Its kernel and records stay on Glyphh's servers; a super power is granted it, and a task calls it through the server, billed per token. Shared through Discover like any power.
-- **A browser** is a browser profile on one rrotor (a full one, or a desktop whose member approved the browser): its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
+- **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
 - **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version is still open.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - **The catalog** is what rrotor's UI shows when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
@@ -623,11 +621,11 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 
 ## Machines
 
-Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (on a server, or on a desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
+Signing in always happens from a machine, and signing in is how a machine is registered: rrotor asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
 **One-click hosting** registers a new machine the same way, without the approve step: the member asks rrotor's UI or the plugin for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
 
-A machine is a registered rrotor, a small Linux VM: a member's desktop (a small helper runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A lite machine gets a browser only once its member approves it (`browser_approved_at`), and a browser power is never placed on a desktop before that. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+A machine is a registered rrotor, the same full image wherever it runs: a server on any host, or a laptop through Docker. It connects out to the server with its own token (only the hash is kept) and reports what it is: where it runs, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
 **Which server process holds a machine's connection is not in this database:** it is live state that is only true right now, so it lives in Redis (see the architecture, Data). `last_seen_at` here is updated when a machine connects and disconnects, not on every heartbeat.
 
