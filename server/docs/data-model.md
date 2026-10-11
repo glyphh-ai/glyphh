@@ -24,6 +24,7 @@ erDiagram
     plans ||--o{ subscriptions : "sold as"
     orgs ||--o{ credit_ledger : "earns and spends"
     users ||--o{ machines : "registers"
+    machine_sign_ins |o--o| machines : "registers"
     orgs ||--o{ invites : "invites"
     users ||--o{ invites : "sends"
 
@@ -165,6 +166,20 @@ erDiagram
         timestamptz created_at
     }
 
+    machine_sign_ins {
+        uuid id PK
+        text code_hash UK "the code the machine holds; only the hash is kept"
+        text user_code UK "the short code the member types or sees"
+        text machine_name "what the machine calls itself"
+        text status "pending, approved, denied"
+        uuid user_id FK "who approved it"
+        uuid machine_id FK "the machine it registered"
+        int interval_seconds "how often the machine may ask"
+        timestamptz last_polled_at
+        timestamptz expires_at
+        timestamptz created_at
+    }
+
     machines {
         uuid id PK
         uuid org_id FK
@@ -281,6 +296,8 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 An org admin invites someone by email, with the role they will have. The invite link carries a token (only its hash is kept) and expires; signing in with Google or GitHub from it, as that email, makes the user in the org, and the invite is accepted. An open invite holds a seat, so an org at `max_seats` cannot invite more; an accepted one becomes a billed seat, and a revoked or expired one frees its seat. Only one open invite per email per org.
 
 ## Machines
+
+Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (the CLI or the desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
 A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept); `last_seen_at` says when it was last online. A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
