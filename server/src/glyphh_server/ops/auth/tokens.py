@@ -49,6 +49,7 @@ async def principal_for(conn: AsyncConnection, access_token: str) -> Principal:
             .where(Token.access_hash == hash_secret(access_token))
             .where(Token.revoked_at.is_(None))
             .where(Token.access_expires_at > datetime.now(UTC))
+            .where(User.disabled_at.is_(None))
         )
     ).first()
     if row is None:

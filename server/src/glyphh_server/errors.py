@@ -41,6 +41,13 @@ class Conflict(GlyphhError):
     status = 409
 
 
+class LimitReached(GlyphhError):
+    """The org's plan does not allow more: seats, machines, credits. Upgrade, or free one up."""
+
+    code = "E_LIMIT"
+    status = 403
+
+
 class Unavailable(GlyphhError):
     code = "E_UNAVAILABLE"
     status = 503

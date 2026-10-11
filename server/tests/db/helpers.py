@@ -16,7 +16,8 @@ async def parent_id(engine: AsyncEngine) -> uuid.UUID:
         return (await conn.execute(select(Org.id).where(Org.parent_id.is_(None)))).scalar_one()
 
 
-async def make_org(engine: AsyncEngine, name: str, plan: str = "Free") -> uuid.UUID:
+async def make_org(engine: AsyncEngine, name: str, plan: str = "Enterprise") -> uuid.UUID:
+    """An org; on Enterprise (no seat limit) unless a test is about a plan."""
     values = {"name": name, "parent_id": await parent_id(engine), "plan_id": await plan_id(engine, plan)}
     async with engine.begin() as conn:
         return (await conn.execute(insert(Org).values(values).returning(Org.id))).scalar_one()
@@ -41,3 +42,9 @@ async def bearer(engine: AsyncEngine, email: str) -> str:
     user = await make_user(engine, await make_org(engine, f"Org of {email}"), email, "org_admin")
     async with engine.begin() as conn:
         return "Bearer " + (await tokens.issue(conn, user)).access_token
+
+
+async def make_plan(engine: AsyncEngine, name: str, seats: int | None) -> uuid.UUID:
+    values = {"name": name, "price_cents": 0, "max_seats": seats}
+    async with engine.begin() as conn:
+        return (await conn.execute(insert(Plan).values(values).returning(Plan.id))).scalar_one()

@@ -83,3 +83,14 @@ async def test_revoking_by_the_access_token_ends_the_pair_and_unknown_is_fine(en
         await tokens.revoke(conn, "never-issued")
         with pytest.raises(Unauthorized):
             await tokens.rotate(conn, issued.refresh_token)
+
+
+async def test_a_disabled_members_tokens_stop_working(engine: AsyncEngine) -> None:
+    from glyphh_server.models import User
+
+    _, user = await _member(engine, "disabled@tok.test")
+    async with engine.begin() as conn:
+        issued = await tokens.issue(conn, user)
+        await conn.execute(update(User).where(User.id == user).values(disabled_at=datetime.now(UTC)))
+        with pytest.raises(Unauthorized):
+            await tokens.principal_for(conn, issued.access_token)

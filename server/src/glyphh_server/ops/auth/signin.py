@@ -53,6 +53,8 @@ async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
                 last_used_at=datetime.now(UTC),
             )
         )
+    if (await conn.execute(select(User.disabled_at).where(User.id == user_id))).scalar_one() is not None:
+        raise Forbidden("Your account in this org is disabled. Ask an org admin.", provider=profile.provider)
     log.info("signed in", extra=fields(user=str(user_id), provider=profile.provider, how=how))
     return user_id
 

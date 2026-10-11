@@ -85,3 +85,13 @@ async def test_two_first_sign_ins_at_once_make_one_person_and_one_org(engine: As
     assert len(set(results)) == 1
     assert await _count(engine, User, User.email == "race@once.test") == 1
     assert await _count(engine, Org, Org.name == "Rae's org") == 1
+
+
+async def test_a_disabled_member_cannot_sign_in(engine: AsyncEngine) -> None:
+    from sqlalchemy import update
+
+    user = await _sign_in(engine, _profile("g-off", "off@disabled.test"))
+    async with engine.begin() as conn:
+        await conn.execute(update(User).where(User.id == user).values(disabled_at=func.now()))
+    with pytest.raises(Forbidden, match="disabled"):
+        await _sign_in(engine, _profile("g-off", "off@disabled.test"))

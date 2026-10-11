@@ -6,7 +6,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.config import Settings, get_settings
+from glyphh_server.db.drift import refuse_drift
 from glyphh_server.db.engine import make_engine
+from glyphh_server.db.limits import apply_limits
 from glyphh_server.db.seed import seed_parent_org, seed_plans
 from glyphh_server.models import Base
 
@@ -17,6 +19,8 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
     async with engine.begin() as conn:
         await conn.execute(text("SELECT pg_advisory_xact_lock(:lock)"), {"lock": _LOCK})
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(refuse_drift)
+        await apply_limits(conn)
         await seed_plans(conn, settings)
         await seed_parent_org(conn)
 

@@ -12,7 +12,7 @@ async def test_me_answers_as_the_signed_in_member(client: httpx.AsyncClient, eng
     res = await client.get("/v1/me", headers={"authorization": auth})
     assert res.status_code == 200, res.text
     body = res.json()
-    assert body["email"] == "me@api.test" and body["role"] == "org_admin" and body["org"]["plan"] == "Free"
+    assert body["email"] == "me@api.test" and body["role"] == "org_admin" and body["org"]["plan"] == "Enterprise"
 
 
 async def test_without_a_valid_token_the_answer_is_always_unauthorized(client: httpx.AsyncClient) -> None:
