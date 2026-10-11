@@ -85,6 +85,23 @@ A super power's data and screens live in its member's rrotor, never on the serve
 
 Still to draw with the rrotor definition: how a super power's data is kept apart from another's in that Postgres, and how its screens reach the app and the web when the machine is remote.
 
+### Machine to machine: SSH over the relay
+
+A member's machines reach each other, so from machine A they can watch machine B work, drive it, or open a terminal on it. Neither machine needs a public address or an open port, and the server cannot read what passes between them.
+
+- **Every machine connects out to the server** over one WebSocket, signed in with its own machine token (in a header, never in the URL). The server is the relay: it joins two of the member's machine connections and passes bytes between them.
+- **The two machines speak SSH to each other** through that relay, so the encryption is end to end: the server forwards only ciphertext. The server is a jump host that cannot see in.
+- **Keys:** each machine makes its own SSH key pair when it signs in. The private key never leaves it; the public key and its fingerprint are registered on the machine's row. A machine accepts only its member's own machines' keys, and remembers every key it has seen: a key that changes is refused, never trusted quietly, so even a compromised server cannot slip in a key of its own.
+- **rrotor runs its own SSH server,** not the machine's system SSH, offering only rrotor's own channels:
+    - **watch:** a run's events as they happen, with what came before it first, from rrotor's own Postgres;
+    - **drive:** send a prompt, answer a question, stop a run;
+    - **files:** inside the folders the member granted;
+    - **shell:** off until the member turns it on for that machine (`shell_enabled`), because a shell is the whole machine.
+- **Who:** for now only the machine's owner, from their own machines, the app or the web. The server checks it before joining two connections.
+- **When B drops:** A is told at once, and can join again when B is back.
+
+Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
