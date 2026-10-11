@@ -59,6 +59,7 @@ erDiagram
 
     team_members {
         uuid id PK
+        uuid org_id FK "the team's and the user's org, enforced by both keys"
         uuid team_id FK
         uuid user_id FK "unique with team_id"
         timestamptz created_at
