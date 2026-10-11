@@ -141,7 +141,7 @@ erDiagram
         uuid id PK
         uuid org_id FK
         uuid user_id FK "whose it is: every power is one user's, for now"
-        text kind "model, connection, folder, browser, skill, task, plugin, loop"
+        text kind "model, connection, folder, browser, ada, skill, task, plugin, loop"
         text name "unique for its owner"
         timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
@@ -332,17 +332,20 @@ erDiagram
     usage_events {
         uuid id PK
         uuid org_id FK
-        uuid user_id FK "whose connection it was"
-        uuid power_id FK "the connection power"
-        text service "what the call reached: gmail, slack, ...; kept as called"
-        text tool "the tool called: gmail-send-email, ..."
+        uuid user_id FK "whose call it was"
+        text kind "connection or ada"
+        uuid power_id FK "the connection power, or the Ada model power"
+        text service "a connection's service (gmail, slack, ...); for Ada, the model's id; kept as called"
+        text tool "the tool or Ada operation: gmail-send-email, query, record, ..."
         uuid super_power_id FK "the super power that called it"
         uuid machine_id FK "the machine it ran on"
         uuid run_id FK "the run it was part of"
         text status "ok, error, refused"
         text error "the reason, for error and refused"
-        int duration_ms "the time Pipedream took, timed by the server"
-        int credits "max(1, ceil(seconds / 30)) for a call made; 0 when refused"
+        int duration_ms "the time the call took, timed by the server"
+        int input_tokens "Ada: the arguments as JSON, counted by the server"
+        int output_tokens "Ada: the result, counted by the server"
+        int credits "connection: max(1, ceil(seconds / 30)); Ada: its tokens at the Ada price; 0 when refused"
         int request_bytes
         int response_bytes
         timestamptz started_at
@@ -576,6 +579,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
+- **An Ada model** is a member's own, like every power: the model's id on Glyphh's Ada service (`am_...`). Its kernel and records stay on Glyphh's servers; a super power is granted it, and a task calls it through the server, billed per token. Shared through Discover like any power.
 - **A browser** is a browser profile on one rrotor (a full one, or a desktop whose member approved the browser): its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
 - **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version is still open.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
@@ -642,7 +646,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 ## Usage
 
-Every usage event is logged in one place: the server's connection relay. A connection call is the only thing Glyphh pays for, and every one goes through the server (rrotor → connector → server → Pipedream), so the server sees each call whole: who, through which connection, from which super power, on which machine, how long, and what it cost. Nothing is reported by the runtime about itself, so a modified rrotor cannot under-report.
+Every usage event is logged in one place: the server, which every billed call passes through. Two kinds are billed: a connection call (rrotor → connector → server → Pipedream), a cost Glyphh pays, and an Ada call (rrotor → server → Ada, our own kernel), which costs Glyphh only its compute. Every one goes through the server, so the server sees each call whole: who, through which connection, from which super power, on which machine, how long, and what it cost. Nothing is reported by the runtime about itself, so a modified rrotor cannot under-report.
 
 One call, as the relay handles it:
 
@@ -653,7 +657,8 @@ One call, as the relay handles it:
 The check runs before the cost is known, so calls already in flight when the balance reaches 0 finish and are counted: the balance can dip below 0 by at most those calls, and the next call is refused. It never turns into a bill.
 
 - **usage_events** is append only: never updated, never deleted by a request. It holds what was called and how it went, **never what went through it**: no arguments, no results, no message bodies. Those are the member's own data, and they stay between the runtime and Pipedream.
-- **Model calls are not usage.** They go straight to the provider on the member's key, and Glyphh never sees them.
+- **Model calls are not usage.** They go straight to the provider on the member's key, and Glyphh never sees them. Jev is one of them: a TypeSafe model the member adds with their own key, never on Glyphh's key, never through the server, never charged.
+- **An Ada call is priced on its tokens:** input is its arguments as JSON, output its result, both counted by the server with one tokenizer; the cost is the larger of the tokens at the Ada price and a floor per call. The old server's prices are the start: Ada $2 per million tokens in and $10 out with a $0.0005 floor; a published Ada model a cent per million each way. How that price is stated in credits is still open.
 - **Operational logs are separate:** request logs and traces go to OpenTelemetry, tagged by org; they are not billing and do not decide a charge.
 - **Size:** the table is partitioned by month on `created_at`, indexed by org and time, and by org, user and time, so every page reads one org's range.
 

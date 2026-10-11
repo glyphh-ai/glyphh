@@ -23,7 +23,7 @@ On the [data model](data-model.md), in the order they were drawn:
 - **People and machines:** `invites`, `machines` (with their edition, SSH key, fingerprint and shell switch), `machine_sign_ins`, `fence_events` (what rrotor reports when a run reaches past its fence), `api_keys`; folders are on a machine, and folder grants are read or write.
 - **Signing in and Stripe:** `sign_in_identities` (Google and GitHub by the provider's own id), `oauth_clients` and `oauth_codes` (the plugin's sign-in), `key_links` (the platform's one-time key links), `stripe_events` (each webhook handled once).
 
-On the [architecture](architecture.md): desktop browsers for super powers, fetched only with the member's approval, Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (the app you drive unsandboxed, remote control only through rrotor by grants), the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
+On the [architecture](architecture.md): tasks with Jev (a model on the member's key) and Ada (our kernel, billed per token), dependencies and Discover, desktop browsers for super powers, fetched only with the member's approval, Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (the app you drive unsandboxed, remote control only through rrotor by grants), the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
 
 ## Open
 
@@ -31,6 +31,9 @@ Decisions still to make. Where a proposal is written, it is a proposal, not a de
 
 - **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and the app and web open them over SSH through the relay.
 - **Where the org admin's pages live:** members, teams, and the allowed models and connections, in the app or on the platform.
+- **Ada in credits:** how the Ada price per token is stated in credits.
+- **Super powers in Discover:** whether a super power becomes one more power type (`super_powers` folds into `powers`) or keeps its own table and is listed the same way.
+- **Requirements and listings:** the tables for power dependencies and the Discover catalog, drawn when built.
 - **App settings** (workspaces, tabs, layout, appearance): not drawn; on hold.
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens reach the app and the web from a remote machine.
 - **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.

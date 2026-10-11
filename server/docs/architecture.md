@@ -13,11 +13,13 @@ flowchart TB
         Live[("Redis<br/>live state: which process<br/>holds each machine")]
         Relay["Relay = the gate<br/>checks grants before joining;<br/>passes SSH it cannot read"]
         ConnRelay["Connection relay<br/>counts every call"]
+        Ada["Ada<br/>our kernel, billed per token"]
         Platform --> Server
         Server --- DB
         Server --- Live
         Server --- Relay
         Server --- ConnRelay
+        Server --- Ada
     end
 
     subgraph Yours["Your machines (your compute)"]
@@ -42,6 +44,8 @@ flowchart TB
     Remote -- "model calls, direct; never through Glyphh" --> Providers
     Desktop -- "connection calls" --> ConnRelay
     Remote -- "connection calls" --> ConnRelay
+    Desktop -- "Ada calls" --> Ada
+    Remote -- "Ada calls" --> Ada
     ConnRelay -- "metered on your subscription" --> Pipedream
     Agents -- "MCP, signed in with OAuth" --> Server
     Server -- "sign-in" --> SignIn
@@ -77,6 +81,8 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 - **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription or key. Glyphh never sees it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
+- **rrotor → Ada → server:** every Ada call goes to Glyphh's own Ada kernel, which never leaves Glyphh's servers, and is billed per token.
+- **Jev is a model, on the first path:** the member adds TypeSafe's Jev with their own key, and rrotor calls TypeSafe directly. It is never on Glyphh's key, never through the server, and never charged.
 
 ### Models
 
@@ -96,6 +102,21 @@ Connections are the moat: about 3,500 services (Gmail, Slack, Salesforce, ...) t
 - **Who is driving decides what can be asked.** In a run the member drives, a tool set to `ask` asks them. In a run nobody is watching (autonomous: on a clock, or started by an agent), `ask` means refused, so it uses only tools that are allowed, by the member or by the super power's own override.
 
 Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in the app's editor. Ported from the old app's super power and power builders.
+
+### Tasks, the heart of rrotor
+
+A task is a program rrotor runs, by hand, from a super power or on a clock, and it reaches the world only through its context:
+
+- `ctx.decide`: Jev, a model the member added with their own key, called directly;
+- `ctx.ada`: one of the member's Ada models (query, record, veto, ...), through the server, billed per token;
+- `ctx.agents.<slot>`: the model filling each of its slots;
+- `ctx.connections.<service>`: its connections, through the server, counted;
+- `ctx.rpa`: the browser, on a machine that has one;
+- `ctx.checkpoint` and `ctx.log`: resume where it stopped, and its run's log.
+
+**Dependencies.** A power declares what it needs: a task that needs Gmail and Slack, a chat model for its writing step, Jev and an Ada model says so. Adding it to a super power grants all of it at once; whatever the member does not have yet is asked for right there (connect Gmail, add a key, pick an Ada model), and it cannot run until everything is in place, naming what is missing. Jev and Ada are dependencies like any model.
+
+**Discover.** Glyphh and orgs publish powers (skills, tasks, Ada models, ...) and super powers to a catalog, each a bundle with its type and its dependencies; an org's listings are visible to its own members. Installing one copies it into the member's own powers, linked to the listing and its version so updates can be offered, and brings its dependencies with it as above. The tables for requirements and listings are drawn when this is built.
 
 ### What a super power can be
 
