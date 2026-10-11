@@ -221,18 +221,16 @@ A member's machines reach each other, so from machine A they can watch machine B
 
 Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
 
-### No app, no platform: rrotor's UI, everywhere
+### app.glyphh.ai: the web front door
 
-Decided 2026-10-11. Glyphh ships no desktop app and no platform web app. Every rrotor's app server serves Glyphh's own UI: the member's super powers, the editor (powers, grants, slots, schedules), runs and their live screens, keys, usage and billing, and for org admins the org's members, teams and limits. It is the same UI on every machine, made to feel native wherever it opens, and it reads what it shows from the server's API (accounts, grants, usage) and from its own rrotor (runs, logs, screens).
+Decided 2026-10-11. Glyphh ships no desktop app and no platform. Every rrotor serves Glyphh's own UI for super powers, and **app.glyphh.ai** is a very light web app for what a person reaches directly in a browser, before or beside their machines. It is a client of the API, like the plugin; nothing about super powers lives there. The server stays headless: no direct access for people, and Glyphh needs a loop (an AI host with the plugin, or a machine's main assistant).
 
-**Where it opens:**
-
-- **In Claude (or ChatGPT):** "open my Glyphh machines" calls a plugin tool that returns a UI Claude renders in the chat: the member's machines from the server, online or not, where each runs, in Claude's own theme (with one machine, it opens it straight away). Tapping a machine opens its rrotor's UI there, through the player. Claude keeps driving the same machine through the plugin's tools beside it. Claude Code in a terminal, which shows no UI, opens the member's browser on the same pages instead.
-- **In any browser:** app.glyphh.ai, the player: the same machine list and the same rrotor UI, from a laptop, an iPad or a phone. On the machine itself, rrotor's UI also answers locally.
-
-**The player** carries rrotor's UI from the member's machine to wherever it opens, and never stores what passes: app.glyphh.ai serves only a small shell, which opens an encrypted channel straight to the rrotor (WebRTC, the server only setting up the call) and loads the UI through it. Where a host's sandbox blocks that, the page offers to open in the browser instead, so nothing dead-ends.
-
-**Signing in happens once, on the server,** never on a machine: the plugin's OAuth or the player's sign-in. Opening a machine uses a **launch ticket**: the server issues it for one machine and one member, for a minute, once; the rrotor checks it with the server and starts the session. Most members have one rrotor, often not the machine they are on; the machine list never depends on any machine being up.
+- **Pages only a browser can show:** sign in, allow an AI host, approve a machine's code, join an org, the return pages (connected, approved, checkout done, a service connected), and errors with their trace id.
+- **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex).
+- **Connections:** the catalog, connect through Pipedream's own sign-in, which account each is, reconnect.
+- **Models:** the catalog with provider logos, add a model with its key (a key is only ever typed into a web page, never a chat), whether the key works.
+- **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
+- **Cards in Claude and ChatGPT** reuse the same components, only after sign-in: machines, deploy status, usage and plan, connections and models (each "add" opens the web page), the swarm, needs-you.
 
 **Usage and billing pages** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 

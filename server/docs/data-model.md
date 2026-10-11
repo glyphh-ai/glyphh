@@ -63,6 +63,9 @@ erDiagram
     orgs ||--o| subscriptions : "pays through"
     plans ||--o{ subscriptions : "sold as"
     orgs ||--o{ credit_ledger : "earns and spends"
+    orgs ||--o{ payments : "pays"
+    payments ||--o| credit_ledger : "becomes"
+    plans ||--o{ subscriptions : "is waiting to become"
     orgs ||--o{ usage_events : "uses"
     users ||--o{ usage_events : "makes"
     powers ||--o{ usage_events : "called through"
@@ -187,6 +190,9 @@ erDiagram
         text base_url "null = the provider's own"
         bytea api_key "encrypted; never returned"
         text api_key_last4
+        timestamptz key_added_at
+        timestamptz key_checked_at "the last time the key was tried against its provider"
+        text key_error "the provider's last refusal of the key; null = it worked"
     }
 
     providers {
@@ -218,6 +224,9 @@ erDiagram
         uuid power_id PK, FK
         text service "what it connects to: gmail, slack, ... (Pipedream calls it the app slug)"
         text account_id "the Pipedream account, once the user has connected it"
+        text account_label "which account, as shown: the Gmail address, the Slack workspace"
+        timestamptz connected_at
+        timestamptz needs_reconnect_at "Pipedream reports the sign-in expired or was revoked"
     }
 
     folders {
@@ -345,12 +354,22 @@ erDiagram
         uuid plan_id FK
         text stripe_customer_id UK
         text stripe_subscription_id UK "null on Free"
-        text status "trialing, active, past_due, canceled"
+        text status "none, active, past_due, canceled, comped (set by a super admin, no charge)"
         int seats "the seats Stripe bills for"
         int extra_machines "bought on top of the plan's included machines"
-        bool auto_top_up "buy a credit pack when the balance runs low"
-        int auto_top_up_below "credits left that trigger it"
-        int auto_top_up_pack "credits it buys"
+        uuid pending_plan_id FK "a downgrade waiting for the period's end"
+        timestamptz pending_plan_at "when it applies: the period's end"
+        text card_brand "the card on file, for display only; Stripe holds the card"
+        text card_last4
+        int card_exp_month
+        int card_exp_year
+        text billing_email
+        bool auto_top_up "charge the card on file when the balance runs low"
+        int auto_top_up_below_cents "the balance that triggers it"
+        int auto_top_up_cents "how much it adds: $5 to $10,000"
+        timestamptz auto_top_up_last_at "the last attempt: one attempt per 10 minutes, taken under the org's lock"
+        timestamptz auto_top_up_failed_at "the card was refused: auto top-up is off until an org admin turns it on again"
+        text auto_top_up_failure "why, as Stripe said it"
         timestamptz current_period_start
         timestamptz current_period_end
         timestamptz created_at
@@ -361,9 +380,10 @@ erDiagram
         uuid id PK
         uuid org_id FK
         uuid user_id FK "who spent it; null for allowances and purchases"
-        text entry "allowance, purchase, usage"
-        int credits "plus for allowance and purchase, minus for usage"
-        text source "a Stripe payment id for a purchase; null otherwise"
+        text entry "allowance, top_up, auto_top_up, grant, usage"
+        int credits "plus for allowance, top-ups and grants, minus for usage"
+        uuid payment_id FK, UK "the payment a top-up came from; at most one entry per payment"
+        text note "a grant's reason, from the super admin"
         uuid usage_event_id FK, UK "the call a usage entry pays for"
         timestamptz expires_at "the period's end for an allowance; null for a purchase"
         timestamptz created_at
@@ -386,6 +406,19 @@ erDiagram
         int request_bytes
         int response_bytes
         timestamptz started_at
+        timestamptz created_at
+    }
+
+    payments {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "who started it; null for an auto top-up"
+        text kind "top_up, auto_top_up"
+        int amount_cents "what was charged, in US dollars: $5 to $10,000"
+        text stripe_ref UK "the Checkout session or PaymentIntent: one payment per Stripe charge"
+        text status "pending, succeeded, failed, refunded"
+        text failure "why it failed, as Stripe said it"
+        timestamptz settled_at "when Stripe confirmed it: only then does the ledger get its credits"
         timestamptz created_at
     }
 
@@ -509,6 +542,7 @@ erDiagram
         text type
         timestamptz received_at
         timestamptz processed_at
+        text error "the last failure handling it; retried until processed"
     }
 
     tokens {
@@ -682,9 +716,23 @@ An org pays a monthly fee for its plan, and the plan includes credits each billi
 
 What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annually ($150 monthly) for 100 external users and 10,000 credits a month, then $2 per external user and $0.012 per credit. A connected user is a seat cost, so it belongs in the plan's price per seat; a call is a credit.
 
-- **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or buy a credit pack (a one-time purchase that does not expire with the period).
-- **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period. Stripe keeps the invoices and payment methods.
-- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each pack bought, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for (`usage_event_id`), one entry per call.
+- **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or add funds.
+- **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period, as the old server did, plus what the old server lacked: a downgrade waiting for the period's end (`pending_plan_id`), and the card on file for display (brand, last four, expiry), kept current from Stripe's webhooks. Stripe keeps the card itself and the invoices; the invoice list is read from Stripe.
+- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each top-up and grant, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for; a top-up entry at its payment, at most one entry per payment, so a webhook and a reconcile arriving together can never add the same money twice.
+- **Grants and comped plans** (super admins): a grant adds credits with a note; a comped plan is a plan with no charge (`status` comped).
+
+### Adding funds, as the old server did
+
+- **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credits to the ledger. A reconcile from Stripe backs the webhook up.
+- **Auto top-up:** on, a threshold and an amount. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the amount. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
+- **How dollars become credits:** still to set (the price of a credit). Until then the plan's allowance and the top-ups are both counted in the same unit the ledger keeps.
+
+### Changing plans, as the old server did
+
+- **Preview, then confirm, then wait for Stripe:** the change is shown first (what is charged now, what the next invoice is), then confirmed, then the server waits for Stripe to confirm before showing the new plan.
+- **Free to paid** is a Stripe Checkout. **Upgrades** apply now and are prorated on the next invoice. **Downgrades wait for the period's end** (`pending_plan_id`): the org keeps what it paid for until then. The old server applied them at once.
+- **Seats** follow the seat rule: up mid-cycle (prorated on the next invoice), never down mid-cycle; the drop applies at renewal only (the old server also dropped them on top-up invoices, a bug not carried over).
+- **Every Stripe event is handled once** (`stripe_events`), and a handler that fails is recorded and retried, never acknowledged and lost.
 
 ## Usage
 
@@ -713,7 +761,7 @@ The same rows serve every view, scoped by the principal:
 
 ## Stripe
 
-**stripe_events** records every Stripe webhook by Stripe's own event id, so an event delivered twice is handled once: a credit pack is never added twice and a seat change never applied twice.
+**stripe_events** records every Stripe webhook by Stripe's own event id, so an event delivered twice is handled once: a top-up is never added twice and a seat change never applied twice. A handler that fails leaves the event unprocessed with its error, and it is tried again; it is never acknowledged and lost.
 
 ## Limits are enforced by the database
 
