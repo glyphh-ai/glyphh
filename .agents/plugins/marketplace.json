@@ -1,0 +1,12 @@
+{
+  "name": "glyphh",
+  "interface": { "displayName": "Glyphh" },
+  "plugins": [
+    {
+      "name": "glyphh",
+      "source": { "source": "local", "path": "./plugins/glyphh" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

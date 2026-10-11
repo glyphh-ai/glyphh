@@ -1,0 +1,9 @@
+{
+  "name": "glyphh",
+  "version": "0.1.0",
+  "description": "Glyphh in Claude: your super powers, machines and connections, signed in with Google or GitHub.",
+  "author": { "name": "Glyphh", "url": "https://glyphh.ai" },
+  "homepage": "https://glyphh.ai",
+  "license": "LicenseRef-Proprietary",
+  "keywords": ["glyphh", "super powers", "agents", "mcp"]
+}
