@@ -242,8 +242,10 @@ erDiagram
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
-        uuid speech_in_model_id FK "voice: the speech-to-text model it listens with, one of the owner's; null = no voice"
-        uuid speech_out_model_id FK "voice: the text-to-speech model it speaks with, one of the owner's"
+        uuid voice_model_id FK "its voice: the speech model it speaks with, one of the owner's; null = it does not speak"
+        text voice_id "which of that model's voices it speaks in"
+        text voice_name "that voice's name, as shown"
+        uuid listen_model_id FK "the speech-to-text model it hears the member with; set on the member's Glyphh"
         jsonb definition "the rrotor definition, still to be drawn; its data lives in rrotor"
         text bundle_key "its files (workflows, pipelines, screens), in object storage"
         timestamptz created_at
@@ -607,7 +609,7 @@ Each member has one Glyphh, the super agent (`glyphh` true): it has every power,
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
-**Voice** is on when a super power has its speech models (`speech_in_model_id`, `speech_out_model_id`), the member's Glyphh first of all: both are the member's own models, called directly on their keys. Audio never reaches this database.
+**Every super power carries a voice,** part of its configuration on its edit screen, beside its avatar and name (ported from the old app's super power editor): a speech model of the member's own (`voice_model_id`) and one of that model's voices (`voice_id`), with a sample to hear before saving. The member's Glyphh also has the model it hears them with (`listen_model_id`). All are the member's own models, called directly on their keys; audio never reaches this database.
 
 A super power's own files (its workflows, pipelines and screens) are a bundle in object storage (`bundle_key`); `definition` holds the rrotor definition, still to be drawn. What it stores (its data, vectors and graph) lives in rrotor, never here. Where the content of its conversations lives is still open.
 

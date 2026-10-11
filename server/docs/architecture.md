@@ -119,10 +119,10 @@ The same three are the loops a super power can run on, so a CLI is used like a m
 
 ### Voice
 
-rrotor talks and listens. The member turns voice on for their rrotor, picks a speech-to-text model and a text-to-speech model from their own models (their own keys, like any model), and presses the talk button in rrotor's UI, wherever it is open: inside Claude, or in any browser.
+rrotor talks and listens, and every super power has a voice of its own, set on its edit screen beside its avatar and name: one of the member's own speech models and one of that model's voices, with a sample to hear first (as the old app's super power editor had it). The member turns voice on for their rrotor, picks the speech-to-text model Glyphh hears them with, and presses the talk button in rrotor's UI, wherever it is open: inside Claude, or in any browser.
 
-- **The audio streams between the browser and rrotor,** over the same encrypted channel as the UI: what the member says is transcribed in rrotor by their speech-to-text model, the main assistant answers on its loop, and the answer is spoken back by their text-to-speech model.
-- **Hearing the swarm, literally:** the main assistant can say what its super powers are doing as it happens: one finished, one failed, one needs an answer, and the member can answer by voice.
+- **The audio streams between the browser and rrotor,** over the same encrypted channel as the UI: what the member says is transcribed in rrotor by their speech-to-text model, the main assistant answers on its loop, and the answer is spoken back in Glyphh's voice.
+- **Hearing the swarm, literally:** the main assistant says what its super powers are doing as it happens (one finished, one failed, one needs an answer), and a super power that speaks for itself does so in its own voice, so the member can tell who is talking. The member can answer by voice.
 - **Never priced by Glyphh, never through Glyphh's servers in the clear:** the speech models are called directly on the member's keys, and the relay passes only what it cannot read.
 
 Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in rrotor's UI. Ported from the old app's super power and power builders.
