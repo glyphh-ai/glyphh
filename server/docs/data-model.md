@@ -20,6 +20,9 @@ erDiagram
     powers ||--o| tasks : "is a"
     powers ||--o| plugins : "is a"
     orgs ||--o{ api_keys : "issues"
+    orgs ||--o| subscriptions : "pays through"
+    plans ||--o{ subscriptions : "sold as"
+    orgs ||--o{ credit_ledger : "earns and spends"
 
     plans {
         uuid id PK
@@ -27,6 +30,7 @@ erDiagram
         int price_cents "per month"
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "null = no limit"
+        int monthly_credits "included each billing period"
         bool active
         int sort
         timestamptz created_at
@@ -116,6 +120,30 @@ erDiagram
         uuid uses_super_power_id FK "another super power it calls (exactly one of the two)"
     }
 
+    subscriptions {
+        uuid id PK
+        uuid org_id FK, UK
+        uuid plan_id FK
+        text stripe_customer_id UK
+        text stripe_subscription_id UK "null on Free"
+        text status "trialing, active, past_due, canceled"
+        timestamptz current_period_start
+        timestamptz current_period_end
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    credit_ledger {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "who spent it; null for allowances and purchases"
+        text entry "allowance, purchase, usage"
+        int credits "plus for allowance and purchase, minus for usage"
+        text source "connection:gmail, a Stripe payment id, ..."
+        timestamptz expires_at "the period's end for an allowance; null for a purchase"
+        timestamptz created_at
+    }
+
     api_keys {
         uuid id PK
         uuid org_id FK
@@ -197,6 +225,14 @@ A super power is a loop (a CLI, or rrotor's own), its rrotor definition, and the
 **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 
 Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
+
+## Billing and usage
+
+An org pays a monthly fee for its plan, and the plan includes credits each billing period. Usage spends credits: every connection call the server relays (Glyphh pays Pipedream for each one) costs credits. Model calls cost nothing here: they go straight to the provider on the member's own key.
+
+- **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or buy a credit pack (a one-time purchase that does not expire with the period).
+- **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period. Stripe keeps the invoices and payment methods.
+- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each pack bought, and each use. The balance is the sum of what has not expired, so it is never stored twice.
 
 ## Scoping
 
