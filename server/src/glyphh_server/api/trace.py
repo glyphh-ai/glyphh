@@ -8,10 +8,9 @@ import logging
 import time
 
 from starlette.datastructures import Headers, MutableHeaders
-from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from glyphh_server.api.errors import error_body
+from glyphh_server.api.errors import refusal
 from glyphh_server.errors import INTERNAL_MESSAGE
 from glyphh_server.obs.context import accept_trace_id, bound
 from glyphh_server.obs.logs import fields
@@ -45,7 +44,7 @@ class TraceMiddleware:
             except Exception:
                 log.exception("crashed", extra=fields(method=scope["method"], path=scope["path"]))
                 if not state["started"]:
-                    response = JSONResponse(error_body("E_INTERNAL", INTERNAL_MESSAGE), status_code=500)
+                    response = refusal(scope["path"], "E_INTERNAL", INTERNAL_MESSAGE, 500)
                     await response(scope, receive, send_traced)
                 else:
                     # The head is already sent: end the body where it stopped, so the connection closes cleanly.

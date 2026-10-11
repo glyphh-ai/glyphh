@@ -1,9 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 
-from glyphh_server.api import errors, health, me
+from glyphh_server.api import errors, health, me, sign_in_pages
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
@@ -11,7 +12,7 @@ from glyphh_server.mcp.server import make_mcp, mcp_http_app
 from glyphh_server.obs.logs import configure
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
     cfg: Settings = settings or get_settings()
     configure(cfg.log_level)
     if len(cfg.secret_key) < 32:
@@ -21,9 +22,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     mcp_app = mcp_http_app(mcp)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        app.state.http = http or httpx.AsyncClient(timeout=10)
         async with mcp.session_manager.run():
             yield
+        await app.state.http.aclose()
         await engine.dispose()
 
     app = FastAPI(title="Glyphh", version=cfg.version, lifespan=lifespan)
@@ -32,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     errors.install(app)
     app.include_router(health.router)
     app.include_router(me.router)
+    app.include_router(sign_in_pages.router)
     app.router.routes.extend(mcp_app.routes)
     # The MCP app's own middleware (bearer authentication, then the token in context) comes with its routes;
     # add_middleware puts each one outermost, so they go in reverse, and the trace layer goes last: outermost.

@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     public_url: str = "http://localhost:8080"
     secret_key: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
     stripe_price_solo: str | None = None
     stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None

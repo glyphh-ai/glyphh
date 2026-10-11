@@ -10,7 +10,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Invalid
-from glyphh_server.models import OAuthCode
+from glyphh_server.models import OAuthClient, OAuthCode
 from glyphh_server.ops.auth import hosts, signed
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 
@@ -41,9 +41,7 @@ def read_pending(secret: str, token: str) -> Pending:
 
 async def approve(conn: AsyncConnection, pending: Pending, user_id: uuid.UUID) -> str:
     """The member allowed the host: make its code and answer where to send the member back to."""
-    client = await hosts.find(conn, pending.client_id)
-    if client is None or pending.redirect_uri not in client.redirect_uris:
-        raise Invalid("This app is not registered for that address. Start again from your app.")
+    client = await _registered(conn, pending)
     code = make_secret()
     await conn.execute(
         insert(OAuthCode).values(
@@ -55,7 +53,25 @@ async def approve(conn: AsyncConnection, pending: Pending, user_id: uuid.UUID) -
             expires_at=datetime.now(UTC) + CODE_TTL,
         )
     )
-    query = {"code": code, **({"state": pending.state} if pending.state else {})}
+    return _back(pending, {"code": code})
+
+
+async def denied(conn: AsyncConnection, pending: Pending) -> str:
+    """The member said no: the host hears access_denied, as OAuth asks, at its own registered address only."""
+    await _registered(conn, pending)
+    return _back(pending, {"error": "access_denied"})
+
+
+async def _registered(conn: AsyncConnection, pending: Pending) -> OAuthClient:
+    """The host, if it registered this redirect address: never send a member anywhere else."""
+    client = await hosts.find(conn, pending.client_id)
+    if client is None or pending.redirect_uri not in client.redirect_uris:
+        raise Invalid("This app is not registered for that address. Start again from your app.")
+    return client
+
+
+def _back(pending: Pending, answer: dict[str, str]) -> str:
+    query = {**answer, **({"state": pending.state} if pending.state else {})}
     parts = urlsplit(pending.redirect_uri)
     return urlunsplit(parts._replace(query="&".join(filter(None, [parts.query, urlencode(query)]))))
 

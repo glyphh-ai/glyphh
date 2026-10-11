@@ -8,10 +8,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
+from starlette.responses import Response
 
 from glyphh_server.errors import GlyphhError
 from glyphh_server.obs.context import current_trace_id
 from glyphh_server.obs.logs import fields
+from glyphh_server.pages import views
 
 log = logging.getLogger("glyphh.api")
 
@@ -29,21 +31,28 @@ def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "trace_id": current_trace_id(), **detail}}
 
 
-async def _glyphh_error(_: Request, err: Exception) -> JSONResponse:
+def refusal(path: str, code: str, message: str, status: int, **detail: Any) -> Response:
+    """A page for the sign-in pages (a person is reading), JSON for everything else (a program is)."""
+    if path.startswith("/auth/"):
+        return views.refused(code, message, current_trace_id(), status)
+    return JSONResponse(error_body(code, message, **detail), status_code=status)
+
+
+async def _glyphh_error(request: Request, err: Exception) -> Response:
     assert isinstance(err, GlyphhError)
     log.log(
         logging.ERROR if err.status >= 500 else logging.INFO,
         "refused",
         extra=fields(code=err.code, status=err.status, reason=err.message),
     )
-    return JSONResponse(error_body(err.code, err.message, **err.detail), status_code=err.status)
+    return refusal(request.url.path, err.code, err.message, err.status, **err.detail)
 
 
-async def _invalid(_: Request, err: Exception) -> JSONResponse:
+async def _invalid(request: Request, err: Exception) -> Response:
     assert isinstance(err, RequestValidationError)
     problems = jsonable_encoder(err.errors())
     log.info("refused", extra=fields(code="E_INVALID", status=422, problems=problems))
-    return JSONResponse(error_body("E_INVALID", "The request is not valid.", problems=problems), status_code=422)
+    return refusal(request.url.path, "E_INVALID", "The request is not valid.", 422, problems=problems)
 
 
 async def _http(_: Request, err: Exception) -> JSONResponse:
