@@ -23,6 +23,7 @@ erDiagram
     orgs ||--o| subscriptions : "pays through"
     plans ||--o{ subscriptions : "sold as"
     orgs ||--o{ credit_ledger : "earns and spends"
+    users ||--o{ machines : "registers"
 
     plans {
         uuid id PK
@@ -31,6 +32,7 @@ erDiagram
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "null = no limit"
         int monthly_credits "included each billing period"
+        int max_machines "null = no limit"
         bool active
         int sort
         timestamptz created_at
@@ -144,6 +146,17 @@ erDiagram
         timestamptz created_at
     }
 
+    machines {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "whose machine it is"
+        text name "unique for its owner"
+        text token_hash UK "what it connects with; only the hash is kept"
+        timestamptz last_seen_at "null = never connected"
+        timestamptz revoked_at
+        timestamptz created_at
+    }
+
     api_keys {
         uuid id PK
         uuid org_id FK
@@ -235,6 +248,10 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 - **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or buy a credit pack (a one-time purchase that does not expire with the period).
 - **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period. Stripe keeps the invoices and payment methods.
 - **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each pack bought, and each use. The balance is the sum of what has not expired, so it is never stored twice.
+
+## Machines
+
+A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept); `last_seen_at` says when it was last online. A plan caps how many machines an org may have (`max_machines`); revoking one stops it connecting.
 
 ## Scoping
 
