@@ -8,6 +8,7 @@ flowchart TB
     Runtime["rrotor (runtime)"] --> SDK --> Server
     Runtime --> Loop["CLI or model"] --> Provider
     Runtime --> Connector --> Server
+    Platform --> Server
 ```
 
 ## Decided
@@ -39,6 +40,10 @@ Glyphh is a model runtime, not a gateway, and it governs nothing: limits, access
 ### Connections
 
 Connections are the moat. A super power declares the connections it needs by name; only Glyphh's connections are used: an MCP server with its sign-in, added in Glyphh, encrypted and never returned. Whichever loop runs the super power (Claude Code, Codex or rrotor's own), rrotor hands it exactly those connections and nothing of the loop's own (for Claude Code, `--mcp-config` with `--strict-mcp-config`).
+
+### Platform
+
+A few pages for what must never go through a chat: an API key is never typed to an agent or passed through MCP. A tool that needs a key returns a one-time link (single use, short lived, tied to that member and that model); the agent opens it in the browser, the member signs in (the link alone is never enough), pastes the key, and it goes straight to the server, encrypted. The agent only hears that it was saved and the key's last four characters. The same pages carry sign-in and consent, approving a machine's sign-in code, accepting an invite, and the hand-off to Stripe for billing. They are served by the server itself: one deployment, one security perimeter, not a separate app.
 
 ### Paths
 
