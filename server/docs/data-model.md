@@ -56,6 +56,8 @@ erDiagram
     powers ||--o| tasks : "is a"
     powers ||--o| plugins : "is a"
     powers ||--o| loops : "is a"
+    powers ||--o| browsers : "is a"
+    machines ||--o{ browsers : "holds"
     orgs ||--o{ api_keys : "issues"
     orgs ||--o| subscriptions : "pays through"
     plans ||--o{ subscriptions : "sold as"
@@ -140,7 +142,7 @@ erDiagram
         uuid id PK
         uuid org_id FK
         uuid user_id FK "whose it is: every power is one user's, for now"
-        text kind "model, connection, folder, skill, task, plugin, loop"
+        text kind "model, connection, folder, browser, skill, task, plugin, loop"
         text name "unique for its owner"
         timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
@@ -204,6 +206,12 @@ erDiagram
         uuid power_id PK, FK
         uuid machine_id FK "the machine the folder is on: the same path on two machines is two folders"
         text path "unique per machine for its owner"
+    }
+
+    browsers {
+        uuid power_id PK, FK
+        uuid machine_id FK "the full rrotor its profile lives on"
+        text profile "the profile's name in rrotor; its cookies and sessions never leave that machine"
     }
 
     skills {
@@ -360,8 +368,10 @@ erDiagram
         text code_hash UK "the code the machine holds; only the hash is kept"
         text user_code UK "the short code the member types or sees"
         text machine_name "what the machine calls itself"
-        text status "pending, approved, denied"
-        uuid user_id FK "who approved it"
+        text source "approve (the machine shows a code, the member approves it) or one_click (minted approved, for a new host)"
+        text host "for one_click: fly, aws, azure, gcp, digitalocean, hetzner, vps"
+        text status "pending, approved, denied, used"
+        uuid user_id FK "who approved or minted it"
         uuid machine_id FK "the machine it registered"
         int interval_seconds "how often the machine may ask"
         timestamptz last_polled_at
@@ -568,11 +578,12 @@ Everything a super power uses is a power: a model, a connection, a folder, a ski
 
 The database enforces it: every power has a `user_id`.
 
-Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
+Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
+- **A browser** is a browser profile on one full rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
 - **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version is still open.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - **The catalog** is what the app and the platform show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
@@ -615,6 +626,8 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 ## Machines
 
 Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (on a server, or inside the desktop app) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
+
+**One-click hosting** registers a new machine the same way, without the approve step: the member asks the app or the platform for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
 
 A machine is a registered rrotor, a small Linux VM: a member's desktop (the app runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 

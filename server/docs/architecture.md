@@ -20,7 +20,7 @@ flowchart TB
 
     subgraph Yours["Your machines (your compute)"]
         Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite) = the fence"]
-        Remote["rrotor VM (full) = the fence<br/>any host: CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
+        Remote["rrotor VM (full) = the fence<br/>any host: CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens,<br/>virtual screen + Chromium (RPA)"]
     end
 
     Agents["Agent hosts<br/>Claude Code, Claude Desktop,<br/>Cursor, ChatGPT (plugin)"]
@@ -33,6 +33,9 @@ flowchart TB
     Remote -- "manage, definitions, keys (outbound WS)" --> Server
     Desktop <-. "SSH, end to end" .-> Relay
     Relay <-. "SSH, end to end" .-> Remote
+    Desktop <-. "screen: WebRTC, end to end" .-> Remote
+    Hosts["Hosts, one click<br/>Fly, AWS, Azure, GCP,<br/>DigitalOcean, Hetzner, any VPS"]
+    Hosts -- "runs" --> Remote
     Desktop -- "model calls, direct; never through Glyphh" --> Providers
     Remote -- "model calls, direct; never through Glyphh" --> Providers
     Desktop -- "connection calls" --> ConnRelay
@@ -131,8 +134,18 @@ Glyphh does not host runtimes. Members run rrotor on their own compute: their de
 
 - rrotor ships as one Linux image: a Docker image for servers, and the same system as the VM the desktop app runs.
 - It connects out to the server, never in, so a remote server needs no public address, ports or firewall rules.
-- Glyphh supplies the setup: one-click configs for the common hosts, a one-line `docker run`, and docs for the rest.
+- **One-click hosting:** a real VM, not a platform container (per-run sandboxes and the virtual screen need a whole machine): Fly Machines, AWS (a CloudFormation quick-create link), Azure (Deploy to Azure), GCP, DigitalOcean and Hetzner (a first-boot script), and a one-line install for any other VPS.
+- **A new host registers itself:** the button carries a one-time code the server mints already approved, for minutes and one use; on first boot the machine trades it for its own token and SSH key. The member never copies a token, and no code is minted when the plan has no machine left.
 - The server knows which machines a member has registered, what each is (desktop or remote, lite or full, its platform and rrotor version), and whether each is online.
+
+### Browsers and RPA on rrotor
+
+A full rrotor runs a virtual screen (a display with no monitor) and a real Chromium in it, so a super power can work websites on a headless server: Glyphh drives the browser through Chromium's own control protocol (click, type, read, go to a page) and screenshots when it needs to see. The old app's RPA tools move here, and the old browser workers already ran this way.
+
+- **Watching:** the screen streams to the member's app or the web over WebRTC, whose video is encrypted end to end by design: the server only passes the call setup over the relay, and a TURN relay used when no direct path exists cannot decrypt it. If WebRTC cannot connect, screen frames go over the SSH channel instead. The server never sees the screen.
+- **Signing into a website:** the member takes control. The bot pauses, the member's taps and keystrokes go straight into the remote browser over the encrypted channel, they type the password and do the 2FA themselves, and hand control back. While they hold it no screenshot goes to the model, so a password or a code never reaches the model or a chat. The run's log records when control changed hands.
+- **Sessions stay on the machine:** each browser profile (a `browsers` power) lives on one rrotor and is granted like a folder, so one super power's signed-in sites are never another's. Cookies never leave that machine.
+- **Later:** a password manager (1Password) can fill sign-ins without the model seeing them. Passkeys are tied to the member's own device and cannot be used remotely; such sites need a password and 2FA through take-over.
 
 ### Machine to machine: SSH over the relay
 
