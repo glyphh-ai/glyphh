@@ -10,3 +10,4 @@ class Principal(BaseModel):
     org_id: uuid.UUID
     role: str
     oauth_client_id: uuid.UUID | None = None
+    host_client_id: str | None = None

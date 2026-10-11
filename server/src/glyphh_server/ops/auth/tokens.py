@@ -9,7 +9,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Unauthorized
-from glyphh_server.models import Token, User
+from glyphh_server.models import OAuthClient, Token, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 
@@ -43,8 +43,9 @@ async def principal_for(conn: AsyncConnection, access_token: str) -> Principal:
     """Who an access token belongs to. Anything wrong with it (unknown, expired, revoked) is one answer."""
     row = (
         await conn.execute(
-            select(Token.user_id, Token.oauth_client_id, User.org_id, User.role)
+            select(Token.user_id, Token.oauth_client_id, OAuthClient.client_id, User.org_id, User.role)
             .join(User, User.id == Token.user_id)
+            .outerjoin(OAuthClient, OAuthClient.id == Token.oauth_client_id)
             .where(Token.access_hash == hash_secret(access_token))
             .where(Token.revoked_at.is_(None))
             .where(Token.access_expires_at > datetime.now(UTC))
@@ -52,7 +53,13 @@ async def principal_for(conn: AsyncConnection, access_token: str) -> Principal:
     ).first()
     if row is None:
         raise Unauthorized("Sign in again: this token is not valid.")
-    return Principal(user_id=row.user_id, org_id=row.org_id, role=row.role, oauth_client_id=row.oauth_client_id)
+    return Principal(
+        user_id=row.user_id,
+        org_id=row.org_id,
+        role=row.role,
+        oauth_client_id=row.oauth_client_id,
+        host_client_id=row.client_id,
+    )
 
 
 async def rotate(conn: AsyncConnection, refresh_token: str) -> IssuedTokens:
@@ -81,3 +88,16 @@ async def revoke(conn: AsyncConnection, token: str) -> None:
         .where(Token.revoked_at.is_(None))
         .values(revoked_at=datetime.now(UTC))
     )
+
+
+async def find_refresh(conn: AsyncConnection, refresh_token: str) -> Token | None:
+    row = (
+        await conn.execute(
+            select(Token).where(
+                Token.refresh_hash == hash_secret(refresh_token),
+                Token.revoked_at.is_(None),
+                Token.refresh_expires_at > datetime.now(UTC),
+            )
+        )
+    ).first()
+    return None if row is None else Token(**row._mapping)

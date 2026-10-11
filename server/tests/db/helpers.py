@@ -32,3 +32,12 @@ async def make_client(engine: AsyncEngine, client_id: str = "claude-code") -> uu
     values = {"client_id": client_id, "name": "Claude Code", "redirect_uris": ["http://localhost:33418/callback"]}
     async with engine.begin() as conn:
         return (await conn.execute(insert(OAuthClient).values(values).returning(OAuthClient.id))).scalar_one()
+
+
+async def bearer(engine: AsyncEngine, email: str) -> str:
+    """A member of a new org, signed in: the Authorization header value for their access token."""
+    from glyphh_server.ops.auth import tokens
+
+    user = await make_user(engine, await make_org(engine, f"Org of {email}"), email, "org_admin")
+    async with engine.begin() as conn:
+        return "Bearer " + (await tokens.issue(conn, user)).access_token

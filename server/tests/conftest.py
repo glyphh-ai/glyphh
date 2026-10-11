@@ -18,9 +18,13 @@ DATABASE_URL: str = os.environ.get(
     "GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test"
 )
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
+SECRET_KEY: str = "test-secret-key-that-signs-sign-in-links-0123456789"
+PUBLIC_URL: str = "http://localhost:8080"
 SETTINGS: Settings = Settings(
     database_url=DATABASE_URL,
     version="test",
+    public_url=PUBLIC_URL,
+    secret_key=SECRET_KEY,
     stripe_price_solo="price_test_solo",
     stripe_price_basic="price_test_basic",
     stripe_price_pro="price_test_pro",
@@ -64,5 +68,5 @@ async def client(engine: AsyncEngine) -> AsyncIterator[httpx.AsyncClient]:
 
 @pytest.fixture
 async def client_without_database() -> AsyncIterator[httpx.AsyncClient]:
-    async for c in _client(create_app(Settings(database_url=UNREACHABLE_URL, version="test"))):
+    async for c in _client(create_app(Settings(database_url=UNREACHABLE_URL, version="test", secret_key=SECRET_KEY))):
         yield c
