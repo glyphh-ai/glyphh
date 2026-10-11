@@ -373,12 +373,14 @@ Left behind from the old server: the margin and the dollar pool, the rate limits
 
 Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
 
+**For now an org is only for billing:** its plan, subscription, seats, machines and credits, and who is in it (members and invites). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+
 ## users
 
 A user belongs to one org and has one role in it:
 
 - `super_admin`: runs Glyphh. Only users of the parent org.
-- `org_admin`: runs their org.
+- `org_admin`: runs their org's billing and members, and sees its usage.
 - `user`: works in their org.
 
 The profile is the user's first name, last name, email and profile image. The email is how a Google or GitHub sign-in finds the user.
