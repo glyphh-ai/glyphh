@@ -11,20 +11,18 @@ from tests.conftest import SETTINGS
 async def _plans(engine: AsyncEngine) -> list[tuple]:
     async with engine.connect() as conn:
         rows = await conn.execute(
-            select(
-                Plan.name, Plan.price_cents, Plan.max_seats, Plan.rpm_limit, Plan.tpm_limit, Plan.stripe_price_id
-            ).order_by(Plan.sort)
+            select(Plan.name, Plan.price_cents, Plan.max_seats, Plan.stripe_price_id).order_by(Plan.sort)
         )
         return [tuple(r) for r in rows]
 
 
-async def test_the_five_plans_are_seeded_with_their_limits_and_stripe_prices(engine: AsyncEngine) -> None:
+async def test_the_five_plans_are_seeded_with_their_seats_and_stripe_prices(engine: AsyncEngine) -> None:
     assert await _plans(engine) == [
-        ("Free", 0, 1, 60, 50_000, None),
-        ("Solo", 2_000, 1, 200, 200_000, "price_test_solo"),
-        ("Basic", 4_000, 25, 600, 500_000, "price_test_basic"),
-        ("Pro", 15_000, 100, 2_000, 2_000_000, "price_test_pro"),
-        ("Enterprise", 0, None, None, None, None),
+        ("Free", 0, 1, None),
+        ("Solo", 2_000, 1, "price_test_solo"),
+        ("Basic", 4_000, 25, "price_test_basic"),
+        ("Pro", 15_000, 100, "price_test_pro"),
+        ("Enterprise", 0, None, None),
     ]
 
 
@@ -32,7 +30,7 @@ async def test_rerunning_the_seed_keeps_an_admins_edits(engine: AsyncEngine) -> 
     async with engine.begin() as conn:
         await conn.execute(update(Plan).where(Plan.name == "Basic").values(max_seats=30))
     await apply_schema(engine, SETTINGS)
-    seats = {name: seats for name, _, seats, *_ in await _plans(engine)}
+    seats = {name: seats for name, _, seats, _ in await _plans(engine)}
     assert seats["Basic"] == 30 and len(seats) == 5
     async with engine.begin() as conn:
         await conn.execute(update(Plan).where(Plan.name == "Basic").values(max_seats=25))
@@ -47,8 +45,7 @@ async def test_plans_are_sold_until_retired(engine: AsyncEngine) -> None:
     ("values", "constraint"),
     [
         ({"price_cents": -1}, "plans_price"),
-        ({"max_seats": 0}, "plans_limits"),
-        ({"rpm_limit": -5}, "plans_limits"),
+        ({"max_seats": 0}, "plans_seats"),
         ({"stripe_price_id": "price_test_pro"}, "plans_stripe_price_id_key"),
         ({"name": "Free"}, "plans_name_key"),
     ],

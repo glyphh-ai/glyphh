@@ -8,12 +8,12 @@ from glyphh_server.models.base import Base, created_at, guid, updated_at
 
 
 class Plan(Base):
-    """What an org pays and the limits it puts on the org. Retired with active=false, never deleted."""
+    """What an org pays and how many users it may have. Retired with active=false, never deleted."""
 
     __tablename__ = "plans"
     __table_args__ = (
         CheckConstraint("price_cents >= 0", name="plans_price"),
-        CheckConstraint("max_seats > 0 AND rpm_limit > 0 AND tpm_limit > 0", name="plans_limits"),
+        CheckConstraint("max_seats > 0", name="plans_seats"),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -21,8 +21,6 @@ class Plan(Base):
     price_cents: Mapped[int]
     stripe_price_id: Mapped[str | None] = mapped_column(Text, unique=True)
     max_seats: Mapped[int | None]
-    rpm_limit: Mapped[int | None]
-    tpm_limit: Mapped[int | None]
     active: Mapped[bool] = mapped_column(server_default="true")
     sort: Mapped[int] = mapped_column(server_default="0")
     created_at: Mapped[datetime] = created_at()

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Text, UniqueConstraint, func, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid, updated_at
@@ -16,7 +16,6 @@ class User(Base):
     __table_args__ = (
         CheckConstraint(f"role IN {ROLES}", name="users_role"),
         Index("users_email", func.lower(text("email")), unique=True),
-        UniqueConstraint("id", "org_id", name="users_id_org"),
     )
 
     id: Mapped[uuid.UUID] = guid()

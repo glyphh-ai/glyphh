@@ -7,12 +7,8 @@ erDiagram
     plans ||--o{ orgs : "limits"
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
-    orgs ||--o{ teams : "has"
-    teams ||--o{ team_members : "has"
-    users ||--o{ team_members : "is in"
     users ||--o{ tokens : "signs in with"
     orgs ||--o{ models : "adds"
-    teams ||--o{ models : "may scope"
     orgs ||--o{ api_keys : "issues"
 
     plans {
@@ -21,8 +17,6 @@ erDiagram
         int price_cents "per month"
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "null = no limit"
-        int rpm_limit "requests per minute, null = no limit"
-        int tpm_limit "tokens per minute, null = no limit"
         bool active
         int sort
         timestamptz created_at
@@ -34,8 +28,6 @@ erDiagram
         uuid parent_id FK "null only for Glyphh, the parent org"
         uuid plan_id FK
         text name
-        int rpm_cap "null = the plan's limit"
-        int tpm_cap "null = the plan's limit"
         timestamptz created_at
     }
 
@@ -51,28 +43,10 @@ erDiagram
         timestamptz updated_at
     }
 
-    teams {
-        uuid id PK
-        uuid org_id FK
-        text name "unique within the org"
-        int rpm_cap "null = the org's limit"
-        int tpm_cap "null = the org's limit"
-        timestamptz created_at
-    }
-
-    team_members {
-        uuid id PK
-        uuid org_id FK "the team's and the user's org, enforced by both keys"
-        uuid team_id FK
-        uuid user_id FK "unique with team_id"
-        timestamptz created_at
-    }
-
     models {
         uuid id PK
         uuid org_id FK
-        uuid team_id FK "null = the whole org"
-        text name "what super powers call it, unique in its scope"
+        text name "what super powers call it, unique in the org"
         text provider "anthropic, openai, google, fireworks, ..."
         text model "the provider's own model id"
         bytea api_key "encrypted; never returned"
@@ -86,7 +60,6 @@ erDiagram
     api_keys {
         uuid id PK
         uuid org_id FK
-        uuid team_id FK "null = the whole org"
         uuid user_id FK "who made it"
         text name
         text key_hash UK
@@ -111,24 +84,21 @@ erDiagram
 
 ## plans
 
-What an org pays and what it may do. The limits on a plan are the limits on every org on it:
-
-- `max_seats`: how many users the org may have.
-- `rpm_limit` and `tpm_limit`: requests and tokens per minute. These were drawn for a router; with model calls going straight from the runtime to the provider, Glyphh never sees them, so what these limit (if anything) is still to be decided.
+What an org pays, and how many users it may have (`max_seats`).
 
 `stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us). A plan that is no longer sold is set `active = false`, never deleted, so orgs on it keep working.
 
 The plans carried over from the old server:
 
-| Plan | Price | Seats | Requests/min | Tokens/min |
-|---|---|---|---|---|
-| Free | $0 | 1 | 60 | 50,000 |
-| Solo | $20 | 1 | 200 | 200,000 |
-| Basic | $40 | 25 | 600 | 500,000 |
-| Pro | $150 | 100 | 2,000 | 2,000,000 |
-| Enterprise | arranged | no limit | no limit | no limit |
+| Plan | Price | Seats |
+|---|---|---|
+| Free | $0 | 1 |
+| Solo | $20 | 1 |
+| Basic | $40 | 25 |
+| Pro | $150 | 100 |
+| Enterprise | arranged | no limit |
 
-Left behind from the old server: the margin and the dollar pool (with keys brought by the user, Glyphh resells no inference), the SSO and governance flags, the price history, and the machine terms.
+Left behind from the old server: the margin and the dollar pool, the rate limits, the SSO and governance flags, the price history, and the machine terms. Glyphh governs nothing: limits and access belong to an AI gateway the customer puts in front of their models.
 
 ## orgs
 
@@ -144,29 +114,11 @@ A user belongs to one org and has one role in it:
 
 The profile is the user's first name, last name, email and profile image. The email is how a Google or GitHub sign-in finds the user.
 
-## teams
-
-Teams are optional. An org with no teams is flat: everything in it is shared across the org. Once an org has teams, everything in it is team scoped: a user sees and works in the teams they are a member of.
-
-- A user can be a member of several teams.
-- Org admins create teams and manage their members, and see every team in their org; super admins see every team everywhere.
-- A team belongs to one org, and its members are users of that org.
-
-## Caps
-
-The plan sets an org's limits. An org admin can cap the org lower, and cap each team lower still, never above what sits over it:
-
-- **Plan:** the ceiling (`rpm_limit`, `tpm_limit`).
-- **Org:** `rpm_cap`, `tpm_cap`, at or under the plan's. Null means the plan's limit.
-- **Team:** `rpm_cap`, `tpm_cap`, at or under the org's. Null means the org's limit.
-
-The limit a request runs under is the smallest that applies to it.
-
 ## Models
 
-Glyphh is not a gateway: it stores how a model is reached and never sits in the call. A super power names one of its org's models; when it runs, rrotor calls the provider directly with that model's key. Glyphh does not route, meter, limit or pay for model calls.
+Glyphh is a model runtime, not a gateway: it stores how a model is reached and never sits in the call, and it governs nothing. A customer who wants limits or access rules puts their own AI gateway in front of their models; a model's base URL can point at it. A super power names one of its org's models; when it runs, rrotor calls the provider directly with that model's key. Glyphh does not route, meter, limit or pay for model calls.
 
-- **models** are what an org admin (or a team) adds: a provider, the provider's model id, and the API key for it, plus a base URL for providers that need one. The key is encrypted at rest, never returned after it is saved (only the last four characters are shown), and handed only to a member's own runtime when a super power runs.
+- **models** are what an org admin adds: a provider, the provider's model id, and the API key for it, plus a base URL for providers that need one. The key is encrypted at rest, never returned after it is saved (only the last four characters are shown), and handed only to a member's own runtime when a super power runs.
 - The public list of models (about 3,900 across 130 providers, with each one's provider, kind, context size and prices) ships with the server to help pick one; it is reference data, not a table.
 - **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart. A sign-in token works too.
 
@@ -174,7 +126,7 @@ Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, mo
 
 ## Scoping
 
-Every API call and MCP tool runs as a principal: the user, their org, their role, and their teams. The role decides what an operation allows, the org decides which rows it sees, and in an org with teams the user's teams narrow that further. Row level security in Postgres enforces the org (and teams) under the code, so a bug in a query cannot reach another org's data.
+Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
 
 ## tokens
 

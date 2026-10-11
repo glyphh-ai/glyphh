@@ -18,16 +18,14 @@ class PlanSeed:
     name: str
     price_cents: int
     max_seats: int | None
-    rpm_limit: int | None
-    tpm_limit: int | None
 
 
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed("Free", 0, 1, 60, 50_000),
-    PlanSeed("Solo", 2_000, 1, 200, 200_000),
-    PlanSeed("Basic", 4_000, 25, 600, 500_000),
-    PlanSeed("Pro", 15_000, 100, 2_000, 2_000_000),
-    PlanSeed("Enterprise", 0, None, None, None),
+    PlanSeed("Free", 0, 1),
+    PlanSeed("Solo", 2_000, 1),
+    PlanSeed("Basic", 4_000, 25),
+    PlanSeed("Pro", 15_000, 100),
+    PlanSeed("Enterprise", 0, None),
 )
 
 
