@@ -5,7 +5,7 @@ flowchart TB
     Web
     App
     Machines
-    Runtime --> SDK --> Server
+    Runtime["rrotor (runtime)"] --> SDK --> Server
 ```
 
 ## Decided
