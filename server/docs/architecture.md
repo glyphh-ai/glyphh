@@ -39,7 +39,7 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 
 ### Access
 
-- **Sign-in:** Google only, for now, on the Google sign-in Glyphh already has. Google's screen is the sign-in; the server takes the callback and redirects back to the app or agent, so it serves no page of its own.
+- **Sign-in:** Google and GitHub. Their screens are the sign-in; the server takes the callback and redirects back to the app or agent, so it serves no page of its own. No magic links: mail scanners use them up, they break across devices, and they train people to click sign-in links in email. Microsoft can follow, the same way, when business users need it.
 - **Tokens:** after Google sign-in the server issues its own tokens to the app, the CLI and the plugin; every token carries its org.
 
 ### Data
