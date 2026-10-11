@@ -22,13 +22,28 @@ What if you could combine every AI super power into one? Glyphh does. A member's
 
 The beta page today: the cat in its ring, the super powers orbiting into it, "What if you could combine every AI super power into one?", **Sign up for the beta** (email sales@glyphh.ai). Rebrand it, and give it room to grow into a full site.
 
-### 2. Sign-in pages (the server's only pages)
+### 2. app.glyphh.ai: the web front door
+
+A very light web app: everything a person reaches directly in a browser. Glyphh has no other app for people: the real work happens in their AI (Claude, ChatGPT, Codex) or on their own machine's UI. Every page has its own address.
+
+**Pages only a browser can show** (something sends the person here):
 
 - **Sign in:** Continue with Google, Continue with GitHub.
-- **Allow:** "Claude wants to use your Glyphh": allow or deny, for an agent host (Claude, Codex, ChatGPT).
+- **Allow:** "Claude wants to use your Glyphh": allow or deny, for an AI host (Claude, ChatGPT, Codex).
 - **Approve a code:** "Is this code on your new machine?", for a machine or a CLI signing in.
-- **Join:** accepting an invite to an org.
-- **States for each:** loading, success ("You're connected. Go back to Claude."), expired link, refused (an unverified email), and an error showing its **trace id**.
+- **Join:** "You're invited to Acme", then sign in, then "You've joined Acme".
+- **Return pages:** you're connected (go back to Claude), machine approved, checkout done ("You're on Pro") or cancelled, a service connected ("Gmail is connected").
+- **Error:** what happened, what to do, and its **trace id**.
+
+**The app itself** (signed in):
+
+- **My machines (home):** each machine, online or not, where it runs; tap to open its UI.
+- **Deploy a machine:** the one-click hosts (Fly, AWS, Azure, GCP, DigitalOcean, Hetzner, any VPS), then live status: waiting, registered, starting, ready.
+- **Add Glyphh to your AI:** Claude, ChatGPT and Codex, each with its setup steps.
+- **Account:** profile, plan and usage, Stripe's portal for payment details, connected AI hosts (disconnect one), sign out.
+- **Opening a machine:** connecting, and "this machine is offline".
+
+**States for every page:** loading, success, expired link, refused, error with its trace id.
 
 ### 3. rrotor's UI (the old app, reworked)
 
@@ -51,18 +66,15 @@ The app every machine serves, in the browser and inside Claude:
 - **Org admin:** members, invites, teams, allowed models and connections.
 - **Settings:** theme, notifications, voice.
 
-### 4. Plugin screens inside Claude and ChatGPT
+### 4. Cards inside Claude and ChatGPT (through the plugin)
 
-Native-feeling cards in the chat, taking the host's light or dark theme:
+The same screens as app.glyphh.ai, built from the same components, as native-feeling cards in the chat, taking the host's light or dark theme. Only after sign-in: signing in itself is always a browser page.
 
 - **My machines:** a list, online or not, tap to open.
 - **Deploy a machine:** the steps, then live status (waiting, registered, starting, ready).
+- **Usage and plan:** "what have I used this month?"
 - **The swarm:** what is running, live.
 - **Needs you:** a super power asking a question, or for permission.
-
-### 5. The player (app.glyphh.ai)
-
-The shell that opens a machine's UI from anywhere: the machine picker, connecting, and "this machine is offline".
 
 ## Must haves
 
@@ -82,4 +94,4 @@ The shell that opens a machine's UI from anywhere: the machine picker, connectin
 1. Brand: logo usage, the cat set and its motion, the colour palette, the typefaces.
 2. Tokens for light and dark.
 3. The component library.
-4. The screens above, starting with the **sign-in pages**, then **rrotor's UI**.
+4. The screens above, starting with **app.glyphh.ai** (sign-in first), then **rrotor's UI**, then the **cards in the chat**.
