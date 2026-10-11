@@ -1,0 +1,8 @@
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.step { display: flex; align-items: center; gap: var(--space-3); color: var(--color-text-muted); }
+.marker { width: 12px; height: 12px; border-radius: var(--radius-full); border: 2px solid var(--color-line); }
+.step[data-state="done"] { color: var(--color-text); } .step[data-state="done"] .marker { background: var(--color-ok); border-color: var(--color-ok); }
+.step[data-state="current"] { color: var(--color-text); font-weight: var(--weight-medium); }
+.step[data-state="current"] .marker { border-color: var(--color-accent); animation: pulse 1.2s ease-in-out infinite; }
+.step[data-state="failed"] { color: var(--color-danger); } .step[data-state="failed"] .marker { background: var(--color-danger); border-color: var(--color-danger); }
+@keyframes pulse { 50% { opacity: 0.4; } }

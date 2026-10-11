@@ -1,0 +1,5 @@
+.skeleton { display: grid; gap: var(--space-2); }
+.line, .box { display: block; border-radius: var(--radius-sm); background: var(--color-surface-raised); animation: shimmer 1.4s ease-in-out infinite; }
+.line { height: 12px; } .line:last-child { width: 60%; }
+.box { height: var(--skeleton-h); border-radius: var(--radius-lg); }
+@keyframes shimmer { 50% { opacity: 0.5; } }

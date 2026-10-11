@@ -1,0 +1,7 @@
+.alert { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+  border: 1px solid var(--color-line); background: var(--color-surface); }
+.alert[data-tone="ok"] { border-color: var(--color-ok); } .alert[data-tone="warn"] { border-color: var(--color-warn); }
+.alert[data-tone="danger"] { border-color: var(--color-danger); }
+.title { margin: 0; font-weight: var(--weight-bold); }
+.body { font-size: var(--text-sm); }
+.trace { margin: 0; font: var(--text-xs) var(--font-mono); color: var(--color-text-muted); }
