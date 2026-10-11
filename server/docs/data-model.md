@@ -14,10 +14,9 @@ erDiagram
     super_powers ||--o{ grants : "is granted"
     powers ||--o{ grants : "granted as"
     machines ||--o{ grants : "granted as"
-    powers ||--o{ super_powers : "is the model of"
+    powers ||--o{ super_powers : "is the loop of"
     powers ||--o{ slots : "declares"
     powers ||--o{ slots : "fills"
-    super_powers ||--o{ slots : "fills"
     super_powers ||--o{ schedules : "on a clock"
     powers ||--o{ schedules : "on a clock"
     machines ||--o{ schedules : "runs on"
@@ -168,7 +167,7 @@ erDiagram
         uuid user_id FK "null = installed by the org, for everyone"
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
-        uuid model_id FK "the one model it runs on, from its owner's models; null = the loop's own (a CLI on its subscription)"
+        uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
         jsonb definition "the rrotor definition (its workflows, pipelines and screens), still to be drawn; its data lives in rrotor"
         timestamptz created_at
         timestamptz updated_at
@@ -177,7 +176,7 @@ erDiagram
     grants {
         uuid id PK
         uuid super_power_id FK "the super power granted it"
-        uuid power_id FK "a power: folder, connection, loop, skill, task, plugin (never a model: that is picked); or"
+        uuid power_id FK "a power: folder, connection, model, skill, task, plugin (the loop is picked, not granted); or"
         uuid machine_id FK "a machine it may run on; or"
         uuid granted_super_power_id FK "a super power it may call (exactly one of the three)"
         timestamptz created_at
@@ -187,8 +186,7 @@ erDiagram
         uuid id PK
         uuid power_id FK "the task (or other power) that declares it"
         text name "what its program calls it: writer, reviewer, ..."
-        uuid model_id FK "filled by one of the owner's models; or"
-        uuid super_power_id FK "by one of their super powers (at most one of the two; neither = not filled yet)"
+        uuid model_id FK "the model that fills it, one of the owner's; null = not filled yet"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -405,13 +403,13 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 ## Super powers
 
-Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a loop, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
+Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
 
-**One model per super power.** A member has a list of models (as many as they add: a hundred is fine), and each super power picks one of them as its model (`model_id`). Adding a model from a super power's editor adds it to the member's list and picks it there. A super power whose loop is a CLI on its own subscription may have none.
+**A loop runs it; models are granted.** Every super power has one loop (`loop_id`): the CLI or rrotor's own engine that runs it. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
 ## Slots
 
-A power that runs on its own (a task) declares **slots**: the agents its program calls by name (`writer`, `reviewer`). Installing it, the member fills each slot with one of their models or one of their super powers. A run is refused, with the slot named, while a slot it calls is empty.
+A task declares **slots**: the steps its program calls by name (`research`, `write`), and each slot is filled with a model. A task on a clock can run Gemini for step one and Claude for step two. A run is refused, with the slot named, while a slot it calls is empty. The UI for filling slots is still to be designed.
 
 ## Schedules and runs
 
