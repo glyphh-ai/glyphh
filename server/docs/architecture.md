@@ -35,7 +35,7 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 ### Models
 
-Glyphh is a model runtime, not a gateway, and it governs nothing: limits, access rules and spend belong to an AI gateway the customer puts in front of their models (a model's base URL can point at it). A super power names a model its org added (a provider, the provider's model id and an API key); when it runs, rrotor calls the provider directly with that key. Glyphh stores the model's setup and never routes, meters, limits or pays for a model call. The key is encrypted on the server and handed only to a member's own runtime.
+Glyphh is a model runtime, not a gateway, and it governs nothing: limits, access rules and spend belong to an AI gateway the customer puts in front of their models (a model's base URL can point at it). A model is a person's own: they add it with their own key (a provider, the provider's model id and an API key), and a super power names one of theirs; when it runs, rrotor calls the provider directly with that key. Glyphh stores the model's setup and never routes, meters, limits or pays for a model call. The key is encrypted on the server and handed only to a member's own runtime.
 
 ### Connections
 
@@ -45,7 +45,7 @@ Connections are the moat. A super power declares the connections it needs by nam
 
 A web app in its own repo (`glyphh-ai/platform`): a client of the server's API through the SDK, like the app, the CLI and the plugin. The server stays headless and serves no pages.
 
-It holds what must never go through a chat: an API key is never typed to an agent or passed through MCP. A tool that needs a key returns a one-time link to the platform (single use, short lived, tied to that member and that model); the agent opens it in the browser, the member signs in (the link alone is never enough), pastes the key, and the platform sends it to the server's API, encrypted at rest there. The agent only hears that it was saved and the key's last four characters. The platform also carries sign-in and consent, approving a machine's sign-in code, accepting an invite, and the hand-off to Stripe for billing.
+It holds what must never go through a chat: an API key is never typed to an agent or passed through MCP. A tool that needs a key returns a one-time link to the platform (single use, short lived, tied to that member and that model); the agent opens it in the browser, the member signs in (the link alone is never enough), pastes the key, and the platform sends it to the server's API, encrypted at rest there. The agent only hears that it was saved and the key's last four characters. For people it shows what each one has, never what is inside: Tom has 4 connections, 3 models, 2 super powers and 2 machines. The platform also carries sign-in and consent, approving a machine's sign-in code, accepting an invite, and the hand-off to Stripe for billing.
 
 Its usage and billing pages read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 

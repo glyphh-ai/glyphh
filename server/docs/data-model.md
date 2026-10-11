@@ -75,7 +75,7 @@ erDiagram
     powers {
         uuid id PK
         uuid org_id FK
-        uuid user_id FK "null = the org's; a model never has one, a connection always does"
+        uuid user_id FK "null = the org's; a model and a connection always have one"
         text kind "model, connection, folder, skill, task, plugin, loop"
         text name "unique for its owner"
         timestamptz created_at
@@ -302,15 +302,15 @@ The profile is the user's first name, last name, email and profile image. The em
 
 Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. Who installed it is the only control; Glyphh governs nothing else:
 
-- **Models are the org's:** an org admin adds them, for everyone in the org.
+- **Models are a user's:** each person adds their own, with their own key. Nothing is shared or deduplicated: ten people adding the same model are ten rows, each with its own key, and one person may add the same model more than once (one per super power, say, to see each one's spend at the provider).
 - **Connections are a user's:** always one person's own account (Pipedream accounts belong to a person; there are no shared or system accounts).
 - **Folders, skills, tasks and plugins** are installed by a user for themselves, or by the org for everyone (`user_id` null).
 
-The database enforces the first two: a model power has no `user_id`, a connection power always has one.
+The database enforces the first two: a model power and a connection power always have a `user_id`.
 
 Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
-- **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
+- **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - The public list of models (about 3,900 across 130 providers) ships with the server to help pick one; it is reference data, not a table.
