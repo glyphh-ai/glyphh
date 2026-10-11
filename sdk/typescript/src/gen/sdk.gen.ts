@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { HealthData, HealthResponses } from './types.gen.js';
+import type { DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, HealthData, HealthResponses, ListHostsData, ListHostsResponses, MeData, MeResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -22,3 +22,22 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * Get Health
  */
 export const health = <ThrowOnError extends boolean = false>(options?: Options<HealthData, ThrowOnError>): RequestResult<HealthResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({ url: '/v1/health', ...options });
+
+/**
+ * Get Me
+ */
+export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>): RequestResult<MeResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeResponses, unknown, ThrowOnError>({ url: '/v1/me', ...options });
+
+/**
+ * List Hosts
+ *
+ * The agent hosts (Claude, Codex, ...) connected to my Glyphh.
+ */
+export const listHosts = <ThrowOnError extends boolean = false>(options?: Options<ListHostsData, ThrowOnError>): RequestResult<ListHostsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListHostsResponses, unknown, ThrowOnError>({ url: '/v1/me/hosts', ...options });
+
+/**
+ * Disconnect Host
+ *
+ * Disconnect one host: its tokens stop working at once; the others are untouched.
+ */
+export const disconnectHost = <ThrowOnError extends boolean = false>(options: Options<DisconnectHostData, ThrowOnError>): RequestResult<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError> => (options.client ?? client).delete<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError>({ url: '/v1/me/hosts/{host_id}', ...options });

@@ -1,27 +1,18 @@
 import { type Client, createClient } from "./gen/client/index.js";
-import { health as healthOperation } from "./gen/sdk.gen.js";
-import type { Health } from "./gen/types.gen.js";
+import { disconnectHost, health, listHosts, me } from "./gen/sdk.gen.js";
+import type { Health, Host, Me, MeOrg } from "./gen/types.gen.js";
+import { GlyphhError, unwrap } from "./errors.js";
 
-export type { Health };
+export type { Health, Host, Me, MeOrg };
+export { GlyphhError };
 
 export interface GlyphhOptions {
   /** The Glyphh server, e.g. http://localhost:8080. Falls back to the GLYPHH_URL environment variable. */
   baseUrl?: string;
+  /** The member's access token, sent as a Bearer token. Falls back to GLYPHH_TOKEN. */
+  token?: string;
   /** A fetch to send requests with; defaults to the global fetch. */
   fetch?: typeof fetch;
-}
-
-/** A request the server refused or failed: its HTTP status (0 when the server was never reached) and its body. */
-export class GlyphhError extends Error {
-  readonly status: number;
-  readonly body: unknown;
-
-  constructor(status: number, body: unknown) {
-    super(`Glyphh request failed with status ${status}`);
-    this.name = "GlyphhError";
-    this.status = status;
-    this.body = body;
-  }
 }
 
 function resolveBaseUrl(baseUrl: string | undefined): string {
@@ -35,13 +26,31 @@ export class Glyphh {
   readonly #client: Client;
 
   constructor(options: GlyphhOptions = {}) {
-    this.#client = createClient({ baseUrl: resolveBaseUrl(options.baseUrl), fetch: options.fetch });
+    const token = options.token ?? process.env.GLYPHH_TOKEN;
+    this.#client = createClient({
+      baseUrl: resolveBaseUrl(options.baseUrl),
+      fetch: options.fetch,
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    });
   }
 
   /** Is the server up, and can it reach its database? */
   async health(): Promise<Health> {
-    const { data, error, response } = await healthOperation({ client: this.#client });
-    if (data === undefined) throw new GlyphhError(response?.status ?? 0, error);
-    return data;
+    return unwrap(await health({ client: this.#client }));
+  }
+
+  /** Who am I signed in as: my profile, my role, my org and its plan. */
+  async me(): Promise<Me> {
+    return unwrap(await me({ client: this.#client }));
+  }
+
+  /** The agent hosts (Claude, Codex, ...) connected to my Glyphh. */
+  async listHosts(): Promise<Host[]> {
+    return unwrap(await listHosts({ client: this.#client }));
+  }
+
+  /** Disconnect one host: its tokens stop working at once; the others are untouched. */
+  async disconnectHost(hostId: string): Promise<void> {
+    unwrap(await disconnectHost({ client: this.#client, path: { host_id: hostId } }));
   }
 }

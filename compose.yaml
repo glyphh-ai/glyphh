@@ -20,6 +20,7 @@ services:
       target: runtime
     environment:
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      GLYPHH_SECRET_KEY: sdk-suite-secret-key-that-signs-sign-in-links-0123
     depends_on:
       db:
         condition: service_healthy

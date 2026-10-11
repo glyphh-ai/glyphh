@@ -5,6 +5,16 @@ export type ClientOptions = {
 };
 
 /**
+ * HTTPValidationError
+ */
+export type HttpValidationError = {
+    /**
+     * Detail
+     */
+    detail?: Array<ValidationError>;
+};
+
+/**
  * Health
  */
 export type Health = {
@@ -22,6 +32,101 @@ export type Health = {
     version: string;
 };
 
+/**
+ * Host
+ */
+export type Host = {
+    /**
+     * Connected At
+     */
+    connected_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * Me
+ */
+export type Me = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * First Name
+     */
+    first_name: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Image Url
+     */
+    image_url: string | null;
+    /**
+     * Last Name
+     */
+    last_name: string | null;
+    org: MeOrg;
+    /**
+     * Role
+     */
+    role: string;
+};
+
+/**
+ * MeOrg
+ */
+export type MeOrg = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Plan
+     */
+    plan: string;
+};
+
+/**
+ * ValidationError
+ */
+export type ValidationError = {
+    /**
+     * Context
+     */
+    ctx?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Input
+     */
+    input?: unknown;
+    /**
+     * Location
+     */
+    loc: Array<string | number>;
+    /**
+     * Message
+     */
+    msg: string;
+    /**
+     * Error Type
+     */
+    type: string;
+};
+
 export type HealthData = {
     body?: never;
     path?: never;
@@ -37,3 +142,67 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type MeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me';
+};
+
+export type MeResponses = {
+    /**
+     * Successful Response
+     */
+    200: Me;
+};
+
+export type MeResponse = MeResponses[keyof MeResponses];
+
+export type ListHostsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me/hosts';
+};
+
+export type ListHostsResponses = {
+    /**
+     * Response Listhosts
+     *
+     * Successful Response
+     */
+    200: Array<Host>;
+};
+
+export type ListHostsResponse = ListHostsResponses[keyof ListHostsResponses];
+
+export type DisconnectHostData = {
+    body?: never;
+    path: {
+        /**
+         * Host Id
+         */
+        host_id: string;
+    };
+    query?: never;
+    url: '/v1/me/hosts/{host_id}';
+};
+
+export type DisconnectHostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DisconnectHostError = DisconnectHostErrors[keyof DisconnectHostErrors];
+
+export type DisconnectHostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DisconnectHostResponse = DisconnectHostResponses[keyof DisconnectHostResponses];
