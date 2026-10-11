@@ -30,6 +30,15 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 - **Language and framework:** Python 3.12+, FastAPI, Pydantic v2, async throughout.
 - **Shape:** one deployment for every tenant, run as two or more stateless processes behind a load balancer.
 
+### Runtime hosting
+
+Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
+
+- rrotor ships as one Docker image, so it runs anywhere Docker does.
+- It connects out to the server, never in, so a remote server needs no public address, ports or firewall rules.
+- Glyphh supplies the setup: one-click configs for the common hosts, a one-line `docker run`, and docs for the rest.
+- The server only knows which runtimes a member has registered, and whether each is online.
+
 ### Interfaces
 
 Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for now, public later). Neither carries logic of its own: same accounts, permission checks and tenant rules as the server.
