@@ -4,6 +4,7 @@ nav:
   - Home: index.md
   - Architecture: architecture.md
   - Data model: data-model.md
+  - Where we are: status.md
 theme:
   name: material
   palette:

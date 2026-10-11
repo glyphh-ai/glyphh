@@ -100,6 +100,8 @@ A member's machines reach each other, so from machine A they can watch machine B
 - **Who:** for now only the machine's owner, from their own machines, the app or the web. The server checks it before joining two connections.
 - **When B drops:** A is told at once, and can join again when B is back.
 
+**Known gap, not yet decided:** the super power's folders are enforced only where rrotor does the work itself (its files channel and its MCP tools). A CLI's own Bash tool runs as rrotor's user, so it can read anything that user can (`cat ~/.ssh/...`), and the shell, once on, is the whole machine. The working folder is not a fence. The proposal on the table: every run inside an operating-system sandbox that holds only its granted folders and its run folder (a container per run on remote servers; Seatbelt on macOS and bubblewrap on Linux desktops; the CLI's own sandbox as a second layer, never the only one), the shell inside the same sandbox by default, and a whole-machine shell as its own switch. Windows desktops would need a container (WSL or Docker) for the same guarantee.
+
 Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
 
 ### Runtime hosting
