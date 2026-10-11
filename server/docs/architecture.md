@@ -21,7 +21,7 @@ flowchart TB
     end
 
     subgraph Yours["Your machines (your compute)"]
-        Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite) = the fence"]
+        Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite) = the fence;<br/>a browser for bots once approved"]
         Remote["rrotor VM (full) = the fence<br/>any host: CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens,<br/>virtual screen + Chromium (RPA)"]
     end
 
@@ -147,6 +147,8 @@ A full rrotor runs a virtual screen (a display with no monitor) and a real Chrom
 - **Watching:** the screen streams to the member's app or the web over WebRTC, whose video is encrypted end to end by design: the server only passes the call setup over the relay, and a TURN relay used when no direct path exists cannot decrypt it. If WebRTC cannot connect, screen frames go over the SSH channel instead. The server never sees the screen.
 - **Signing into a website:** the member takes control. The bot pauses, the member's taps and keystrokes go straight into the remote browser over the encrypted channel, they type the password and do the 2FA themselves, and hand control back. While they hold it no screenshot goes to the model, so a password or a code never reaches the model or a chat. The run's log records when control changed hands.
 - **Sessions stay on the machine:** each browser profile (a `browsers` power) lives on one rrotor and is granted like a folder, so one super power's signed-in sites are never another's. Cookies never leave that machine.
+- **On a desktop:** when the member drives Glyphh, it uses the app's own browser and the member's own sessions, because they are at the keyboard. A super power running on the desktop (unattended, a bot) never touches the app's browser: it gets its own Chromium and virtual screen inside the desktop's rrotor VM, fenced and watched like a remote rrotor's, and the member's own sessions are never shared with it.
+- **Fetched only with the member's approval:** the desktop's VM does not carry the browser until the first super power that needs one is placed on that desktop. Then the app asks first and explains: what it is (a separate browser inside the fence, for super powers only, which never sees the member's own sessions), what it costs (a few hundred MB on disk, roughly 300 to 500 MB of memory while a browser is open), and why (browser work runs on this machine and its own internet address, which some sites trust more than a cloud server). Declined, the super power cannot be placed on that desktop and is offered a remote rrotor instead; approved, the browser is fetched once and kept.
 - **Later:** a password manager (1Password) can fill sign-ins without the model seeing them. Passkeys are tied to the member's own device and cannot be used remotely; such sites need a password and 2FA through take-over.
 
 ### Machine to machine: SSH over the relay
