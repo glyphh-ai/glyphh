@@ -9,39 +9,38 @@ As of 2026-10-11. The rule: the data model is drawn first, then built in the ord
 - **SDKs** (`glyphh-ai/glyphh`): TypeScript and Python, generated from the server's OpenAPI spec, with health as the first call; both suites run in Docker against the server.
 - **Docs:** this site (architecture, data model, this page).
 
+The repos `glyphh-ai/app` and `glyphh-ai/platform` are no longer needed: the UI lives in rrotor, the sign-in pages in the server.
+
 ## Drawn, not built
 
 On the [data model](data-model.md), in the order they were drawn:
 
 - **Powers:** `powers` and one table per kind (`models`, `connections`, `folders`, `skills`, `tasks`, `plugins`, `loops`). Every power is one user's own, with a disabled mark for when a limit leaves it out.
-- **Catalog:** `providers` (with logos) and `catalog_models` (name, description, type), the list the app picks models from.
+- **Catalog:** `providers` (with logos) and `catalog_models` (name, description, type), the list rrotor's UI picks models from.
 - **Super powers:** `super_powers` (one loop each; the member's Glyphh has everything), `grants` (folders, connections, models, skills, tasks, plugins, machines, other super powers), `slots` (a task's steps, each filled with a model), `tool_permissions` (allow, ask, deny per tool, with a super power's override for autonomous runs).
 - **Teams and limits:** `teams`, `allowed_models`, `allowed_connections`, and the two limit switches on orgs and teams.
 - **Schedules and runs:** `schedules` (the server's clock, sent to a machine) and `runs` (the history).
 - **Billing and usage:** the plan's credit and machine columns, `subscriptions`, `credit_ledger`, `usage_events` (logged by the server's connection relay, one per call).
 - **Browsers and hosting:** `browsers` (a browser profile on one full rrotor, granted like a folder), and one-click sign-ins on `machine_sign_ins` for new hosts.
 - **People and machines:** `invites`, `machines` (with their edition, SSH key, fingerprint and shell switch), `machine_sign_ins`, `fence_events` (what rrotor reports when a run reaches past its fence), `api_keys`; folders are on a machine, and folder grants are read or write.
-- **Signing in and Stripe:** `sign_in_identities` (Google and GitHub by the provider's own id), `oauth_clients` and `oauth_codes` (the plugin's sign-in), `key_links` (the platform's one-time key links), `stripe_events` (each webhook handled once).
+- **Signing in and Stripe:** `sign_in_identities` (Google and GitHub by the provider's own id), `oauth_clients` and `oauth_codes` (the plugin's sign-in), `launch_tickets` (open one machine's UI, once, for a minute), `stripe_events` (each webhook handled once).
 
-On the [architecture](architecture.md): tasks with Jev (a model on the member's key) and Ada (our kernel, billed per token), dependencies and Discover, desktop browsers for super powers, fetched only with the member's approval, Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (the app you drive unsandboxed, remote control only through rrotor by grants), the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
+On the [architecture](architecture.md): no desktop app and no platform (every rrotor serves Glyphh's UI, opened in Claude or any browser through the player; sign-in once on the server; four sign-in pages), tasks with Jev (a model on the member's key) and Ada (our kernel, billed per token), dependencies and Discover, desktop browsers for super powers, fetched only with the member's approval, Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (everything Glyphh runs is inside it, reached only by grants), usage and billing pages in rrotor's UI, adding a model in rrotor's UI, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
 
 ## Open
 
 Decisions still to make. Where a proposal is written, it is a proposal, not a decision.
 
-- **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and the app and web open them over SSH through the relay.
-- **Where the org admin's pages live:** members, teams, and the allowed models and connections, in the app or on the platform.
+- **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the player through the relay.
 - **Ada in credits:** how the Ada price per token is stated in credits.
 - **Super powers in Discover:** whether a super power becomes one more power type (`super_powers` folds into `powers`) or keeps its own table and is listed the same way.
 - **Requirements and listings:** the tables for power dependencies and the Discover catalog, drawn when built.
-- **App settings** (workspaces, tabs, layout, appearance): not drawn; on hold.
-- **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens reach the app and the web from a remote machine.
+- **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
 - **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.
 - **Plans:** price per credit and monthly credits per plan, included and extra machines for Solo, Basic and Pro, whether runs themselves spend credits, and whether Free is held to one connected service.
 - **Usage detail:** how long each call's row is kept.
 - **Teams:** whether a user can be in more than one (drawn as at most one).
 - **Catalog descriptions:** the old list has no descriptions for its 3,900 models; they are to be written or imported.
-- **Platform stack:** a very small web app in `glyphh-ai/platform`, stack not chosen.
 
 ## Next
 

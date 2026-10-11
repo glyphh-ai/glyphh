@@ -21,8 +21,8 @@ erDiagram
     oauth_clients ||--o{ oauth_codes : "asks for"
     users ||--o{ oauth_codes : "approves"
     oauth_clients |o--o{ tokens : "issued to"
-    users ||--o{ key_links : "gets"
-    powers |o--o{ key_links : "sets the key of"
+    users ||--o{ launch_tickets : "opens with"
+    machines ||--o{ launch_tickets : "opened by"
     machines ||--o{ folders : "holds"
     machines ||--o{ fence_events : "reports"
     super_powers ||--o{ fence_events : "tried"
@@ -444,13 +444,14 @@ erDiagram
         timestamptz created_at
     }
 
-    key_links {
+    launch_tickets {
         uuid id PK
-        uuid user_id FK "the only person it works for"
-        uuid power_id FK "the model whose key it sets"
-        text token_hash UK "the link's token; only the hash is kept"
-        timestamptz expires_at "minutes, not days"
-        timestamptz used_at "a link works once"
+        uuid user_id FK "the only member it opens for"
+        uuid machine_id FK "the only machine it opens"
+        text page "where in rrotor's UI it lands: home, a super power, a model's key, ..."
+        text token_hash UK "only the hash is kept"
+        timestamptz expires_at "a minute"
+        timestamptz used_at "a ticket works once"
         timestamptz created_at
     }
 
@@ -477,7 +478,7 @@ erDiagram
     tokens {
         uuid id PK
         uuid user_id FK
-        uuid oauth_client_id FK "the agent host it was issued to; null = the app or the CLI"
+        uuid oauth_client_id FK "the agent host it was issued to; null = the player or rrotor's UI"
         text access_hash UK
         text refresh_hash UK
         timestamptz access_expires_at
@@ -554,13 +555,13 @@ An org admin invites someone by email, with the role they will have. The invite 
 
 - **sign_in_identities:** a person signs in with Google or GitHub, and the server finds them by the provider's own id for them (`subject`), never by email alone: an email that changes, or a GitHub account with a hidden email, still finds the same person, and an email can never be used to reach someone else's account. The first sign-in links by email, once, through an invite or a new org.
 - **The plugin signs in with OAuth:** an agent host (Claude Code, Cursor, ChatGPT) is an `oauth_clients` row; the member approves it in the browser, the host gets a one-time code (`oauth_codes`, with PKCE, a minute to live), and trades it for tokens issued to that client, so the member can see and revoke each host on its own.
-- **key_links:** the one-time link an agent hands the member to enter a model's key on the platform. It works once, for minutes, only for that member signed in, and only for that model.
+- **launch_tickets:** how a machine's UI is opened, from Claude, the player or an agent's link (to enter a model's key, say): issued by the server for one member and one machine, landing on one page, for a minute, once. The rrotor checks it with the server and starts the session, so a member signs in once, on the server, never on a machine.
 
 ## tokens
 
 What the server hands out after a sign-in: a short-lived access token and a longer-lived refresh token. Only their hashes are stored, so a stolen database holds no usable token. A token is revoked by setting `revoked_at`.
 
-A token issued to an agent host carries its OAuth client (`oauth_client_id`), so each host is revoked on its own; the app's and the platform's tokens carry none. Machines have their own token on `machines`, not here.
+A token issued to an agent host carries its OAuth client (`oauth_client_id`), so each host is revoked on its own; the player's and rrotor's UI's carry none. Machines have their own token on `machines`, not here.
 
 **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 
@@ -583,14 +584,14 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A browser** is a browser profile on one rrotor (a full one, or a desktop whose member approved the browser): its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
 - **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version is still open.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
-- **The catalog** is what the app and the platform show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
+- **The catalog** is what rrotor's UI shows when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
 
 Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
 
 ## Tool permissions
 
-Every tool a power brings (each tool of a connection, of a plugin's MCP server, ...) has a permission, set where the app shows that power (the powers window, Connections):
+Every tool a power brings (each tool of a connection, of a plugin's MCP server, ...) has a permission, set where rrotor's UI shows that power:
 
 - **The user's own setting:** `allow` (runs without asking), `ask` (asks each time) or `deny` (never runs). A tool with no row is `ask`.
 - **A super power's override:** for its autonomous runs, a super power can set a tool to `allow` or `deny`, whatever the user's own setting says. With no override, the user's own setting applies.
@@ -622,15 +623,15 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 
 ## Machines
 
-Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (on a server, or inside the desktop app) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
+Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (on a server, or on a desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
-**One-click hosting** registers a new machine the same way, without the approve step: the member asks the app or the platform for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
+**One-click hosting** registers a new machine the same way, without the approve step: the member asks rrotor's UI or the plugin for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
 
-A machine is a registered rrotor, a small Linux VM: a member's desktop (the app runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A lite machine gets a browser only once its member approves it (`browser_approved_at`), and a browser power is never placed on a desktop before that. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+A machine is a registered rrotor, a small Linux VM: a member's desktop (a small helper runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A lite machine gets a browser only once its member approves it (`browser_approved_at`), and a browser power is never placed on a desktop before that. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
 **Which server process holds a machine's connection is not in this database:** it is live state that is only true right now, so it lives in Redis (see the architecture, Data). `last_seen_at` here is updated when a machine connects and disconnects, not on every heartbeat.
 
-**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform shows them ("this super power tried to leave its folders").
+**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and rrotor's UI shows them ("this super power tried to leave its folders").
 
 A machine's shell over SSH is off until the member turns it on (`shell_enabled`).
 
