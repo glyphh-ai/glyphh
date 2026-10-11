@@ -23,6 +23,13 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 - **Language and framework:** Python 3.12+, FastAPI, Pydantic v2, async throughout.
 - **Shape:** one deployment for every tenant, run as two or more stateless processes behind a load balancer.
 
+### Interfaces
+
+Two ways in, one per surface, both in the public `glyphh-ai/glyphh` repo. Neither carries logic of its own: same accounts, permission checks and tenant rules as the server.
+
+- **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the app on desktop, web and mobile, and the CLI), Python second.
+- **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, plus skills that teach the agent to use Glyphh's tools.
+
 ### Data
 
 - **Database:** one Postgres for every tenant, without pgvector.
