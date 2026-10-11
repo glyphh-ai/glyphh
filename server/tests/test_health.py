@@ -45,7 +45,7 @@ async def test_mcp_lists_its_tools(client: httpx.AsyncClient, auth: dict[str, st
     res = await client.post("/mcp", headers=auth, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
     assert res.status_code == 200, res.text
     tools = {t["name"] for t in _sse_result(res.text)["result"]["tools"]}
-    assert tools == {"health", "me"}
+    assert tools == {"health", "me", "org", "members", "invite", "invites", "revoke_invite"}
 
 
 async def test_mcp_and_the_api_answer_the_same(client: httpx.AsyncClient, auth: dict[str, str]) -> None:

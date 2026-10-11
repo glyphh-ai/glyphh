@@ -37,3 +37,19 @@ def refused(code: str, message: str, trace_id: str, status: int) -> HTMLResponse
         ),
         status=status,
     )
+
+
+def join(org: str, email: str, role: str, invite: str, providers: list[str]) -> HTMLResponse:
+    query = escape(urlencode({"invite": invite}))
+    buttons = "".join(f"<a class=btn href='/auth/{p}/start?{query}'>{LABELS[p]}</a>" for p in providers)
+    who = "an org admin" if role == "org_admin" else "a member"
+    return page(
+        "Join",
+        (f"<h1>Join {escape(org)} on Glyphh</h1><p>You're invited as {who}. Sign in as {escape(email)}.</p>{buttons}"),
+    )
+
+
+def joined(org: str) -> HTMLResponse:
+    return page(
+        "Joined", (f"<h1>You've joined {escape(org)}</h1><p>Open Glyphh in Claude, ChatGPT or Codex to start.</p>")
+    )

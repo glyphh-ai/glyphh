@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.applications import Starlette
 
 from glyphh_server.config import Settings
-from glyphh_server.mcp import health, me
+from glyphh_server.mcp import health, me, org
 from glyphh_server.mcp.oauth import GlyphhOAuth
 
 # DNS-rebinding protection guards servers bound to localhost; this one is public, behind its own auth.
@@ -29,6 +29,7 @@ def make_mcp(engine: AsyncEngine, settings: Settings) -> MCPServer:
     mcp = MCPServer("glyphh", version=settings.version, auth=auth, auth_server_provider=provider)
     health.register(mcp, engine, settings.version)
     me.register(mcp, engine)
+    org.register(mcp, engine, base)
     return mcp
 
 

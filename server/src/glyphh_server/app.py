@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 
-from glyphh_server.api import errors, health, me, sign_in_pages
+from glyphh_server.api import errors, health, join_pages, me, org, sign_in_pages
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
@@ -35,7 +35,9 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     errors.install(app)
     app.include_router(health.router)
     app.include_router(me.router)
+    app.include_router(org.router)
     app.include_router(sign_in_pages.router)
+    app.include_router(join_pages.router)
     app.router.routes.extend(mcp_app.routes)
     # The MCP app's own middleware (bearer authentication, then the token in context) comes with its routes;
     # add_middleware puts each one outermost, so they go in reverse, and the trace layer goes last: outermost.

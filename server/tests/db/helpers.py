@@ -48,3 +48,12 @@ async def make_plan(engine: AsyncEngine, name: str, seats: int | None) -> uuid.U
     values = {"name": name, "price_cents": 0, "max_seats": seats}
     async with engine.begin() as conn:
         return (await conn.execute(insert(Plan).values(values).returning(Plan.id))).scalar_one()
+
+
+async def admin_of(engine: AsyncEngine, org_name: str, plan: str = "Enterprise"):
+    """A new org and its org admin, as the principal operations run as."""
+    from glyphh_server.ops.auth.principal import Principal
+
+    org = await make_org(engine, org_name, plan)
+    user = await make_user(engine, org, f"admin@{uuid.uuid4().hex[:8]}.test", "org_admin")
+    return Principal(user_id=user, org_id=org, role="org_admin")
