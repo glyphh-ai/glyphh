@@ -30,6 +30,11 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 - **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the app on desktop, web and mobile, and the CLI), Python second.
 - **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, plus skills that teach the agent to use Glyphh's tools.
 
+### Access
+
+- **Sign-in:** Google only, for now, on the Google sign-in Glyphh already has. Google's screen is the sign-in; the server takes the callback and redirects back to the app or agent, so it serves no page of its own.
+- **Tokens:** after Google sign-in the server issues its own tokens to the app, the CLI and the plugin; every token carries its org.
+
 ### Data
 
 - **Database:** one Postgres for every tenant, without pgvector.
