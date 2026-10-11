@@ -28,9 +28,9 @@ erDiagram
     plans {
         uuid id PK
         text name UK
-        int price_cents "per month"
+        int price_cents "per seat, per month"
         text stripe_price_id UK "null for Free and Enterprise"
-        int max_seats "null = no limit"
+        int max_seats "the most seats an org may have; null = no limit"
         int monthly_credits "included each billing period"
         int included_machines "null = no limit"
         int extra_machine_cents "per extra machine per month; null = no extras on this plan"
@@ -131,6 +131,7 @@ erDiagram
         text stripe_customer_id UK
         text stripe_subscription_id UK "null on Free"
         text status "trialing, active, past_due, canceled"
+        int seats "the seats Stripe bills for"
         int extra_machines "bought on top of the plan's included machines"
         timestamptz current_period_start
         timestamptz current_period_end
@@ -187,7 +188,15 @@ erDiagram
 
 ## plans
 
-What an org pays, and how many users it may have (`max_seats`).
+What an org pays per seat each month, and how many seats it may have (`max_seats`).
+
+Seats are billed as the old server billed them (his rule, 2026-09-18):
+
+- **A seat is an active user.** The subscription's `seats` is what Stripe bills for.
+- **Adding a seat mid-cycle** raises `seats` at once, and the part-month is billed on the next invoice, never charged on the spot.
+- **Removing a seat never lowers `seats` mid-cycle.** It drops only when the next invoice is created, with nothing refunded for a month already billed.
+- **The billing date never moves:** it is set when the subscription starts.
+- **At `max_seats`, an org upgrades to add more people.**
 
 `stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us). A plan that is no longer sold is set `active = false`, never deleted, so orgs on it keep working.
 
