@@ -1,0 +1,2 @@
+.heading { margin: 0; font-family: var(--font-display); font-weight: var(--weight-bold); line-height: var(--leading-tight); }
+.h1 { font-size: var(--text-3xl); } .h2 { font-size: var(--text-xl); } .h3 { font-size: var(--text-lg); } .h4 { font-size: var(--text-md); }

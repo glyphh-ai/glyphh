@@ -1,0 +1,12 @@
+.button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-raised);
+  color: var(--color-text); font: var(--weight-medium) var(--text-sm) var(--font-body); cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out); }
+.button:disabled { opacity: 0.55; cursor: not-allowed; }
+.button[data-size="sm"] { min-height: 32px; padding: 0 var(--space-3); }
+.button[data-size="md"] { min-height: 40px; padding: 0 var(--space-4); }
+.button[data-size="lg"] { min-height: 48px; padding: 0 var(--space-5); font-size: var(--text-md); }
+.button[data-variant="primary"] { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.button[data-variant="ghost"] { background: transparent; border-color: transparent; }
+.button[data-variant="danger"] { background: transparent; color: var(--color-danger); border-color: var(--color-danger); }
+.block { width: 100%; }

@@ -56,3 +56,11 @@ services:
     depends_on:
       server:
         condition: service_healthy
+
+  test-ui:
+    image: node:24-slim
+    working_dir: /ui
+    volumes:
+      - ./ui:/ui
+      - /ui/node_modules
+    command: sh -c "npm ci --silent && npx tsc --noEmit && npx vitest run --coverage"
