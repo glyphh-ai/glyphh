@@ -13,7 +13,7 @@ What if you could combine every AI super power into one? Glyphh does. A member's
 **Keep:**
 
 - **The Glyphh logo.**
-- **The cat avatars:** the Glyphh cat and the super power faces (16 bodies). They are alive: **the blink**, the little **hop**, and the glowing **ring with its comet** from the current site. Every super power wears a cat.
+- **The cat avatars:** the Glyphh cat and the super power faces (16 bodies). They are alive: **the blink**, the little **hop**, and the glowing **ring with its comet** from the current site. Every super power wears a cat, and its **mood** shows in its eye (thinking, working, done, stuck, ...). The artwork and the motion are in `brand/` (see `brand/README.md`).
 - **The look and feel of the old desktop app**, reworked: it becomes rrotor's UI (below).
 
 ## Surfaces and screens
