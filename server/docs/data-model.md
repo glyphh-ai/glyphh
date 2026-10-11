@@ -17,6 +17,7 @@ erDiagram
     powers ||--o{ tool_permissions : "sets"
     super_powers ||--o{ tool_permissions : "overrides"
     users ||--o{ tokens : "signs in with"
+    users ||--|| user_settings : "sets"
     users ||--o{ sign_in_identities : "signs in as"
     oauth_clients ||--o{ oauth_codes : "asks for"
     users ||--o{ oauth_codes : "approves"
@@ -96,6 +97,9 @@ erDiagram
         text name
         bool limit_models "true = only the org's allowed models"
         bool limit_connections "true = only the org's allowed connections"
+        text image_key "the org's picture, in object storage"
+        bool member_api_keys "members may make their own API keys"
+        jsonb memory_policy "per lane (search, capture, sensitive): member, on or off"
         timestamptz created_at
     }
 
@@ -134,7 +138,28 @@ erDiagram
         text first_name
         text last_name
         text image_url
+        text time_zone "every schedule reads its cron in it"
+        timestamptz disabled_at "an org admin disabled the member"
         timestamptz created_at
+        timestamptz updated_at
+    }
+
+    user_settings {
+        uuid user_id PK, FK
+        text theme "dark, light, system, ..."
+        text notifications "on, off, ask"
+        text permission_mode "ask, plan, accept_edits, auto: how new sessions start"
+        text voice_mode "off, push_to_talk, continuous"
+        bool voice_autoplay
+        bool voice_brief "spoken replies kept short"
+        bool memory_search "search and use past sessions"
+        bool memory_capture "make memory from sessions"
+        bool memory_sensitive "include sensitive topics"
+        uuid embeddings_model_id FK "the model memory is indexed with; null = off"
+        timestamptz memory_policy_accepted_at
+        text memory_policy_version
+        bool sandbox_strict "runs reach only the allowed hosts"
+        text[] allowed_hosts "hosts every sandboxed run may reach"
         timestamptz updated_at
     }
 
@@ -240,6 +265,18 @@ erDiagram
         uuid org_id FK
         uuid user_id FK "whose it is: every super power is one user's"
         text name "unique for its owner"
+        text description "when to use it: the main assistant reads it to hand work over"
+        text instructions "its standing brief, at the head of every turn"
+        int avatar_variant "1..16, the face it wears"
+        text avatar_color "a CSS colour"
+        text avatar_key "a picture instead of the face, in object storage"
+        int personality "1..5: serious to playful; 3 = as it comes"
+        int directness "1..5: gentle to blunt"
+        int temperament "1..5: kind to spicy"
+        text effort "low, medium, high, xhigh, max; null = the session's own"
+        text role "orchestrator or worker"
+        bool live "false = paused: its schedules hold, nothing deleted"
+        jsonb map_layout "where its power map's cards sit, as the member left them"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
         uuid voice_model_id FK "its voice: the speech model it speaks with, one of the owner's; null = it does not speak"
@@ -259,6 +296,7 @@ erDiagram
         uuid machine_id FK "a machine it may run on; or"
         uuid granted_super_power_id FK "a super power it may call (exactly one of the three)"
         text access "for a folder: read or write; null for anything else"
+        bool denied "on the member's Glyphh only: taken away from what it otherwise has"
         timestamptz created_at
     }
 
@@ -317,6 +355,9 @@ erDiagram
         text status "trialing, active, past_due, canceled"
         int seats "the seats Stripe bills for"
         int extra_machines "bought on top of the plan's included machines"
+        bool auto_top_up "buy a credit pack when the balance runs low"
+        int auto_top_up_below "credits left that trigger it"
+        int auto_top_up_pack "credits it buys"
         timestamptz current_period_start
         timestamptz current_period_end
         timestamptz created_at
@@ -399,6 +440,7 @@ erDiagram
         text ssh_public_key UK "the machine's SSH key; its private key never leaves the machine"
         text ssh_fingerprint "shown when the machine is registered, to check by eye"
         bool shell_enabled "false until the member turns it on: a shell on this machine over SSH"
+        int[] local_ports "ports on this machine its runs may reach"
         timestamptz last_seen_at "null = never connected"
         timestamptz revoked_at
         timestamptz created_at
@@ -538,6 +580,8 @@ A user belongs to one org and has one role in it:
 
 The profile is the user's first name, last name, email and profile image. A Google or GitHub sign-in finds the user by the provider's own id for them (below, Signing in), never by email alone. A user is in at most one team (`team_id`).
 
+**user_settings** holds the member's own settings from the old app's Settings pages: theme, notifications, how new sessions start, voice, memory and its consent, and the sandbox's allowed hosts. What only ever applied to the desktop app's windows (workspaces, tabs, layouts, the dock, window sizes) is gone; a machine's own settings (its granted folders, its local ports, its shell) live on the machine.
+
 ## Teams: limiting models and connections
 
 The org's Models and Connections pages exist only to say which models and connections users may add. They hold no keys and no accounts: a user still adds their own model with their own key, and connects their own account.
@@ -608,6 +652,8 @@ Every tool a power brings (each tool of a connection, of a plugin's MCP server, 
 Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
+
+**A super power's configuration** is everything its edit screen sets (ported field for field from the old app's editor): its name, description, instructions, avatar, voice, personality, directness and temperament sliders, effort, role, whether it is live, and its power map's layout. The member's Glyphh has the same fields, and has everything except what the member takes away from it: those are grants marked `denied`, so a new connection or model reaches Glyphh by itself. Left behind: per-model dollar caps (Glyphh never meters model calls) and the old per-agent guardrails, which nothing enforced.
 
 **Every super power carries a voice,** part of its configuration on its edit screen, beside its avatar and name (ported from the old app's super power editor): a speech model of the member's own (`voice_model_id`) and one of that model's voices (`voice_id`), with a sample to hear before saving. The member's Glyphh also has the model it hears them with (`listen_model_id`). All are the member's own models, called directly on their keys; audio never reaches this database.
 

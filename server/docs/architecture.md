@@ -2,20 +2,20 @@
 
 ```mermaid
 flowchart TB
-    subgraph You["You, from anywhere"]
-        Claude["Claude, ChatGPT, Codex, Gemini<br/>+ the Glyphh plugin:<br/>one more window onto Glyphh"]
-        Browser["Any browser<br/>laptop, iPad, phone"]
+    subgraph You["You, anywhere"]
+        Claude["Claude + Glyphh plugin"]
+        Browser["Any browser"]
     end
 
-    subgraph Cloud["Glyphh cloud (ours, headless)"]
-        Pages["Sign-in pages<br/>sign in, allow, approve a code, join"]
-        Player["Player, app.glyphh.ai<br/>opens your rrotor's UI<br/>with a launch ticket"]
-        Server["Server<br/>API + MCP"]
-        DB[("Postgres<br/>durable truth")]
-        Live[("Redis<br/>live state")]
-        Relay["Relay = the gate<br/>passes what it cannot read"]
-        ConnRelay["Connection relay<br/>counts every call"]
-        Ada["Ada<br/>our kernel, billed per token"]
+    subgraph Cloud["Glyphh cloud"]
+        Pages["Sign-in pages"]
+        Player["Player"]
+        Server["Server: API + MCP"]
+        DB[("Postgres")]
+        Live[("Redis")]
+        Relay["Relay (the gate)"]
+        ConnRelay["Connection relay"]
+        Ada["Ada"]
         Server --- DB
         Server --- Live
         Server --- Relay
@@ -25,33 +25,36 @@ flowchart TB
         Player --- Relay
     end
 
-    subgraph Yours["Your machines: each one a rrotor VM = the fence"]
-        R1["rrotor on a hosted server<br/>Glyphh, the main assistant, always on:<br/>Claude Code or Codex (your subscription)<br/>or the Glyphh loop (your key);<br/>super powers, sandboxed runs, MCP surface,<br/>Glyphh's UI, Postgres + pgvector, Neo4j,<br/>Redis, cron, Chromium (RPA)"]
-        R2["the same rrotor, anywhere else<br/>another server, or a laptop<br/>through Docker: just another host"]
+    subgraph A["Machine A"]
+        RA["rrotor<br/>Glyphh, the main assistant<br/>super powers, UI"]
     end
 
-    Hosts["Hosts, one click<br/>Fly, AWS, Azure, GCP,<br/>DigitalOcean, Hetzner, any VPS"]
-    Site["glyphh.ai<br/>public website"]
-    Providers["Model providers<br/>3,900 models, 125 providers,<br/>Jev on your own key"]
-    Pipedream["Pipedream<br/>3,500 connections"]
-    Stripe["Stripe<br/>its own checkout and portal"]
-    SignIn["Google, GitHub"]
+    subgraph B["Machine B"]
+        RB["rrotor<br/>super powers, UI"]
+    end
 
-    Claude -- "MCP, signed in with OAuth" --> Server
-    Claude -- "machine list, then a machine" --> Player
+    Providers["Model providers"]
+    Pipedream["Pipedream"]
+    Hosts["Hosts, one click"]
+    Stripe["Stripe"]
+    SignIn["Google, GitHub"]
+    Site["glyphh.ai"]
+
+    Claude -- "MCP" --> Server
+    Claude --> Player
     Browser --> Player
-    Relay <-. "end to end: UI, SSH, screen" .-> R1
-    Relay <-. "end to end: UI, SSH, screen" .-> R2
-    R1 -- "outbound WS" --> Server
-    R2 -- "outbound WS" --> Server
-    R1 -- "the loop's thinking, direct:<br/>your subscription or your key" --> Providers
-    R2 -- "model calls, direct" --> Providers
-    R1 -- "connection calls" --> ConnRelay
-    R2 -- "connection calls" --> ConnRelay
-    R1 -- "Ada calls" --> Ada
-    R2 -- "Ada calls" --> Ada
-    ConnRelay -- "metered on your subscription" --> Pipedream
-    Hosts -- "runs" --> R1
+    RA <-. "rrotor to rrotor: SSH, end to end" .-> Relay
+    Relay <-. "SSH, end to end" .-> RB
+    RA -- "outbound" --> Server
+    RB -- "outbound" --> Server
+    RA -- "direct" --> Providers
+    RB -- "direct" --> Providers
+    RA -- "connections" --> ConnRelay
+    RB -- "connections" --> ConnRelay
+    RA -- "Ada" --> Ada
+    ConnRelay --> Pipedream
+    Hosts -- "runs" --> RA
+    Hosts -- "runs" --> RB
     Pages --> SignIn
     Server --> Stripe
 ```
