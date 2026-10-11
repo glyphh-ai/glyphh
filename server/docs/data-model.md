@@ -7,6 +7,13 @@ erDiagram
     plans ||--o{ orgs : "limits"
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
+    orgs ||--o{ teams : "has"
+    teams ||--o{ users : "has"
+    orgs ||--o{ allowed_models : "limits to"
+    teams ||--o{ allowed_models : "limits further to"
+    catalog_models ||--o{ allowed_models : "allowed as"
+    orgs ||--o{ allowed_connections : "limits to"
+    teams ||--o{ allowed_connections : "limits further to"
     users ||--o{ tokens : "signs in with"
     orgs ||--o{ powers : "holds"
     users ||--o{ powers : "installs for themselves"
@@ -70,12 +77,41 @@ erDiagram
         uuid parent_id FK "null only for Glyphh, the parent org"
         uuid plan_id FK
         text name
+        bool limit_models "true = only the org's allowed models"
+        bool limit_connections "true = only the org's allowed connections"
+        timestamptz created_at
+    }
+
+    teams {
+        uuid id PK
+        uuid org_id FK
+        text name "unique in its org"
+        bool limit_models "true = only the team's allowed models"
+        bool limit_connections "true = only the team's allowed connections"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    allowed_models {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK "null = the org's list"
+        uuid catalog_model_id FK "unique per list"
+        timestamptz created_at
+    }
+
+    allowed_connections {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK "null = the org's list"
+        text service "gmail, slack, ...; unique per list"
         timestamptz created_at
     }
 
     users {
         uuid id PK
         uuid org_id FK
+        uuid team_id FK "null = in no team: only the org's limits apply"
         text role "super_admin | org_admin | user"
         text email UK
         text first_name
@@ -373,7 +409,20 @@ Left behind from the old server: the margin and the dollar pool, the rate limits
 
 Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
 
-**For now an org is only for billing:** its plan, subscription, seats, machines and credits, and who is in it (members and invites). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+**For now an org is for billing and for limiting models and connections:** its plan, subscription, seats, machines and credits, who is in it (members and invites), and which models and connections its users may add (below). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+
+## Teams: limiting models and connections
+
+The org's Models and Connections pages exist only to say which models and connections users may add. They hold no keys and no accounts: a user still adds their own model with their own key, and connects their own account.
+
+- **Two settings, two lists, at the org and at every team, with the same behaviour:** `limit_models` with `allowed_models` (picked from the catalog), and `limit_connections` with `allowed_connections` (services: Gmail, Slack, ...).
+- **Everything is on by default.** Off means no limit: a user may add any model in the catalog and connect any service.
+- **Limiting at the org:** when the org turns a setting on, the org admin adds what is allowed, and only that is allowed, org wide.
+- **Limiting at a team:** a team turns its own setting on and lists what its members may add. Under an org that limits, a team can only narrow it: its list is part of the org's list, never more.
+- **A user adds only what applies to them:** their team's list if their team limits, otherwise the org's if the org limits, otherwise anything. A user is in at most one team; a user in none has only the org's limits.
+- **The database enforces it:** a model or connection power outside the user's lists is refused with the reason, and taking an entry off the org's list takes it off every team's list too.
+
+Still to decide: what happens to a model or connection a user already has when a limit later leaves it out.
 
 ## users
 
@@ -387,7 +436,7 @@ The profile is the user's first name, last name, email and profile image. The em
 
 ## Powers
 
-Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. Who installed it is the only control; Glyphh governs nothing else:
+Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. Who installed it is the control, with one more: the org and its teams may limit which models and connections can be added (above). Glyphh governs nothing else:
 
 - **Models are a user's:** each person adds their own, with their own key. Nothing is shared or deduplicated: ten people adding the same model are ten rows, each with its own key, and one person may add the same model more than once (one per super power, say, to see each one's spend at the provider).
 - **Connections are a user's:** always one person's own account (Pipedream accounts belong to a person; there are no shared or system accounts).
