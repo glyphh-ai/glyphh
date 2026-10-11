@@ -129,7 +129,7 @@ erDiagram
         uuid user_id FK "whose it is: every power is one user's, for now"
         text kind "model, connection, folder, skill, task, plugin, loop"
         text name "unique for its owner"
-        timestamptz disabled_at "set when a limit leaves it out: it stops working and can only be deleted"
+        timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
         timestamptz created_at
         timestamptz updated_at
@@ -436,7 +436,7 @@ The org's Models and Connections pages exist only to say which models and connec
 - **A user adds only what applies to them:** their team's list if their team limits, otherwise the org's if the org limits, otherwise anything. A user is in at most one team; a user in none has only the org's limits.
 - **The database enforces it:** a model or connection power outside the user's lists is refused with the reason, and taking an entry off the org's list takes it off every team's list too.
 
-**A limit set later disables what it leaves out.** A model or connection a user already has stops working the moment a limit leaves it out: the database marks it disabled with the reason, rrotor is never handed it, and its calls are refused. A disabled power can only be deleted, never edited.
+**A limit set later disables what it leaves out.** A model or connection a user already has stops working the moment a limit leaves it out: the database marks it disabled with the reason, rrotor is never handed it, and its calls are refused. A disabled power can only be deleted, never edited. When the limit no longer leaves it out (the item is allowed again, or the limit is turned off), it comes back on its own: the mark is cleared and everything hanging off it works as before (its grants, tool permissions, slots, schedules, key and account), with nothing for the user to redo.
 
 ## Tool permissions
 
