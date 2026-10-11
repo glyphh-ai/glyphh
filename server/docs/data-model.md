@@ -14,6 +14,8 @@ erDiagram
     catalog_models ||--o{ allowed_models : "allowed as"
     orgs ||--o{ allowed_connections : "limits to"
     teams ||--o{ allowed_connections : "limits further to"
+    powers ||--o{ tool_permissions : "sets"
+    super_powers ||--o{ tool_permissions : "overrides"
     users ||--o{ tokens : "signs in with"
     orgs ||--o{ powers : "holds"
     users ||--o{ powers : "installs for themselves"
@@ -127,6 +129,18 @@ erDiagram
         uuid user_id FK "whose it is: every power is one user's, for now"
         text kind "model, connection, folder, skill, task, plugin, loop"
         text name "unique for its owner"
+        timestamptz disabled_at "set when a limit leaves it out: it stops working and can only be deleted"
+        text disabled_reason "which limit left it out"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    tool_permissions {
+        uuid id PK
+        uuid power_id FK "the power whose tool it is: a connection, a plugin, ..."
+        text tool "the tool's name; unique per power and super power"
+        uuid super_power_id FK "null = the user's own setting; set = that super power's override, for its autonomous runs"
+        text permission "allow, ask, deny (an override is allow or deny)"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -422,7 +436,16 @@ The org's Models and Connections pages exist only to say which models and connec
 - **A user adds only what applies to them:** their team's list if their team limits, otherwise the org's if the org limits, otherwise anything. A user is in at most one team; a user in none has only the org's limits.
 - **The database enforces it:** a model or connection power outside the user's lists is refused with the reason, and taking an entry off the org's list takes it off every team's list too.
 
-Still to decide: what happens to a model or connection a user already has when a limit later leaves it out.
+**A limit set later disables what it leaves out.** A model or connection a user already has stops working the moment a limit leaves it out: the database marks it disabled with the reason, rrotor is never handed it, and its calls are refused. A disabled power can only be deleted, never edited.
+
+## Tool permissions
+
+Every tool a power brings (each tool of a connection, of a plugin's MCP server, ...) has a permission, set where the app shows that power (the powers window, Connections):
+
+- **The user's own setting:** `allow` (runs without asking), `ask` (asks each time) or `deny` (never runs). A tool with no row is `ask`.
+- **A super power's override:** for its autonomous runs, a super power can set a tool to `allow` or `deny`, whatever the user's own setting says. With no override, the user's own setting applies.
+- **Autonomous means nobody to ask:** in a run nobody is watching, `ask` is refused, so an autonomous super power uses only tools that are allowed, by the user or by its override.
+- **Where it is enforced:** a connection call at the server's relay, which every connection call passes through, so it holds even against a modified rrotor; every other tool in rrotor, which hands the loop only what is allowed.
 
 ## users
 
