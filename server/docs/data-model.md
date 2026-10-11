@@ -78,7 +78,7 @@ Left behind from the old server: the margin and the dollar pool (with keys broug
 
 ## orgs
 
-Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan; a new org starts on Free.
+Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
 
 ## users
 

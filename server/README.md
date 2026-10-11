@@ -8,6 +8,17 @@ The Glyphh server: headless, multi-tenant. Every capability is built SDK first, 
 
 The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`) and MCP on http://localhost:8080/mcp.
 
+Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables and seeds the plans and Glyphh, the parent org. The live Stripe price ids come from `.env` (`GLYPHH_STRIPE_PRICE_SOLO`, `_BASIC`, `_PRO`; not committed).
+
+Until relaunch there are no migrations: the schema step only creates what's missing, so after a change to an existing table, reset the dev database with `docker compose down -v`.
+
+## Layout
+
+- `models/`: the schema, one table per module (drawn in `docs/data-model.md`)
+- `db/`: the engine, the schema step and the seed
+- `ops/`: the service functions, one per capability
+- `api/` and `mcp/`: thin surfaces that call the same ops
+
 ## Test it
 
     docker compose --profile test run --rm --build test

@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.db import database_reachable
+from glyphh_server.db.engine import database_reachable
 
 
 class Health(BaseModel):

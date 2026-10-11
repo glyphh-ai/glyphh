@@ -5,8 +5,8 @@ from fastapi import FastAPI
 
 from glyphh_server.api import health
 from glyphh_server.config import Settings, get_settings
-from glyphh_server.db import make_engine
-from glyphh_server.mcp_server import make_mcp, mcp_http_app
+from glyphh_server.db.engine import make_engine
+from glyphh_server.mcp.server import make_mcp, mcp_http_app
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

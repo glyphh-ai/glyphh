@@ -22,4 +22,4 @@ ENV GLYPHH_VERSION=$GLYPHH_VERSION
 RUN useradd --uid 1000 --create-home glyphh
 USER glyphh
 EXPOSE 8080
-CMD ["sh", "-c", "python -m glyphh_server.schema && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", "python -m glyphh_server.db.schema && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080"]

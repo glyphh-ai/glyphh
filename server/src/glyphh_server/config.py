@@ -8,6 +8,9 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
     version: str = "dev"
+    stripe_price_solo: str | None = None
+    stripe_price_basic: str | None = None
+    stripe_price_pro: str | None = None
 
 
 @lru_cache

@@ -11,13 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from glyphh_server.config import Settings
-from glyphh_server.db import make_engine
-from glyphh_server.schema import apply_schema
+from glyphh_server.db.engine import make_engine
+from glyphh_server.db.schema import apply_schema
 
 DATABASE_URL: str = os.environ.get(
     "GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test"
 )
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
+SETTINGS: Settings = Settings(
+    database_url=DATABASE_URL,
+    version="test",
+    stripe_price_solo="price_test_solo",
+    stripe_price_basic="price_test_basic",
+    stripe_price_pro="price_test_pro",
+)
 
 
 async def _fresh_database(url: str) -> None:
@@ -37,7 +44,7 @@ async def _fresh_database(url: str) -> None:
 async def engine() -> AsyncIterator[AsyncEngine]:
     await _fresh_database(DATABASE_URL)
     eng = make_engine(DATABASE_URL)
-    await apply_schema(eng)
+    await apply_schema(eng, SETTINGS)
     yield eng
     await eng.dispose()
 
@@ -51,7 +58,7 @@ async def _client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 
 @pytest.fixture
 async def client(engine: AsyncEngine) -> AsyncIterator[httpx.AsyncClient]:
-    async for c in _client(create_app(Settings(database_url=DATABASE_URL, version="test"))):
+    async for c in _client(create_app(SETTINGS)):
         yield c
 
 

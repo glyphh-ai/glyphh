@@ -19,6 +19,9 @@ services:
     build:
       context: .
       target: runtime
+    env_file:
+      - path: .env
+        required: false
     environment:
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
     ports:
