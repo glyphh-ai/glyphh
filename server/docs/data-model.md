@@ -36,6 +36,7 @@ erDiagram
     powers ||--o{ grants : "granted as"
     machines ||--o{ grants : "granted as"
     powers ||--o{ super_powers : "is the loop of"
+    powers |o--o{ loops : "thinks with"
     powers ||--o{ slots : "declares"
     powers ||--o{ slots : "fills"
     super_powers ||--o{ schedules : "on a clock"
@@ -230,7 +231,8 @@ erDiagram
 
     loops {
         uuid power_id PK, FK
-        text engine "claude, codex, gemini, ..., or rrotor's own"
+        text engine "claude_code (the member's Claude subscription), codex (their ChatGPT subscription) or glyphh (the Glyphh loop)"
+        uuid model_id FK "for glyphh: the model it thinks with, one of the member's; null for a CLI, which signs in on the machine"
     }
 
     super_powers {
@@ -573,7 +575,7 @@ Everything a super power uses is a power: a model, a connection, a folder, a ski
 
 The database enforces it: every power has a `user_id`.
 
-Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
+Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power or the main assistant: Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
@@ -601,7 +603,7 @@ Every tool a power brings (each tool of a connection, of a plugin's MCP server, 
 
 Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
-**A loop runs it; models are granted.** Every super power has one loop (`loop_id`): the CLI or rrotor's own engine that runs it. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
+**A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
 A super power's own files (its workflows, pipelines and screens) are a bundle in object storage (`bundle_key`); `definition` holds the rrotor definition, still to be drawn. What it stores (its data, vectors and graph) lives in rrotor, never here. Where the content of its conversations lives is still open.
 

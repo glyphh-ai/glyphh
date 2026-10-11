@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TB
     subgraph You["You, from anywhere"]
-        Claude["Claude, ChatGPT, Codex, Gemini<br/>+ the Glyphh plugin:<br/>native machine list, rrotor's UI inline"]
+        Claude["Claude, ChatGPT, Codex, Gemini<br/>+ the Glyphh plugin:<br/>one more window onto Glyphh"]
         Browser["Any browser<br/>laptop, iPad, phone"]
     end
 
@@ -26,7 +26,7 @@ flowchart TB
     end
 
     subgraph Yours["Your machines: each one a rrotor VM = the fence"]
-        R1["rrotor on a hosted server<br/>Glyphh's UI + super power screens,<br/>CLIs, loop, sandboxed runs,<br/>Postgres + pgvector, Neo4j, Redis,<br/>cron, Chromium (RPA)"]
+        R1["rrotor on a hosted server<br/>Glyphh, the main assistant, always on:<br/>Claude Code or Codex (your subscription)<br/>or the Glyphh loop (your key);<br/>super powers, sandboxed runs, MCP surface,<br/>Glyphh's UI, Postgres + pgvector, Neo4j,<br/>Redis, cron, Chromium (RPA)"]
         R2["the same rrotor, anywhere else<br/>another server, or a laptop<br/>through Docker: just another host"]
     end
 
@@ -44,7 +44,7 @@ flowchart TB
     Relay <-. "end to end: UI, SSH, screen" .-> R2
     R1 -- "outbound WS" --> Server
     R2 -- "outbound WS" --> Server
-    R1 -- "model calls, direct" --> Providers
+    R1 -- "the loop's thinking, direct:<br/>your subscription or your key" --> Providers
     R2 -- "model calls, direct" --> Providers
     R1 -- "connection calls" --> ConnRelay
     R2 -- "connection calls" --> ConnRelay
@@ -81,7 +81,7 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 ### Paths
 
-- **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription or key. Glyphh never sees it.
+- **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription (Claude Code, Codex) or key (the Glyphh loop). Glyphh never sees it and never prices it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
 - **rrotor → Ada → server:** every Ada call goes to Glyphh's own Ada kernel, which never leaves Glyphh's servers, and is billed per token.
 - **Jev is a model, on the first path:** the member adds TypeSafe's Jev with their own key, and rrotor calls TypeSafe directly. It is never on Glyphh's key, never through the server, and never charged.
@@ -98,10 +98,24 @@ Connections are the moat: about 3,500 services (Gmail, Slack, Salesforce, ...) t
 
 ### Glyphh and the super powers under it
 
-- **Glyphh, the super agent, has everything:** every power, every super power and every machine the member has. There is one per member, and it is what the member drives.
+- **Glyphh, the super agent, has everything:** every power, every super power and every machine the member has. There is one per member: the member's main assistant, the orchestrator.
 - **Every other super power sits under Glyphh and has only what it is granted:** its folders (read or write), connections, models, skills, tasks, plugins, the machines it may run on and the other super powers it may call. Its loop is picked, not granted: every super power has exactly one. Nothing else of the member's, whether or not anyone is watching.
 
 - **Who is driving decides what can be asked.** In a run the member drives, a tool set to `ask` asks them. In a run nobody is watching (autonomous: on a clock, or started by an agent), `ask` means refused, so it uses only tools that are allowed, by the member or by the super power's own override.
+
+### The main assistant: Glyphh, on the loop the member picks
+
+Decided 2026-10-11. Glyphh, the orchestrator, lives in the member's rrotor and is always on: a closed laptop changes nothing. Setting it up is choosing its loop, one of three, and none of them is priced in Glyphh tokens:
+
+1. **Claude Code, on the member's Claude subscription.** It is already installed in rrotor; the member only signs in, through Anthropic's own login, in the CLI's own terminal.
+2. **Codex, on the member's ChatGPT subscription.** The same: installed, the member signs in through OpenAI's own login (device code on a headless machine).
+3. **The Glyphh loop, on a model the member configured with their own key** (any of the catalog's models, Jev included).
+
+The same three are the loops a super power can run on, so a CLI is used like a model wherever a loop is picked.
+
+- **A CLI's sign-in stays in the CLI.** rrotor runs the unmodified program and shows its own login; the credentials stay in that program's files on that machine. Glyphh never collects, stores or passes them, and the server never sees them. rrotor reports only which CLIs are signed in. (Anthropic allows hosting Claude Code this way under its Commercial Terms, which Glyphh accepts; OpenAI's terms for Codex are to be confirmed.)
+- **rrotor's MCP surface powers the orchestration.** Whichever loop it runs on, the main assistant works through rrotor's own MCP tools: super powers and their grants, runs, schedules, connections, folders, the browser and the other machines. The same tools are what Claude reaches through the plugin, so the member's Claude on a desktop is one more window onto Glyphh, never what it depends on.
+- **Seeing and hearing the swarm:** the main assistant and its super powers run in the same rrotor, so its UI shows every running super power, its step, its log and its screens live, and the main assistant hears when one finishes, fails or needs an answer. When the member is away, the server sends a push or an email.
 
 Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in rrotor's UI. Ported from the old app's super power and power builders.
 
@@ -129,7 +143,7 @@ A task is a program rrotor runs, by hand, from a super power or on a clock, and 
 
 Everything a super power needs to run, on the member's own machine:
 
-- **The CLIs, already installed:** Claude Code, Codex, Gemini and the rest, ready to be a super power's loop.
+- **The CLIs, already installed:** Claude Code and Codex, ready to be the main assistant's or a super power's loop once the member signs in.
 - **Postgres with pgvector:** a super power's own data and its vectors. The server's Postgres has no pgvector; vectors live only in rrotor.
 - **Neo4j:** a super power's graph.
 - **Redis and cron:** queues, caches and the machine's own clock.
