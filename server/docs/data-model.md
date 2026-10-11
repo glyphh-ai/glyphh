@@ -74,9 +74,8 @@ erDiagram
 
     connections {
         uuid power_id PK, FK
-        text app "gmail, slack, ..."
-        text mcp_url
-        bytea secret "the sign-in, encrypted; never returned"
+        text app "the Pipedream app slug: gmail, slack, ..."
+        text account_id "the Pipedream account, once the user has connected it"
     }
 
     folders {
@@ -187,7 +186,7 @@ The database enforces the first two: a model power has no `user_id`, a connectio
 Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks` or `plugins`. A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
-- **A connection** is an account reached as an MCP server, with its sign-in. Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
+- **A connection** is a user's own account at Pipedream: the app and the account id. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, app and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - The public list of models (about 3,900 across 130 providers) ships with the server to help pick one; it is reference data, not a table.
 
