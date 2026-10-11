@@ -2,14 +2,44 @@
 
 ```mermaid
 flowchart TB
-    Web
-    App
-    Machines
-    Runtime["rrotor (runtime)"] --> SDK --> Server
-    Runtime --> Loop["CLI or model"] --> Provider
-    Runtime --> Connector --> Server
-    Platform --> Server
+    subgraph Public["Public"]
+        Site["glyphh.ai<br/>public website"]
+    end
+
+    subgraph Cloud["Glyphh cloud (ours)"]
+        Platform["Platform<br/>manage your rrotors, keys, billing"]
+        Server["Server<br/>API + MCP"]
+        DB[("Postgres<br/>accounts, powers, grants,<br/>machines, usage, billing")]
+        Relay["Relay<br/>joins your machines;<br/>passes SSH it cannot read"]
+        ConnRelay["Connection relay<br/>counts every call"]
+        Platform --> Server
+        Server --- DB
+        Server --- Relay
+        Server --- ConnRelay
+    end
+
+    subgraph Yours["Your machines (your compute)"]
+        Desktop["Desktop app = rrotor lite<br/>CLIs, loop, sandboxed runs<br/>(no pgvector, no Neo4j)"]
+        Remote["rrotor (full), any host<br/>CLIs, loop, sandboxed runs,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
+    end
+
+    Agents["Agent hosts<br/>Claude Code, Claude Desktop,<br/>Cursor, ChatGPT (plugin)"]
+    Providers["Model providers<br/>3,900 models, 125 providers"]
+    Pipedream["Pipedream<br/>3,500 connections"]
+
+    Desktop -- "manage, definitions, keys (outbound WS)" --> Server
+    Remote -- "manage, definitions, keys (outbound WS)" --> Server
+    Desktop <-. "SSH, end to end" .-> Relay
+    Relay <-. "SSH, end to end" .-> Remote
+    Desktop -- "model calls, direct; never through Glyphh" --> Providers
+    Remote -- "model calls, direct; never through Glyphh" --> Providers
+    Desktop -- "connection calls" --> ConnRelay
+    Remote -- "connection calls" --> ConnRelay
+    ConnRelay -- "metered on your subscription" --> Pipedream
+    Agents -- "MCP" --> Server
 ```
+
+![The whole system](img/architecture.png)
 
 ## Decided
 
@@ -77,9 +107,16 @@ Glyphh has the super power editor: the skills and tools to create a super power,
 
 Everything a super power needs to run, on the member's own machine:
 
+- **The CLIs, already installed:** Claude Code, Codex, Gemini and the rest, ready to be a super power's loop.
 - **Postgres with pgvector:** a super power's own data and its vectors. The server's Postgres has no pgvector; vectors live only in rrotor.
+- **Neo4j:** a super power's graph.
+- **Redis and cron:** queues, caches and the machine's own clock.
 - **A Next.js server:** serves a super power's screens.
-- **The loop:** the CLI or rrotor's own, with the super power's model and powers.
+- **The loop:** the CLI or rrotor's own, with the super power's models and powers.
+
+It is the agent runtime: from it, a super power reaches about 3,900 models across 125 providers directly, never through Glyphh's servers, and about 3,500 connections, which go through the server and are counted against the member's subscription.
+
+**The desktop app is a rrotor too, a lite one:** the CLIs, the loop and sandboxed runs, without pgvector or Neo4j. It connects to the member's other machines, so they can spread super powers across them and manage them all from one place.
 
 A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
 
