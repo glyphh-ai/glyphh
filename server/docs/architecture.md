@@ -43,7 +43,9 @@ Connections are the moat. A super power declares the connections it needs by nam
 
 ### Platform
 
-A few pages for what must never go through a chat: an API key is never typed to an agent or passed through MCP. A tool that needs a key returns a one-time link (single use, short lived, tied to that member and that model); the agent opens it in the browser, the member signs in (the link alone is never enough), pastes the key, and it goes straight to the server, encrypted. The agent only hears that it was saved and the key's last four characters. The same pages carry sign-in and consent, approving a machine's sign-in code, accepting an invite, and the hand-off to Stripe for billing. They are served by the server itself: one deployment, one security perimeter, not a separate app.
+A web app in its own repo (`glyphh-ai/platform`): a client of the server's API through the SDK, like the app, the CLI and the plugin. The server stays headless and serves no pages.
+
+It holds what must never go through a chat: an API key is never typed to an agent or passed through MCP. A tool that needs a key returns a one-time link to the platform (single use, short lived, tied to that member and that model); the agent opens it in the browser, the member signs in (the link alone is never enough), pastes the key, and the platform sends it to the server's API, encrypted at rest there. The agent only hears that it was saved and the key's last four characters. The platform also carries sign-in and consent, approving a machine's sign-in code, accepting an invite, and the hand-off to Stripe for billing.
 
 ### Paths
 
