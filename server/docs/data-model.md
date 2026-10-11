@@ -7,6 +7,9 @@ erDiagram
     plans ||--o{ orgs : "limits"
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
+    orgs ||--o{ teams : "has"
+    teams ||--o{ team_members : "has"
+    users ||--o{ team_members : "is in"
     users ||--o{ tokens : "signs in with"
 
     plans {
@@ -41,6 +44,20 @@ erDiagram
         text image_url
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    teams {
+        uuid id PK
+        uuid org_id FK
+        text name "unique within the org"
+        timestamptz created_at
+    }
+
+    team_members {
+        uuid id PK
+        uuid team_id FK
+        uuid user_id FK "unique with team_id"
+        timestamptz created_at
     }
 
     tokens {
@@ -89,6 +106,18 @@ A user belongs to one org and has one role in it:
 - `user`: works in their org.
 
 The profile is the user's first name, last name, email and profile image. The email is how a Google or GitHub sign-in finds the user.
+
+## teams
+
+Teams are optional. An org with no teams is flat: everything in it is shared across the org. Once an org has teams, everything in it is team scoped: a user sees and works in the teams they are a member of.
+
+- A user can be a member of several teams.
+- Org admins create teams and manage their members, and see every team in their org; super admins see every team everywhere.
+- A team belongs to one org, and its members are users of that org.
+
+## Scoping
+
+Every API call and MCP tool runs as a principal: the user, their org, their role, and their teams. The role decides what an operation allows, the org decides which rows it sees, and in an org with teams the user's teams narrow that further. Row level security in Postgres enforces the org (and teams) under the code, so a bug in a query cannot reach another org's data.
 
 ## tokens
 
