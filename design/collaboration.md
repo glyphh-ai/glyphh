@@ -65,6 +65,19 @@ The same components serve all three surfaces, so each must look right in all thr
 - **The design agent needs a component that does not exist:** add it under "Requests" below, with what it is for and its variants and states. The code agent builds it, then it comes back through `/design-sync`.
 - **The code agent needs a value or a look:** it asks here too; it never picks one itself.
 
+## Where we are
+
+- **Step 1 is done (2026-10-11):** the whole library above is built in `ui/`, with bare styling on placeholder tokens, tested at 100%. See `ui/README.md`.
+- **Next, step 2:** start `/design-sync` in the code agent's session to bring it into Claude Design.
+
 ## Requests
 
-None yet.
+From the design agent, after sketching app.glyphh.ai's sign-in pages and machines against the brief. Each is something those screens need that the library list above does not cover yet.
+
+- **LogoTile** (the brief's "provider logo tiles"): a square tile holding a third-party logo or, without one, its initials. For model providers, connections, AI hosts (Claude, ChatGPT, Codex), sign-in providers (Google, GitHub) and deploy hosts (Fly, AWS, ...). Sizes small, medium, large; states default, disabled, loading (skeleton).
+- **Button: a leading icon or logo slot.** For "Continue with Google", "Continue with GitHub" and "Add a machine". Every existing variant, size and state.
+- **TextInput: a `code` variant** for one-time codes (`WDJB-MJHT`): monospace, large, centred, uppercased, the dash added as you type, pasting a whole code works. States default, focus, error, disabled.
+- **DescriptionList:** label and value pairs, two columns on wide screens and stacked on phones. For "Is this code on your new machine?" (machine, OS, location, when) and for account and machine details.
+- **Avatar: three more kinds** beside the cats: a person (initials or photo), an org (letter tile) and a `ring` option, the glowing ring with its comet, for heroes, sign-in pages and empty states. Ring states: still, turning, comet.
+- **AuthLayout** (or a Page variant): a brand panel beside the content on desktop (logo, Glyphh in its ring showing the page's mood, one line), collapsing to logo, small ring and content on a phone. For every page "only a browser can show".
+- **Menu: radio and check items**, for the org switcher in the account menu (Personal, Acme, ...), plus a danger item (Sign out).
