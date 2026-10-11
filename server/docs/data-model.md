@@ -228,7 +228,9 @@ Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, mo
 
 ## Billing and usage
 
-An org pays a monthly fee for its plan, and the plan includes credits each billing period. Usage spends credits: every connection call the server relays (Glyphh pays Pipedream for each one) costs credits. Model calls cost nothing here: they go straight to the provider on the member's own key.
+An org pays a monthly fee for its plan, and the plan includes credits each billing period. Usage spends credits, and a Glyphh credit is a Pipedream credit: 30 seconds of a connection call. The server relays every connection call and times it, so a call costs `max(1, ceil(seconds / 30))` credits, exactly what Pipedream bills Glyphh for it. Model calls cost nothing here: they go straight to the provider on the member's own key.
+
+What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annually ($150 monthly) for 100 external users and 10,000 credits a month, then $2 per external user and $0.012 per credit. A connected user is a seat cost, so it belongs in the plan's price per seat; a call is a credit.
 
 - **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or buy a credit pack (a one-time purchase that does not expire with the period).
 - **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period. Stripe keeps the invoices and payment methods.
