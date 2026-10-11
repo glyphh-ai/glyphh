@@ -19,7 +19,8 @@ On the [data model](data-model.md), in the order they were drawn:
 - **Teams and limits:** `teams`, `allowed_models`, `allowed_connections`, and the two limit switches on orgs and teams.
 - **Schedules and runs:** `schedules` (the server's clock, sent to a machine) and `runs` (the history).
 - **Billing and usage:** the plan's credit and machine columns, `subscriptions`, `credit_ledger`, `usage_events` (logged by the server's connection relay, one per call).
-- **People and machines:** `invites`, `machines` (with their SSH key, fingerprint and shell switch), `machine_sign_ins`, `api_keys`.
+- **People and machines:** `invites`, `machines` (with their edition, SSH key, fingerprint and shell switch), `machine_sign_ins`, `machine_connections` (which server process holds each machine), `fence_events` (what rrotor reports when a run reaches past its fence), `api_keys`; folders are on a machine, and folder grants are read or write.
+- **Signing in and Stripe:** `sign_in_identities` (Google and GitHub by the provider's own id), `oauth_clients` and `oauth_codes` (the plugin's sign-in), `key_links` (the platform's one-time key links), `stripe_events` (each webhook handled once).
 
 On the [architecture](architecture.md): rrotor as a Linux VM (the app you drive unsandboxed, remote control only through rrotor by grants), the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
 

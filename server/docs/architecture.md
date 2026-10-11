@@ -10,7 +10,7 @@ flowchart TB
         Platform["Platform<br/>manage your rrotors, keys, billing"]
         Server["Server<br/>API + MCP"]
         DB[("Postgres<br/>accounts, powers, grants,<br/>machines, usage, billing")]
-        Relay["Relay<br/>joins your machines;<br/>passes SSH it cannot read"]
+        Relay["Relay = the gate<br/>checks grants before joining;<br/>passes SSH it cannot read"]
         ConnRelay["Connection relay<br/>counts every call"]
         Platform --> Server
         Server --- DB
@@ -19,11 +19,13 @@ flowchart TB
     end
 
     subgraph Yours["Your machines (your compute)"]
-        Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite), by grants"]
-        Remote["rrotor VM (full), any host<br/>CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
+        Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite) = the fence"]
+        Remote["rrotor VM (full) = the fence<br/>any host: CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
     end
 
     Agents["Agent hosts<br/>Claude Code, Claude Desktop,<br/>Cursor, ChatGPT (plugin)"]
+    SignIn["Google, GitHub<br/>sign-in"]
+    Stripe["Stripe<br/>subscriptions, packs"]
     Providers["Model providers<br/>3,900 models, 125 providers"]
     Pipedream["Pipedream<br/>3,500 connections"]
 
@@ -36,7 +38,11 @@ flowchart TB
     Desktop -- "connection calls" --> ConnRelay
     Remote -- "connection calls" --> ConnRelay
     ConnRelay -- "metered on your subscription" --> Pipedream
-    Agents -- "MCP" --> Server
+    Agents -- "MCP, signed in with OAuth" --> Server
+    Server -- "sign-in" --> SignIn
+    Server -- "billing; webhooks back" --> Stripe
+    Desktop -- "fence events" --> Server
+    Remote -- "fence events" --> Server
 ```
 
 ![The whole system](img/architecture.png)
@@ -136,6 +142,8 @@ A member's machines reach each other, so from machine A they can watch machine B
     - **shell:** off until the member turns it on for that machine (`shell_enabled`), because a shell is the whole machine.
 - **Who:** for now only the machine's owner, from their own machines, the app or the web. The server checks it before joining two connections.
 - **When B drops:** A is told at once, and can join again when B is back.
+
+**The relay is the gate; rrotor is the fence.** The relay cannot read the stream, and an escape attempt never crosses it anyway (`cd /` happens inside B's VM), so the folders are enforced in B's rrotor, where what was not granted is not mounted. The relay guards the door in front: before it joins two machines it checks who is asking, which machine, which super power and which channel (watch, drive, files, shell) against the grants, and refuses anything else before SSH starts; B's rrotor checks the same again when the channel opens. When a grant is revoked, a machine removed or a power disabled, the relay cuts the live sessions at once and the server tells rrotor to unmount. When something inside a run reaches past its fence, rrotor reports it to the server (`fence_events`), and the platform shows it. Neither depends on the other being honest.
 
 ### rrotor is a Linux VM; the app you drive is not sandboxed
 

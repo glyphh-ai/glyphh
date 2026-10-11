@@ -17,6 +17,17 @@ erDiagram
     powers ||--o{ tool_permissions : "sets"
     super_powers ||--o{ tool_permissions : "overrides"
     users ||--o{ tokens : "signs in with"
+    users ||--o{ sign_in_identities : "signs in as"
+    oauth_clients ||--o{ oauth_codes : "asks for"
+    users ||--o{ oauth_codes : "approves"
+    oauth_clients |o--o{ tokens : "issued to"
+    users ||--o{ key_links : "gets"
+    powers |o--o{ key_links : "sets the key of"
+    machines ||--o| machine_connections : "connected through"
+    machines ||--o{ folders : "holds"
+    machines ||--o{ fence_events : "reports"
+    super_powers ||--o{ fence_events : "tried"
+    users ||--o{ tool_permissions : "sets"
     orgs ||--o{ powers : "holds"
     users ||--o{ powers : "installs for themselves"
     orgs ||--o{ super_powers : "has"
@@ -137,7 +148,8 @@ erDiagram
 
     tool_permissions {
         uuid id PK
-        uuid power_id FK "the power whose tool it is: a connection, a plugin, ..."
+        uuid user_id FK "whose setting it is"
+        uuid power_id FK "the power whose tool it is: a connection, a plugin, ...; null = one of rrotor's own built-in tools"
         text tool "the tool's name; unique per power and super power"
         uuid super_power_id FK "null = the user's own setting; set = that super power's override, for its autonomous runs"
         text permission "allow, ask, deny (an override is allow or deny)"
@@ -188,7 +200,8 @@ erDiagram
 
     folders {
         uuid power_id PK, FK
-        text path
+        uuid machine_id FK "the machine the folder is on: the same path on two machines is two folders"
+        text path "unique per machine for its owner"
     }
 
     skills {
@@ -218,7 +231,8 @@ erDiagram
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
-        jsonb definition "the rrotor definition (its workflows, pipelines and screens), still to be drawn; its data lives in rrotor"
+        jsonb definition "the rrotor definition, still to be drawn; its data lives in rrotor"
+        text bundle_key "its files (workflows, pipelines, screens), in object storage"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -229,6 +243,7 @@ erDiagram
         uuid power_id FK "a power: folder, connection, model, skill, task, plugin (the loop is picked, not granted); or"
         uuid machine_id FK "a machine it may run on; or"
         uuid granted_super_power_id FK "a super power it may call (exactly one of the three)"
+        text access "for a folder: read or write; null for anything else"
         timestamptz created_at
     }
 
@@ -357,6 +372,7 @@ erDiagram
         uuid user_id FK "whose machine it is"
         text name "unique for its owner"
         text kind "desktop or remote"
+        text edition "lite (the desktop's: no pgvector, no Neo4j) or full"
         text platform "macos, windows, linux"
         text version "the rrotor build it runs"
         text token_hash UK "what it connects with; only the hash is kept"
@@ -382,9 +398,77 @@ erDiagram
         timestamptz created_at
     }
 
+    sign_in_identities {
+        uuid id PK
+        uuid user_id FK
+        text provider "google or github"
+        text subject "the provider's own id for the person; unique per provider"
+        text email "the email the provider gave, at the last sign-in"
+        timestamptz last_used_at
+        timestamptz created_at
+    }
+
+    oauth_clients {
+        uuid id PK
+        text client_id UK "what the agent host sends"
+        text name "Claude Code, Cursor, ChatGPT, ..."
+        text[] redirect_uris
+        timestamptz created_at
+    }
+
+    oauth_codes {
+        uuid id PK
+        uuid oauth_client_id FK
+        uuid user_id FK "who approved it"
+        text code_hash UK "only the hash is kept"
+        text redirect_uri
+        text code_challenge "PKCE"
+        timestamptz expires_at "a minute or so"
+        timestamptz used_at "a code works once"
+        timestamptz created_at
+    }
+
+    key_links {
+        uuid id PK
+        uuid user_id FK "the only person it works for"
+        uuid power_id FK "the model whose key it sets"
+        text token_hash UK "the link's token; only the hash is kept"
+        timestamptz expires_at "minutes, not days"
+        timestamptz used_at "a link works once"
+        timestamptz created_at
+    }
+
+    machine_connections {
+        uuid machine_id PK, FK
+        text instance "the server process holding its connection"
+        timestamptz connected_at
+        timestamptz heartbeat_at "a row not heard from is gone"
+    }
+
+    fence_events {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid machine_id FK "where it happened"
+        uuid super_power_id FK "what tried"
+        uuid run_id FK "in which run"
+        text kind "path, network, channel"
+        text detail "what it reached for: a path, a host, a channel"
+        timestamptz created_at
+    }
+
+    stripe_events {
+        uuid id PK
+        text stripe_event_id UK "Stripe's own id: an event is handled once"
+        text type
+        timestamptz received_at
+        timestamptz processed_at
+    }
+
     tokens {
         uuid id PK
         uuid user_id FK
+        uuid oauth_client_id FK "the agent host it was issued to; null = the app or the CLI"
         text access_hash UK
         text refresh_hash UK
         timestamptz access_expires_at
@@ -393,6 +477,8 @@ erDiagram
         timestamptz created_at
     }
 ```
+
+![The data model](img/data-model.png)
 
 ## plans
 
@@ -448,6 +534,7 @@ Every tool a power brings (each tool of a connection, of a plugin's MCP server, 
 - **The user's own setting:** `allow` (runs without asking), `ask` (asks each time) or `deny` (never runs). A tool with no row is `ask`.
 - **A super power's override:** for its autonomous runs, a super power can set a tool to `allow` or `deny`, whatever the user's own setting says. With no override, the user's own setting applies.
 - **Autonomous means nobody to ask:** in a run nobody is watching, `ask` is refused, so an autonomous super power uses only tools that are allowed, by the user or by its override.
+- **rrotor's own tools** (its ~250 built-in tools) have permissions too: a row with no power is a built-in tool's.
 - **Where it is enforced:** a connection call at the server's relay, which every connection call passes through, so it holds even against a modified rrotor; every other tool in rrotor, which hands the loop only what is allowed.
 
 ## users
@@ -544,7 +631,7 @@ An org admin invites someone by email, with the role they will have. The invite 
 
 Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (the CLI or the desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
-A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
 ## Limits are enforced by the database
 
@@ -556,6 +643,10 @@ Every plan limit (seats, machines, credits) holds even when requests race or cod
 - **Downgrades never cut anyone off:** an org over its new plan's limit keeps what it has and cannot add more until it is back under.
 - **Tested for each limit:** the limit, the refusal and its message, freeing a place, the downgrade rule, and concurrent requests racing for the last place.
 
+**machine_connections** says which server process holds each connected machine's connection, so a request landing on another process is sent to the right one (Postgres notifications carry it across; no Redis). A row not heard from within its heartbeat is treated as gone.
+
+**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform shows them ("this super power tried to leave its folders").
+
 ## Scoping
 
 Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
@@ -563,3 +654,13 @@ Every API call and MCP tool runs as a principal: the user, their org and their r
 ## tokens
 
 What the server hands out after a sign-in: a short-lived access token and a longer-lived refresh token. Only their hashes are stored, so a stolen database holds no usable token. A token is revoked by setting `revoked_at`.
+
+## Signing in
+
+- **sign_in_identities:** a person signs in with Google or GitHub, and the server finds them by the provider's own id for them (`subject`), never by email alone: an email that changes, or a GitHub account with a hidden email, still finds the same person, and an email can never be used to reach someone else's account. The first sign-in links by email, once, through an invite or a new org.
+- **The plugin signs in with OAuth:** an agent host (Claude Code, Cursor, ChatGPT) is an `oauth_clients` row; the member approves it in the browser, the host gets a one-time code (`oauth_codes`, with PKCE, a minute to live), and trades it for tokens issued to that client, so the member can see and revoke each host on its own.
+- **key_links:** the one-time link an agent hands the member to enter a model's key on the platform. It works once, for minutes, only for that member signed in, and only for that model.
+
+## Stripe
+
+**stripe_events** records every Stripe webhook by Stripe's own event id, so an event delivered twice is handled once: a credit pack is never added twice and a seat change never applied twice.
