@@ -10,10 +10,12 @@ flowchart TB
         Platform["Platform<br/>manage your rrotors, keys, billing"]
         Server["Server<br/>API + MCP"]
         DB[("Postgres<br/>accounts, powers, grants,<br/>machines, usage, billing")]
+        Live[("Redis<br/>live state: which process<br/>holds each machine")]
         Relay["Relay = the gate<br/>checks grants before joining;<br/>passes SSH it cannot read"]
         ConnRelay["Connection relay<br/>counts every call"]
         Platform --> Server
         Server --- DB
+        Server --- Live
         Server --- Relay
         Server --- ConnRelay
     end
@@ -196,7 +198,9 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 
 ### Data
 
-- **Database:** one Postgres for every tenant, without pgvector.
+- **Database:** one Postgres for every tenant, without pgvector: the durable truth.
+- **Live state:** Redis, managed with a standby, for what is only true right now: which server process holds each machine's connection, machine heartbeats (keys that expire on their own when a machine goes quiet), and messages between server processes (cut this session, unmount this folder, this grant was revoked); later rate counters and short-lived caches. Losing it loses nothing: machines reconnect and register again in seconds.
+- **Joining two machines** happens on the process that already holds B's connection: A's request is sent there, so SSH bytes flow through one process and never cross between servers. Redis carries only the lookup and the control messages, never the bytes.
 - **Tenant isolation:** row-level security keyed on the org, enforced by the database.
 - **Access:** SQLAlchemy 2 (async) over asyncpg.
 - **Schema:** one schema file until relaunch, then Alembic migrations.

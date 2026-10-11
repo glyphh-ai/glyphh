@@ -23,7 +23,6 @@ erDiagram
     oauth_clients |o--o{ tokens : "issued to"
     users ||--o{ key_links : "gets"
     powers |o--o{ key_links : "sets the key of"
-    machines ||--o| machine_connections : "connected through"
     machines ||--o{ folders : "holds"
     machines ||--o{ fence_events : "reports"
     super_powers ||--o{ fence_events : "tried"
@@ -451,13 +450,6 @@ erDiagram
         timestamptz created_at
     }
 
-    machine_connections {
-        uuid machine_id PK, FK
-        text instance "the server process holding its connection"
-        timestamptz connected_at
-        timestamptz heartbeat_at "a row not heard from is gone"
-    }
-
     fence_events {
         uuid id PK
         uuid org_id FK
@@ -631,7 +623,7 @@ Signing in always happens from a machine, and signing in is how a machine is reg
 
 A machine is a registered rrotor, a small Linux VM: a member's desktop (the app runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
-**machine_connections** says which server process holds each connected machine's connection, so a request landing on another process is sent to the right one (Postgres notifications carry it across; no Redis). A row not heard from within its heartbeat is treated as gone.
+**Which server process holds a machine's connection is not in this database:** it is live state that is only true right now, so it lives in Redis (see the architecture, Data). `last_seen_at` here is updated when a machine connects and disconnects, not on every heartbeat.
 
 **fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform shows them ("this super power tried to leave its folders").
 
