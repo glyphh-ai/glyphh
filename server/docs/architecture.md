@@ -34,6 +34,10 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 Glyphh is not a gateway. A super power names a model its org added (a provider, the provider's model id and an API key); when it runs, rrotor calls the provider directly with that key. Glyphh stores the model's setup and never routes, meters, limits or pays for a model call. The key is encrypted on the server and handed only to a member's own runtime.
 
+### Connections
+
+Connections are the moat. A super power declares the connections it needs by name; on install a member binds each one, either to a connection their CLI already has (Claude Code's own MCP servers and connectors) or to a connection they add in Glyphh: an MCP server with its sign-in, encrypted and never returned. Connections kept in Glyphh are portable: whichever loop runs the super power (Claude Code, Codex or rrotor's own), rrotor hands it exactly the bound connections and nothing else (for Claude Code, `--mcp-config` with `--strict-mcp-config`).
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
