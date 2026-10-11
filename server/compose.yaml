@@ -33,7 +33,7 @@ services:
       context: .
       target: test
     environment:
-      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh_test
     depends_on:
       db:
         condition: service_healthy

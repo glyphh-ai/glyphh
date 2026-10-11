@@ -12,7 +12,7 @@ flowchart TB
 
 ### How everything is built
 
-- **Every capability is built SDK first, then API, then MCP.** The SDK call is designed first (what a developer writes), the API serves it, MCP exposes it to agents. One service function sits behind all three.
+- **Every capability is built in this order: the database (drawn in the data model first), then the API, then the SDK.** MCP exposes the same service function the API serves, so one function sits behind every surface.
 - **100% test coverage is the target**, enforced in CI.
 - **Builds and deploys are automatic:** every merge to main is tested, built and deployed, and clients update themselves.
 - **Everything runs in Docker**, locally and in production.
