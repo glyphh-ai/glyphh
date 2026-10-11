@@ -26,8 +26,11 @@ A single-deployment, multi-tenant cloud SaaS.
 - **Background jobs:** a Postgres-backed queue.
 - **Files:** object storage (R2 or S3), with references in Postgres.
 
-### Enterprise
+### Operations
 
-- Single sign-on (OIDC and SAML), SCIM provisioning, roles per org, an audit log.
 - OpenTelemetry tracing and metrics, logs tagged by tenant.
 - Managed Postgres with point-in-time recovery, and connection pooling.
+
+### Not at the start
+
+- No single sign-on, SCIM, enterprise roles or audit log.
