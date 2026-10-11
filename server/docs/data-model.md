@@ -15,6 +15,9 @@ erDiagram
     powers ||--o{ grants : "granted as"
     machines ||--o{ grants : "granted as"
     powers ||--o| models : "is a"
+    providers ||--o{ catalog_models : "offers"
+    providers ||--o{ models : "serves"
+    catalog_models |o--o{ models : "picked from"
     powers ||--o| connections : "is a"
     powers ||--o| folders : "is a"
     powers ||--o| skills : "is a"
@@ -84,11 +87,36 @@ erDiagram
 
     models {
         uuid power_id PK, FK
-        text provider "anthropic, openai, google, fireworks, ..."
+        uuid provider_id FK
+        uuid catalog_model_id FK "null = not in the catalog: a fine-tune, a private model"
         text model "the provider's own model id"
         text base_url "null = the provider's own"
         bytea api_key "encrypted; never returned"
         text api_key_last4
+    }
+
+    providers {
+        uuid id PK
+        text slug UK "anthropic, openai, google, fireworks, ..."
+        text name "Anthropic"
+        text logo_key "its logo, in object storage"
+        text base_url "the provider's endpoint"
+        bool active
+        int sort
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    catalog_models {
+        uuid id PK
+        uuid provider_id FK
+        text model "the provider's own model id; unique per provider"
+        text name "Claude Sonnet, GPT-5, ..."
+        text kind "chat, embedding, image, audio, video"
+        text logo_key "null = the provider's logo; set when the maker differs (Llama on Fireworks)"
+        bool active
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     connections {
@@ -313,7 +341,8 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
-- The public list of models (about 3,900 across 130 providers) ships with the server to help pick one; it is reference data, not a table.
+- **The catalog** is what the app and the platform show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a display name and kind). It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across 130 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
+- **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
 
 ## Super powers
 
