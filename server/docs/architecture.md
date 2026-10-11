@@ -115,7 +115,15 @@ The same three are the loops a super power can run on, so a CLI is used like a m
 
 - **A CLI's sign-in stays in the CLI.** rrotor runs the unmodified program and shows its own login; the credentials stay in that program's files on that machine. Glyphh never collects, stores or passes them, and the server never sees them. rrotor reports only which CLIs are signed in. (Anthropic allows hosting Claude Code this way under its Commercial Terms, which Glyphh accepts; OpenAI's terms for Codex are to be confirmed.)
 - **rrotor's MCP surface powers the orchestration.** Whichever loop it runs on, the main assistant works through rrotor's own MCP tools: super powers and their grants, runs, schedules, connections, folders, the browser and the other machines. The same tools are what Claude reaches through the plugin, so the member's Claude on a desktop is one more window onto Glyphh, never what it depends on.
-- **Seeing and hearing the swarm:** the main assistant and its super powers run in the same rrotor, so its UI shows every running super power, its step, its log and its screens live, and the main assistant hears when one finishes, fails or needs an answer. When the member is away, the server sends a push or an email.
+- **Seeing and hearing the swarm:** the main assistant and its super powers run in the same rrotor (and with voice on, the main assistant says it out loud, below), so its UI shows every running super power, its step, its log and its screens live, and the main assistant hears when one finishes, fails or needs an answer. When the member is away, the server sends a push or an email.
+
+### Voice
+
+rrotor talks and listens. The member turns voice on for their rrotor, picks a speech-to-text model and a text-to-speech model from their own models (their own keys, like any model), and presses the talk button in rrotor's UI, wherever it is open: inside Claude, or in any browser.
+
+- **The audio streams between the browser and rrotor,** over the same encrypted channel as the UI: what the member says is transcribed in rrotor by their speech-to-text model, the main assistant answers on its loop, and the answer is spoken back by their text-to-speech model.
+- **Hearing the swarm, literally:** the main assistant can say what its super powers are doing as it happens: one finished, one failed, one needs an answer, and the member can answer by voice.
+- **Never priced by Glyphh, never through Glyphh's servers in the clear:** the speech models are called directly on the member's keys, and the relay passes only what it cannot read.
 
 Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in rrotor's UI. Ported from the old app's super power and power builders.
 

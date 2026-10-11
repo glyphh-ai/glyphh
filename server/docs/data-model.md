@@ -242,6 +242,8 @@ erDiagram
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
+        uuid speech_in_model_id FK "voice: the speech-to-text model it listens with, one of the owner's; null = no voice"
+        uuid speech_out_model_id FK "voice: the text-to-speech model it speaks with, one of the owner's"
         jsonb definition "the rrotor definition, still to be drawn; its data lives in rrotor"
         text bundle_key "its files (workflows, pipelines, screens), in object storage"
         timestamptz created_at
@@ -604,6 +606,8 @@ Every tool a power brings (each tool of a connection, of a plugin's MCP server, 
 Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
+
+**Voice** is on when a super power has its speech models (`speech_in_model_id`, `speech_out_model_id`), the member's Glyphh first of all: both are the member's own models, called directly on their keys. Audio never reaches this database.
 
 A super power's own files (its workflows, pipelines and screens) are a bundle in object storage (`bundle_key`); `definition` holds the rrotor definition, still to be drawn. What it stores (its data, vectors and graph) lives in rrotor, never here. Where the content of its conversations lives is still open.
 
