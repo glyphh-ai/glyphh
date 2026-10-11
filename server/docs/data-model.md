@@ -416,7 +416,7 @@ Glyphh is the parent org: the one org with no parent. Every customer org's paren
 The org's Models and Connections pages exist only to say which models and connections users may add. They hold no keys and no accounts: a user still adds their own model with their own key, and connects their own account.
 
 - **Two settings, two lists, at the org and at every team, with the same behaviour:** `limit_models` with `allowed_models` (picked from the catalog), and `limit_connections` with `allowed_connections` (services: Gmail, Slack, ...).
-- **Everything is on by default.** Off means no limit: a user may add any model in the catalog and connect any service.
+- **Everything is allowed by default:** both settings start off, and a user may add any model in the catalog and connect any service.
 - **Limiting at the org:** when the org turns a setting on, the org admin adds what is allowed, and only that is allowed, org wide.
 - **Limiting at a team:** a team turns its own setting on and lists what its members may add. Under an org that limits, a team can only narrow it: its list is part of the org's list, never more.
 - **A user adds only what applies to them:** their team's list if their team limits, otherwise the org's if the org limits, otherwise anything. A user is in at most one team; a user in none has only the org's limits.
