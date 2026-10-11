@@ -17,4 +17,4 @@ Everything here is the source artwork for Claude Design. Upload it to the design
 
 ## Colour today
 
-Every cat is drawn in Glyphh ink (`#0b0a0f`) inside a white sticker border. A colour per super power is stored but not drawn yet: the new palette decides it.
+Every cat is drawn in Glyphh ink (`#0b0a0f`) inside a white sticker border, and stays black and white: a super power's colour fills only its eye (the white parts inside the `eye` group). Glyphh's own eye stays white. See `../DECISIONS.md`.
