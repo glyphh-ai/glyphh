@@ -11,6 +11,11 @@ erDiagram
     teams ||--o{ team_members : "has"
     users ||--o{ team_members : "is in"
     users ||--o{ tokens : "signs in with"
+    orgs ||--o{ provider_keys : "brings"
+    teams ||--o{ provider_keys : "may scope"
+    orgs ||--o{ api_keys : "issues"
+    api_keys ||--o{ requests : "made"
+    provider_keys ||--o{ requests : "paid"
 
     plans {
         uuid id PK
@@ -33,6 +38,7 @@ erDiagram
         text name
         int rpm_cap "null = the plan's limit"
         int tpm_cap "null = the plan's limit"
+        text_array models "null = every catalog model"
         timestamptz created_at
     }
 
@@ -54,6 +60,7 @@ erDiagram
         text name "unique within the org"
         int rpm_cap "null = the org's limit"
         int tpm_cap "null = the org's limit"
+        text_array models "null = the org's models"
         timestamptz created_at
     }
 
@@ -62,6 +69,48 @@ erDiagram
         uuid org_id FK "the team's and the user's org, enforced by both keys"
         uuid team_id FK
         uuid user_id FK "unique with team_id"
+        timestamptz created_at
+    }
+
+    provider_keys {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK "null = the whole org"
+        text provider "anthropic, openai, google, ..."
+        bytea secret "encrypted; never returned"
+        text last4
+        uuid created_by FK
+        timestamptz created_at
+        timestamptz revoked_at
+    }
+
+    api_keys {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK "null = the whole org"
+        uuid user_id FK "who made it"
+        text name
+        text key_hash UK
+        text prefix "shown, to tell keys apart"
+        timestamptz expires_at
+        timestamptz last_used_at
+        timestamptz revoked_at
+        timestamptz created_at
+    }
+
+    requests {
+        uuid id PK
+        uuid org_id FK
+        uuid team_id FK
+        uuid user_id FK
+        uuid api_key_id FK "null when a sign-in token made it"
+        uuid provider_key_id FK
+        text provider
+        text model
+        int status
+        int input_tokens
+        int output_tokens
+        int duration_ms
         timestamptz created_at
     }
 
@@ -129,6 +178,18 @@ The plan sets an org's limits. An org admin can cap the org lower, and cap each 
 - **Team:** `rpm_cap`, `tpm_cap`, at or under the org's. Null means the org's limit.
 
 The limit a request runs under is the smallest that applies to it.
+
+## The gateway
+
+The router passes a model call to its provider on the member's own key: Glyphh never pays for inference.
+
+- **The model catalog is not a table.** It is the public list of models (about 3,900 across 130 providers, with each one's provider, kind, context size and prices), shipped with the server and updated with it.
+- **Model access:** `models` on an org narrows the catalog for the whole org (null = every model); `models` on a team narrows it again (null = the org's). A call is checked against both.
+- **provider_keys** are the keys members bring: per provider, for the whole org or one team, encrypted at rest and never returned after they are saved (only the last four characters are shown). A team's own key wins over the org's.
+- **api_keys** are the keys Glyphh issues, so a script or a runtime can call the router; only a hash is stored. A sign-in token works too.
+- **requests** is the log of every call: who, which model and provider, the outcome, the tokens and the time. It is what the rate limits count and what usage shows.
+
+Left behind from the old gateway: LiteLLM's 80-odd tables, its per-row model deployments and credentials table, budgets, margins and the dollar pool (BYOK has no money to meter), spend aggregates, auto-routers, the stored copy of each member's key, and the per-model flags nothing enforced. The Pipedream lane (connections) is drawn separately when it is built.
 
 ## Scoping
 
