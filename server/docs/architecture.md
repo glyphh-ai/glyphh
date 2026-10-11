@@ -19,8 +19,8 @@ flowchart TB
     end
 
     subgraph Yours["Your machines (your compute)"]
-        Desktop["Desktop app = rrotor lite<br/>CLIs, loop, sandboxed runs<br/>(no pgvector, no Neo4j)"]
-        Remote["rrotor (full), any host<br/>CLIs, loop, sandboxed runs,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
+        Desktop["Desktop app<br/>you drive it, unsandboxed;<br/>remote reaches it only through<br/>its rrotor VM (lite), by grants"]
+        Remote["rrotor VM (full), any host<br/>CLIs, loop, grants only,<br/>Postgres + pgvector, Neo4j,<br/>Redis, cron, Next.js screens"]
     end
 
     Agents["Agent hosts<br/>Claude Code, Claude Desktop,<br/>Cursor, ChatGPT (plugin)"]
@@ -116,7 +116,7 @@ Everything a super power needs to run, on the member's own machine:
 
 It is the agent runtime: from it, a super power reaches about 3,900 models across 125 providers directly, never through Glyphh's servers, and about 3,500 connections, which go through the server and are counted against the member's subscription.
 
-**The desktop app is a rrotor too, a lite one:** the CLIs, the loop and sandboxed runs, without pgvector or Neo4j. It connects to the member's other machines, so they can spread super powers across them and manage them all from one place.
+**The desktop app is a rrotor too, a lite one:** the CLIs and the loop, without pgvector or Neo4j. It connects to the member's other machines, so they can spread super powers across them and manage them all from one place.
 
 A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
 
@@ -137,7 +137,14 @@ A member's machines reach each other, so from machine A they can watch machine B
 - **Who:** for now only the machine's owner, from their own machines, the app or the web. The server checks it before joining two connections.
 - **When B drops:** A is told at once, and can join again when B is back.
 
-**Known gap, not yet decided:** the super power's folders are enforced only where rrotor does the work itself (its files channel and its MCP tools). A CLI's own Bash tool runs as rrotor's user, so it can read anything that user can (`cat ~/.ssh/...`), and the shell, once on, is the whole machine. The working folder is not a fence. The proposal on the table: every run inside an operating-system sandbox that holds only its granted folders and its run folder (a container per run on remote servers; Seatbelt on macOS and bubblewrap on Linux desktops; the CLI's own sandbox as a second layer, never the only one), the shell inside the same sandbox by default, and a whole-machine shell as its own switch. Windows desktops would need a container (WSL or Docker) for the same guarantee.
+### rrotor is a Linux VM; the app you drive is not sandboxed
+
+Decided 2026-10-11:
+
+- **rrotor is a small Linux VM.** On a server it is the machine; on a desktop the app runs it headless (Apple's Virtualization framework on macOS, WSL2 on Windows, locked down: no automounted drives, no Windows interop, no Windows PATH). Inside it, a run sees only the folders it was granted, mounted in; the rest of the desktop does not exist for it, so no shell, Bash tool or program can reach past them. On Linux desktops the same fence comes from namespaces and Landlock, without a VM.
+- **The app runs unsandboxed, because the member is driving.** Like Claude Code on their own machine: they see each step, approve what is risky, and can stop it. Glyphh, the agent they drive, has everything.
+- **Remote control reaches a desktop only through its rrotor, and only by grants.** Another machine, the web, the platform or a super power running unattended never touches the app or the desktop directly: it reaches the rrotor VM, which holds only what was granted. A super power is fenced whether or not anyone is watching it.
+- **The app's own tools that touch files, shells or processes move into rrotor,** so nothing remote can reach the desktop through a tool in the app instead of through bash. The app keeps its screens, its windows and its browser, which already keeps its own storage apart from the member's own browser; its downloads and uploads go to a granted folder.
 
 Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
 

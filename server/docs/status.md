@@ -21,13 +21,12 @@ On the [data model](data-model.md), in the order they were drawn:
 - **Billing and usage:** the plan's credit and machine columns, `subscriptions`, `credit_ledger`, `usage_events` (logged by the server's connection relay, one per call).
 - **People and machines:** `invites`, `machines` (with their SSH key, fingerprint and shell switch), `machine_sign_ins`, `api_keys`.
 
-On the [architecture](architecture.md): the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
+On the [architecture](architecture.md): rrotor as a Linux VM (the app you drive unsandboxed, remote control only through rrotor by grants), the platform's usage and billing pages, adding a model in the app, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
 
 ## Open
 
 Decisions still to make. Where a proposal is written, it is a proposal, not a decision.
 
-- **Run sandbox:** the gap above, where a CLI's Bash or the shell reaches past the super power's folders. Proposal: every run in an operating-system sandbox holding only its granted folders.
 - **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and the app and web open them over SSH through the relay.
 - **App settings** (workspaces, tabs, layout, appearance): not drawn; on hold.
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens reach the app and the web from a remote machine.
