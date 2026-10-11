@@ -10,6 +10,13 @@ flowchart TB
 
 ## Decided
 
+### How everything is built
+
+- **Every capability is built SDK first, then API, then MCP.** The SDK call is designed first (what a developer writes), the API serves it, MCP exposes it to agents. One service function sits behind all three.
+- **100% test coverage is the target**, enforced in CI.
+- **Builds and deploys are automatic:** every merge to main is tested, built and deployed, and clients update themselves.
+- **Everything runs in Docker**, locally and in production.
+
 ### Server
 
 A single-deployment, multi-tenant cloud SaaS, headless first: every capability is an API (OpenAPI) and an MCP tool before it is any screen, with the same permission checks behind both.
