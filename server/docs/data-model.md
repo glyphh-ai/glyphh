@@ -88,7 +88,7 @@ erDiagram
     powers {
         uuid id PK
         uuid org_id FK
-        uuid user_id FK "null = the org's; a model and a connection always have one"
+        uuid user_id FK "whose it is: every power is one user's, for now"
         text kind "model, connection, folder, skill, task, plugin, loop"
         text name "unique for its owner"
         timestamptz created_at
@@ -389,9 +389,9 @@ Everything a super power uses is a power: a model, a connection, a folder, a ski
 
 - **Models are a user's:** each person adds their own, with their own key. Nothing is shared or deduplicated: ten people adding the same model are ten rows, each with its own key, and one person may add the same model more than once (one per super power, say, to see each one's spend at the provider).
 - **Connections are a user's:** always one person's own account (Pipedream accounts belong to a person; there are no shared or system accounts).
-- **Folders, skills, tasks and plugins** are installed by a user for themselves, or by the org for everyone (`user_id` null).
+- **Folders, skills, tasks and plugins are a user's too:** for now every power is one person's own, built or installed for themselves. The org installs none.
 
-The database enforces the first two: a model power and a connection power always have a `user_id`.
+The database enforces it: every power has a `user_id`.
 
 Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
@@ -403,7 +403,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 ## Super powers
 
-Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
+Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is installed by a user or by the org.
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): the CLI or rrotor's own engine that runs it. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
