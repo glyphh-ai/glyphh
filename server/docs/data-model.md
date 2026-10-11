@@ -25,6 +25,12 @@ erDiagram
     orgs ||--o| subscriptions : "pays through"
     plans ||--o{ subscriptions : "sold as"
     orgs ||--o{ credit_ledger : "earns and spends"
+    orgs ||--o{ usage_events : "uses"
+    users ||--o{ usage_events : "makes"
+    powers ||--o{ usage_events : "called through"
+    super_powers ||--o{ usage_events : "called from"
+    machines ||--o{ usage_events : "called on"
+    usage_events ||--o| credit_ledger : "spends"
     users ||--o{ machines : "registers"
     machine_sign_ins |o--o| machines : "registers"
     orgs ||--o{ invites : "invites"
@@ -157,8 +163,29 @@ erDiagram
         uuid user_id FK "who spent it; null for allowances and purchases"
         text entry "allowance, purchase, usage"
         int credits "plus for allowance and purchase, minus for usage"
-        text source "connection:gmail, a Stripe payment id, ..."
+        text source "a Stripe payment id for a purchase; null otherwise"
+        uuid usage_event_id FK, UK "the call a usage entry pays for"
         timestamptz expires_at "the period's end for an allowance; null for a purchase"
+        timestamptz created_at
+    }
+
+    usage_events {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "whose connection it was"
+        uuid power_id FK "the connection power"
+        text app "the Pipedream app slug, kept as called"
+        text tool "the tool called: gmail-send-email, ..."
+        uuid super_power_id FK "the super power that called it"
+        uuid machine_id FK "the machine it ran on"
+        uuid run_id "the run it was part of; runs are drawn with the rrotor definition"
+        text status "ok, error, refused"
+        text error "the reason, for error and refused"
+        int duration_ms "the time Pipedream took, timed by the server"
+        int credits "max(1, ceil(seconds / 30)) for a call made; 0 when refused"
+        int request_bytes
+        int response_bytes
+        timestamptz started_at
         timestamptz created_at
     }
 
@@ -304,7 +331,32 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 - **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or buy a credit pack (a one-time purchase that does not expire with the period).
 - **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period. Stripe keeps the invoices and payment methods.
-- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each pack bought, and each use. The balance is the sum of what has not expired, so it is never stored twice.
+- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each pack bought, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for (`usage_event_id`), one entry per call.
+
+## Usage
+
+Every usage event is logged in one place: the server's connection relay. A connection call is the only thing Glyphh pays for, and every one goes through the server (rrotor → connector → server → Pipedream), so the server sees each call whole: who, through which connection, from which super power, on which machine, how long, and what it cost. Nothing is reported by the runtime about itself, so a modified rrotor cannot under-report.
+
+One call, as the relay handles it:
+
+1. **Check:** lock the org's row and read the balance. At 0, the call is refused with the reason and logged as `refused` (0 credits). Nothing reaches Pipedream.
+2. **Call:** relay it to Pipedream and time it.
+3. **Record:** in one transaction, a `usage_events` row and its `credit_ledger` usage entry. A call that fails at Pipedream is still logged (`error`) and still costs what Pipedream bills for it.
+
+The check runs before the cost is known, so calls already in flight when the balance reaches 0 finish and are counted: the balance can dip below 0 by at most those calls, and the next call is refused. It never turns into a bill.
+
+- **usage_events** is append only: never updated, never deleted by a request. It holds what was called and how it went, **never what went through it**: no arguments, no results, no message bodies. Those are the member's own data, and they stay between the runtime and Pipedream.
+- **Model calls are not usage.** They go straight to the provider on the member's key, and Glyphh never sees them.
+- **Operational logs are separate:** request logs and traces go to OpenTelemetry, tagged by org; they are not billing and do not decide a charge.
+- **Size:** the table is partitioned by month on `created_at`, indexed by org and time, and by org, user and time, so every page reads one org's range.
+
+### Who sees what
+
+The same rows serve every view, scoped by the principal:
+
+- **A user** sees their own calls and their org's balance.
+- **An org admin** sees every call in the org, by user, by connector, by super power, by machine and by day, and the ledger.
+- **A super admin** sees every org, and what Glyphh owes Pipedream for it: the same credits, at Pipedream's price.
 
 ## Invites
 
