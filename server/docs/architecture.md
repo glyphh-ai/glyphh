@@ -15,12 +15,10 @@ flowchart TB
         Live[("Redis")]
         Relay["Relay (the gate)"]
         ConnRelay["Connection relay"]
-        Ada["Ada"]
         Server --- DB
         Server --- Live
         Server --- Relay
         Server --- ConnRelay
-        Server --- Ada
         Server --- Pages
         Player --- Relay
     end
@@ -51,7 +49,6 @@ flowchart TB
     RB -- "direct" --> Providers
     RA -- "connections" --> ConnRelay
     RB -- "connections" --> ConnRelay
-    RA -- "Ada" --> Ada
     ConnRelay --> Pipedream
     Hosts -- "runs" --> RA
     Hosts -- "runs" --> RB
@@ -86,7 +83,6 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 - **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription (Claude Code, Codex) or key (the Glyphh loop). Glyphh never sees it and never prices it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
-- **rrotor → Ada → server:** every Ada call goes to Glyphh's own Ada kernel, which never leaves Glyphh's servers, and is billed per token.
 - **Jev is a model, on the first path:** the member adds TypeSafe's Jev with their own key, and rrotor calls TypeSafe directly. It is never on Glyphh's key, never through the server, and never charged.
 
 ### Models
@@ -135,15 +131,19 @@ Glyphh has the super power editor: the skills and tools to create a super power,
 A task is a program rrotor runs, by hand, from a super power or on a clock, and it reaches the world only through its context:
 
 - `ctx.decide`: Jev, a model the member added with their own key, called directly;
-- `ctx.ada`: one of the member's Ada models (query, record, veto, ...), through the server, billed per token;
 - `ctx.agents.<slot>`: the model filling each of its slots;
 - `ctx.connections.<service>`: its connections, through the server, counted;
 - `ctx.rpa`: the browser, on a machine that has one;
 - `ctx.checkpoint` and `ctx.log`: resume where it stopped, and its run's log.
 
-**Dependencies.** A power declares what it needs: a task that needs Gmail and Slack, a chat model for its writing step, Jev and an Ada model says so. Adding it to a super power grants all of it at once; whatever the member does not have yet is asked for right there (connect Gmail, add a key, pick an Ada model), and it cannot run until everything is in place, naming what is missing. Jev and Ada are dependencies like any model.
+**Dependencies.** A power declares what it needs: a task that needs Gmail and Slack, a chat model for its writing step and Jev says so. Adding it to a super power grants all of it at once; whatever the member does not have yet is asked for right there (connect Gmail, add a key), and it cannot run until everything is in place, naming what is missing. Jev is a dependency like any model.
 
-**Discover.** Glyphh and orgs publish powers (skills, tasks, Ada models, ...) and super powers to a catalog, each a bundle with its type and its dependencies; an org's listings are visible to its own members. Installing one copies it into the member's own powers, linked to the listing and its version so updates can be offered, and brings its dependencies with it as above. The tables for requirements and listings are drawn when this is built.
+**Discover.** Glyphh and orgs publish powers (skills, tasks, ...) and super powers to a catalog, each a bundle with its type and its dependencies; an org's listings are visible to its own members. Installing one copies it into the member's own powers, linked to the listing and its version so updates can be offered, and brings its dependencies with it as above. The tables for requirements and listings are drawn when this is built.
+
+### Not in Glyphh, for now
+
+- **Memory:** Glyphh has none of its own. A member who wants memory adds it as a power or a super power of their own.
+- **Ada** comes later; the basics first.
 
 ### What a super power can be
 

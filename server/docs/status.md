@@ -7,6 +7,7 @@ As of 2026-10-11. The rule: the data model is drawn first, then built in the ord
 - **Server** (`glyphh-ai/server`): Python, FastAPI, SQLAlchemy over asyncpg, Postgres 17. One schema applied at boot under an advisory lock (no migrations until relaunch). `GET /v1/health` and the stateless MCP endpoint at `/mcp`. CI runs ruff and the tests in Docker on every push and publishes the image on main.
 - **Tables:** `plans` (seeded: Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs` (Glyphh, the parent org, seeded), `users`, `tokens`.
 - **SDKs** (`glyphh-ai/glyphh`): TypeScript and Python, generated from the server's OpenAPI spec, with health as the first call; both suites run in Docker against the server.
+- **Not in Glyphh for now:** memory (a member adds it as a power if they want it) and Ada (later).
 - **Docs:** this site (architecture, data model, this page).
 
 The repos `glyphh-ai/app` and `glyphh-ai/platform` are no longer needed: the UI lives in rrotor, the sign-in pages in the server.
@@ -26,7 +27,7 @@ On the [data model](data-model.md), in the order they were drawn:
 - **People and machines:** `invites`, `machines` (with where they run, their SSH key, fingerprint and shell switch), `machine_sign_ins`, `fence_events` (what rrotor reports when a run reaches past its fence), `api_keys`; folders are on a machine, and folder grants are read or write.
 - **Signing in and Stripe:** `sign_in_identities` (Google and GitHub by the provider's own id), `oauth_clients` and `oauth_codes` (the plugin's sign-in), `launch_tickets` (open one machine's UI, once, for a minute), `stripe_events` (each webhook handled once).
 
-On the [architecture](architecture.md): voice (speech in and out on the member's own models, streamed between the browser and rrotor), the main assistant, Glyphh, in rrotor on one of three loops (Claude Code or Codex on the member's subscription, or the Glyphh loop on their own key; none priced by Glyphh), orchestrating through rrotor's MCP, no desktop app and no platform (every rrotor serves Glyphh's UI, opened in Claude or any browser through the player; sign-in once on the server; four sign-in pages), tasks with Jev (a model on the member's key) and Ada (our kernel, billed per token), dependencies and Discover, one full rrotor everywhere (a laptop is just another Docker host), Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (everything Glyphh runs is inside it, reached only by grants), usage and billing pages in rrotor's UI, adding a model in rrotor's UI, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
+On the [architecture](architecture.md): voice (speech in and out on the member's own models, streamed between the browser and rrotor), the main assistant, Glyphh, in rrotor on one of three loops (Claude Code or Codex on the member's subscription, or the Glyphh loop on their own key; none priced by Glyphh), orchestrating through rrotor's MCP, no desktop app and no platform (every rrotor serves Glyphh's UI, opened in Claude or any browser through the player; sign-in once on the server; four sign-in pages), tasks with Jev (a model on the member's key), dependencies and Discover, one full rrotor everywhere (a laptop is just another Docker host), Redis for live state (which process holds each machine, heartbeats, messages between processes), rrotor as a Linux VM (everything Glyphh runs is inside it, reached only by grants), usage and billing pages in rrotor's UI, adding a model in rrotor's UI, what rrotor carries (Postgres with pgvector, a Next.js server, the loop), and machine to machine over SSH through the relay.
 
 ## Open
 
@@ -34,8 +35,6 @@ Decisions still to make. Where a proposal is written, it is a proposal, not a de
 
 - **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the player through the relay.
 - **Codex hosting terms:** confirm OpenAI's terms for hosting Codex signed in with a member's ChatGPT subscription; Glyphh accepts Anthropic's Commercial Terms for Claude Code.
-- **Memory:** the member's memory settings are drawn; where memory itself lives (rrotor, most likely) is not.
-- **Ada in credits:** how the Ada price per token is stated in credits.
 - **Super powers in Discover:** whether a super power becomes one more power type (`super_powers` folds into `powers`) or keeps its own table and is listed the same way.
 - **Requirements and listings:** the tables for power dependencies and the Discover catalog, drawn when built.
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
