@@ -45,6 +45,13 @@ Connections are the moat. A super power declares the connections it needs by nam
 - **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription or key. Glyphh never sees it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
 
+### Two ways a super power runs
+
+- **Interactive (the member is driving):** the CLI gets every power and every super power the member has. The person is in the loop and approves what happens, so they have complete control.
+- **Autonomous (a schedule, a trigger, nobody watching):** it gets nothing but what its builder granted: exactly its listed powers (`super_power_powers`) and the base tools it declares, nothing else of the member's.
+
+The builder sets those limits: skills and tools to create a super power, add and remove its powers, pick its base tools and test-run it. Every builder step is a server operation, so it is an API call and an MCP tool too, and a member can build a super power by talking to their CLI. Ported from the old app's super power and power builders.
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
