@@ -8,15 +8,12 @@ erDiagram
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
     users ||--o{ tokens : "signs in with"
-    orgs ||--o{ models : "adds"
+    orgs ||--o{ powers : "installs for everyone"
+    users ||--o{ powers : "installs for themselves"
+    orgs ||--o{ super_powers : "has"
+    super_powers ||--o{ super_power_powers : "uses"
+    powers ||--o{ super_power_powers : "used by"
     orgs ||--o{ api_keys : "issues"
-    orgs ||--o{ teams : "has"
-    teams ||--o{ team_members : "has"
-    users ||--o{ team_members : "is in"
-    teams ||--o{ team_models : "may use"
-    models ||--o{ team_models : "granted to"
-    teams ||--o{ team_apps : "may connect"
-    users ||--o{ connections : "connects"
 
     plans {
         uuid id PK
@@ -50,57 +47,33 @@ erDiagram
         timestamptz updated_at
     }
 
-    models {
+    powers {
         uuid id PK
         uuid org_id FK
-        text name "what super powers call it, unique in the org"
-        text provider "anthropic, openai, google, fireworks, ..."
-        text model "the provider's own model id"
-        bytea api_key "encrypted; never returned"
-        text api_key_last4
-        text base_url "null = the provider's own"
-        uuid created_by FK
+        uuid user_id FK "null = installed by the org, for everyone"
+        text kind "model, connection, folder, skill, task, plugin"
+        text name "unique for its owner"
+        jsonb config "what the kind needs: a provider and model id, an MCP server, a path, ..."
+        bytea secret "an API key or sign-in, encrypted; never returned"
         timestamptz created_at
         timestamptz updated_at
     }
 
-    teams {
+    super_powers {
         uuid id PK
         uuid org_id FK
-        text name "unique in the org"
-        bool all_models "true = every org model"
-        bool all_apps "true = any app"
+        uuid user_id FK "null = installed by the org, for everyone"
+        text name "unique for its owner"
+        text loop "the CLI, or rrotor's own"
+        jsonb definition "the rrotor definition, still to be drawn"
         timestamptz created_at
+        timestamptz updated_at
     }
 
-    team_members {
-        uuid id PK
-        uuid org_id FK
-        uuid team_id FK
-        uuid user_id FK "unique with team_id"
-        timestamptz created_at
-    }
-
-    team_models {
-        uuid team_id PK, FK
-        uuid model_id PK, FK
-    }
-
-    team_apps {
-        uuid team_id PK, FK
-        text app PK "gmail, slack, ..."
-    }
-
-    connections {
-        uuid id PK
-        uuid org_id FK
-        uuid user_id FK "a connection is one person's"
-        text app "gmail, slack, ..."
-        text name
-        text mcp_url
-        bytea secret "encrypted; never returned"
-        timestamptz created_at
-        timestamptz revoked_at
+    super_power_powers {
+        uuid super_power_id PK, FK
+        uuid power_id FK "a power it uses"
+        uuid uses_super_power_id FK "or another super power it calls"
     }
 
     api_keys {
@@ -160,31 +133,26 @@ A user belongs to one org and has one role in it:
 
 The profile is the user's first name, last name, email and profile image. The email is how a Google or GitHub sign-in finds the user.
 
-## Models
+## Powers
 
-Glyphh is a model runtime, not a gateway: it stores how a model is reached and never sits in the call, and it governs nothing. A customer who wants limits or access rules puts their own AI gateway in front of their models; a model's base URL can point at it. A super power names one of its org's models; when it runs, rrotor calls the provider directly with that model's key. Glyphh does not route, meter, limit or pay for model calls.
+Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. A user installs a power for themselves, or the org installs it for everyone (`user_id` null). That is the only control: Glyphh governs nothing else.
 
-- **models** are what an org admin adds: a provider, the provider's model id, and the API key for it, plus a base URL for providers that need one. The key is encrypted at rest, never returned after it is saved (only the last four characters are shown), and handed only to a member's own runtime when a super power runs.
-- The public list of models (about 3,900 across 130 providers, with each one's provider, kind, context size and prices) ships with the server to help pick one; it is reference data, not a table.
-- **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart. A sign-in token works too.
+- **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
+- **A connection** is an account reached as an MCP server, with its sign-in. Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
+- **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
+- The public list of models (about 3,900 across 130 providers) ships with the server to help pick one; it is reference data, not a table.
 
-Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and the per-model flags nothing enforced.
+## Super powers
 
-## Teams
+A super power is a loop (a CLI, or rrotor's own), its rrotor definition, and the powers it uses, which can include other super powers. Like a power, it is installed by a user or by the org.
 
-Teams only limit access: which of the org's models, and which apps, their members may use. They govern nothing else.
+**api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 
-- **An org with no teams is flat:** every member may use every org model and connect any app.
-- **An org with teams:** a member may use the models and apps of the teams they are in, together. A member in no team may use none.
-- **A team grants models** either all of them (`all_models`) or the ones listed in `team_models`, and **apps** either all of them (`all_apps`) or the ones listed in `team_apps`.
-
-## Connections
-
-A connection is one person's: their own Gmail, Slack or other account, reached as an MCP server with its sign-in, encrypted and never returned. Only its owner's super power runs use it. In an org with teams, a member may only connect the apps their teams allow.
+Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
 
 ## Scoping
 
-Every API call and MCP tool runs as a principal: the user, their org, their role and their teams. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
+Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
 
 ## tokens
 
