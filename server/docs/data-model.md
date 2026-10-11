@@ -14,6 +14,17 @@ erDiagram
     super_powers ||--o{ grants : "is granted"
     powers ||--o{ grants : "granted as"
     machines ||--o{ grants : "granted as"
+    powers ||--o{ super_powers : "is the model of"
+    powers ||--o{ slots : "declares"
+    powers ||--o{ slots : "fills"
+    super_powers ||--o{ slots : "fills"
+    super_powers ||--o{ schedules : "on a clock"
+    powers ||--o{ schedules : "on a clock"
+    machines ||--o{ schedules : "runs on"
+    schedules ||--o{ runs : "fires"
+    super_powers ||--o{ runs : "runs"
+    machines ||--o{ runs : "ran on"
+    runs ||--o{ usage_events : "spends"
     powers ||--o| models : "is a"
     providers ||--o{ catalog_models : "offers"
     providers ||--o{ models : "serves"
@@ -157,6 +168,7 @@ erDiagram
         uuid user_id FK "null = installed by the org, for everyone"
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
+        uuid model_id FK "the one model it runs on, from its owner's models; null = the loop's own (a CLI on its subscription)"
         jsonb definition "the rrotor definition, still to be drawn"
         timestamptz created_at
         timestamptz updated_at
@@ -165,9 +177,55 @@ erDiagram
     grants {
         uuid id PK
         uuid super_power_id FK "the super power granted it"
-        uuid power_id FK "a power: folder, connection, loop, model, skill, task, plugin; or"
+        uuid power_id FK "a power: folder, connection, loop, skill, task, plugin (never a model: that is picked); or"
         uuid machine_id FK "a machine it may run on; or"
         uuid granted_super_power_id FK "a super power it may call (exactly one of the three)"
+        timestamptz created_at
+    }
+
+    slots {
+        uuid id PK
+        uuid power_id FK "the task (or other power) that declares it"
+        text name "what its program calls it: writer, reviewer, ..."
+        uuid model_id FK "filled by one of the owner's models; or"
+        uuid super_power_id FK "by one of their super powers (at most one of the two; neither = not filled yet)"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    schedules {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "whose schedule it is"
+        uuid super_power_id FK "what it runs: a super power; or"
+        uuid power_id FK "a task (exactly one of the two)"
+        uuid machine_id FK "where it runs"
+        text name
+        text cron "five fields"
+        text time_zone "the zone the cron reads in: America/New_York, ..."
+        jsonb input "what each run is handed"
+        bool enabled
+        timestamptz next_run_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    runs {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "who it ran for"
+        uuid super_power_id FK "what ran: a super power; or"
+        uuid power_id FK "a task (exactly one of the two)"
+        uuid schedule_id FK "null = started by hand, or by an agent"
+        uuid machine_id FK "where it ran"
+        text trigger "schedule, manual, agent"
+        text status "queued, running, succeeded, failed, canceled, missed"
+        text error "the reason, when it did not succeed"
+        jsonb result "what it returned, kept small"
+        text log_key "its full log, in object storage"
+        timestamptz scheduled_for "the time the clock meant; null when not scheduled"
+        timestamptz started_at
+        timestamptz finished_at
         timestamptz created_at
     }
 
@@ -207,7 +265,7 @@ erDiagram
         text tool "the tool called: gmail-send-email, ..."
         uuid super_power_id FK "the super power that called it"
         uuid machine_id FK "the machine it ran on"
-        uuid run_id "the run it was part of; runs are drawn with the rrotor definition"
+        uuid run_id FK "the run it was part of"
         text status "ok, error, refused"
         text error "the reason, for error and refused"
         int duration_ms "the time Pipedream took, timed by the server"
@@ -347,7 +405,22 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 ## Super powers
 
-Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a loop, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
+Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a loop, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
+
+**One model per super power.** A member has a list of models (as many as they add: a hundred is fine), and each super power picks one of them as its model (`model_id`). Adding a model from a super power's editor adds it to the member's list and picks it there. A super power whose loop is a CLI on its own subscription may have none.
+
+## Slots
+
+A power that runs on its own (a task) declares **slots**: the agents its program calls by name (`writer`, `reviewer`). Installing it, the member fills each slot with one of their models or one of their super powers. A run is refused, with the slot named, while a slot it calls is empty.
+
+## Schedules and runs
+
+Anything that runs on its own can be put on a clock: a super power or a task.
+
+- **schedules:** what runs, on which of the member's machines, a five-field cron read in its own time zone, and the input each run is handed. Switched off with `enabled`, never deleted to pause.
+- **The clock is the server's.** When a schedule is due, the server sends the run to its machine over the machine's connection. A machine that is offline at that moment gets the run marked `missed`, with the reason: nothing piles up and fires later in a burst.
+- **runs** is the history: every run, whether the clock, the member or an agent started it, with its status, its error, a small result and its full log (in object storage). A schedule's history is its runs. A run's connection calls are its usage events, so a run shows what it cost.
+- **Who sees what:** as for usage. A user sees their own runs, an org admin the org's.
 
 **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 
