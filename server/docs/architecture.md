@@ -5,7 +5,7 @@ flowchart TB
     Web
     App
     Machines
-    Server
+    Runtime --> SDK --> Server
 ```
 
 ## Decided
