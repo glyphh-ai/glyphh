@@ -5,6 +5,7 @@ nav:
   - Architecture: architecture.md
   - Data model: data-model.md
   - Where we are: status.md
+  - Build plan: build-plan.md
 theme:
   name: material
   palette:
