@@ -185,10 +185,14 @@ erDiagram
         uuid org_id FK
         uuid user_id FK "whose machine it is"
         text name "unique for its owner"
+        text kind "desktop or remote"
+        text platform "macos, windows, linux"
+        text version "the rrotor build it runs"
         text token_hash UK "what it connects with; only the hash is kept"
         timestamptz last_seen_at "null = never connected"
         timestamptz revoked_at
         timestamptz created_at
+        timestamptz updated_at
     }
 
     api_keys {
@@ -299,7 +303,7 @@ An org admin invites someone by email, with the role they will have. The invite 
 
 Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (the CLI or the desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
-A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept); `last_seen_at` says when it was last online. A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
 ## Scoping
 
