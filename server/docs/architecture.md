@@ -12,7 +12,7 @@ flowchart TB
 
 ### Server
 
-A single-deployment, multi-tenant cloud SaaS.
+A single-deployment, multi-tenant cloud SaaS, headless first: every capability is an API (OpenAPI) and an MCP tool before it is any screen, with the same permission checks behind both.
 
 - **Language and framework:** Python 3.12+, FastAPI, Pydantic v2, async throughout.
 - **Shape:** one deployment for every tenant, run as two or more stateless processes behind a load balancer.
