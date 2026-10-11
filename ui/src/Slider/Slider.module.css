@@ -1,0 +1,3 @@
+.slider { display: flex; align-items: center; gap: var(--space-3); }
+.slider input { flex: 1; accent-color: var(--color-accent); }
+.value { min-width: 6ch; font-size: var(--text-sm); color: var(--color-text-muted); }

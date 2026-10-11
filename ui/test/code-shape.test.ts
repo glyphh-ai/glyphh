@@ -28,3 +28,21 @@ it("gives every component its folder, its own file and its own styles", () => {
   }));
   expect(missing).toEqual([]);
 });
+
+it("keeps every function and component under 40 lines (tests excepted)", async () => {
+  const ts = await import("typescript");
+  const big: string[] = [];
+  for (const file of files(SRC).filter((f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f) && !f.endsWith(".d.ts"))) {
+    const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
+    const visit = (node: import("typescript").Node): void => {
+      if (ts.isFunctionLike(node) && "body" in node && node.body) {
+        const start = source.getLineAndCharacterOfPosition(node.getStart()).line;
+        const end = source.getLineAndCharacterOfPosition(node.getEnd()).line;
+        if (end - start + 1 > 40) big.push(`${file.replace(SRC, "")}:${start + 1}`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  expect(big).toEqual([]);
+});
