@@ -50,7 +50,7 @@ erDiagram
     powers {
         uuid id PK
         uuid org_id FK
-        uuid user_id FK "null = installed by the org, for everyone"
+        uuid user_id FK "null = the org's; a model never has one, a connection always does"
         text kind "model, connection, folder, skill, task, plugin"
         text name "unique for its owner"
         jsonb config "what the kind needs: a provider and model id, an MCP server, a path, ..."
@@ -135,7 +135,13 @@ The profile is the user's first name, last name, email and profile image. The em
 
 ## Powers
 
-Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. A user installs a power for themselves, or the org installs it for everyone (`user_id` null). That is the only control: Glyphh governs nothing else.
+Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. Who installed it is the only control; Glyphh governs nothing else:
+
+- **Models are the org's:** an org admin adds them, for everyone in the org.
+- **Connections are a user's:** always one person's own account (Pipedream accounts belong to a person; there are no shared or system accounts).
+- **Folders, skills, tasks and plugins** are installed by a user for themselves, or by the org for everyone (`user_id` null).
+
+The database enforces the first two: a model power has no `user_id`, a connection power always has one.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is an account reached as an MCP server, with its sign-in. Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
