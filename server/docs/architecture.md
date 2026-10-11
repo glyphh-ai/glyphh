@@ -12,7 +12,7 @@ flowchart TB
 
 ### Server
 
-A single-deployment, multi-tenant cloud SaaS. There is no separate platform: no console product.
+A single-deployment, multi-tenant cloud SaaS.
 
 - **Language and framework:** Python 3.12+, FastAPI, Pydantic v2, async throughout.
 - **Shape:** one deployment for every tenant, run as two or more stateless processes behind a load balancer.
