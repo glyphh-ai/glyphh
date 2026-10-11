@@ -27,9 +27,11 @@ erDiagram
     machines ||--o{ folders : "holds"
     machines ||--o{ fence_events : "reports"
     super_powers ||--o{ fence_events : "tried"
+    runs ||--o{ fence_events : "during"
     users ||--o{ tool_permissions : "sets"
     orgs ||--o{ powers : "holds"
-    users ||--o{ powers : "installs for themselves"
+    users ||--o{ powers : "owns"
+    users ||--o{ super_powers : "owns"
     orgs ||--o{ super_powers : "has"
     super_powers ||--o{ grants : "is granted"
     powers ||--o{ grants : "granted as"
@@ -150,7 +152,7 @@ erDiagram
         uuid id PK
         uuid user_id FK "whose setting it is"
         uuid power_id FK "the power whose tool it is: a connection, a plugin, ...; null = one of rrotor's own built-in tools"
-        text tool "the tool's name; unique per power and super power"
+        text tool "the tool's name; unique per user, power (or built-in), tool and super power"
         uuid super_power_id FK "null = the user's own setting; set = that super power's override, for its autonomous runs"
         text permission "allow, ask, deny (an override is allow or deny)"
         timestamptz created_at
@@ -282,6 +284,7 @@ erDiagram
         uuid schedule_id FK "null = started by hand, or by an agent"
         uuid machine_id FK "where it ran"
         text trigger "schedule, manual, agent"
+        text mode "driven (the member is at it: ask asks) or autonomous (nobody is: ask is refused)"
         text status "queued, running, succeeded, failed, canceled, missed"
         text error "the reason, when it did not succeed"
         jsonb result "what it returned, kept small"
@@ -480,6 +483,12 @@ erDiagram
 
 ![The data model](img/data-model.png)
 
+## orgs
+
+Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
+
+**For now an org is for billing and for limiting models and connections:** its plan, subscription, seats, machines and credits, who is in it (members and invites), and which models and connections its users may add (below). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+
 ## plans
 
 What an org pays per seat each month, and how many seats it may have (`max_seats`).
@@ -506,13 +515,17 @@ The plans carried over from the old server:
 
 An org that already has its included machines plus its extras cannot register another: signing in from one more machine is refused with the reason (on Free: "Free includes 2 machines. Upgrade, or remove one."), and nothing is half registered.
 
-Left behind from the old server: the margin and the dollar pool, the rate limits, the SSO and governance flags, the price history, and the machine terms. Glyphh governs nothing: limits and access belong to an AI gateway the customer puts in front of their models.
+Left behind from the old server: the margin and the dollar pool, the rate limits, the SSO and governance flags, the price history, and the machine terms. Beyond which models and connections users may add, Glyphh governs nothing: spend and rate limits belong to an AI gateway the customer puts in front of their models.
 
-## orgs
+## users
 
-Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
+A user belongs to one org and has one role in it:
 
-**For now an org is for billing and for limiting models and connections:** its plan, subscription, seats, machines and credits, who is in it (members and invites), and which models and connections its users may add (below). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+- `super_admin`: runs Glyphh. Only users of the parent org.
+- `org_admin`: runs their org's billing and members, and sees its usage.
+- `user`: works in their org.
+
+The profile is the user's first name, last name, email and profile image. A Google or GitHub sign-in finds the user by the provider's own id for them (below, Signing in), never by email alone. A user is in at most one team (`team_id`).
 
 ## Teams: limiting models and connections
 
@@ -527,29 +540,27 @@ The org's Models and Connections pages exist only to say which models and connec
 
 **A limit set later disables what it leaves out.** A model or connection a user already has stops working the moment a limit leaves it out: the database marks it disabled with the reason, rrotor is never handed it, and its calls are refused. A disabled power can only be deleted, never edited. When the limit no longer leaves it out (the item is allowed again, or the limit is turned off), it comes back on its own: the mark is cleared and everything hanging off it works as before (its grants, tool permissions, slots, schedules, key and account), with nothing for the user to redo.
 
-## Tool permissions
+## Invites
 
-Every tool a power brings (each tool of a connection, of a plugin's MCP server, ...) has a permission, set where the app shows that power (the powers window, Connections):
+An org admin invites someone by email, with the role they will have. The invite link carries a token (only its hash is kept) and expires; signing in with Google or GitHub from it, as that email, makes the user in the org, and the invite is accepted. An open invite holds a seat, so an org at `max_seats` cannot invite more; an accepted one becomes a billed seat, and a revoked or expired one frees its seat. Only one open invite per email per org.
 
-- **The user's own setting:** `allow` (runs without asking), `ask` (asks each time) or `deny` (never runs). A tool with no row is `ask`.
-- **A super power's override:** for its autonomous runs, a super power can set a tool to `allow` or `deny`, whatever the user's own setting says. With no override, the user's own setting applies.
-- **Autonomous means nobody to ask:** in a run nobody is watching, `ask` is refused, so an autonomous super power uses only tools that are allowed, by the user or by its override.
-- **rrotor's own tools** (its ~250 built-in tools) have permissions too: a row with no power is a built-in tool's.
-- **Where it is enforced:** a connection call at the server's relay, which every connection call passes through, so it holds even against a modified rrotor; every other tool in rrotor, which hands the loop only what is allowed.
+## Signing in
 
-## users
+- **sign_in_identities:** a person signs in with Google or GitHub, and the server finds them by the provider's own id for them (`subject`), never by email alone: an email that changes, or a GitHub account with a hidden email, still finds the same person, and an email can never be used to reach someone else's account. The first sign-in links by email, once, through an invite or a new org.
+- **The plugin signs in with OAuth:** an agent host (Claude Code, Cursor, ChatGPT) is an `oauth_clients` row; the member approves it in the browser, the host gets a one-time code (`oauth_codes`, with PKCE, a minute to live), and trades it for tokens issued to that client, so the member can see and revoke each host on its own.
+- **key_links:** the one-time link an agent hands the member to enter a model's key on the platform. It works once, for minutes, only for that member signed in, and only for that model.
 
-A user belongs to one org and has one role in it:
+## tokens
 
-- `super_admin`: runs Glyphh. Only users of the parent org.
-- `org_admin`: runs their org's billing and members, and sees its usage.
-- `user`: works in their org.
+What the server hands out after a sign-in: a short-lived access token and a longer-lived refresh token. Only their hashes are stored, so a stolen database holds no usable token. A token is revoked by setting `revoked_at`.
 
-The profile is the user's first name, last name, email and profile image. The email is how a Google or GitHub sign-in finds the user.
+A token issued to an agent host carries its OAuth client (`oauth_client_id`), so each host is revoked on its own; the app's and the platform's tokens carry none. Machines have their own token on `machines`, not here.
+
+**api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 
 ## Powers
 
-Everything a super power uses is a power: a model, a connection, a folder, a skill, a task or a plugin. Who installed it is the control, with one more: the org and its teams may limit which models and connections can be added (above). Glyphh governs nothing else:
+Everything a super power uses is a power: a model, a connection, a folder, a skill, a task, a plugin, or the loop that runs it. Who installed it is the control, with one more: the org and its teams may limit which models and connections can be added (above). Glyphh governs nothing else:
 
 - **Models are a user's:** each person adds their own, with their own key. Nothing is shared or deduplicated: ten people adding the same model are ten rows, each with its own key, and one person may add the same model more than once (one per super power, say, to see each one's spend at the provider).
 - **Connections are a user's:** always one person's own account (Pipedream accounts belong to a person; there are no shared or system accounts).
@@ -561,15 +572,31 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
+- **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
+- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version is still open.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
-- **The catalog** is what the app and the platform show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across 130 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
+- **The catalog** is what the app and the platform show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
+
+Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
+
+## Tool permissions
+
+Every tool a power brings (each tool of a connection, of a plugin's MCP server, ...) has a permission, set where the app shows that power (the powers window, Connections):
+
+- **The user's own setting:** `allow` (runs without asking), `ask` (asks each time) or `deny` (never runs). A tool with no row is `ask`.
+- **A super power's override:** for its autonomous runs, a super power can set a tool to `allow` or `deny`, whatever the user's own setting says. With no override, the user's own setting applies.
+- **Autonomous means nobody to ask:** in a run nobody is watching, `ask` is refused, so an autonomous super power uses only tools that are allowed, by the user or by its override.
+- **rrotor's own tools** (its ~250 built-in tools) have permissions too: a row with no power is a built-in tool's.
+- **Where it is enforced:** a connection call at the server's relay, which every connection call passes through, so it holds even against a modified rrotor; every other tool in rrotor, which hands the loop only what is allowed.
 
 ## Super powers
 
 Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): the CLI or rrotor's own engine that runs it. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
+
+A super power's own files (its workflows, pipelines and screens) are a bundle in object storage (`bundle_key`); `definition` holds the rrotor definition, still to be drawn. What it stores (its data, vectors and graph) lives in rrotor, never here. Where the content of its conversations lives is still open.
 
 ## Slots
 
@@ -581,12 +608,21 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 
 - **schedules:** what runs, on which of the member's machines, a five-field cron read in its own time zone, and the input each run is handed. Switched off with `enabled`, never deleted to pause.
 - **The clock is the server's.** When a schedule is due, the server sends the run to its machine over the machine's connection. A machine that is offline at that moment gets the run marked `missed`, with the reason: nothing piles up and fires later in a burst.
+- **A run is driven or autonomous** (`mode`): driven when the member is at it, so a tool set to `ask` asks them; autonomous when nobody is (a schedule, an agent), so `ask` is refused.
 - **runs** is the history: every run, whether the clock, the member or an agent started it, with its status, its error, a small result and its full log (in object storage). A schedule's history is its runs. A run's connection calls are its usage events, so a run shows what it cost.
 - **Who sees what:** as for usage. A user sees their own runs, an org admin the org's.
 
-**api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
+## Machines
 
-Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
+Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (on a server, or inside the desktop app) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
+
+A machine is a registered rrotor, a small Linux VM: a member's desktop (the app runs it) or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+
+**machine_connections** says which server process holds each connected machine's connection, so a request landing on another process is sent to the right one (Postgres notifications carry it across; no Redis). A row not heard from within its heartbeat is treated as gone.
+
+**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform shows them ("this super power tried to leave its folders").
+
+A machine's shell over SSH is off until the member turns it on (`shell_enabled`).
 
 ## Billing and usage
 
@@ -623,44 +659,20 @@ The same rows serve every view, scoped by the principal:
 - **An org admin** sees every call in the org, by user, by connector, by super power, by machine and by day, and the ledger.
 - **A super admin** sees every org, and what Glyphh owes Pipedream for it: the same credits, at Pipedream's price.
 
-## Invites
+## Stripe
 
-An org admin invites someone by email, with the role they will have. The invite link carries a token (only its hash is kept) and expires; signing in with Google or GitHub from it, as that email, makes the user in the org, and the invite is accepted. An open invite holds a seat, so an org at `max_seats` cannot invite more; an accepted one becomes a billed seat, and a revoked or expired one frees its seat. Only one open invite per email per org.
-
-## Machines
-
-Signing in always happens from a machine, and signing in is how a machine is registered: rrotor (the CLI or the desktop) asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
-
-A machine is a registered rrotor: a member's desktop or a remote server they run, on any host. It connects out to the server with its own token (only the hash is kept) and reports what it is: a desktop or a remote server, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. Its edition says what it can host: a desktop's rrotor is lite (no pgvector, no Neo4j), a remote one is full, so a super power that needs vectors or a graph is never placed or scheduled on a lite machine. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
+**stripe_events** records every Stripe webhook by Stripe's own event id, so an event delivered twice is handled once: a credit pack is never added twice and a seat change never applied twice.
 
 ## Limits are enforced by the database
 
-Every plan limit (seats, machines, credits) holds even when requests race or code has a bug:
+Every limit (seats, machines, credits, and the org's and teams' allowed models and connections) holds even when requests race or code has a bug:
 
-- **The database enforces it.** A trigger refuses a write that would take an org over its limit: a machine past its included plus extra machines, a user or invite past its seats. A bug in a route cannot get around it.
+- **The database enforces it.** A trigger refuses a write that would take an org over its limit: a machine past its included plus extra machines, a user or invite past its seats, a model or connection outside the user's allowed lists. Credits are checked by the connection relay under the same org lock. A bug in a route cannot get around it.
 - **No races.** The check locks the org's row before counting, so requests at the same moment are taken one after another; exactly one gets the last place, and the rest are refused with the reason.
 - **Freed at once:** a revoked machine, a removed user, a revoked or expired invite stops counting immediately.
 - **Downgrades never cut anyone off:** an org over its new plan's limit keeps what it has and cannot add more until it is back under.
 - **Tested for each limit:** the limit, the refusal and its message, freeing a place, the downgrade rule, and concurrent requests racing for the last place.
 
-**machine_connections** says which server process holds each connected machine's connection, so a request landing on another process is sent to the right one (Postgres notifications carry it across; no Redis). A row not heard from within its heartbeat is treated as gone.
-
-**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform shows them ("this super power tried to leave its folders").
-
 ## Scoping
 
-Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data.
-
-## tokens
-
-What the server hands out after a sign-in: a short-lived access token and a longer-lived refresh token. Only their hashes are stored, so a stolen database holds no usable token. A token is revoked by setting `revoked_at`.
-
-## Signing in
-
-- **sign_in_identities:** a person signs in with Google or GitHub, and the server finds them by the provider's own id for them (`subject`), never by email alone: an email that changes, or a GitHub account with a hidden email, still finds the same person, and an email can never be used to reach someone else's account. The first sign-in links by email, once, through an invite or a new org.
-- **The plugin signs in with OAuth:** an agent host (Claude Code, Cursor, ChatGPT) is an `oauth_clients` row; the member approves it in the browser, the host gets a one-time code (`oauth_codes`, with PKCE, a minute to live), and trades it for tokens issued to that client, so the member can see and revoke each host on its own.
-- **key_links:** the one-time link an agent hands the member to enter a model's key on the platform. It works once, for minutes, only for that member signed in, and only for that model.
-
-## Stripe
-
-**stripe_events** records every Stripe webhook by Stripe's own event id, so an event delivered twice is handled once: a credit pack is never added twice and a seat change never applied twice.
+Every API call and MCP tool runs as a principal: the user, their org and their role. The role decides what an operation allows and the org decides which rows it sees. Row level security in Postgres enforces the org under the code, so a bug in a query cannot reach another org's data. Inside an org, powers, super powers, machines, runs and usage are each one user's: a user reaches only their own, an org admin reads the org's usage and runs (never its keys), a super admin every org's.

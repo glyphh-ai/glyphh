@@ -29,6 +29,7 @@ On the [architecture](architecture.md): rrotor as a Linux VM (the app you drive 
 Decisions still to make. Where a proposal is written, it is a proposal, not a decision.
 
 - **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and the app and web open them over SSH through the relay.
+- **Where the org admin's pages live:** members, teams, and the allowed models and connections, in the app or on the platform.
 - **App settings** (workspaces, tabs, layout, appearance): not drawn; on hold.
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens reach the app and the web from a remote machine.
 - **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.
