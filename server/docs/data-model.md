@@ -8,7 +8,7 @@ erDiagram
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
     users ||--o{ tokens : "signs in with"
-    orgs ||--o{ powers : "installs for everyone"
+    orgs ||--o{ powers : "holds"
     users ||--o{ powers : "installs for themselves"
     orgs ||--o{ super_powers : "has"
     super_powers ||--o{ grants : "is granted"
