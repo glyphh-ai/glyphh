@@ -14,6 +14,9 @@ flowchart TB
 
 A single-deployment, multi-tenant cloud SaaS, headless first: every capability is an API (OpenAPI) and an MCP tool before it is any screen, with the same permission checks behind both.
 
+- **API:** REST with OpenAPI over one service layer; Server-Sent Events where results stream (model output, long jobs, live updates).
+- **MCP:** the Streamable HTTP transport on one `/mcp` endpoint, stateless so any process answers any call. Its tools are generated from the same service layer and curated to task-sized tools, not one per endpoint.
+
 - **Language and framework:** Python 3.12+, FastAPI, Pydantic v2, async throughout.
 - **Shape:** one deployment for every tenant, run as two or more stateless processes behind a load balancer.
 
