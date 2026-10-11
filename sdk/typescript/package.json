@@ -1,0 +1,33 @@
+{
+  "name": "@glyphh-ai/sdk",
+  "version": "0.1.0",
+  "description": "The Glyphh SDK for TypeScript",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,57 @@
+# The SDK suites, in Docker, against the real server built from the sibling checkout.
+name: glyphh-sdk
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: glyphh
+      POSTGRES_PASSWORD: glyphh
+      POSTGRES_DB: glyphh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphh -d glyphh"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  server:
+    build:
+      context: ${GLYPHH_SERVER_DIR:-../server}
+      target: runtime
+    environment:
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/health')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  test-typescript:
+    image: node:22-slim
+    working_dir: /sdk
+    volumes:
+      - ./sdk/typescript:/sdk
+      - /sdk/node_modules
+    environment:
+      GLYPHH_URL: http://server:8080
+    command: sh -c "npm ci --silent && npx tsc --noEmit && npx vitest run --coverage"
+    depends_on:
+      server:
+        condition: service_healthy
+
+  test-python:
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    working_dir: /sdk
+    volumes:
+      - ./sdk/python:/sdk
+      - /sdk/.venv
+    environment:
+      GLYPHH_URL: http://server:8080
+      UV_LINK_MODE: copy
+    command: sh -c "uv sync -q && uv run ruff check . && uv run pytest -q"
+    depends_on:
+      server:
+        condition: service_healthy
