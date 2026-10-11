@@ -7,6 +7,7 @@ from glyphh._calls import DISCONNECT_HOST, HEALTH, LIST_HOSTS, ME, Call, answer
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._models import Health, Host, Me
+from glyphh._org import AsyncOrg, Org
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
@@ -25,6 +26,7 @@ class Glyphh:
         self, base_url: str | None = None, *, token: str | None = None, transport: httpx.BaseTransport | None = None
     ) -> None:
         self._client = _client(base_url, token, transport)
+        self.org = Org(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -60,6 +62,7 @@ class AsyncGlyphh:
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._client = _client(base_url, token, transport)
+        self.org = AsyncOrg(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

@@ -5,6 +5,19 @@ export type ClientOptions = {
 };
 
 /**
+ * CreatedInvite
+ */
+export type CreatedInvite = {
+    invite: InviteView;
+    /**
+     * Link
+     *
+     * The link to send the person: shown once, never stored
+     */
+    link: string;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -48,6 +61,28 @@ export type Host = {
      * Name
      */
     name: string;
+};
+
+/**
+ * InviteView
+ */
+export type InviteView = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Role
+     */
+    role: string;
 };
 
 /**
@@ -97,6 +132,106 @@ export type MeOrg = {
      * Plan
      */
     plan: string;
+};
+
+/**
+ * Member
+ */
+export type Member = {
+    /**
+     * Disabled
+     */
+    disabled: boolean;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * First Name
+     */
+    first_name: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Joined At
+     */
+    joined_at: string;
+    /**
+     * Last Name
+     */
+    last_name: string | null;
+    /**
+     * Role
+     */
+    role: string;
+};
+
+/**
+ * MemberChange
+ */
+export type MemberChange = {
+    /**
+     * Disabled
+     */
+    disabled?: boolean | null;
+    /**
+     * Role
+     */
+    role?: 'org_admin' | 'user' | null;
+};
+
+/**
+ * NewInvite
+ */
+export type NewInvite = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Role
+     */
+    role?: 'org_admin' | 'user';
+};
+
+/**
+ * OrgView
+ */
+export type OrgView = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Max Seats
+     *
+     * null = no limit
+     */
+    max_seats: number | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Plan
+     */
+    plan: string;
+    /**
+     * Seats Taken
+     */
+    seats_taken: number;
+};
+
+/**
+ * RenameOrg
+ */
+export type RenameOrg = {
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -206,3 +341,195 @@ export type DisconnectHostResponses = {
 };
 
 export type DisconnectHostResponse = DisconnectHostResponses[keyof DisconnectHostResponses];
+
+export type GetOrgData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org';
+};
+
+export type GetOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgView;
+};
+
+export type GetOrgResponse = GetOrgResponses[keyof GetOrgResponses];
+
+export type RenameOrgData = {
+    body: RenameOrg;
+    path?: never;
+    query?: never;
+    url: '/v1/org';
+};
+
+export type RenameOrgErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RenameOrgError = RenameOrgErrors[keyof RenameOrgErrors];
+
+export type RenameOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgView;
+};
+
+export type RenameOrgResponse = RenameOrgResponses[keyof RenameOrgResponses];
+
+export type ListInvitesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/invites';
+};
+
+export type ListInvitesResponses = {
+    /**
+     * Response Listinvites
+     *
+     * Successful Response
+     */
+    200: Array<InviteView>;
+};
+
+export type ListInvitesResponse = ListInvitesResponses[keyof ListInvitesResponses];
+
+export type CreateInviteData = {
+    body: NewInvite;
+    path?: never;
+    query?: never;
+    url: '/v1/org/invites';
+};
+
+export type CreateInviteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateInviteError = CreateInviteErrors[keyof CreateInviteErrors];
+
+export type CreateInviteResponses = {
+    /**
+     * Successful Response
+     */
+    201: CreatedInvite;
+};
+
+export type CreateInviteResponse = CreateInviteResponses[keyof CreateInviteResponses];
+
+export type RevokeInviteData = {
+    body?: never;
+    path: {
+        /**
+         * Invite Id
+         */
+        invite_id: string;
+    };
+    query?: never;
+    url: '/v1/org/invites/{invite_id}';
+};
+
+export type RevokeInviteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeInviteError = RevokeInviteErrors[keyof RevokeInviteErrors];
+
+export type RevokeInviteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RevokeInviteResponse = RevokeInviteResponses[keyof RevokeInviteResponses];
+
+export type ListMembersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/members';
+};
+
+export type ListMembersResponses = {
+    /**
+     * Response Listmembers
+     *
+     * Successful Response
+     */
+    200: Array<Member>;
+};
+
+export type ListMembersResponse = ListMembersResponses[keyof ListMembersResponses];
+
+export type RemoveMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Member Id
+         */
+        member_id: string;
+    };
+    query?: never;
+    url: '/v1/org/members/{member_id}';
+};
+
+export type RemoveMemberErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveMemberError = RemoveMemberErrors[keyof RemoveMemberErrors];
+
+export type RemoveMemberResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RemoveMemberResponse = RemoveMemberResponses[keyof RemoveMemberResponses];
+
+export type UpdateMemberData = {
+    body: MemberChange;
+    path: {
+        /**
+         * Member Id
+         */
+        member_id: string;
+    };
+    query?: never;
+    url: '/v1/org/members/{member_id}';
+};
+
+export type UpdateMemberErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateMemberError = UpdateMemberErrors[keyof UpdateMemberErrors];
+
+export type UpdateMemberResponses = {
+    /**
+     * Successful Response
+     */
+    200: Member;
+};
+
+export type UpdateMemberResponse = UpdateMemberResponses[keyof UpdateMemberResponses];

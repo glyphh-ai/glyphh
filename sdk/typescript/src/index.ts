@@ -2,9 +2,11 @@ import { type Client, createClient } from "./gen/client/index.js";
 import { disconnectHost, health, listHosts, me } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg } from "./gen/types.gen.js";
 import { GlyphhError, unwrap } from "./errors.js";
+import { OrgApi } from "./org.js";
 
 export type { Health, Host, Me, MeOrg };
-export { GlyphhError };
+export { GlyphhError, OrgApi };
+export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 
 export interface GlyphhOptions {
   /** The Glyphh server, e.g. http://localhost:8080. Falls back to the GLYPHH_URL environment variable. */
@@ -24,6 +26,8 @@ function resolveBaseUrl(baseUrl: string | undefined): string {
 /** The Glyphh SDK. Every server capability is a method here first. */
 export class Glyphh {
   readonly #client: Client;
+  /** My org: plan and seats, members, invites. */
+  readonly org: OrgApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -32,6 +36,7 @@ export class Glyphh {
       fetch: options.fetch,
       headers: token ? { authorization: `Bearer ${token}` } : undefined,
     });
+    this.org = new OrgApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

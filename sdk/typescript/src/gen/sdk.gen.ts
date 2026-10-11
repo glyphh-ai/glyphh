@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, HealthData, HealthResponses, ListHostsData, ListHostsResponses, MeData, MeResponses } from './types.gen.js';
+import type { CreateInviteData, CreateInviteErrors, CreateInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, ListHostsData, ListHostsResponses, ListInvitesData, ListInvitesResponses, ListMembersData, ListMembersResponses, MeData, MeResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -41,3 +41,64 @@ export const listHosts = <ThrowOnError extends boolean = false>(options?: Option
  * Disconnect one host: its tokens stop working at once; the others are untouched.
  */
 export const disconnectHost = <ThrowOnError extends boolean = false>(options: Options<DisconnectHostData, ThrowOnError>): RequestResult<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError> => (options.client ?? client).delete<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError>({ url: '/v1/me/hosts/{host_id}', ...options });
+
+/**
+ * Get Org
+ */
+export const getOrg = <ThrowOnError extends boolean = false>(options?: Options<GetOrgData, ThrowOnError>): RequestResult<GetOrgResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetOrgResponses, unknown, ThrowOnError>({ url: '/v1/org', ...options });
+
+/**
+ * Rename Org
+ */
+export const renameOrg = <ThrowOnError extends boolean = false>(options: Options<RenameOrgData, ThrowOnError>): RequestResult<RenameOrgResponses, RenameOrgErrors, ThrowOnError> => (options.client ?? client).patch<RenameOrgResponses, RenameOrgErrors, ThrowOnError>({
+    url: '/v1/org',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Invites
+ */
+export const listInvites = <ThrowOnError extends boolean = false>(options?: Options<ListInvitesData, ThrowOnError>): RequestResult<ListInvitesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListInvitesResponses, unknown, ThrowOnError>({ url: '/v1/org/invites', ...options });
+
+/**
+ * Create Invite
+ */
+export const createInvite = <ThrowOnError extends boolean = false>(options: Options<CreateInviteData, ThrowOnError>): RequestResult<CreateInviteResponses, CreateInviteErrors, ThrowOnError> => (options.client ?? client).post<CreateInviteResponses, CreateInviteErrors, ThrowOnError>({
+    url: '/v1/org/invites',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke Invite
+ */
+export const revokeInvite = <ThrowOnError extends boolean = false>(options: Options<RevokeInviteData, ThrowOnError>): RequestResult<RevokeInviteResponses, RevokeInviteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeInviteResponses, RevokeInviteErrors, ThrowOnError>({ url: '/v1/org/invites/{invite_id}', ...options });
+
+/**
+ * List Members
+ */
+export const listMembers = <ThrowOnError extends boolean = false>(options?: Options<ListMembersData, ThrowOnError>): RequestResult<ListMembersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListMembersResponses, unknown, ThrowOnError>({ url: '/v1/org/members', ...options });
+
+/**
+ * Remove Member
+ */
+export const removeMember = <ThrowOnError extends boolean = false>(options: Options<RemoveMemberData, ThrowOnError>): RequestResult<RemoveMemberResponses, RemoveMemberErrors, ThrowOnError> => (options.client ?? client).delete<RemoveMemberResponses, RemoveMemberErrors, ThrowOnError>({ url: '/v1/org/members/{member_id}', ...options });
+
+/**
+ * Update Member
+ */
+export const updateMember = <ThrowOnError extends boolean = false>(options: Options<UpdateMemberData, ThrowOnError>): RequestResult<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError>({
+    url: '/v1/org/members/{member_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
