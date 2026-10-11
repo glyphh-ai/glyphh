@@ -11,14 +11,16 @@ erDiagram
     orgs ||--o{ powers : "installs for everyone"
     users ||--o{ powers : "installs for themselves"
     orgs ||--o{ super_powers : "has"
-    super_powers ||--o{ super_power_powers : "uses"
-    powers ||--o{ super_power_powers : "used by"
+    super_powers ||--o{ grants : "is granted"
+    powers ||--o{ grants : "granted as"
+    machines ||--o{ grants : "granted as"
     powers ||--o| models : "is a"
     powers ||--o| connections : "is a"
     powers ||--o| folders : "is a"
     powers ||--o| skills : "is a"
     powers ||--o| tasks : "is a"
     powers ||--o| plugins : "is a"
+    powers ||--o| loops : "is a"
     orgs ||--o{ api_keys : "issues"
     orgs ||--o| subscriptions : "pays through"
     plans ||--o{ subscriptions : "sold as"
@@ -68,7 +70,7 @@ erDiagram
         uuid id PK
         uuid org_id FK
         uuid user_id FK "null = the org's; a model never has one, a connection always does"
-        text kind "model, connection, folder, skill, task, plugin"
+        text kind "model, connection, folder, skill, task, plugin, loop"
         text name "unique for its owner"
         timestamptz created_at
         timestamptz updated_at
@@ -109,22 +111,29 @@ erDiagram
         text bundle_key "its files, in object storage"
     }
 
+    loops {
+        uuid power_id PK, FK
+        text engine "claude, codex, gemini, ..., or rrotor's own"
+    }
+
     super_powers {
         uuid id PK
         uuid org_id FK
         uuid user_id FK "null = installed by the org, for everyone"
         text name "unique for its owner"
-        text loop "the CLI, or rrotor's own"
+        bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         jsonb definition "the rrotor definition, still to be drawn"
         timestamptz created_at
         timestamptz updated_at
     }
 
-    super_power_powers {
+    grants {
         uuid id PK
-        uuid super_power_id FK
-        uuid power_id FK "a power it uses, or"
-        uuid uses_super_power_id FK "another super power it calls (exactly one of the two)"
+        uuid super_power_id FK "the super power granted it"
+        uuid power_id FK "a power: folder, connection, loop, model, skill, task, plugin; or"
+        uuid machine_id FK "a machine it may run on; or"
+        uuid granted_super_power_id FK "a super power it may call (exactly one of the three)"
+        timestamptz created_at
     }
 
     subscriptions {
@@ -272,7 +281,7 @@ Everything a super power uses is a power: a model, a connection, a folder, a ski
 
 The database enforces the first two: a model power has no `user_id`, a connection power always has one.
 
-Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks` or `plugins`. A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
+Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power: a CLI, or rrotor's own). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the app and the account id. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, app and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
@@ -281,7 +290,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 ## Super powers
 
-A super power is a loop (a CLI, or rrotor's own), its rrotor definition, and the powers it uses, which can include other super powers. Like a power, it is installed by a user or by the org.
+Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a loop, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. Like a power, a super power is installed by a user or by the org.
 
 **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart.
 

@@ -45,12 +45,12 @@ Connections are the moat. A super power declares the connections it needs by nam
 - **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription or key. Glyphh never sees it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
 
-### Two ways a super power runs
+### Glyphh and the super powers under it
 
-- **Interactive (the member is driving):** the CLI gets every power and every super power the member has. The person is in the loop and approves what happens, so they have complete control.
-- **Autonomous (a schedule, a trigger, nobody watching):** it gets nothing but what its builder granted: exactly its listed powers (`super_power_powers`) and the base tools it declares, nothing else of the member's.
+- **Glyphh, the super agent, has everything:** every power, every super power and every machine the member has. There is one per member, and it is what the member drives.
+- **Every other super power sits under Glyphh and has only what it is granted:** its folders, connections, machines, loops, models, skills, tasks, plugins and the other super powers it may call. Nothing else of the member's, whether or not anyone is watching.
 
-The builder sets those limits: skills and tools to create a super power, add and remove its powers, pick its base tools and test-run it. Every builder step is a server operation, so it is an API call and an MCP tool too, and a member can build a super power by talking to their CLI. Ported from the old app's super power and power builders.
+The builder sets the grants: skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Every builder step is a server operation, so it is an API call and an MCP tool too, and a member can build a super power by talking to Glyphh. Ported from the old app's super power and power builders.
 
 ### Runtime hosting
 
