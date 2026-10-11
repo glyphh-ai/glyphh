@@ -6,6 +6,8 @@ flowchart TB
     App
     Machines
     Runtime["rrotor (runtime)"] --> SDK --> Server
+    Runtime --> Loop["CLI or model"] --> Provider
+    Runtime --> Connector --> Server
 ```
 
 ## Decided
@@ -37,6 +39,11 @@ Glyphh is a model runtime, not a gateway, and it governs nothing: limits, access
 ### Connections
 
 Connections are the moat. A super power declares the connections it needs by name; only Glyphh's connections are used: an MCP server with its sign-in, added in Glyphh, encrypted and never returned. Whichever loop runs the super power (Claude Code, Codex or rrotor's own), rrotor hands it exactly those connections and nothing of the loop's own (for Claude Code, `--mcp-config` with `--strict-mcp-config`).
+
+### Paths
+
+- **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription or key. Glyphh never sees it.
+- **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
 
 ### Runtime hosting
 
