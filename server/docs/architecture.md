@@ -50,7 +50,7 @@ Connections are the moat. A super power declares the connections it needs by nam
 - **Glyphh, the super agent, has everything:** every power, every super power and every machine the member has. There is one per member, and it is what the member drives.
 - **Every other super power sits under Glyphh and has only what it is granted:** its folders, connections, machines, loops, models, skills, tasks, plugins and the other super powers it may call. Nothing else of the member's, whether or not anyone is watching.
 
-The builder sets the grants: skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Every builder step is a server operation, so it is an API call and an MCP tool too, and a member can build a super power by talking to Glyphh. Ported from the old app's super power and power builders.
+Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in the app's editor. Ported from the old app's super power and power builders.
 
 ### Runtime hosting
 
