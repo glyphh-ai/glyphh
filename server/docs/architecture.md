@@ -25,7 +25,7 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 ### Interfaces
 
-Two ways in, one per surface, both in the public `glyphh-ai/glyphh` repo. Neither carries logic of its own: same accounts, permission checks and tenant rules as the server.
+Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for now, public later). Neither carries logic of its own: same accounts, permission checks and tenant rules as the server.
 
 - **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the app on desktop, web and mobile, and the CLI), Python second.
 - **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, plus skills that teach the agent to use Glyphh's tools.
