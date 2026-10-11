@@ -65,6 +65,11 @@ flowchart TB
 - **100% test coverage is the target**, enforced in CI.
 - **Builds and deploys are automatic:** every merge to main is tested, built and deployed, and clients update themselves.
 - **Everything runs in Docker**, locally and in production.
+- **Built to be run by agents:** agents write and operate this code, so every failure is explicit and traceable:
+    - **Errors have codes.** Every refusal is a `GlyphhError` with a stable code (`E_INVALID`, `E_UNAUTHORIZED`, `E_FORBIDDEN`, `E_NOT_FOUND`, `E_CONFLICT`, `E_UNAVAILABLE`), answered in one shape: `{"error": {"code", "message", "trace_id"}}`, and as an MCP tool error carrying the same code and trace id.
+    - **Crashes fail closed.** Anything else is caught at the edge (the request's outermost layer, and the guard around every MCP tool), logged with its traceback, and answered only `E_INTERNAL` with the trace id: never the crash's own message, never a half-done success.
+    - **Everything is traceable.** Every request and tool call has a trace id (a caller's own `x-request-id` when it is safe, else a new one), echoed on the response, and every log line is one JSON object carrying it, the user and the org.
+    - **Nothing is large.** CI fails a source file over 200 lines, a function over 40 or a class over 120 (`tests/test_code_shape.py`).
 
 ### Server
 
