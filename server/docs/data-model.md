@@ -169,7 +169,7 @@ erDiagram
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid model_id FK "the one model it runs on, from its owner's models; null = the loop's own (a CLI on its subscription)"
-        jsonb definition "the rrotor definition, still to be drawn"
+        jsonb definition "the rrotor definition (its workflows, pipelines and screens), still to be drawn; its data lives in rrotor"
         timestamptz created_at
         timestamptz updated_at
     }

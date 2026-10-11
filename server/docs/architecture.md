@@ -68,6 +68,23 @@ The API behind them is three operations, also MCP tools so an agent can answer "
 
 Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in the app's editor. Ported from the old app's super power and power builders.
 
+### What a super power can be
+
+- **Workflows and data pipelines:** what the power types (tasks and the rest) are today. They run on their own, by hand or on a schedule.
+- **Screens:** a super power can have a UI of its own, not only a chat.
+
+### What rrotor carries
+
+Everything a super power needs to run, on the member's own machine:
+
+- **Postgres with pgvector:** a super power's own data and its vectors. The server's Postgres has no pgvector; vectors live only in rrotor.
+- **A Next.js server:** serves a super power's screens.
+- **The loop:** the CLI or rrotor's own, with the super power's model and powers.
+
+A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
+
+Still to draw with the rrotor definition: how a super power's data is kept apart from another's in that Postgres, and how its screens reach the app and the web when the machine is remote.
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: their desktop, or a remote server on any infrastructure (Fly.io, Railway, Render, AWS, a VPS).
