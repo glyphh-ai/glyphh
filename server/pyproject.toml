@@ -41,6 +41,8 @@ addopts = "--cov=glyphh_server --cov-branch --cov-report=term-missing --cov-fail
 
 [tool.coverage.run]
 source = ["glyphh_server"]
+# SQLAlchemy's async engine switches greenlets; without this, lines resumed after one go unseen.
+concurrency = ["greenlet", "thread"]
 
 [tool.ruff]
 line-length = 120
