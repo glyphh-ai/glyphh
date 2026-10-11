@@ -31,6 +31,8 @@ erDiagram
         uuid parent_id FK "null only for Glyphh, the parent org"
         uuid plan_id FK
         text name
+        int rpm_cap "null = the plan's limit"
+        int tpm_cap "null = the plan's limit"
         timestamptz created_at
     }
 
@@ -50,6 +52,8 @@ erDiagram
         uuid id PK
         uuid org_id FK
         text name "unique within the org"
+        int rpm_cap "null = the org's limit"
+        int tpm_cap "null = the org's limit"
         timestamptz created_at
     }
 
@@ -114,6 +118,16 @@ Teams are optional. An org with no teams is flat: everything in it is shared acr
 - A user can be a member of several teams.
 - Org admins create teams and manage their members, and see every team in their org; super admins see every team everywhere.
 - A team belongs to one org, and its members are users of that org.
+
+## Caps
+
+The plan sets an org's limits. An org admin can cap the org lower, and cap each team lower still, never above what sits over it:
+
+- **Plan:** the ceiling (`rpm_limit`, `tpm_limit`).
+- **Org:** `rpm_cap`, `tpm_cap`, at or under the plan's. Null means the plan's limit.
+- **Team:** `rpm_cap`, `tpm_cap`, at or under the org's. Null means the org's limit.
+
+The limit a request runs under is the smallest that applies to it.
 
 ## Scoping
 
