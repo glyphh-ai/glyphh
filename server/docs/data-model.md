@@ -11,11 +11,9 @@ erDiagram
     teams ||--o{ team_members : "has"
     users ||--o{ team_members : "is in"
     users ||--o{ tokens : "signs in with"
-    orgs ||--o{ provider_keys : "brings"
-    teams ||--o{ provider_keys : "may scope"
+    orgs ||--o{ models : "adds"
+    teams ||--o{ models : "may scope"
     orgs ||--o{ api_keys : "issues"
-    api_keys ||--o{ requests : "made"
-    provider_keys ||--o{ requests : "paid"
 
     plans {
         uuid id PK
@@ -38,7 +36,6 @@ erDiagram
         text name
         int rpm_cap "null = the plan's limit"
         int tpm_cap "null = the plan's limit"
-        text_array models "null = every catalog model"
         timestamptz created_at
     }
 
@@ -60,7 +57,6 @@ erDiagram
         text name "unique within the org"
         int rpm_cap "null = the org's limit"
         int tpm_cap "null = the org's limit"
-        text_array models "null = the org's models"
         timestamptz created_at
     }
 
@@ -72,16 +68,19 @@ erDiagram
         timestamptz created_at
     }
 
-    provider_keys {
+    models {
         uuid id PK
         uuid org_id FK
         uuid team_id FK "null = the whole org"
-        text provider "anthropic, openai, google, ..."
-        bytea secret "encrypted; never returned"
-        text last4
+        text name "what super powers call it, unique in its scope"
+        text provider "anthropic, openai, google, fireworks, ..."
+        text model "the provider's own model id"
+        bytea api_key "encrypted; never returned"
+        text api_key_last4
+        text base_url "null = the provider's own"
         uuid created_by FK
         timestamptz created_at
-        timestamptz revoked_at
+        timestamptz updated_at
     }
 
     api_keys {
@@ -95,22 +94,6 @@ erDiagram
         timestamptz expires_at
         timestamptz last_used_at
         timestamptz revoked_at
-        timestamptz created_at
-    }
-
-    requests {
-        uuid id PK
-        uuid org_id FK
-        uuid team_id FK
-        uuid user_id FK
-        uuid api_key_id FK "null when a sign-in token made it"
-        uuid provider_key_id FK
-        text provider
-        text model
-        int status
-        int input_tokens
-        int output_tokens
-        int duration_ms
         timestamptz created_at
     }
 
@@ -131,7 +114,7 @@ erDiagram
 What an org pays and what it may do. The limits on a plan are the limits on every org on it:
 
 - `max_seats`: how many users the org may have.
-- `rpm_limit` and `tpm_limit`: the org's requests and tokens per minute through the router.
+- `rpm_limit` and `tpm_limit`: requests and tokens per minute. These were drawn for a router; with model calls going straight from the runtime to the provider, Glyphh never sees them, so what these limit (if anything) is still to be decided.
 
 `stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us). A plan that is no longer sold is set `active = false`, never deleted, so orgs on it keep working.
 
@@ -179,17 +162,15 @@ The plan sets an org's limits. An org admin can cap the org lower, and cap each 
 
 The limit a request runs under is the smallest that applies to it.
 
-## The gateway
+## Models
 
-The router passes a model call to its provider on the member's own key: Glyphh never pays for inference.
+Glyphh is not a gateway: it stores how a model is reached and never sits in the call. A super power names one of its org's models; when it runs, rrotor calls the provider directly with that model's key. Glyphh does not route, meter, limit or pay for model calls.
 
-- **The model catalog is not a table.** It is the public list of models (about 3,900 across 130 providers, with each one's provider, kind, context size and prices), shipped with the server and updated with it.
-- **Model access:** `models` on an org narrows the catalog for the whole org (null = every model); `models` on a team narrows it again (null = the org's). A call is checked against both.
-- **provider_keys** are the keys members bring: per provider, for the whole org or one team, encrypted at rest and never returned after they are saved (only the last four characters are shown). A team's own key wins over the org's.
-- **api_keys** are the keys Glyphh issues, so a script or a runtime can call the router; only a hash is stored. A sign-in token works too.
-- **requests** is the log of every call: who, which model and provider, the outcome, the tokens and the time. It is what the rate limits count and what usage shows.
+- **models** are what an org admin (or a team) adds: a provider, the provider's model id, and the API key for it, plus a base URL for providers that need one. The key is encrypted at rest, never returned after it is saved (only the last four characters are shown), and handed only to a member's own runtime when a super power runs.
+- The public list of models (about 3,900 across 130 providers, with each one's provider, kind, context size and prices) ships with the server to help pick one; it is reference data, not a table.
+- **api_keys** are the keys Glyphh issues, so a script or a runtime can call the Glyphh API; only a hash is stored, with a short prefix shown to tell keys apart. A sign-in token works too.
 
-Left behind from the old gateway: LiteLLM's 80-odd tables, its per-row model deployments and credentials table, budgets, margins and the dollar pool (BYOK has no money to meter), spend aggregates, auto-routers, the stored copy of each member's key, and the per-model flags nothing enforced. The Pipedream lane (connections) is drawn separately when it is built.
+Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and the per-model flags nothing enforced.
 
 ## Scoping
 
