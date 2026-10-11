@@ -4,6 +4,8 @@ Each phase is built in the house order: the database (drawn first), the API, the
 
 ## Phase 1: sign in from Claude and Codex
 
+Done means four pieces, end to end: **the database**, **the Glyphh plugin and SDK**, **the server with its sign-in UI** (native-feeling, in the house style), and **fully connected to Claude and Codex**.
+
 Day one supports two agent hosts: **Claude** (Claude Code, and Claude Desktop and claude.ai through the same connector) and **Codex**. A member adds Glyphh's MCP server, signs in with Google or GitHub, and the host is connected.
 
 **Database**
@@ -21,11 +23,11 @@ Day one supports two agent hosts: **Claude** (Claude Code, and Claude Desktop an
 - `/mcp` answers only with a valid token, and points an unsigned caller at the sign-in.
 - API and MCP: `me` (who am I, my org), and the member's connected hosts (list, revoke).
 
-**SDK and plugin**
+**Plugin and SDK** (in `glyphh-ai/glyphh`)
 
 - SDK (TypeScript and Python): `me`, connected hosts, token refresh.
-- Claude: the plugin's MCP config pointing at `https://api.glyphh.ai/mcp`.
-- Codex: the same server in Codex's config, signed in with `codex mcp login`.
+- The Glyphh plugin for Claude: its MCP config pointing at `https://api.glyphh.ai/mcp`, installable in Claude Code and added as a connector in Claude Desktop and claude.ai.
+- Codex: the same server in Codex's config, signed in with `codex mcp login`, with the setup written out for members.
 
 **Checks**
 
