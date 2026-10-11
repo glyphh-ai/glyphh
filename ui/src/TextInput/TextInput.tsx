@@ -9,9 +9,11 @@ export interface TextInputProps extends ControlProps<string> {
 }
 
 /** A one-line text input. */
-export function TextInput({ id, name, value, invalid, describedBy, onChange, onBlur, type = "text", ...rest }: TextInputProps) {
+export function TextInput(props: TextInputProps) {
+  const { id, name, value, invalid, describedBy, onChange, onBlur, type = "text", placeholder, autoComplete, disabled } = props;
   return (
-    <input {...rest} className={styles.input} id={id} name={name} type={type} value={value}
+    <input className={styles.input} id={id} name={name} type={type} value={value} placeholder={placeholder}
+      autoComplete={autoComplete} disabled={disabled}
       aria-invalid={invalid || undefined} aria-describedby={describedBy}
       onChange={(e) => onChange(e.target.value)} onBlur={onBlur} />
   );
