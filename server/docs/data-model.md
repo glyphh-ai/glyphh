@@ -164,7 +164,7 @@ erDiagram
     super_powers {
         uuid id PK
         uuid org_id FK
-        uuid user_id FK "null = installed by the org, for everyone"
+        uuid user_id FK "whose it is: every super power is one user's"
         text name "unique for its owner"
         bool glyphh "true = the member's Glyphh, the super agent: one per member, granted everything"
         uuid loop_id FK "the loop that runs it: one of its owner's loops; every super power has one"
@@ -403,7 +403,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 
 ## Super powers
 
-Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is installed by a user or by the org.
+Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
 **A loop runs it; models are granted.** Every super power has one loop (`loop_id`): the CLI or rrotor's own engine that runs it. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
