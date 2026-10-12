@@ -10,11 +10,19 @@
           "host": {
             "title": "Host",
             "type": "string"
+          },
+          "orgs": {
+            "items": {
+              "$ref": "#/components/schemas/MeOrg"
+            },
+            "title": "Orgs",
+            "type": "array"
           }
         },
         "required": [
           "host",
-          "email"
+          "email",
+          "orgs"
         ],
         "title": "AllowScreen",
         "type": "object"
@@ -102,6 +110,19 @@
         "title": "Host",
         "type": "object"
       },
+      "InviteAnswer": {
+        "properties": {
+          "invite": {
+            "title": "Invite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invite"
+        ],
+        "title": "InviteAnswer",
+        "type": "object"
+      },
       "InviteView": {
         "properties": {
           "email": {
@@ -185,6 +206,19 @@
         "title": "JoinScreen",
         "type": "object"
       },
+      "Joined": {
+        "properties": {
+          "org": {
+            "title": "Org",
+            "type": "string"
+          }
+        },
+        "required": [
+          "org"
+        ],
+        "title": "Joined",
+        "type": "object"
+      },
       "Me": {
         "properties": {
           "email": {
@@ -260,15 +294,25 @@
             "title": "Name",
             "type": "string"
           },
+          "personal": {
+            "title": "Personal",
+            "type": "boolean"
+          },
           "plan": {
             "title": "Plan",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
             "type": "string"
           }
         },
         "required": [
           "id",
           "name",
-          "plan"
+          "plan",
+          "personal",
+          "role"
         ],
         "title": "MeOrg",
         "type": "object"
@@ -656,6 +700,81 @@
         ]
       }
     },
+    "/v1/invites/accept": {
+      "post": {
+        "operationId": "acceptInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Joined"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept",
+        "tags": [
+          "invites"
+        ]
+      }
+    },
+    "/v1/invites/decline": {
+      "post": {
+        "operationId": "declineInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline",
+        "tags": [
+          "invites"
+        ]
+      }
+    },
     "/v1/me": {
       "get": {
         "operationId": "me",
@@ -735,6 +854,32 @@
           }
         },
         "summary": "Disconnect Host",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/v1/me/orgs": {
+      "get": {
+        "description": "Every org I belong to, my Personal org first.",
+        "operationId": "listMyOrgs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MeOrg"
+                  },
+                  "title": "Response Listmyorgs",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List My Orgs",
         "tags": [
           "me"
         ]
