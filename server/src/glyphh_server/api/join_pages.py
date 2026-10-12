@@ -11,11 +11,11 @@ from glyphh_server.ops.auth.signin import sign_in
 
 
 async def finish_join(request: Request, conn: Conn, chosen: Provider, invite: str, code: str) -> Response:
-    """Accept as the email the provider vouches for, then sign in (which links the provider account)."""
+    """Sign in (which makes the person, with their Personal org, the first time), then accept as their email."""
     settings = cfg(request)
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, chosen.NAME))
-    org = await invites.accept_invite(conn, invite, profile.email, profile.first_name, profile.last_name)
-    await sign_in(conn, profile)
+    user_id = await sign_in(conn, profile)
+    org = await invites.accept_invite(conn, invite, user_id)
     res = screen(settings, "/joined", org=org)
     res.delete_cookie(COOKIE, path="/auth")
     return res

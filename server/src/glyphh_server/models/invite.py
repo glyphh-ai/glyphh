@@ -21,7 +21,7 @@ class Invite(Base):
             "org_id",
             func.lower(text("email")),
             unique=True,
-            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+            postgresql_where=text("accepted_at IS NULL AND declined_at IS NULL AND revoked_at IS NULL"),
         ),
     )
 
@@ -33,5 +33,6 @@ class Invite(Base):
     token_hash: Mapped[str] = mapped_column(Text, unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()

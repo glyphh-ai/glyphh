@@ -6,14 +6,14 @@ from tests.db.helpers import admin_of, make_user
 from tests.test_health import MCP_HEADERS, _sse_result
 
 
-async def _bearer(engine: AsyncEngine, user) -> dict[str, str]:
+async def _bearer(engine: AsyncEngine, user, org) -> dict[str, str]:
     async with engine.begin() as conn:
-        return {"authorization": f"Bearer {(await tokens.issue(conn, user)).access_token}"}
+        return {"authorization": f"Bearer {(await tokens.issue(conn, user, org)).access_token}"}
 
 
 async def test_an_admin_runs_the_org_through_the_api(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     boss = await admin_of(engine, "API Org Co")
-    auth = await _bearer(engine, boss.user_id)
+    auth = await _bearer(engine, boss.user_id, boss.org_id)
     assert (await client.get("/v1/org", headers=auth)).json()["name"] == "API Org Co"
     assert (await client.patch("/v1/org", headers=auth, json={"name": "API Org"})).json()["name"] == "API Org"
     made = await client.post("/v1/org/invites", headers=auth, json={"email": "new@apiorg.test"})
@@ -34,8 +34,8 @@ async def test_the_api_refuses_bad_input_strangers_and_non_admins(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     boss = await admin_of(engine, "Refuse Co")
-    member = await _bearer(engine, await make_user(engine, boss.org_id, "m@refuse.test"))
-    auth = await _bearer(engine, boss.user_id)
+    member = await _bearer(engine, await make_user(engine, boss.org_id, "m@refuse.test"), boss.org_id)
+    auth = await _bearer(engine, boss.user_id, boss.org_id)
     bad = await client.post("/v1/org/invites", headers=auth, json={"email": "not-an-email"})
     assert bad.status_code == 422 and bad.json()["error"]["problems"][0]["loc"] == ["body", "email"]
     assert (await client.patch("/v1/org", headers=member, json={"name": "x"})).json()["error"]["code"] == "E_FORBIDDEN"
@@ -44,7 +44,7 @@ async def test_the_api_refuses_bad_input_strangers_and_non_admins(
 
 async def test_agents_reach_the_org_through_mcp(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     boss = await admin_of(engine, "MCP Org Co")
-    headers = {**MCP_HEADERS, **(await _bearer(engine, boss.user_id))}
+    headers = {**MCP_HEADERS, **(await _bearer(engine, boss.user_id, boss.org_id))}
 
     async def call(name: str, args: dict | None = None) -> dict:
         res = await client.post(

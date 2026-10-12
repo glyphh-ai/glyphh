@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import Invite, Org, Plan, User
+from glyphh_server.models import Invite, Membership, Org, Plan
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.guards import require_admin
 
@@ -20,18 +20,23 @@ class OrgView(BaseModel):
 
 
 async def _seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
-    users = select(func.count()).select_from(User).where(User.org_id == org_id, User.disabled_at.is_(None))
+    members = (
+        select(func.count())
+        .select_from(Membership)
+        .where(Membership.org_id == org_id, Membership.disabled_at.is_(None))
+    )
     invites = (
         select(func.count())
         .select_from(Invite)
         .where(
             Invite.org_id == org_id,
             Invite.accepted_at.is_(None),
+            Invite.declined_at.is_(None),
             Invite.revoked_at.is_(None),
             Invite.expires_at > func.now(),
         )
     )
-    return int((await conn.execute(select(users.scalar_subquery() + invites.scalar_subquery()))).scalar_one())
+    return int((await conn.execute(select(members.scalar_subquery() + invites.scalar_subquery()))).scalar_one())
 
 
 async def get_org(conn: AsyncConnection, who: Principal) -> OrgView:

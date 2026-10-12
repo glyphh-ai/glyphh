@@ -22,11 +22,12 @@ async def test_without_a_valid_token_the_answer_is_always_unauthorized(client: h
 
 
 async def test_a_member_lists_and_disconnects_their_hosts(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    user = await make_user(engine, await make_org(engine, "API Hosts Co"), "hosts@api.test")
+    org = await make_org(engine, "API Hosts Co")
+    user = await make_user(engine, org, "hosts@api.test")
     claude = await make_client(engine, "api-claude")
     async with engine.begin() as conn:
-        issued = await tokens.issue(conn, user, claude)
-        mine = await tokens.issue(conn, user)
+        issued = await tokens.issue(conn, user, org, claude)
+        mine = await tokens.issue(conn, user, org)
     auth = {"authorization": f"Bearer {mine.access_token}"}
     listed = (await client.get("/v1/me/hosts", headers=auth)).json()
     assert [h["id"] for h in listed] == [str(claude)]

@@ -8,7 +8,7 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class Org(Base):
-    """A customer org, under Glyphh: the one parent org, the only org with no parent."""
+    """An org under Glyphh (the one parent org, the only org with no parent). A Personal org is one person's alone."""
 
     __tablename__ = "orgs"
     __table_args__ = (
@@ -19,4 +19,5 @@ class Org(Base):
     parent_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("orgs.id", ondelete="RESTRICT"))
     plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"), index=True)
     name: Mapped[str] = mapped_column(Text)
+    personal_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     created_at: Mapped[datetime] = created_at()

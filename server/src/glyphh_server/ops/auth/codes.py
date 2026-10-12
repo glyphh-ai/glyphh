@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import Invalid
-from glyphh_server.models import OAuthClient, OAuthCode
+from glyphh_server.errors import Forbidden, Invalid
+from glyphh_server.models import Membership, OAuthClient, OAuthCode
 from glyphh_server.ops.auth import hosts, signed
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 
@@ -39,14 +39,20 @@ def read_pending(secret: str, token: str) -> Pending:
     return Pending(**body)
 
 
-async def approve(conn: AsyncConnection, pending: Pending, user_id: uuid.UUID) -> str:
-    """The member allowed the host: make its code and answer where to send the member back to."""
+async def approve(conn: AsyncConnection, pending: Pending, user_id: uuid.UUID, org_id: uuid.UUID) -> str:
+    """The member allowed the host to act in one of their orgs: make its code, and answer where to send them back."""
     client = await _registered(conn, pending)
+    member = select(Membership.user_id).where(
+        Membership.user_id == user_id, Membership.org_id == org_id, Membership.disabled_at.is_(None)
+    )
+    if (await conn.execute(member)).first() is None:
+        raise Forbidden("You aren't in that org. Pick one of yours.", reason="not_a_member")
     code = make_secret()
     await conn.execute(
         insert(OAuthCode).values(
             oauth_client_id=client.id,
             user_id=user_id,
+            org_id=org_id,
             code_hash=hash_secret(code),
             redirect_uri=pending.redirect_uri,
             code_challenge=pending.code_challenge,
@@ -90,13 +96,14 @@ async def find(conn: AsyncConnection, oauth_client_id: uuid.UUID, code: str) -> 
     return None if row is None else OAuthCode(**row._mapping)
 
 
-async def consume(conn: AsyncConnection, code: str) -> uuid.UUID | None:
-    """Mark the code used, once: a second exchange of the same code gets nothing."""
-    return (
+async def consume(conn: AsyncConnection, code: str) -> tuple[uuid.UUID, uuid.UUID] | None:
+    """Mark the code used, once, answering who it was for and in which org: a second exchange gets nothing."""
+    row = (
         await conn.execute(
             update(OAuthCode)
             .where(OAuthCode.code_hash == hash_secret(code), OAuthCode.used_at.is_(None))
             .values(used_at=datetime.now(UTC))
-            .returning(OAuthCode.user_id)
+            .returning(OAuthCode.user_id, OAuthCode.org_id)
         )
-    ).scalar_one_or_none()
+    ).first()
+    return None if row is None else (row.user_id, row.org_id)

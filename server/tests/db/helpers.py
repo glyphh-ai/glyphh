@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import OAuthClient, Org, Plan, User
+from glyphh_server.models import Membership, OAuthClient, Org, Plan, User
 
 
 async def plan_id(engine: AsyncEngine, name: str = "Free") -> uuid.UUID:
@@ -24,9 +24,12 @@ async def make_org(engine: AsyncEngine, name: str, plan: str = "Enterprise") -> 
 
 
 async def make_user(engine: AsyncEngine, org_id: uuid.UUID, email: str, role: str = "user") -> uuid.UUID:
-    values = {"org_id": org_id, "role": role, "email": email, "first_name": "Ada", "last_name": "Lovelace"}
+    """A person, a member of this org with this role."""
+    values = {"email": email, "first_name": "Ada", "last_name": "Lovelace"}
     async with engine.begin() as conn:
-        return (await conn.execute(insert(User).values(values).returning(User.id))).scalar_one()
+        user = (await conn.execute(insert(User).values(values).returning(User.id))).scalar_one()
+        await conn.execute(insert(Membership).values(user_id=user, org_id=org_id, role=role))
+        return user
 
 
 async def make_client(engine: AsyncEngine, client_id: str = "claude-code") -> uuid.UUID:
@@ -39,9 +42,10 @@ async def bearer(engine: AsyncEngine, email: str) -> str:
     """A member of a new org, signed in: the Authorization header value for their access token."""
     from glyphh_server.ops.auth import tokens
 
-    user = await make_user(engine, await make_org(engine, f"Org of {email}"), email, "org_admin")
+    org = await make_org(engine, f"Org of {email}")
+    user = await make_user(engine, org, email, "org_admin")
     async with engine.begin() as conn:
-        return "Bearer " + (await tokens.issue(conn, user)).access_token
+        return "Bearer " + (await tokens.issue(conn, user, org)).access_token
 
 
 async def make_plan(engine: AsyncEngine, name: str, seats: int | None) -> uuid.UUID:

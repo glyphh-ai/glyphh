@@ -34,17 +34,16 @@ async def test_a_new_person_gets_a_new_org_on_free_as_its_admin(engine: AsyncEng
         ),
     )
     async with engine.connect() as conn:
-        role, org_id = (await conn.execute(select(User.role, User.org_id).where(User.id == user))).one()
-        mine = await me(conn, Principal(user_id=user, org_id=org_id, role=role))
+        org_id = (await conn.execute(select(Org.id).where(Org.personal_user_id == user))).scalar_one()
+        mine = await me(conn, Principal(user_id=user, org_id=org_id, role="org_admin"))
     assert (mine.email, mine.first_name, mine.role) == ("new.person@example.test", "Nia", "org_admin")
-    assert (mine.org.name, mine.org.plan) == ("Nia's org", "Free")
+    assert (mine.org.name, mine.org.plan, mine.org.personal) == ("Personal", "Free", True)
 
 
-async def test_a_person_without_a_first_name_gets_an_org_named_from_their_email(engine: AsyncEngine) -> None:
+async def test_everyone_gets_one_personal_org_of_their_own(engine: AsyncEngine) -> None:
     user = await _sign_in(engine, _profile("gh-anon", "octo@cat.test", provider="github"))
-    async with engine.connect() as conn:
-        name = (await conn.execute(select(Org.name).join(User, User.org_id == Org.id).where(User.id == user))).scalar()
-    assert name == "octo"
+    await _sign_in(engine, _profile("gh-anon", "octo@cat.test", provider="github"))
+    assert await _count(engine, Org, Org.personal_user_id == user) == 1
 
 
 async def test_signing_in_again_finds_the_same_person_even_with_a_new_email(engine: AsyncEngine) -> None:
@@ -84,14 +83,4 @@ async def test_two_first_sign_ins_at_once_make_one_person_and_one_org(engine: As
     results = await asyncio.gather(*(_sign_in(engine, profile) for _ in range(5)))
     assert len(set(results)) == 1
     assert await _count(engine, User, User.email == "race@once.test") == 1
-    assert await _count(engine, Org, Org.name == "Rae's org") == 1
-
-
-async def test_a_disabled_member_cannot_sign_in(engine: AsyncEngine) -> None:
-    from sqlalchemy import update
-
-    user = await _sign_in(engine, _profile("g-off", "off@disabled.test"))
-    async with engine.begin() as conn:
-        await conn.execute(update(User).where(User.id == user).values(disabled_at=func.now()))
-    with pytest.raises(Forbidden, match="disabled"):
-        await _sign_in(engine, _profile("g-off", "off@disabled.test"))
+    assert await _count(engine, Org, Org.personal_user_id == results[0]) == 1

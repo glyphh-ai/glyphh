@@ -50,7 +50,7 @@ async def test_a_role_must_be_one_of_the_three(engine: AsyncEngine) -> None:
     org_id = await make_org(engine, "Roles Inc")
     for role in ("super_admin", "org_admin", "user"):
         await make_user(engine, org_id, f"{role}@roles.test", role)
-    with pytest.raises(IntegrityError, match="users_role"):
+    with pytest.raises(IntegrityError, match="memberships_role"):
         await make_user(engine, org_id, "owner@roles.test", "owner")
 
 
@@ -61,7 +61,7 @@ async def test_an_email_belongs_to_one_user_whatever_its_case(engine: AsyncEngin
         await make_user(engine, org_id, "dana@case.TEST")
 
 
-async def test_a_user_needs_an_org_and_an_org_with_users_stays(engine: AsyncEngine) -> None:
+async def test_a_membership_needs_an_org_and_an_org_with_members_stays(engine: AsyncEngine) -> None:
     with pytest.raises(IntegrityError):
         await make_user(engine, uuid.uuid4(), "orphan@nowhere.test")
     org_id = await make_org(engine, "Kept Ltd")
@@ -72,11 +72,13 @@ async def test_a_user_needs_an_org_and_an_org_with_users_stays(engine: AsyncEngi
 
 
 async def test_a_users_tokens_go_with_the_user(engine: AsyncEngine) -> None:
-    user_id = await make_user(engine, await make_org(engine, "Tokens Ltd"), "t@tokens.test")
+    org_id = await make_org(engine, "Tokens Ltd")
+    user_id = await make_user(engine, org_id, "t@tokens.test")
     async with engine.begin() as conn:
         await conn.execute(
             insert(Token).values(
                 user_id=user_id,
+                org_id=org_id,
                 access_hash="a" * 64,
                 refresh_hash="r" * 64,
                 access_expires_at=func.now(),

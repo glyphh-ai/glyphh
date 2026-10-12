@@ -9,7 +9,7 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict, Forbidden, Invalid, NotFound
-from glyphh_server.models import Invite, Org, User
+from glyphh_server.models import Invite, Membership, Org, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.guards import refusals, require_admin
@@ -36,16 +36,27 @@ class OpenInvite(BaseModel):
 
 
 def _open():
-    return (Invite.accepted_at.is_(None), Invite.revoked_at.is_(None), Invite.expires_at > func.now())
+    return (
+        Invite.accepted_at.is_(None),
+        Invite.declined_at.is_(None),
+        Invite.revoked_at.is_(None),
+        Invite.expires_at > func.now(),
+    )
 
 
 async def create_invite(conn: AsyncConnection, who: Principal, email: str, role: MemberRole) -> tuple[InviteView, str]:
     """The invite, and its token: shown once, in the link, never stored."""
     require_admin(who)
     email = email.strip().lower()
-    taken = select(User.org_id).where(func.lower(User.email) == email)
-    if (await conn.execute(taken)).first() is not None:
-        raise Conflict("That email already has a Glyphh account.", email=email)
+    if (await conn.execute(select(Org.personal_user_id).where(Org.id == who.org_id))).scalar_one() is not None:
+        raise Forbidden("A Personal org is yours alone. Invite people into an org you share.", reason="personal")
+    member = (
+        select(Membership.user_id)
+        .join(User, User.id == Membership.user_id)
+        .where(Membership.org_id == who.org_id, func.lower(User.email) == email)
+    )
+    if (await conn.execute(member)).first() is not None:
+        raise Conflict("That person is already in your org.", email=email)
     token = make_secret()
     with refusals("That email already has an open invite."):
         row = (
@@ -111,16 +122,25 @@ async def read_invite(conn: AsyncConnection, token: str) -> OpenInvite:
     return OpenInvite(org=row.name, email=row.email, role=row.role, invited_by=by, expires_at=row.expires_at)
 
 
-async def accept_invite(conn: AsyncConnection, token: str, email: str, first: str | None, last: str | None) -> str:
-    """Make the person a member of the invite's org, as the invite's email only. Answers the org's name."""
+def _wrong(invite: OpenInvite, email: str) -> Forbidden:
+    return Forbidden(
+        f"This invite is for {invite.email}. Sign in with that account.",
+        reason="wrong_account",
+        invited=invite.email,
+        email=email,
+    )
+
+
+async def _person(conn: AsyncConnection, user_id: uuid.UUID) -> str:
+    return (await conn.execute(select(User.email).where(User.id == user_id))).scalar_one()
+
+
+async def accept_invite(conn: AsyncConnection, token: str, user_id: uuid.UUID) -> str:
+    """Add the person to the invite's org, as the invite's email only; they keep every other org. Answers its name."""
     invite = await read_invite(conn, token)
+    email = await _person(conn, user_id)
     if email.strip().lower() != invite.email:
-        raise Forbidden(
-            f"This invite is for {invite.email}. Sign in with that account.",
-            reason="wrong_account",
-            invited=invite.email,
-            email=email,
-        )
+        raise _wrong(invite, email)
     row = (
         await conn.execute(
             update(Invite)
@@ -133,8 +153,17 @@ async def accept_invite(conn: AsyncConnection, token: str, email: str, first: st
         raise Invalid(
             "This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="invite_expired"
         )
-    with refusals("That email already has a Glyphh account."):
-        await conn.execute(
-            insert(User).values(org_id=row.org_id, role=row.role, email=invite.email, first_name=first, last_name=last)
-        )
+    with refusals("You're already in that org."):
+        await conn.execute(insert(Membership).values(user_id=user_id, org_id=row.org_id, role=row.role))
     return invite.org
+
+
+async def decline_invite(conn: AsyncConnection, token: str, user_id: uuid.UUID) -> None:
+    """The invited person says no: the invite closes and its seat is free again."""
+    invite = await read_invite(conn, token)
+    email = await _person(conn, user_id)
+    if email.strip().lower() != invite.email:
+        raise _wrong(invite, email)
+    await conn.execute(
+        update(Invite).where(Invite.token_hash == hash_secret(token), *_open()).values(declined_at=func.now())
+    )

@@ -8,7 +8,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.db.limits import is_limit
-from glyphh_server.models import Invite, Org, User
+from glyphh_server.models import Invite, Membership, Org
 from tests.db.helpers import make_org, make_plan, make_user, plan_id
 
 
@@ -37,7 +37,7 @@ async def _refused(coro) -> None:
     assert is_limit(caught.value)
 
 
-async def test_users_and_open_invites_together_never_pass_the_seats(engine: AsyncEngine) -> None:
+async def test_members_and_open_invites_together_never_pass_the_seats(engine: AsyncEngine) -> None:
     org = await _org(engine, 2)
     await make_user(engine, org, "one@seats.test")
     await _invite(engine, org, "two@seats.test")
@@ -49,18 +49,19 @@ async def test_a_disabled_member_a_revoked_or_expired_invite_frees_a_seat(engine
     org = await _org(engine, 1)
     ada = await make_user(engine, org, "ada@free.test")
     async with engine.begin() as conn:
-        await conn.execute(update(User).where(User.id == ada).values(disabled_at=func.now()))
+        await conn.execute(update(Membership).where(Membership.user_id == ada).values(disabled_at=func.now()))
     await _invite(engine, org, "x@free.test", revoked_at=datetime.now(UTC))
     await _invite(engine, org, "y@free.test", expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    await _invite(engine, org, "z@free.test", declined_at=datetime.now(UTC))
     bob = await make_user(engine, org, "bob@free.test")
 
     async def reenable() -> None:
         async with engine.begin() as conn:
-            await conn.execute(update(User).where(User.id == ada).values(disabled_at=None))
+            await conn.execute(update(Membership).where(Membership.user_id == ada).values(disabled_at=None))
 
     await _refused(reenable())
     async with engine.begin() as conn:
-        await conn.execute(update(User).where(User.id == bob).values(first_name="Bobby"))
+        await conn.execute(update(Membership).where(Membership.user_id == bob).values(role="org_admin"))
 
 
 async def test_no_limit_means_no_limit(engine: AsyncEngine) -> None:
@@ -75,7 +76,9 @@ async def test_a_downgrade_cuts_no_one_off_but_adds_nobody(engine: AsyncEngine) 
         await make_user(engine, org, f"d{i}@down.test")
     async with engine.begin() as conn:
         await conn.execute(update(Org).where(Org.id == org).values(plan_id=await plan_id(engine, "Free")))
-        kept = (await conn.execute(select(func.count()).select_from(User).where(User.org_id == org))).scalar()
+        kept = (
+            await conn.execute(select(func.count()).select_from(Membership).where(Membership.org_id == org))
+        ).scalar()
     assert kept == 3
     await _refused(make_user(engine, org, "d9@down.test"))
 

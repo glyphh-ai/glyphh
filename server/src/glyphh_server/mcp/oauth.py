@@ -84,9 +84,9 @@ class GlyphhOAuth:
     ) -> OAuthToken:
         # TokenError is frozen, so it is raised after the transaction closes, never through it.
         async with self.engine.begin() as conn:
-            user_id = await codes.consume(conn, code.code)
+            who = await codes.consume(conn, code.code)
             host = await hosts.find(conn, client.client_id or "")
-            issued = None if user_id is None or host is None else await tokens.issue(conn, user_id, host.id)
+            issued = None if who is None or host is None else await tokens.issue(conn, who[0], who[1], host.id)
         if issued is None:
             raise TokenError("invalid_grant", "This code was already used.")
         return _oauth_token(issued)

@@ -30,6 +30,7 @@ class OAuthCode(Base):
     id: Mapped[uuid.UUID] = guid()
     oauth_client_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("oauth_clients.id", ondelete="CASCADE"), index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"))
     code_hash: Mapped[str] = mapped_column(Text, unique=True)
     redirect_uri: Mapped[str] = mapped_column(Text)
     code_challenge: Mapped[str] = mapped_column(Text)

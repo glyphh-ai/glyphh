@@ -5,7 +5,7 @@ from fastapi import APIRouter, Response
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.ops.auth import hosts
 from glyphh_server.ops.auth.hosts import Host
-from glyphh_server.ops.me import Me, me
+from glyphh_server.ops.me import Me, MeOrg, me, my_orgs
 
 router = APIRouter(prefix="/v1/me", tags=["me"])
 
@@ -13,6 +13,12 @@ router = APIRouter(prefix="/v1/me", tags=["me"])
 @router.get("", operation_id="me")
 async def get_me(caller: Caller, conn: Conn) -> Me:
     return await me(conn, caller)
+
+
+@router.get("/orgs", operation_id="listMyOrgs")
+async def list_my_orgs(caller: Caller, conn: Conn) -> list[MeOrg]:
+    """Every org I belong to, my Personal org first."""
+    return await my_orgs(conn, caller.user_id)
 
 
 @router.get("/hosts", operation_id="listHosts")

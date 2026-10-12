@@ -47,9 +47,10 @@ async def _authorize(client: httpx.AsyncClient, client_id: str, challenge: str) 
 
 async def _member_allows(engine: AsyncEngine, sign_in_link: str, email: str) -> str:
     pending = codes.read_pending(SECRET_KEY, parse_qs(urlsplit(sign_in_link).query)["request"][0])
-    user = await make_user(engine, await make_org(engine, f"Org of {email}"), email, "org_admin")
+    org = await make_org(engine, f"Org of {email}")
+    user = await make_user(engine, org, email, "org_admin")
     async with engine.begin() as conn:
-        back = await codes.approve(conn, pending, user)
+        back = await codes.approve(conn, pending, user, org)
     query = parse_qs(urlsplit(back).query)
     assert query["state"] == ["st-1"]
     return query["code"][0]

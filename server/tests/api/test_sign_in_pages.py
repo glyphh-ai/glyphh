@@ -61,8 +61,13 @@ async def _to_allow(browser: httpx.AsyncClient, provider: str = "google") -> tup
 
 async def test_signing_in_with_google_and_allowing_gives_the_host_a_code(browser: httpx.AsyncClient) -> None:
     consent, ctx = await _to_allow(browser)
-    shown = await browser.get("/v1/auth/allow", params={"consent": consent})
-    assert shown.json() == {"host": "Claude", "email": "pages@google.test"}
+    shown = (await browser.get("/v1/auth/allow", params={"consent": consent})).json()
+    assert (shown["host"], shown["email"]) == ("Claude", "pages@google.test")
+    assert (shown["orgs"][0]["name"], shown["orgs"][0]["personal"], shown["orgs"][0]["role"]) == (
+        "Personal",
+        True,
+        "org_admin",
+    )
     back = await browser.post("/auth/allow", data={"consent": consent, "decision": "allow"})
     assert back.status_code == 303 and back.headers["location"].startswith(REDIRECT)
     query = parse_qs(urlsplit(back.headers["location"]).query)
@@ -162,3 +167,39 @@ async def test_each_refusal_says_why_so_the_screen_can_show_it(browser: httpx.As
     expired = screen(await browser.get("/auth/google/start", params={"request": EXPIRED}), "/problem")
     forged = screen(await browser.get("/auth/google/start", params={"request": "forged.0"}), "/problem")
     assert (expired["reason"], forged["reason"]) == ("expired", "invalid")
+
+
+async def test_the_host_acts_in_the_org_picked_under_use_with(browser: httpx.AsyncClient, engine: AsyncEngine) -> None:
+    from sqlalchemy import insert, select
+
+    from glyphh_server.models import Membership, Token, User
+    from tests.db.helpers import make_org
+
+    consent, ctx = await _to_allow(browser)
+    async with engine.begin() as conn:
+        me = (await conn.execute(select(User.id).where(User.email == "pages@google.test"))).scalar_one()
+    team = await make_org(engine, "Use With Co")
+    stranger = await make_org(engine, "Not Theirs Co")
+    async with engine.begin() as conn:
+        await conn.execute(insert(Membership).values(user_id=me, org_id=team, role="user"))
+    names = [o["name"] for o in (await browser.get("/v1/auth/allow", params={"consent": consent})).json()["orgs"]]
+    assert names[0] == "Personal" and "Use With Co" in names
+    refused = await browser.post("/auth/allow", data={"consent": consent, "decision": "allow", "org": str(stranger)})
+    assert screen(refused, "/problem")["reason"] == "not_a_member"
+    consent, ctx = await _to_allow(browser)
+    back = await browser.post("/auth/allow", data={"consent": consent, "decision": "allow", "org": str(team)})
+    code = parse_qs(urlsplit(back.headers["location"]).query)["code"][0]
+    body = {"grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT}
+    issued = await browser.post(
+        "/token", data={**body, "client_id": ctx["host"]["client_id"], "code_verifier": ctx["verifier"]}
+    )
+    me_now = (await browser.get("/v1/me", headers={"authorization": f"Bearer {issued.json()['access_token']}"})).json()
+    assert (me_now["org"]["name"], me_now["role"]) == ("Use With Co", "user")
+    async with engine.connect() as conn:
+        assert team in (await conn.execute(select(Token.org_id).where(Token.user_id == me))).scalars().all()
+
+
+async def test_not_you_goes_back_to_the_sign_in_with_the_same_request(browser: httpx.AsyncClient) -> None:
+    consent, _ = await _to_allow(browser)
+    back = await browser.get("/auth/switch", params={"consent": consent})
+    assert screen(back, "/sign-in")["request"] and "glyphh_signin=" in back.headers["set-cookie"]

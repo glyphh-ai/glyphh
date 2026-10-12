@@ -91,9 +91,23 @@ def test_refusals_translate_clashes_and_pass_other_errors_on() -> None:
         raise DBAPIError("x", {}, Exception("deadlock"))
 
 
-async def test_a_duplicate_member_email_is_a_conflict(engine: AsyncEngine) -> None:
-    boss = await admin_of(engine, "Dup Co")
+async def test_a_duplicate_email_is_a_conflict(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
         with pytest.raises(Conflict), refusals("taken"):
-            await conn.execute(insert(User).values(org_id=boss.org_id, role="user", email="dup@dup.test"))
-            await conn.execute(insert(User).values(org_id=boss.org_id, role="user", email="DUP@dup.test"))
+            await conn.execute(insert(User).values(email="dup@dup.test"))
+            await conn.execute(insert(User).values(email="DUP@dup.test"))
+
+
+async def test_removing_someone_takes_them_out_of_this_org_only(engine: AsyncEngine) -> None:
+    from sqlalchemy import select
+
+    from glyphh_server.models import Membership
+
+    boss = await admin_of(engine, "Remove Co")
+    other = await admin_of(engine, "Kept Co")
+    ann = await make_user(engine, boss.org_id, "ann@remove.test")
+    async with engine.begin() as conn:
+        await conn.execute(insert(Membership).values(user_id=ann, org_id=other.org_id, role="user"))
+        await members.remove_member(conn, boss, ann)
+        left = (await conn.execute(select(Membership.org_id).where(Membership.user_id == ann))).scalars().all()
+    assert left == [other.org_id]

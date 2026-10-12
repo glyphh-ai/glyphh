@@ -15,6 +15,7 @@ class Token(Base):
 
     id: Mapped[uuid.UUID] = guid()
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"), index=True)
     oauth_client_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("oauth_clients.id", ondelete="CASCADE"), index=True
     )

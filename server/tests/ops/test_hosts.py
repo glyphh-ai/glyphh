@@ -20,13 +20,14 @@ async def test_a_registered_host_is_found_by_its_client_id(engine: AsyncEngine) 
 
 
 async def test_a_member_sees_their_connected_hosts_and_disconnects_one(engine: AsyncEngine) -> None:
-    user = await make_user(engine, await make_org(engine, "Hosts Co"), "hosts@ops.test")
+    org = await make_org(engine, "Hosts Co")
+    user = await make_user(engine, org, "hosts@ops.test")
     claude, codex = await make_client(engine, "list-claude"), await make_client(engine, "list-codex")
     async with engine.begin() as conn:
-        await tokens.issue(conn, user, claude)
-        await tokens.issue(conn, user, claude)
-        await tokens.issue(conn, user, codex)
-        await tokens.issue(conn, user)
+        await tokens.issue(conn, user, org, claude)
+        await tokens.issue(conn, user, org, claude)
+        await tokens.issue(conn, user, org, codex)
+        await tokens.issue(conn, user, org)
         assert {h.id for h in await hosts.connected(conn, user)} == {claude, codex}
         await hosts.disconnect(conn, user, claude)
         assert [h.id for h in await hosts.connected(conn, user)] == [codex]

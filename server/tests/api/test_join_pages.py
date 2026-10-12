@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
-from glyphh_server.models import User
+from glyphh_server.models import Membership, Org, User
 from glyphh_server.ops import invites
 from tests.api.test_sign_in_pages import screen
 from tests.conftest import _client
@@ -43,8 +43,15 @@ async def test_the_invited_person_signs_in_and_joins(browser: httpx.AsyncClient,
     joined = screen(await _sign_in_from(browser, token), "/joined")
     assert joined["org"].startswith("Join Co")
     async with engine.connect() as conn:
-        role = (await conn.execute(select(User.role).where(User.email == GOOGLE_ME["email"]))).scalar_one()
-    assert role == "user"
+        orgs = (
+            await conn.execute(
+                select(Membership.role, Org.personal_user_id)
+                .join(Org, Org.id == Membership.org_id)
+                .join(User, User.id == Membership.user_id)
+                .where(User.email == GOOGLE_ME["email"])
+            )
+        ).all()
+    assert sorted((r.role, r.personal_user_id is not None) for r in orgs) == [("org_admin", True), ("user", False)]
 
 
 async def test_signing_in_as_someone_else_is_refused(browser: httpx.AsyncClient, engine: AsyncEngine) -> None:

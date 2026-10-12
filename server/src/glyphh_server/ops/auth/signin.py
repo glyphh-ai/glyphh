@@ -1,5 +1,5 @@
 """Signing in with Google or GitHub. A person is found by the provider's own id for them; the first time,
-by their verified email (linking the account) or, new to Glyphh, as a new member of a new org on Free.
+by their verified email (linking the account) or, new to Glyphh, as a new person with their Personal org on Free.
 Two first sign-ins at the same moment become one person: both wait on the same database lock."""
 
 import logging
@@ -12,12 +12,13 @@ from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Forbidden
-from glyphh_server.models import Org, Plan, SignInIdentity, User
+from glyphh_server.models import Membership, Org, Plan, SignInIdentity, User
 from glyphh_server.obs.logs import fields
 
 log = logging.getLogger("glyphh.auth")
 
 NEW_ORG_PLAN: str = "Free"
+PERSONAL: str = "Personal"
 
 
 class ProviderProfile(BaseModel):
@@ -58,10 +59,6 @@ async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
                 last_used_at=datetime.now(UTC),
             )
         )
-    if (await conn.execute(select(User.disabled_at).where(User.id == user_id))).scalar_one() is not None:
-        raise Forbidden(
-            "Your account in this org is disabled. Ask an org admin.", provider=profile.provider, reason="disabled"
-        )
     log.info("signed in", extra=fields(user=str(user_id), provider=profile.provider, how=how))
     return user_id
 
@@ -86,24 +83,34 @@ async def _by_email(conn: AsyncConnection, email: str) -> uuid.UUID | None:
 
 
 async def _new_member(conn: AsyncConnection, profile: ProviderProfile, email: str) -> uuid.UUID:
-    """A new org on Free, under Glyphh, with this person as its admin."""
-    plan_id = (await conn.execute(select(Plan.id).where(Plan.name == NEW_ORG_PLAN))).scalar_one()
-    parent_id = (await conn.execute(select(Org.id).where(Org.parent_id.is_(None)))).scalar_one()
-    name = f"{profile.first_name}'s org" if profile.first_name else email.split("@")[0]
-    org_id = (
-        await conn.execute(insert(Org).values(name=name, plan_id=plan_id, parent_id=parent_id).returning(Org.id))
-    ).scalar_one()
-    return (
+    """A new person, with their Personal org on Free, under Glyphh, where they are the org admin."""
+    user_id = (
         await conn.execute(
             insert(User)
             .values(
-                org_id=org_id,
-                role="org_admin",
-                email=email,
-                first_name=profile.first_name,
-                last_name=profile.last_name,
-                image_url=profile.image_url,
+                email=email, first_name=profile.first_name, last_name=profile.last_name, image_url=profile.image_url
             )
             .returning(User.id)
         )
     ).scalar_one()
+    await personal_org(conn, user_id)
+    return user_id
+
+
+async def personal_org(conn: AsyncConnection, user_id: uuid.UUID) -> uuid.UUID:
+    """Make a person's Personal org (theirs alone, on Free, under Glyphh) and their membership as its admin."""
+    plan_id = (await conn.execute(select(Plan.id).where(Plan.name == NEW_ORG_PLAN))).scalar_one()
+    parent_id = (await conn.execute(select(Org.id).where(Org.parent_id.is_(None)))).scalar_one()
+    org_id = (
+        await conn.execute(
+            insert(Org)
+            .values(name=PERSONAL, plan_id=plan_id, parent_id=parent_id, personal_user_id=user_id)
+            .returning(Org.id)
+        )
+    ).scalar_one()
+    await conn.execute(insert(Membership).values(user_id=user_id, org_id=org_id, role="org_admin"))
+    return org_id
+
+
+async def personal_org_of(conn: AsyncConnection, user_id: uuid.UUID) -> uuid.UUID:
+    return (await conn.execute(select(Org.id).where(Org.personal_user_id == user_id))).scalar_one()

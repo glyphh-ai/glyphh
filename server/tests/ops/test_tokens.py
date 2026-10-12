@@ -26,7 +26,7 @@ async def test_an_issued_token_names_its_member_org_role_and_host(engine: AsyncE
     org, user = await _member(engine, "issue@tok.test")
     host = await make_client(engine, "issue-host")
     async with engine.begin() as conn:
-        issued = await tokens.issue(conn, user, host)
+        issued = await tokens.issue(conn, user, org, host)
         who = await tokens.principal_for(conn, issued.access_token)
         stored = (await conn.execute(select(Token.access_hash).where(Token.user_id == user))).scalar_one()
     assert (who.user_id, who.org_id, who.role, who.oauth_client_id) == (user, org, "org_admin", host)
@@ -35,9 +35,9 @@ async def test_an_issued_token_names_its_member_org_role_and_host(engine: AsyncE
 
 
 async def test_unknown_expired_and_revoked_tokens_are_refused_the_same(engine: AsyncEngine) -> None:
-    _, user = await _member(engine, "refuse@tok.test")
+    org, user = await _member(engine, "refuse@tok.test")
     async with engine.begin() as conn:
-        expired, revoked = await tokens.issue(conn, user), await tokens.issue(conn, user)
+        expired, revoked = await tokens.issue(conn, user, org), await tokens.issue(conn, user, org)
         await conn.execute(
             update(Token)
             .where(Token.access_hash == hash_secret(expired.access_token))
@@ -51,9 +51,9 @@ async def test_unknown_expired_and_revoked_tokens_are_refused_the_same(engine: A
 
 
 async def test_a_refresh_rotates_and_works_once(engine: AsyncEngine) -> None:
-    _, user = await _member(engine, "rotate@tok.test")
+    org, user = await _member(engine, "rotate@tok.test")
     async with engine.begin() as conn:
-        first = await tokens.issue(conn, user)
+        first = await tokens.issue(conn, user, org)
         second = await tokens.rotate(conn, first.refresh_token)
         assert (await tokens.principal_for(conn, second.access_token)).user_id == user
         with pytest.raises(Unauthorized):
@@ -63,9 +63,9 @@ async def test_a_refresh_rotates_and_works_once(engine: AsyncEngine) -> None:
 
 
 async def test_an_expired_refresh_token_is_refused(engine: AsyncEngine) -> None:
-    _, user = await _member(engine, "stale@tok.test")
+    org, user = await _member(engine, "stale@tok.test")
     async with engine.begin() as conn:
-        issued = await tokens.issue(conn, user)
+        issued = await tokens.issue(conn, user, org)
         await conn.execute(
             update(Token)
             .where(Token.refresh_hash == hash_secret(issued.refresh_token))
@@ -76,9 +76,9 @@ async def test_an_expired_refresh_token_is_refused(engine: AsyncEngine) -> None:
 
 
 async def test_revoking_by_the_access_token_ends_the_pair_and_unknown_is_fine(engine: AsyncEngine) -> None:
-    _, user = await _member(engine, "revoke@tok.test")
+    org, user = await _member(engine, "revoke@tok.test")
     async with engine.begin() as conn:
-        issued = await tokens.issue(conn, user)
+        issued = await tokens.issue(conn, user, org)
         await tokens.revoke(conn, issued.access_token)
         await tokens.revoke(conn, "never-issued")
         with pytest.raises(Unauthorized):
@@ -86,11 +86,29 @@ async def test_revoking_by_the_access_token_ends_the_pair_and_unknown_is_fine(en
 
 
 async def test_a_disabled_members_tokens_stop_working(engine: AsyncEngine) -> None:
-    from glyphh_server.models import User
+    from glyphh_server.models import Membership
 
-    _, user = await _member(engine, "disabled@tok.test")
+    org, user = await _member(engine, "disabled@tok.test")
     async with engine.begin() as conn:
-        issued = await tokens.issue(conn, user)
-        await conn.execute(update(User).where(User.id == user).values(disabled_at=datetime.now(UTC)))
+        issued = await tokens.issue(conn, user, org)
+        await conn.execute(update(Membership).where(Membership.user_id == user).values(disabled_at=datetime.now(UTC)))
         with pytest.raises(Unauthorized):
             await tokens.principal_for(conn, issued.access_token)
+
+
+async def test_a_token_acts_in_its_own_org_and_stops_when_the_membership_goes(engine: AsyncEngine) -> None:
+    from sqlalchemy import delete
+
+    from glyphh_server.models import Membership
+
+    org, user = await _member(engine, "two@tok.test")
+    other = await make_org(engine, "Second Co")
+    async with engine.begin() as conn:
+        await conn.execute(Membership.__table__.insert().values(user_id=user, org_id=other, role="user"))
+        here, there = await tokens.issue(conn, user, org), await tokens.issue(conn, user, other)
+        assert (await tokens.principal_for(conn, there.access_token)).org_id == other
+        assert (await tokens.principal_for(conn, there.access_token)).role == "user"
+        await conn.execute(delete(Membership).where(Membership.user_id == user, Membership.org_id == other))
+        with pytest.raises(Unauthorized):
+            await tokens.principal_for(conn, there.access_token)
+        assert (await tokens.principal_for(conn, here.access_token)).org_id == org
