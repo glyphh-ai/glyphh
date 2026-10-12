@@ -411,7 +411,7 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 
 Board changes from the decisions of 2026-10-11 and 2026-10-12.
 
-- **`UsageFlow`, `UsageMore`, `UsageAudit` and their light boards:** a plan's included usage **expires at the period's end**; it never carries over. Show it the way Billing and the admin ledger do ("$4.10 expires on 3 Nov"), and carry over only bought credit.
+All done (2026-10-12): the Usage boards (dark and light) now let a plan's included usage expire at the period's end and carry over only bought credit. They assume included usage is spent before bought credit; say if it's the other way round.
 
 
 ### Questions

@@ -306,8 +306,8 @@ var L_PAST = dayLabels(4, 'Sep', 30);
 var L_30 = dayLabels(12, 'Sep', 30);
 var USES = [1310, 1405, 1280, 1510, 1366, 1290, 1231, 444];               // 9,836
 var CRED_ME = [180, 205, 172, 230, 198, 214, 221, 92];                    // 1,512
-var CRED_ORG = [1720, 1910, 1655, 2080, 1890, 1980, 2105, 1048];          // 14,388
-var CRED_GMAIL = [860, 955, 830, 1040, 945, 990, 1050, 540];              // 7,210
+var CRED_ORG = [1410, 1566, 1357, 1705, 1549, 1623, 1726, 859];          // 11,795 units = $235.90
+var CRED_GMAIL = [705, 783, 680, 852, 775, 812, 860, 443];              // 5,910 units = $118.20
 var USES_ORG = [12600, 13480, 12210, 14020, 13150, 12880, 12610, 5460];  // 96,410
 function series(n, total, seed, lowEvery) {
   var v = [], s = 0;
@@ -315,7 +315,7 @@ function series(n, total, seed, lowEvery) {
   var out = v.map(function (x) { return Math.round(x / s * total); }), sum = out.reduce(function (a, b) { return a + b; }, 0);
   out[n - 1] += total - sum; return out;
 }
-var CRED_PAST = series(30, 13940, 17, 5);
+var CRED_PAST = series(30, 8940, 17, 5);   // $178.80
 var USES_30 = series(29, 31090, 13, 2).concat([444]);
 var RUNS_LISTING = series(29, 9100, 11, 3).concat([312]);
 var IN_SONNET = [1480, 1620, 1390, 1710, 1560, 1500, 1640, 700];        // thousands, 11.6M
@@ -362,8 +362,8 @@ function byModels(d, o) {
 }
 // Connectors, sorted by credit used (2¢ units)
 var CON_ME = [['Gmail', 'bo@northwind.com', 812, 21, '2.6%', '3 h 10 m', 980, 65], ['Slack', 'Northwind workspace', 288, 4, '1.4%', '41 m', 292, 19], ['Salesforce', 'bo@northwind.com', 142, 9, '6.3%', '1 h 55 m', 188, 12], ['Notion', 'Bo’s workspace', 42, 0, '0%', '6 m', 52, 3]];
-var CON_ORG = [['Gmail', '18 accounts', 6120, 129, '2.1%', '27 h 40 m', 7210, 50], ['Salesforce', '9 accounts', 2040, 98, '4.8%', '19 h 02 m', 3020, 21], ['Slack', '22 accounts', 2610, 31, '1.2%', '6 h 15 m', 2690, 19], ['Notion', '7 accounts', 640, 6, '0.9%', '1 h 34 m', 702, 5], ['Jira', '5 accounts', 310, 5, '1.6%', '58 m', 384, 3]];
-var CON_PAST = [['Gmail', '17 accounts', 5890, 118, '2.0%', '26 h 12 m', 6940, 50], ['Salesforce', '9 accounts', 1980, 91, '4.6%', '18 h 30 m', 2910, 21], ['Slack', '21 accounts', 2520, 28, '1.1%', '6 h 02 m', 2600, 19], ['Notion', '7 accounts', 610, 5, '0.8%', '1 h 31 m', 690, 5], ['Jira', '5 accounts', 300, 4, '1.3%', '55 m', 370, 3]];
+var CON_ORG = [['Gmail', '18 accounts', 5020, 105, '2.1%', '22 h 41 m', 5910, 50], ['Salesforce', '9 accounts', 1670, 80, '4.8%', '15 h 36 m', 2476, 21], ['Slack', '22 accounts', 2140, 26, '1.2%', '5 h 08 m', 2205, 19], ['Notion', '7 accounts', 525, 5, '1.0%', '1 h 17 m', 576, 5], ['Jira', '5 accounts', 255, 4, '1.6%', '48 m', 315, 3]];
+var CON_PAST = [['Gmail', '17 accounts', 3780, 76, '2.0%', '16 h 48 m', 4450, 50], ['Salesforce', '9 accounts', 1270, 58, '4.6%', '11 h 52 m', 1870, 21], ['Slack', '21 accounts', 1610, 18, '1.1%', '3 h 52 m', 1670, 19], ['Notion', '7 accounts', 390, 3, '0.8%', '58 m', 440, 5], ['Jira', '5 accounts', 190, 2, '1.1%', '35 m', 240, 3]];
 function byCon(d, rows, o) {
   o = o || {};
   return table(d, { label: 'Credit by connector', grid: 'minmax(0, 2.2fr) 90px 110px 100px 100px 160px',
@@ -379,7 +379,7 @@ function byMachines(d) {
     rows: M.map(function (r) { return [cName(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1]), cNum(fmt(r[2])), cNum(fmt(r[3])), cErr(fmt(r[4]), r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cNum(usd(r[7])), cShare(r[8])]; }),
     prows: M.map(function (r) { return prow(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1], fmt(r[2]) + ' runs · ' + fmt(r[3]) + ' uses · ' + fmt(r[4]) + ' errors (' + r[5] + ') · ' + r[6], { right: usd(r[7]), pct: r[8] }); }) });
 }
-var USERS = [[MAX, 'MA', 'Sales', 610, 14902, 388, '2.6%', '48 h 10 m', 3104, 22], ['Ana Ruiz', 'AR', 'Sales', 398, 11260, 201, '1.8%', '36 h 44 m', 2890, 20], ['Bo Li', 'BL', 'Design', 412, 9836, 142, '1.4%', '31 h 12 m', 1512, 11], ['Kenji Watanabe', 'KW', 'Support', 366, 8410, 97, '1.2%', '28 h 05 m', 1290, 9], ['Sam Rivera', 'SR', 'Sales · Design', 301, 6022, 64, '1.1%', '19 h 30 m', 1104, 8]];
+var USERS = [[MAX, 'MA', 'Sales', 610, 14902, 388, '2.6%', '48 h 10 m', 2560, 22], ['Ana Ruiz', 'AR', 'Sales', 398, 11260, 201, '1.8%', '36 h 44 m', 2370, 20], ['Bo Li', 'BL', 'Design', 412, 9836, 142, '1.4%', '31 h 12 m', 1512, 13], ['Kenji Watanabe', 'KW', 'Support', 366, 8410, 97, '1.2%', '28 h 05 m', 1058, 9], ['Sam Rivera', 'SR', 'Sales · Design', 301, 6022, 64, '1.1%', '19 h 30 m', 905, 8]];
 function byUsers(d) {
   return table(d, { label: 'By user', grid: 'minmax(0, 2.4fr) 64px 84px 96px 100px 84px 130px',
     heads: [hd('Member · teams'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Credit', 'right'), hd('Share of credit')],
@@ -479,7 +479,7 @@ function memberTiles(d, keys) {
     tile('Tokens in', '18.4M', keys), tile('Tokens out', '2.1M', keys), tile('Tokens cached', '11.2M', '61% of input'), tile('Connection calls', '1,284', '$30.24 credit used')]);
 }
 function memberChart(d, o) { o = o || {}; return chart(d, { title: 'Uses by day', total: '9,836', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credit'] : null, segOn: 'Uses', tip: o.tip }); }
-function memberBal(d) { return bal(d, { v: '$263.44 left', line: 'Northwind has used $287.76 of $551.20 this billing period; $30.24 of it was yours.', pct: 52, ml: '52% used', mr: '+$240.00 on 4 Nov', note: 'Shared by everyone in Northwind. Sam Rivera, your org admin, can add more.' }); }
+function memberBal(d) { return bal(d, { v: '$354.10 left', line: 'Northwind has used $235.90 this billing period; $30.24 of it was yours. $4.10 expires on 3 Nov; the rest is bought credit and carries on.', pct: 40, ml: '40% used', mr: '+$240.00 on 4 Nov', note: 'Shared by everyone in Northwind. Sam Rivera, your org admin, can add more.' }); }
 function usageHead(d, o) { o = o || {}; return head(d, { title: o.title || 'Usage', size: d ? '32px' : '28px', btns: [btn('secondary', 'Audit log')], meta: o.meta || 'What your super powers used in Northwind: runs, powers, models and connection calls. ' + COUNTS_ONLY }); }
 function memberTop(d, o) {
   o = o || {};
@@ -505,7 +505,7 @@ function orgTop(d, o) {
   return [R(d, [orgTabs()]), R(d, [head(d, { title: o.title || 'Usage', size: d ? '32px' : '28px', meta: o.meta || 'Everything Northwind’s 24 members used: by user, super power, power, model, connection and machine. ' + COUNTS_ONLY, btns: o.btns })]),
     R(d, [ctrls(d, { period: o.period === undefined ? NOW : o.period, range: o.range || RANGE, items: periodItems(d, { team: o.team || 'All teams', earlier: o.earlier }) })])];
 }
-function orgBal(d) { return bal(d, { link: 'Billing', v: '$263.44 left', line: '$287.76 used of $551.20 this billing period: $61.20 carried over, $240.00 from Basic (24 seats × $10) on 4 Oct, and $250.00 added on 6 Oct.', pct: 52, ml: '52% used', mr: '+$240.00 on 4 Nov', note: 'Bought credit expires a year after purchase: the $250.00 on 6 Oct 2027.', btns: [btn('primary', 'Add funds')] }); }
+function orgBal(d) { return bal(d, { link: 'Billing', v: '$354.10 left', line: '$4.10 expires on 3 Nov: what is left of the $240.00 included with Basic (24 seats × $10). $350.00 is bought credit and carries on. $235.90 used of $590.00 this billing period.', pct: 40, ml: '40% used', mr: '+$240.00 on 4 Nov', note: 'Included usage expires at the end of each period. Bought credit expires a year after purchase: $100.00 on 19 Sep 2027, $250.00 on 6 Oct 2027.', btns: [btn('primary', 'Add funds')] }); }
 
 // Billing period: credit used, in dollars
 function creditsChart(d, vals, total, o) {
@@ -552,31 +552,31 @@ var STATES = [
   { id: 'creditsOrg', title: '3 · Credit this billing period (org admin)', who: 'a', sub: 'Org › Usage, the new sub-tab after Review. The same view for all of Northwind: the balance with a link to Billing and Add funds, credit used by day, and every connector the org called, paginated.',
     build: function (d) {
       var rows = orgTop(d).concat([R(d, [alert(d, 'plain', { title: 'Only connection calls use credit', body: CREDITS_ONLY })]),
-        R(d, [creditsChart(d, CRED_ORG, '$287.76')], [orgBal(d)]),
+        R(d, [creditsChart(d, CRED_ORG, '$235.90')], [orgBal(d)]),
         R(d, [h({ title: 'Credit by connector', desc: 'All of Northwind this billing period, most credit used first.', mt: '8px' }), byCon(d, CON_ORG, { hi: 0 }), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
       return { nav: 'Org', rows: rows };
     } },
   { id: 'gmail', title: '4 · A connector opened: Gmail', who: 'a', sub: 'From a connector’s row. Its credit used and calls by tool, by super power and by user, by day; then its rows in the audit log, already filtered to Gmail, with cursor paging and Export CSV. A member sees the same for their own calls, without By user.',
     build: function (d) {
-      var tools = [['gmail-find-email', '3,410 calls · $70.40', 49], ['gmail-send-email', '1,620 calls · $37.80', 26], ['gmail-get-attachment', '450 calls · $23.20', 16], ['gmail-list-labels', '640 calls · $12.80', 9]];
-      var bySp = [['Inbox Zero · Ana Ruiz', '$48.20', 33, icCat('Inbox Zero', 28)], ['Deal Desk · ' + MAX, '$39.60', 27, icCat('Deal Desk', 28)], ['Inbox Zero · Bo Li', '$16.56', 11, icCat('Inbox Zero', 28)], ['Scout · Kenji Watanabe', '$14.24', 10, icCat('Scout', 28)], ['6 more', '$25.60', 18]];
-      var byU = [[MAX, '$52.80', 37, icPerson('MA', 28)], ['Ana Ruiz', '$48.20', 33, icPerson('AR', 28)], ['Bo Li', '$19.60', 14, icPerson('BL', 28)], ['Kenji Watanabe', '$14.24', 10, icPerson('KW', 28)], ['20 more', '$9.36', 6]];
+      var tools = [['gmail-find-email', '2,800 calls · $57.80', 49], ['gmail-send-email', '1,330 calls · $31.00', 26], ['gmail-get-attachment', '370 calls · $19.00', 16], ['gmail-list-labels', '520 calls · $10.40', 9]];
+      var bySp = [['Inbox Zero · Ana Ruiz', '$39.50', 33, icCat('Inbox Zero', 28)], ['Deal Desk · ' + MAX, '$32.40', 27, icCat('Deal Desk', 28)], ['Inbox Zero · Bo Li', '$16.56', 14, icCat('Inbox Zero', 28)], ['Scout · Kenji Watanabe', '$11.68', 10, icCat('Scout', 28)], ['6 more', '$18.06', 15]];
+      var byU = [[MAX, '$43.20', 37, icPerson('MA', 28)], ['Ana Ruiz', '$39.50', 33, icPerson('AR', 28)], ['Bo Li', '$19.60', 17, icPerson('BL', 28)], ['Kenji Watanabe', '$11.68', 10, icPerson('KW', 28)], ['20 more', '$4.22', 4]];
       var rows = [R(d, [orgTabs()]), R(d, [head(d, { crumb: 'Usage', icon: icLogo('Gmail', d ? 64 : 52), title: 'Gmail', meta: 'Connector · 18 members’ own accounts · this billing period, 4 Oct – 3 Nov', btns: [btn('secondary', 'Export CSV')] })]),
         R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d, { team: 'All teams' }) })]),
-        R(d, [tiles(d, [tile('Credit used', '$144.20', '50% of Northwind’s'), tile('Calls', '6,120', 'through Pipedream'), tile('Errors', '129', '2.1% of calls'), tile('Time', '27 h 40 m', 'in calls')])]),
-        R(d, [chart(d, { title: 'Gmail credit used by day', total: '$144.20', sub: '4 Oct – 3 Nov', labels: L_PERIOD, vals: CRED_GMAIL, money: true })], [hbars('By tool', 'Calls and credit used', tools)]),
+        R(d, [tiles(d, [tile('Credit used', '$118.20', '50% of Northwind’s'), tile('Calls', '5,020', 'through Pipedream'), tile('Errors', '105', '2.1% of calls'), tile('Time', '22 h 41 m', 'in calls')])]),
+        R(d, [chart(d, { title: 'Gmail credit used by day', total: '$118.20', sub: '4 Oct – 3 Nov', labels: L_PERIOD, vals: CRED_GMAIL, money: true })], [hbars('By tool', 'Calls and credit used', tools)]),
         R(d, [hbars('By super power', 'Credit used this period', bySp)], [hbars('By user', 'Credit used this period', byU)], 'minmax(0, 1fr) minmax(0, 1fr)'),
         R(d, [h({ title: 'Gmail calls', desc: 'The audit log’s connector calls, filtered to Gmail. Newest first.', link: 'Open in the audit log', mt: '8px' }), auditFilters(d, 'calls', { user: true, con: 'Gmail', clear: true }),
-          auditCalls(d, CALLS_GMAIL, { user: true }), cursor(d, 'Gmail calls', 'Newest first · 6,120 rows · 50 a page', true), btns(d, [btn('secondary', 'Export 6,120 rows as CSV', true)])])];
+          auditCalls(d, CALLS_GMAIL, { user: true }), cursor(d, 'Gmail calls', 'Newest first · 5,020 rows · 50 a page', true), btns(d, [btn('secondary', 'Export 5,020 rows as CSV', true)])])];
       return { nav: 'Org', rows: rows };
     } },
   { id: 'past', title: '5 · A past billing period, closed', who: 'a', sub: 'Picked from Earlier periods, listed by their dates. Closed periods are final: the totals match the invoice, which is one link away. The same breakdown below. No today, so no counting note.',
     build: function (d) {
       var rows = orgTop(d, { period: null, range: '4 Sep – 3 Oct · closed', earlier: '4 Sep – 3 Oct' }).concat([
         R(d, [alert(d, 'plain', { title: 'This period is closed', body: 'These totals are final and match the invoice for 4 Sep – 3 Oct.' })]),
-        R(d, [tiles(d, [tile('Credit used', '$278.80', 'of $340.00'), tile('Connection calls', '11,530', 'only these use credit'), tile('Runs', '14,206', '24 members'), tile('Model tokens', '602M', 'on members’ keys, not billed')])]),
-        R(d, [creditsChart(d, CRED_PAST, '$278.80', { labels: L_PAST, closed: true, sub: '4 Sep – 3 Oct · 30 days' })],
-          [bal(d, { title: 'The period’s credit', link: 'Invoice for Sep 4 – Oct 3', v: '$278.80 used', line: '$278.80 used of $340.00: $240.00 from Basic on 4 Sep and $100.00 added on 19 Sep. Nothing expires at the end of a period: the $61.20 left carried on.', note: 'Bought credit expires a year after purchase: the $100.00 on 19 Sep 2027.', pct: 82, ml: '82% used', mr: 'closed 3 Oct' })]),
+        R(d, [tiles(d, [tile('Credit used', '$178.80', 'of $240.00 included'), tile('Connection calls', '7,390', 'only these use credit'), tile('Runs', '14,206', '24 members'), tile('Model tokens', '602M', 'on members’ keys, not billed')])]),
+        R(d, [creditsChart(d, CRED_PAST, '$178.80', { labels: L_PAST, closed: true, sub: '4 Sep – 3 Oct · 30 days' })],
+          [bal(d, { title: 'The period’s credit', link: 'Invoice for Sep 4 – Oct 3', v: '$178.80 used', line: '$178.80 used of the $240.00 included with Basic. $61.20 of included usage expired on 3 Oct. The $100.00 bought on 19 Sep wasn’t needed and carried on.', note: 'Bought credit expires a year after purchase: the $100.00 on 19 Sep 2027.', pct: 75, ml: '75% of included used', mr: 'closed 3 Oct' })]),
         R(d, [h({ title: 'Credit by connector', desc: '4 Sep – 3 Oct, most credit used first.', mt: '8px' }), byCon(d, CON_PAST), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
       return { nav: 'Org', rows: rows };
     } },
@@ -658,7 +658,7 @@ var STATES = [
     build: function (d) {
       return { nav: 'Org', rows: [R(d, [orgTabs()]), R(d, [head(d, { crumb: 'Usage', title: 'Audit log', meta: 'Every connector call and power use in Northwind, newest first. ' + COUNTS_ONLY + ' Rows can’t be changed or deleted.' })]),
         R(d, [auditTabs('Connector calls'), auditFilters(d, 'calls', { user: true }),
-          ctrls(d, { range: '11,920 rows · 4 Oct 00:00 – now', items: [], btns: [btn('secondary', 'Export 11,920 rows as CSV', true)] }),
+          ctrls(d, { range: '9,770 rows · 4 Oct 00:00 – now', items: [], btns: [btn('secondary', 'Export 9,770 rows as CSV', true)] }),
           auditCalls(d, CALLS_ORG, { user: true }), cursor(d, 'Connector calls', 'Newest first · 50 a page', true)])] };
     } },
   { id: 'logOrg', title: '18 · The org’s audit log, filtered to nothing', who: 'a', sub: 'Bo Li, Gmail, errors only, since 9 Oct. A filter that matches nothing says so, offers to clear, and Export is off with nothing to export.',
@@ -683,7 +683,7 @@ var STATES = [
   { id: 'org', title: '20 · The org’s usage, by user', who: 'a', sub: 'Org › Usage for Sam Rivera. The same page for all of Northwind, with By users first and a Team filter. The balance links to Billing. A user’s row opens their usage, the member page with a crumb back.',
     build: function (d) {
       var rows = orgTop(d).concat([R(d, [tiles(d, [tile('Runs', '3,980', '18 of 24 members'), tile('Uses', '96,410', 'powers used in runs'), tile('Errors', '1,722', '1.8% of uses'), tile('Time', '302 h', 'spent in runs'),
-          tile('Tokens in', '171M', 'on members’ keys'), tile('Tokens out', '19.6M', 'on members’ keys'), tile('Tokens cached', '98M', '57% of input'), tile('Connection calls', '11,920', '$287.76 credit used')])]),
+          tile('Tokens in', '171M', 'on members’ keys'), tile('Tokens out', '19.6M', 'on members’ keys'), tile('Tokens cached', '98M', '57% of input'), tile('Connection calls', '9,770', '$235.90 credit used')])]),
         R(d, [chart(d, { title: 'Uses by day', total: '96,410', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES_ORG, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credit'] : null, segOn: 'Uses' })], [orgBal(d)]),
         R(d, byBlock(d, 'Users', BY_ORG).concat([byUsers(d), pager(d, 'Members', 1, 5, 24, 1, 5)]))]);
       return { nav: 'Org', rows: rows };
@@ -691,8 +691,8 @@ var STATES = [
   { id: 'orgTeam', title: '21 · The org’s usage, one team', who: 'a', sub: 'Team: Sales narrows everything on the page: tiles, bars, balance share and the table. By super powers shows each one’s owner, since super powers belong to members.',
     build: function (d) {
       var rows = [R(d, [orgTabs()]), R(d, [head(d, { title: 'Usage', size: d ? '32px' : '28px', meta: 'Sales: 9 members. ' + COUNTS_ONLY })]), R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d, { team: 'Sales' }) })]),
-        R(d, [tiles(d, [tile('Runs', '1,840', '8 of 9 members'), tile('Uses', '44,120', 'powers used in runs'), tile('Errors', '1,012', '2.3% of uses'), tile('Credit used', '$164.20', '57% of Northwind’s')])]),
-        R(d, byBlock(d, 'Super powers', BY_ORG).concat([bySP(d, [['Deal Desk', MAX + ' · max-mac', 402, 10110, 296, '2.9%', '30 h 02 m', '14.1M in · 1.6M out', 2620, 23], ['Inbox Zero', 'Ana Ruiz · ana-box', 288, 8040, 120, '1.5%', '22 h 40 m', '10.2M in · 1.2M out', 2410, 18], ['Scout', 'Sam Rivera · studio-sam', 140, 3360, 41, '1.2%', '9 h 12 m', '4.0M in · 0.5M out', 610, 8]], { who: true }), pager(d, 'Super powers', 1, 3, 14, 1, 5)]))];
+        R(d, [tiles(d, [tile('Runs', '1,840', '8 of 9 members'), tile('Uses', '44,120', 'powers used in runs'), tile('Errors', '1,012', '2.3% of uses'), tile('Credit used', '$134.40', '57% of Northwind’s')])]),
+        R(d, byBlock(d, 'Super powers', BY_ORG).concat([bySP(d, [['Deal Desk', MAX + ' · max-mac', 402, 10110, 296, '2.9%', '30 h 02 m', '14.1M in · 1.6M out', 2150, 23], ['Inbox Zero', 'Ana Ruiz · ana-box', 288, 8040, 120, '1.5%', '22 h 40 m', '10.2M in · 1.2M out', 1975, 18], ['Scout', 'Sam Rivera · studio-sam', 140, 3360, 41, '1.2%', '9 h 12 m', '4.0M in · 0.5M out', 500, 8]], { who: true }), pager(d, 'Super powers', 1, 3, 14, 1, 5)]))];
       return { nav: 'Org', rows: rows };
     } },
   { id: 'orgMember', title: '22 · An org admin’s view of a member', who: 'a', sub: 'From a row of By users: Bo Li’s usage as Sam Rivera sees it. The same page as Bo’s own, with a crumb back, and Bo’s model token counts: counts only, even though the models run on Bo’s own keys. Sam never sees prompts, replies or keys.',
@@ -707,7 +707,7 @@ var STATES = [
   { id: 'out', title: '22 · Out of credit', who: 'm', sub: 'The balance reached $0.00: connection calls are refused ($0.00, logged as Refused with the reason) until Basic adds $240.00 on 4 Nov or an org admin adds funds. Nothing else stops. A member is told who can fix it.',
     build: function (d) {
       return { nav: '', rows: memberTop(d).concat([R(d, [alert(d, 'red', { title: 'Northwind is out of credit', body: 'Connection calls stop until 4 Nov, when Basic adds $240.00. Model calls and everything else on your machines keep working. Sam Rivera, your org admin, can add funds now.' })]),
-        R(d, [creditsChart(d, CRED_ME, '$30.24')], [bal(d, { v: '$0.00 left', red: true, line: '$551.20 used of $551.20 this billing period.', pct: 100, ml: '100% used', mr: '+$240.00 on 4 Nov', note: 'Calls refused while out of credit cost nothing.' })]),
+        R(d, [creditsChart(d, CRED_ME, '$30.24')], [bal(d, { v: '$0.00 left', red: true, line: '$590.00 used of $590.00 this billing period: Basic’s $240.00 and all $350.00 of bought credit.', pct: 100, ml: '100% used', mr: '+$240.00 on 4 Nov', note: 'Calls refused while out of credit cost nothing.' })]),
         R(d, [h({ title: 'Latest connector calls', desc: 'Refused calls are logged at $0.00 with the reason.', link: 'Open the audit log', mt: '8px' }), auditCalls(d, CALLS_REFUSED)])]) };
     } },
   { id: 'listing', title: '23 · A publisher’s listing stats: Receipt filer', who: 'm', sub: 'From a published listing: Stats. Installs, installs used in the last 30 days, runs, by day, by version. Counts only: a publisher never sees who installed it or what it ran on.',
@@ -755,7 +755,7 @@ class Component extends DCLogic {
       intro: 'What a member, an org admin and a publisher can see of what was used: runs, powers, model tokens and connection calls, counted by day. It opens on the org’s billing period (4 Oct – 3 Nov here), with earlier periods by their dates, Last 30 days and Custom. Credit is dollars: only connection calls use it, 2¢ for each started 30 seconds; runs cost nothing; model calls are on members’ own keys and show tokens, never dollars. Counts and times only: no prompts, arguments or results anywhere. Desktop 1200, phone 390.',
       states: STATES.filter(function (s, i) { return PART.indexOf(i + 1) >= 0; }).map(function (s, i) { return { title: (i + 1) + ' · ' + s.title.replace(/^\d+ · /, ''), sub: s.sub, frames: [frame(s, true), frame(s, false)] }; }),
       notes: [
-        { t: 'By billing period', b: 'Every usage page opens on the org’s current billing period, not the calendar month, so credit used matches the balance and, once closed, the invoice. Nothing expires at the end of a period; bought credit expires a year after purchase. Earlier periods are listed by their dates; Last 30 days and Custom are for looking, not for matching bills.' },
+        { t: 'By billing period', b: 'Every usage page opens on the org’s current billing period, not the calendar month, so credit used matches the balance and, once closed, the invoice. A plan’s included usage expires at the period’s end (“$4.10 expires on 3 Nov”); only bought credit carries over, and it expires a year after purchase. Earlier periods are listed by their dates; Last 30 days and Custom are for looking, not for matching bills.' },
         { t: 'Only connection calls use credit', b: 'Credit is dollars. The server times every connection call it relays: 2¢ for each started 30 seconds, failed calls included, refused calls $0.00. Runs cost nothing. Model calls never use credit (members’ own keys): they show tokens in, out and cached. Skills, tasks, folders and browsers are counted, never billed.' },
         { t: 'Counts, never content', b: 'usage_events and power_events hold who, what, when, how long, tokens and cost. No prompts, arguments, results or keys, so none of it can appear on these pages, in a row’s detail or in the CSV. The detail panel says so.' },
         { t: 'Who sees what', b: 'A member sees their own usage and the org’s balance. An org admin sees all of the org under Org › Usage (after Review), each member’s usage including their model token counts (counts only, even on the member’s own key), with By users, a Team filter, everyone’s rows in the audit log, Add funds and the link to Billing. A publisher sees their listing’s counts, never who.' },

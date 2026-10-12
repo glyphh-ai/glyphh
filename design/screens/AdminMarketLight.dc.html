@@ -682,7 +682,7 @@ function detail(base, o) {
 function msg(kind, who, ini, role, org, when, text, qf, q) {
   var agent = kind === 'agent';
   return { isAgent: agent, cat: reviewer('done', 22), ini: agent ? '' : ini, who: who, role: role, org: org, when: when, text: text, quote: q || '', quoteField: qf || '',
-    avR: agent ? '11px' : '50%', avBorder: agent ? '1px solid var(--tile)' : 'none', avBg: agent ? 'transparent' : (org === 'Glyphh' ? '#7C4DFF' : 'var(--s3)'), avTx: org === 'Glyphh' && !agent ? '#FFFFFF' : 'var(--tx)', avTx: org === 'Glyphh' && !agent ? '#FFFFFF' : 'var(--tx)',
+    avR: agent ? '11px' : '50%', avBorder: agent ? '1px solid var(--tile)' : 'none', avBg: agent ? 'transparent' : (org === 'Glyphh' ? '#7C4DFF' : 'var(--s3)'), avTx: org === 'Glyphh' && !agent ? '#FFFFFF' : 'var(--tx)', avTx: org === 'Glyphh' && !agent ? '#FFFFFF' : 'var(--tx)', avTx: org === 'Glyphh' && !agent ? '#FFFFFF' : 'var(--tx)',
     roleLine: agent ? '#6A3DF0' : 'var(--line2)', roleTx: agent ? '#6A3DF0' : 'var(--tx2)' };
 }
 var THREAD = [
