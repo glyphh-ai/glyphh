@@ -158,7 +158,8 @@ The left half on desktop, collapsing to a small ring above the content on a phon
 
 ### app.glyphh.ai
 
-- **Machine cards** show up to 8 super powers, each in an outlined square with its name under it (two lines, then an ellipsis), then "+N / See all".
+- **Machine cards** show up to 8 super powers, each in an outlined square with its name under it (two lines, then an ellipsis), then "+N / See all". They are the machine's **8 most recently active** installed super powers (a super power can be installed on many machines); the machine's own Glyphh isn't one of them (Chris, 2026-10-12).
+- **The card's line** is the platform and where it runs ("rrotor on macOS · Fly"). The drawn location ("Austin") is left out for now (Chris, 2026-10-12).
 - **See all** opens a dialog with search, status filters and pages.
 - **Clicking a super power** opens it on its machine in rrotor. The platform shows and edits what is in the system (powers, grants, settings, catalogs, plans); the work runs on machines and is never run from the web.
 - **The theme is in the account menu** (bottom of the rail) and on the Account page: Light, Dark or System.
@@ -214,6 +215,8 @@ Decided by Chris, 2026-10-12: rrotor's UI is for business users. **No terminal a
 ### Navigation
 
 **A left rail, not a top nav** (Chris, 2026-10-12; board `AppShell`, `AppShell2`). The rail collapses to icons (256 px open, 72 px collapsed, remembered per person), with **you, your org and your account at the bottom left**: a button that opens the account menu upward (your orgs to switch between, Account, Usage, API keys, Help and status, the theme Light / Dark / System, Sign out). On a phone (below 768 px) the same rail is a **drawer from the left**, opened by a menu button top left. The page's title and main action head the page itself; there is no top bar. Icons are **Lucide** (approved 2026-10-12), stroke 2, 20 px, only the ones `AppShell` lists. Sign-in pages have no rail.
+
+In a **Personal org** (no members or teams) the Org group holds only Billing, Usage and API keys (Chris, 2026-10-12).
 
 Decided 2026-10-11 and 2026-10-12: the rail holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans, Audit log); the account menu has Usage and API keys. Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
 
