@@ -15,7 +15,13 @@ ME: dict = {
     "last_name": None,
     "image_url": None,
     "role": "org_admin",
-    "org": {"id": "7f0c7b1e-0000-4000-8000-000000000002", "name": "Acme", "plan": "Free", "personal": False, "role": "org_admin"},
+    "org": {
+        "id": "7f0c7b1e-0000-4000-8000-000000000002",
+        "name": "Acme",
+        "plan": "Free",
+        "personal": False,
+        "role": "org_admin",
+    },
 }
 HOST: dict = {
     "id": "7f0c7b1e-0000-4000-8000-000000000003",
@@ -56,7 +62,7 @@ def test_me_sends_the_token_and_reads_the_member() -> None:
         last_name=None,
         image_url=None,
         role="org_admin",
-        org=MeOrg(id=ME["org"]["id"], name="Acme", plan="Free"),
+        org=MeOrg(id=ME["org"]["id"], name="Acme", plan="Free", personal=False, role="org_admin"),
     )
     assert seen[0].headers["authorization"] == "Bearer tok-1"
 

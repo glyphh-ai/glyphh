@@ -14,9 +14,9 @@ from glyphh._calls import (
     Call,
     answer,
 )
-from glyphh._gen.models.invite_answer import InviteAnswer
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
+from glyphh._gen.models.invite_answer import InviteAnswer
 from glyphh._models import Health, Host, Me, MeOrg
 from glyphh._org import AsyncOrg, Org
 
