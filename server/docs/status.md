@@ -47,3 +47,5 @@ Decisions still to make. Where a proposal is written, it is a proposal, not a de
 ## Next
 
 Building the drawn tables when the word is given, with their limits enforced in the database and race tested; then the API (Google and GitHub sign-in, tokens, machine sign-in) and the SDK, in that order.
+
+What is decided but not started: [backlog](backlog.md).
