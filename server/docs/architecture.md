@@ -382,6 +382,10 @@ erDiagram
     super_powers ||--o{ usage_events : "called from"
     machines ||--o{ usage_events : "called on"
     usage_events ||--o| credit_ledger : "spends"
+    runs ||--o{ power_events : "uses"
+    powers ||--o{ power_events : "used as"
+    super_powers ||--o{ power_events : "used by"
+    machines ||--o{ power_events : "reported by"
     users ||--o{ machines : "registers"
     machine_sign_ins |o--o| machines : "registers"
     orgs ||--o{ invites : "invites"
@@ -732,6 +736,43 @@ erDiagram
         timestamptz created_at
     }
 
+    power_events {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid machine_id FK "the machine that reported it"
+        text event_id "rrotor's own id for it; unique per machine, so a batch sent twice counts once"
+        uuid run_id FK
+        uuid super_power_id FK
+        uuid power_id FK "the power used; null for one of rrotor's own tools"
+        text kind "model_call, tool_call, skill, task_step, folder_read, folder_write, browser"
+        text tool "the tool's name, for a tool call"
+        text model "the provider's model id, for a model call"
+        int input_tokens "as the provider reported them"
+        int output_tokens
+        int cached_tokens
+        text status "ok, error"
+        text error_code "the provider's or the tool's code, never its message"
+        int duration_ms
+        timestamptz started_at
+        timestamptz created_at "when the server took it"
+    }
+
+    usage_daily {
+        date day PK
+        uuid org_id PK, FK
+        uuid user_id PK, FK
+        uuid super_power_id PK, FK "the nil id when none"
+        uuid power_id PK, FK "the nil id for rrotor's own tools"
+        int uses
+        int errors
+        bigint duration_ms
+        bigint input_tokens
+        bigint output_tokens
+        int connection_calls
+        int credits
+    }
+
     payments {
         uuid id PK
         uuid org_id FK
@@ -1066,7 +1107,7 @@ The database enforces it: every power has a `user_id`.
 
 Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power or the main assistant: Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
-- **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call, never sees its rates or prices, and never counts its tokens. What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
+- **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call and never sees its rates, prices, prompts or answers; rrotor reports only the tokens the provider says each call used (see Usage). What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
 - **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
@@ -1165,7 +1206,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 ### Usage
 
-Every usage event is logged in one place: the server's connection relay. A connection call is the only thing billed, a cost Glyphh pays, and every one goes through the server (rrotor → connector → server → Pipedream), so the server sees each call whole: who, through which connection, from which super power, on which machine, how long, and what it cost. Nothing is reported by the runtime about itself, so a modified rrotor cannot under-report.
+**Billed usage** is logged in one place: the server's connection relay. A connection call is the only thing billed, a cost Glyphh pays, and every one goes through the server (rrotor → connector → server → Pipedream), so the server sees each call whole: who, through which connection, from which super power, on which machine, how long, and what it cost. Nothing billed is reported by the runtime about itself, so a modified rrotor cannot under-report.
 
 One call, as the relay handles it:
 
@@ -1176,9 +1217,18 @@ One call, as the relay handles it:
 The check runs before the cost is known, so calls already in flight when the balance reaches 0 finish and are counted: the balance can dip below 0 by at most those calls, and the next call is refused. It never turns into a bill.
 
 - **usage_events** is append only: never updated, never deleted by a request. It holds what was called and how it went, **never what went through it**: no arguments, no results, no message bodies. Those are the member's own data, and they stay between the runtime and Pipedream.
-- **Model calls are not usage.** They go straight to the provider on the member's key, and Glyphh never sees them. Jev is one of them: a TypeSafe model the member adds with their own key, never on Glyphh's key, never through the server, never charged.
+- **Model calls are never billed.** They go straight to the provider on the member's key, and Glyphh never sees them; rrotor reports their token counts (below). Jev is one of them: a TypeSafe model the member adds with their own key, never on Glyphh's key, never through the server, never charged.
 - **Operational logs are separate:** request logs and traces go to OpenTelemetry, tagged by org; they are not billing and do not decide a charge.
 - **Size:** the table is partitioned by month on `created_at`, indexed by org and time, and by org, user and time, so every page reads one org's range.
+
+#### What rrotor reports: every power and super power, counted, never billed
+
+Decided 2026-10-11. Beside the metered connection calls, rrotor reports each use of a power inside a run, so members, org admins and publishers can see what is used, how often and how well. Counts and times only, **never content**: no prompts, arguments, results or keys. None of it is billed, and it never decides a charge.
+
+- **power_events:** one row per use, sent by rrotor over its machine connection in batches: the model call (with the input, output and cached tokens exactly as the provider reported them, and the provider's model id), a tool call of a plugin or of rrotor's own, a skill loaded, a task step, a folder read or written, a browser session. Each carries its run, super power, power, machine, user and org, its status and how long it took. Each has rrotor's own event id (unique per machine), so a batch sent twice is counted once. Append only, partitioned by month like `usage_events`.
+- **usage_daily:** the nightly roll-up of both tables, per day, org, user, super power and power: uses, errors, time, tokens, and connection calls and credits. Every usage page reads it, and a day still running is read from the raw rows.
+- **Listings:** a publisher sees their listing's installs (powers installed from its versions), installs used in the last 30 days, and runs; the marketplace ranks by them.
+- **Trust:** a modified rrotor can only misreport its own member's insight, never a bill: what is billed is counted by the server.
 
 #### Who sees what
 
