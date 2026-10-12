@@ -947,7 +947,7 @@
       "y": 0,
       "w": 3100,
       "h": 3920,
-      "title": "rrotor: the desktop (1 of 4)",
+      "title": "rrotor: the desktop (1 of 5)",
       "page": "rrotor-desktop"
     },
     "RrotorDesktop2.dc.html": {
@@ -955,7 +955,7 @@
       "y": 4120,
       "w": 3100,
       "h": 5050,
-      "title": "rrotor: the desktop (2 of 4)",
+      "title": "rrotor: the desktop (2 of 5)",
       "page": "rrotor-desktop"
     },
     "RrotorDesktop3.dc.html": {
@@ -963,7 +963,7 @@
       "y": 9370,
       "w": 3100,
       "h": 3920,
-      "title": "rrotor: the desktop (3 of 4)",
+      "title": "rrotor: the desktop (3 of 5)",
       "page": "rrotor-desktop"
     },
     "RrotorDesktop4.dc.html": {
@@ -972,7 +972,15 @@
       "w": 3100,
       "h": 2920,
       "page": "rrotor-desktop",
-      "title": "rrotor: the desktop (4 of 4)"
+      "title": "rrotor: the desktop (4 of 5)"
+    },
+    "RrotorDesktop5.dc.html": {
+      "x": 0,
+      "y": 16610,
+      "w": 3100,
+      "h": 2920,
+      "page": "rrotor-desktop",
+      "title": "rrotor: the desktop (5 of 5)"
     }
   },
   "createdOnFiles": {
@@ -1455,7 +1463,8 @@
     "RrotorDesktop.dc.html",
     "RrotorDesktop2.dc.html",
     "RrotorDesktop3.dc.html",
-    "RrotorDesktop4.dc.html"
+    "RrotorDesktop4.dc.html",
+    "RrotorDesktop5.dc.html"
   ],
   "pages": [
     {
