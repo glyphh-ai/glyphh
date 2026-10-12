@@ -1,19 +1,20 @@
-# rrotor's UI: the design, for the agent that builds it
+# rrotor's views: the design, for the agent that builds them
 
-rrotor's UI is the screen every Glyphh machine serves: you open a machine and watch its super powers work. It is a separate app from app.glyphh.ai (the platform), with its own look on the same brand. This folder is everything the build needs from the design. Pull `glyphh-ai/glyphh` before you start, and again before each screen: the design keeps moving.
+rrotor's views are where you open a machine and watch its super powers work. **rrotor is headless** (Chris, 2026-10-12): the machine serves no UI; it streams every session to the server, and these views are **pages on app.glyphh.ai and live panels in Claude**, built in the platform (`glyphh-ai/platform`) on `@glyphh-ai/ui`. They keep their own look on the same brand. This folder is everything the build needs from the design. Pull `glyphh-ai/glyphh` before you start, and again before each screen: the design keeps moving.
 
 ## Read first
 
 1. **This file**, all of it.
 2. **`../DESIGN.md`**, the brand and the decisions. Read the brief, every section under Decisions, Brand assets, "How the build must be made" and the section headed "rrotor's UI is the business version". It holds the colours, type, cats, logo, buttons, lists, the rules for logos and icons, and the build rules (no inline styles, tokens only, small components). They apply here exactly as they do on the platform.
-3. **The server's `docs/architecture.md`** (`glyphh-ai/server`). Read these sections: "rrotor is a Linux VM", "Platform and rrotor", "Browsers and RPA on rrotor", "Machine to machine", "Usage" (power_events), "Schedules and runs", "Access" (launch tickets) and "Each machine has its own address". Under Open, read Decisions and Design. It has the data behind every screen, and you never contradict it.
+3. **The server's `docs/architecture.md`** (`glyphh-ai/server`). Read these sections: "rrotor is a Linux VM", "rrotor is headless: a machine that executes and streams", "The main assistant" (the loops), "Platform and rrotor", "Browsers and RPA on rrotor", "Machine to machine", "Usage" (power_events), "Schedules and runs", "Access" (launch tickets) and "Each machine has its own address". Under Open, read Decisions and Design. It has the data behind every screen, and you never contradict it.
 
-## What rrotor's UI is
+## What rrotor's views are
 
-- **Served by the machine:** a Next.js server inside rrotor, at the machine's own address `<machine-id>.glyphh.ai`, reached through Glyphh's relay. It opens in a browser tab, or from Claude.
-- **Opened with a launch ticket:** one member, one machine, one page, valid for a minute and usable once. rrotor checks the ticket with the server and starts its own session. A member signs in on the server, never on a machine.
+- **Pages on the platform and panels in Claude, not served by the machine:** the machine streams each session (chat turns and steps in plain words, status, "needs you", a browser's screen) to the server, and the server passes it on to the page or panel watching. Opening a machine is the platform's (`MachineOpen` in `../screens/`): the card grows into the page and the splash plays in the centre. The member is already signed in on the platform; nobody signs in on a machine.
+- **Needs you, wherever the member is:** when a super power needs an answer or a hand, the plugin's hook in Claude Code says "Glyphh needs you" and the Glyphh panel shows which super power and why; the member answers there or takes control of its browser.
+- **A screen per browser, not a desktop** (the architecture, "rrotor is headless"): each super power's browser has its own screen, watched and taken over on its own. `MachineTakeover` draws a whole desktop; see Questions in `../DESIGN.md`.
 - **The business version:** no terminal anywhere. Work shows as **Activity** in plain words and as **Outputs**. Developers get their own terminal later, as a separate way in.
-- **Its own app, one shared library:** rrotor's UI takes its tokens, fonts, cats, logo tiles, icons and every shared component from **`@glyphh-ai/ui`**, the package published from its own repo `glyphh-ai/ui` (decided by Chris, 2026-10-12; see "One component library" in `../DESIGN.md`). Pin a version. Never copy a component out of it. rrotor's own pieces (the rail, the stage, the drawer, the workbench tiles) live in rrotor. A piece both apps need that the library lacks is a request, added under Requests in `../DESIGN.md`, and it lands in the library, not in rrotor.
+- **One library, in the platform:** the views take their tokens, fonts, cats, logo tiles, icons and every component from **`@glyphh-ai/ui`**, in the platform repo (`ui/`; see "One component library, in the platform" in `../DESIGN.md`). The machine's own pieces (the rail, the stage, the drawer, the workbench tiles) are components there too. A piece the library lacks is a request, added under Requests in `../DESIGN.md`.
 
 ## The words
 
@@ -71,7 +72,7 @@ All of it stops for people who turn motion off.
 
 ## Still to come (don't invent these; ask, or wait for the boards)
 
-- **The platform → machine handoff:** opening a machine from app.glyphh.ai or from Claude, the launch ticket, the splash, then the desktop. Its screens will be drawn here.
+- **The platform → machine handoff:** drawn as `MachineOpen` (in `../screens/`); opening a machine from Claude (a panel) is to draw.
 - rrotor's **Settings** (from the account), including **archived threads**: search, restore, delete for good.
 - **Light theme** and **phone** for every board.
 - The live browser up close (watching, take control, hand back), a run's history, and the layout manager's full rules (splits, presets).
