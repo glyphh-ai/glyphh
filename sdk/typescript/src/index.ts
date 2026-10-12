@@ -11,11 +11,15 @@ import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
 import { ApiKeysApi, OrgAdminApi } from "./orgadmin.js";
+export type {
+  Call, CallPage, GroupPage, GroupQuery, ListingStats, LogQuery, Period, RunPage, RunQuery, UsageBy, UsagePage, UsageQuery, Use, UsePage,
+} from "./usage.js";
+import { UsageApi } from "./usage.js";
 import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
+export { ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi, UsageApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -86,6 +90,8 @@ export class Glyphh {
   readonly orgAdmin: OrgAdminApi;
   /** API keys: mine, and the org's for org admins. */
   readonly apiKeys: ApiKeysApi;
+  /** Usage: runs, uses, tokens, connection calls and credit, and its audit log. */
+  readonly usage: UsageApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -107,6 +113,7 @@ export class Glyphh {
     this.marketplace = new MarketplaceApi(this.#client);
     this.orgAdmin = new OrgAdminApi(this.#client);
     this.apiKeys = new ApiKeysApi(this.#client);
+    this.usage = new UsageApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

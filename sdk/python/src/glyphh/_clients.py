@@ -32,6 +32,7 @@ from glyphh._org import AsyncOrg, Org
 from glyphh._org_admin_specs import API_KEY_SPECS, ORG_ADMIN_SPECS
 from glyphh._powers import AsyncPowers, AsyncSpecApi, Powers, SpecApi
 from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
+from glyphh._usage_specs import USAGE_SPECS
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
@@ -63,6 +64,7 @@ class Glyphh:
         self.marketplace = SpecApi(self._run, MARKETPLACE_SPECS)
         self.org_admin = SpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = SpecApi(self._run, API_KEY_SPECS)
+        self.usage = SpecApi(self._run, USAGE_SPECS)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -141,6 +143,7 @@ class AsyncGlyphh:
         self.marketplace = AsyncSpecApi(self._run, MARKETPLACE_SPECS)
         self.org_admin = AsyncSpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = AsyncSpecApi(self._run, API_KEY_SPECS)
+        self.usage = AsyncSpecApi(self._run, USAGE_SPECS)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

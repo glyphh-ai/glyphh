@@ -327,6 +327,52 @@ export type AutoTopUpCheck = {
 };
 
 /**
+ * Balance
+ */
+export type Balance = {
+    /**
+     * Ask
+     */
+    ask: Array<string>;
+    /**
+     * Balance Cents
+     */
+    balance_cents: number;
+    /**
+     * Bought Cents
+     */
+    bought_cents: number;
+    /**
+     * Included Cents
+     */
+    included_cents: number;
+    /**
+     * Next Expiry At
+     */
+    next_expiry_at: string | null;
+    /**
+     * Next Expiry Cents
+     */
+    next_expiry_cents: number | null;
+    /**
+     * Out
+     */
+    out: boolean;
+    /**
+     * Period End
+     */
+    period_end: string;
+    /**
+     * Period Start
+     */
+    period_start: string;
+    /**
+     * Used Cents
+     */
+    used_cents: number;
+};
+
+/**
  * Billing
  */
 export type Billing = {
@@ -367,6 +413,136 @@ export type Billing = {
      * Stripe Publishable Key
      */
     stripe_publishable_key: string;
+};
+
+/**
+ * ByVersion
+ */
+export type ByVersion = {
+    /**
+     * Installs
+     */
+    installs: number;
+    /**
+     * Live
+     */
+    live: boolean;
+    /**
+     * Runs
+     */
+    runs: number;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
+ * Call
+ */
+export type Call = {
+    /**
+     * Account
+     */
+    account: string | null;
+    /**
+     * Cost Cents
+     */
+    cost_cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number;
+    /**
+     * Error
+     */
+    error: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Machine
+     */
+    machine: string | null;
+    /**
+     * Machine Id
+     */
+    machine_id: string | null;
+    /**
+     * Power Id
+     */
+    power_id: string | null;
+    /**
+     * Request Bytes
+     */
+    request_bytes: number;
+    /**
+     * Response Bytes
+     */
+    response_bytes: number;
+    /**
+     * Run Id
+     */
+    run_id: string | null;
+    /**
+     * Service
+     */
+    service: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Super Power
+     */
+    super_power: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string | null;
+    /**
+     * Tool
+     */
+    tool: string;
+    /**
+     * Trace Id
+     */
+    trace_id: string | null;
+    /**
+     * User
+     */
+    user: string | null;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * CallPage
+ */
+export type CallPage = {
+    /**
+     * Calls
+     */
+    calls: Array<Call>;
+    /**
+     * Next
+     */
+    next: string | null;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -583,6 +759,44 @@ export type ConnectionView = {
 };
 
 /**
+ * Counts
+ */
+export type Counts = {
+    /**
+     * Cached Tokens
+     */
+    cached_tokens?: number;
+    /**
+     * Connection Calls
+     */
+    connection_calls?: number;
+    /**
+     * Cost Cents
+     */
+    cost_cents?: number;
+    /**
+     * Duration Ms
+     */
+    duration_ms?: number;
+    /**
+     * Errors
+     */
+    errors?: number;
+    /**
+     * Input Tokens
+     */
+    input_tokens?: number;
+    /**
+     * Output Tokens
+     */
+    output_tokens?: number;
+    /**
+     * Uses
+     */
+    uses?: number;
+};
+
+/**
  * CreatedInvite
  */
 export type CreatedInvite = {
@@ -790,6 +1004,52 @@ export type CustomRow = {
      * Used By
      */
     used_by: Array<User>;
+};
+
+/**
+ * Day
+ */
+export type Day = {
+    /**
+     * Cached Tokens
+     */
+    cached_tokens?: number;
+    /**
+     * Connection Calls
+     */
+    connection_calls?: number;
+    /**
+     * Cost Cents
+     */
+    cost_cents?: number;
+    /**
+     * Day
+     */
+    day: string;
+    /**
+     * Duration Ms
+     */
+    duration_ms?: number;
+    /**
+     * Errors
+     */
+    errors?: number;
+    /**
+     * Input Tokens
+     */
+    input_tokens?: number;
+    /**
+     * Output Tokens
+     */
+    output_tokens?: number;
+    /**
+     * Today
+     */
+    today: boolean;
+    /**
+     * Uses
+     */
+    uses?: number;
 };
 
 /**
@@ -1050,6 +1310,95 @@ export type GrantView = {
      * Target Id
      */
     target_id: string;
+};
+
+/**
+ * Group
+ */
+export type Group = {
+    /**
+     * Accounts
+     */
+    accounts?: number | null;
+    /**
+     * Cached Tokens
+     */
+    cached_tokens?: number;
+    /**
+     * Connection Calls
+     */
+    connection_calls?: number;
+    /**
+     * Cost Cents
+     */
+    cost_cents?: number;
+    /**
+     * Duration Ms
+     */
+    duration_ms?: number;
+    /**
+     * Errors
+     */
+    errors?: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Input Tokens
+     */
+    input_tokens?: number;
+    /**
+     * Kind
+     */
+    kind?: string | null;
+    /**
+     * Logo
+     */
+    logo?: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Output Tokens
+     */
+    output_tokens?: number;
+    /**
+     * Runs
+     */
+    runs?: number | null;
+    /**
+     * Share
+     */
+    share: number;
+    /**
+     * Sub
+     */
+    sub?: string | null;
+    /**
+     * Uses
+     */
+    uses?: number;
+};
+
+/**
+ * GroupPage
+ */
+export type GroupPage = {
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Groups
+     */
+    groups: Array<Group>;
+    sums: Counts;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -1646,6 +1995,40 @@ export type ListingChange = {
      * Summary
      */
     summary?: string | null;
+};
+
+/**
+ * ListingStats
+ */
+export type ListingStats = {
+    /**
+     * Days
+     */
+    days: Array<RunDay>;
+    /**
+     * Failed Runs
+     */
+    failed_runs: number;
+    /**
+     * Installs
+     */
+    installs: number;
+    /**
+     * Runs
+     */
+    runs: number;
+    /**
+     * Since
+     */
+    since: string;
+    /**
+     * Used
+     */
+    used: number;
+    /**
+     * Versions
+     */
+    versions: Array<ByVersion>;
 };
 
 /**
@@ -2766,6 +3149,40 @@ export type PeoplePage = {
 };
 
 /**
+ * Period
+ */
+export type Period = {
+    /**
+     * Closed
+     */
+    closed: boolean;
+    /**
+     * End
+     */
+    end: string;
+    /**
+     * Included Cents
+     */
+    included_cents: number;
+    /**
+     * Invoice Id
+     */
+    invoice_id: string | null;
+    /**
+     * Invoice Url
+     */
+    invoice_url: string | null;
+    /**
+     * Start
+     */
+    start: string;
+    /**
+     * Used Cents
+     */
+    used_cents: number;
+};
+
+/**
  * Person
  */
 export type Person = {
@@ -3167,6 +3584,72 @@ export type ReviewView = {
 };
 
 /**
+ * RunDay
+ */
+export type RunDay = {
+    /**
+     * Day
+     */
+    day: string;
+    /**
+     * Runs
+     */
+    runs: number;
+};
+
+/**
+ * RunPage
+ */
+export type RunPage = {
+    /**
+     * Runs
+     */
+    runs: Array<RunUse>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * RunUse
+ */
+export type RunUse = {
+    /**
+     * Cost Cents
+     */
+    cost_cents: number;
+    /**
+     * Ended At
+     */
+    ended_at: string;
+    /**
+     * Errors
+     */
+    errors: number;
+    /**
+     * Machine
+     */
+    machine: string | null;
+    /**
+     * Machine Id
+     */
+    machine_id: string | null;
+    /**
+     * Run Id
+     */
+    run_id: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Uses
+     */
+    uses: number;
+};
+
+/**
  * Say
  */
 export type Say = {
@@ -3466,6 +3949,40 @@ export type Slots = {
      * Slots
      */
     slots: Array<SlotView>;
+};
+
+/**
+ * Span
+ */
+export type Span = {
+    /**
+     * First
+     */
+    first: string;
+    /**
+     * Last
+     */
+    last: string;
+    /**
+     * Period End
+     */
+    period_end: string;
+    /**
+     * Period Start
+     */
+    period_start: string;
+    /**
+     * Rolled Through
+     */
+    rolled_through: string | null;
+    /**
+     * Today
+     */
+    today: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
 };
 
 /**
@@ -3965,6 +4482,60 @@ export type Ticket = {
 };
 
 /**
+ * Tiles
+ */
+export type Tiles = {
+    /**
+     * Cached Tokens
+     */
+    cached_tokens?: number;
+    /**
+     * Connection Calls
+     */
+    connection_calls?: number;
+    /**
+     * Cost Cents
+     */
+    cost_cents?: number;
+    /**
+     * Duration Ms
+     */
+    duration_ms?: number;
+    /**
+     * Errors
+     */
+    errors?: number;
+    /**
+     * Input Tokens
+     */
+    input_tokens?: number;
+    /**
+     * Members
+     */
+    members: number;
+    /**
+     * Output Tokens
+     */
+    output_tokens?: number;
+    /**
+     * People
+     */
+    people: number;
+    /**
+     * Refused
+     */
+    refused: number;
+    /**
+     * Runs
+     */
+    runs: number;
+    /**
+     * Uses
+     */
+    uses?: number;
+};
+
+/**
  * Tool
  */
 export type Tool = {
@@ -4119,6 +4690,135 @@ export type Traded = {
      * Token
      */
     token?: string | null;
+};
+
+/**
+ * UsagePage
+ */
+export type UsagePage = {
+    balance: Balance;
+    /**
+     * Days
+     */
+    days: Array<Day>;
+    span: Span;
+    tiles: Tiles;
+};
+
+/**
+ * Use
+ */
+export type Use = {
+    /**
+     * Cached Tokens
+     */
+    cached_tokens: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number;
+    /**
+     * Error Code
+     */
+    error_code: string | null;
+    /**
+     * Event Id
+     */
+    event_id: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Input Tokens
+     */
+    input_tokens: number;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Machine
+     */
+    machine: string | null;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Model
+     */
+    model: string | null;
+    /**
+     * Output Tokens
+     */
+    output_tokens: number;
+    /**
+     * Power
+     */
+    power: string | null;
+    /**
+     * Power Id
+     */
+    power_id: string | null;
+    /**
+     * Power Kind
+     */
+    power_kind: string | null;
+    /**
+     * Run Id
+     */
+    run_id: string | null;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Super Power
+     */
+    super_power: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string | null;
+    /**
+     * Tool
+     */
+    tool: string | null;
+    /**
+     * User
+     */
+    user: string | null;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * UsePage
+ */
+export type UsePage = {
+    /**
+     * Next
+     */
+    next: string | null;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Uses
+     */
+    uses: Array<Use>;
 };
 
 /**
@@ -4947,6 +5647,41 @@ export type ListingScreenshotResponses = {
      */
     200: unknown;
 };
+
+export type ListingStatsData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: {
+        /**
+         * Days
+         */
+        days?: number;
+    };
+    url: '/v1/listings/{listing_id}/stats';
+};
+
+export type ListingStatsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListingStatsError = ListingStatsErrors[keyof ListingStatsErrors];
+
+export type ListingStatsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingStats;
+};
+
+export type ListingStatsResponse = ListingStatsResponses[keyof ListingStatsResponses];
 
 export type SubmitListingData = {
     body?: never;
@@ -8973,3 +9708,654 @@ export type StopThreadResponses = {
 };
 
 export type StopThreadResponse = StopThreadResponses[keyof StopThreadResponses];
+
+export type UsagePageData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         *
+         * People, for an org admin
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         *
+         * Whole teams, for an org admin
+         */
+        teams?: Array<string> | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+    };
+    url: '/v1/usage';
+};
+
+export type UsagePageErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsagePageError = UsagePageErrors[keyof UsagePageErrors];
+
+export type UsagePageResponses = {
+    /**
+     * Successful Response
+     */
+    200: UsagePage;
+};
+
+export type UsagePageResponse = UsagePageResponses[keyof UsagePageResponses];
+
+export type UsageByData = {
+    body?: never;
+    path: {
+        /**
+         * By
+         */
+        by: 'users' | 'super_powers' | 'powers' | 'models' | 'connections' | 'connectors' | 'machines' | 'tools' | 'errors';
+    };
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         *
+         * People, for an org admin
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         *
+         * Whole teams, for an org admin
+         */
+        teams?: Array<string> | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+    };
+    url: '/v1/usage/by/{by}';
+};
+
+export type UsageByErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageByError = UsageByErrors[keyof UsageByErrors];
+
+export type UsageByResponses = {
+    /**
+     * Successful Response
+     */
+    200: GroupPage;
+};
+
+export type UsageByResponse = UsageByResponses[keyof UsageByResponses];
+
+export type UsageCallsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * After
+         */
+        after?: string | null;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         */
+        teams?: Array<string> | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Run
+         */
+        run?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Tool
+         */
+        tool?: string | null;
+        /**
+         * Status
+         */
+        status?: 'ok' | 'error' | 'refused' | null;
+        /**
+         * Error
+         */
+        error?: boolean | null;
+        /**
+         * Kind
+         */
+        kind?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+    };
+    url: '/v1/usage/calls';
+};
+
+export type UsageCallsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageCallsError = UsageCallsErrors[keyof UsageCallsErrors];
+
+export type UsageCallsResponses = {
+    /**
+     * Successful Response
+     */
+    200: CallPage;
+};
+
+export type UsageCallsResponse = UsageCallsResponses[keyof UsageCallsResponses];
+
+export type ExportUsageCallsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         */
+        teams?: Array<string> | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Run
+         */
+        run?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Tool
+         */
+        tool?: string | null;
+        /**
+         * Status
+         */
+        status?: 'ok' | 'error' | 'refused' | null;
+        /**
+         * Error
+         */
+        error?: boolean | null;
+        /**
+         * Kind
+         */
+        kind?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+    };
+    url: '/v1/usage/calls.csv';
+};
+
+export type ExportUsageCallsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportUsageCallsError = ExportUsageCallsErrors[keyof ExportUsageCallsErrors];
+
+export type ExportUsageCallsResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type ExportUsageCallsResponse = ExportUsageCallsResponses[keyof ExportUsageCallsResponses];
+
+export type UsageCallData = {
+    body?: never;
+    path: {
+        /**
+         * Call Id
+         */
+        call_id: string;
+    };
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+    };
+    url: '/v1/usage/calls/{call_id}';
+};
+
+export type UsageCallErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageCallError = UsageCallErrors[keyof UsageCallErrors];
+
+export type UsageCallResponses = {
+    /**
+     * Successful Response
+     */
+    200: Call;
+};
+
+export type UsageCallResponse = UsageCallResponses[keyof UsageCallResponses];
+
+export type UsagePeriodsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/usage/periods';
+};
+
+export type UsagePeriodsResponses = {
+    /**
+     * Response Usageperiods
+     *
+     * Successful Response
+     */
+    200: Array<Period>;
+};
+
+export type UsagePeriodsResponse = UsagePeriodsResponses[keyof UsagePeriodsResponses];
+
+export type UsageRunsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         *
+         * People, for an org admin
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         *
+         * Whole teams, for an org admin
+         */
+        teams?: Array<string> | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+    };
+    url: '/v1/usage/runs';
+};
+
+export type UsageRunsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageRunsError = UsageRunsErrors[keyof UsageRunsErrors];
+
+export type UsageRunsResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunPage;
+};
+
+export type UsageRunsResponse = UsageRunsResponses[keyof UsageRunsResponses];
+
+export type UsageUsesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * After
+         */
+        after?: string | null;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         */
+        teams?: Array<string> | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Run
+         */
+        run?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Tool
+         */
+        tool?: string | null;
+        /**
+         * Status
+         */
+        status?: 'ok' | 'error' | 'refused' | null;
+        /**
+         * Error
+         */
+        error?: boolean | null;
+        /**
+         * Kind
+         */
+        kind?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+    };
+    url: '/v1/usage/uses';
+};
+
+export type UsageUsesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageUsesError = UsageUsesErrors[keyof UsageUsesErrors];
+
+export type UsageUsesResponses = {
+    /**
+     * Successful Response
+     */
+    200: UsePage;
+};
+
+export type UsageUsesResponse = UsageUsesResponses[keyof UsageUsesResponses];
+
+export type ExportUsageUsesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Users
+         */
+        users?: Array<string> | null;
+        /**
+         * Teams
+         */
+        teams?: Array<string> | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Run
+         */
+        run?: string | null;
+        /**
+         * Service
+         */
+        service?: string | null;
+        /**
+         * Tool
+         */
+        tool?: string | null;
+        /**
+         * Status
+         */
+        status?: 'ok' | 'error' | 'refused' | null;
+        /**
+         * Error
+         */
+        error?: boolean | null;
+        /**
+         * Kind
+         */
+        kind?: string | null;
+        /**
+         * Power
+         */
+        power?: string | null;
+    };
+    url: '/v1/usage/uses.csv';
+};
+
+export type ExportUsageUsesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportUsageUsesError = ExportUsageUsesErrors[keyof ExportUsageUsesErrors];
+
+export type ExportUsageUsesResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type ExportUsageUsesResponse = ExportUsageUsesResponses[keyof ExportUsageUsesResponses];
+
+export type UsageUseData = {
+    body?: never;
+    path: {
+        /**
+         * Use Id
+         */
+        use_id: string;
+    };
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+    };
+    url: '/v1/usage/uses/{use_id}';
+};
+
+export type UsageUseErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UsageUseError = UsageUseErrors[keyof UsageUseErrors];
+
+export type UsageUseResponses = {
+    /**
+     * Successful Response
+     */
+    200: Use;
+};
+
+export type UsageUseResponse = UsageUseResponses[keyof UsageUseResponses];
