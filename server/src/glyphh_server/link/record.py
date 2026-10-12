@@ -52,6 +52,15 @@ async def event(conn: AsyncConnection, machine: uuid.UUID, report: SessionEvent)
     return True
 
 
+async def refused(conn: AsyncConnection, machine: uuid.UUID, thread: uuid.UUID) -> None:
+    """A session the machine could not run leaves its thread stuck, so the record says so even with nobody watching."""
+    await conn.execute(
+        update(Thread)
+        .where(Thread.id == thread, Thread.machine_id == machine)
+        .values(status="stuck", last_event_at=func.now())
+    )
+
+
 async def _asked(conn: AsyncConnection, org: uuid.UUID, user: uuid.UUID, report: SessionEvent) -> None:
     e = report.event
     values = {

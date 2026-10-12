@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.link import record
 from glyphh_server.link.hub import Hub
-from glyphh_server.link.wire import PROTOCOL, REPORT, Hello, SessionEvent
+from glyphh_server.link.wire import PROTOCOL, REPORT, Hello, SessionEvent, SessionRefused
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.auth.secrets import hash_secret
 
@@ -70,6 +70,10 @@ async def _report(ws: WebSocket, engine: AsyncEngine, hub: Hub, machine: uuid.UU
         if not mine:
             log.warning("event for a thread not this machine's", extra=fields(machine=str(machine)))
             return True
+    if isinstance(report, SessionRefused) and report.thread:
+        async with engine.begin() as conn:
+            await record.refused(conn, machine, report.thread)
+        log.warning("session refused", extra=fields(machine=str(machine), reason=report.reason))
     log.info("reported", extra=fields(machine=str(machine), type=report.type))
     if report.thread:
         hub.publish(report.thread, report.model_dump(mode="json"))

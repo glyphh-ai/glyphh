@@ -106,6 +106,13 @@ async def test_events_change_the_thread_record_and_open_questions(engine: AsyncE
             scout,
         )
         assert len(asked[0].detail) == 200 and asked[0].answer is None
+    stuck = await make_thread(engine, who.org, who.user, mac, "Never started")
+    async with live() as app, aconnect_ws(URL, app, headers={"authorization": f"Bearer {token}"}) as ws:
+        refusal = {"type": "session.refused", "session": str(stuck), "thread": str(stuck), "reason": "No space left"}
+        await ws.send_text(json.dumps(refusal))
+        await ws.send_text(json.dumps({**refusal, "thread": str(not_mine)}))
+        assert await until(lambda: _is(engine, stuck, ("stuck", 0)))
+    assert (await _thread(engine, not_mine)).status == "idle"
 
 
 async def _is(engine: AsyncEngine, thread: uuid.UUID, want: tuple[str, int]) -> bool:
