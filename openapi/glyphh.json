@@ -51,6 +51,315 @@
         "title": "Added",
         "type": "object"
       },
+      "AdminListing": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "featured": {
+            "title": "Featured",
+            "type": "boolean"
+          },
+          "featured_sort": {
+            "title": "Featured Sort",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "installs": {
+            "title": "Installs",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "maker": {
+            "title": "Maker",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "org": {
+            "title": "Org",
+            "type": "string"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "reach": {
+            "title": "Reach",
+            "type": "string"
+          },
+          "unpublished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unpublished At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "reach",
+          "maker",
+          "org",
+          "category",
+          "published",
+          "featured",
+          "featured_sort",
+          "unpublished_at",
+          "installs",
+          "created_at"
+        ],
+        "title": "AdminListing",
+        "type": "object"
+      },
+      "AdminListingPage": {
+        "properties": {
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/AdminListing"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listings",
+          "total"
+        ],
+        "title": "AdminListingPage",
+        "type": "object"
+      },
+      "AdminModel": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "powers": {
+            "title": "Powers",
+            "type": "integer"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed At"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "provider_name",
+          "model",
+          "name",
+          "description",
+          "type",
+          "active",
+          "removed_at",
+          "powers"
+        ],
+        "title": "AdminModel",
+        "type": "object"
+      },
+      "AdminModelPage": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/AdminModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "models",
+          "total"
+        ],
+        "title": "AdminModelPage",
+        "type": "object"
+      },
+      "AdminProvider": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "logo_dark_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Dark Key"
+          },
+          "logo_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Key"
+          },
+          "models": {
+            "title": "Models",
+            "type": "integer"
+          },
+          "models_on": {
+            "title": "Models On",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "no_description": {
+            "title": "No Description",
+            "type": "integer"
+          },
+          "powers": {
+            "title": "Powers",
+            "type": "integer"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed At"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort": {
+            "title": "Sort",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "base_url",
+          "logo_key",
+          "logo_dark_key",
+          "active",
+          "removed_at",
+          "sort",
+          "models",
+          "models_on",
+          "no_description",
+          "powers"
+        ],
+        "title": "AdminProvider",
+        "type": "object"
+      },
       "AllowScreen": {
         "properties": {
           "email": {
@@ -714,6 +1023,34 @@
         "title": "Billing",
         "type": "object"
       },
+      "BillingSettingsView": {
+        "properties": {
+          "current": {
+            "$ref": "#/components/schemas/SettingsRow"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsRow"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsRow"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current",
+          "upcoming",
+          "history"
+        ],
+        "title": "BillingSettingsView",
+        "type": "object"
+      },
       "ByVersion": {
         "properties": {
           "installs": {
@@ -1102,6 +1439,73 @@
           "total"
         ],
         "title": "CatalogPage",
+        "type": "object"
+      },
+      "CategoryIn": {
+        "properties": {
+          "name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CategoryIn",
+        "type": "object"
+      },
+      "CategoryOrder": {
+        "properties": {
+          "category_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Category Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category_ids"
+        ],
+        "title": "CategoryOrder",
+        "type": "object"
+      },
+      "CategoryView": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "listings": {
+            "title": "Listings",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort": {
+            "title": "Sort",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "sort",
+          "listings"
+        ],
+        "title": "CategoryView",
         "type": "object"
       },
       "CliView": {
@@ -1795,6 +2199,21 @@
         "title": "DaySpend",
         "type": "object"
       },
+      "Disable": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "Disable",
+        "type": "object"
+      },
       "Ended": {
         "properties": {
           "ok": {
@@ -1930,6 +2349,24 @@
           "last_active_at"
         ],
         "title": "Face",
+        "type": "object"
+      },
+      "Featured": {
+        "properties": {
+          "listing_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Listing Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "listing_ids"
+        ],
+        "title": "Featured",
         "type": "object"
       },
       "File": {
@@ -2087,6 +2524,29 @@
           "amount_cents"
         ],
         "title": "FundsIn",
+        "type": "object"
+      },
+      "Gift": {
+        "properties": {
+          "cents": {
+            "description": "$1 to $10,000, in cents",
+            "maximum": 1000000.0,
+            "minimum": 100.0,
+            "title": "Cents",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cents",
+          "note"
+        ],
+        "title": "Gift",
         "type": "object"
       },
       "GrantChange": {
@@ -2579,6 +3039,42 @@
           "people"
         ],
         "title": "Impact",
+        "type": "object"
+      },
+      "Import": {
+        "properties": {
+          "api_key": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Api Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_key"
+        ],
+        "title": "Import",
+        "type": "object"
+      },
+      "Imported": {
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "known": {
+            "title": "Known",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "known"
+        ],
+        "title": "Imported",
         "type": "object"
       },
       "InReview": {
@@ -3126,6 +3622,27 @@
           "expires_at"
         ],
         "title": "Launch",
+        "type": "object"
+      },
+      "Ledger": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ],
+        "title": "Ledger",
         "type": "object"
       },
       "LedgerEntry": {
@@ -4345,6 +4862,118 @@
         "title": "MemberTeams",
         "type": "object"
       },
+      "ModelChange": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "chat",
+                  "embedding",
+                  "image",
+                  "audio",
+                  "video"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "ModelChange",
+        "type": "object"
+      },
+      "ModelIn": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "model": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "provider_id": {
+            "format": "uuid",
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "chat",
+            "enum": [
+              "chat",
+              "embedding",
+              "image",
+              "audio",
+              "video"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "model",
+          "name"
+        ],
+        "title": "ModelIn",
+        "type": "object"
+      },
       "ModelView": {
         "properties": {
           "base_url": {
@@ -4506,6 +5135,25 @@
           "used_by"
         ],
         "title": "ModelView",
+        "type": "object"
+      },
+      "Moved": {
+        "properties": {
+          "applies_at": {
+            "format": "date-time",
+            "title": "Applies At",
+            "type": "string"
+          },
+          "orgs": {
+            "title": "Orgs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "orgs",
+          "applies_at"
+        ],
+        "title": "Moved",
         "type": "object"
       },
       "MyCopy": {
@@ -4898,6 +5546,86 @@
         "title": "NextInvoice",
         "type": "object"
       },
+      "NextVersion": {
+        "properties": {
+          "extra_machine_cents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Machine Cents"
+          },
+          "included_machines": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Machines"
+          },
+          "max_seats": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seats"
+          },
+          "monthly_credit_cents": {
+            "minimum": 0.0,
+            "title": "Monthly Credit Cents",
+            "type": "integer"
+          },
+          "price_cents": {
+            "minimum": 0.0,
+            "title": "Price Cents",
+            "type": "integer"
+          },
+          "stripe_machine_price_id": {
+            "anyOf": [
+              {
+                "pattern": "^price_\\w+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Machine Price Id"
+          },
+          "stripe_price_id": {
+            "anyOf": [
+              {
+                "pattern": "^price_\\w+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Price Id"
+          }
+        },
+        "required": [
+          "price_cents",
+          "monthly_credit_cents"
+        ],
+        "title": "NextVersion",
+        "type": "object"
+      },
       "OneClick": {
         "properties": {
           "code": {
@@ -5057,6 +5785,534 @@
           "org"
         ],
         "title": "OrgIn",
+        "type": "object"
+      },
+      "OrgMachine": {
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "online": {
+            "title": "Online",
+            "type": "boolean"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "owner",
+          "host",
+          "platform",
+          "version",
+          "online",
+          "last_seen_at",
+          "revoked_at"
+        ],
+        "title": "OrgMachine",
+        "type": "object"
+      },
+      "OrgMachines": {
+        "properties": {
+          "machines": {
+            "items": {
+              "$ref": "#/components/schemas/OrgMachine"
+            },
+            "title": "Machines",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "machines",
+          "total"
+        ],
+        "title": "OrgMachines",
+        "type": "object"
+      },
+      "OrgMember": {
+        "properties": {
+          "disabled": {
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "joined_at": {
+            "format": "date-time",
+            "title": "Joined At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "email",
+          "role",
+          "disabled",
+          "joined_at"
+        ],
+        "title": "OrgMember",
+        "type": "object"
+      },
+      "OrgMembers": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/OrgMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "members",
+          "total"
+        ],
+        "title": "OrgMembers",
+        "type": "object"
+      },
+      "OrgOverview": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credit": {
+            "$ref": "#/components/schemas/Credit"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "machines": {
+            "title": "Machines",
+            "type": "integer"
+          },
+          "machines_online": {
+            "title": "Machines Online",
+            "type": "integer"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_invites": {
+            "title": "Open Invites",
+            "type": "integer"
+          },
+          "pending_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_plan_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Plan At"
+          },
+          "personal": {
+            "title": "Personal",
+            "type": "boolean"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanView"
+          },
+          "powers": {
+            "title": "Powers",
+            "type": "integer"
+          },
+          "seats": {
+            "title": "Seats",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stripe_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Customer Id"
+          },
+          "super_powers": {
+            "title": "Super Powers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "personal",
+          "plan",
+          "status",
+          "seats",
+          "members",
+          "open_invites",
+          "machines",
+          "machines_online",
+          "powers",
+          "super_powers",
+          "credit",
+          "pending_plan",
+          "pending_plan_at",
+          "stripe_customer_id",
+          "created_at",
+          "disabled_at",
+          "disabled_reason"
+        ],
+        "title": "OrgOverview",
+        "type": "object"
+      },
+      "OrgPage": {
+        "properties": {
+          "orgs": {
+            "items": {
+              "$ref": "#/components/schemas/OrgRow"
+            },
+            "title": "Orgs",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "orgs",
+          "total"
+        ],
+        "title": "OrgPage",
+        "type": "object"
+      },
+      "OrgPower": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "owner",
+          "disabled_reason",
+          "created_at"
+        ],
+        "title": "OrgPower",
+        "type": "object"
+      },
+      "OrgPowers": {
+        "properties": {
+          "powers": {
+            "items": {
+              "$ref": "#/components/schemas/OrgPower"
+            },
+            "title": "Powers",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "powers",
+          "total"
+        ],
+        "title": "OrgPowers",
+        "type": "object"
+      },
+      "OrgRow": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "machines": {
+            "title": "Machines",
+            "type": "integer"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "personal": {
+            "title": "Personal",
+            "type": "boolean"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "personal",
+          "plan",
+          "family",
+          "status",
+          "members",
+          "machines",
+          "created_at",
+          "disabled_at",
+          "disabled_reason"
+        ],
+        "title": "OrgRow",
+        "type": "object"
+      },
+      "OrgSuperPower": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "glyphh": {
+            "title": "Glyphh",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "owner",
+          "glyphh",
+          "live",
+          "created_at"
+        ],
+        "title": "OrgSuperPower",
+        "type": "object"
+      },
+      "OrgSuperPowers": {
+        "properties": {
+          "super_powers": {
+            "items": {
+              "$ref": "#/components/schemas/OrgSuperPower"
+            },
+            "title": "Super Powers",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "super_powers",
+          "total"
+        ],
+        "title": "OrgSuperPowers",
         "type": "object"
       },
       "OrgView": {
@@ -5682,6 +6938,20 @@
         "title": "PlanIn",
         "type": "object"
       },
+      "PlanPick": {
+        "properties": {
+          "plan_id": {
+            "format": "uuid",
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "title": "PlanPick",
+        "type": "object"
+      },
       "PlanPreview": {
         "properties": {
           "applies_at": {
@@ -5747,6 +7017,121 @@
           "applies_at"
         ],
         "title": "PlanPreview",
+        "type": "object"
+      },
+      "PlanVersion": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "extra_machine_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Machine Cents"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "included_machines": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Machines"
+          },
+          "max_seats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seats"
+          },
+          "monthly_credit_cents": {
+            "title": "Monthly Credit Cents",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on_sale": {
+            "title": "On Sale",
+            "type": "boolean"
+          },
+          "orgs": {
+            "title": "Orgs",
+            "type": "integer"
+          },
+          "price_cents": {
+            "title": "Price Cents",
+            "type": "integer"
+          },
+          "stripe_machine_price_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Machine Price Id"
+          },
+          "stripe_price_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Price Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "family",
+          "version",
+          "name",
+          "price_cents",
+          "max_seats",
+          "monthly_credit_cents",
+          "included_machines",
+          "extra_machine_cents",
+          "on_sale",
+          "stripe_price_id",
+          "stripe_machine_price_id",
+          "orgs",
+          "created_at"
+        ],
+        "title": "PlanVersion",
         "type": "object"
       },
       "PlanView": {
@@ -5870,6 +7255,99 @@
           }
         },
         "title": "ProfileChange",
+        "type": "object"
+      },
+      "ProviderChange": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "pattern": "^https?://\\S+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          }
+        },
+        "title": "ProviderChange",
+        "type": "object"
+      },
+      "ProviderIn": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "pattern": "^https?://\\S+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort": {
+            "default": 1000,
+            "title": "Sort",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "ProviderIn",
         "type": "object"
       },
       "ProviderView": {
@@ -6173,6 +7651,20 @@
           "decided_at"
         ],
         "title": "ReviewView",
+        "type": "object"
+      },
+      "ReviewerReport": {
+        "properties": {
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          }
+        },
+        "required": [
+          "report"
+        ],
+        "title": "ReviewerReport",
         "type": "object"
       },
       "RunDay": {
@@ -6705,6 +8197,104 @@
           }
         },
         "title": "SettingsChange",
+        "type": "object"
+      },
+      "SettingsIn": {
+        "properties": {
+          "call_cents": {
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Call Cents",
+            "type": "integer"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "seconds_per_charge": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 3600.0,
+            "title": "Seconds Per Charge",
+            "type": "integer"
+          },
+          "top_up_max_cents": {
+            "maximum": 100000000.0,
+            "title": "Top Up Max Cents",
+            "type": "integer"
+          },
+          "top_up_min_cents": {
+            "minimum": 50.0,
+            "title": "Top Up Min Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "call_cents",
+          "seconds_per_charge",
+          "top_up_min_cents",
+          "top_up_max_cents"
+        ],
+        "title": "SettingsIn",
+        "type": "object"
+      },
+      "SettingsRow": {
+        "properties": {
+          "call_cents": {
+            "title": "Call Cents",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "seconds_per_charge": {
+            "title": "Seconds Per Charge",
+            "type": "integer"
+          },
+          "set_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set By"
+          },
+          "top_up_max_cents": {
+            "title": "Top Up Max Cents",
+            "type": "integer"
+          },
+          "top_up_min_cents": {
+            "title": "Top Up Min Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "call_cents",
+          "seconds_per_charge",
+          "top_up_min_cents",
+          "top_up_max_cents",
+          "effective_from",
+          "set_by",
+          "created_at"
+        ],
+        "title": "SettingsRow",
         "type": "object"
       },
       "Shot": {
@@ -8748,6 +10338,2345 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/admin/audit": {
+      "get": {
+        "description": "What Glyphh's staff and reviewer did, across every org (or one, with `org`), newest first.",
+        "operationId": "adminAuditLog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "who",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Who"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "members",
+                    "teams",
+                    "limits",
+                    "keys",
+                    "review",
+                    "billing",
+                    "orgs",
+                    "plans",
+                    "gifts",
+                    "models",
+                    "marketplace",
+                    "featured",
+                    "glyphh"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target"
+            }
+          },
+          {
+            "in": "query",
+            "name": "org",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Audit",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/audit.csv": {
+      "get": {
+        "operationId": "adminExportAuditLog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "who",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Who"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "members",
+                    "teams",
+                    "limits",
+                    "keys",
+                    "review",
+                    "billing",
+                    "orgs",
+                    "plans",
+                    "gifts",
+                    "models",
+                    "marketplace",
+                    "featured",
+                    "glyphh"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target"
+            }
+          },
+          {
+            "in": "query",
+            "name": "org",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Export Audit",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/billing-settings": {
+      "get": {
+        "operationId": "adminBillingSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Billing Settings",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "post": {
+        "description": "From now, or from a time to come; kept with who set it.",
+        "operationId": "adminSetBillingSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Set Billing Settings",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/catalog-models": {
+      "get": {
+        "operationId": "adminCatalogModels",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "on",
+                    "off",
+                    "removed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "chat",
+                    "embedding",
+                    "image",
+                    "audio",
+                    "video"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "no_description",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "No Description",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModelPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Catalog Models",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "post": {
+        "operationId": "adminAddCatalogModel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Add Model",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/catalog-models/{model_id}": {
+      "delete": {
+        "operationId": "adminRemoveCatalogModel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Remove Model",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "patch": {
+        "operationId": "adminChangeCatalogModel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Change Model",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/categories": {
+      "get": {
+        "operationId": "adminCategories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryView"
+                  },
+                  "title": "Response Admincategories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Categories",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "post": {
+        "operationId": "adminAddCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Add Category",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "put": {
+        "operationId": "adminOrderCategories",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryView"
+                  },
+                  "title": "Response Adminordercategories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Order Categories",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/categories/{category_id}": {
+      "delete": {
+        "description": "Its listings are left with no category.",
+        "operationId": "adminDeleteCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Delete Category",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "patch": {
+        "operationId": "adminRenameCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Rename Category",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/featured": {
+      "put": {
+        "description": "The featured shelf, in this order; every other listing leaves it.",
+        "operationId": "adminSetFeatured",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Featured"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminListing"
+                  },
+                  "title": "Response Adminsetfeatured",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Set Featured",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/listings": {
+      "get": {
+        "operationId": "adminListings",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "published",
+                    "unpublished",
+                    "glyphh_review",
+                    "featured"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminListingPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Listings",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs": {
+      "get": {
+        "operationId": "adminOrgs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "Free",
+                    "Solo",
+                    "Basic",
+                    "Pro",
+                    "Enterprise"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "disabled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "personal",
+                    "team"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Orgs",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}": {
+      "get": {
+        "operationId": "adminOrg",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/comp": {
+      "delete": {
+        "description": "Back to Free, to choose and pay for a plan like any org.",
+        "operationId": "adminEndComp",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin End Comp",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "post": {
+        "description": "Any plan version at no charge; its Stripe subscription ends, the card stays.",
+        "operationId": "adminCompPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanPick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Comp",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/disable": {
+      "post": {
+        "description": "Nobody acts in it, its machines are cut off, its billing pauses; its data is kept.",
+        "operationId": "adminDisableOrg",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Disable"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Disable",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/enable": {
+      "post": {
+        "operationId": "adminEnableOrg",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Enable",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/gift": {
+      "post": {
+        "description": "Credit in dollars with a note, spent like bought credit, for a year.",
+        "operationId": "adminGiftCredit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Gift"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Gift",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/ledger": {
+      "get": {
+        "operationId": "adminOrgLedger",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ledger"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org Ledger",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/machines": {
+      "get": {
+        "operationId": "adminOrgMachines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgMachines"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org Machines",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/members": {
+      "get": {
+        "operationId": "adminOrgMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgMembers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org Members",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/move": {
+      "post": {
+        "description": "To its family's version on sale, in 30 days (Billing shows it waiting).",
+        "operationId": "adminMovePlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanPick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Move",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/powers": {
+      "get": {
+        "operationId": "adminOrgPowers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgPowers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org Powers",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/orgs/{org_id}/super-powers": {
+      "get": {
+        "operationId": "adminOrgSuperPowers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgSuperPowers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Org Super Powers",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/plans": {
+      "get": {
+        "operationId": "adminPlans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanVersion"
+                  },
+                  "title": "Response Adminplans",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Plans",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/plans/{family}": {
+      "post": {
+        "description": "The family's next version, sold from now; orgs on the one before keep it until they change or are moved.",
+        "operationId": "adminNextPlanVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "family",
+            "required": true,
+            "schema": {
+              "enum": [
+                "Free",
+                "Solo",
+                "Basic",
+                "Pro",
+                "Enterprise"
+              ],
+              "title": "Family",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NextVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Next Version",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/plans/{plan_id}/move": {
+      "post": {
+        "operationId": "adminMoveOrgsToPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Move All",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/providers": {
+      "get": {
+        "operationId": "adminProviders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "on",
+                    "off",
+                    "removed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminProvider"
+                  },
+                  "title": "Response Adminproviders",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Providers",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "post": {
+        "description": "Hidden from members until one of its models is on.",
+        "operationId": "adminAddProvider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProvider"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Add Provider",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/providers/{provider_id}": {
+      "delete": {
+        "description": "For good: members' models on it can only be deleted.",
+        "operationId": "adminRemoveProvider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProvider"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Remove Provider",
+        "tags": [
+          "glyphh admin"
+        ]
+      },
+      "patch": {
+        "description": "Its name, endpoint and order, or off and on (members' models on it are disabled with the reason).",
+        "operationId": "adminChangeProvider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProvider"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Change Provider",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/providers/{provider_id}/import": {
+      "post": {
+        "description": "The provider's own list of models, read with this key (never kept); new ones arrive on, without a\ndescription.",
+        "operationId": "adminImportModels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Import"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Import",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/providers/{provider_id}/logo": {
+      "put": {
+        "description": "A square PNG, re-encoded at 512 px; `dark` for the copy on dark grounds.",
+        "operationId": "adminSetProviderLogo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dark",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Dark",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-file-name",
+            "required": false,
+            "schema": {
+              "default": "logo.png",
+              "maxLength": 200,
+              "title": "X-File-Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProvider"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Set Logo",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
+    "/v1/admin/reviews/{listing_version_id}/report": {
+      "put": {
+        "description": "Glyphh's reviewer's report on a version waiting for Glyphh; a person decides.",
+        "operationId": "adminWriteReviewerReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewerReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Report",
+        "tags": [
+          "glyphh admin"
+        ]
+      }
+    },
     "/v1/api-keys/{key_id}/revoke": {
       "post": {
         "operationId": "revokeApiKey",
@@ -9047,6 +12976,51 @@
         "summary": "List Providers",
         "tags": [
           "powers"
+        ]
+      }
+    },
+    "/v1/catalog/providers/{slug}/logo": {
+      "get": {
+        "operationId": "providerLogo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dark",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Dark",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Provider Logo",
+        "tags": [
+          "glyphh admin"
         ]
       }
     },

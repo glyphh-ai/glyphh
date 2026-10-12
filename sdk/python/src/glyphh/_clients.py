@@ -3,6 +3,7 @@ from uuid import UUID
 
 import httpx
 
+from glyphh._admin_specs import Admin, AsyncAdmin
 from glyphh._billing import AsyncBilling, Billing
 from glyphh._calls import (
     ACCEPT_INVITE,
@@ -65,6 +66,7 @@ class Glyphh:
         self.org_admin = SpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = SpecApi(self._run, API_KEY_SPECS)
         self.usage = SpecApi(self._run, USAGE_SPECS)
+        self.admin = Admin(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -144,6 +146,7 @@ class AsyncGlyphh:
         self.org_admin = AsyncSpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = AsyncSpecApi(self._run, API_KEY_SPECS)
         self.usage = AsyncSpecApi(self._run, USAGE_SPECS)
+        self.admin = AsyncAdmin(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

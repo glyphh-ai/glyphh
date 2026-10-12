@@ -40,5 +40,26 @@ class Upload:
         return _answer(await client.get_async_httpx_client().request(self.method, **req))
 
 
+class ProviderLogo:
+    """Glyphh admin's PUT of a provider's logo (or its copy for dark grounds), run like a generated operation."""
+
+    @staticmethod
+    def _path(provider_id: str, dark: bool) -> str:
+        return f"/v1/admin/providers/{provider_id}/logo?dark={'true' if dark else 'false'}"
+
+    def sync_detailed(
+        self, *, client: Client, provider_id: str, data: bytes, content_type: str, name: str, dark: bool
+    ) -> Response[Any]:
+        req = _request(self._path(provider_id, dark), data, content_type, name)
+        return _answer(client.get_httpx_client().request("PUT", **req))
+
+    async def asyncio_detailed(
+        self, *, client: Client, provider_id: str, data: bytes, content_type: str, name: str, dark: bool
+    ) -> Response[Any]:
+        req = _request(self._path(provider_id, dark), data, content_type, name)
+        return _answer(await client.get_async_httpx_client().request("PUT", **req))
+
+
 SET_ICON = Upload("PUT", "icon")
+SET_PROVIDER_LOGO = ProviderLogo()
 ADD_SCREENSHOT = Upload("POST", "screenshots")

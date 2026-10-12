@@ -4,6 +4,7 @@ import {
   signOutEverywhere,
 } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange } from "./gen/types.gen.js";
+import { AdminApi, AdminCatalogApi, AdminMarketApi } from "./admin.js";
 import { BillingApi } from "./billing.js";
 import { ListingsApi, MarketplaceApi } from "./discover.js";
 import { CustomPowersApi, SchedulesApi, SuperPowersApi } from "./editors.js";
@@ -19,7 +20,7 @@ import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi, UsageApi };
+export { AdminApi, AdminCatalogApi, AdminMarketApi, ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi, UsageApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -36,6 +37,7 @@ export type {
   Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, MarketQuery, NewListing, Picture,
   ReviewDecision, VersionChange, Waiting,
 } from "./discover.js";
+export type * from "./admin.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -92,6 +94,8 @@ export class Glyphh {
   readonly apiKeys: ApiKeysApi;
   /** Usage: runs, uses, tokens, connection calls and credit, and its audit log. */
   readonly usage: UsageApi;
+  /** Glyphh admin, for Glyphh's staff: orgs, plans, the catalog, the marketplace and Glyphh's audit log. */
+  readonly admin: AdminApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -114,6 +118,7 @@ export class Glyphh {
     this.orgAdmin = new OrgAdminApi(this.#client);
     this.apiKeys = new ApiKeysApi(this.#client);
     this.usage = new UsageApi(this.#client);
+    this.admin = new AdminApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

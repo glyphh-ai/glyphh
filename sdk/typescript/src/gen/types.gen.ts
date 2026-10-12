@@ -41,6 +41,196 @@ export type Added = {
 };
 
 /**
+ * AdminListing
+ */
+export type AdminListing = {
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Featured
+     */
+    featured: boolean;
+    /**
+     * Featured Sort
+     */
+    featured_sort: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Installs
+     */
+    installs: number;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Maker
+     */
+    maker: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Org
+     */
+    org: string;
+    /**
+     * Published
+     */
+    published: boolean;
+    /**
+     * Reach
+     */
+    reach: string;
+    /**
+     * Unpublished At
+     */
+    unpublished_at: string | null;
+};
+
+/**
+ * AdminListingPage
+ */
+export type AdminListingPage = {
+    /**
+     * Listings
+     */
+    listings: Array<AdminListing>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * AdminModel
+ */
+export type AdminModel = {
+    /**
+     * Active
+     */
+    active: boolean;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Powers
+     */
+    powers: number;
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Provider Name
+     */
+    provider_name: string;
+    /**
+     * Removed At
+     */
+    removed_at: string | null;
+    /**
+     * Type
+     */
+    type: string;
+};
+
+/**
+ * AdminModelPage
+ */
+export type AdminModelPage = {
+    /**
+     * Models
+     */
+    models: Array<AdminModel>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * AdminProvider
+ */
+export type AdminProvider = {
+    /**
+     * Active
+     */
+    active: boolean;
+    /**
+     * Base Url
+     */
+    base_url: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Logo Dark Key
+     */
+    logo_dark_key: string | null;
+    /**
+     * Logo Key
+     */
+    logo_key: string | null;
+    /**
+     * Models
+     */
+    models: number;
+    /**
+     * Models On
+     */
+    models_on: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * No Description
+     */
+    no_description: number;
+    /**
+     * Powers
+     */
+    powers: number;
+    /**
+     * Removed At
+     */
+    removed_at: string | null;
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Sort
+     */
+    sort: number;
+};
+
+/**
  * AllowScreen
  */
 export type AllowScreen = {
@@ -416,6 +606,21 @@ export type Billing = {
 };
 
 /**
+ * BillingSettingsView
+ */
+export type BillingSettingsView = {
+    current: SettingsRow;
+    /**
+     * History
+     */
+    history: Array<SettingsRow>;
+    /**
+     * Upcoming
+     */
+    upcoming: Array<SettingsRow>;
+};
+
+/**
  * ByVersion
  */
 export type ByVersion = {
@@ -625,6 +830,52 @@ export type CatalogPage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * CategoryIn
+ */
+export type CategoryIn = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * CategoryOrder
+ */
+export type CategoryOrder = {
+    /**
+     * Category Ids
+     */
+    category_ids: Array<string>;
+};
+
+/**
+ * CategoryView
+ */
+export type CategoryView = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Listings
+     */
+    listings: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Sort
+     */
+    sort: number;
 };
 
 /**
@@ -1067,6 +1318,16 @@ export type DaySpend = {
 };
 
 /**
+ * Disable
+ */
+export type Disable = {
+    /**
+     * Reason
+     */
+    reason: string;
+};
+
+/**
  * Ended
  */
 export type Ended = {
@@ -1146,6 +1407,16 @@ export type Face = {
      * Status
      */
     status: string;
+};
+
+/**
+ * Featured
+ */
+export type Featured = {
+    /**
+     * Listing Ids
+     */
+    listing_ids: Array<string>;
 };
 
 /**
@@ -1248,6 +1519,22 @@ export type FundsIn = {
      * Amount Cents
      */
     amount_cents: number;
+};
+
+/**
+ * Gift
+ */
+export type Gift = {
+    /**
+     * Cents
+     *
+     * $1 to $10,000, in cents
+     */
+    cents: number;
+    /**
+     * Note
+     */
+    note: string;
 };
 
 /**
@@ -1541,6 +1828,30 @@ export type Impact = {
      * Powers
      */
     powers: number;
+};
+
+/**
+ * Import
+ */
+export type Import = {
+    /**
+     * Api Key
+     */
+    api_key: string;
+};
+
+/**
+ * Imported
+ */
+export type Imported = {
+    /**
+     * Added
+     */
+    added: Array<string>;
+    /**
+     * Known
+     */
+    known: number;
 };
 
 /**
@@ -1869,6 +2180,20 @@ export type Launch = {
      * Url
      */
     url: string;
+};
+
+/**
+ * Ledger
+ */
+export type Ledger = {
+    /**
+     * Entries
+     */
+    entries: Array<LedgerEntry>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -2570,6 +2895,54 @@ export type MemberTeams = {
 };
 
 /**
+ * ModelChange
+ */
+export type ModelChange = {
+    /**
+     * Active
+     */
+    active?: boolean | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Type
+     */
+    type?: 'chat' | 'embedding' | 'image' | 'audio' | 'video' | null;
+};
+
+/**
+ * ModelIn
+ */
+export type ModelIn = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Provider Id
+     */
+    provider_id: string;
+    /**
+     * Type
+     */
+    type?: 'chat' | 'embedding' | 'image' | 'audio' | 'video';
+};
+
+/**
  * ModelView
  */
 export type ModelView = {
@@ -2641,6 +3014,20 @@ export type ModelView = {
      * Used By
      */
     used_by: Array<User>;
+};
+
+/**
+ * Moved
+ */
+export type Moved = {
+    /**
+     * Applies At
+     */
+    applies_at: string;
+    /**
+     * Orgs
+     */
+    orgs: number;
 };
 
 /**
@@ -2860,6 +3247,40 @@ export type NextInvoice = {
 };
 
 /**
+ * NextVersion
+ */
+export type NextVersion = {
+    /**
+     * Extra Machine Cents
+     */
+    extra_machine_cents?: number | null;
+    /**
+     * Included Machines
+     */
+    included_machines?: number | null;
+    /**
+     * Max Seats
+     */
+    max_seats?: number | null;
+    /**
+     * Monthly Credit Cents
+     */
+    monthly_credit_cents: number;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Stripe Machine Price Id
+     */
+    stripe_machine_price_id?: string | null;
+    /**
+     * Stripe Price Id
+     */
+    stripe_price_id?: string | null;
+};
+
+/**
  * OneClick
  */
 export type OneClick = {
@@ -2946,6 +3367,331 @@ export type OrgIn = {
      * Org
      */
     org: string;
+};
+
+/**
+ * OrgMachine
+ */
+export type OrgMachine = {
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Seen At
+     */
+    last_seen_at: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Online
+     */
+    online: boolean;
+    /**
+     * Owner
+     */
+    owner: string;
+    /**
+     * Platform
+     */
+    platform: string;
+    /**
+     * Revoked At
+     */
+    revoked_at: string | null;
+    /**
+     * Version
+     */
+    version: string | null;
+};
+
+/**
+ * OrgMachines
+ */
+export type OrgMachines = {
+    /**
+     * Machines
+     */
+    machines: Array<OrgMachine>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * OrgMember
+ */
+export type OrgMember = {
+    /**
+     * Disabled
+     */
+    disabled: boolean;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Joined At
+     */
+    joined_at: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * OrgMembers
+ */
+export type OrgMembers = {
+    /**
+     * Members
+     */
+    members: Array<OrgMember>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * OrgOverview
+ */
+export type OrgOverview = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    credit: Credit;
+    /**
+     * Disabled At
+     */
+    disabled_at: string | null;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Machines
+     */
+    machines: number;
+    /**
+     * Machines Online
+     */
+    machines_online: number;
+    /**
+     * Members
+     */
+    members: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Open Invites
+     */
+    open_invites: number;
+    pending_plan: PlanView | null;
+    /**
+     * Pending Plan At
+     */
+    pending_plan_at: string | null;
+    /**
+     * Personal
+     */
+    personal: boolean;
+    plan: PlanView;
+    /**
+     * Powers
+     */
+    powers: number;
+    /**
+     * Seats
+     */
+    seats: number;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Stripe Customer Id
+     */
+    stripe_customer_id: string | null;
+    /**
+     * Super Powers
+     */
+    super_powers: number;
+};
+
+/**
+ * OrgPage
+ */
+export type OrgPage = {
+    /**
+     * Orgs
+     */
+    orgs: Array<OrgRow>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * OrgPower
+ */
+export type OrgPower = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Owner
+     */
+    owner: string;
+};
+
+/**
+ * OrgPowers
+ */
+export type OrgPowers = {
+    /**
+     * Powers
+     */
+    powers: Array<OrgPower>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * OrgRow
+ */
+export type OrgRow = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Disabled At
+     */
+    disabled_at: string | null;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Family
+     */
+    family: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Machines
+     */
+    machines: number;
+    /**
+     * Members
+     */
+    members: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Personal
+     */
+    personal: boolean;
+    /**
+     * Plan
+     */
+    plan: string;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * OrgSuperPower
+ */
+export type OrgSuperPower = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Glyphh
+     */
+    glyphh: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Live
+     */
+    live: boolean;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Owner
+     */
+    owner: string;
+};
+
+/**
+ * OrgSuperPowers
+ */
+export type OrgSuperPowers = {
+    /**
+     * Super Powers
+     */
+    super_powers: Array<OrgSuperPower>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -3307,6 +4053,16 @@ export type PlanIn = {
 };
 
 /**
+ * PlanPick
+ */
+export type PlanPick = {
+    /**
+     * Plan Id
+     */
+    plan_id: string;
+};
+
+/**
  * PlanPreview
  */
 export type PlanPreview = {
@@ -3336,6 +4092,68 @@ export type PlanPreview = {
      */
     seats: number;
     target: PlanView;
+};
+
+/**
+ * PlanVersion
+ */
+export type PlanVersion = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Extra Machine Cents
+     */
+    extra_machine_cents: number | null;
+    /**
+     * Family
+     */
+    family: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Included Machines
+     */
+    included_machines: number | null;
+    /**
+     * Max Seats
+     */
+    max_seats: number | null;
+    /**
+     * Monthly Credit Cents
+     */
+    monthly_credit_cents: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * On Sale
+     */
+    on_sale: boolean;
+    /**
+     * Orgs
+     */
+    orgs: number;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Stripe Machine Price Id
+     */
+    stripe_machine_price_id: string | null;
+    /**
+     * Stripe Price Id
+     */
+    stripe_price_id: string | null;
+    /**
+     * Version
+     */
+    version: number;
 };
 
 /**
@@ -3406,6 +4224,50 @@ export type ProfileChange = {
      * Last Name
      */
     last_name?: string | null;
+};
+
+/**
+ * ProviderChange
+ */
+export type ProviderChange = {
+    /**
+     * Active
+     */
+    active?: boolean | null;
+    /**
+     * Base Url
+     */
+    base_url?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Sort
+     */
+    sort?: number | null;
+};
+
+/**
+ * ProviderIn
+ */
+export type ProviderIn = {
+    /**
+     * Base Url
+     */
+    base_url?: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Sort
+     */
+    sort?: number;
 };
 
 /**
@@ -3581,6 +4443,18 @@ export type ReviewView = {
      * Step
      */
     step: string;
+};
+
+/**
+ * ReviewerReport
+ */
+export type ReviewerReport = {
+    /**
+     * Report
+     */
+    report: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -3889,6 +4763,66 @@ export type SettingsChange = {
      * Theme
      */
     theme?: 'dark' | 'light' | 'system' | null;
+};
+
+/**
+ * SettingsIn
+ */
+export type SettingsIn = {
+    /**
+     * Call Cents
+     */
+    call_cents: number;
+    /**
+     * Effective From
+     */
+    effective_from?: string | null;
+    /**
+     * Seconds Per Charge
+     */
+    seconds_per_charge: number;
+    /**
+     * Top Up Max Cents
+     */
+    top_up_max_cents: number;
+    /**
+     * Top Up Min Cents
+     */
+    top_up_min_cents: number;
+};
+
+/**
+ * SettingsRow
+ */
+export type SettingsRow = {
+    /**
+     * Call Cents
+     */
+    call_cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Effective From
+     */
+    effective_from: string;
+    /**
+     * Seconds Per Charge
+     */
+    seconds_per_charge: number;
+    /**
+     * Set By
+     */
+    set_by: string | null;
+    /**
+     * Top Up Max Cents
+     */
+    top_up_max_cents: number;
+    /**
+     * Top Up Min Cents
+     */
+    top_up_min_cents: number;
 };
 
 /**
@@ -4987,6 +5921,1256 @@ export type Waiting = {
     user_code: string;
 };
 
+export type AdminAuditLogData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Who
+         */
+        who?: string | null;
+        /**
+         * Type
+         */
+        type?: 'members' | 'teams' | 'limits' | 'keys' | 'review' | 'billing' | 'orgs' | 'plans' | 'gifts' | 'models' | 'marketplace' | 'featured' | 'glyphh' | null;
+        /**
+         * Target
+         */
+        target?: string | null;
+        /**
+         * Org
+         */
+        org?: string | null;
+    };
+    url: '/v1/admin/audit';
+};
+
+export type AdminAuditLogErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminAuditLogError = AdminAuditLogErrors[keyof AdminAuditLogErrors];
+
+export type AdminAuditLogResponses = {
+    /**
+     * Successful Response
+     */
+    200: AuditPage;
+};
+
+export type AdminAuditLogResponse = AdminAuditLogResponses[keyof AdminAuditLogResponses];
+
+export type AdminExportAuditLogData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Who
+         */
+        who?: string | null;
+        /**
+         * Type
+         */
+        type?: 'members' | 'teams' | 'limits' | 'keys' | 'review' | 'billing' | 'orgs' | 'plans' | 'gifts' | 'models' | 'marketplace' | 'featured' | 'glyphh' | null;
+        /**
+         * Target
+         */
+        target?: string | null;
+        /**
+         * Org
+         */
+        org?: string | null;
+    };
+    url: '/v1/admin/audit.csv';
+};
+
+export type AdminExportAuditLogErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminExportAuditLogError = AdminExportAuditLogErrors[keyof AdminExportAuditLogErrors];
+
+export type AdminExportAuditLogResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type AdminExportAuditLogResponse = AdminExportAuditLogResponses[keyof AdminExportAuditLogResponses];
+
+export type AdminBillingSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/billing-settings';
+};
+
+export type AdminBillingSettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: BillingSettingsView;
+};
+
+export type AdminBillingSettingsResponse = AdminBillingSettingsResponses[keyof AdminBillingSettingsResponses];
+
+export type AdminSetBillingSettingsData = {
+    body: SettingsIn;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/billing-settings';
+};
+
+export type AdminSetBillingSettingsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminSetBillingSettingsError = AdminSetBillingSettingsErrors[keyof AdminSetBillingSettingsErrors];
+
+export type AdminSetBillingSettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: BillingSettingsView;
+};
+
+export type AdminSetBillingSettingsResponse = AdminSetBillingSettingsResponses[keyof AdminSetBillingSettingsResponses];
+
+export type AdminCatalogModelsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Provider
+         */
+        provider?: string | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * State
+         */
+        state?: 'on' | 'off' | 'removed' | null;
+        /**
+         * Type
+         */
+        type?: 'chat' | 'embedding' | 'image' | 'audio' | 'video' | null;
+        /**
+         * No Description
+         */
+        no_description?: boolean;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/catalog-models';
+};
+
+export type AdminCatalogModelsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminCatalogModelsError = AdminCatalogModelsErrors[keyof AdminCatalogModelsErrors];
+
+export type AdminCatalogModelsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminModelPage;
+};
+
+export type AdminCatalogModelsResponse = AdminCatalogModelsResponses[keyof AdminCatalogModelsResponses];
+
+export type AdminAddCatalogModelData = {
+    body: ModelIn;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/catalog-models';
+};
+
+export type AdminAddCatalogModelErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminAddCatalogModelError = AdminAddCatalogModelErrors[keyof AdminAddCatalogModelErrors];
+
+export type AdminAddCatalogModelResponses = {
+    /**
+     * Successful Response
+     */
+    201: AdminModel;
+};
+
+export type AdminAddCatalogModelResponse = AdminAddCatalogModelResponses[keyof AdminAddCatalogModelResponses];
+
+export type AdminRemoveCatalogModelData = {
+    body?: never;
+    path: {
+        /**
+         * Model Id
+         */
+        model_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/catalog-models/{model_id}';
+};
+
+export type AdminRemoveCatalogModelErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminRemoveCatalogModelError = AdminRemoveCatalogModelErrors[keyof AdminRemoveCatalogModelErrors];
+
+export type AdminRemoveCatalogModelResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminModel;
+};
+
+export type AdminRemoveCatalogModelResponse = AdminRemoveCatalogModelResponses[keyof AdminRemoveCatalogModelResponses];
+
+export type AdminChangeCatalogModelData = {
+    body: ModelChange;
+    path: {
+        /**
+         * Model Id
+         */
+        model_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/catalog-models/{model_id}';
+};
+
+export type AdminChangeCatalogModelErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminChangeCatalogModelError = AdminChangeCatalogModelErrors[keyof AdminChangeCatalogModelErrors];
+
+export type AdminChangeCatalogModelResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminModel;
+};
+
+export type AdminChangeCatalogModelResponse = AdminChangeCatalogModelResponses[keyof AdminChangeCatalogModelResponses];
+
+export type AdminCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/categories';
+};
+
+export type AdminCategoriesResponses = {
+    /**
+     * Response Admincategories
+     *
+     * Successful Response
+     */
+    200: Array<CategoryView>;
+};
+
+export type AdminCategoriesResponse = AdminCategoriesResponses[keyof AdminCategoriesResponses];
+
+export type AdminAddCategoryData = {
+    body: CategoryIn;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/categories';
+};
+
+export type AdminAddCategoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminAddCategoryError = AdminAddCategoryErrors[keyof AdminAddCategoryErrors];
+
+export type AdminAddCategoryResponses = {
+    /**
+     * Successful Response
+     */
+    201: CategoryView;
+};
+
+export type AdminAddCategoryResponse = AdminAddCategoryResponses[keyof AdminAddCategoryResponses];
+
+export type AdminOrderCategoriesData = {
+    body: CategoryOrder;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/categories';
+};
+
+export type AdminOrderCategoriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrderCategoriesError = AdminOrderCategoriesErrors[keyof AdminOrderCategoriesErrors];
+
+export type AdminOrderCategoriesResponses = {
+    /**
+     * Response Adminordercategories
+     *
+     * Successful Response
+     */
+    200: Array<CategoryView>;
+};
+
+export type AdminOrderCategoriesResponse = AdminOrderCategoriesResponses[keyof AdminOrderCategoriesResponses];
+
+export type AdminDeleteCategoryData = {
+    body?: never;
+    path: {
+        /**
+         * Category Id
+         */
+        category_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/categories/{category_id}';
+};
+
+export type AdminDeleteCategoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminDeleteCategoryError = AdminDeleteCategoryErrors[keyof AdminDeleteCategoryErrors];
+
+export type AdminDeleteCategoryResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type AdminDeleteCategoryResponse = AdminDeleteCategoryResponses[keyof AdminDeleteCategoryResponses];
+
+export type AdminRenameCategoryData = {
+    body: CategoryIn;
+    path: {
+        /**
+         * Category Id
+         */
+        category_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/categories/{category_id}';
+};
+
+export type AdminRenameCategoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminRenameCategoryError = AdminRenameCategoryErrors[keyof AdminRenameCategoryErrors];
+
+export type AdminRenameCategoryResponses = {
+    /**
+     * Successful Response
+     */
+    200: CategoryView;
+};
+
+export type AdminRenameCategoryResponse = AdminRenameCategoryResponses[keyof AdminRenameCategoryResponses];
+
+export type AdminSetFeaturedData = {
+    body: Featured;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/featured';
+};
+
+export type AdminSetFeaturedErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminSetFeaturedError = AdminSetFeaturedErrors[keyof AdminSetFeaturedErrors];
+
+export type AdminSetFeaturedResponses = {
+    /**
+     * Response Adminsetfeatured
+     *
+     * Successful Response
+     */
+    200: Array<AdminListing>;
+};
+
+export type AdminSetFeaturedResponse = AdminSetFeaturedResponses[keyof AdminSetFeaturedResponses];
+
+export type AdminListingsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * State
+         */
+        state?: 'published' | 'unpublished' | 'glyphh_review' | 'featured' | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/listings';
+};
+
+export type AdminListingsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminListingsError = AdminListingsErrors[keyof AdminListingsErrors];
+
+export type AdminListingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminListingPage;
+};
+
+export type AdminListingsResponse = AdminListingsResponses[keyof AdminListingsResponses];
+
+export type AdminOrgsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Family
+         */
+        family?: 'Free' | 'Solo' | 'Basic' | 'Pro' | 'Enterprise' | null;
+        /**
+         * State
+         */
+        state?: 'active' | 'disabled' | null;
+        /**
+         * Kind
+         */
+        kind?: 'personal' | 'team' | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs';
+};
+
+export type AdminOrgsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgsError = AdminOrgsErrors[keyof AdminOrgsErrors];
+
+export type AdminOrgsResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgPage;
+};
+
+export type AdminOrgsResponse = AdminOrgsResponses[keyof AdminOrgsResponses];
+
+export type AdminOrgData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}';
+};
+
+export type AdminOrgErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgError = AdminOrgErrors[keyof AdminOrgErrors];
+
+export type AdminOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminOrgResponse = AdminOrgResponses[keyof AdminOrgResponses];
+
+export type AdminEndCompData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/comp';
+};
+
+export type AdminEndCompErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminEndCompError = AdminEndCompErrors[keyof AdminEndCompErrors];
+
+export type AdminEndCompResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminEndCompResponse = AdminEndCompResponses[keyof AdminEndCompResponses];
+
+export type AdminCompPlanData = {
+    body: PlanPick;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/comp';
+};
+
+export type AdminCompPlanErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminCompPlanError = AdminCompPlanErrors[keyof AdminCompPlanErrors];
+
+export type AdminCompPlanResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminCompPlanResponse = AdminCompPlanResponses[keyof AdminCompPlanResponses];
+
+export type AdminDisableOrgData = {
+    body: Disable;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/disable';
+};
+
+export type AdminDisableOrgErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminDisableOrgError = AdminDisableOrgErrors[keyof AdminDisableOrgErrors];
+
+export type AdminDisableOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminDisableOrgResponse = AdminDisableOrgResponses[keyof AdminDisableOrgResponses];
+
+export type AdminEnableOrgData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/enable';
+};
+
+export type AdminEnableOrgErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminEnableOrgError = AdminEnableOrgErrors[keyof AdminEnableOrgErrors];
+
+export type AdminEnableOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminEnableOrgResponse = AdminEnableOrgResponses[keyof AdminEnableOrgResponses];
+
+export type AdminGiftCreditData = {
+    body: Gift;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/gift';
+};
+
+export type AdminGiftCreditErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminGiftCreditError = AdminGiftCreditErrors[keyof AdminGiftCreditErrors];
+
+export type AdminGiftCreditResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminGiftCreditResponse = AdminGiftCreditResponses[keyof AdminGiftCreditResponses];
+
+export type AdminOrgLedgerData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs/{org_id}/ledger';
+};
+
+export type AdminOrgLedgerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgLedgerError = AdminOrgLedgerErrors[keyof AdminOrgLedgerErrors];
+
+export type AdminOrgLedgerResponses = {
+    /**
+     * Successful Response
+     */
+    200: Ledger;
+};
+
+export type AdminOrgLedgerResponse = AdminOrgLedgerResponses[keyof AdminOrgLedgerResponses];
+
+export type AdminOrgMachinesData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs/{org_id}/machines';
+};
+
+export type AdminOrgMachinesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgMachinesError = AdminOrgMachinesErrors[keyof AdminOrgMachinesErrors];
+
+export type AdminOrgMachinesResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgMachines;
+};
+
+export type AdminOrgMachinesResponse = AdminOrgMachinesResponses[keyof AdminOrgMachinesResponses];
+
+export type AdminOrgMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs/{org_id}/members';
+};
+
+export type AdminOrgMembersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgMembersError = AdminOrgMembersErrors[keyof AdminOrgMembersErrors];
+
+export type AdminOrgMembersResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgMembers;
+};
+
+export type AdminOrgMembersResponse = AdminOrgMembersResponses[keyof AdminOrgMembersResponses];
+
+export type AdminMovePlanData = {
+    body: PlanPick;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/orgs/{org_id}/move';
+};
+
+export type AdminMovePlanErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminMovePlanError = AdminMovePlanErrors[keyof AdminMovePlanErrors];
+
+export type AdminMovePlanResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgOverview;
+};
+
+export type AdminMovePlanResponse = AdminMovePlanResponses[keyof AdminMovePlanResponses];
+
+export type AdminOrgPowersData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: {
+        /**
+         * Kind
+         */
+        kind?: string | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs/{org_id}/powers';
+};
+
+export type AdminOrgPowersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgPowersError = AdminOrgPowersErrors[keyof AdminOrgPowersErrors];
+
+export type AdminOrgPowersResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgPowers;
+};
+
+export type AdminOrgPowersResponse = AdminOrgPowersResponses[keyof AdminOrgPowersResponses];
+
+export type AdminOrgSuperPowersData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: string;
+    };
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/admin/orgs/{org_id}/super-powers';
+};
+
+export type AdminOrgSuperPowersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminOrgSuperPowersError = AdminOrgSuperPowersErrors[keyof AdminOrgSuperPowersErrors];
+
+export type AdminOrgSuperPowersResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgSuperPowers;
+};
+
+export type AdminOrgSuperPowersResponse = AdminOrgSuperPowersResponses[keyof AdminOrgSuperPowersResponses];
+
+export type AdminPlansData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/plans';
+};
+
+export type AdminPlansResponses = {
+    /**
+     * Response Adminplans
+     *
+     * Successful Response
+     */
+    200: Array<PlanVersion>;
+};
+
+export type AdminPlansResponse = AdminPlansResponses[keyof AdminPlansResponses];
+
+export type AdminNextPlanVersionData = {
+    body: NextVersion;
+    path: {
+        /**
+         * Family
+         */
+        family: 'Free' | 'Solo' | 'Basic' | 'Pro' | 'Enterprise';
+    };
+    query?: never;
+    url: '/v1/admin/plans/{family}';
+};
+
+export type AdminNextPlanVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminNextPlanVersionError = AdminNextPlanVersionErrors[keyof AdminNextPlanVersionErrors];
+
+export type AdminNextPlanVersionResponses = {
+    /**
+     * Successful Response
+     */
+    201: PlanVersion;
+};
+
+export type AdminNextPlanVersionResponse = AdminNextPlanVersionResponses[keyof AdminNextPlanVersionResponses];
+
+export type AdminMoveOrgsToPlanData = {
+    body?: never;
+    path: {
+        /**
+         * Plan Id
+         */
+        plan_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/plans/{plan_id}/move';
+};
+
+export type AdminMoveOrgsToPlanErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminMoveOrgsToPlanError = AdminMoveOrgsToPlanErrors[keyof AdminMoveOrgsToPlanErrors];
+
+export type AdminMoveOrgsToPlanResponses = {
+    /**
+     * Successful Response
+     */
+    200: Moved;
+};
+
+export type AdminMoveOrgsToPlanResponse = AdminMoveOrgsToPlanResponses[keyof AdminMoveOrgsToPlanResponses];
+
+export type AdminProvidersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * State
+         */
+        state?: 'on' | 'off' | 'removed' | null;
+    };
+    url: '/v1/admin/providers';
+};
+
+export type AdminProvidersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminProvidersError = AdminProvidersErrors[keyof AdminProvidersErrors];
+
+export type AdminProvidersResponses = {
+    /**
+     * Response Adminproviders
+     *
+     * Successful Response
+     */
+    200: Array<AdminProvider>;
+};
+
+export type AdminProvidersResponse = AdminProvidersResponses[keyof AdminProvidersResponses];
+
+export type AdminAddProviderData = {
+    body: ProviderIn;
+    path?: never;
+    query?: never;
+    url: '/v1/admin/providers';
+};
+
+export type AdminAddProviderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminAddProviderError = AdminAddProviderErrors[keyof AdminAddProviderErrors];
+
+export type AdminAddProviderResponses = {
+    /**
+     * Successful Response
+     */
+    201: AdminProvider;
+};
+
+export type AdminAddProviderResponse = AdminAddProviderResponses[keyof AdminAddProviderResponses];
+
+export type AdminRemoveProviderData = {
+    body?: never;
+    path: {
+        /**
+         * Provider Id
+         */
+        provider_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/providers/{provider_id}';
+};
+
+export type AdminRemoveProviderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminRemoveProviderError = AdminRemoveProviderErrors[keyof AdminRemoveProviderErrors];
+
+export type AdminRemoveProviderResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminProvider;
+};
+
+export type AdminRemoveProviderResponse = AdminRemoveProviderResponses[keyof AdminRemoveProviderResponses];
+
+export type AdminChangeProviderData = {
+    body: ProviderChange;
+    path: {
+        /**
+         * Provider Id
+         */
+        provider_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/providers/{provider_id}';
+};
+
+export type AdminChangeProviderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminChangeProviderError = AdminChangeProviderErrors[keyof AdminChangeProviderErrors];
+
+export type AdminChangeProviderResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminProvider;
+};
+
+export type AdminChangeProviderResponse = AdminChangeProviderResponses[keyof AdminChangeProviderResponses];
+
+export type AdminImportModelsData = {
+    body: Import;
+    path: {
+        /**
+         * Provider Id
+         */
+        provider_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/providers/{provider_id}/import';
+};
+
+export type AdminImportModelsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminImportModelsError = AdminImportModelsErrors[keyof AdminImportModelsErrors];
+
+export type AdminImportModelsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Imported;
+};
+
+export type AdminImportModelsResponse = AdminImportModelsResponses[keyof AdminImportModelsResponses];
+
+export type AdminSetProviderLogoData = {
+    body: Blob | File;
+    headers?: {
+        /**
+         * X-File-Name
+         */
+        'x-file-name'?: string;
+    };
+    path: {
+        /**
+         * Provider Id
+         */
+        provider_id: string;
+    };
+    query?: {
+        /**
+         * Dark
+         */
+        dark?: boolean;
+    };
+    url: '/v1/admin/providers/{provider_id}/logo';
+};
+
+export type AdminSetProviderLogoErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminSetProviderLogoError = AdminSetProviderLogoErrors[keyof AdminSetProviderLogoErrors];
+
+export type AdminSetProviderLogoResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminProvider;
+};
+
+export type AdminSetProviderLogoResponse = AdminSetProviderLogoResponses[keyof AdminSetProviderLogoResponses];
+
+export type AdminWriteReviewerReportData = {
+    body: ReviewerReport;
+    path: {
+        /**
+         * Listing Version Id
+         */
+        listing_version_id: string;
+    };
+    query?: never;
+    url: '/v1/admin/reviews/{listing_version_id}/report';
+};
+
+export type AdminWriteReviewerReportErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminWriteReviewerReportError = AdminWriteReviewerReportErrors[keyof AdminWriteReviewerReportErrors];
+
+export type AdminWriteReviewerReportResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type AdminWriteReviewerReportResponse = AdminWriteReviewerReportResponses[keyof AdminWriteReviewerReportResponses];
+
 export type RevokeApiKeyData = {
     body?: never;
     path: {
@@ -5180,6 +7364,39 @@ export type ListProvidersResponses = {
 };
 
 export type ListProvidersResponse = ListProvidersResponses[keyof ListProvidersResponses];
+
+export type ProviderLogoData = {
+    body?: never;
+    path: {
+        /**
+         * Slug
+         */
+        slug: string;
+    };
+    query?: {
+        /**
+         * Dark
+         */
+        dark?: boolean;
+    };
+    url: '/v1/catalog/providers/{slug}/logo';
+};
+
+export type ProviderLogoErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProviderLogoError = ProviderLogoErrors[keyof ProviderLogoErrors];
+
+export type ProviderLogoResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type ListServicesData = {
     body?: never;

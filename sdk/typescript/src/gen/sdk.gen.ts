@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFromMarketplaceData, AddFromMarketplaceErrors, AddFromMarketplaceResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddLimitEntriesData, AddLimitEntriesErrors, AddLimitEntriesResponses, AddListingScreenshotData, AddListingScreenshotErrors, AddListingScreenshotResponses, AddModelData, AddModelErrors, AddModelResponses, AddScheduleData, AddScheduleErrors, AddScheduleResponses, AddTeamMembersData, AddTeamMembersErrors, AddTeamMembersResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ApproveMachineSignInData, ApproveMachineSignInErrors, ApproveMachineSignInResponses, AskMachineSignInData, AskMachineSignInErrors, AskMachineSignInResponses, BrowseMarketplaceData, BrowseMarketplaceErrors, BrowseMarketplaceResponses, CancelCliSignInData, CancelCliSignInErrors, CancelCliSignInResponses, ChangeCustomPowerData, ChangeCustomPowerErrors, ChangeCustomPowerResponses, ChangeListingData, ChangeListingErrors, ChangeListingResponses, ChangeListingVersionData, ChangeListingVersionErrors, ChangeListingVersionResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeScheduleData, ChangeScheduleErrors, ChangeScheduleResponses, ChangeSuperPowerData, ChangeSuperPowerErrors, ChangeSuperPowerResponses, ChangeTeamData, ChangeTeamErrors, ChangeTeamResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, CommentOnListingData, CommentOnListingErrors, CommentOnListingResponses, ConnectData, ConnectErrors, ConnectResponses, CreateCustomPowerData, CreateCustomPowerErrors, CreateCustomPowerResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateListingData, CreateListingErrors, CreateListingResponses, CreateSuperPowerData, CreateSuperPowerErrors, CreateSuperPowerResponses, CreateTeamData, CreateTeamErrors, CreateTeamResponses, DecideReviewData, DecideReviewErrors, DecideReviewResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteCustomFileData, DeleteCustomFileErrors, DeleteCustomFileResponses, DeleteCustomPowerData, DeleteCustomPowerErrors, DeleteCustomPowerResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteSuperPowerData, DeleteSuperPowerErrors, DeleteSuperPowerResponses, DeleteTeamData, DeleteTeamErrors, DeleteTeamResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DenyMachineSignInData, DenyMachineSignInErrors, DenyMachineSignInResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, ExportAuditLogData, ExportAuditLogErrors, ExportAuditLogResponses, ExportUsageCallsData, ExportUsageCallsErrors, ExportUsageCallsResponses, ExportUsageUsesData, ExportUsageUsesErrors, ExportUsageUsesResponses, GetBillingData, GetBillingResponses, GetCustomPowerData, GetCustomPowerErrors, GetCustomPowerResponses, GetLimitImpactData, GetLimitImpactErrors, GetLimitImpactResponses, GetLimitsData, GetLimitsErrors, GetLimitsResponses, GetListingData, GetListingErrors, GetListingResponses, GetMachineSignInData, GetMachineSignInErrors, GetMachineSignInResponses, GetMemberKeysData, GetMemberKeysResponses, GetMemberTeamsData, GetMemberTeamsErrors, GetMemberTeamsResponses, GetOrgData, GetOrgResponses, GetSuperPowerData, GetSuperPowerErrors, GetSuperPowerResponses, GetTeamData, GetTeamErrors, GetTeamResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, InviteManyData, InviteManyErrors, InviteManyResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListApiKeyMakersData, ListApiKeyMakersErrors, ListApiKeyMakersResponses, ListAuditLogData, ListAuditLogErrors, ListAuditLogResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListCustomPowersData, ListCustomPowersErrors, ListCustomPowersResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListingCommentsData, ListingCommentsErrors, ListingCommentsResponses, ListingIconData, ListingIconErrors, ListingIconResponses, ListingScreenshotData, ListingScreenshotErrors, ListingScreenshotResponses, ListingStatsData, ListingStatsErrors, ListingStatsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachineClisData, ListMachineClisErrors, ListMachineClisResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyApiKeysData, ListMyApiKeysErrors, ListMyApiKeysResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListOrgApiKeysData, ListOrgApiKeysErrors, ListOrgApiKeysResponses, ListPeopleData, ListPeopleErrors, ListPeopleResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListSuperPowersData, ListSuperPowersErrors, ListSuperPowersResponses, ListTeamsData, ListTeamsResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MakeApiKeyData, MakeApiKeyErrors, MakeApiKeyResponses, MarketplaceHomeData, MarketplaceHomeErrors, MarketplaceHomeResponses, MarketplaceListingData, MarketplaceListingErrors, MarketplaceListingResponses, MeData, MeResponses, MintOneClickHostData, MintOneClickHostErrors, MintOneClickHostResponses, MyGlyphhData, MyGlyphhResponses, MyListingsData, MyListingsResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OpenPanelSessionData, OpenPanelSessionErrors, OpenPanelSessionResponses, OrderListingScreenshotsData, OrderListingScreenshotsErrors, OrderListingScreenshotsResponses, OrgCreditData, OrgCreditResponses, PasteCliCodeData, PasteCliCodeErrors, PasteCliCodeResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadCustomFileData, ReadCustomFileErrors, ReadCustomFileResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveLimitEntriesData, RemoveLimitEntriesErrors, RemoveLimitEntriesResponses, RemoveListingScreenshotData, RemoveListingScreenshotErrors, RemoveListingScreenshotResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RemoveTeamMemberData, RemoveTeamMemberErrors, RemoveTeamMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RenewPanelSessionData, RenewPanelSessionResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, ReviewQueueData, ReviewQueueErrors, ReviewQueueResponses, RevokeApiKeyData, RevokeApiKeyErrors, RevokeApiKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SaveTaskFlowData, SaveTaskFlowErrors, SaveTaskFlowResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetGrantData, SetGrantErrors, SetGrantResponses, SetLimitData, SetLimitErrors, SetLimitResponses, SetListingIconData, SetListingIconErrors, SetListingIconResponses, SetLoopData, SetLoopErrors, SetLoopResponses, SetMemberKeysData, SetMemberKeysErrors, SetMemberKeysResponses, SetMemberTeamsData, SetMemberTeamsErrors, SetMemberTeamsResponses, SetTaskSlotsData, SetTaskSlotsErrors, SetTaskSlotsResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInCliData, SignInCliErrors, SignInCliResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SubmitListingData, SubmitListingErrors, SubmitListingResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, TaskSlotsData, TaskSlotsErrors, TaskSlotsResponses, TradeMachineSignInData, TradeMachineSignInErrors, TradeMachineSignInResponses, UnpublishListingData, UnpublishListingErrors, UnpublishListingResponses, UpdateFromMarketplaceData, UpdateFromMarketplaceErrors, UpdateFromMarketplaceResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, UsageByData, UsageByErrors, UsageByResponses, UsageCallData, UsageCallErrors, UsageCallResponses, UsageCallsData, UsageCallsErrors, UsageCallsResponses, UsagePageData, UsagePageErrors, UsagePageResponses, UsagePeriodsData, UsagePeriodsResponses, UsageRunsData, UsageRunsErrors, UsageRunsResponses, UsageUseData, UsageUseErrors, UsageUseResponses, UsageUsesData, UsageUsesErrors, UsageUsesResponses, WatchMachineData, WatchMachineErrors, WatchMachineResponses, WatchMeData, WatchMeResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses, WithdrawListingData, WithdrawListingErrors, WithdrawListingResponses, WriteCustomFileData, WriteCustomFileErrors, WriteCustomFileResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFromMarketplaceData, AddFromMarketplaceErrors, AddFromMarketplaceResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddLimitEntriesData, AddLimitEntriesErrors, AddLimitEntriesResponses, AddListingScreenshotData, AddListingScreenshotErrors, AddListingScreenshotResponses, AddModelData, AddModelErrors, AddModelResponses, AddScheduleData, AddScheduleErrors, AddScheduleResponses, AddTeamMembersData, AddTeamMembersErrors, AddTeamMembersResponses, AdminAddCatalogModelData, AdminAddCatalogModelErrors, AdminAddCatalogModelResponses, AdminAddCategoryData, AdminAddCategoryErrors, AdminAddCategoryResponses, AdminAddProviderData, AdminAddProviderErrors, AdminAddProviderResponses, AdminAuditLogData, AdminAuditLogErrors, AdminAuditLogResponses, AdminBillingSettingsData, AdminBillingSettingsResponses, AdminCatalogModelsData, AdminCatalogModelsErrors, AdminCatalogModelsResponses, AdminCategoriesData, AdminCategoriesResponses, AdminChangeCatalogModelData, AdminChangeCatalogModelErrors, AdminChangeCatalogModelResponses, AdminChangeProviderData, AdminChangeProviderErrors, AdminChangeProviderResponses, AdminCompPlanData, AdminCompPlanErrors, AdminCompPlanResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDisableOrgData, AdminDisableOrgErrors, AdminDisableOrgResponses, AdminEnableOrgData, AdminEnableOrgErrors, AdminEnableOrgResponses, AdminEndCompData, AdminEndCompErrors, AdminEndCompResponses, AdminExportAuditLogData, AdminExportAuditLogErrors, AdminExportAuditLogResponses, AdminGiftCreditData, AdminGiftCreditErrors, AdminGiftCreditResponses, AdminImportModelsData, AdminImportModelsErrors, AdminImportModelsResponses, AdminListingsData, AdminListingsErrors, AdminListingsResponses, AdminMoveOrgsToPlanData, AdminMoveOrgsToPlanErrors, AdminMoveOrgsToPlanResponses, AdminMovePlanData, AdminMovePlanErrors, AdminMovePlanResponses, AdminNextPlanVersionData, AdminNextPlanVersionErrors, AdminNextPlanVersionResponses, AdminOrderCategoriesData, AdminOrderCategoriesErrors, AdminOrderCategoriesResponses, AdminOrgData, AdminOrgErrors, AdminOrgLedgerData, AdminOrgLedgerErrors, AdminOrgLedgerResponses, AdminOrgMachinesData, AdminOrgMachinesErrors, AdminOrgMachinesResponses, AdminOrgMembersData, AdminOrgMembersErrors, AdminOrgMembersResponses, AdminOrgPowersData, AdminOrgPowersErrors, AdminOrgPowersResponses, AdminOrgResponses, AdminOrgsData, AdminOrgsErrors, AdminOrgsResponses, AdminOrgSuperPowersData, AdminOrgSuperPowersErrors, AdminOrgSuperPowersResponses, AdminPlansData, AdminPlansResponses, AdminProvidersData, AdminProvidersErrors, AdminProvidersResponses, AdminRemoveCatalogModelData, AdminRemoveCatalogModelErrors, AdminRemoveCatalogModelResponses, AdminRemoveProviderData, AdminRemoveProviderErrors, AdminRemoveProviderResponses, AdminRenameCategoryData, AdminRenameCategoryErrors, AdminRenameCategoryResponses, AdminSetBillingSettingsData, AdminSetBillingSettingsErrors, AdminSetBillingSettingsResponses, AdminSetFeaturedData, AdminSetFeaturedErrors, AdminSetFeaturedResponses, AdminSetProviderLogoData, AdminSetProviderLogoErrors, AdminSetProviderLogoResponses, AdminWriteReviewerReportData, AdminWriteReviewerReportErrors, AdminWriteReviewerReportResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ApproveMachineSignInData, ApproveMachineSignInErrors, ApproveMachineSignInResponses, AskMachineSignInData, AskMachineSignInErrors, AskMachineSignInResponses, BrowseMarketplaceData, BrowseMarketplaceErrors, BrowseMarketplaceResponses, CancelCliSignInData, CancelCliSignInErrors, CancelCliSignInResponses, ChangeCustomPowerData, ChangeCustomPowerErrors, ChangeCustomPowerResponses, ChangeListingData, ChangeListingErrors, ChangeListingResponses, ChangeListingVersionData, ChangeListingVersionErrors, ChangeListingVersionResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeScheduleData, ChangeScheduleErrors, ChangeScheduleResponses, ChangeSuperPowerData, ChangeSuperPowerErrors, ChangeSuperPowerResponses, ChangeTeamData, ChangeTeamErrors, ChangeTeamResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, CommentOnListingData, CommentOnListingErrors, CommentOnListingResponses, ConnectData, ConnectErrors, ConnectResponses, CreateCustomPowerData, CreateCustomPowerErrors, CreateCustomPowerResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateListingData, CreateListingErrors, CreateListingResponses, CreateSuperPowerData, CreateSuperPowerErrors, CreateSuperPowerResponses, CreateTeamData, CreateTeamErrors, CreateTeamResponses, DecideReviewData, DecideReviewErrors, DecideReviewResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteCustomFileData, DeleteCustomFileErrors, DeleteCustomFileResponses, DeleteCustomPowerData, DeleteCustomPowerErrors, DeleteCustomPowerResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteSuperPowerData, DeleteSuperPowerErrors, DeleteSuperPowerResponses, DeleteTeamData, DeleteTeamErrors, DeleteTeamResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DenyMachineSignInData, DenyMachineSignInErrors, DenyMachineSignInResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, ExportAuditLogData, ExportAuditLogErrors, ExportAuditLogResponses, ExportUsageCallsData, ExportUsageCallsErrors, ExportUsageCallsResponses, ExportUsageUsesData, ExportUsageUsesErrors, ExportUsageUsesResponses, GetBillingData, GetBillingResponses, GetCustomPowerData, GetCustomPowerErrors, GetCustomPowerResponses, GetLimitImpactData, GetLimitImpactErrors, GetLimitImpactResponses, GetLimitsData, GetLimitsErrors, GetLimitsResponses, GetListingData, GetListingErrors, GetListingResponses, GetMachineSignInData, GetMachineSignInErrors, GetMachineSignInResponses, GetMemberKeysData, GetMemberKeysResponses, GetMemberTeamsData, GetMemberTeamsErrors, GetMemberTeamsResponses, GetOrgData, GetOrgResponses, GetSuperPowerData, GetSuperPowerErrors, GetSuperPowerResponses, GetTeamData, GetTeamErrors, GetTeamResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, InviteManyData, InviteManyErrors, InviteManyResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListApiKeyMakersData, ListApiKeyMakersErrors, ListApiKeyMakersResponses, ListAuditLogData, ListAuditLogErrors, ListAuditLogResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListCustomPowersData, ListCustomPowersErrors, ListCustomPowersResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListingCommentsData, ListingCommentsErrors, ListingCommentsResponses, ListingIconData, ListingIconErrors, ListingIconResponses, ListingScreenshotData, ListingScreenshotErrors, ListingScreenshotResponses, ListingStatsData, ListingStatsErrors, ListingStatsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachineClisData, ListMachineClisErrors, ListMachineClisResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyApiKeysData, ListMyApiKeysErrors, ListMyApiKeysResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListOrgApiKeysData, ListOrgApiKeysErrors, ListOrgApiKeysResponses, ListPeopleData, ListPeopleErrors, ListPeopleResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListSuperPowersData, ListSuperPowersErrors, ListSuperPowersResponses, ListTeamsData, ListTeamsResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MakeApiKeyData, MakeApiKeyErrors, MakeApiKeyResponses, MarketplaceHomeData, MarketplaceHomeErrors, MarketplaceHomeResponses, MarketplaceListingData, MarketplaceListingErrors, MarketplaceListingResponses, MeData, MeResponses, MintOneClickHostData, MintOneClickHostErrors, MintOneClickHostResponses, MyGlyphhData, MyGlyphhResponses, MyListingsData, MyListingsResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OpenPanelSessionData, OpenPanelSessionErrors, OpenPanelSessionResponses, OrderListingScreenshotsData, OrderListingScreenshotsErrors, OrderListingScreenshotsResponses, OrgCreditData, OrgCreditResponses, PasteCliCodeData, PasteCliCodeErrors, PasteCliCodeResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ProviderLogoData, ProviderLogoErrors, ProviderLogoResponses, ReadCustomFileData, ReadCustomFileErrors, ReadCustomFileResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveLimitEntriesData, RemoveLimitEntriesErrors, RemoveLimitEntriesResponses, RemoveListingScreenshotData, RemoveListingScreenshotErrors, RemoveListingScreenshotResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RemoveTeamMemberData, RemoveTeamMemberErrors, RemoveTeamMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RenewPanelSessionData, RenewPanelSessionResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, ReviewQueueData, ReviewQueueErrors, ReviewQueueResponses, RevokeApiKeyData, RevokeApiKeyErrors, RevokeApiKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SaveTaskFlowData, SaveTaskFlowErrors, SaveTaskFlowResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetGrantData, SetGrantErrors, SetGrantResponses, SetLimitData, SetLimitErrors, SetLimitResponses, SetListingIconData, SetListingIconErrors, SetListingIconResponses, SetLoopData, SetLoopErrors, SetLoopResponses, SetMemberKeysData, SetMemberKeysErrors, SetMemberKeysResponses, SetMemberTeamsData, SetMemberTeamsErrors, SetMemberTeamsResponses, SetTaskSlotsData, SetTaskSlotsErrors, SetTaskSlotsResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInCliData, SignInCliErrors, SignInCliResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SubmitListingData, SubmitListingErrors, SubmitListingResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, TaskSlotsData, TaskSlotsErrors, TaskSlotsResponses, TradeMachineSignInData, TradeMachineSignInErrors, TradeMachineSignInResponses, UnpublishListingData, UnpublishListingErrors, UnpublishListingResponses, UpdateFromMarketplaceData, UpdateFromMarketplaceErrors, UpdateFromMarketplaceResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, UsageByData, UsageByErrors, UsageByResponses, UsageCallData, UsageCallErrors, UsageCallResponses, UsageCallsData, UsageCallsErrors, UsageCallsResponses, UsagePageData, UsagePageErrors, UsagePageResponses, UsagePeriodsData, UsagePeriodsResponses, UsageRunsData, UsageRunsErrors, UsageRunsResponses, UsageUseData, UsageUseErrors, UsageUseResponses, UsageUsesData, UsageUsesErrors, UsageUsesResponses, WatchMachineData, WatchMachineErrors, WatchMachineResponses, WatchMeData, WatchMeResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses, WithdrawListingData, WithdrawListingErrors, WithdrawListingResponses, WriteCustomFileData, WriteCustomFileErrors, WriteCustomFileResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,349 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Admin Audit
+ *
+ * What Glyphh's staff and reviewer did, across every org (or one, with `org`), newest first.
+ */
+export const adminAuditLog = <ThrowOnError extends boolean = false>(options?: Options<AdminAuditLogData, ThrowOnError>): RequestResult<AdminAuditLogResponses, AdminAuditLogErrors, ThrowOnError> => (options?.client ?? client).get<AdminAuditLogResponses, AdminAuditLogErrors, ThrowOnError>({ url: '/v1/admin/audit', ...options });
+
+/**
+ * Admin Export Audit
+ */
+export const adminExportAuditLog = <ThrowOnError extends boolean = false>(options?: Options<AdminExportAuditLogData, ThrowOnError>): RequestResult<AdminExportAuditLogResponses, AdminExportAuditLogErrors, ThrowOnError> => (options?.client ?? client).get<AdminExportAuditLogResponses, AdminExportAuditLogErrors, ThrowOnError>({ url: '/v1/admin/audit.csv', ...options });
+
+/**
+ * Admin Billing Settings
+ */
+export const adminBillingSettings = <ThrowOnError extends boolean = false>(options?: Options<AdminBillingSettingsData, ThrowOnError>): RequestResult<AdminBillingSettingsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<AdminBillingSettingsResponses, unknown, ThrowOnError>({ url: '/v1/admin/billing-settings', ...options });
+
+/**
+ * Admin Set Billing Settings
+ *
+ * From now, or from a time to come; kept with who set it.
+ */
+export const adminSetBillingSettings = <ThrowOnError extends boolean = false>(options: Options<AdminSetBillingSettingsData, ThrowOnError>): RequestResult<AdminSetBillingSettingsResponses, AdminSetBillingSettingsErrors, ThrowOnError> => (options.client ?? client).post<AdminSetBillingSettingsResponses, AdminSetBillingSettingsErrors, ThrowOnError>({
+    url: '/v1/admin/billing-settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Catalog Models
+ */
+export const adminCatalogModels = <ThrowOnError extends boolean = false>(options?: Options<AdminCatalogModelsData, ThrowOnError>): RequestResult<AdminCatalogModelsResponses, AdminCatalogModelsErrors, ThrowOnError> => (options?.client ?? client).get<AdminCatalogModelsResponses, AdminCatalogModelsErrors, ThrowOnError>({ url: '/v1/admin/catalog-models', ...options });
+
+/**
+ * Admin Add Model
+ */
+export const adminAddCatalogModel = <ThrowOnError extends boolean = false>(options: Options<AdminAddCatalogModelData, ThrowOnError>): RequestResult<AdminAddCatalogModelResponses, AdminAddCatalogModelErrors, ThrowOnError> => (options.client ?? client).post<AdminAddCatalogModelResponses, AdminAddCatalogModelErrors, ThrowOnError>({
+    url: '/v1/admin/catalog-models',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Remove Model
+ */
+export const adminRemoveCatalogModel = <ThrowOnError extends boolean = false>(options: Options<AdminRemoveCatalogModelData, ThrowOnError>): RequestResult<AdminRemoveCatalogModelResponses, AdminRemoveCatalogModelErrors, ThrowOnError> => (options.client ?? client).delete<AdminRemoveCatalogModelResponses, AdminRemoveCatalogModelErrors, ThrowOnError>({ url: '/v1/admin/catalog-models/{model_id}', ...options });
+
+/**
+ * Admin Change Model
+ */
+export const adminChangeCatalogModel = <ThrowOnError extends boolean = false>(options: Options<AdminChangeCatalogModelData, ThrowOnError>): RequestResult<AdminChangeCatalogModelResponses, AdminChangeCatalogModelErrors, ThrowOnError> => (options.client ?? client).patch<AdminChangeCatalogModelResponses, AdminChangeCatalogModelErrors, ThrowOnError>({
+    url: '/v1/admin/catalog-models/{model_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Categories
+ */
+export const adminCategories = <ThrowOnError extends boolean = false>(options?: Options<AdminCategoriesData, ThrowOnError>): RequestResult<AdminCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<AdminCategoriesResponses, unknown, ThrowOnError>({ url: '/v1/admin/categories', ...options });
+
+/**
+ * Admin Add Category
+ */
+export const adminAddCategory = <ThrowOnError extends boolean = false>(options: Options<AdminAddCategoryData, ThrowOnError>): RequestResult<AdminAddCategoryResponses, AdminAddCategoryErrors, ThrowOnError> => (options.client ?? client).post<AdminAddCategoryResponses, AdminAddCategoryErrors, ThrowOnError>({
+    url: '/v1/admin/categories',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Order Categories
+ */
+export const adminOrderCategories = <ThrowOnError extends boolean = false>(options: Options<AdminOrderCategoriesData, ThrowOnError>): RequestResult<AdminOrderCategoriesResponses, AdminOrderCategoriesErrors, ThrowOnError> => (options.client ?? client).put<AdminOrderCategoriesResponses, AdminOrderCategoriesErrors, ThrowOnError>({
+    url: '/v1/admin/categories',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Delete Category
+ *
+ * Its listings are left with no category.
+ */
+export const adminDeleteCategory = <ThrowOnError extends boolean = false>(options: Options<AdminDeleteCategoryData, ThrowOnError>): RequestResult<AdminDeleteCategoryResponses, AdminDeleteCategoryErrors, ThrowOnError> => (options.client ?? client).delete<AdminDeleteCategoryResponses, AdminDeleteCategoryErrors, ThrowOnError>({ url: '/v1/admin/categories/{category_id}', ...options });
+
+/**
+ * Admin Rename Category
+ */
+export const adminRenameCategory = <ThrowOnError extends boolean = false>(options: Options<AdminRenameCategoryData, ThrowOnError>): RequestResult<AdminRenameCategoryResponses, AdminRenameCategoryErrors, ThrowOnError> => (options.client ?? client).patch<AdminRenameCategoryResponses, AdminRenameCategoryErrors, ThrowOnError>({
+    url: '/v1/admin/categories/{category_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Set Featured
+ *
+ * The featured shelf, in this order; every other listing leaves it.
+ */
+export const adminSetFeatured = <ThrowOnError extends boolean = false>(options: Options<AdminSetFeaturedData, ThrowOnError>): RequestResult<AdminSetFeaturedResponses, AdminSetFeaturedErrors, ThrowOnError> => (options.client ?? client).put<AdminSetFeaturedResponses, AdminSetFeaturedErrors, ThrowOnError>({
+    url: '/v1/admin/featured',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Listings
+ */
+export const adminListings = <ThrowOnError extends boolean = false>(options?: Options<AdminListingsData, ThrowOnError>): RequestResult<AdminListingsResponses, AdminListingsErrors, ThrowOnError> => (options?.client ?? client).get<AdminListingsResponses, AdminListingsErrors, ThrowOnError>({ url: '/v1/admin/listings', ...options });
+
+/**
+ * Admin Orgs
+ */
+export const adminOrgs = <ThrowOnError extends boolean = false>(options?: Options<AdminOrgsData, ThrowOnError>): RequestResult<AdminOrgsResponses, AdminOrgsErrors, ThrowOnError> => (options?.client ?? client).get<AdminOrgsResponses, AdminOrgsErrors, ThrowOnError>({ url: '/v1/admin/orgs', ...options });
+
+/**
+ * Admin Org
+ */
+export const adminOrg = <ThrowOnError extends boolean = false>(options: Options<AdminOrgData, ThrowOnError>): RequestResult<AdminOrgResponses, AdminOrgErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgResponses, AdminOrgErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}', ...options });
+
+/**
+ * Admin End Comp
+ *
+ * Back to Free, to choose and pay for a plan like any org.
+ */
+export const adminEndComp = <ThrowOnError extends boolean = false>(options: Options<AdminEndCompData, ThrowOnError>): RequestResult<AdminEndCompResponses, AdminEndCompErrors, ThrowOnError> => (options.client ?? client).delete<AdminEndCompResponses, AdminEndCompErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/comp', ...options });
+
+/**
+ * Admin Comp
+ *
+ * Any plan version at no charge; its Stripe subscription ends, the card stays.
+ */
+export const adminCompPlan = <ThrowOnError extends boolean = false>(options: Options<AdminCompPlanData, ThrowOnError>): RequestResult<AdminCompPlanResponses, AdminCompPlanErrors, ThrowOnError> => (options.client ?? client).post<AdminCompPlanResponses, AdminCompPlanErrors, ThrowOnError>({
+    url: '/v1/admin/orgs/{org_id}/comp',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Disable
+ *
+ * Nobody acts in it, its machines are cut off, its billing pauses; its data is kept.
+ */
+export const adminDisableOrg = <ThrowOnError extends boolean = false>(options: Options<AdminDisableOrgData, ThrowOnError>): RequestResult<AdminDisableOrgResponses, AdminDisableOrgErrors, ThrowOnError> => (options.client ?? client).post<AdminDisableOrgResponses, AdminDisableOrgErrors, ThrowOnError>({
+    url: '/v1/admin/orgs/{org_id}/disable',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Enable
+ */
+export const adminEnableOrg = <ThrowOnError extends boolean = false>(options: Options<AdminEnableOrgData, ThrowOnError>): RequestResult<AdminEnableOrgResponses, AdminEnableOrgErrors, ThrowOnError> => (options.client ?? client).post<AdminEnableOrgResponses, AdminEnableOrgErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/enable', ...options });
+
+/**
+ * Admin Gift
+ *
+ * Credit in dollars with a note, spent like bought credit, for a year.
+ */
+export const adminGiftCredit = <ThrowOnError extends boolean = false>(options: Options<AdminGiftCreditData, ThrowOnError>): RequestResult<AdminGiftCreditResponses, AdminGiftCreditErrors, ThrowOnError> => (options.client ?? client).post<AdminGiftCreditResponses, AdminGiftCreditErrors, ThrowOnError>({
+    url: '/v1/admin/orgs/{org_id}/gift',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Org Ledger
+ */
+export const adminOrgLedger = <ThrowOnError extends boolean = false>(options: Options<AdminOrgLedgerData, ThrowOnError>): RequestResult<AdminOrgLedgerResponses, AdminOrgLedgerErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgLedgerResponses, AdminOrgLedgerErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/ledger', ...options });
+
+/**
+ * Admin Org Machines
+ */
+export const adminOrgMachines = <ThrowOnError extends boolean = false>(options: Options<AdminOrgMachinesData, ThrowOnError>): RequestResult<AdminOrgMachinesResponses, AdminOrgMachinesErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgMachinesResponses, AdminOrgMachinesErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/machines', ...options });
+
+/**
+ * Admin Org Members
+ */
+export const adminOrgMembers = <ThrowOnError extends boolean = false>(options: Options<AdminOrgMembersData, ThrowOnError>): RequestResult<AdminOrgMembersResponses, AdminOrgMembersErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgMembersResponses, AdminOrgMembersErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/members', ...options });
+
+/**
+ * Admin Move
+ *
+ * To its family's version on sale, in 30 days (Billing shows it waiting).
+ */
+export const adminMovePlan = <ThrowOnError extends boolean = false>(options: Options<AdminMovePlanData, ThrowOnError>): RequestResult<AdminMovePlanResponses, AdminMovePlanErrors, ThrowOnError> => (options.client ?? client).post<AdminMovePlanResponses, AdminMovePlanErrors, ThrowOnError>({
+    url: '/v1/admin/orgs/{org_id}/move',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Org Powers
+ */
+export const adminOrgPowers = <ThrowOnError extends boolean = false>(options: Options<AdminOrgPowersData, ThrowOnError>): RequestResult<AdminOrgPowersResponses, AdminOrgPowersErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgPowersResponses, AdminOrgPowersErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/powers', ...options });
+
+/**
+ * Admin Org Super Powers
+ */
+export const adminOrgSuperPowers = <ThrowOnError extends boolean = false>(options: Options<AdminOrgSuperPowersData, ThrowOnError>): RequestResult<AdminOrgSuperPowersResponses, AdminOrgSuperPowersErrors, ThrowOnError> => (options.client ?? client).get<AdminOrgSuperPowersResponses, AdminOrgSuperPowersErrors, ThrowOnError>({ url: '/v1/admin/orgs/{org_id}/super-powers', ...options });
+
+/**
+ * Admin Plans
+ */
+export const adminPlans = <ThrowOnError extends boolean = false>(options?: Options<AdminPlansData, ThrowOnError>): RequestResult<AdminPlansResponses, unknown, ThrowOnError> => (options?.client ?? client).get<AdminPlansResponses, unknown, ThrowOnError>({ url: '/v1/admin/plans', ...options });
+
+/**
+ * Admin Next Version
+ *
+ * The family's next version, sold from now; orgs on the one before keep it until they change or are moved.
+ */
+export const adminNextPlanVersion = <ThrowOnError extends boolean = false>(options: Options<AdminNextPlanVersionData, ThrowOnError>): RequestResult<AdminNextPlanVersionResponses, AdminNextPlanVersionErrors, ThrowOnError> => (options.client ?? client).post<AdminNextPlanVersionResponses, AdminNextPlanVersionErrors, ThrowOnError>({
+    url: '/v1/admin/plans/{family}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Move All
+ */
+export const adminMoveOrgsToPlan = <ThrowOnError extends boolean = false>(options: Options<AdminMoveOrgsToPlanData, ThrowOnError>): RequestResult<AdminMoveOrgsToPlanResponses, AdminMoveOrgsToPlanErrors, ThrowOnError> => (options.client ?? client).post<AdminMoveOrgsToPlanResponses, AdminMoveOrgsToPlanErrors, ThrowOnError>({ url: '/v1/admin/plans/{plan_id}/move', ...options });
+
+/**
+ * Admin Providers
+ */
+export const adminProviders = <ThrowOnError extends boolean = false>(options?: Options<AdminProvidersData, ThrowOnError>): RequestResult<AdminProvidersResponses, AdminProvidersErrors, ThrowOnError> => (options?.client ?? client).get<AdminProvidersResponses, AdminProvidersErrors, ThrowOnError>({ url: '/v1/admin/providers', ...options });
+
+/**
+ * Admin Add Provider
+ *
+ * Hidden from members until one of its models is on.
+ */
+export const adminAddProvider = <ThrowOnError extends boolean = false>(options: Options<AdminAddProviderData, ThrowOnError>): RequestResult<AdminAddProviderResponses, AdminAddProviderErrors, ThrowOnError> => (options.client ?? client).post<AdminAddProviderResponses, AdminAddProviderErrors, ThrowOnError>({
+    url: '/v1/admin/providers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Remove Provider
+ *
+ * For good: members' models on it can only be deleted.
+ */
+export const adminRemoveProvider = <ThrowOnError extends boolean = false>(options: Options<AdminRemoveProviderData, ThrowOnError>): RequestResult<AdminRemoveProviderResponses, AdminRemoveProviderErrors, ThrowOnError> => (options.client ?? client).delete<AdminRemoveProviderResponses, AdminRemoveProviderErrors, ThrowOnError>({ url: '/v1/admin/providers/{provider_id}', ...options });
+
+/**
+ * Admin Change Provider
+ *
+ * Its name, endpoint and order, or off and on (members' models on it are disabled with the reason).
+ */
+export const adminChangeProvider = <ThrowOnError extends boolean = false>(options: Options<AdminChangeProviderData, ThrowOnError>): RequestResult<AdminChangeProviderResponses, AdminChangeProviderErrors, ThrowOnError> => (options.client ?? client).patch<AdminChangeProviderResponses, AdminChangeProviderErrors, ThrowOnError>({
+    url: '/v1/admin/providers/{provider_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Import
+ *
+ * The provider's own list of models, read with this key (never kept); new ones arrive on, without a
+ * description.
+ */
+export const adminImportModels = <ThrowOnError extends boolean = false>(options: Options<AdminImportModelsData, ThrowOnError>): RequestResult<AdminImportModelsResponses, AdminImportModelsErrors, ThrowOnError> => (options.client ?? client).post<AdminImportModelsResponses, AdminImportModelsErrors, ThrowOnError>({
+    url: '/v1/admin/providers/{provider_id}/import',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Set Logo
+ *
+ * A square PNG, re-encoded at 512 px; `dark` for the copy on dark grounds.
+ */
+export const adminSetProviderLogo = <ThrowOnError extends boolean = false>(options: Options<AdminSetProviderLogoData, ThrowOnError>): RequestResult<AdminSetProviderLogoResponses, AdminSetProviderLogoErrors, ThrowOnError> => (options.client ?? client).put<AdminSetProviderLogoResponses, AdminSetProviderLogoErrors, ThrowOnError>({
+    bodySerializer: null,
+    url: '/v1/admin/providers/{provider_id}/logo',
+    ...options,
+    headers: {
+        'Content-Type': 'image/jpeg',
+        ...options.headers
+    }
+});
+
+/**
+ * Admin Report
+ *
+ * Glyphh's reviewer's report on a version waiting for Glyphh; a person decides.
+ */
+export const adminWriteReviewerReport = <ThrowOnError extends boolean = false>(options: Options<AdminWriteReviewerReportData, ThrowOnError>): RequestResult<AdminWriteReviewerReportResponses, AdminWriteReviewerReportErrors, ThrowOnError> => (options.client ?? client).put<AdminWriteReviewerReportResponses, AdminWriteReviewerReportErrors, ThrowOnError>({
+    url: '/v1/admin/reviews/{listing_version_id}/report',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Revoke Key
@@ -51,6 +394,11 @@ export const listCatalogModels = <ThrowOnError extends boolean = false>(options?
  * The catalog's providers, each with how many models it offers and, when a limit leaves all out, why.
  */
 export const listProviders = <ThrowOnError extends boolean = false>(options?: Options<ListProvidersData, ThrowOnError>): RequestResult<ListProvidersResponses, ListProvidersErrors, ThrowOnError> => (options?.client ?? client).get<ListProvidersResponses, ListProvidersErrors, ThrowOnError>({ url: '/v1/catalog/providers', ...options });
+
+/**
+ * Provider Logo
+ */
+export const providerLogo = <ThrowOnError extends boolean = false>(options: Options<ProviderLogoData, ThrowOnError>): RequestResult<ProviderLogoResponses, ProviderLogoErrors, ThrowOnError> => (options.client ?? client).get<ProviderLogoResponses, ProviderLogoErrors, ThrowOnError>({ url: '/v1/catalog/providers/{slug}/logo', ...options });
 
 /**
  * List Services
