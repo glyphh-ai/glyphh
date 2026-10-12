@@ -10,13 +10,45 @@
       "x": 0,
       "y": 0
     },
+    "AdminAudit2.dc.html": {
+      "h": 7126,
+      "page": "admin-audit",
+      "title": "Audit log of admin actions (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 7292
+    },
+    "AdminAudit3.dc.html": {
+      "h": 3190,
+      "page": "admin-audit",
+      "title": "Audit log of admin actions (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 14618
+    },
     "AdminAuditLight.dc.html": {
       "h": 7092,
       "title": "Audit log of admin actions, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "admin-audit-light"
+      "page": "admin-audit"
+    },
+    "AdminAuditLight2.dc.html": {
+      "h": 7126,
+      "title": "Audit log of admin actions, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 7292,
+      "page": "admin-audit"
+    },
+    "AdminAuditLight3.dc.html": {
+      "h": 3190,
+      "title": "Audit log of admin actions, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 14618,
+      "page": "admin-audit"
     },
     "AdminCatalog.dc.html": {
       "h": 7754,
@@ -26,13 +58,61 @@
       "x": 0,
       "y": 0
     },
+    "AdminCatalog2.dc.html": {
+      "h": 6432,
+      "page": "admin-models",
+      "title": "Glyphh admin, models and providers (2 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 7954
+    },
+    "AdminCatalog3.dc.html": {
+      "h": 5198,
+      "page": "admin-models",
+      "title": "Glyphh admin, models and providers (3 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 14586
+    },
+    "AdminCatalog4.dc.html": {
+      "h": 3705,
+      "page": "admin-models",
+      "title": "Glyphh admin, models and providers (4 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 19984
+    },
     "AdminCatalogLight.dc.html": {
       "h": 7754,
       "title": "Glyphh admin, models and providers, light (1 of 4)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "admin-models-light"
+      "page": "admin-models"
+    },
+    "AdminCatalogLight2.dc.html": {
+      "h": 6432,
+      "title": "Glyphh admin, models and providers, light (2 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 7954,
+      "page": "admin-models"
+    },
+    "AdminCatalogLight3.dc.html": {
+      "h": 5198,
+      "title": "Glyphh admin, models and providers, light (3 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 14586,
+      "page": "admin-models"
+    },
+    "AdminCatalogLight4.dc.html": {
+      "h": 3705,
+      "title": "Glyphh admin, models and providers, light (4 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 19984,
+      "page": "admin-models"
     },
     "AdminMarket.dc.html": {
       "h": 5613,
@@ -42,13 +122,77 @@
       "x": 0,
       "y": 0
     },
+    "AdminMarket2.dc.html": {
+      "h": 8000,
+      "page": "admin-market",
+      "title": "Glyphh admin, the marketplace (2 of 5)",
+      "w": 3520,
+      "x": 0,
+      "y": 5813
+    },
+    "AdminMarket3.dc.html": {
+      "h": 4069,
+      "page": "admin-market",
+      "title": "Glyphh admin, the marketplace (3 of 5)",
+      "w": 3520,
+      "x": 0,
+      "y": 14013
+    },
+    "AdminMarket4.dc.html": {
+      "h": 3585,
+      "page": "admin-market",
+      "title": "Glyphh admin, the marketplace (4 of 5)",
+      "w": 3520,
+      "x": 0,
+      "y": 18282
+    },
+    "AdminMarket5.dc.html": {
+      "h": 1704,
+      "page": "admin-market",
+      "title": "Glyphh admin, the marketplace (5 of 5)",
+      "w": 3520,
+      "x": 0,
+      "y": 22067
+    },
     "AdminMarketLight.dc.html": {
       "h": 5613,
       "title": "Glyphh admin, the marketplace, light (1 of 5)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "admin-market-light"
+      "page": "admin-market"
+    },
+    "AdminMarketLight2.dc.html": {
+      "h": 8000,
+      "title": "Glyphh admin, the marketplace, light (2 of 5)",
+      "w": 3520,
+      "x": 3920,
+      "y": 5813,
+      "page": "admin-market"
+    },
+    "AdminMarketLight3.dc.html": {
+      "h": 4069,
+      "title": "Glyphh admin, the marketplace, light (3 of 5)",
+      "w": 3520,
+      "x": 3920,
+      "y": 14013,
+      "page": "admin-market"
+    },
+    "AdminMarketLight4.dc.html": {
+      "h": 3585,
+      "title": "Glyphh admin, the marketplace, light (4 of 5)",
+      "w": 3520,
+      "x": 3920,
+      "y": 18282,
+      "page": "admin-market"
+    },
+    "AdminMarketLight5.dc.html": {
+      "h": 1704,
+      "title": "Glyphh admin, the marketplace, light (5 of 5)",
+      "w": 3520,
+      "x": 3920,
+      "y": 22067,
+      "page": "admin-market"
     },
     "AdminOrgActions.dc.html": {
       "h": 5631,
@@ -58,13 +202,45 @@
       "x": 0,
       "y": 0
     },
+    "AdminOrgActions2.dc.html": {
+      "h": 5655,
+      "page": "admin-plans",
+      "title": "Glyphh admin, org actions and plans (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 5831
+    },
+    "AdminOrgActions3.dc.html": {
+      "h": 4066,
+      "page": "admin-plans",
+      "title": "Glyphh admin, org actions and plans (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 11686
+    },
     "AdminOrgActionsLight.dc.html": {
       "h": 5631,
       "title": "Glyphh admin, org actions and plans, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "admin-plans-light"
+      "page": "admin-plans"
+    },
+    "AdminOrgActionsLight2.dc.html": {
+      "h": 5655,
+      "title": "Glyphh admin, org actions and plans, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 5831,
+      "page": "admin-plans"
+    },
+    "AdminOrgActionsLight3.dc.html": {
+      "h": 4066,
+      "title": "Glyphh admin, org actions and plans, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 11686,
+      "page": "admin-plans"
     },
     "AdminOrgs.dc.html": {
       "h": 5655,
@@ -74,13 +250,29 @@
       "x": 0,
       "y": 0
     },
+    "AdminOrgs2.dc.html": {
+      "h": 5810,
+      "page": "admin-orgs",
+      "title": "Glyphh admin, orgs (2 of 2)",
+      "w": 3520,
+      "x": 0,
+      "y": 5855
+    },
     "AdminOrgsLight.dc.html": {
       "h": 5655,
       "title": "Glyphh admin, orgs, light (1 of 2)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "admin-orgs-light"
+      "page": "admin-orgs"
+    },
+    "AdminOrgsLight2.dc.html": {
+      "h": 5810,
+      "title": "Glyphh admin, orgs, light (2 of 2)",
+      "w": 3520,
+      "x": 3920,
+      "y": 5855,
+      "page": "admin-orgs"
     },
     "AllowFlow.dc.html": {
       "h": 3150,
@@ -98,13 +290,61 @@
       "x": 0,
       "y": 0
     },
+    "ApiKeys2.dc.html": {
+      "h": 6967,
+      "page": "api-keys",
+      "title": "API keys, yours and the org's (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 6463
+    },
+    "ApiKeys3.dc.html": {
+      "h": 4351,
+      "page": "api-keys",
+      "title": "API keys, yours and the org's (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 13630
+    },
     "ApiKeysLight.dc.html": {
       "h": 6263,
       "title": "API keys, yours and the org's, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "api-keys-light"
+      "page": "api-keys"
+    },
+    "ApiKeysLight2.dc.html": {
+      "h": 6967,
+      "title": "API keys, yours and the org's, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 6463,
+      "page": "api-keys"
+    },
+    "ApiKeysLight3.dc.html": {
+      "h": 4351,
+      "title": "API keys, yours and the org's, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 13630,
+      "page": "api-keys"
+    },
+    "AppShell.dc.html": {
+      "h": 4997,
+      "page": "app-shell",
+      "title": "The left rail (1 of 2)",
+      "w": 3520,
+      "x": 0,
+      "y": 0
+    },
+    "AppShell2.dc.html": {
+      "h": 3959,
+      "page": "app-shell",
+      "title": "The left rail (2 of 2)",
+      "w": 3520,
+      "x": 0,
+      "y": 5197
     },
     "BillingFlow.dc.html": {
       "h": 6277,
@@ -114,13 +354,61 @@
       "x": 0,
       "y": 0
     },
-    "BillingLight.dc.html": {
-      "h": 6277,
-      "page": "billing-light",
-      "title": "Billing, light (1 of 4)",
+    "BillingFlow2.dc.html": {
+      "h": 4397,
+      "page": "billing",
+      "title": "Billing, dark (2 of 4)",
       "w": 5072,
       "x": 0,
+      "y": 6477
+    },
+    "BillingFlow3.dc.html": {
+      "h": 4484,
+      "page": "billing",
+      "title": "Billing, dark (3 of 4)",
+      "w": 5072,
+      "x": 0,
+      "y": 11074
+    },
+    "BillingFlow4.dc.html": {
+      "h": 4303,
+      "page": "billing",
+      "title": "Billing, dark (4 of 4)",
+      "w": 5072,
+      "x": 0,
+      "y": 15758
+    },
+    "BillingLight.dc.html": {
+      "h": 6277,
+      "page": "billing",
+      "title": "Billing, light (1 of 4)",
+      "w": 5072,
+      "x": 5472,
       "y": 0
+    },
+    "BillingLight2.dc.html": {
+      "h": 4397,
+      "page": "billing",
+      "title": "Billing, light (2 of 4)",
+      "w": 5072,
+      "x": 5472,
+      "y": 6477
+    },
+    "BillingLight3.dc.html": {
+      "h": 4484,
+      "page": "billing",
+      "title": "Billing, light (3 of 4)",
+      "w": 5072,
+      "x": 5472,
+      "y": 11074
+    },
+    "BillingLight4.dc.html": {
+      "h": 4303,
+      "page": "billing",
+      "title": "Billing, light (4 of 4)",
+      "w": 5072,
+      "x": 5472,
+      "y": 15758
     },
     "CodeFlow.dc.html": {
       "h": 3150,
@@ -138,6 +426,14 @@
       "x": 0,
       "y": 0
     },
+    "Components2.dc.html": {
+      "h": 6688,
+      "page": "components",
+      "title": "Requested components (2 of 2)",
+      "w": 3376,
+      "x": 0,
+      "y": 6668
+    },
     "CustomPowers.dc.html": {
       "h": 5600,
       "page": "custom",
@@ -148,10 +444,10 @@
     },
     "CustomPowersLight.dc.html": {
       "h": 5600,
-      "page": "custom-light",
+      "page": "custom",
       "title": "Custom powers, light",
       "w": 4300,
-      "x": 0,
+      "x": 4700,
       "y": 0
     },
     "JoinFlow.dc.html": {
@@ -178,13 +474,61 @@
       "x": 0,
       "y": 0
     },
+    "ListingSubmit2.dc.html": {
+      "h": 6412,
+      "page": "listing",
+      "title": "Publish a power or super power (2 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 7207
+    },
+    "ListingSubmit3.dc.html": {
+      "h": 4339,
+      "page": "listing",
+      "title": "Publish a power or super power (3 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 13819
+    },
+    "ListingSubmit4.dc.html": {
+      "h": 1885,
+      "page": "listing",
+      "title": "Publish a power or super power (4 of 4)",
+      "w": 3520,
+      "x": 0,
+      "y": 18358
+    },
     "ListingSubmitLight.dc.html": {
       "h": 7007,
       "title": "Publish a power or super power, light (1 of 4)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "listing-light"
+      "page": "listing"
+    },
+    "ListingSubmitLight2.dc.html": {
+      "h": 6412,
+      "title": "Publish a power or super power, light (2 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 7207,
+      "page": "listing"
+    },
+    "ListingSubmitLight3.dc.html": {
+      "h": 4339,
+      "title": "Publish a power or super power, light (3 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 13819,
+      "page": "listing"
+    },
+    "ListingSubmitLight4.dc.html": {
+      "h": 1885,
+      "title": "Publish a power or super power, light (4 of 4)",
+      "w": 3520,
+      "x": 3920,
+      "y": 18358,
+      "page": "listing"
     },
     "LogoInUse.dc.html": {
       "h": 980,
@@ -210,10 +554,10 @@
     },
     "MarketplaceLight.dc.html": {
       "h": 6600,
-      "page": "market-light",
+      "page": "market",
       "title": "Marketplace, light",
       "w": 4300,
-      "x": 0,
+      "x": 4700,
       "y": 0
     },
     "OrgLimits.dc.html": {
@@ -224,13 +568,29 @@
       "x": 0,
       "y": 0
     },
-    "OrgLimitsLight.dc.html": {
-      "h": 6326,
-      "page": "org-limits-light",
-      "title": "Org allowed models and connections, light (1 of 2)",
+    "OrgLimits2.dc.html": {
+      "h": 4918,
+      "page": "org-limits",
+      "title": "Org allowed models and connections (2 of 2)",
       "w": 3520,
       "x": 0,
-      "y": 0
+      "y": 6526
+    },
+    "OrgLimitsLight.dc.html": {
+      "h": 6326,
+      "title": "Org allowed models and connections, light (1 of 2)",
+      "w": 3520,
+      "x": 3920,
+      "y": 0,
+      "page": "org-limits"
+    },
+    "OrgLimitsLight2.dc.html": {
+      "h": 4918,
+      "title": "Org allowed models and connections, light (2 of 2)",
+      "w": 3520,
+      "x": 3920,
+      "y": 6526,
+      "page": "org-limits"
     },
     "OrgReview.dc.html": {
       "h": 5064,
@@ -240,13 +600,45 @@
       "x": 0,
       "y": 0
     },
+    "OrgReview2.dc.html": {
+      "h": 6483,
+      "page": "org-review",
+      "title": "Org review (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 5264
+    },
+    "OrgReview3.dc.html": {
+      "h": 3129,
+      "page": "org-review",
+      "title": "Org review (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 11947
+    },
     "OrgReviewLight.dc.html": {
       "h": 5064,
       "title": "Org review, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "org-review-light"
+      "page": "org-review"
+    },
+    "OrgReviewLight2.dc.html": {
+      "h": 6483,
+      "title": "Org review, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 5264,
+      "page": "org-review"
+    },
+    "OrgReviewLight3.dc.html": {
+      "h": 3129,
+      "title": "Org review, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 11947,
+      "page": "org-review"
     },
     "OrgTeams.dc.html": {
       "h": 7070,
@@ -256,13 +648,45 @@
       "x": 0,
       "y": 0
     },
-    "OrgTeamsLight.dc.html": {
-      "h": 7070,
-      "page": "org-teams-light",
-      "title": "Org members and teams, light (1 of 3)",
+    "OrgTeams2.dc.html": {
+      "h": 6804,
+      "page": "org-teams",
+      "title": "Org members and teams (2 of 3)",
       "w": 3520,
       "x": 0,
+      "y": 7270
+    },
+    "OrgTeams3.dc.html": {
+      "h": 5472,
+      "page": "org-teams",
+      "title": "Org members and teams (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 14274
+    },
+    "OrgTeamsLight.dc.html": {
+      "h": 7070,
+      "page": "org-teams",
+      "title": "Org members and teams, light (1 of 3)",
+      "w": 3520,
+      "x": 3920,
       "y": 0
+    },
+    "OrgTeamsLight2.dc.html": {
+      "h": 6804,
+      "page": "org-teams",
+      "title": "Org members and teams, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 7270
+    },
+    "OrgTeamsLight3.dc.html": {
+      "h": 5472,
+      "page": "org-teams",
+      "title": "Org members and teams, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 14274
     },
     "Palettes.dc.html": {
       "h": 1500,
@@ -287,6 +711,14 @@
       "x": 0,
       "y": 0
     },
+    "PluginCards2.dc.html": {
+      "h": 3801,
+      "page": "plugin",
+      "title": "The plugin: cards in Claude and ChatGPT (2 of 2)",
+      "w": 3152,
+      "x": 0,
+      "y": 5741
+    },
     "PowersFlow.dc.html": {
       "h": 7600,
       "page": "powers",
@@ -297,18 +729,18 @@
     },
     "PowersLight.dc.html": {
       "h": 7600,
-      "page": "powers-light",
+      "page": "powers",
       "title": "Powers, light, desktop",
       "w": 5072,
-      "x": 0,
+      "x": 5472,
       "y": 0
     },
     "PowersLightMobile.dc.html": {
       "h": 4400,
-      "page": "powers-light-mobile",
+      "page": "powers-mobile",
       "title": "Powers, light, mobile",
       "w": 5072,
-      "x": 0,
+      "x": 5472,
       "y": 0
     },
     "PowersMobile.dc.html": {
@@ -329,10 +761,10 @@
     },
     "RrotorSplashLight.dc.html": {
       "h": 6000,
-      "page": "rrotor-splash-light",
+      "page": "rrotor-splash",
       "title": "rrotor: the splash, light",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0
     },
     "SignInFlow.dc.html": {
@@ -353,10 +785,10 @@
     },
     "SuperPowerEditLight.dc.html": {
       "h": 8000,
-      "page": "sp-edit-light",
+      "page": "sp-edit",
       "title": "Super power editor, light",
       "w": 4300,
-      "x": 0,
+      "x": 4700,
       "y": 0
     },
     "TaskCanvas.dc.html": {
@@ -369,10 +801,10 @@
     },
     "TaskCanvasLight.dc.html": {
       "h": 4600,
-      "page": "task-flow-light",
+      "page": "task-flow",
       "title": "Task flow, light",
       "w": 4300,
-      "x": 0,
+      "x": 4700,
       "y": 0
     },
     "Type.dc.html": {
@@ -390,13 +822,29 @@
       "x": 0,
       "y": 0
     },
+    "UsageAudit2.dc.html": {
+      "h": 4778,
+      "page": "usage-audit",
+      "title": "Usage audit log (2 of 2)",
+      "w": 3520,
+      "x": 0,
+      "y": 4679
+    },
     "UsageAuditLight.dc.html": {
       "h": 4479,
       "title": "Usage audit log, light (1 of 2)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "usage-audit-light"
+      "page": "usage-audit"
+    },
+    "UsageAuditLight2.dc.html": {
+      "h": 4778,
+      "title": "Usage audit log, light (2 of 2)",
+      "w": 3520,
+      "x": 3920,
+      "y": 4679,
+      "page": "usage-audit"
     },
     "UsageFlow.dc.html": {
       "h": 6381,
@@ -406,13 +854,45 @@
       "x": 0,
       "y": 0
     },
+    "UsageFlow2.dc.html": {
+      "h": 6168,
+      "page": "usage",
+      "title": "Usage, billing periods and yours (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 6581
+    },
+    "UsageFlow3.dc.html": {
+      "h": 5921,
+      "page": "usage",
+      "title": "Usage, billing periods and yours (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 12949
+    },
     "UsageFlowLight.dc.html": {
       "h": 6381,
       "title": "Usage, billing periods and yours, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "usage-light"
+      "page": "usage"
+    },
+    "UsageFlowLight2.dc.html": {
+      "h": 6168,
+      "title": "Usage, billing periods and yours, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 6581,
+      "page": "usage"
+    },
+    "UsageFlowLight3.dc.html": {
+      "h": 5921,
+      "title": "Usage, billing periods and yours, light (3 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 12949,
+      "page": "usage"
     },
     "UsageMore.dc.html": {
       "h": 6456,
@@ -422,525 +902,53 @@
       "x": 0,
       "y": 0
     },
+    "UsageMore2.dc.html": {
+      "h": 4466,
+      "page": "usage-more",
+      "title": "Usage details, org and publishers (2 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 6656
+    },
+    "UsageMore3.dc.html": {
+      "h": 2355,
+      "page": "usage-more",
+      "title": "Usage details, org and publishers (3 of 3)",
+      "w": 3520,
+      "x": 0,
+      "y": 11322
+    },
     "UsageMoreLight.dc.html": {
       "h": 6456,
       "title": "Usage details, org and publishers, light (1 of 3)",
       "w": 3520,
-      "x": 0,
+      "x": 3920,
       "y": 0,
-      "page": "usage-more-light"
-    },
-    "AppShell.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 3520,
-      "h": 4997,
-      "title": "The left rail (1 of 2)",
-      "page": "app-shell"
-    },
-    "AdminCatalog2.dc.html": {
-      "x": 0,
-      "y": 7954,
-      "w": 3520,
-      "h": 6432,
-      "page": "admin-models",
-      "title": "Glyphh admin, models and providers (2 of 4)"
-    },
-    "AdminCatalog3.dc.html": {
-      "x": 0,
-      "y": 14586,
-      "w": 3520,
-      "h": 5198,
-      "page": "admin-models",
-      "title": "Glyphh admin, models and providers (3 of 4)"
-    },
-    "AdminCatalog4.dc.html": {
-      "x": 0,
-      "y": 19984,
-      "w": 3520,
-      "h": 3705,
-      "page": "admin-models",
-      "title": "Glyphh admin, models and providers (4 of 4)"
-    },
-    "AdminCatalogLight2.dc.html": {
-      "x": 0,
-      "y": 7954,
-      "w": 3520,
-      "h": 6432,
-      "page": "admin-models-light",
-      "title": "Glyphh admin, models and providers, light (2 of 4)"
-    },
-    "AdminCatalogLight3.dc.html": {
-      "x": 0,
-      "y": 14586,
-      "w": 3520,
-      "h": 5198,
-      "page": "admin-models-light",
-      "title": "Glyphh admin, models and providers, light (3 of 4)"
-    },
-    "AdminCatalogLight4.dc.html": {
-      "x": 0,
-      "y": 19984,
-      "w": 3520,
-      "h": 3705,
-      "page": "admin-models-light",
-      "title": "Glyphh admin, models and providers, light (4 of 4)"
-    },
-    "AdminMarket2.dc.html": {
-      "x": 0,
-      "y": 5813,
-      "w": 3520,
-      "h": 8000,
-      "page": "admin-market",
-      "title": "Glyphh admin, the marketplace (2 of 5)"
-    },
-    "AdminMarket3.dc.html": {
-      "x": 0,
-      "y": 14013,
-      "w": 3520,
-      "h": 4069,
-      "page": "admin-market",
-      "title": "Glyphh admin, the marketplace (3 of 5)"
-    },
-    "AdminMarket4.dc.html": {
-      "x": 0,
-      "y": 18282,
-      "w": 3520,
-      "h": 3585,
-      "page": "admin-market",
-      "title": "Glyphh admin, the marketplace (4 of 5)"
-    },
-    "AdminMarket5.dc.html": {
-      "x": 0,
-      "y": 22067,
-      "w": 3520,
-      "h": 1704,
-      "page": "admin-market",
-      "title": "Glyphh admin, the marketplace (5 of 5)"
-    },
-    "AdminMarketLight2.dc.html": {
-      "x": 0,
-      "y": 5813,
-      "w": 3520,
-      "h": 8000,
-      "page": "admin-market-light",
-      "title": "Glyphh admin, the marketplace, light (2 of 5)"
-    },
-    "AdminMarketLight3.dc.html": {
-      "x": 0,
-      "y": 14013,
-      "w": 3520,
-      "h": 4069,
-      "page": "admin-market-light",
-      "title": "Glyphh admin, the marketplace, light (3 of 5)"
-    },
-    "AdminMarketLight4.dc.html": {
-      "x": 0,
-      "y": 18282,
-      "w": 3520,
-      "h": 3585,
-      "page": "admin-market-light",
-      "title": "Glyphh admin, the marketplace, light (4 of 5)"
-    },
-    "AdminMarketLight5.dc.html": {
-      "x": 0,
-      "y": 22067,
-      "w": 3520,
-      "h": 1704,
-      "page": "admin-market-light",
-      "title": "Glyphh admin, the marketplace, light (5 of 5)"
-    },
-    "AdminOrgActions2.dc.html": {
-      "x": 0,
-      "y": 5831,
-      "w": 3520,
-      "h": 5655,
-      "page": "admin-plans",
-      "title": "Glyphh admin, org actions and plans (2 of 3)"
-    },
-    "AdminOrgActions3.dc.html": {
-      "x": 0,
-      "y": 11686,
-      "w": 3520,
-      "h": 4066,
-      "page": "admin-plans",
-      "title": "Glyphh admin, org actions and plans (3 of 3)"
-    },
-    "AdminOrgActionsLight2.dc.html": {
-      "x": 0,
-      "y": 5831,
-      "w": 3520,
-      "h": 5655,
-      "page": "admin-plans-light",
-      "title": "Glyphh admin, org actions and plans, light (2 of 3)"
-    },
-    "AdminOrgActionsLight3.dc.html": {
-      "x": 0,
-      "y": 11686,
-      "w": 3520,
-      "h": 4066,
-      "page": "admin-plans-light",
-      "title": "Glyphh admin, org actions and plans, light (3 of 3)"
-    },
-    "AdminOrgs2.dc.html": {
-      "x": 0,
-      "y": 5855,
-      "w": 3520,
-      "h": 5810,
-      "page": "admin-orgs",
-      "title": "Glyphh admin, orgs (2 of 2)"
-    },
-    "AdminOrgsLight2.dc.html": {
-      "x": 0,
-      "y": 5855,
-      "w": 3520,
-      "h": 5810,
-      "page": "admin-orgs-light",
-      "title": "Glyphh admin, orgs, light (2 of 2)"
-    },
-    "ApiKeys2.dc.html": {
-      "x": 0,
-      "y": 6463,
-      "w": 3520,
-      "h": 6967,
-      "page": "api-keys",
-      "title": "API keys, yours and the org's (2 of 3)"
-    },
-    "ApiKeys3.dc.html": {
-      "x": 0,
-      "y": 13630,
-      "w": 3520,
-      "h": 4351,
-      "page": "api-keys",
-      "title": "API keys, yours and the org's (3 of 3)"
-    },
-    "ApiKeysLight2.dc.html": {
-      "x": 0,
-      "y": 6463,
-      "w": 3520,
-      "h": 6967,
-      "page": "api-keys-light",
-      "title": "API keys, yours and the org's, light (2 of 3)"
-    },
-    "ApiKeysLight3.dc.html": {
-      "x": 0,
-      "y": 13630,
-      "w": 3520,
-      "h": 4351,
-      "page": "api-keys-light",
-      "title": "API keys, yours and the org's, light (3 of 3)"
-    },
-    "AdminAudit2.dc.html": {
-      "x": 0,
-      "y": 7292,
-      "w": 3520,
-      "h": 7126,
-      "page": "admin-audit",
-      "title": "Audit log of admin actions (2 of 3)"
-    },
-    "AdminAudit3.dc.html": {
-      "x": 0,
-      "y": 14618,
-      "w": 3520,
-      "h": 3190,
-      "page": "admin-audit",
-      "title": "Audit log of admin actions (3 of 3)"
-    },
-    "AdminAuditLight2.dc.html": {
-      "x": 0,
-      "y": 7292,
-      "w": 3520,
-      "h": 7126,
-      "page": "admin-audit-light",
-      "title": "Audit log of admin actions, light (2 of 3)"
-    },
-    "AdminAuditLight3.dc.html": {
-      "x": 0,
-      "y": 14618,
-      "w": 3520,
-      "h": 3190,
-      "page": "admin-audit-light",
-      "title": "Audit log of admin actions, light (3 of 3)"
-    },
-    "ListingSubmit2.dc.html": {
-      "x": 0,
-      "y": 7207,
-      "w": 3520,
-      "h": 6412,
-      "page": "listing",
-      "title": "Publish a power or super power (2 of 4)"
-    },
-    "ListingSubmit3.dc.html": {
-      "x": 0,
-      "y": 13819,
-      "w": 3520,
-      "h": 4339,
-      "page": "listing",
-      "title": "Publish a power or super power (3 of 4)"
-    },
-    "ListingSubmit4.dc.html": {
-      "x": 0,
-      "y": 18358,
-      "w": 3520,
-      "h": 1885,
-      "page": "listing",
-      "title": "Publish a power or super power (4 of 4)"
-    },
-    "ListingSubmitLight2.dc.html": {
-      "x": 0,
-      "y": 7207,
-      "w": 3520,
-      "h": 6412,
-      "page": "listing-light",
-      "title": "Publish a power or super power, light (2 of 4)"
-    },
-    "ListingSubmitLight3.dc.html": {
-      "x": 0,
-      "y": 13819,
-      "w": 3520,
-      "h": 4339,
-      "page": "listing-light",
-      "title": "Publish a power or super power, light (3 of 4)"
-    },
-    "ListingSubmitLight4.dc.html": {
-      "x": 0,
-      "y": 18358,
-      "w": 3520,
-      "h": 1885,
-      "page": "listing-light",
-      "title": "Publish a power or super power, light (4 of 4)"
-    },
-    "OrgReview2.dc.html": {
-      "x": 0,
-      "y": 5264,
-      "w": 3520,
-      "h": 6483,
-      "page": "org-review",
-      "title": "Org review (2 of 3)"
-    },
-    "OrgReview3.dc.html": {
-      "x": 0,
-      "y": 11947,
-      "w": 3520,
-      "h": 3129,
-      "page": "org-review",
-      "title": "Org review (3 of 3)"
-    },
-    "OrgReviewLight2.dc.html": {
-      "x": 0,
-      "y": 5264,
-      "w": 3520,
-      "h": 6483,
-      "page": "org-review-light",
-      "title": "Org review, light (2 of 3)"
-    },
-    "OrgReviewLight3.dc.html": {
-      "x": 0,
-      "y": 11947,
-      "w": 3520,
-      "h": 3129,
-      "page": "org-review-light",
-      "title": "Org review, light (3 of 3)"
-    },
-    "OrgTeams2.dc.html": {
-      "x": 0,
-      "y": 7270,
-      "w": 3520,
-      "h": 6804,
-      "page": "org-teams",
-      "title": "Org members and teams (2 of 3)"
-    },
-    "OrgTeams3.dc.html": {
-      "x": 0,
-      "y": 14274,
-      "w": 3520,
-      "h": 5472,
-      "page": "org-teams",
-      "title": "Org members and teams (3 of 3)"
-    },
-    "OrgTeamsLight2.dc.html": {
-      "x": 0,
-      "y": 7270,
-      "w": 3520,
-      "h": 6804,
-      "page": "org-teams-light",
-      "title": "Org members and teams, light (2 of 3)"
-    },
-    "OrgTeamsLight3.dc.html": {
-      "x": 0,
-      "y": 14274,
-      "w": 3520,
-      "h": 5472,
-      "page": "org-teams-light",
-      "title": "Org members and teams, light (3 of 3)"
-    },
-    "OrgLimits2.dc.html": {
-      "x": 0,
-      "y": 6526,
-      "w": 3520,
-      "h": 4918,
-      "page": "org-limits",
-      "title": "Org allowed models and connections (2 of 2)"
-    },
-    "OrgLimitsLight2.dc.html": {
-      "x": 0,
-      "y": 6526,
-      "w": 3520,
-      "h": 4918,
-      "page": "org-limits-light",
-      "title": "Org allowed models and connections, light (2 of 2)"
-    },
-    "UsageFlow2.dc.html": {
-      "x": 0,
-      "y": 6581,
-      "w": 3520,
-      "h": 6168,
-      "page": "usage",
-      "title": "Usage, billing periods and yours (2 of 3)"
-    },
-    "UsageFlow3.dc.html": {
-      "x": 0,
-      "y": 12949,
-      "w": 3520,
-      "h": 5921,
-      "page": "usage",
-      "title": "Usage, billing periods and yours (3 of 3)"
-    },
-    "UsageFlowLight2.dc.html": {
-      "x": 0,
-      "y": 6581,
-      "w": 3520,
-      "h": 6168,
-      "page": "usage-light",
-      "title": "Usage, billing periods and yours, light (2 of 3)"
-    },
-    "UsageFlowLight3.dc.html": {
-      "x": 0,
-      "y": 12949,
-      "w": 3520,
-      "h": 5921,
-      "page": "usage-light",
-      "title": "Usage, billing periods and yours, light (3 of 3)"
-    },
-    "UsageMore2.dc.html": {
-      "x": 0,
-      "y": 6656,
-      "w": 3520,
-      "h": 4466,
-      "page": "usage-more",
-      "title": "Usage details, org and publishers (2 of 3)"
-    },
-    "UsageMore3.dc.html": {
-      "x": 0,
-      "y": 11322,
-      "w": 3520,
-      "h": 2355,
-      "page": "usage-more",
-      "title": "Usage details, org and publishers (3 of 3)"
+      "page": "usage-more"
     },
     "UsageMoreLight2.dc.html": {
-      "x": 0,
-      "y": 6656,
-      "w": 3520,
       "h": 4466,
-      "page": "usage-more-light",
-      "title": "Usage details, org and publishers, light (2 of 3)"
+      "title": "Usage details, org and publishers, light (2 of 3)",
+      "w": 3520,
+      "x": 3920,
+      "y": 6656,
+      "page": "usage-more"
     },
     "UsageMoreLight3.dc.html": {
-      "x": 0,
-      "y": 11322,
-      "w": 3520,
       "h": 2355,
-      "page": "usage-more-light",
-      "title": "Usage details, org and publishers, light (3 of 3)"
-    },
-    "UsageAudit2.dc.html": {
-      "x": 0,
-      "y": 4679,
+      "title": "Usage details, org and publishers, light (3 of 3)",
       "w": 3520,
-      "h": 4778,
-      "page": "usage-audit",
-      "title": "Usage audit log (2 of 2)"
+      "x": 3920,
+      "y": 11322,
+      "page": "usage-more"
     },
-    "UsageAuditLight2.dc.html": {
+    "RrotorDesktop.dc.html": {
       "x": 0,
-      "y": 4679,
-      "w": 3520,
-      "h": 4778,
-      "page": "usage-audit-light",
-      "title": "Usage audit log, light (2 of 2)"
-    },
-    "AppShell2.dc.html": {
-      "x": 0,
-      "y": 5197,
-      "w": 3520,
-      "h": 3959,
-      "page": "app-shell",
-      "title": "The left rail (2 of 2)"
-    },
-    "BillingFlow2.dc.html": {
-      "x": 0,
-      "y": 6477,
-      "w": 5072,
-      "h": 4397,
-      "page": "billing",
-      "title": "Billing, dark (2 of 4)"
-    },
-    "BillingFlow3.dc.html": {
-      "x": 0,
-      "y": 11074,
-      "w": 5072,
-      "h": 4484,
-      "page": "billing",
-      "title": "Billing, dark (3 of 4)"
-    },
-    "BillingFlow4.dc.html": {
-      "x": 0,
-      "y": 15758,
-      "w": 5072,
-      "h": 4303,
-      "page": "billing",
-      "title": "Billing, dark (4 of 4)"
-    },
-    "BillingLight2.dc.html": {
-      "x": 0,
-      "y": 6477,
-      "w": 5072,
-      "h": 4397,
-      "page": "billing-light",
-      "title": "Billing, light (2 of 4)"
-    },
-    "BillingLight3.dc.html": {
-      "x": 0,
-      "y": 11074,
-      "w": 5072,
-      "h": 4484,
-      "page": "billing-light",
-      "title": "Billing, light (3 of 4)"
-    },
-    "BillingLight4.dc.html": {
-      "x": 0,
-      "y": 15758,
-      "w": 5072,
-      "h": 4303,
-      "page": "billing-light",
-      "title": "Billing, light (4 of 4)"
-    },
-    "PluginCards2.dc.html": {
-      "x": 0,
-      "y": 5741,
-      "w": 3152,
-      "h": 3801,
-      "page": "plugin",
-      "title": "The plugin: cards in Claude and ChatGPT (2 of 2)"
-    },
-    "Components2.dc.html": {
-      "x": 0,
-      "y": 6668,
-      "w": 3376,
-      "h": 6688,
-      "title": "Requested components (2 of 2)",
-      "page": "components"
+      "y": 0,
+      "w": 3100,
+      "h": 3900,
+      "title": "rrotor: the desktop",
+      "page": "rrotor-desktop"
     }
   },
   "createdOnFiles": {
@@ -1065,6 +1073,15 @@
       "x": 0,
       "y": -300
     },
+    "t-app-shell": {
+      "kind": "title1",
+      "maxW": 3520,
+      "page": "app-shell",
+      "text": "The app shell: the left rail",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
     "t-components": {
       "kind": "title1",
       "maxW": 3376,
@@ -1079,15 +1096,6 @@
       "maxW": 4300,
       "page": "custom",
       "text": "Custom powers",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t-custom-light": {
-      "kind": "title1",
-      "maxW": 4300,
-      "page": "custom-light",
-      "text": "Custom powers on the light theme",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1118,15 +1126,6 @@
       "x": 0,
       "y": -300
     },
-    "t-market-light": {
-      "kind": "title1",
-      "maxW": 4300,
-      "page": "market-light",
-      "text": "Marketplace on the light theme",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
     "t-org-limits": {
       "kind": "title1",
       "maxW": 3520,
@@ -1139,7 +1138,6 @@
     "t-org-limits-light": {
       "kind": "title1",
       "maxW": 3520,
-      "page": "org-limits-light",
       "text": "Org: Allowed models and connections (light)",
       "w": 240,
       "x": 0,
@@ -1171,29 +1169,11 @@
       "x": 0,
       "y": -300
     },
-    "t-org-teams-light": {
-      "kind": "title1",
-      "maxW": 3520,
-      "page": "org-teams-light",
-      "text": "Org: Members and teams (light)",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
     "t-rrotor-splash": {
       "kind": "title1",
       "maxW": 3520,
       "page": "rrotor-splash",
       "text": "rrotor's UI: the splash",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t-rrotor-splash-light": {
-      "kind": "title1",
-      "maxW": 3520,
-      "page": "rrotor-splash-light",
-      "text": "rrotor: Splash (light)",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1207,29 +1187,11 @@
       "x": 0,
       "y": -300
     },
-    "t-sp-edit-light": {
-      "kind": "title1",
-      "maxW": 4300,
-      "page": "sp-edit-light",
-      "text": "Super power editor on the light theme",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
     "t-task-flow": {
       "kind": "title1",
       "maxW": 4300,
       "page": "task-flow",
       "text": "Task flow",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t-task-flow-light": {
-      "kind": "title1",
-      "maxW": 4300,
-      "page": "task-flow-light",
-      "text": "Task flow on the light theme",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1320,29 +1282,11 @@
       "x": 0,
       "y": -300
     },
-    "t5": {
-      "kind": "title1",
-      "maxW": 5072,
-      "page": "billing-light",
-      "text": "Billing on the light theme",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
     "t6": {
       "kind": "title1",
       "maxW": 5072,
       "page": "powers",
       "text": "Powers: connections and permissions",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t7": {
-      "kind": "title1",
-      "maxW": 5072,
-      "page": "powers-light",
-      "text": "Powers on the light theme",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1356,22 +1300,13 @@
       "x": 0,
       "y": -300
     },
-    "t9": {
+    "t-rrotor-desktop": {
       "kind": "title1",
-      "maxW": 5072,
-      "page": "powers-light-mobile",
-      "text": "Powers on phones, light",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t-app-shell": {
-      "kind": "title1",
-      "maxW": 3520,
-      "text": "The app shell: the left rail",
+      "maxW": 3100,
+      "text": "rrotor's UI: the desktop",
       "x": 0,
       "y": -300,
-      "page": "app-shell"
+      "page": "rrotor-desktop"
     }
   },
   "order": [
@@ -1410,7 +1345,6 @@
     "UsageAudit.dc.html",
     "ApiKeys.dc.html",
     "AdminAudit.dc.html",
-    "RrotorSplashLight.dc.html",
     "OrgTeamsLight.dc.html",
     "OrgLimitsLight.dc.html",
     "Components.dc.html",
@@ -1492,7 +1426,9 @@
     "BillingLight2.dc.html",
     "BillingLight3.dc.html",
     "BillingLight4.dc.html",
-    "PluginCards2.dc.html"
+    "PluginCards2.dc.html",
+    "RrotorSplashLight.dc.html",
+    "RrotorDesktop.dc.html"
   ],
   "pages": [
     {
@@ -1533,11 +1469,7 @@
     },
     {
       "id": "billing",
-      "name": "Billing (dark)"
-    },
-    {
-      "id": "billing-light",
-      "name": "Billing (light)"
+      "name": "Billing"
     },
     {
       "id": "plugin",
@@ -1545,55 +1477,35 @@
     },
     {
       "id": "powers",
-      "name": "Powers (dark, desktop)"
+      "name": "Powers (desktop)"
     },
     {
       "id": "powers-mobile",
-      "name": "Powers (dark, mobile)"
-    },
-    {
-      "id": "powers-light",
-      "name": "Powers (light, desktop)"
-    },
-    {
-      "id": "powers-light-mobile",
-      "name": "Powers (light, mobile)"
+      "name": "Powers (mobile)"
     },
     {
       "id": "sp-edit",
-      "name": "Super power editor (dark)"
-    },
-    {
-      "id": "sp-edit-light",
-      "name": "Super power editor (light)"
+      "name": "Super power editor"
     },
     {
       "id": "task-flow",
-      "name": "Task flow (dark)"
-    },
-    {
-      "id": "task-flow-light",
-      "name": "Task flow (light)"
+      "name": "Task flow"
     },
     {
       "id": "custom",
-      "name": "Custom powers (dark)"
-    },
-    {
-      "id": "custom-light",
-      "name": "Custom powers (light)"
+      "name": "Custom powers"
     },
     {
       "id": "market",
-      "name": "Marketplace (dark)"
-    },
-    {
-      "id": "market-light",
-      "name": "Marketplace (light)"
+      "name": "Marketplace"
     },
     {
       "id": "rrotor-splash",
       "name": "rrotor \u00b7 Splash"
+    },
+    {
+      "id": "rrotor-desktop",
+      "name": "rrotor \u00b7 Desktop"
     },
     {
       "id": "listing",
@@ -1646,62 +1558,6 @@
     {
       "id": "admin-audit",
       "name": "Audit log of admin actions"
-    },
-    {
-      "id": "rrotor-splash-light",
-      "name": "rrotor \u00b7 Splash (light)"
-    },
-    {
-      "id": "org-teams-light",
-      "name": "Org \u00b7 Members and teams (light)"
-    },
-    {
-      "id": "org-limits-light",
-      "name": "Org \u00b7 Allowed models and connections (light)"
-    },
-    {
-      "id": "org-review-light",
-      "name": "Org \u00b7 Review (light)"
-    },
-    {
-      "id": "listing-light",
-      "name": "Publish a listing (light)"
-    },
-    {
-      "id": "usage-light",
-      "name": "Usage (light)"
-    },
-    {
-      "id": "usage-more-light",
-      "name": "Usage \u00b7 Details, org and publishers (light)"
-    },
-    {
-      "id": "usage-audit-light",
-      "name": "Usage \u00b7 Audit log (light)"
-    },
-    {
-      "id": "admin-orgs-light",
-      "name": "Glyphh admin \u00b7 Orgs (light)"
-    },
-    {
-      "id": "admin-plans-light",
-      "name": "Glyphh admin \u00b7 Org actions and plans (light)"
-    },
-    {
-      "id": "admin-models-light",
-      "name": "Glyphh admin \u00b7 Models (light)"
-    },
-    {
-      "id": "admin-market-light",
-      "name": "Glyphh admin \u00b7 Marketplace (light)"
-    },
-    {
-      "id": "api-keys-light",
-      "name": "API keys (light)"
-    },
-    {
-      "id": "admin-audit-light",
-      "name": "Audit log of admin actions (light)"
     }
   ],
   "title": "Glyphh Design"
