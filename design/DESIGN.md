@@ -538,3 +538,14 @@ Build next, before any app page: the shell from `AppShell` / `AppShell2` (rail, 
 
 Reading the boards: tall boards are split into parts (`Name`, `Name2`, `Name3`, ... on one page, one script; read every part). `…Light` boards are the same layout in light tokens: one component per look. App boards still show the old top bar until redrawn: shell from `AppShell`, content from the board.
 
+### Update: the machine view is on the platform (2026-10-12)
+
+`git log --oneline 3a6105a~6..3a6105a -- design/` shows it. Canvas page **Machines on the platform**; boards in `screens/`:
+
+- **`MachineOpen`:** opening a machine from Machines. The card grows into the page; the rail switches to machine mode (← Machines, the machine switcher, Glyphh, the super powers, the account at the bottom; one `Rail` component, 256 px); the splash; then the crew view. Also switching machines, back to Machines, needed while elsewhere (toast), an asleep machine.
+- **`MachineDesktop` to `MachineDesktop4`:** the whole machine view, every state, inside the platform. Build from these, not `rrotor/screens/RrotorDesktop*`. View tabs are names only: Overview, Edit, Crew, Workbench, Desktop. Agents, messages, activity and voices stream from the server; voices are behind a feature flag.
+- **`MachineEdit`, `MachineEdit2`:** the editor in the machine view (the same `SuperPowerEdit` components) and Glyphh's whole-machine map (one map component; zoom in, zoom out, fit, top right).
+- **`MachineTakeover`:** the Desktop view (watch, take control, hand back) and Glyphh's panels in Claude (the card, the desktop panel, give a sign-in, hand back, an ask, full screen).
+
+Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the take-over shows the whole desktop or only the browser window.
+
