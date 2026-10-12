@@ -12,8 +12,7 @@ flowchart TB
     end
 
     subgraph Cloud["Glyphh cloud"]
-        Platform["Platform<br/>app.glyphh.ai"]
-        Player["Player"]
+        Platform["Platform<br/>app.glyphh.ai<br/>every view, the machines' work too"]
         Server["Server: API + MCP"]
         DB[("Postgres")]
         Live[("Redis")]
@@ -23,16 +22,15 @@ flowchart TB
         Server --- Live
         Server --- Relay
         Server --- ConnRelay
-        Platform -- "API" --> Server
-        Player --- Relay
+        Platform -- "API + live streams" --> Server
     end
 
-    subgraph A["Machine A"]
-        RA["rrotor<br/>Glyphh, the main assistant<br/>super powers, UI"]
+    subgraph A["Machine A: runs everything"]
+        RA["rrotor, headless<br/>its Glyphh, the main assistant<br/>super powers, CLIs, browsers, data"]
     end
 
-    subgraph B["Machine B"]
-        RB["rrotor<br/>super powers, UI"]
+    subgraph B["Machine B, if wanted"]
+        RB["rrotor, headless<br/>its Glyphh<br/>super powers, CLIs, browsers, data"]
     end
 
     Providers["Model providers"]
@@ -42,14 +40,12 @@ flowchart TB
     SignIn["Google, GitHub"]
     Site["glyphh.ai"]
 
-    Claude -- "MCP + cards" --> Server
-    Claude --> Player
+    Claude -- "MCP + cards, live panels" --> Server
     Browser --> Platform
-    Browser --> Player
     RA <-. "rrotor to rrotor: SSH, end to end" .-> Relay
     Relay <-. "SSH, end to end" .-> RB
-    RA -- "outbound" --> Server
-    RB -- "outbound" --> Server
+    RA -- "outbound: sessions stream" --> Server
+    RB -- "outbound: sessions stream" --> Server
     RA -- "direct" --> Providers
     RB -- "direct" --> Providers
     RA -- "connections" --> ConnRelay
@@ -244,7 +240,7 @@ Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made 
 |---|---|---|
 | Server (API, MCP, relay) | `glyphh-ai/server` | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, Redis |
 | Platform (app.glyphh.ai, the cards) | `glyphh-ai/platform` | Vite + React, static, on Fly behind Caddy |
-| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; never published: the platform builds it from a checkout beside it |
+| Component library (`@glyphh-ai/ui`) | `glyphh-ai/platform` (`ui/`) | React, CSS modules on the tokens, zod; a workspace beside the app, never published: rrotor is headless, so the platform is its only user |
 | SDKs, plugin, design | `glyphh-ai/glyphh` | TypeScript and Python clients generated from the OpenAPI spec |
 | rrotor (the machine) | `glyphh-ai/rrotor` | One Linux image, headless: the engine in TypeScript, the services below. Its views are the platform's and Claude's panels |
 
@@ -327,7 +323,7 @@ A member's machines reach each other, so from machine A they can watch machine B
     - **drive:** send a prompt, answer a question, stop a run;
     - **files:** inside the folders the member granted;
     - **shell:** off until the member turns it on for that machine (`shell_enabled`), because a shell is the whole machine.
-- **Who:** for now only the machine's owner, from their own machines, from Claude, or from a browser through the player. The server checks it before joining two connections.
+- **Who:** for now only the machine's owner, from their own machines, from Claude, or from the platform. The server checks it before joining two connections.
 - **When B drops:** A is told at once, and can join again when B is back.
 
 **The relay is the gate; rrotor is the fence.** The relay cannot read the stream, and an escape attempt never crosses it anyway (`cd /` happens inside B's VM), so the folders are enforced in B's rrotor, where what was not granted is not mounted. The relay guards the door in front: before it joins two machines it checks who is asking, which machine, which super power and which channel (watch, drive, files, shell) against the grants, and refuses anything else before SSH starts; B's rrotor checks the same again when the channel opens. When a grant is revoked, a machine removed or a power disabled, the relay cuts the live sessions at once and the server tells rrotor to unmount. When something inside a run reaches past its fence, rrotor reports it to the server (`fence_events`), and the platform and the panels show it. Neither depends on the other being honest.
@@ -348,7 +344,7 @@ Decided 2026-10-11; since 2026-10-12 both halves are the platform's (rrotor is h
 
 **Doing is asking.** Creating and changing things (a skill, a task, a super power and its grants) is done by asking Glyphh in Claude, Codex or ChatGPT; the plugin's tools are the server's operations. The platform shows the result, takes quick fixes, and does what a chat cannot.
 
-**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It is built on the component library (`@glyphh-ai/ui`, its own repo `glyphh-ai/ui`). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
+**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It holds the component library (`@glyphh-ai/ui`, `ui/`) beside the app. Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
 
 - **The sign-in screens** (sign in, allow an AI host, approve a machine's code, join an org) are platform pages. The server keeps the OAuth endpoints and the Google and GitHub callbacks, and sends the browser to the platform for each screen; the screen's buttons send it back to the server, which still binds every flow to that browser.
 - **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex). Each machine's card shows its 8 most recently active super powers with their status, then See all (decided by Chris, 2026-10-12): a super power is **installed** on any number of machines, and every rrotor also has its Glyphh, which the card doesn't list.
@@ -1460,7 +1456,7 @@ The house order: the data model is drawn first, then built as database, API and 
 
 - **Phase 1, sign in from Claude and Codex** (2026-10-11): Google and GitHub sign-in; OAuth for MCP (metadata, `authorize`, `token` with PKCE and refresh, dynamic registration, `revoke`); `me` and the connected hosts on the API, MCP and both SDKs; the Glyphh plugin for Claude Code and Codex. Signed in and called `me` from Claude (app, iPad, Claude Code) and ChatGPT.
 - **Phase 2a, orgs:** the org (plan, seats, rename), members (roles, disable, remove), invites (one-time link, withdraw), Join; seats enforced by the database under the org's row lock; the server refuses to boot on a database behind the code.
-- **The component library's own repo** (`glyphh-ai/ui`, 2026-10-12), shared by the platform and rrotor's UI and **never published** (Chris: it is only for building our own apps). Each app checks it out beside itself and depends on it by path (`file:../../ui`): dev compose mounts `../ui`, CI checks out its main with `UI_READ_TOKEN`, the image takes it as the `ui` build context. The platform is switched; rrotor's UI follows the same way.
+- **The component library back in the platform** (Chris, 2026-10-12): rrotor is headless, so nothing else draws with it. It is `ui/` in `glyphh-ai/platform` again (its history kept), never published; the separate `glyphh-ai/ui` repo is no longer used.
 - **The platform** (`glyphh-ai/platform`): the component library moved there; the sign-in screens are platform pages and the server keeps every flow; each refused step says why.
 - **Many orgs per person** (2026-10-12): `memberships` (role and disabled per org), a Personal org for everyone, the org a token acts in, Use with on Allow; the platform's own session (`/v1/session`: a code and its verifier for tokens, the refresh token in an httpOnly cookie, switch org, sign out); accepting and declining an invite.
 - **The sign-in screens on the design:** Sign in, Allow, Join signed out, Joined and the problem page, on the brand orbit.
@@ -1491,7 +1487,7 @@ Waiting until Chris brings them back: Allow after the answer, Join while signed 
 1. **Sign in from Claude and Codex.** Done.
 2. **Orgs and billing:** members, invites and seats are done; billing (plans, Stripe, top-ups, auto top-up, credits) is next: its decisions are made.
 3. **Machines:** machine sign-in (approve a code), one-click hosting (Fly first), machine tokens, Redis for live state, deploy status.
-4. **rrotor:** the image, the app server and Glyphh's UI, the main assistant on its three loops, rrotor's MCP surface, launch tickets, the player.
+4. **rrotor:** the image, headless (rrotor is headless): the main assistant on its three loops, every session streamed back to the server, rrotor's MCP surface, a screen per browser, launch tickets; rrotor's views as platform pages and Claude panels.
 5. **Powers and super powers:** the catalog, models on the member's keys, grants, slots, tool permissions, the editor and its configuration, voice.
 6. **Connections:** Pipedream connect, the connection relay, credits and usage, teams and limits.
 7. **Runs and schedules:** the server's clock, runs and their history, the browser and RPA.
@@ -1509,7 +1505,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **The machine's own address:** with no UI on the machine, does anything still need `<machine-id>.glyphh.ai`? Outputs and a super power's own screens could stream through the server like everything else. If nothing needs it, the certificates question below goes away.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
 - **Updating machines:** who decides when a machine moves to a new rrotor (the server, a rollout, the member), and what happens to a run in flight.
-- **The player:** the diagram and Access still name it. With rrotor headless and its views in the platform and Claude panels, nothing needs it. Drop it.
+- **The player:** gone from the diagram and the prose; the data model's notes on `launch_tickets` and `tokens` still name it (and rrotor's UI). With rrotor headless and its views in the platform and Claude panels, nothing needs it: drop it there when those tables are next touched.
 
 #### To draw
 
