@@ -137,7 +137,7 @@ Glyphh has the super power editor: the skills and tools to create a super power,
 
 ### Tasks, the heart of rrotor
 
-A task is a program rrotor runs, by hand, from a super power or on a clock, and it reaches the world only through its context:
+A task is a program rrotor runs, by hand, from a super power or on a clock, and it reaches the world only through its context. **In the UI a task is a power** (decided 2026-10-11): "task" stays as the power's kind, and people see "power" everywhere:
 
 - `ctx.decide`: Jev, a model the member added with their own key, called directly;
 - `ctx.agents.<slot>`: the model filling each of its slots;
@@ -153,6 +153,7 @@ A task is a program rrotor runs, by hand, from a super power or on a clock, and 
 
 - **Memory:** Glyphh has none of its own. A member who wants memory adds it as a power or a super power of their own.
 - **Ada** comes later; the basics first.
+- **A super power using the loop's own connectors** (the member's Claude or ChatGPT connectors beside Glyphh's): not now (2026-10-11). Connections stay Glyphh's, governed and counted.
 
 ### What a super power can be
 
@@ -249,7 +250,10 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Members and invites** (org admins).
 - **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings).
 
-**rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens. The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
+**rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens.
+
+**Each machine has its own address** (decided 2026-10-11): `<machine-id>.glyphh.ai`, an opaque id, never the machine's name. rrotor's UI and every super power's screens and streams hang off it. `*.glyphh.ai` points at the relay, which reaches the machine over its outbound connection. Still to decide: Decided with it (2026-10-11): **TLS is passed through by name** (SNI) to rrotor, which holds its own certificate got through the server, so the relay forwards only ciphertext, as it does for SSH; **a super power's own screens get their own origin** (`<power>.<machine-id>.glyphh.ai`), so an app a member installed can never read rrotor's session; **a machine's session lasts about an hour** and is refreshed while in use, and the server tells the machine at once, over its connection, when a member is removed or a token revoked.
+ The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
 
 **Usage and billing** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 
@@ -296,12 +300,13 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 - **Schema:** one schema file until relaunch, then Alembic migrations.
 - **Background work:** Postgres, with no queue table of its own: the clock reads `schedules.next_run_at`, and each job is its own table's state (a Stripe event not yet processed, a machine to unmount), taken with `FOR UPDATE SKIP LOCKED` so two processes never take the same one.
 - **Files:** object storage (R2 or S3), with references in Postgres: power and super power bundles, run logs, provider logos.
-- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](#data-model)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. Where conversations live: see [Open](#open).
+- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](#data-model)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. **Conversations** (decided 2026-10-11): the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the relay.
 
 ### Operations
 
 - OpenTelemetry tracing and metrics, logs tagged by tenant.
 - Managed Postgres with point-in-time recovery, and connection pooling.
+- **Status page:** Better Stack, hosted, at `status.glyphh.ai` (decided 2026-10-11), checking the API, the platform and `/mcp` every minute from several regions. Never on Fly, so it stays up when we're down.
 
 ### Not at the start
 
@@ -1235,7 +1240,7 @@ The check runs before the cost is known, so calls already in flight when the bal
 - **usage_events** is append only: never updated, never deleted by a request. It holds what was called and how it went, **never what went through it**: no arguments, no results, no message bodies. Those are the member's own data, and they stay between the runtime and Pipedream.
 - **Model calls are never billed.** They go straight to the provider on the member's key, and Glyphh never sees them; rrotor reports their token counts (below). Jev is one of them: a TypeSafe model the member adds with their own key, never on Glyphh's key, never through the server, never charged.
 - **Operational logs are separate:** request logs and traces go to OpenTelemetry, tagged by org; they are not billing and do not decide a charge.
-- **Size:** the table is partitioned by month on `created_at`, indexed by org and time, and by org, user and time, so every page reads one org's range.
+- **Size:** the table is partitioned by month on `created_at`, indexed by org and time, and by org, user and time, so every page reads one org's range. **Kept 13 months** (decided 2026-10-11), as are `power_events`; after that only `usage_daily` keeps them.
 
 #### What rrotor reports: every power and super power, counted, never billed
 
@@ -1318,18 +1323,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **Each machine has its own address** (decided 2026-10-11): `<machine-id>.glyphh.ai`, an opaque id, never the machine's name. rrotor's UI and every super power's screens and streams hang off it. `*.glyphh.ai` points at the relay, which reaches the machine over its outbound connection. Still to decide:
-    - **Where TLS ends:** at the relay (simple, but the relay can read the page), or passed through by name (SNI) to rrotor, which holds its own certificate got through the server, so the relay forwards only ciphertext as it does for SSH.
-    - **A super power's own screens** (its app) on the machine's origin, or on one of their own (`<power>.<machine-id>.glyphh.ai`) so an app a member installed can't read rrotor's session.
-    - **How long a machine's session lasts,** and how it learns a member was removed or a token revoked.
-
-- **Tasks are powers:** rename tasks to powers everywhere (proposed, not confirmed).
-- **"Also use my Claude or ChatGPT connectors":** a switch per super power, letting its loop use the member's own connectors beside Glyphh's (proposed, not decided).
-- **Conversations:** where they live. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the relay.
-- **Status page:** a hosted service (Better Stack, Instatus, OpenStatus) or our own on Cloudflare; never on Fly, so it stays up when we're down. The sign-in screens already link to `status.glyphh.ai`.
-- **Codex hosting terms:** confirm OpenAI's terms for hosting Codex signed in with a member's ChatGPT subscription; Glyphh accepts Anthropic's Commercial Terms for Claude Code.
-- **Usage detail:** how long each call's row is kept.
-- **Old prod:** stopped on Fly, not destroyed (database and Redis kept); when to cut over or drop it.
+None open: every decision so far is made (2026-10-11).
 
 #### To draw
 
@@ -1353,6 +1347,9 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **The server** runs only on the Mac behind ngrok; nothing is deployed.
 - **The platform on Fly:** its app, `app.glyphh.ai` pointing at it, and `GLYPHH_PLATFORM_URL` set on the server.
 - **Codex** is added but not signed in: run `codex mcp login glyphh` on the Mac.
+- **Codex hosting terms:** check OpenAI's terms for hosting Codex signed in with a member's ChatGPT subscription (Glyphh accepts Anthropic's Commercial Terms for Claude Code).
+- **The status page:** a Better Stack account, its checks, and `status.glyphh.ai` pointed at it.
+- **Old prod:** stays stopped until the new server is live; then a final dump, and it is destroyed (decided 2026-10-11).
 
 #### Design
 
