@@ -297,15 +297,19 @@ Tested on Docker Desktop (kernel 6.12), 2026-10-12:
 
 ### The machine link: protocol 1
 
-Built in rrotor's engine, 2026-10-12 (`engine/src/link.ts`, `wire.ts`). The server's side is still to build (Open, To build).
+Built 2026-10-12: rrotor's side in its engine (`engine/src/link.ts`, `wire.ts`), the server's in `link/` (`wire.py`, `serve.py`, `record.py`, `hub.py`).
 
 - **One outbound WebSocket** to the server's `/v1/machine/link`, signed in with the machine's own token in a header, never the URL. On every connect the machine says `hello` (the protocol, 1, and its rrotor version). After a drop it comes back after 1 s, doubling to 30 s. While it is down it keeps the newest 1,000 messages and sends them first when it is back.
 - **The server asks:**
-    - `session.start`: a session id (letters, digits, `-` and `_`, since it names the session's folder), Claude Code or Codex, the prompt, an optional model, an optional folder to work in, the session's MCP servers, and **driven or autonomous**;
+    - `session.start`: a session id (letters, digits, `-` and `_`, since it names the session's folder; a thread's lead session is the thread's own id), its **thread**, the super power working it (none: Glyphh's crew), Claude Code or Codex, the prompt, an optional model, an optional folder to work in, the session's MCP servers, and **driven or autonomous**;
     - `session.send`: more from the member;
     - `session.answer`: the member's answer to a "needs you", allow or deny;
-    - `session.stop`.
-- **The machine reports** each session's events, numbered from 1 so the server can pass them on in order to whoever is watching, and refuses what it cannot do with the reason (`session.refused`), never silently.
+    - `session.stop`;
+    - `thread.delete`: delete a thread's events, for good.
+- **The machine reports** each session's events with their thread and super power, **numbered within the thread** from 1, so the server can pass them on in order to whoever is watching, and refuses what it cannot do with the reason (`session.refused`), never silently.
+- **What the server does with a report** (`record.py`): `hello` brings the machine online with its version (a machine on another protocol is closed with 4426); an event updates its thread's record (its status, its newest number and time) and a "needs you" opens a question, only for a thread of that machine's; then the event is passed on to the thread's watchers and kept nowhere. A report it cannot read is logged and skipped; the connection stays. Going offline is recorded when the connection ends.
+- **Members reach the machine through the API:** start a thread on a machine (its record is written first, then the machine is told, so its first events always find it), say more, stop it, answer a question, delete a thread; each needs the machine connected and says so, with when it was last seen, when it is not. **Watching** a thread is a stream of Server-Sent Events, each the machine's event as it came, numbered.
+- **One server process, for now:** who is connected and who is watching live in that process (`hub.py`). Running more than one needs Redis's publish and subscribe between them (Data, above); until then the server runs as one process.
 - **A session's events,** the same from either CLI:
     - status (working, idle, needs you, done, stuck);
     - text;
@@ -890,6 +894,7 @@ erDiagram
         uuid thread_id FK
         uuid super_power_id FK "the super power that asked, for the panel; null = Glyphh"
         uuid run_id FK "the session that asked (arrives with runs)"
+        text session "the session that asked, on the machine; the answer goes back to it"
         text ask_id "the CLI's own id for the question, sent back with the answer"
         text kind "permission (more kinds as they are drawn)"
         text tool "what it wants to use"
@@ -1573,6 +1578,7 @@ The house order: the data model is drawn first, then built as database, API and 
 - **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`, `machines`, `super_powers` (its loop and voice columns wait for `powers`), `super_power_installs`, `launch_tickets`, `threads`, `thread_crew`, `needs_you`.
 - **Machines on the API** (2026-10-12): my machines as cards (connected first, each with its 8 most recently active super powers and its counts), every super power on one (search, status, pages, the count of each status), and opening one with a one-minute, one-time launch ticket; an offline machine says so.
 - **Threads on the API** (2026-10-12): `threads`, `thread_crew` and `needs_you` (their links to `runs` and `schedules` arrive with those tables); a machine's Recents (pinned first, then the newest; by goal, by a super power with how many threads each is in, archived or not, in pages), one thread with its machine and open questions, rename, pin, archive, delete an archived one for good; my open questions across my machines and answering one once. What the machine reports (a thread opened, its status, a question asked) arrives with the machine link.
+- **The machine link, the server's side** (2026-10-12): `/v1/machine/link` with machine tokens, hello and versions, events applied to threads (status, newest number, questions opened) and passed on to watchers, starting a thread on a machine, saying more, stopping, answers and deletes reaching the machine, and watching a thread live. One process until Redis.
 
 - **rrotor, its first slice** (`glyphh-ai/rrotor`, 2026-10-12):
     - **The image:** headless, the engine under s6.
@@ -1632,12 +1638,12 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### To build
 
-- **The server's side of the machine link** (protocol 1, above):
-    - `/v1/machine/link` with machine tokens;
-    - threads (Threads and messages): a thread's id on `session.start`, and `thread.read`, `threads.search` and `thread.delete` added to the protocol, with the machine's side in rrotor;
-    - starting, sending to, answering and stopping sessions;
-    - passing each session's events on to the platform and Claude's panels;
-    - keeping a "needs you" until it is answered.
+- **The machine link, next:**
+    - rrotor's side of threads: the thread on `session.start` and on each event, numbered within the thread, and `thread.delete`;
+    - the machine keeping its threads' events (its Postgres), so `thread.read` and `threads.search` can be added to the protocol and a view can read a thread's history;
+    - a question answered while its machine was offline: sent when it is back;
+    - Redis between server processes;
+    - machine sign-in (approve a code) giving a machine its token.
 - **rrotor, next:**
     - a live session on a Mac signed into Claude Code and Codex, to check their output against the engine;
     - the machine's gateway, so either CLI runs any configured model;

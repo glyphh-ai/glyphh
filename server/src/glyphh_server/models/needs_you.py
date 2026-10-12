@@ -35,6 +35,7 @@ class NeedsYou(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     thread_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("threads.id", ondelete="CASCADE"))
     super_power_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("super_powers.id", ondelete="CASCADE"))
+    session: Mapped[str] = mapped_column(Text, server_default="")
     ask_id: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(Text, server_default="permission")
     tool: Mapped[str] = mapped_column(Text)

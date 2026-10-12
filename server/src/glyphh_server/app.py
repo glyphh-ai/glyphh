@@ -10,17 +10,20 @@ from glyphh_server.api import (
     errors,
     health,
     invite_answers,
+    link,
     machines,
     me,
     org,
     session,
     sign_in_pages,
     sign_in_screens,
+    thread_work,
     threads,
 )
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
+from glyphh_server.link.hub import Hub
 from glyphh_server.mcp.server import make_mcp, mcp_http_app
 from glyphh_server.obs.logs import configure
 
@@ -45,6 +48,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app = FastAPI(title="Glyphh", version=cfg.version, lifespan=lifespan)
     app.state.settings = cfg
     app.state.engine = engine
+    app.state.hub = Hub()
     errors.install(app)
     app.include_router(health.router)
     app.include_router(me.router)
@@ -55,6 +59,8 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.include_router(session.router)
     app.include_router(machines.router)
     app.include_router(threads.router)
+    app.include_router(thread_work.router)
+    app.include_router(link.router)
     app.router.routes.extend(mcp_app.routes)
     _layers(app, mcp_app, cfg)
     return app

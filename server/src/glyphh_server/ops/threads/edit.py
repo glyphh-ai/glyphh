@@ -1,6 +1,6 @@
 """Changing a thread's record: its goal, pinned to the top of Recents, archived out of it. Deleting one for good,
-once it is archived (as rrotor's Settings does it), takes its record; telling its machine to delete its messages
-arrives with the machine link."""
+once it is archived (as rrotor's Settings does it), takes its record, ends every watch of it, and tells its machine
+to delete its messages when it is connected."""
 
 import uuid
 
@@ -9,6 +9,8 @@ from sqlalchemy import delete, func, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict
+from glyphh_server.link import wire
+from glyphh_server.link.hub import Hub
 from glyphh_server.models import Thread
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.threads.shape import ThreadRow, mine, my_thread
@@ -39,8 +41,10 @@ async def change_thread(conn: AsyncConnection, who: Principal, thread_id: uuid.U
     return await my_thread(conn, who, thread_id)
 
 
-async def delete_thread(conn: AsyncConnection, who: Principal, thread_id: uuid.UUID) -> None:
+async def delete_thread(conn: AsyncConnection, who: Principal, hub: Hub, thread_id: uuid.UUID) -> None:
     thread = await my_thread(conn, who, thread_id)
     if thread.archived_at is None:
         raise Conflict("Archive the thread first; archived threads are deleted for good.", reason="not_archived")
     await conn.execute(delete(Thread).where(Thread.id == thread_id, *mine(who)))
+    hub.end(thread_id)
+    await hub.tell(thread.machine_id, wire.forget(thread_id))

@@ -1,6 +1,6 @@
 """Needs you: every question a member's super powers are waiting on, across their machines, newest first; and
-answering one, once (two answers at the same moment: the first wins, the second is told). Sending the answer to
-the machine arrives with the machine link."""
+answering one, once (two answers at the same moment: the first wins, the second is told). The answer goes to the
+machine when it is connected; when it is not, it is kept, and the question waits there until it is back."""
 
 import uuid
 from datetime import datetime
@@ -11,6 +11,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict, NotFound
+from glyphh_server.link import wire
+from glyphh_server.link.hub import Hub
 from glyphh_server.models import Machine, NeedsYou, SuperPower, Thread
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.threads.shape import CrewFace
@@ -95,17 +97,21 @@ async def open_questions(
     return QuestionPage(questions=[_question(r) for r in found], total=total)
 
 
-async def answer(conn: AsyncConnection, who: Principal, question_id: uuid.UUID, allow: bool) -> Answered:
+async def answer(conn: AsyncConnection, who: Principal, hub: Hub, question_id: uuid.UUID, allow: bool) -> Answered:
     mine = (NeedsYou.id == question_id, NeedsYou.user_id == who.user_id, NeedsYou.org_id == who.org_id)
     given = "allow" if allow else "deny"
     done = await conn.execute(
         update(NeedsYou)
         .where(*mine, NeedsYou.answer.is_(None))
         .values(answer=given, answered_by=who.user_id, answered_at=func.now())
-        .returning(NeedsYou.id, NeedsYou.answer, NeedsYou.answered_at)
+        .returning(
+            NeedsYou.id, NeedsYou.answer, NeedsYou.answered_at, NeedsYou.session, NeedsYou.ask_id, NeedsYou.thread_id
+        )
     )
     row = done.first()
     if row is not None:
+        machine = (await conn.execute(select(Thread.machine_id).where(Thread.id == row.thread_id))).scalar_one()
+        await hub.tell(machine, wire.answer(row.session, row.ask_id, allow))
         return Answered(id=row.id, answer=row.answer, answered_at=row.answered_at)
     before = (await conn.execute(select(NeedsYou.answer).where(*mine))).first()
     if before is None:

@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel
 
 from glyphh_server.api.auth import Caller, Conn
@@ -48,9 +48,9 @@ async def change(thread_id: uuid.UUID, body: ThreadChange, caller: Caller, conn:
 
 
 @router.delete("/threads/{thread_id}", operation_id="deleteThread", status_code=204)
-async def delete(thread_id: uuid.UUID, caller: Caller, conn: Conn) -> Response:
-    """Delete an archived thread for good."""
-    await delete_thread(conn, caller, thread_id)
+async def delete(thread_id: uuid.UUID, caller: Caller, conn: Conn, request: Request) -> Response:
+    """Delete an archived thread for good, and its messages on its machine."""
+    await delete_thread(conn, caller, request.app.state.hub, thread_id)
     return Response(status_code=204)
 
 
@@ -61,6 +61,6 @@ async def needs_you(caller: Caller, conn: Conn, page: Page = 1, size: Size = 25)
 
 
 @router.post("/needs-you/{question_id}/answer", operation_id="answerNeedsYou")
-async def answer_one(question_id: uuid.UUID, body: AnswerIn, caller: Caller, conn: Conn) -> Answered:
-    """Allow or deny, once: answered anywhere, it is closed everywhere."""
-    return await answer(conn, caller, question_id, body.allow)
+async def answer_one(question_id: uuid.UUID, body: AnswerIn, caller: Caller, conn: Conn, request: Request) -> Answered:
+    """Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told."""
+    return await answer(conn, caller, request.app.state.hub, question_id, body.allow)
