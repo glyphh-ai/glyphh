@@ -5,6 +5,20 @@ export type ClientOptions = {
 };
 
 /**
+ * Access
+ */
+export type Access = {
+    /**
+     * Access Token
+     */
+    access_token: string;
+    /**
+     * Expires In
+     */
+    expires_in: number;
+};
+
+/**
  * AllowScreen
  */
 export type AllowScreen = {
@@ -23,6 +37,20 @@ export type AllowScreen = {
 };
 
 /**
+ * CodeIn
+ */
+export type CodeIn = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Verifier
+     */
+    verifier: string;
+};
+
+/**
  * CreatedInvite
  */
 export type CreatedInvite = {
@@ -33,6 +61,42 @@ export type CreatedInvite = {
      * The link to send the person: shown once, never stored
      */
     link: string;
+};
+
+/**
+ * Face
+ *
+ * A super power as a machine shows it: its face, its name, what it is doing there.
+ */
+export type Face = {
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Active At
+     */
+    last_active_at: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Status
+     */
+    status: string;
 };
 
 /**
@@ -79,6 +143,30 @@ export type Host = {
      * Name
      */
     name: string;
+};
+
+/**
+ * InstalledPage
+ */
+export type InstalledPage = {
+    /**
+     * Counts
+     */
+    counts: {
+        [key: string]: number;
+    };
+    /**
+     * Machine
+     */
+    machine: string;
+    /**
+     * Super Powers
+     */
+    super_powers: Array<Face>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -130,6 +218,10 @@ export type JoinScreen = {
      */
     invited_by: string | null;
     /**
+     * Invited By Email
+     */
+    invited_by_email: string | null;
+    /**
      * Org
      */
     org: string;
@@ -151,6 +243,88 @@ export type Joined = {
      * Org
      */
     org: string;
+};
+
+/**
+ * Launch
+ */
+export type Launch = {
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Url
+     */
+    url: string;
+};
+
+/**
+ * MachineCard
+ */
+export type MachineCard = {
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Installed
+     */
+    installed: number;
+    /**
+     * Last Seen At
+     */
+    last_seen_at: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Needs You
+     */
+    needs_you: number;
+    /**
+     * Online
+     */
+    online: boolean;
+    /**
+     * Platform
+     */
+    platform: string;
+    /**
+     * Super Powers
+     */
+    super_powers: Array<Face>;
+    /**
+     * Version
+     */
+    version: string;
+    /**
+     * Working
+     */
+    working: number;
+};
+
+/**
+ * MachinePage
+ */
+export type MachinePage = {
+    /**
+     * Machines
+     */
+    machines: Array<MachineCard>;
+    /**
+     * Online
+     */
+    online: number;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -196,6 +370,10 @@ export type MeOrg = {
      * Name
      */
     name: string;
+    /**
+     * People
+     */
+    people: number;
     /**
      * Personal
      */
@@ -273,6 +451,26 @@ export type NewInvite = {
 };
 
 /**
+ * OpenIn
+ */
+export type OpenIn = {
+    /**
+     * Super Power
+     */
+    super_power?: string | null;
+};
+
+/**
+ * OrgIn
+ */
+export type OrgIn = {
+    /**
+     * Org
+     */
+    org: string;
+};
+
+/**
  * OrgView
  */
 export type OrgView = {
@@ -308,6 +506,46 @@ export type RenameOrg = {
      * Name
      */
     name: string;
+};
+
+/**
+ * Settings
+ */
+export type Settings = {
+    /**
+     * Page Sizes
+     */
+    page_sizes?: {
+        [key: string]: 10 | 25 | 50 | 100;
+    };
+    /**
+     * Rail Collapsed
+     */
+    rail_collapsed?: boolean;
+    /**
+     * Theme
+     */
+    theme?: 'dark' | 'light' | 'system';
+};
+
+/**
+ * SettingsChange
+ */
+export type SettingsChange = {
+    /**
+     * Page Sizes
+     */
+    page_sizes?: {
+        [key: string]: 10 | 25 | 50 | 100;
+    } | null;
+    /**
+     * Rail Collapsed
+     */
+    rail_collapsed?: boolean | null;
+    /**
+     * Theme
+     */
+    theme?: 'dark' | 'light' | 'system' | null;
 };
 
 /**
@@ -504,6 +742,117 @@ export type DeclineInviteResponses = {
 
 export type DeclineInviteResponse = DeclineInviteResponses[keyof DeclineInviteResponses];
 
+export type ListMachinesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/machines';
+};
+
+export type ListMachinesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMachinesError = ListMachinesErrors[keyof ListMachinesErrors];
+
+export type ListMachinesResponses = {
+    /**
+     * Successful Response
+     */
+    200: MachinePage;
+};
+
+export type ListMachinesResponse = ListMachinesResponses[keyof ListMachinesResponses];
+
+export type OpenMachineData = {
+    body: OpenIn;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/open';
+};
+
+export type OpenMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type OpenMachineError = OpenMachineErrors[keyof OpenMachineErrors];
+
+export type OpenMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: Launch;
+};
+
+export type OpenMachineResponse = OpenMachineResponses[keyof OpenMachineResponses];
+
+export type ListInstalledSuperPowersData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Status
+         */
+        status?: 'working' | 'thinking' | 'needs_you' | 'idle' | 'stuck' | 'done' | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/machines/{machine_id}/super-powers';
+};
+
+export type ListInstalledSuperPowersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListInstalledSuperPowersError = ListInstalledSuperPowersErrors[keyof ListInstalledSuperPowersErrors];
+
+export type ListInstalledSuperPowersResponses = {
+    /**
+     * Successful Response
+     */
+    200: InstalledPage;
+};
+
+export type ListInstalledSuperPowersResponse = ListInstalledSuperPowersResponses[keyof ListInstalledSuperPowersResponses];
+
 export type MeData = {
     body?: never;
     path?: never;
@@ -585,6 +934,47 @@ export type ListMyOrgsResponses = {
 };
 
 export type ListMyOrgsResponse = ListMyOrgsResponses[keyof ListMyOrgsResponses];
+
+export type MySettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me/settings';
+};
+
+export type MySettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Settings;
+};
+
+export type MySettingsResponse = MySettingsResponses[keyof MySettingsResponses];
+
+export type ChangeMySettingsData = {
+    body: SettingsChange;
+    path?: never;
+    query?: never;
+    url: '/v1/me/settings';
+};
+
+export type ChangeMySettingsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeMySettingsError = ChangeMySettingsErrors[keyof ChangeMySettingsErrors];
+
+export type ChangeMySettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Settings;
+};
+
+export type ChangeMySettingsResponse = ChangeMySettingsResponses[keyof ChangeMySettingsResponses];
 
 export type GetOrgData = {
     body?: never;
@@ -777,3 +1167,85 @@ export type UpdateMemberResponses = {
 };
 
 export type UpdateMemberResponse = UpdateMemberResponses[keyof UpdateMemberResponses];
+
+export type RefreshSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/session/refresh';
+};
+
+export type RefreshSessionResponses = {
+    /**
+     * Successful Response
+     */
+    200: Access;
+};
+
+export type RefreshSessionResponse = RefreshSessionResponses[keyof RefreshSessionResponses];
+
+export type SignOutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/session/sign-out';
+};
+
+export type SignOutResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type SignOutResponse = SignOutResponses[keyof SignOutResponses];
+
+export type SwitchOrgData = {
+    body: OrgIn;
+    path?: never;
+    query?: never;
+    url: '/v1/session/switch';
+};
+
+export type SwitchOrgErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SwitchOrgError = SwitchOrgErrors[keyof SwitchOrgErrors];
+
+export type SwitchOrgResponses = {
+    /**
+     * Successful Response
+     */
+    200: Access;
+};
+
+export type SwitchOrgResponse = SwitchOrgResponses[keyof SwitchOrgResponses];
+
+export type StartSessionData = {
+    body: CodeIn;
+    path?: never;
+    query?: never;
+    url: '/v1/session/token';
+};
+
+export type StartSessionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StartSessionError = StartSessionErrors[keyof StartSessionErrors];
+
+export type StartSessionResponses = {
+    /**
+     * Successful Response
+     */
+    200: Access;
+};
+
+export type StartSessionResponse = StartSessionResponses[keyof StartSessionResponses];

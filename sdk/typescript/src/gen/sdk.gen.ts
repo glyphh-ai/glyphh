@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInvitesData, ListInvitesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, MeData, MeResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -63,6 +63,34 @@ export const declineInvite = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * Machines
+ *
+ * My machines, connected first, each with its 8 most recently active super powers.
+ */
+export const listMachines = <ThrowOnError extends boolean = false>(options?: Options<ListMachinesData, ThrowOnError>): RequestResult<ListMachinesResponses, ListMachinesErrors, ThrowOnError> => (options?.client ?? client).get<ListMachinesResponses, ListMachinesErrors, ThrowOnError>({ url: '/v1/machines', ...options });
+
+/**
+ * Open One
+ *
+ * A one-minute, one-time link into the machine's UI, on its home or one of its super powers.
+ */
+export const openMachine = <ThrowOnError extends boolean = false>(options: Options<OpenMachineData, ThrowOnError>): RequestResult<OpenMachineResponses, OpenMachineErrors, ThrowOnError> => (options.client ?? client).post<OpenMachineResponses, OpenMachineErrors, ThrowOnError>({
+    url: '/v1/machines/{machine_id}/open',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Super Powers
+ *
+ * Every super power on one of my machines, searched and filtered, with how many of each status.
+ */
+export const listInstalledSuperPowers = <ThrowOnError extends boolean = false>(options: Options<ListInstalledSuperPowersData, ThrowOnError>): RequestResult<ListInstalledSuperPowersResponses, ListInstalledSuperPowersErrors, ThrowOnError> => (options.client ?? client).get<ListInstalledSuperPowersResponses, ListInstalledSuperPowersErrors, ThrowOnError>({ url: '/v1/machines/{machine_id}/super-powers', ...options });
+
+/**
  * Get Me
  */
 export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>): RequestResult<MeResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeResponses, unknown, ThrowOnError>({ url: '/v1/me', ...options });
@@ -87,6 +115,27 @@ export const disconnectHost = <ThrowOnError extends boolean = false>(options: Op
  * Every org I belong to, my Personal org first.
  */
 export const listMyOrgs = <ThrowOnError extends boolean = false>(options?: Options<ListMyOrgsData, ThrowOnError>): RequestResult<ListMyOrgsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListMyOrgsResponses, unknown, ThrowOnError>({ url: '/v1/me/orgs', ...options });
+
+/**
+ * My Settings
+ *
+ * What the platform remembers for me: the theme, the rail, each list's rows per page.
+ */
+export const mySettings = <ThrowOnError extends boolean = false>(options?: Options<MySettingsData, ThrowOnError>): RequestResult<MySettingsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MySettingsResponses, unknown, ThrowOnError>({ url: '/v1/me/settings', ...options });
+
+/**
+ * Change My Settings
+ *
+ * Change any of them; a list's rows per page are merged in by the list's name.
+ */
+export const changeMySettings = <ThrowOnError extends boolean = false>(options: Options<ChangeMySettingsData, ThrowOnError>): RequestResult<ChangeMySettingsResponses, ChangeMySettingsErrors, ThrowOnError> => (options.client ?? client).patch<ChangeMySettingsResponses, ChangeMySettingsErrors, ThrowOnError>({
+    url: '/v1/me/settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Get Org
@@ -142,6 +191,40 @@ export const removeMember = <ThrowOnError extends boolean = false>(options: Opti
  */
 export const updateMember = <ThrowOnError extends boolean = false>(options: Options<UpdateMemberData, ThrowOnError>): RequestResult<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError>({
     url: '/v1/org/members/{member_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Refresh
+ */
+export const refreshSession = <ThrowOnError extends boolean = false>(options?: Options<RefreshSessionData, ThrowOnError>): RequestResult<RefreshSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshSessionResponses, unknown, ThrowOnError>({ url: '/v1/session/refresh', ...options });
+
+/**
+ * Sign Out
+ */
+export const signOut = <ThrowOnError extends boolean = false>(options?: Options<SignOutData, ThrowOnError>): RequestResult<SignOutResponses, unknown, ThrowOnError> => (options?.client ?? client).post<SignOutResponses, unknown, ThrowOnError>({ url: '/v1/session/sign-out', ...options });
+
+/**
+ * Switch
+ */
+export const switchOrg = <ThrowOnError extends boolean = false>(options: Options<SwitchOrgData, ThrowOnError>): RequestResult<SwitchOrgResponses, SwitchOrgErrors, ThrowOnError> => (options.client ?? client).post<SwitchOrgResponses, SwitchOrgErrors, ThrowOnError>({
+    url: '/v1/session/switch',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start
+ */
+export const startSession = <ThrowOnError extends boolean = false>(options: Options<StartSessionData, ThrowOnError>): RequestResult<StartSessionResponses, StartSessionErrors, ThrowOnError> => (options.client ?? client).post<StartSessionResponses, StartSessionErrors, ThrowOnError>({
+    url: '/v1/session/token',
     ...options,
     headers: {
         'Content-Type': 'application/json',

@@ -1,11 +1,15 @@
 import { type Client, createClient } from "./gen/client/index.js";
-import { acceptInvite, declineInvite, disconnectHost, health, listHosts, listMyOrgs, me } from "./gen/sdk.gen.js";
-import type { Health, Host, Me, MeOrg } from "./gen/types.gen.js";
+import {
+  acceptInvite, changeMySettings, declineInvite, disconnectHost, health, listHosts, listMyOrgs, me, mySettings,
+} from "./gen/sdk.gen.js";
+import type { Health, Host, Me, MeOrg, Settings, SettingsChange } from "./gen/types.gen.js";
 import { GlyphhError, unwrap } from "./errors.js";
+import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
 
-export type { Health, Host, Me, MeOrg };
-export { GlyphhError, OrgApi };
+export type { Health, Host, Me, MeOrg, Settings, SettingsChange };
+export { GlyphhError, MachinesApi, OrgApi };
+export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 
 export interface GlyphhOptions {
@@ -28,6 +32,8 @@ export class Glyphh {
   readonly #client: Client;
   /** My org: plan and seats, members, invites. */
   readonly org: OrgApi;
+  /** My machines and the super powers on them. */
+  readonly machines: MachinesApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -37,6 +43,7 @@ export class Glyphh {
       headers: token ? { authorization: `Bearer ${token}` } : undefined,
     });
     this.org = new OrgApi(this.#client);
+    this.machines = new MachinesApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */
@@ -62,6 +69,16 @@ export class Glyphh {
   /** Decline an invite sent to me: it closes, and its seat is free again. */
   async declineInvite(invite: string): Promise<void> {
     unwrap(await declineInvite({ client: this.#client, body: { invite } }));
+  }
+
+  /** What the platform remembers for me: the theme, the rail, each list's rows per page. */
+  async settings(): Promise<Settings> {
+    return unwrap(await mySettings({ client: this.#client }));
+  }
+
+  /** Change any of my settings; a list's rows per page are merged in by the list's name. */
+  async changeSettings(change: SettingsChange): Promise<Settings> {
+    return unwrap(await changeMySettings({ client: this.#client, body: change }));
   }
 
   /** The agent hosts (Claude, Codex, ...) connected to my Glyphh. */

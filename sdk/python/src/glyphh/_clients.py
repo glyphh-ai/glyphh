@@ -5,20 +5,29 @@ import httpx
 
 from glyphh._calls import (
     ACCEPT_INVITE,
+    CHANGE_SETTINGS,
     DECLINE_INVITE,
     DISCONNECT_HOST,
     HEALTH,
     LIST_HOSTS,
     LIST_MY_ORGS,
     ME,
+    SETTINGS,
     Call,
     answer,
 )
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._gen.models.invite_answer import InviteAnswer
-from glyphh._models import Health, Host, Me, MeOrg
+from glyphh._gen.models.settings_change import SettingsChange
+from glyphh._machines import AsyncMachines, Machines
+from glyphh._models import Health, Host, Me, MeOrg, Settings
 from glyphh._org import AsyncOrg, Org
+
+
+def _change(theme: str | None, rail_collapsed: bool | None, page_sizes: dict[str, int] | None) -> SettingsChange:
+    given = {"theme": theme, "rail_collapsed": rail_collapsed, "page_sizes": page_sizes}
+    return SettingsChange.from_dict({k: v for k, v in given.items() if v is not None})
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
@@ -38,6 +47,7 @@ class Glyphh:
     ) -> None:
         self._client = _client(base_url, token, transport)
         self.org = Org(self._run)
+        self.machines = Machines(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -65,6 +75,16 @@ class Glyphh:
         """Decline an invite sent to me: it closes, and its seat is free again."""
         self._run(DECLINE_INVITE, body=InviteAnswer(invite=invite))
 
+    def settings(self) -> Settings:
+        """What the platform remembers for me: the theme, the rail, each list's rows per page."""
+        return self._run(SETTINGS)  # type: ignore[return-value]
+
+    def change_settings(
+        self, *, theme: str | None = None, rail_collapsed: bool | None = None, page_sizes: dict[str, int] | None = None
+    ) -> Settings:
+        """Change any of my settings; a list's rows per page are merged in by the list's name."""
+        return self._run(CHANGE_SETTINGS, body=_change(theme, rail_collapsed, page_sizes))  # type: ignore[return-value]
+
     def list_hosts(self) -> list[Host]:
         """The agent hosts (Claude, Codex, ...) connected to my Glyphh."""
         return self._run(LIST_HOSTS)  # type: ignore[return-value]
@@ -86,6 +106,7 @@ class AsyncGlyphh:
     ) -> None:
         self._client = _client(base_url, token, transport)
         self.org = AsyncOrg(self._run)
+        self.machines = AsyncMachines(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:
@@ -112,6 +133,16 @@ class AsyncGlyphh:
     async def decline_invite(self, invite: str) -> None:
         """Decline an invite sent to me: it closes, and its seat is free again."""
         await self._run(DECLINE_INVITE, body=InviteAnswer(invite=invite))
+
+    async def settings(self) -> Settings:
+        """What the platform remembers for me: the theme, the rail, each list's rows per page."""
+        return await self._run(SETTINGS)  # type: ignore[return-value]
+
+    async def change_settings(
+        self, *, theme: str | None = None, rail_collapsed: bool | None = None, page_sizes: dict[str, int] | None = None
+    ) -> Settings:
+        """Change any of my settings; a list's rows per page are merged in by the list's name."""
+        return await self._run(CHANGE_SETTINGS, body=_change(theme, rail_collapsed, page_sizes))  # type: ignore[return-value]
 
     async def list_hosts(self) -> list[Host]:
         """The agent hosts (Claude, Codex, ...) connected to my Glyphh."""

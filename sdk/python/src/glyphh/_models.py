@@ -8,6 +8,7 @@ from glyphh._gen.models.health import Health as _Health
 from glyphh._gen.models.host import Host as _Host
 from glyphh._gen.models.me import Me as _Me
 from glyphh._gen.models.me_org import MeOrg as _MeOrg
+from glyphh._gen.models.settings import Settings as _Settings
 from glyphh._gen.types import Unset
 
 
@@ -25,6 +26,16 @@ class MeOrg:
     plan: str
     personal: bool
     role: str
+    people: int
+
+
+@dataclass(frozen=True, slots=True)
+class Settings:
+    """What the platform remembers for me: the theme, the rail, each list's rows per page."""
+
+    theme: str
+    rail_collapsed: bool
+    page_sizes: dict[str, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +77,16 @@ def me_of(m: _Me) -> Me:
 
 
 def org_of(m: _MeOrg) -> MeOrg:
-    return MeOrg(id=str(m.id), name=m.name, plan=m.plan, personal=m.personal, role=m.role)
+    return MeOrg(id=str(m.id), name=m.name, plan=m.plan, personal=m.personal, role=m.role, people=m.people)
+
+
+def settings_of(m: _Settings) -> Settings:
+    sizes = m.to_dict()["page_sizes"] if not isinstance(m.page_sizes, Unset) else {}
+    return Settings(
+        theme=str(m.theme.value if not isinstance(m.theme, Unset) else "system"),
+        rail_collapsed=bool(m.rail_collapsed),
+        page_sizes={k: int(v) for k, v in sizes.items()},
+    )
 
 
 def host_of(m: _Host) -> Host:

@@ -16,6 +16,7 @@ class MeOrg:
     Attributes:
         id (UUID):
         name (str):
+        people (int):
         personal (bool):
         plan (str):
         role (str):
@@ -23,6 +24,7 @@ class MeOrg:
 
     id: UUID
     name: str
+    people: int
     personal: bool
     plan: str
     role: str
@@ -32,6 +34,8 @@ class MeOrg:
         id = str(self.id)
 
         name = self.name
+
+        people = self.people
 
         personal = self.personal
 
@@ -45,6 +49,7 @@ class MeOrg:
             {
                 "id": id,
                 "name": name,
+                "people": people,
                 "personal": personal,
                 "plan": plan,
                 "role": role,
@@ -60,6 +65,8 @@ class MeOrg:
 
         name = d.pop("name")
 
+        people = d.pop("people")
+
         personal = d.pop("personal")
 
         plan = d.pop("plan")
@@ -69,6 +76,7 @@ class MeOrg:
         me_org = cls(
             id=id,
             name=name,
+            people=people,
             personal=personal,
             plan=plan,
             role=role,

@@ -19,6 +19,7 @@ class JoinScreen:
         email (str):
         expires_at (datetime.datetime):
         invited_by (None | str):
+        invited_by_email (None | str):
         org (str):
         providers (list[str]):
         role (JoinScreenRole):
@@ -27,6 +28,7 @@ class JoinScreen:
     email: str
     expires_at: datetime.datetime
     invited_by: None | str
+    invited_by_email: None | str
     org: str
     providers: list[str]
     role: JoinScreenRole
@@ -39,6 +41,9 @@ class JoinScreen:
 
         invited_by: None | str
         invited_by = self.invited_by
+
+        invited_by_email: None | str
+        invited_by_email = self.invited_by_email
 
         org = self.org
 
@@ -53,6 +58,7 @@ class JoinScreen:
                 "email": email,
                 "expires_at": expires_at,
                 "invited_by": invited_by,
+                "invited_by_email": invited_by_email,
                 "org": org,
                 "providers": providers,
                 "role": role,
@@ -75,6 +81,13 @@ class JoinScreen:
 
         invited_by = _parse_invited_by(d.pop("invited_by"))
 
+        def _parse_invited_by_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        invited_by_email = _parse_invited_by_email(d.pop("invited_by_email"))
+
         org = d.pop("org")
 
         providers = cast(list[str], d.pop("providers"))
@@ -85,6 +98,7 @@ class JoinScreen:
             email=email,
             expires_at=expires_at,
             invited_by=invited_by,
+            invited_by_email=invited_by_email,
             org=org,
             providers=providers,
             role=role,
