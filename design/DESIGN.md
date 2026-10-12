@@ -103,7 +103,7 @@ The same screens as app.glyphh.ai, built from the same components, as native-fee
 
 - **On the sign-in pages** (the brand panel, top left): the logo is **52 px tall on desktop, 36 px on a phone** (Chris, 2026-10-12; it was 34 and 26, too small). Drawn on `SignInFlow`, `AllowFlow`, `CodeFlow`, `JoinFlow`, `LightAccount`.
 - **One logo, on every ground:** `brand/logo/glyphh-logo-black.png`, the ink mark in its white sticker border. No light, dark or white version, no recolouring.
-- The cat alone is the favicon and the small app icon.
+- The cat alone is the favicon and the small app icon. On the platform: `logo/glyphh-mascot-square.png`, transparent, as favicon.ico (16, 32, 48 px), a 32 px PNG and a 180 px apple-touch-icon (Chris, 2026-10-12). `logo/favicon.svg` still carries the old purple-to-pink tile and is not used.
 
 ### The cats
 
