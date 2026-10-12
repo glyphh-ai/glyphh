@@ -29,6 +29,12 @@ A clean UI build: small, well-formed, reusable components, and screens made only
 - **Variants and states are props,** not new components or class overrides: `<Button variant="primary" size="lg" busy>`, `<Alert tone="danger" traceId="…">`.
 - **Tokens only.** No raw colour, size, font, radius, shadow or duration in any file but `tokens.css`.
 - **Small files, one job each.** A component folder holds its `.tsx`, its `.module.css` and its test, and nothing that belongs to a screen.
+- **Use the brand; never invent a style.** Every look comes from the brand and the boards:
+  - the logo and the cats come from `design/brand/`, used as given;
+  - colour, type, radius, shadow and motion come from the tokens;
+  - each component's look comes from the design agent.
+
+  Never make up a colour, gradient, shadow, border, icon, illustration, animation or layout the boards don't show. If a screen needs a look that isn't drawn, ask, or add a request; don't improvise one.
 - **Repeated patterns become components the first time they repeat.** For example: the trace id block, the logo tile, the list row with a status chip, and the pager.
 
 ## How to read a board
