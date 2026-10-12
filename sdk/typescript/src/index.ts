@@ -10,11 +10,12 @@ import { CustomPowersApi, SchedulesApi, SuperPowersApi } from "./editors.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
+import { ApiKeysApi, OrgAdminApi } from "./orgadmin.js";
 import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
+export { ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -28,11 +29,15 @@ export type {
   ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerQuery, SuperPowerView,
 } from "./editors.js";
 export type {
-  Added, Comment, Home, ListingChange, ListingView, MarketDetail, MarketPage, MarketQuery, NewListing, Picture, ReviewDecision,
-  VersionChange, Waiting,
+  Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, MarketQuery, NewListing, Picture,
+  ReviewDecision, VersionChange, Waiting,
 } from "./discover.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
+export type {
+  AuditFilters, AuditPage, AuditQuery, Impact, InviteMany, InviteResult, KeysPage, KeyView, LimitKind, LimitQuery, LimitView, MadeKey,
+  Maker, MemberKeys, MemberTeams, NewKey, PeopleQuery, PeoplePage, TeamChange, TeamView,
+} from "./orgadmin.js";
 export type {
   Answered, CrewCount, CrewFace, Question, QuestionPage, ThreadChange, ThreadDetail, ThreadMachine, ThreadPage, ThreadQuery, ThreadRow,
 } from "./threads.js";
@@ -77,6 +82,10 @@ export class Glyphh {
   readonly listings: ListingsApi;
   /** The Marketplace. */
   readonly marketplace: MarketplaceApi;
+  /** Org admin: people, teams, limits and the audit log. */
+  readonly orgAdmin: OrgAdminApi;
+  /** API keys: mine, and the org's for org admins. */
+  readonly apiKeys: ApiKeysApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -96,6 +105,8 @@ export class Glyphh {
     this.schedules = new SchedulesApi(this.#client);
     this.listings = new ListingsApi(this.#client);
     this.marketplace = new MarketplaceApi(this.#client);
+    this.orgAdmin = new OrgAdminApi(this.#client);
+    this.apiKeys = new ApiKeysApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

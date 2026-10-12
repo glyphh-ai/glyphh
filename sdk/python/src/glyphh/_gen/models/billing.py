@@ -9,8 +9,8 @@ from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
     from ..models.auto_top_up import AutoTopUp
-    from ..models.card import Card
     from ..models.credit import Credit
+    from ..models.payment_card import PaymentCard
     from ..models.plan_view import PlanView
 
 
@@ -23,7 +23,7 @@ class Billing:
     Attributes:
         auto_top_up (AutoTopUp):
         billing_email (None | str):
-        card (Card | None):
+        card (None | PaymentCard):
         credit (Credit):
         extra_machines (int):
         machines_in_use (int):
@@ -38,7 +38,7 @@ class Billing:
 
     auto_top_up: AutoTopUp
     billing_email: str | None
-    card: Card | None
+    card: PaymentCard | None
     credit: Credit
     extra_machines: int
     machines_in_use: int
@@ -52,7 +52,7 @@ class Billing:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.card import Card
+        from ..models.payment_card import PaymentCard
         from ..models.plan_view import PlanView
 
         auto_top_up = self.auto_top_up.to_dict()
@@ -61,7 +61,7 @@ class Billing:
         billing_email = self.billing_email
 
         card: dict[str, Any] | None
-        if isinstance(self.card, Card):
+        if isinstance(self.card, PaymentCard):
             card = self.card.to_dict()
         else:
             card = self.card
@@ -119,8 +119,8 @@ class Billing:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.auto_top_up import AutoTopUp
-        from ..models.card import Card
         from ..models.credit import Credit
+        from ..models.payment_card import PaymentCard
         from ..models.plan_view import PlanView
 
         d = dict(src_dict)
@@ -133,18 +133,18 @@ class Billing:
 
         billing_email = _parse_billing_email(d.pop("billing_email"))
 
-        def _parse_card(data: object) -> Card | None:
+        def _parse_card(data: object) -> PaymentCard | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                card_type_0 = Card.from_dict(data)
+                card_type_0 = PaymentCard.from_dict(data)
 
                 return card_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(Card | None, data)
+            return cast(None | PaymentCard, data)
 
         card = _parse_card(d.pop("card"))
 

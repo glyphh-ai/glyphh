@@ -6,14 +6,15 @@ import {
   updateFromMarketplace, withdrawListing,
 } from "./gen/sdk.gen.js";
 import type {
-  Added, Comment, Home, ListingChange, ListingView, MarketDetail, MarketPage, NewListing, ReviewDecision, VersionChange,
-  Waiting,
+  Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, NewListing, ReviewDecision, VersionChange,
 } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
 export type {
-  Added, Comment, Home, ListingChange, ListingView, MarketDetail, MarketPage, NewListing, ReviewDecision, VersionChange, Waiting,
+  Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, NewListing, ReviewDecision, VersionChange,
 };
+/** A version waiting for review (the name the SDK first gave it). */
+export type Waiting = InReview;
 export interface MarketQuery { kind?: "custom" | "super_power"; type?: string; category?: string; q?: string; page?: number; size?: number }
 export type Picture = { data: Blob; type: "image/png" | "image/jpeg"; name?: string };
 

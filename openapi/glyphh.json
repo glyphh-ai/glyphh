@@ -193,6 +193,206 @@
         "title": "Answered",
         "type": "object"
       },
+      "Asked": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "interval_seconds": {
+            "title": "Interval Seconds",
+            "type": "integer"
+          },
+          "user_code": {
+            "title": "User Code",
+            "type": "string"
+          },
+          "verify_url": {
+            "title": "Verify Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "user_code",
+          "verify_url",
+          "interval_seconds",
+          "expires_at"
+        ],
+        "title": "Asked",
+        "type": "object"
+      },
+      "AuditEntry": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "after": {
+            "additionalProperties": true,
+            "title": "After",
+            "type": "object"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "before": {
+            "additionalProperties": true,
+            "title": "Before",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Detail"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_kind": {
+            "title": "Target Kind",
+            "type": "string"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "who": {
+            "title": "Who",
+            "type": "string"
+          },
+          "who_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Who Id"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "who",
+          "who_id",
+          "role",
+          "type",
+          "action",
+          "summary",
+          "target_kind",
+          "target_label",
+          "target_id",
+          "org",
+          "source",
+          "source_detail",
+          "region",
+          "trace_id",
+          "before",
+          "after"
+        ],
+        "title": "AuditEntry",
+        "type": "object"
+      },
+      "AuditPage": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ],
+        "title": "AuditPage",
+        "type": "object"
+      },
       "AutoTopUp": {
         "properties": {
           "below_cents": {
@@ -358,7 +558,7 @@
           "card": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/glyphh_server__ops__billing__summary__Card"
+                "$ref": "#/components/schemas/PaymentCard"
               },
               {
                 "type": "null"
@@ -572,6 +772,64 @@
           "total"
         ],
         "title": "CatalogPage",
+        "type": "object"
+      },
+      "CliView": {
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "cli": {
+            "title": "Cli",
+            "type": "string"
+          },
+          "login_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Error"
+          },
+          "login_step": {
+            "title": "Login Step",
+            "type": "string"
+          },
+          "signed_in": {
+            "title": "Signed In",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cli",
+          "signed_in",
+          "account",
+          "version",
+          "login_step",
+          "login_error",
+          "updated_at"
+        ],
+        "title": "CliView",
         "type": "object"
       },
       "CodeIn": {
@@ -1102,6 +1360,83 @@
         "title": "DaySpend",
         "type": "object"
       },
+      "Ended": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "Ended",
+        "type": "object"
+      },
+      "Entries": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "Entries",
+        "type": "object"
+      },
+      "Entry": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "users": {
+            "title": "Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "users"
+        ],
+        "title": "Entry",
+        "type": "object"
+      },
       "Face": {
         "description": "A super power as a machine shows it: its face, its name, what it is doing there.",
         "properties": {
@@ -1211,7 +1546,7 @@
           },
           "nodes": {
             "items": {
-              "$ref": "#/components/schemas/Step"
+              "$ref": "#/components/schemas/FlowStep"
             },
             "maxItems": 200,
             "title": "Nodes",
@@ -1223,6 +1558,63 @@
           "edges"
         ],
         "title": "Flow",
+        "type": "object"
+      },
+      "FlowStep": {
+        "properties": {
+          "checkpoint": {
+            "default": false,
+            "title": "Checkpoint",
+            "type": "boolean"
+          },
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,60}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "trigger",
+              "agent",
+              "model",
+              "connection",
+              "decide",
+              "memory",
+              "skill",
+              "checkpoint",
+              "output"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "x": {
+            "default": 0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "default": 0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "title": "FlowStep",
         "type": "object"
       },
       "Found": {
@@ -1521,21 +1913,21 @@
           },
           "featured": {
             "items": {
-              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+              "$ref": "#/components/schemas/MarketCard"
             },
             "title": "Featured",
             "type": "array"
           },
           "newest": {
             "items": {
-              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+              "$ref": "#/components/schemas/MarketCard"
             },
             "title": "Newest",
             "type": "array"
           },
           "popular": {
             "items": {
-              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+              "$ref": "#/components/schemas/MarketCard"
             },
             "title": "Popular",
             "type": "array"
@@ -1588,6 +1980,82 @@
         "title": "Host",
         "type": "object"
       },
+      "Impact": {
+        "properties": {
+          "people": {
+            "title": "People",
+            "type": "integer"
+          },
+          "powers": {
+            "title": "Powers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "powers",
+          "people"
+        ],
+        "title": "Impact",
+        "type": "object"
+      },
+      "InReview": {
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "listing_version_id": {
+            "format": "uuid",
+            "title": "Listing Version Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reach": {
+            "title": "Reach",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_version_id",
+          "listing_id",
+          "name",
+          "kind",
+          "reach",
+          "version",
+          "by",
+          "submitted_at"
+        ],
+        "title": "InReview",
+        "type": "object"
+      },
       "InstalledPage": {
         "properties": {
           "counts": {
@@ -1633,6 +2101,67 @@
           "invite"
         ],
         "title": "InviteAnswer",
+        "type": "object"
+      },
+      "InviteMany": {
+        "properties": {
+          "emails": {
+            "items": {
+              "maxLength": 254,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Emails",
+            "type": "array"
+          },
+          "role": {
+            "default": "user",
+            "enum": [
+              "org_admin",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "team_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Team Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "title": "InviteMany",
+        "type": "object"
+      },
+      "InviteResult": {
+        "properties": {
+          "refused": {
+            "items": {
+              "$ref": "#/components/schemas/Refused"
+            },
+            "title": "Refused",
+            "type": "array"
+          },
+          "sent": {
+            "items": {
+              "$ref": "#/components/schemas/Sent"
+            },
+            "title": "Sent",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sent",
+          "refused"
+        ],
+        "title": "InviteResult",
         "type": "object"
       },
       "InviteView": {
@@ -1869,11 +2398,137 @@
         "title": "KeyIn",
         "type": "object"
       },
+      "KeyView": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked",
+              "off"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "owner",
+          "owner_id",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "status"
+        ],
+        "title": "KeyView",
+        "type": "object"
+      },
+      "KeysPage": {
+        "properties": {
+          "ask": {
+            "description": "The org admins to ask, when my own keys are off",
+            "items": {
+              "type": "string"
+            },
+            "title": "Ask",
+            "type": "array"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KeyView"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "live": {
+            "title": "Live",
+            "type": "integer"
+          },
+          "member_keys": {
+            "title": "Member Keys",
+            "type": "boolean"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "keys",
+          "total",
+          "live",
+          "member_keys",
+          "ask"
+        ],
+        "title": "KeysPage",
+        "type": "object"
+      },
       "Launch": {
         "properties": {
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
+            "type": "string"
+          },
+          "page": {
+            "title": "Page",
+            "type": "string"
+          },
+          "ticket": {
+            "title": "Ticket",
             "type": "string"
           },
           "url": {
@@ -1883,6 +2538,8 @@
         },
         "required": [
           "url",
+          "ticket",
+          "page",
           "expires_at"
         ],
         "title": "Launch",
@@ -1974,6 +2631,59 @@
           "total"
         ],
         "title": "LedgerPage",
+        "type": "object"
+      },
+      "LimitView": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "left_out_people": {
+            "title": "Left Out People",
+            "type": "integer"
+          },
+          "limited": {
+            "title": "Limited",
+            "type": "boolean"
+          },
+          "org_limited": {
+            "title": "Org Limited",
+            "type": "boolean"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "team",
+          "limited",
+          "org_limited",
+          "entries",
+          "total",
+          "left_out_people"
+        ],
+        "title": "LimitView",
         "type": "object"
       },
       "Link": {
@@ -2381,6 +3091,193 @@
         "title": "MachinePage",
         "type": "object"
       },
+      "MachineSays": {
+        "description": "What a machine says it is when it signs in.",
+        "properties": {
+          "host": {
+            "enum": [
+              "fly",
+              "aws",
+              "azure",
+              "gcp",
+              "digitalocean",
+              "hetzner",
+              "vps",
+              "docker"
+            ],
+            "title": "Host",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "macos",
+              "windows",
+              "linux"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "ssh_public_key": {
+            "maxLength": 1000,
+            "minLength": 20,
+            "pattern": "^ssh-ed25519 [A-Za-z0-9+/=]+( .*)?$",
+            "title": "Ssh Public Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "platform",
+          "host",
+          "ssh_public_key"
+        ],
+        "title": "MachineSays",
+        "type": "object"
+      },
+      "MadeKey": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/KeyView"
+          },
+          "secret": {
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "secret"
+        ],
+        "title": "MadeKey",
+        "type": "object"
+      },
+      "Maker": {
+        "properties": {
+          "keys": {
+            "title": "Keys",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "keys"
+        ],
+        "title": "Maker",
+        "type": "object"
+      },
+      "MarketCard": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "boolean"
+          },
+          "adds": {
+            "title": "Adds",
+            "type": "integer"
+          },
+          "avatar_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Color"
+          },
+          "avatar_variant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Variant"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "has_icon": {
+            "title": "Has Icon",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "summary",
+          "by",
+          "category",
+          "adds",
+          "version",
+          "published_at",
+          "has_icon",
+          "avatar_variant",
+          "avatar_color",
+          "added"
+        ],
+        "title": "MarketCard",
+        "type": "object"
+      },
       "MarketDetail": {
         "properties": {
           "added": {
@@ -2525,7 +3422,7 @@
           },
           "listings": {
             "items": {
-              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+              "$ref": "#/components/schemas/MarketCard"
             },
             "title": "Listings",
             "type": "array"
@@ -2755,6 +3652,64 @@
           }
         },
         "title": "MemberChange",
+        "type": "object"
+      },
+      "MemberKeys": {
+        "properties": {
+          "keys": {
+            "title": "Keys",
+            "type": "integer"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          },
+          "people": {
+            "title": "People",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "on",
+          "keys",
+          "people"
+        ],
+        "title": "MemberKeys",
+        "type": "object"
+      },
+      "MemberKeysChange": {
+        "properties": {
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "MemberKeysChange",
+        "type": "object"
+      },
+      "MemberTeams": {
+        "properties": {
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "teams"
+        ],
+        "title": "MemberTeams",
         "type": "object"
       },
       "ModelView": {
@@ -3065,6 +4020,29 @@
         "title": "NewFolder",
         "type": "object"
       },
+      "NewHost": {
+        "properties": {
+          "host": {
+            "enum": [
+              "fly",
+              "aws",
+              "azure",
+              "gcp",
+              "digitalocean",
+              "hetzner",
+              "vps",
+              "docker"
+            ],
+            "title": "Host",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host"
+        ],
+        "title": "NewHost",
+        "type": "object"
+      },
       "NewInvite": {
         "properties": {
           "email": {
@@ -3087,6 +4065,32 @@
           "email"
         ],
         "title": "NewInvite",
+        "type": "object"
+      },
+      "NewKey": {
+        "properties": {
+          "expires": {
+            "default": "90d",
+            "enum": [
+              "30d",
+              "90d",
+              "1y",
+              "never"
+            ],
+            "title": "Expires",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NewKey",
         "type": "object"
       },
       "NewListing": {
@@ -3261,8 +4265,37 @@
         "title": "NextInvoice",
         "type": "object"
       },
+      "OneClick": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "expires_at"
+        ],
+        "title": "OneClick",
+        "type": "object"
+      },
       "OpenIn": {
         "properties": {
+          "panel": {
+            "default": "machine",
+            "enum": [
+              "machine",
+              "thread",
+              "needs_you"
+            ],
+            "title": "Panel",
+            "type": "string"
+          },
           "super_power": {
             "anyOf": [
               {
@@ -3274,6 +4307,18 @@
               }
             ],
             "title": "Super Power"
+          },
+          "thread": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread"
           }
         },
         "title": "OpenIn",
@@ -3478,6 +4523,54 @@
         "title": "Page",
         "type": "object"
       },
+      "PanelSession": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "panel": {
+            "title": "Panel",
+            "type": "string"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "panel",
+          "machine_id"
+        ],
+        "title": "PanelSession",
+        "type": "object"
+      },
       "Part": {
         "description": "A skill inside a plugin, or a tool of an app.",
         "properties": {
@@ -3495,6 +4588,63 @@
           "description"
         ],
         "title": "Part",
+        "type": "object"
+      },
+      "Pasted": {
+        "properties": {
+          "code": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Pasted",
+        "type": "object"
+      },
+      "PaymentCard": {
+        "properties": {
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "exp_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Month"
+          },
+          "exp_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Year"
+          },
+          "last4": {
+            "title": "Last4",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand",
+          "last4",
+          "exp_month",
+          "exp_year"
+        ],
+        "title": "PaymentCard",
         "type": "object"
       },
       "PaymentStart": {
@@ -3536,6 +4686,132 @@
           "stripe_publishable_key"
         ],
         "title": "PaymentStart",
+        "type": "object"
+      },
+      "People": {
+        "properties": {
+          "user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "User Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "title": "People",
+        "type": "object"
+      },
+      "PeoplePage": {
+        "properties": {
+          "max_seats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seats"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "seats_taken": {
+            "title": "Seats Taken",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "people",
+          "total",
+          "seats_taken",
+          "max_seats"
+        ],
+        "title": "PeoplePage",
+        "type": "object"
+      },
+      "Person": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "member",
+              "invite"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "invited",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "email",
+          "name",
+          "role",
+          "status",
+          "teams",
+          "since"
+        ],
+        "title": "Person",
         "type": "object"
       },
       "Place": {
@@ -4052,6 +5328,24 @@
         "title": "QuestionPage",
         "type": "object"
       },
+      "Refused": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "message"
+        ],
+        "title": "Refused",
+        "type": "object"
+      },
       "RenameOrg": {
         "properties": {
           "name": {
@@ -4389,6 +5683,30 @@
         "title": "Searched",
         "type": "object"
       },
+      "Sent": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "link",
+          "expires_at"
+        ],
+        "title": "Sent",
+        "type": "object"
+      },
       "Service": {
         "properties": {
           "blocked": {
@@ -4692,59 +6010,118 @@
       },
       "Step": {
         "properties": {
-          "checkpoint": {
-            "default": false,
-            "title": "Checkpoint",
-            "type": "boolean"
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
           },
-          "config": {
-            "additionalProperties": true,
-            "title": "Config",
-            "type": "object"
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "login": {
+            "title": "Login",
+            "type": "string"
+          },
+          "step": {
+            "enum": [
+              "open_link",
+              "enter_code"
+            ],
+            "title": "Step",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login",
+          "step",
+          "url"
+        ],
+        "title": "Step",
+        "type": "object"
+      },
+      "SuperPowerCard": {
+        "properties": {
+          "avatar_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Color"
+          },
+          "avatar_variant": {
+            "title": "Avatar Variant",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
           },
           "id": {
-            "pattern": "^[A-Za-z0-9_-]{1,60}$",
+            "format": "uuid",
             "title": "Id",
             "type": "string"
           },
-          "kind": {
-            "enum": [
-              "trigger",
-              "agent",
-              "model",
-              "connection",
-              "decide",
-              "memory",
-              "skill",
-              "checkpoint",
-              "output"
+          "last_active_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Kind",
+            "title": "Last Active At"
+          },
+          "machines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Machines",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
             "type": "string"
           },
-          "label": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Label",
+          "status": {
+            "title": "Status",
             "type": "string"
-          },
-          "x": {
-            "default": 0,
-            "title": "X",
-            "type": "number"
-          },
-          "y": {
-            "default": 0,
-            "title": "Y",
-            "type": "number"
           }
         },
         "required": [
           "id",
-          "kind",
-          "label"
+          "name",
+          "description",
+          "avatar_variant",
+          "avatar_color",
+          "status",
+          "machines",
+          "last_active_at"
         ],
-        "title": "Step",
+        "title": "SuperPowerCard",
         "type": "object"
       },
       "SuperPowerChange": {
@@ -4969,7 +6346,7 @@
           },
           "super_powers": {
             "items": {
-              "$ref": "#/components/schemas/glyphh_server__ops__super_powers__page__Card"
+              "$ref": "#/components/schemas/SuperPowerCard"
             },
             "title": "Super Powers",
             "type": "array"
@@ -5162,6 +6539,137 @@
           "updated_at"
         ],
         "title": "SuperPowerView",
+        "type": "object"
+      },
+      "Switch": {
+        "properties": {
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "Switch",
+        "type": "object"
+      },
+      "TeamChange": {
+        "properties": {
+          "limit_connections": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Connections"
+          },
+          "limit_models": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Models"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "TeamChange",
+        "type": "object"
+      },
+      "TeamIn": {
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TeamIn",
+        "type": "object"
+      },
+      "TeamView": {
+        "properties": {
+          "allowed_connections": {
+            "title": "Allowed Connections",
+            "type": "integer"
+          },
+          "allowed_models": {
+            "title": "Allowed Models",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "limit_connections": {
+            "title": "Limit Connections",
+            "type": "boolean"
+          },
+          "limit_models": {
+            "title": "Limit Models",
+            "type": "boolean"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "members",
+          "limit_models",
+          "limit_connections",
+          "allowed_models",
+          "allowed_connections"
+        ],
+        "title": "TeamView",
+        "type": "object"
+      },
+      "TeamsOf": {
+        "properties": {
+          "team_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Team Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "team_ids"
+        ],
+        "title": "TeamsOf",
         "type": "object"
       },
       "ThreadChange": {
@@ -5464,6 +6972,21 @@
         "title": "ThreadStart",
         "type": "object"
       },
+      "Ticket": {
+        "properties": {
+          "ticket": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Ticket",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket"
+        ],
+        "title": "Ticket",
+        "type": "object"
+      },
       "Tool": {
         "properties": {
           "description": {
@@ -5679,6 +7202,74 @@
           "total"
         ],
         "title": "TopUpPage",
+        "type": "object"
+      },
+      "Trade": {
+        "properties": {
+          "code": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "machine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MachineSays"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Trade",
+        "type": "object"
+      },
+      "Traded": {
+        "properties": {
+          "machine_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "slow_down",
+              "denied",
+              "expired",
+              "approved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Traded",
         "type": "object"
       },
       "User": {
@@ -5918,266 +7509,43 @@
         "type": "object"
       },
       "Waiting": {
+        "description": "A machine waiting for the member's yes, as the Approve a code page shows it.",
         "properties": {
-          "by": {
-            "title": "By",
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
             "type": "string"
           },
-          "kind": {
-            "title": "Kind",
+          "fingerprint": {
+            "title": "Fingerprint",
             "type": "string"
           },
-          "listing_id": {
-            "format": "uuid",
-            "title": "Listing Id",
-            "type": "string"
-          },
-          "listing_version_id": {
-            "format": "uuid",
-            "title": "Listing Version Id",
+          "host": {
+            "title": "Host",
             "type": "string"
           },
           "name": {
             "title": "Name",
             "type": "string"
           },
-          "reach": {
-            "title": "Reach",
+          "platform": {
+            "title": "Platform",
             "type": "string"
           },
-          "submitted_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Submitted At"
-          },
-          "version": {
-            "title": "Version",
+          "user_code": {
+            "title": "User Code",
             "type": "string"
           }
         },
         "required": [
-          "listing_version_id",
-          "listing_id",
+          "user_code",
           "name",
-          "kind",
-          "reach",
-          "version",
-          "by",
-          "submitted_at"
+          "platform",
+          "host",
+          "fingerprint",
+          "expires_at"
         ],
         "title": "Waiting",
-        "type": "object"
-      },
-      "glyphh_server__ops__billing__summary__Card": {
-        "properties": {
-          "brand": {
-            "title": "Brand",
-            "type": "string"
-          },
-          "exp_month": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exp Month"
-          },
-          "exp_year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exp Year"
-          },
-          "last4": {
-            "title": "Last4",
-            "type": "string"
-          }
-        },
-        "required": [
-          "brand",
-          "last4",
-          "exp_month",
-          "exp_year"
-        ],
-        "title": "Card",
-        "type": "object"
-      },
-      "glyphh_server__ops__discover__market__Card": {
-        "properties": {
-          "added": {
-            "title": "Added",
-            "type": "boolean"
-          },
-          "adds": {
-            "title": "Adds",
-            "type": "integer"
-          },
-          "avatar_color": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Color"
-          },
-          "avatar_variant": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Variant"
-          },
-          "by": {
-            "title": "By",
-            "type": "string"
-          },
-          "category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category"
-          },
-          "has_icon": {
-            "title": "Has Icon",
-            "type": "boolean"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "published_at": {
-            "format": "date-time",
-            "title": "Published At",
-            "type": "string"
-          },
-          "summary": {
-            "title": "Summary",
-            "type": "string"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "name",
-          "summary",
-          "by",
-          "category",
-          "adds",
-          "version",
-          "published_at",
-          "has_icon",
-          "avatar_variant",
-          "avatar_color",
-          "added"
-        ],
-        "title": "Card",
-        "type": "object"
-      },
-      "glyphh_server__ops__super_powers__page__Card": {
-        "properties": {
-          "avatar_color": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Color"
-          },
-          "avatar_variant": {
-            "title": "Avatar Variant",
-            "type": "integer"
-          },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "last_active_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Active At"
-          },
-          "machines": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Machines",
-            "type": "array"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "description",
-          "avatar_variant",
-          "avatar_color",
-          "status",
-          "machines",
-          "last_active_at"
-        ],
-        "title": "Card",
         "type": "object"
       }
     }
@@ -6188,6 +7556,49 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/api-keys/{key_id}/revoke": {
+      "post": {
+        "operationId": "revokeApiKey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Key",
+        "tags": [
+          "api keys"
+        ]
+      }
+    },
     "/v1/auth/allow": {
       "get": {
         "operationId": "allowScreen",
@@ -7388,6 +8799,219 @@
         ]
       }
     },
+    "/v1/machine-sign-ins/{user_code}": {
+      "get": {
+        "description": "The machine waiting with this code: its name, platform, host and SSH fingerprint, to check by eye.",
+        "operationId": "getMachineSignIn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_code",
+            "required": true,
+            "schema": {
+              "title": "User Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Waiting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Shown",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machine-sign-ins/{user_code}/approve": {
+      "post": {
+        "description": "Yes, this is my machine: it is registered in the org I act in when it trades its code.",
+        "operationId": "approveMachineSignIn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_code",
+            "required": true,
+            "schema": {
+              "title": "User Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Waiting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approved",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machine-sign-ins/{user_code}/deny": {
+      "post": {
+        "description": "Not my machine: its code is spent and it is told so.",
+        "operationId": "denyMachineSignIn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_code",
+            "required": true,
+            "schema": {
+              "title": "User Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Waiting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Denied",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machine/sign-ins": {
+      "post": {
+        "description": "A machine asks for a code: the secret one it keeps, and the short one its member approves.",
+        "operationId": "askMachineSignIn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MachineSays"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asked"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Asked",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machine/sign-ins/token": {
+      "post": {
+        "description": "A machine trades its code: pending, slow down, denied, expired, or its id and its own token, once. Committed\nbefore the answer goes, since the machine links with its token the moment it has it.",
+        "operationId": "tradeMachineSignIn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Trade"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Traded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Traded",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
     "/v1/machines": {
       "get": {
         "description": "My machines, connected first, each with its 8 most recently active super powers.",
@@ -7445,9 +9069,308 @@
         ]
       }
     },
+    "/v1/machines/one-click": {
+      "post": {
+        "description": "A code a new host signs itself in with, already approved, for minutes and one use.",
+        "operationId": "mintOneClickHost",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewHost"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneClick"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Minted",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/clis": {
+      "get": {
+        "description": "Claude Code and Codex on this machine: signed in or not, as which account, and a sign-in under way.",
+        "operationId": "listMachineClis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CliView"
+                  },
+                  "title": "Response Listmachineclis",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listed",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/clis/{cli}/sign-in": {
+      "delete": {
+        "description": "Calls a sign-in off.",
+        "operationId": "cancelCliSignIn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "cli",
+            "required": true,
+            "schema": {
+              "enum": [
+                "claude_code",
+                "codex"
+              ],
+              "title": "Cli",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Canceled",
+        "tags": [
+          "machines"
+        ]
+      },
+      "post": {
+        "description": "Starts the CLI's own login on the machine; answers with what to show: the link, and Codex's code.",
+        "operationId": "signInCli",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "cli",
+            "required": true,
+            "schema": {
+              "enum": [
+                "claude_code",
+                "codex"
+              ],
+              "title": "Cli",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Step"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Started",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/clis/{cli}/sign-in/code": {
+      "post": {
+        "description": "The code claude.ai showed the member, passed to Claude Code (never kept); answers when it has finished.",
+        "operationId": "pasteCliCode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "cli",
+            "required": true,
+            "schema": {
+              "enum": [
+                "claude_code",
+                "codex"
+              ],
+              "title": "Cli",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pasted"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ended"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pasted",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/events": {
+      "get": {
+        "description": "One of my machines, live: its whole state, then its threads' records, its super powers' statuses, its CLIs,\nand every \"needs you\" on it, as they change.",
+        "operationId": "watchMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Machine",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
     "/v1/machines/{machine_id}/open": {
       "post": {
-        "description": "A one-minute, one-time link into the machine's UI, on its home or one of its super powers.",
+        "description": "The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it, one of its\nthreads, or my questions.",
         "operationId": "openMachine",
         "parameters": [
           {
@@ -8080,6 +10003,116 @@
         ]
       }
     },
+    "/v1/me/api-keys": {
+      "get": {
+        "operationId": "listMyApiKeys",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeysPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List My Keys",
+        "tags": [
+          "api keys"
+        ]
+      },
+      "post": {
+        "operationId": "makeApiKey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MadeKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Make Key",
+        "tags": [
+          "api keys"
+        ]
+      }
+    },
+    "/v1/me/events": {
+      "get": {
+        "description": "Every \"needs you\" opened, answered or withdrawn across my machines, and each machine going online or not.\nA machine's panel sees only its machine's.",
+        "operationId": "watchMe",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mine",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
     "/v1/me/hosts": {
       "get": {
         "description": "The agent hosts (Claude, Codex, ...) connected to my Glyphh.",
@@ -8397,6 +10430,474 @@
           }
         },
         "summary": "Rename Org",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/api-keys": {
+      "get": {
+        "operationId": "listOrgApiKeys",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeysPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Org Keys",
+        "tags": [
+          "api keys"
+        ]
+      }
+    },
+    "/v1/org/api-keys/makers": {
+      "get": {
+        "operationId": "listApiKeyMakers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Maker"
+                  },
+                  "title": "Response Listapikeymakers",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Makers",
+        "tags": [
+          "api keys"
+        ]
+      }
+    },
+    "/v1/org/api-keys/member-keys": {
+      "get": {
+        "operationId": "getMemberKeys",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberKeys"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Member Keys",
+        "tags": [
+          "api keys"
+        ]
+      },
+      "put": {
+        "operationId": "setMemberKeys",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberKeysChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberKeys"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Member Keys",
+        "tags": [
+          "api keys"
+        ]
+      }
+    },
+    "/v1/org/audit": {
+      "get": {
+        "operationId": "listAuditLog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "who",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Who"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "members",
+                    "teams",
+                    "limits",
+                    "keys",
+                    "review",
+                    "billing",
+                    "orgs",
+                    "plans",
+                    "gifts",
+                    "models",
+                    "marketplace",
+                    "featured",
+                    "glyphh"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit Log",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/audit.csv": {
+      "get": {
+        "operationId": "exportAuditLog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "who",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Who"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "members",
+                    "teams",
+                    "limits",
+                    "keys",
+                    "review",
+                    "billing",
+                    "orgs",
+                    "plans",
+                    "gifts",
+                    "models",
+                    "marketplace",
+                    "featured",
+                    "glyphh"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Audit Log",
         "tags": [
           "org"
         ]
@@ -8989,6 +11490,47 @@
         ]
       }
     },
+    "/v1/org/invites/many": {
+      "post": {
+        "operationId": "inviteMany",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMany"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite Many",
+        "tags": [
+          "org"
+        ]
+      }
+    },
     "/v1/org/invites/{invite_id}": {
       "delete": {
         "operationId": "revokeInvite",
@@ -9020,6 +11562,395 @@
           }
         },
         "summary": "Revoke Invite",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/limits/{kind}": {
+      "get": {
+        "operationId": "getLimits",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "models",
+                "connections"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A team's list; the org's when left out",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A team's list; the org's when left out",
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Limits",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/limits/{kind}/entries": {
+      "post": {
+        "operationId": "addLimitEntries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "models",
+                "connections"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A team's list; the org's when left out",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A team's list; the org's when left out",
+              "title": "Team"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Entries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Limit Entries",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/limits/{kind}/entries/remove": {
+      "post": {
+        "operationId": "removeLimitEntries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "models",
+                "connections"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A team's list; the org's when left out",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A team's list; the org's when left out",
+              "title": "Team"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Entries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Limit Entries",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/limits/{kind}/impact": {
+      "get": {
+        "operationId": "getLimitImpact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "models",
+                "connections"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A team's list; the org's when left out",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A team's list; the org's when left out",
+              "title": "Team"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Limit Impact",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/limits/{kind}/switch": {
+      "put": {
+        "operationId": "setLimit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "models",
+                "connections"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A team's list; the org's when left out",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A team's list; the org's when left out",
+              "title": "Team"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Switch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Limit",
         "tags": [
           "org"
         ]
@@ -9134,6 +12065,570 @@
         "summary": "Update Member",
         "tags": [
           "org"
+        ]
+      }
+    },
+    "/v1/org/members/{user_id}/teams": {
+      "get": {
+        "operationId": "getMemberTeams",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberTeams"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Member Teams",
+        "tags": [
+          "org"
+        ]
+      },
+      "put": {
+        "operationId": "setMemberTeams",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamsOf"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberTeams"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Member Teams",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/people": {
+      "get": {
+        "operationId": "listPeople",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "org_admin",
+                    "user"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "description": "Team ids, or none for people in no team",
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Team ids, or none for people in no team",
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeoplePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List People",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/teams": {
+      "get": {
+        "operationId": "listTeams",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamView"
+                  },
+                  "title": "Response Listteams",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Teams",
+        "tags": [
+          "org"
+        ]
+      },
+      "post": {
+        "operationId": "createTeam",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Team",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/teams/{team_id}": {
+      "delete": {
+        "operationId": "deleteTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Team",
+        "tags": [
+          "org"
+        ]
+      },
+      "get": {
+        "operationId": "getTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Team",
+        "tags": [
+          "org"
+        ]
+      },
+      "patch": {
+        "operationId": "changeTeam",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Team",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/teams/{team_id}/members": {
+      "post": {
+        "operationId": "addTeamMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/People"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Team Members",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/org/teams/{team_id}/members/{user_id}": {
+      "delete": {
+        "operationId": "removeTeamMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Team Member",
+        "tags": [
+          "org"
+        ]
+      }
+    },
+    "/v1/panel/session": {
+      "post": {
+        "description": "The ticket the panel's tool handed it, once, for a token reaching only what the panel shows.",
+        "operationId": "openPanelSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ticket"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Opened",
+        "tags": [
+          "panels"
+        ]
+      }
+    },
+    "/v1/panel/session/renew": {
+      "post": {
+        "description": "Another hour for an open panel.",
+        "operationId": "renewPanelSession",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Renewed",
+        "tags": [
+          "panels"
         ]
       }
     },
@@ -10524,7 +14019,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/Waiting"
+                    "$ref": "#/components/schemas/InReview"
                   },
                   "title": "Response Reviewqueue",
                   "type": "array"

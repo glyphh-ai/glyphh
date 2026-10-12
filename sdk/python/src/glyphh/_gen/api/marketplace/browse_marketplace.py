@@ -7,6 +7,7 @@ from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.browse_marketplace_kind_type_0 import BrowseMarketplaceKindType0
 from ...models.http_validation_error import HTTPValidationError
+from ...models.market_page import MarketPage
 from ...types import UNSET, Response, Unset
 
 
@@ -62,7 +63,14 @@ def _get_kwargs(
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> HTTPValidationError | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> HTTPValidationError | MarketPage | None:
+    if response.status_code == 200:
+        response_200 = MarketPage.from_dict(response.json())
+
+        return response_200
+
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
 
@@ -74,7 +82,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[HTTPValidationError]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[HTTPValidationError | MarketPage]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -92,7 +102,7 @@ def sync_detailed(
     q: str | Unset = "",
     page: int | Unset = 1,
     size: int | Unset = 24,
-) -> Response[HTTPValidationError]:
+) -> Response[HTTPValidationError | MarketPage]:
     """Browse
 
      Search what is listed for me, most added first, with how many of each type and category.
@@ -110,7 +120,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError]
+        Response[HTTPValidationError | MarketPage]
     """
 
     kwargs = _get_kwargs(
@@ -138,7 +148,7 @@ def sync(
     q: str | Unset = "",
     page: int | Unset = 1,
     size: int | Unset = 24,
-) -> HTTPValidationError | None:
+) -> HTTPValidationError | MarketPage | None:
     """Browse
 
      Search what is listed for me, most added first, with how many of each type and category.
@@ -156,7 +166,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError
+        HTTPValidationError | MarketPage
     """
 
     return sync_detailed(
@@ -179,7 +189,7 @@ async def asyncio_detailed(
     q: str | Unset = "",
     page: int | Unset = 1,
     size: int | Unset = 24,
-) -> Response[HTTPValidationError]:
+) -> Response[HTTPValidationError | MarketPage]:
     """Browse
 
      Search what is listed for me, most added first, with how many of each type and category.
@@ -197,7 +207,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError]
+        Response[HTTPValidationError | MarketPage]
     """
 
     kwargs = _get_kwargs(
@@ -223,7 +233,7 @@ async def asyncio(
     q: str | Unset = "",
     page: int | Unset = 1,
     size: int | Unset = 24,
-) -> HTTPValidationError | None:
+) -> HTTPValidationError | MarketPage | None:
     """Browse
 
      Search what is listed for me, most added first, with how many of each type and category.
@@ -241,7 +251,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError
+        HTTPValidationError | MarketPage
     """
 
     return (

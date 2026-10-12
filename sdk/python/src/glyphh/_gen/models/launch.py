@@ -15,15 +15,23 @@ class Launch:
     """
     Attributes:
         expires_at (datetime.datetime):
+        page (str):
+        ticket (str):
         url (str):
     """
 
     expires_at: datetime.datetime
+    page: str
+    ticket: str
     url: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         expires_at = self.expires_at.isoformat()
+
+        page = self.page
+
+        ticket = self.ticket
 
         url = self.url
 
@@ -32,6 +40,8 @@ class Launch:
         field_dict.update(
             {
                 "expires_at": expires_at,
+                "page": page,
+                "ticket": ticket,
                 "url": url,
             }
         )
@@ -43,10 +53,16 @@ class Launch:
         d = dict(src_dict)
         expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
+        page = d.pop("page")
+
+        ticket = d.pop("ticket")
+
         url = d.pop("url")
 
         launch = cls(
             expires_at=expires_at,
+            page=page,
+            ticket=ticket,
             url=url,
         )
 

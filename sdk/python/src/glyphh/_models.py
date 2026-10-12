@@ -8,7 +8,9 @@ from glyphh._gen.models.health import Health as _Health
 from glyphh._gen.models.host import Host as _Host
 from glyphh._gen.models.me import Me as _Me
 from glyphh._gen.models.me_org import MeOrg as _MeOrg
+from glyphh._gen.models.profile_change import ProfileChange
 from glyphh._gen.models.settings import Settings as _Settings
+from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._gen.types import Unset
 
 
@@ -94,3 +96,15 @@ def settings_of(m: _Settings) -> Settings:
 
 def host_of(m: _Host) -> Host:
     return Host(id=str(m.id), name=m.name, connected_at=m.connected_at, org=_opt(m.org))
+
+
+def settings_change(
+    theme: str | None, rail_collapsed: bool | None, page_sizes: dict[str, int] | None
+) -> SettingsChange:
+    given = {"theme": theme, "rail_collapsed": rail_collapsed, "page_sizes": page_sizes}
+    return SettingsChange.from_dict({k: v for k, v in given.items() if v is not None})
+
+
+def profile_change(first_name: str | None, last_name: str | None) -> ProfileChange:
+    given = {"first_name": first_name, "last_name": last_name}
+    return ProfileChange.from_dict({k: v for k, v in given.items() if v is not None})

@@ -6,27 +6,59 @@ from typing import Any, TypeVar
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-T = TypeVar("T", bound="StepConfig")
+T = TypeVar("T", bound="MemberKeys")
 
 
 @_attrs_define
-class StepConfig:
+class MemberKeys:
+    """
+    Attributes:
+        keys (int):
+        on (bool):
+        people (int):
+    """
+
+    keys: int
+    on: bool
+    people: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        keys = self.keys
+
+        on = self.on
+
+        people = self.people
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
+        field_dict.update(
+            {
+                "keys": keys,
+                "on": on,
+                "people": people,
+            }
+        )
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        step_config = cls()
+        keys = d.pop("keys")
 
-        step_config.additional_properties = d
-        return step_config
+        on = d.pop("on")
+
+        people = d.pop("people")
+
+        member_keys = cls(
+            keys=keys,
+            on=on,
+            people=people,
+        )
+
+        member_keys.additional_properties = d
+        return member_keys
 
     @property
     def additional_keys(self) -> list[str]:

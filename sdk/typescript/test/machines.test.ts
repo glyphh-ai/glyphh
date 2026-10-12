@@ -34,7 +34,7 @@ describe("machines", () => {
 
   it("opens a machine on its home or one of its super powers", async () => {
     const seen: Request[] = [];
-    const launch = { url: "https://m-1.glyphh.ai/open?ticket=x", expires_at: "2026-10-12T12:01:00Z" };
+    const launch = { url: "http://platform.test/machines/m-1", ticket: "x", page: "machine", expires_at: "2026-10-12T12:01:00Z" };
     expect(await glyphh(launch, seen).machines.open("m-1")).toEqual(launch);
     await glyphh(launch, seen).machines.open("m-1", "s-1");
     expect(await Promise.all(seen.map((r) => r.json()))).toEqual([{ super_power: null }, { super_power: "s-1" }]);

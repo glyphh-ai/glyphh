@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, cast
-from uuid import UUID
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -13,61 +12,48 @@ T = TypeVar("T", bound="Waiting")
 
 @_attrs_define
 class Waiting:
-    """
+    """A machine waiting for the member's yes, as the Approve a code page shows it.
+
     Attributes:
-        by (str):
-        kind (str):
-        listing_id (UUID):
-        listing_version_id (UUID):
+        expires_at (datetime.datetime):
+        fingerprint (str):
+        host (str):
         name (str):
-        reach (str):
-        submitted_at (datetime.datetime | None):
-        version (str):
+        platform (str):
+        user_code (str):
     """
 
-    by: str
-    kind: str
-    listing_id: UUID
-    listing_version_id: UUID
+    expires_at: datetime.datetime
+    fingerprint: str
+    host: str
     name: str
-    reach: str
-    submitted_at: datetime.datetime | None
-    version: str
+    platform: str
+    user_code: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        by = self.by
+        expires_at = self.expires_at.isoformat()
 
-        kind = self.kind
+        fingerprint = self.fingerprint
 
-        listing_id = str(self.listing_id)
-
-        listing_version_id = str(self.listing_version_id)
+        host = self.host
 
         name = self.name
 
-        reach = self.reach
+        platform = self.platform
 
-        submitted_at: str | None
-        if isinstance(self.submitted_at, datetime.datetime):
-            submitted_at = self.submitted_at.isoformat()
-        else:
-            submitted_at = self.submitted_at
-
-        version = self.version
+        user_code = self.user_code
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "by": by,
-                "kind": kind,
-                "listing_id": listing_id,
-                "listing_version_id": listing_version_id,
+                "expires_at": expires_at,
+                "fingerprint": fingerprint,
+                "host": host,
                 "name": name,
-                "reach": reach,
-                "submitted_at": submitted_at,
-                "version": version,
+                "platform": platform,
+                "user_code": user_code,
             }
         )
 
@@ -76,44 +62,25 @@ class Waiting:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        by = d.pop("by")
+        expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
-        kind = d.pop("kind")
+        fingerprint = d.pop("fingerprint")
 
-        listing_id = UUID(d.pop("listing_id"))
-
-        listing_version_id = UUID(d.pop("listing_version_id"))
+        host = d.pop("host")
 
         name = d.pop("name")
 
-        reach = d.pop("reach")
+        platform = d.pop("platform")
 
-        def _parse_submitted_at(data: object) -> datetime.datetime | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                submitted_at_type_0 = datetime.datetime.fromisoformat(data)
-
-                return submitted_at_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(datetime.datetime | None, data)
-
-        submitted_at = _parse_submitted_at(d.pop("submitted_at"))
-
-        version = d.pop("version")
+        user_code = d.pop("user_code")
 
         waiting = cls(
-            by=by,
-            kind=kind,
-            listing_id=listing_id,
-            listing_version_id=listing_version_id,
+            expires_at=expires_at,
+            fingerprint=fingerprint,
+            host=host,
             name=name,
-            reach=reach,
-            submitted_at=submitted_at,
-            version=version,
+            platform=platform,
+            user_code=user_code,
         )
 
         waiting.additional_properties = d

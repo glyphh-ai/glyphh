@@ -26,7 +26,7 @@ export class MachinesApi {
     return unwrap(await listInstalledSuperPowers({ client: this.#client, path: { machine_id: machineId }, query }));
   }
 
-  /** A one-minute, one-time link into the machine's UI: its home, or one of its super powers. */
+  /** The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it. */
   async open(machineId: string, superPower?: string): Promise<Launch> {
     return unwrap(await openMachine({ client: this.#client, path: { machine_id: machineId }, body: { super_power: superPower ?? null } }));
   }

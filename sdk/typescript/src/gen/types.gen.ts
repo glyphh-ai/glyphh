@@ -135,6 +135,128 @@ export type Answered = {
 };
 
 /**
+ * Asked
+ */
+export type Asked = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Interval Seconds
+     */
+    interval_seconds: number;
+    /**
+     * User Code
+     */
+    user_code: string;
+    /**
+     * Verify Url
+     */
+    verify_url: string;
+};
+
+/**
+ * AuditEntry
+ */
+export type AuditEntry = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * After
+     */
+    after: {
+        [key: string]: unknown;
+    };
+    /**
+     * At
+     */
+    at: string;
+    /**
+     * Before
+     */
+    before: {
+        [key: string]: unknown;
+    };
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Org
+     */
+    org: string | null;
+    /**
+     * Region
+     */
+    region: string | null;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Source Detail
+     */
+    source_detail: string | null;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Target Id
+     */
+    target_id: string | null;
+    /**
+     * Target Kind
+     */
+    target_kind: string;
+    /**
+     * Target Label
+     */
+    target_label: string;
+    /**
+     * Trace Id
+     */
+    trace_id: string | null;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Who
+     */
+    who: string;
+    /**
+     * Who Id
+     */
+    who_id: string | null;
+};
+
+/**
+ * AuditPage
+ */
+export type AuditPage = {
+    /**
+     * Entries
+     */
+    entries: Array<AuditEntry>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * AutoTopUp
  */
 export type AutoTopUp = {
@@ -213,7 +335,7 @@ export type Billing = {
      * Billing Email
      */
     billing_email: string | null;
-    card: GlyphhServerOpsBillingSummaryCard | null;
+    card: PaymentCard | null;
     credit: Credit;
     /**
      * Extra Machines
@@ -327,6 +449,40 @@ export type CatalogPage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * CliView
+ */
+export type CliView = {
+    /**
+     * Account
+     */
+    account: string | null;
+    /**
+     * Cli
+     */
+    cli: string;
+    /**
+     * Login Error
+     */
+    login_error: string | null;
+    /**
+     * Login Step
+     */
+    login_step: string;
+    /**
+     * Signed In
+     */
+    signed_in: boolean;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Version
+     */
+    version: string;
 };
 
 /**
@@ -651,6 +807,52 @@ export type DaySpend = {
 };
 
 /**
+ * Ended
+ */
+export type Ended = {
+    /**
+     * Ok
+     */
+    ok: boolean;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * Entries
+ */
+export type Entries = {
+    /**
+     * Ids
+     */
+    ids: Array<string>;
+};
+
+/**
+ * Entry
+ */
+export type Entry = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Provider
+     */
+    provider: string | null;
+    /**
+     * Users
+     */
+    users: number;
+};
+
+/**
  * Face
  *
  * A super power as a machine shows it: its face, its name, what it is doing there.
@@ -725,7 +927,43 @@ export type Flow = {
     /**
      * Nodes
      */
-    nodes: Array<Step>;
+    nodes: Array<FlowStep>;
+};
+
+/**
+ * FlowStep
+ */
+export type FlowStep = {
+    /**
+     * Checkpoint
+     */
+    checkpoint?: boolean;
+    /**
+     * Config
+     */
+    config?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: 'trigger' | 'agent' | 'model' | 'connection' | 'decide' | 'memory' | 'skill' | 'checkpoint' | 'output';
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * X
+     */
+    x?: number;
+    /**
+     * Y
+     */
+    y?: number;
 };
 
 /**
@@ -907,15 +1145,15 @@ export type Home = {
     /**
      * Featured
      */
-    featured: Array<GlyphhServerOpsDiscoverMarketCard>;
+    featured: Array<MarketCard>;
     /**
      * Newest
      */
-    newest: Array<GlyphhServerOpsDiscoverMarketCard>;
+    newest: Array<MarketCard>;
     /**
      * Popular
      */
-    popular: Array<GlyphhServerOpsDiscoverMarketCard>;
+    popular: Array<MarketCard>;
 };
 
 /**
@@ -940,6 +1178,58 @@ export type Host = {
      * the org it acts in now: its newest sign-in's
      */
     org: string | null;
+};
+
+/**
+ * Impact
+ */
+export type Impact = {
+    /**
+     * People
+     */
+    people: number;
+    /**
+     * Powers
+     */
+    powers: number;
+};
+
+/**
+ * InReview
+ */
+export type InReview = {
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Listing Id
+     */
+    listing_id: string;
+    /**
+     * Listing Version Id
+     */
+    listing_version_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Reach
+     */
+    reach: string;
+    /**
+     * Submitted At
+     */
+    submitted_at: string | null;
+    /**
+     * Version
+     */
+    version: string;
 };
 
 /**
@@ -974,6 +1264,38 @@ export type InviteAnswer = {
      * Invite
      */
     invite: string;
+};
+
+/**
+ * InviteMany
+ */
+export type InviteMany = {
+    /**
+     * Emails
+     */
+    emails: Array<string>;
+    /**
+     * Role
+     */
+    role?: 'org_admin' | 'user';
+    /**
+     * Team Ids
+     */
+    team_ids?: Array<string>;
+};
+
+/**
+ * InviteResult
+ */
+export type InviteResult = {
+    /**
+     * Refused
+     */
+    refused: Array<Refused>;
+    /**
+     * Sent
+     */
+    sent: Array<Sent>;
 };
 
 /**
@@ -1109,6 +1431,76 @@ export type KeyIn = {
 };
 
 /**
+ * KeyView
+ */
+export type KeyView = {
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Owner
+     */
+    owner: string;
+    /**
+     * Owner Id
+     */
+    owner_id: string;
+    /**
+     * Prefix
+     */
+    prefix: string;
+    /**
+     * Status
+     */
+    status: 'active' | 'expired' | 'revoked' | 'off';
+};
+
+/**
+ * KeysPage
+ */
+export type KeysPage = {
+    /**
+     * Ask
+     *
+     * The org admins to ask, when my own keys are off
+     */
+    ask: Array<string>;
+    /**
+     * Keys
+     */
+    keys: Array<KeyView>;
+    /**
+     * Live
+     */
+    live: number;
+    /**
+     * Member Keys
+     */
+    member_keys: boolean;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * Launch
  */
 export type Launch = {
@@ -1116,6 +1508,14 @@ export type Launch = {
      * Expires At
      */
     expires_at: string;
+    /**
+     * Page
+     */
+    page: string;
+    /**
+     * Ticket
+     */
+    ticket: string;
     /**
      * Url
      */
@@ -1164,6 +1564,40 @@ export type LedgerPage = {
      * Entries
      */
     entries: Array<LedgerEntry>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * LimitView
+ */
+export type LimitView = {
+    /**
+     * Entries
+     */
+    entries: Array<Entry>;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Left Out People
+     */
+    left_out_people: number;
+    /**
+     * Limited
+     */
+    limited: boolean;
+    /**
+     * Org Limited
+     */
+    org_limited: boolean;
+    /**
+     * Team
+     */
+    team: string | null;
     /**
      * Total
      */
@@ -1383,6 +1817,117 @@ export type MachinePage = {
 };
 
 /**
+ * MachineSays
+ *
+ * What a machine says it is when it signs in.
+ */
+export type MachineSays = {
+    /**
+     * Host
+     */
+    host: 'fly' | 'aws' | 'azure' | 'gcp' | 'digitalocean' | 'hetzner' | 'vps' | 'docker';
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Platform
+     */
+    platform: 'macos' | 'windows' | 'linux';
+    /**
+     * Ssh Public Key
+     */
+    ssh_public_key: string;
+};
+
+/**
+ * MadeKey
+ */
+export type MadeKey = {
+    key: KeyView;
+    /**
+     * Secret
+     */
+    secret: string;
+};
+
+/**
+ * Maker
+ */
+export type Maker = {
+    /**
+     * Keys
+     */
+    keys: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * MarketCard
+ */
+export type MarketCard = {
+    /**
+     * Added
+     */
+    added: boolean;
+    /**
+     * Adds
+     */
+    adds: number;
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number | null;
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Has Icon
+     */
+    has_icon: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
  * MarketDetail
  */
 export type MarketDetail = {
@@ -1473,7 +2018,7 @@ export type MarketPage = {
     /**
      * Listings
      */
-    listings: Array<GlyphhServerOpsDiscoverMarketCard>;
+    listings: Array<MarketCard>;
     /**
      * Total
      */
@@ -1597,6 +2142,48 @@ export type MemberChange = {
      * Role
      */
     role?: 'org_admin' | 'user' | null;
+};
+
+/**
+ * MemberKeys
+ */
+export type MemberKeys = {
+    /**
+     * Keys
+     */
+    keys: number;
+    /**
+     * On
+     */
+    on: boolean;
+    /**
+     * People
+     */
+    people: number;
+};
+
+/**
+ * MemberKeysChange
+ */
+export type MemberKeysChange = {
+    /**
+     * On
+     */
+    on: boolean;
+};
+
+/**
+ * MemberTeams
+ */
+export type MemberTeams = {
+    /**
+     * Teams
+     */
+    teams: Array<string>;
+    /**
+     * User Id
+     */
+    user_id: string;
 };
 
 /**
@@ -1766,6 +2353,16 @@ export type NewFolder = {
 };
 
 /**
+ * NewHost
+ */
+export type NewHost = {
+    /**
+     * Host
+     */
+    host: 'fly' | 'aws' | 'azure' | 'gcp' | 'digitalocean' | 'hetzner' | 'vps' | 'docker';
+};
+
+/**
  * NewInvite
  */
 export type NewInvite = {
@@ -1777,6 +2374,20 @@ export type NewInvite = {
      * Role
      */
     role?: 'org_admin' | 'user';
+};
+
+/**
+ * NewKey
+ */
+export type NewKey = {
+    /**
+     * Expires
+     */
+    expires?: '30d' | '90d' | '1y' | 'never';
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -1866,13 +2477,35 @@ export type NextInvoice = {
 };
 
 /**
+ * OneClick
+ */
+export type OneClick = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+};
+
+/**
  * OpenIn
  */
 export type OpenIn = {
     /**
+     * Panel
+     */
+    panel?: 'machine' | 'thread' | 'needs_you';
+    /**
      * Super Power
      */
     super_power?: string | null;
+    /**
+     * Thread
+     */
+    thread?: string | null;
 };
 
 /**
@@ -1999,6 +2632,32 @@ export type Page = {
 };
 
 /**
+ * PanelSession
+ */
+export type PanelSession = {
+    /**
+     * Access Token
+     */
+    access_token: string;
+    /**
+     * Expires In
+     */
+    expires_in: number;
+    /**
+     * Machine Id
+     */
+    machine_id: string | null;
+    /**
+     * Panel
+     */
+    panel: string;
+    /**
+     * Thread Id
+     */
+    thread_id?: string | null;
+};
+
+/**
  * Part
  *
  * A skill inside a plugin, or a tool of an app.
@@ -2012,6 +2671,38 @@ export type Part = {
      * Name
      */
     name: string;
+};
+
+/**
+ * Pasted
+ */
+export type Pasted = {
+    /**
+     * Code
+     */
+    code: string;
+};
+
+/**
+ * PaymentCard
+ */
+export type PaymentCard = {
+    /**
+     * Brand
+     */
+    brand: string;
+    /**
+     * Exp Month
+     */
+    exp_month: number | null;
+    /**
+     * Exp Year
+     */
+    exp_year: number | null;
+    /**
+     * Last4
+     */
+    last4: string;
 };
 
 /**
@@ -2040,6 +2731,76 @@ export type PaymentStart = {
      * Stripe Publishable Key
      */
     stripe_publishable_key: string;
+};
+
+/**
+ * People
+ */
+export type People = {
+    /**
+     * User Ids
+     */
+    user_ids: Array<string>;
+};
+
+/**
+ * PeoplePage
+ */
+export type PeoplePage = {
+    /**
+     * Max Seats
+     */
+    max_seats: number | null;
+    /**
+     * People
+     */
+    people: Array<Person>;
+    /**
+     * Seats Taken
+     */
+    seats_taken: number;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * Person
+ */
+export type Person = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: 'member' | 'invite';
+    /**
+     * Name
+     */
+    name: string | null;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * Since
+     */
+    since: string;
+    /**
+     * Status
+     */
+    status: 'active' | 'invited' | 'disabled';
+    /**
+     * Teams
+     */
+    teams: Array<string>;
 };
 
 /**
@@ -2318,6 +3079,20 @@ export type QuestionPage = {
 };
 
 /**
+ * Refused
+ */
+export type Refused = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * RenameOrg
  */
 export type RenameOrg = {
@@ -2514,6 +3289,24 @@ export type Searched = {
 };
 
 /**
+ * Sent
+ */
+export type Sent = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Link
+     */
+    link: string;
+};
+
+/**
  * Service
  */
 export type Service = {
@@ -2680,35 +3473,63 @@ export type Slots = {
  */
 export type Step = {
     /**
-     * Checkpoint
+     * Code
      */
-    checkpoint?: boolean;
+    code?: string | null;
     /**
-     * Config
+     * Expires At
      */
-    config?: {
-        [key: string]: unknown;
-    };
+    expires_at?: string | null;
+    /**
+     * Login
+     */
+    login: string;
+    /**
+     * Step
+     */
+    step: 'open_link' | 'enter_code';
+    /**
+     * Url
+     */
+    url: string;
+};
+
+/**
+ * SuperPowerCard
+ */
+export type SuperPowerCard = {
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number;
+    /**
+     * Description
+     */
+    description: string;
     /**
      * Id
      */
     id: string;
     /**
-     * Kind
+     * Last Active At
      */
-    kind: 'trigger' | 'agent' | 'model' | 'connection' | 'decide' | 'memory' | 'skill' | 'checkpoint' | 'output';
+    last_active_at: string | null;
     /**
-     * Label
+     * Machines
      */
-    label: string;
+    machines: Array<string>;
     /**
-     * X
+     * Name
      */
-    x?: number;
+    name: string;
     /**
-     * Y
+     * Status
      */
-    y?: number;
+    status: string;
 };
 
 /**
@@ -2796,7 +3617,7 @@ export type SuperPowerPage = {
     /**
      * Super Powers
      */
-    super_powers: Array<GlyphhServerOpsSuperPowersPageCard>;
+    super_powers: Array<SuperPowerCard>;
     /**
      * Total
      */
@@ -2894,6 +3715,88 @@ export type SuperPowerView = {
      * Voice Name
      */
     voice_name: string | null;
+};
+
+/**
+ * Switch
+ */
+export type Switch = {
+    /**
+     * On
+     */
+    on: boolean;
+};
+
+/**
+ * TeamChange
+ */
+export type TeamChange = {
+    /**
+     * Limit Connections
+     */
+    limit_connections?: boolean | null;
+    /**
+     * Limit Models
+     */
+    limit_models?: boolean | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+};
+
+/**
+ * TeamIn
+ */
+export type TeamIn = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * TeamView
+ */
+export type TeamView = {
+    /**
+     * Allowed Connections
+     */
+    allowed_connections: number;
+    /**
+     * Allowed Models
+     */
+    allowed_models: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Limit Connections
+     */
+    limit_connections: boolean;
+    /**
+     * Limit Models
+     */
+    limit_models: boolean;
+    /**
+     * Members
+     */
+    members: number;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * TeamsOf
+ */
+export type TeamsOf = {
+    /**
+     * Team Ids
+     */
+    team_ids: Array<string>;
 };
 
 /**
@@ -3052,6 +3955,16 @@ export type ThreadStart = {
 };
 
 /**
+ * Ticket
+ */
+export type Ticket = {
+    /**
+     * Ticket
+     */
+    ticket: string;
+};
+
+/**
  * Tool
  */
 export type Tool = {
@@ -3177,6 +4090,35 @@ export type TopUpPage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * Trade
+ */
+export type Trade = {
+    /**
+     * Code
+     */
+    code: string;
+    machine?: MachineSays | null;
+};
+
+/**
+ * Traded
+ */
+export type Traded = {
+    /**
+     * Machine Id
+     */
+    machine_id?: string | null;
+    /**
+     * Status
+     */
+    status: 'pending' | 'slow_down' | 'denied' | 'expired' | 'approved';
+    /**
+     * Token
+     */
+    token?: string | null;
 };
 
 /**
@@ -3315,159 +4257,65 @@ export type VersionInfo = {
 
 /**
  * Waiting
+ *
+ * A machine waiting for the member's yes, as the Approve a code page shows it.
  */
 export type Waiting = {
     /**
-     * By
+     * Expires At
      */
-    by: string;
+    expires_at: string;
     /**
-     * Kind
+     * Fingerprint
      */
-    kind: string;
+    fingerprint: string;
     /**
-     * Listing Id
+     * Host
      */
-    listing_id: string;
-    /**
-     * Listing Version Id
-     */
-    listing_version_id: string;
+    host: string;
     /**
      * Name
      */
     name: string;
     /**
-     * Reach
+     * Platform
      */
-    reach: string;
+    platform: string;
     /**
-     * Submitted At
+     * User Code
      */
-    submitted_at: string | null;
-    /**
-     * Version
-     */
-    version: string;
+    user_code: string;
 };
 
-/**
- * Card
- */
-export type GlyphhServerOpsBillingSummaryCard = {
-    /**
-     * Brand
-     */
-    brand: string;
-    /**
-     * Exp Month
-     */
-    exp_month: number | null;
-    /**
-     * Exp Year
-     */
-    exp_year: number | null;
-    /**
-     * Last4
-     */
-    last4: string;
+export type RevokeApiKeyData = {
+    body?: never;
+    path: {
+        /**
+         * Key Id
+         */
+        key_id: string;
+    };
+    query?: never;
+    url: '/v1/api-keys/{key_id}/revoke';
 };
 
-/**
- * Card
- */
-export type GlyphhServerOpsDiscoverMarketCard = {
+export type RevokeApiKeyErrors = {
     /**
-     * Added
+     * Validation Error
      */
-    added: boolean;
-    /**
-     * Adds
-     */
-    adds: number;
-    /**
-     * Avatar Color
-     */
-    avatar_color: string | null;
-    /**
-     * Avatar Variant
-     */
-    avatar_variant: number | null;
-    /**
-     * By
-     */
-    by: string;
-    /**
-     * Category
-     */
-    category: string | null;
-    /**
-     * Has Icon
-     */
-    has_icon: boolean;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Published At
-     */
-    published_at: string;
-    /**
-     * Summary
-     */
-    summary: string;
-    /**
-     * Type
-     */
-    type: string;
-    /**
-     * Version
-     */
-    version: string;
+    422: HttpValidationError;
 };
 
-/**
- * Card
- */
-export type GlyphhServerOpsSuperPowersPageCard = {
+export type RevokeApiKeyError = RevokeApiKeyErrors[keyof RevokeApiKeyErrors];
+
+export type RevokeApiKeyResponses = {
     /**
-     * Avatar Color
+     * Successful Response
      */
-    avatar_color: string | null;
-    /**
-     * Avatar Variant
-     */
-    avatar_variant: number;
-    /**
-     * Description
-     */
-    description: string;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Last Active At
-     */
-    last_active_at: string | null;
-    /**
-     * Machines
-     */
-    machines: Array<string>;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Status
-     */
-    status: string;
+    200: KeyView;
 };
+
+export type RevokeApiKeyResponse = RevokeApiKeyResponses[keyof RevokeApiKeyResponses];
 
 export type AllowScreenData = {
     body?: never;
@@ -4220,6 +5068,146 @@ export type WithdrawListingResponses = {
 
 export type WithdrawListingResponse = WithdrawListingResponses[keyof WithdrawListingResponses];
 
+export type GetMachineSignInData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/v1/machine-sign-ins/{user_code}';
+};
+
+export type GetMachineSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetMachineSignInError = GetMachineSignInErrors[keyof GetMachineSignInErrors];
+
+export type GetMachineSignInResponses = {
+    /**
+     * Successful Response
+     */
+    200: Waiting;
+};
+
+export type GetMachineSignInResponse = GetMachineSignInResponses[keyof GetMachineSignInResponses];
+
+export type ApproveMachineSignInData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/v1/machine-sign-ins/{user_code}/approve';
+};
+
+export type ApproveMachineSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApproveMachineSignInError = ApproveMachineSignInErrors[keyof ApproveMachineSignInErrors];
+
+export type ApproveMachineSignInResponses = {
+    /**
+     * Successful Response
+     */
+    200: Waiting;
+};
+
+export type ApproveMachineSignInResponse = ApproveMachineSignInResponses[keyof ApproveMachineSignInResponses];
+
+export type DenyMachineSignInData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/v1/machine-sign-ins/{user_code}/deny';
+};
+
+export type DenyMachineSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DenyMachineSignInError = DenyMachineSignInErrors[keyof DenyMachineSignInErrors];
+
+export type DenyMachineSignInResponses = {
+    /**
+     * Successful Response
+     */
+    200: Waiting;
+};
+
+export type DenyMachineSignInResponse = DenyMachineSignInResponses[keyof DenyMachineSignInResponses];
+
+export type AskMachineSignInData = {
+    body: MachineSays;
+    path?: never;
+    query?: never;
+    url: '/v1/machine/sign-ins';
+};
+
+export type AskMachineSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AskMachineSignInError = AskMachineSignInErrors[keyof AskMachineSignInErrors];
+
+export type AskMachineSignInResponses = {
+    /**
+     * Successful Response
+     */
+    201: Asked;
+};
+
+export type AskMachineSignInResponse = AskMachineSignInResponses[keyof AskMachineSignInResponses];
+
+export type TradeMachineSignInData = {
+    body: Trade;
+    path?: never;
+    query?: never;
+    url: '/v1/machine/sign-ins/token';
+};
+
+export type TradeMachineSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type TradeMachineSignInError = TradeMachineSignInErrors[keyof TradeMachineSignInErrors];
+
+export type TradeMachineSignInResponses = {
+    /**
+     * Successful Response
+     */
+    200: Traded;
+};
+
+export type TradeMachineSignInResponse = TradeMachineSignInResponses[keyof TradeMachineSignInResponses];
+
 export type ListMachinesData = {
     body?: never;
     path?: never;
@@ -4253,6 +5241,193 @@ export type ListMachinesResponses = {
 };
 
 export type ListMachinesResponse = ListMachinesResponses[keyof ListMachinesResponses];
+
+export type MintOneClickHostData = {
+    body: NewHost;
+    path?: never;
+    query?: never;
+    url: '/v1/machines/one-click';
+};
+
+export type MintOneClickHostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MintOneClickHostError = MintOneClickHostErrors[keyof MintOneClickHostErrors];
+
+export type MintOneClickHostResponses = {
+    /**
+     * Successful Response
+     */
+    201: OneClick;
+};
+
+export type MintOneClickHostResponse = MintOneClickHostResponses[keyof MintOneClickHostResponses];
+
+export type ListMachineClisData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/clis';
+};
+
+export type ListMachineClisErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMachineClisError = ListMachineClisErrors[keyof ListMachineClisErrors];
+
+export type ListMachineClisResponses = {
+    /**
+     * Response Listmachineclis
+     *
+     * Successful Response
+     */
+    200: Array<CliView>;
+};
+
+export type ListMachineClisResponse = ListMachineClisResponses[keyof ListMachineClisResponses];
+
+export type CancelCliSignInData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Cli
+         */
+        cli: 'claude_code' | 'codex';
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/clis/{cli}/sign-in';
+};
+
+export type CancelCliSignInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelCliSignInError = CancelCliSignInErrors[keyof CancelCliSignInErrors];
+
+export type CancelCliSignInResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type CancelCliSignInResponse = CancelCliSignInResponses[keyof CancelCliSignInResponses];
+
+export type SignInCliData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Cli
+         */
+        cli: 'claude_code' | 'codex';
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/clis/{cli}/sign-in';
+};
+
+export type SignInCliErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SignInCliError = SignInCliErrors[keyof SignInCliErrors];
+
+export type SignInCliResponses = {
+    /**
+     * Successful Response
+     */
+    200: Step;
+};
+
+export type SignInCliResponse = SignInCliResponses[keyof SignInCliResponses];
+
+export type PasteCliCodeData = {
+    body: Pasted;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Cli
+         */
+        cli: 'claude_code' | 'codex';
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/clis/{cli}/sign-in/code';
+};
+
+export type PasteCliCodeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PasteCliCodeError = PasteCliCodeErrors[keyof PasteCliCodeErrors];
+
+export type PasteCliCodeResponses = {
+    /**
+     * Successful Response
+     */
+    200: Ended;
+};
+
+export type PasteCliCodeResponse = PasteCliCodeResponses[keyof PasteCliCodeResponses];
+
+export type WatchMachineData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/events';
+};
+
+export type WatchMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type WatchMachineError = WatchMachineErrors[keyof WatchMachineErrors];
+
+export type WatchMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type OpenMachineData = {
     body: OpenIn;
@@ -4593,6 +5768,79 @@ export type ChangeMeResponses = {
 
 export type ChangeMeResponse = ChangeMeResponses[keyof ChangeMeResponses];
 
+export type ListMyApiKeysData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/me/api-keys';
+};
+
+export type ListMyApiKeysErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMyApiKeysError = ListMyApiKeysErrors[keyof ListMyApiKeysErrors];
+
+export type ListMyApiKeysResponses = {
+    /**
+     * Successful Response
+     */
+    200: KeysPage;
+};
+
+export type ListMyApiKeysResponse = ListMyApiKeysResponses[keyof ListMyApiKeysResponses];
+
+export type MakeApiKeyData = {
+    body: NewKey;
+    path?: never;
+    query?: never;
+    url: '/v1/me/api-keys';
+};
+
+export type MakeApiKeyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MakeApiKeyError = MakeApiKeyErrors[keyof MakeApiKeyErrors];
+
+export type MakeApiKeyResponses = {
+    /**
+     * Successful Response
+     */
+    201: MadeKey;
+};
+
+export type MakeApiKeyResponse = MakeApiKeyResponses[keyof MakeApiKeyResponses];
+
+export type WatchMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me/events';
+};
+
+export type WatchMeResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type ListHostsData = {
     body?: never;
     path?: never;
@@ -4804,6 +6052,217 @@ export type RenameOrgResponses = {
 };
 
 export type RenameOrgResponse = RenameOrgResponses[keyof RenameOrgResponses];
+
+export type ListOrgApiKeysData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Owner
+         */
+        owner?: string | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/org/api-keys';
+};
+
+export type ListOrgApiKeysErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListOrgApiKeysError = ListOrgApiKeysErrors[keyof ListOrgApiKeysErrors];
+
+export type ListOrgApiKeysResponses = {
+    /**
+     * Successful Response
+     */
+    200: KeysPage;
+};
+
+export type ListOrgApiKeysResponse = ListOrgApiKeysResponses[keyof ListOrgApiKeysResponses];
+
+export type ListApiKeyMakersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+    };
+    url: '/v1/org/api-keys/makers';
+};
+
+export type ListApiKeyMakersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListApiKeyMakersError = ListApiKeyMakersErrors[keyof ListApiKeyMakersErrors];
+
+export type ListApiKeyMakersResponses = {
+    /**
+     * Response Listapikeymakers
+     *
+     * Successful Response
+     */
+    200: Array<Maker>;
+};
+
+export type ListApiKeyMakersResponse = ListApiKeyMakersResponses[keyof ListApiKeyMakersResponses];
+
+export type GetMemberKeysData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/api-keys/member-keys';
+};
+
+export type GetMemberKeysResponses = {
+    /**
+     * Successful Response
+     */
+    200: MemberKeys;
+};
+
+export type GetMemberKeysResponse = GetMemberKeysResponses[keyof GetMemberKeysResponses];
+
+export type SetMemberKeysData = {
+    body: MemberKeysChange;
+    path?: never;
+    query?: never;
+    url: '/v1/org/api-keys/member-keys';
+};
+
+export type SetMemberKeysErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetMemberKeysError = SetMemberKeysErrors[keyof SetMemberKeysErrors];
+
+export type SetMemberKeysResponses = {
+    /**
+     * Successful Response
+     */
+    200: MemberKeys;
+};
+
+export type SetMemberKeysResponse = SetMemberKeysResponses[keyof SetMemberKeysResponses];
+
+export type ListAuditLogData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Who
+         */
+        who?: string | null;
+        /**
+         * Type
+         */
+        type?: 'members' | 'teams' | 'limits' | 'keys' | 'review' | 'billing' | 'orgs' | 'plans' | 'gifts' | 'models' | 'marketplace' | 'featured' | 'glyphh' | null;
+        /**
+         * Target
+         */
+        target?: string | null;
+    };
+    url: '/v1/org/audit';
+};
+
+export type ListAuditLogErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListAuditLogError = ListAuditLogErrors[keyof ListAuditLogErrors];
+
+export type ListAuditLogResponses = {
+    /**
+     * Successful Response
+     */
+    200: AuditPage;
+};
+
+export type ListAuditLogResponse = ListAuditLogResponses[keyof ListAuditLogResponses];
+
+export type ExportAuditLogData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Since
+         */
+        since?: string | null;
+        /**
+         * Until
+         */
+        until?: string | null;
+        /**
+         * Who
+         */
+        who?: string | null;
+        /**
+         * Type
+         */
+        type?: 'members' | 'teams' | 'limits' | 'keys' | 'review' | 'billing' | 'orgs' | 'plans' | 'gifts' | 'models' | 'marketplace' | 'featured' | 'glyphh' | null;
+        /**
+         * Target
+         */
+        target?: string | null;
+    };
+    url: '/v1/org/audit.csv';
+};
+
+export type ExportAuditLogErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportAuditLogError = ExportAuditLogErrors[keyof ExportAuditLogErrors];
+
+export type ExportAuditLogResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type ExportAuditLogResponse = ExportAuditLogResponses[keyof ExportAuditLogResponses];
 
 export type GetBillingData = {
     body?: never;
@@ -5182,6 +6641,31 @@ export type CreateInviteResponses = {
 
 export type CreateInviteResponse = CreateInviteResponses[keyof CreateInviteResponses];
 
+export type InviteManyData = {
+    body: InviteMany;
+    path?: never;
+    query?: never;
+    url: '/v1/org/invites/many';
+};
+
+export type InviteManyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type InviteManyError = InviteManyErrors[keyof InviteManyErrors];
+
+export type InviteManyResponses = {
+    /**
+     * Successful Response
+     */
+    201: InviteResult;
+};
+
+export type InviteManyResponse = InviteManyResponses[keyof InviteManyResponses];
+
 export type RevokeInviteData = {
     body?: never;
     path: {
@@ -5211,6 +6695,203 @@ export type RevokeInviteResponses = {
 };
 
 export type RevokeInviteResponse = RevokeInviteResponses[keyof RevokeInviteResponses];
+
+export type GetLimitsData = {
+    body?: never;
+    path: {
+        /**
+         * Kind
+         */
+        kind: 'models' | 'connections';
+    };
+    query?: {
+        /**
+         * Team
+         *
+         * A team's list; the org's when left out
+         */
+        team?: string | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/org/limits/{kind}';
+};
+
+export type GetLimitsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLimitsError = GetLimitsErrors[keyof GetLimitsErrors];
+
+export type GetLimitsResponses = {
+    /**
+     * Successful Response
+     */
+    200: LimitView;
+};
+
+export type GetLimitsResponse = GetLimitsResponses[keyof GetLimitsResponses];
+
+export type AddLimitEntriesData = {
+    body: Entries;
+    path: {
+        /**
+         * Kind
+         */
+        kind: 'models' | 'connections';
+    };
+    query?: {
+        /**
+         * Team
+         *
+         * A team's list; the org's when left out
+         */
+        team?: string | null;
+    };
+    url: '/v1/org/limits/{kind}/entries';
+};
+
+export type AddLimitEntriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddLimitEntriesError = AddLimitEntriesErrors[keyof AddLimitEntriesErrors];
+
+export type AddLimitEntriesResponses = {
+    /**
+     * Successful Response
+     */
+    200: LimitView;
+};
+
+export type AddLimitEntriesResponse = AddLimitEntriesResponses[keyof AddLimitEntriesResponses];
+
+export type RemoveLimitEntriesData = {
+    body: Entries;
+    path: {
+        /**
+         * Kind
+         */
+        kind: 'models' | 'connections';
+    };
+    query?: {
+        /**
+         * Team
+         *
+         * A team's list; the org's when left out
+         */
+        team?: string | null;
+    };
+    url: '/v1/org/limits/{kind}/entries/remove';
+};
+
+export type RemoveLimitEntriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveLimitEntriesError = RemoveLimitEntriesErrors[keyof RemoveLimitEntriesErrors];
+
+export type RemoveLimitEntriesResponses = {
+    /**
+     * Successful Response
+     */
+    200: LimitView;
+};
+
+export type RemoveLimitEntriesResponse = RemoveLimitEntriesResponses[keyof RemoveLimitEntriesResponses];
+
+export type GetLimitImpactData = {
+    body?: never;
+    path: {
+        /**
+         * Kind
+         */
+        kind: 'models' | 'connections';
+    };
+    query?: {
+        /**
+         * Team
+         *
+         * A team's list; the org's when left out
+         */
+        team?: string | null;
+    };
+    url: '/v1/org/limits/{kind}/impact';
+};
+
+export type GetLimitImpactErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLimitImpactError = GetLimitImpactErrors[keyof GetLimitImpactErrors];
+
+export type GetLimitImpactResponses = {
+    /**
+     * Successful Response
+     */
+    200: Impact;
+};
+
+export type GetLimitImpactResponse = GetLimitImpactResponses[keyof GetLimitImpactResponses];
+
+export type SetLimitData = {
+    body: Switch;
+    path: {
+        /**
+         * Kind
+         */
+        kind: 'models' | 'connections';
+    };
+    query?: {
+        /**
+         * Team
+         *
+         * A team's list; the org's when left out
+         */
+        team?: string | null;
+    };
+    url: '/v1/org/limits/{kind}/switch';
+};
+
+export type SetLimitErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetLimitError = SetLimitErrors[keyof SetLimitErrors];
+
+export type SetLimitResponses = {
+    /**
+     * Successful Response
+     */
+    200: LimitView;
+};
+
+export type SetLimitResponse = SetLimitResponses[keyof SetLimitResponses];
 
 export type ListMembersData = {
     body?: never;
@@ -5289,6 +6970,352 @@ export type UpdateMemberResponses = {
 };
 
 export type UpdateMemberResponse = UpdateMemberResponses[keyof UpdateMemberResponses];
+
+export type GetMemberTeamsData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/v1/org/members/{user_id}/teams';
+};
+
+export type GetMemberTeamsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetMemberTeamsError = GetMemberTeamsErrors[keyof GetMemberTeamsErrors];
+
+export type GetMemberTeamsResponses = {
+    /**
+     * Successful Response
+     */
+    200: MemberTeams;
+};
+
+export type GetMemberTeamsResponse = GetMemberTeamsResponses[keyof GetMemberTeamsResponses];
+
+export type SetMemberTeamsData = {
+    body: TeamsOf;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/v1/org/members/{user_id}/teams';
+};
+
+export type SetMemberTeamsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetMemberTeamsError = SetMemberTeamsErrors[keyof SetMemberTeamsErrors];
+
+export type SetMemberTeamsResponses = {
+    /**
+     * Successful Response
+     */
+    200: MemberTeams;
+};
+
+export type SetMemberTeamsResponse = SetMemberTeamsResponses[keyof SetMemberTeamsResponses];
+
+export type ListPeopleData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Role
+         */
+        role?: 'org_admin' | 'user' | null;
+        /**
+         * Team
+         *
+         * Team ids, or none for people in no team
+         */
+        team?: Array<string> | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/org/people';
+};
+
+export type ListPeopleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPeopleError = ListPeopleErrors[keyof ListPeopleErrors];
+
+export type ListPeopleResponses = {
+    /**
+     * Successful Response
+     */
+    200: PeoplePage;
+};
+
+export type ListPeopleResponse = ListPeopleResponses[keyof ListPeopleResponses];
+
+export type ListTeamsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/teams';
+};
+
+export type ListTeamsResponses = {
+    /**
+     * Response Listteams
+     *
+     * Successful Response
+     */
+    200: Array<TeamView>;
+};
+
+export type ListTeamsResponse = ListTeamsResponses[keyof ListTeamsResponses];
+
+export type CreateTeamData = {
+    body: TeamIn;
+    path?: never;
+    query?: never;
+    url: '/v1/org/teams';
+};
+
+export type CreateTeamErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateTeamError = CreateTeamErrors[keyof CreateTeamErrors];
+
+export type CreateTeamResponses = {
+    /**
+     * Successful Response
+     */
+    201: TeamView;
+};
+
+export type CreateTeamResponse = CreateTeamResponses[keyof CreateTeamResponses];
+
+export type DeleteTeamData = {
+    body?: never;
+    path: {
+        /**
+         * Team Id
+         */
+        team_id: string;
+    };
+    query?: never;
+    url: '/v1/org/teams/{team_id}';
+};
+
+export type DeleteTeamErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteTeamError = DeleteTeamErrors[keyof DeleteTeamErrors];
+
+export type DeleteTeamResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteTeamResponse = DeleteTeamResponses[keyof DeleteTeamResponses];
+
+export type GetTeamData = {
+    body?: never;
+    path: {
+        /**
+         * Team Id
+         */
+        team_id: string;
+    };
+    query?: never;
+    url: '/v1/org/teams/{team_id}';
+};
+
+export type GetTeamErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTeamError = GetTeamErrors[keyof GetTeamErrors];
+
+export type GetTeamResponses = {
+    /**
+     * Successful Response
+     */
+    200: TeamView;
+};
+
+export type GetTeamResponse = GetTeamResponses[keyof GetTeamResponses];
+
+export type ChangeTeamData = {
+    body: TeamChange;
+    path: {
+        /**
+         * Team Id
+         */
+        team_id: string;
+    };
+    query?: never;
+    url: '/v1/org/teams/{team_id}';
+};
+
+export type ChangeTeamErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeTeamError = ChangeTeamErrors[keyof ChangeTeamErrors];
+
+export type ChangeTeamResponses = {
+    /**
+     * Successful Response
+     */
+    200: TeamView;
+};
+
+export type ChangeTeamResponse = ChangeTeamResponses[keyof ChangeTeamResponses];
+
+export type AddTeamMembersData = {
+    body: People;
+    path: {
+        /**
+         * Team Id
+         */
+        team_id: string;
+    };
+    query?: never;
+    url: '/v1/org/teams/{team_id}/members';
+};
+
+export type AddTeamMembersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddTeamMembersError = AddTeamMembersErrors[keyof AddTeamMembersErrors];
+
+export type AddTeamMembersResponses = {
+    /**
+     * Successful Response
+     */
+    200: TeamView;
+};
+
+export type AddTeamMembersResponse = AddTeamMembersResponses[keyof AddTeamMembersResponses];
+
+export type RemoveTeamMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Team Id
+         */
+        team_id: string;
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/v1/org/teams/{team_id}/members/{user_id}';
+};
+
+export type RemoveTeamMemberErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveTeamMemberError = RemoveTeamMemberErrors[keyof RemoveTeamMemberErrors];
+
+export type RemoveTeamMemberResponses = {
+    /**
+     * Successful Response
+     */
+    200: TeamView;
+};
+
+export type RemoveTeamMemberResponse = RemoveTeamMemberResponses[keyof RemoveTeamMemberResponses];
+
+export type OpenPanelSessionData = {
+    body: Ticket;
+    path?: never;
+    query?: never;
+    url: '/v1/panel/session';
+};
+
+export type OpenPanelSessionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type OpenPanelSessionError = OpenPanelSessionErrors[keyof OpenPanelSessionErrors];
+
+export type OpenPanelSessionResponses = {
+    /**
+     * Successful Response
+     */
+    200: PanelSession;
+};
+
+export type OpenPanelSessionResponse = OpenPanelSessionResponses[keyof OpenPanelSessionResponses];
+
+export type RenewPanelSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/panel/session/renew';
+};
+
+export type RenewPanelSessionResponses = {
+    /**
+     * Successful Response
+     */
+    200: PanelSession;
+};
+
+export type RenewPanelSessionResponse = RenewPanelSessionResponses[keyof RenewPanelSessionResponses];
 
 export type ListPlansData = {
     body?: never;
@@ -6213,7 +8240,7 @@ export type ReviewQueueResponses = {
      *
      * Successful Response
      */
-    200: Array<Waiting>;
+    200: Array<InReview>;
 };
 
 export type ReviewQueueResponse = ReviewQueueResponses[keyof ReviewQueueResponses];

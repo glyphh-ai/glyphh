@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class StepKind(StrEnum):
+class FlowStepKind(StrEnum):
     AGENT = "agent"
     CHECKPOINT = "checkpoint"
     CONNECTION = "connection"

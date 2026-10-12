@@ -24,23 +24,14 @@ from glyphh._editor_specs import CUSTOM_SPECS, SCHEDULE_SPECS, SUPER_POWER_SPECS
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._gen.models.invite_answer import InviteAnswer
-from glyphh._gen.models.profile_change import ProfileChange
-from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
+from glyphh._models import profile_change as _profile
+from glyphh._models import settings_change as _change
 from glyphh._org import AsyncOrg, Org
+from glyphh._org_admin_specs import API_KEY_SPECS, ORG_ADMIN_SPECS
 from glyphh._powers import AsyncPowers, AsyncSpecApi, Powers, SpecApi
 from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
-
-
-def _change(theme: str | None, rail_collapsed: bool | None, page_sizes: dict[str, int] | None) -> SettingsChange:
-    given = {"theme": theme, "rail_collapsed": rail_collapsed, "page_sizes": page_sizes}
-    return SettingsChange.from_dict({k: v for k, v in given.items() if v is not None})
-
-
-def _profile(first_name: str | None, last_name: str | None) -> ProfileChange:
-    given = {"first_name": first_name, "last_name": last_name}
-    return ProfileChange.from_dict({k: v for k, v in given.items() if v is not None})
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
@@ -70,6 +61,8 @@ class Glyphh:
         self.schedules = SpecApi(self._run, SCHEDULE_SPECS)
         self.listings = SpecApi(self._run, LISTING_SPECS)
         self.marketplace = SpecApi(self._run, MARKETPLACE_SPECS)
+        self.org_admin = SpecApi(self._run, ORG_ADMIN_SPECS)
+        self.api_keys = SpecApi(self._run, API_KEY_SPECS)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -146,6 +139,8 @@ class AsyncGlyphh:
         self.schedules = AsyncSpecApi(self._run, SCHEDULE_SPECS)
         self.listings = AsyncSpecApi(self._run, LISTING_SPECS)
         self.marketplace = AsyncSpecApi(self._run, MARKETPLACE_SPECS)
+        self.org_admin = AsyncSpecApi(self._run, ORG_ADMIN_SPECS)
+        self.api_keys = AsyncSpecApi(self._run, API_KEY_SPECS)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

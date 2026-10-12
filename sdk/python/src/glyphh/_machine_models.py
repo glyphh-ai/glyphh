@@ -57,6 +57,8 @@ class InstalledPage:
 @dataclass(frozen=True, slots=True)
 class Launch:
     url: str
+    ticket: str
+    page: str
     expires_at: datetime
 
 
@@ -106,4 +108,4 @@ def installed_of(m: _InstalledPage) -> InstalledPage:
 
 
 def launch_of(m: _Launch) -> Launch:
-    return Launch(url=m.url, expires_at=m.expires_at)
+    return Launch(url=m.url, ticket=m.ticket, page=m.page, expires_at=m.expires_at)

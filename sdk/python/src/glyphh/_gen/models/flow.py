@@ -7,8 +7,8 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
+    from ..models.flow_step import FlowStep
     from ..models.link import Link
-    from ..models.step import Step
 
 
 T = TypeVar("T", bound="Flow")
@@ -19,11 +19,11 @@ class Flow:
     """
     Attributes:
         edges (list[Link]):
-        nodes (list[Step]):
+        nodes (list[FlowStep]):
     """
 
     edges: list[Link]
-    nodes: list[Step]
+    nodes: list[FlowStep]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,8 +50,8 @@ class Flow:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.flow_step import FlowStep
         from ..models.link import Link
-        from ..models.step import Step
 
         d = dict(src_dict)
         edges = []
@@ -64,7 +64,7 @@ class Flow:
         nodes = []
         _nodes = d.pop("nodes")
         for nodes_item_data in _nodes:
-            nodes_item = Step.from_dict(nodes_item_data)
+            nodes_item = FlowStep.from_dict(nodes_item_data)
 
             nodes.append(nodes_item)
 

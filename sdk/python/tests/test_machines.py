@@ -36,7 +36,12 @@ INSTALLED = {
     "total": 1,
     "counts": {"all": 1, "working": 1},
 }
-LAUNCH = {"url": f"https://{M}.glyphh.ai/open?ticket=x", "expires_at": "2026-10-12T12:01:00Z"}
+LAUNCH = {
+    "url": f"http://platform.test/machines/{M}",
+    "ticket": "x",
+    "page": "machine",
+    "expires_at": "2026-10-12T12:01:00Z",
+}
 SETTINGS = {"theme": "light", "rail_collapsed": True, "page_sizes": {"members": 25}}
 
 
@@ -92,7 +97,10 @@ def test_machines_are_listed_searched_and_opened() -> None:
         "q=rev&status=working&page=1&size=24",
         "q=&page=1&size=24",
     ]
-    assert [json.loads(r.content) for r in seen[3:]] == [{"super_power": S}, {"super_power": None}]
+    assert [json.loads(r.content) for r in seen[3:]] == [
+        {"panel": "machine", "super_power": S},
+        {"panel": "machine", "super_power": None},
+    ]
 
 
 async def test_the_async_client_answers_the_same() -> None:

@@ -73,7 +73,9 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | Launch]:
     """Open One
 
-     A one-minute, one-time link into the machine's UI, on its home or one of its super powers.
+     The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it,
+    one of its
+    threads, or my questions.
 
     Args:
         machine_id (UUID):
@@ -107,7 +109,9 @@ def sync(
 ) -> HTTPValidationError | Launch | None:
     """Open One
 
-     A one-minute, one-time link into the machine's UI, on its home or one of its super powers.
+     The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it,
+    one of its
+    threads, or my questions.
 
     Args:
         machine_id (UUID):
@@ -136,7 +140,9 @@ async def asyncio_detailed(
 ) -> Response[HTTPValidationError | Launch]:
     """Open One
 
-     A one-minute, one-time link into the machine's UI, on its home or one of its super powers.
+     The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it,
+    one of its
+    threads, or my questions.
 
     Args:
         machine_id (UUID):
@@ -168,7 +174,9 @@ async def asyncio(
 ) -> HTTPValidationError | Launch | None:
     """Open One
 
-     A one-minute, one-time link into the machine's UI, on its home or one of its super powers.
+     The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it,
+    one of its
+    threads, or my questions.
 
     Args:
         machine_id (UUID):

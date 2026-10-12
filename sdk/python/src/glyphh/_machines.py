@@ -50,7 +50,7 @@ class Machines:
         return self._run(INSTALLED, **_query(machine_id, q, status, page, size))
 
     def open(self, machine_id: str, super_power: str | None = None) -> Any:
-        """A one-minute, one-time link into the machine's UI: its home, or one of its super powers."""
+        """The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it."""
         return self._run(OPEN, **_open(machine_id, super_power))
 
 

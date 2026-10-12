@@ -6,44 +6,43 @@ from typing import Any, TypeVar, cast
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-T = TypeVar("T", bound="Card")
+T = TypeVar("T", bound="Entry")
 
 
 @_attrs_define
-class Card:
+class Entry:
     """
     Attributes:
-        brand (str):
-        exp_month (int | None):
-        exp_year (int | None):
-        last4 (str):
+        id (str):
+        name (str):
+        provider (None | str):
+        users (int):
     """
 
-    brand: str
-    exp_month: int | None
-    exp_year: int | None
-    last4: str
+    id: str
+    name: str
+    provider: str | None
+    users: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        brand = self.brand
+        id = self.id
 
-        exp_month: int | None
-        exp_month = self.exp_month
+        name = self.name
 
-        exp_year: int | None
-        exp_year = self.exp_year
+        provider: str | None
+        provider = self.provider
 
-        last4 = self.last4
+        users = self.users
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "brand": brand,
-                "exp_month": exp_month,
-                "exp_year": exp_year,
-                "last4": last4,
+                "id": id,
+                "name": name,
+                "provider": provider,
+                "users": users,
             }
         )
 
@@ -52,33 +51,28 @@ class Card:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        brand = d.pop("brand")
+        id = d.pop("id")
 
-        def _parse_exp_month(data: object) -> int | None:
+        name = d.pop("name")
+
+        def _parse_provider(data: object) -> str | None:
             if data is None:
                 return data
-            return cast(int | None, data)
+            return cast(None | str, data)
 
-        exp_month = _parse_exp_month(d.pop("exp_month"))
+        provider = _parse_provider(d.pop("provider"))
 
-        def _parse_exp_year(data: object) -> int | None:
-            if data is None:
-                return data
-            return cast(int | None, data)
+        users = d.pop("users")
 
-        exp_year = _parse_exp_year(d.pop("exp_year"))
-
-        last4 = d.pop("last4")
-
-        card = cls(
-            brand=brand,
-            exp_month=exp_month,
-            exp_year=exp_year,
-            last4=last4,
+        entry = cls(
+            id=id,
+            name=name,
+            provider=provider,
+            users=users,
         )
 
-        card.additional_properties = d
-        return card
+        entry.additional_properties = d
+        return entry
 
     @property
     def additional_keys(self) -> list[str]:

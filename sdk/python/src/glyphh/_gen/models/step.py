@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..models.step_kind import StepKind
+from ..models.step_step import StepStep
 from ..types import UNSET, Unset
-
-if TYPE_CHECKING:
-    from ..models.step_config import StepConfig
-
 
 T = TypeVar("T", bound="Step")
 
@@ -20,93 +16,88 @@ T = TypeVar("T", bound="Step")
 class Step:
     """
     Attributes:
-        id (str):
-        kind (StepKind):
-        label (str):
-        checkpoint (bool | Unset):  Default: False.
-        config (StepConfig | Unset):
-        x (float | Unset):  Default: 0.0.
-        y (float | Unset):  Default: 0.0.
+        login (str):
+        step (StepStep):
+        url (str):
+        code (None | str | Unset):
+        expires_at (None | str | Unset):
     """
 
-    id: str
-    kind: StepKind
-    label: str
-    checkpoint: bool | Unset = False
-    config: StepConfig | Unset = UNSET
-    x: float | Unset = 0.0
-    y: float | Unset = 0.0
+    login: str
+    step: StepStep
+    url: str
+    code: str | Unset | None = UNSET
+    expires_at: str | Unset | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        id = self.id
+        login = self.login
 
-        kind = self.kind.value
+        step = self.step.value
 
-        label = self.label
+        url = self.url
 
-        checkpoint = self.checkpoint
+        code: str | Unset | None
+        if isinstance(self.code, Unset):
+            code = UNSET
+        else:
+            code = self.code
 
-        config: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.config, Unset):
-            config = self.config.to_dict()
-
-        x = self.x
-
-        y = self.y
+        expires_at: str | Unset | None
+        if isinstance(self.expires_at, Unset):
+            expires_at = UNSET
+        else:
+            expires_at = self.expires_at
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "id": id,
-                "kind": kind,
-                "label": label,
+                "login": login,
+                "step": step,
+                "url": url,
             }
         )
-        if checkpoint is not UNSET:
-            field_dict["checkpoint"] = checkpoint
-        if config is not UNSET:
-            field_dict["config"] = config
-        if x is not UNSET:
-            field_dict["x"] = x
-        if y is not UNSET:
-            field_dict["y"] = y
+        if code is not UNSET:
+            field_dict["code"] = code
+        if expires_at is not UNSET:
+            field_dict["expires_at"] = expires_at
 
         return field_dict
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.step_config import StepConfig
-
         d = dict(src_dict)
-        id = d.pop("id")
+        login = d.pop("login")
 
-        kind = StepKind(d.pop("kind"))
+        step = StepStep(d.pop("step"))
 
-        label = d.pop("label")
+        url = d.pop("url")
 
-        checkpoint = d.pop("checkpoint", UNSET)
+        def _parse_code(data: object) -> str | Unset | None:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
 
-        _config = d.pop("config", UNSET)
-        config: StepConfig | Unset
-        if isinstance(_config, Unset):
-            config = UNSET
-        else:
-            config = StepConfig.from_dict(_config)
+        code = _parse_code(d.pop("code", UNSET))
 
-        x = d.pop("x", UNSET)
+        def _parse_expires_at(data: object) -> str | Unset | None:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
 
-        y = d.pop("y", UNSET)
+        expires_at = _parse_expires_at(d.pop("expires_at", UNSET))
 
         step = cls(
-            id=id,
-            kind=kind,
-            label=label,
-            checkpoint=checkpoint,
-            config=config,
-            x=x,
-            y=y,
+            login=login,
+            step=step,
+            url=url,
+            code=code,
+            expires_at=expires_at,
         )
 
         step.additional_properties = d
