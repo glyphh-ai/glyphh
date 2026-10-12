@@ -122,11 +122,16 @@ The same screens as app.glyphh.ai, built from the same components, as native-fee
 | Ground | Ink `#0B0A0F` | Paper `#F5F5F7` |
 | Accent (main action, the ring, running) | Violet `#7C4DFF`, white text on it | the same |
 | Accent as text | `#B49CFF` | `#6A3DF0` |
-| Thinking, info | Ion `#6FD8FF` | |
-| Needs you | Pink `#F062D0` | |
+| Thinking, info | Ion `#6FD8FF` | `#00679E` as text |
+| Needs you | Pink `#F062D0` | `#C2189C` as text |
 | Stuck, errors | Red `#FF4D4D` | `#C21D3C` as text |
 
 Yellow, lime, green and orange were tried and dropped.
+
+- **Signal colours are for status only:** Ion, Pink and Red mean thinking, needs you and stuck, nowhere else.
+- **Power colours belong to the cats:** the eye colours a super power can wear (Frost `#FFFFFF`, Violet, Ion, Iris `#B49CFF`, Bloom `#FF8AD8`, Rose `#FF6B9A`, Azure `#5B8CFF`, Teal `#2EE6D6`) are used only in a cat's eye, never on UI.
+- **Kinds are not colour-coded.** Skills, plugins, tasks, apps, a task's steps and the power map's cards all take the accent text colour and are told apart by their icon and label. A super power takes Violet.
+- **No tints of their own:** soft or deeper copies of a colour are not new colours; use the values above.
 
 ### Type: Red Hat
 

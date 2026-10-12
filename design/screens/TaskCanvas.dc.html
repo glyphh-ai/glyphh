@@ -12,7 +12,7 @@
 <style>
 body{margin:0}
 button,input,textarea,select{font:inherit}
-.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--red:#FF4D4D;--red-tx:#FF8A8A;--scrim:rgba(0,0,0,.55);--dot:rgba(245,243,250,.07)}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--red:#FF4D4D;--red-tx:#FF4D4D;--scrim:rgba(0,0,0,.55);--dot:rgba(245,243,250,.07)}
 .t a{color:var(--accent-tx)}
 </style>
 </helmet>
@@ -43,7 +43,7 @@ button,input,textarea,select{font:inherit}
 <a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Custom powers</a>
 <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
 <span style="width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: #F062D0; font-size: 20px">◆</span>
-<div style="flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 3px"><div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.02em">Morning briefing</h2><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid #F062D0; color: #F062D0; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">Task</span></div><div style="font-size: 13px; color: {{f.stateTx}}">{{f.state}}</div></div>
+<div style="flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 3px"><div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.02em">Morning briefing</h2><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--accent-tx); color: var(--accent-tx); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">Task</span></div><div style="font-size: 13px; color: {{f.stateTx}}">{{f.state}}</div></div>
 <sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 10px"><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button><button type="button" disabled="{{f.blocked}}" style="height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: {{f.saveBg}}; color: {{f.saveTx}}; font-size: 15px; font-weight: 600">Save</button></div></sc-if>
 </div>
 <div role="tablist" aria-label="Task" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto"><sc-for list="{{f.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for></div>
@@ -138,7 +138,7 @@ button,input,textarea,select{font:inherit}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4300,"height":4600}}'>
-var K = { trigger: ['Trigger', '#F062D0', '▸'], agent: ['Agent', '#7C4DFF', '◉'], model: ['Model', '#2EE6D6', '◈'], connection: ['Connection', '#6FD8FF', '⇄'], decide: ['Decide', '#B49CFF', '◇'], memory: ['Memory', '#5B8CFF', '▤'], skill: ['Skill', '#B49CFF', '◆'], checkpoint: ['Checkpoint', '#8E89A0', '⚑'], output: ['Output', '#F5F3FA', '⤷'] };
+var K = { trigger: ['Trigger', '#B49CFF', '▸'], agent: ['Agent', '#7C4DFF', '◉'], model: ['Model', '#B49CFF', '◈'], connection: ['Connection', '#B49CFF', '⇄'], decide: ['Decide', '#B49CFF', '◇'], memory: ['Memory', '#B49CFF', '▤'], skill: ['Skill', '#B49CFF', '◆'], checkpoint: ['Checkpoint', '#8E89A0', '⚑'], output: ['Output', '#F5F3FA', '⤷'] };
 var NODES = [
   ['trigger', 'Every weekday at 8:00', 'on a clock · studio-mac', 244, 20],
   ['agent', 'Hand to Inbox Zero', 'slot: main', 244, 116],
@@ -152,7 +152,7 @@ var LINKS = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5, 'yes'], [4, 6, 'no']];
 function graph(sel, broken) {
   var nodes = NODES.map(function (n, i) {
     var k = K[n[0]], isSel = i === sel, bad = broken && i === 5;
-    return { tag: k[0], c: k[1], glyph: k[2], label: n[1], sub: bad ? 'no tool picked' : n[2], subTx: bad ? '#FF8A8A' : 'var(--tx3)', x: n[3] + 'px', y: n[4] + 'px',
+    return { tag: k[0], c: k[1], glyph: k[2], label: n[1], sub: bad ? 'no tool picked' : n[2], subTx: bad ? '#FF4D4D' : 'var(--tx3)', x: n[3] + 'px', y: n[4] + 'px',
       selStr: isSel ? 'true' : 'false', border: bad ? '1px solid #FF4D4D' : (isSel ? '1px solid #7C4DFF' : '1px solid var(--line2)'), ring: isSel ? '0 0 0 4px rgba(124,77,255,.25)' : (bad ? '0 0 0 4px rgba(255,77,77,.15)' : 'none'),
       inH: i === 0 ? 'none' : 'block', outH: n[0] === 'output' || i === 5 ? 'none' : 'block', border2: '', more: i < NODES.length - 1 };
   });

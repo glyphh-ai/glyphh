@@ -12,7 +12,7 @@
 <style>
 body{margin:0}
 button,input,textarea{font:inherit}
-.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#5A2FE0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
+.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#6A3DF0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
 .t a{color:var(--accent-tx)}
 .flow{stroke-dasharray:6 5;animation:dash 1.2s linear infinite}
 @keyframes dash{to{stroke-dashoffset:-22}}
@@ -196,8 +196,8 @@ function cat(face, color, size) {
 var B = 'assets/';
 var LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', Claude: 'claude.svg', OpenAI: 'openai.svg', Notion: 'notion.svg' };
 function lg(n) { return LG[n] ? B + LG[n] : ''; }
-var COL = { conn: '#00679E', folder: '#B8168F', sp: '#2A5FE0', custom: '#6A3DF0', model: '#0E8C82' };
-var TYPE = { Skill: '#6A3DF0', Plugin: '#2A5FE0', Task: '#B8168F', App: '#0E8C82' };
+var COL = { conn: '#6A3DF0', folder: '#6A3DF0', sp: '#6A3DF0', custom: '#6A3DF0', model: '#6A3DF0' };
+var TYPE = { Skill: '#6A3DF0', Plugin: '#6A3DF0', Task: '#6A3DF0', App: '#6A3DF0' };
 function mapData() {
   var L = [['Connections', 'conn', [['Gmail', 'Connected', 'Gmail'], ['Slack', 'Connected', 'Slack']]], ['Folders', 'folder', [['inbox-zero', '~/work/inbox-zero · works here', '', '▤']]], ['Super powers', 'sp', [['Scout', 'Hands work to it', '', '◉']]]];
   var R = [['Custom powers', 'custom', [['Morning briefing', 'Task', '', '◆'], ['Triage rules', 'Skill', '', '◆'], ['Inbox dashboard', 'App', '', '▦']]], ['Models', 'model', [['Claude Sonnet', 'Runs on', 'Claude']]]];
@@ -257,7 +257,7 @@ function frames() {
         w: mobile ? '390px' : '1200px', h: mobile ? '844px' : '780px', radius: mobile ? '36px' : '16px', pad: mobile ? '16px' : '48px', logoH: mobile ? '24px' : '28px',
         cols: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) minmax(300px, 380px)', gap: mobile ? '24px' : '40px', railPos: mobile ? 'static' : 'sticky',
         sliderCols: mobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', btnDir: mobile ? 'column-reverse' : 'row', menuW: mobile ? '358px' : '420px', voiceMenuX: mobile ? '0px' : '96px',
-        state: o.unsaved ? 'Unsaved changes' : 'Saved · edits only; it runs on your machines', stateDot: o.unsaved ? '#B8168F' : '#7C4DFF', stateTx: o.unsaved ? '#B8168F' : 'var(--tx3)',
+        state: o.unsaved ? 'Unsaved changes' : 'Saved · edits only; it runs on your machines', stateDot: o.unsaved ? '#C2189C' : '#7C4DFF', stateTx: o.unsaved ? '#C2189C' : 'var(--tx3)',
         toast: o.toast || '', face: cat(9, '#6A3DF0', mobile ? 56 : 72), cards: m.cards, groups: m.groups, edges: m.edges,
         mapCtl: [['+', 'Zoom in'], ['−', 'Zoom out'], ['Fit', 'Fit'], ['Reset', 'Reset the layout']].map(function (c) { return { t: c[0], label: c[1] }; }),
         rail: rail(false), sliders: SL.map(function (s) { return { name: s[0], n: s[1], value: s[2], lo: s[3], hi: s[4], fill: ((s[1] - 1) * 25) + '%' }; }),

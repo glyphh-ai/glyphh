@@ -12,7 +12,7 @@
 <style>
 body{margin:0}
 button,input,textarea{font:inherit}
-.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#D2C4FF;--red:#FF4D4D;--red-tx:#FF8A8A;--scrim:rgba(0,0,0,.55);--dot:rgba(245,243,250,.07)}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#B49CFF;--red:#FF4D4D;--red-tx:#FF4D4D;--scrim:rgba(0,0,0,.55);--dot:rgba(245,243,250,.07)}
 .t a{color:var(--accent-tx)}
 .flow{stroke-dasharray:6 5;animation:dash 1.2s linear infinite}
 @keyframes dash{to{stroke-dashoffset:-22}}
@@ -196,8 +196,8 @@ function cat(face, color, size) {
 var B = 'assets/';
 var LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', Claude: 'claude.svg', OpenAI: 'openai-dark.svg', Notion: 'notion.svg' };
 function lg(n) { return LG[n] ? B + LG[n] : ''; }
-var COL = { conn: '#6FD8FF', folder: '#F062D0', sp: '#5B8CFF', custom: '#B49CFF', model: '#2EE6D6' };
-var TYPE = { Skill: '#B49CFF', Plugin: '#5B8CFF', Task: '#F062D0', App: '#2EE6D6' };
+var COL = { conn: '#B49CFF', folder: '#B49CFF', sp: '#B49CFF', custom: '#B49CFF', model: '#B49CFF' };
+var TYPE = { Skill: '#B49CFF', Plugin: '#B49CFF', Task: '#B49CFF', App: '#B49CFF' };
 function mapData() {
   var L = [['Connections', 'conn', [['Gmail', 'Connected', 'Gmail'], ['Slack', 'Connected', 'Slack']]], ['Folders', 'folder', [['inbox-zero', '~/work/inbox-zero · works here', '', '▤']]], ['Super powers', 'sp', [['Scout', 'Hands work to it', '', '◉']]]];
   var R = [['Custom powers', 'custom', [['Morning briefing', 'Task', '', '◆'], ['Triage rules', 'Skill', '', '◆'], ['Inbox dashboard', 'App', '', '▦']]], ['Models', 'model', [['Claude Sonnet', 'Runs on', 'Claude']]]];

@@ -12,7 +12,7 @@
 <style>
 body{margin:0}
 button,input,textarea{font:inherit}
-.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#5A2FE0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
+.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#6A3DF0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
 .t a{color:var(--accent-tx)}
 </style>
 </helmet>
@@ -115,13 +115,13 @@ button,input,textarea{font:inherit}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4300,"height":5600}}'>
-var TYPE = { Skill: ['#6A3DF0', '◆'], Plugin: ['#2A5FE0', '▣'], Task: ['#B8168F', '⟴'], App: ['#0E8C82', '▦'] };
+var TYPE = { Skill: ['#6A3DF0', '◆'], Plugin: ['#6A3DF0', '▣'], Task: ['#6A3DF0', '⟴'], App: ['#6A3DF0', '▦'] };
 var B = 'assets/', LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', 'Google Drive': 'google-drive.svg', GitHub: 'github.svg' };
 function rows(list) { return list.map(function (r, i) { var t = TYPE[r[1]]; return { name: r[0], type: r[1], c: t[0], glyph: t[1], sub: r[2], used: r[3], top: i === 0 ? 'none' : '1px solid var(--line)' }; }); }
 var MINE = rows([['Morning briefing', 'Task', 'by you · unread mail and the calendar, as one note', 'Inbox Zero, Ledger'], ['Triage rules', 'Skill', 'by you · how this inbox sorts: labels, VIPs, what waits', 'Inbox Zero'], ['Inbox dashboard', 'App', 'by you · a board of what’s waiting, with 6 tools', 'Inbox Zero'], ['Release notes', 'Plugin', 'by you · 3 skills for turning PRs into notes', 'Scout'], ['Receipt filer', 'Task', 'by you · receipts from Gmail into Drive, every Friday', 'not used yet'], ['Tone guide', 'Skill', 'by you · how we write: short, plain, warm', 'all 5']]);
 var THEIRS = rows([['Competitor watch', 'Task', 'from Northwind · daily changes on 6 rival sites', 'Scout'], ['SQL helper', 'Skill', 'from Sam Rivera · writes and explains Postgres', 'Ledger'], ['Standup board', 'App', 'from Glyphh · the team’s day at a glance', 'Standup Notes']]);
 function tabsOf(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
-function conn(n, ok) { return { name: n, src: B + LG[n], state: ok ? 'Connected' : 'Connect', c: ok ? 'var(--accent-tx)' : '#B8168F' }; }
+function conn(n, ok) { return { name: n, src: B + LG[n], state: ok ? 'Connected' : 'Connect', c: ok ? 'var(--accent-tx)' : '#C2189C' }; }
 var DETAIL = {
   skill: { name: 'Triage rules', type: 'Skill', usedBy: 1, usedNames: 'Inbox Zero', tabs: tabsOf(['Overview', 'Contents', 'Connections', 'Used by'], 'Overview'),
     fields: [{ label: 'Name', value: 'triage-rules', font: "'Red Hat Mono', monospace" }, { label: 'Description · the main agent reads this to decide when to use it', value: 'How this inbox sorts mail: which labels, who counts as a VIP, what can wait a day.', font: "'Red Hat Text', sans-serif" },

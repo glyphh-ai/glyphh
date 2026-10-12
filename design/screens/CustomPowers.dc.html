@@ -12,7 +12,7 @@
 <style>
 body{margin:0}
 button,input,textarea{font:inherit}
-.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--red-tx:#FF8A8A;--scrim:rgba(0,0,0,.55)}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--red-tx:#FF4D4D;--scrim:rgba(0,0,0,.55)}
 .t a{color:var(--accent-tx)}
 </style>
 </helmet>
@@ -115,7 +115,7 @@ button,input,textarea{font:inherit}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4300,"height":5600}}'>
-var TYPE = { Skill: ['#B49CFF', '◆'], Plugin: ['#5B8CFF', '▣'], Task: ['#F062D0', '⟴'], App: ['#2EE6D6', '▦'] };
+var TYPE = { Skill: ['#B49CFF', '◆'], Plugin: ['#B49CFF', '▣'], Task: ['#B49CFF', '⟴'], App: ['#B49CFF', '▦'] };
 var B = 'assets/', LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', 'Google Drive': 'google-drive.svg', GitHub: 'github-dark.svg' };
 function rows(list) { return list.map(function (r, i) { var t = TYPE[r[1]]; return { name: r[0], type: r[1], c: t[0], glyph: t[1], sub: r[2], used: r[3], top: i === 0 ? 'none' : '1px solid var(--line)' }; }); }
 var MINE = rows([['Morning briefing', 'Task', 'by you · unread mail and the calendar, as one note', 'Inbox Zero, Ledger'], ['Triage rules', 'Skill', 'by you · how this inbox sorts: labels, VIPs, what waits', 'Inbox Zero'], ['Inbox dashboard', 'App', 'by you · a board of what’s waiting, with 6 tools', 'Inbox Zero'], ['Release notes', 'Plugin', 'by you · 3 skills for turning PRs into notes', 'Scout'], ['Receipt filer', 'Task', 'by you · receipts from Gmail into Drive, every Friday', 'not used yet'], ['Tone guide', 'Skill', 'by you · how we write: short, plain, warm', 'all 5']]);

@@ -50,7 +50,7 @@ button,input{font:inherit}
 <sc-if value="{{f.isHome}}" hint-placeholder-val="{{ true }}">
 <section aria-label="Featured" style="display: grid; grid-template-columns: {{f.featCols}}; gap: 16px; padding: 20px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line)">
 <div style="height: {{f.featH}}; border-radius: 14px; border: 1px dashed var(--line2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--tx3)">[ its screenshot ]</div>
-<div style="display: flex; flex-direction: column; gap: 10px; justify-content: center"><span style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-tx)">Featured · from Glyphh</span><span style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">Standup board</span><span style="font-size: 15px; line-height: 1.5; color: var(--tx2)">The team's day at a glance: what shipped, what's stuck, who's out. Reads Slack, GitHub and the calendar.</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid #2EE6D6; color: #2EE6D6; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">App</span><span style="font-size: 13px; color: var(--tx3)">2,410 adds</span></span><button type="button" style="align-self: flex-start; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add to my powers</button></div>
+<div style="display: flex; flex-direction: column; gap: 10px; justify-content: center"><span style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-tx)">Featured · from Glyphh</span><span style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">Standup board</span><span style="font-size: 15px; line-height: 1.5; color: var(--tx2)">The team's day at a glance: what shipped, what's stuck, who's out. Reads Slack, GitHub and the calendar.</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--accent-tx); color: var(--accent-tx); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">App</span><span style="font-size: 13px; color: var(--tx3)">2,410 adds</span></span><button type="button" style="align-self: flex-start; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add to my powers</button></div>
 </section>
 <sc-for list="{{f.shelves}}" as="sh">
 <section aria-label="{{sh.name}}" style="display: flex; flex-direction: column; gap: 10px">
@@ -119,18 +119,18 @@ function cat(face, color) {
   s.push(sh(body, c, c, 16), sh(ear, c, c, 16), sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c), sh('M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z', 'none', c, 8), sh(circ(92, 94, 12), color), sh(circ(96.2, 89.8, 3.6), INK));
   return { shapes: s };
 }
-var TYPE = { Skill: ['#B49CFF', '◆'], Plugin: ['#5B8CFF', '▣'], Task: ['#F062D0', '⟴'], App: ['#2EE6D6', '▦'], 'Super power': ['#7C4DFF', ''] };
+var TYPE = { Skill: ['#B49CFF', '◆'], Plugin: ['#B49CFF', '▣'], Task: ['#B49CFF', '⟴'], App: ['#B49CFF', '▦'], 'Super power': ['#7C4DFF', ''] };
 function item(n, t, by, d, adds, face) { var ty = TYPE[t]; return { name: n, type: t, by: by, desc: d, adds: adds, c: ty[0], glyph: ty[1], cat: face ? cat(face, '#B49CFF') : null }; }
 var B = 'assets/', LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', GitHub: 'github-dark.svg', Salesforce: 'salesforce.svg' };
 function tabsOf(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
 var DET = {
   power: { name: 'Competitor watch', type: 'Task', by: 'Northwind', adds: '1,284', updated: '3 days ago', tabs: tabsOf(['Overview', 'Flow', 'Connections', 'Versions'], 'Overview'),
     about: 'Every morning it checks six rival sites for price and feature changes and leaves a short note with links. You pick the sites; it remembers what it saw last time.', listTitle: 'What it uses',
-    chips: [{ name: 'Slot main', c: '#7C4DFF' }, { name: 'Browser', c: '#6FD8FF' }, { name: 'Slack', c: '#6FD8FF', src: B + LG.Slack }, { name: 'Memory', c: '#5B8CFF' }],
+    chips: [{ name: 'Slot main', c: '#7C4DFF' }, { name: 'Browser', c: '#B49CFF' }, { name: 'Slack', c: '#B49CFF', src: B + LG.Slack }, { name: 'Memory', c: '#B49CFF' }],
     facts: [{ k: 'Type', v: 'Task' }, { k: 'Version', v: '2.4.0' }, { k: 'Runs', v: 'Every day at 7am' }, { k: 'Needs', v: 'Slack' }, { k: 'Licence', v: 'Free' }] },
   sp: { name: 'Deal Desk', type: 'Super power', by: 'Sam Rivera', adds: '612', updated: 'last week', tabs: tabsOf(['Overview', 'Its powers', 'Versions'], 'Its powers'),
     about: 'Keeps Salesforce in step with your inbox: logs calls, moves stages, drafts the follow-up. Comes with its own brief, voice and avatar; you change any of them.', listTitle: 'Its powers',
-    chips: [{ name: 'Gmail', c: '#6FD8FF', src: B + LG.Gmail }, { name: 'Salesforce', c: '#6FD8FF', src: B + LG.Salesforce }, { name: 'Deal stages', c: '#B49CFF' }, { name: 'Follow-up writer', c: '#F062D0' }, { name: 'Claude Sonnet', c: '#2EE6D6' }],
+    chips: [{ name: 'Gmail', c: '#B49CFF', src: B + LG.Gmail }, { name: 'Salesforce', c: '#B49CFF', src: B + LG.Salesforce }, { name: 'Deal stages', c: '#B49CFF' }, { name: 'Follow-up writer', c: '#B49CFF' }, { name: 'Claude Sonnet', c: '#B49CFF' }],
     facts: [{ k: 'Type', v: 'Super power' }, { k: 'Custom powers', v: '2 come with it' }, { k: 'Needs', v: 'Gmail, Salesforce' }, { k: 'Licence', v: 'Free' }] }
 };
 DET.power.c = TYPE.Task[0]; DET.power.glyph = TYPE.Task[1]; DET.power.cat = null;
