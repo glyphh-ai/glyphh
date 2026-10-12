@@ -86,7 +86,7 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 ### Paths
 
-- **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription (Claude Code, Codex) or key (the Glyphh loop). Glyphh never sees it and never prices it.
+- **rrotor → CLI or model → provider:** the thinking goes straight to the provider, on the member's own subscription (Claude Code, Codex) or key (a model they configured, run inside one of those CLIs through the machine's own gateway). Glyphh never sees it and never prices it.
 - **rrotor → connector → server:** every connection call goes through the server, which relays it to Pipedream and counts it, because each one is a cost Glyphh pays.
 - **Jev is a model, on the first path:** the member adds TypeSafe's Jev with their own key, and rrotor calls TypeSafe directly. It is never on Glyphh's key, never through the server, and never charged.
 
@@ -98,7 +98,7 @@ Adding a model happens on the platform or in a card in Claude: picking a model f
 
 ### Connections
 
-Connections are the moat: about 3,500 services (Gmail, Slack, Salesforce, ...) through Pipedream. A connection is always one person's own account; Pipedream holds the account and its sign-in, and Glyphh stores no secret for it. A super power is granted the connections it may use, and whichever loop runs it (Claude Code, Codex or rrotor's own), rrotor hands it exactly those and nothing of the loop's own (for Claude Code, `--mcp-config` with `--strict-mcp-config`). Every call goes through the server, which checks the tool's permission and the org's credits, relays it to Pipedream with a short-lived token minted for the run, and counts it.
+Connections are the moat: about 3,500 services (Gmail, Slack, Salesforce, ...) through Pipedream. A connection is always one person's own account; Pipedream holds the account and its sign-in, and Glyphh stores no secret for it. A super power is granted the connections it may use, and whichever CLI runs it and on whichever model (Claude Code or Codex, on a subscription or through the machine's gateway), rrotor hands it exactly those as MCP and nothing of the CLI's own (for Claude Code, `--mcp-config` with `--strict-mcp-config`). **The connections span the gap to everything** (Chris, 2026-10-12): any model the member runs, on either CLI, reaches the same services the same way, governed, counted and billed. Every call goes through the server, which checks the tool's permission and the org's credits, relays it to Pipedream with a short-lived token minted for the run, and counts it.
 
 ### Glyphh and the super powers under it
 
@@ -109,13 +109,20 @@ Connections are the moat: about 3,500 services (Gmail, Slack, Salesforce, ...) t
 
 ### The main assistant: Glyphh, on the loop the member picks
 
-Decided 2026-10-11. Glyphh, the orchestrator, lives in the member's rrotor and is always on: a closed laptop changes nothing. Setting it up is choosing its loop, one of three, and none of them is priced in Glyphh tokens:
+Decided 2026-10-11; the loops are the two CLIs since 2026-10-12 (Chris). Glyphh, the orchestrator, lives in the member's rrotor and is always on: a closed laptop changes nothing. Setting it up is choosing its loop, a CLI and the model it thinks with, and none of it is priced in Glyphh tokens:
 
-1. **Claude Code, on the member's Claude subscription.** It is already installed in rrotor; the member only signs in, through Anthropic's own login, in the CLI's own terminal.
-2. **Codex, on the member's ChatGPT subscription.** The same: installed, the member signs in through OpenAI's own login (device code on a headless machine).
-3. **The Glyphh loop, on a model the member configured with their own key** (any of the catalog's models, Jev included).
+1. **Claude Code**, already installed in rrotor:
+    - on the member's **Claude subscription**: they sign in through Anthropic's own login, in the CLI's own terminal;
+    - or on **any model they configured** with their own key (any of the catalog's models, Jev included), through the machine's gateway.
+2. **Codex**, the same way:
+    - on the member's **ChatGPT subscription**: they sign in through OpenAI's own login (device code on a headless machine);
+    - or on any model they configured, through the gateway.
 
-The same three are the loops a super power can run on, so a CLI is used like a model wherever a loop is picked.
+The same choices are the loops a super power runs on, and each step of a task can be its own (a CLI and a model). There is no loop of Glyphh's own: the two CLIs are the only harnesses, so every model gets the same tools, connections, permissions and fence.
+
+- **The machine's gateway:** a small service on rrotor that speaks Anthropic's Messages API to Claude Code (`ANTHROPIC_BASE_URL` points at it) and an OpenAI-compatible API to Codex (its model provider's base URL). It calls whichever model a step was given, on the member's own key, straight to the provider. It translates; it runs no agent loop. It lives on the member's machine with their keys, so Glyphh's servers still never route, meter or price a model call (Models, above).
+    - **What a configured model does not get:** in gateway mode the CLI signs in to the gateway, not to claude.ai or ChatGPT, so the member's own connectors there do not come with it. It needs none: Glyphh's connections reach it as MCP (Connections, above).
+    - **Which providers** the gateway speaks natively and which through their OpenAI-compatible API is to check against the catalog's 125; how well each model drives a CLI's tools is to test.
 
 - **A CLI's sign-in stays in the CLI.** rrotor runs the unmodified program and shows its own login; the credentials stay in that program's files on that machine. Glyphh never collects, stores or passes them, and the server never sees them. rrotor reports only which CLIs are signed in. (Anthropic allows hosting Claude Code this way under its Commercial Terms, which Glyphh accepts; OpenAI's terms for Codex are to be confirmed.)
 - **rrotor's MCP surface powers the orchestration.** Whichever loop it runs on, the main assistant works through rrotor's own MCP tools: super powers and their grants, runs, schedules, connections, folders, the browser and the other machines. The same tools are what Claude reaches through the plugin, so the member's Claude on a desktop is one more window onto Glyphh, never what it depends on.
@@ -149,7 +156,7 @@ A task is a program rrotor runs, by hand, from a super power or on a clock, and 
 
 - **Memory:** Glyphh has none of its own. A member who wants memory adds it as a power or a super power of their own.
 - **Ada** comes later; the basics first.
-- **A super power using the loop's own connectors** (the member's Claude or ChatGPT connectors beside Glyphh's): not now (2026-10-11). Connections stay Glyphh's, governed and counted.
+- **A super power using the loop's own connectors** (the member's Claude or ChatGPT connectors beside Glyphh's): not now (2026-10-11, again 2026-10-12). Connections stay Glyphh's, governed, counted and billed: they span the gap to everything.
 
 ### What a super power can be
 
@@ -190,7 +197,7 @@ Decided by Chris, 2026-10-12, after the full-circle prototype (below):
 
 - **rrotor runs everything headless and serves no UI of its own.** On the machine:
     - Claude Code and Codex, run unmodified in headless mode;
-    - the Glyphh loop, ported from the old worker (`@glyphh/sdk/loop`) and its harness;
+    - the machine's gateway, so either CLI can run any model the member configured;
     - the runs, the browser and the data.
 
     rrotor never trying to be *the* harness is the point: the harness is wherever the member already is.
@@ -267,7 +274,8 @@ Everything that must outlive an update lives on one volume, `/data`: the machine
 - **No UI and no front door on the machine** (rrotor is headless, above). Whether outputs and a super power's own screens still need the machine's own address is open.
 - **The loops:**
     - Claude Code and Codex, installed at pinned versions and run unmodified in headless mode (`claude -p` with stream JSON, `--mcp-config` and `--strict-mcp-config`; `codex exec --json`). Their sign-ins stay in their own files on `/data`.
-    - The Glyphh loop, the engine's own, on the member's models through the AI SDK (`ai` and its providers, with OpenAI-compatible for providers it has no package for). Whether it covers the catalog's 125 providers is to check.
+    - **The machine's gateway** (The main assistant, above): Claude Code points `ANTHROPIC_BASE_URL` at it and Codex its model provider's base URL, so either CLI runs any model the member configured, on their own key. It translates between the CLIs' APIs and each provider's; it runs no loop of its own. The old server's gateway already spoke Anthropic's Messages format and is the place to start.
+
 - **Data:** Postgres 17 with pgvector (each super power its own schema and role, as decided), Redis (Valkey) for queues and caches, and Neo4j Community. Neo4j is a JVM that wants about a gigabyte, so it is in the image but started only when a super power with a graph runs. Schedules need no cron: the server is the clock.
 - **The browser:** headful Chromium, one virtual screen (Xvfb) per browser profile, driven over CDP with Playwright; take control goes into that screen (xdotool). Watching and take control are as Browsers and RPA on rrotor says: WebRTC (GStreamer's `webrtcbin`), with screen frames over the SSH channel when WebRTC cannot connect.
 - **Media:** ffmpeg, for what super powers make (reels, thumbnails, audio).
@@ -340,7 +348,7 @@ Decided 2026-10-11; since 2026-10-12 both halves are the platform's (rrotor is h
 | Data | Metadata, read through the API | Each machine's streams, live, passed on by the server |
 | Reached | Pages on app.glyphh.ai, and the same views as cards in Claude and ChatGPT | The same: pages on app.glyphh.ai, and live panels in Claude |
 
-**Why Glyphh is the same on every loop and every platform.** Powers are agnostic: a member combines them with their own subscription (Claude Code, Codex) or their own models, in any way they want (a super power that turns YouTube content into videos), and a super power sent to anyone works the same way every time. That holds because Glyphh controls the machine and the execution of the parts that matter, the actual work: tasks run on rrotor. Swap the orchestrator (Claude, Codex, the Glyphh loop) and a super power works as it was built.
+**Why Glyphh is the same on every loop and every platform.** Powers are agnostic: a member combines them with their own subscription (Claude Code, Codex) or their own models, in any way they want (a super power that turns YouTube content into videos), and a super power sent to anyone works the same way every time. That holds because Glyphh controls the machine and the execution of the parts that matter, the actual work: tasks run on rrotor. Swap the orchestrator (Claude Code or Codex, on a subscription or on any model through the machine's gateway) and a super power works as it was built.
 
 **Doing is asking.** Creating and changing things (a skill, a task, a super power and its grants) is done by asking Glyphh in Claude, Codex or ChatGPT; the plugin's tools are the server's operations. The platform shows the result, takes quick fixes, and does what a chat cannot.
 
@@ -707,8 +715,8 @@ erDiagram
 
     loops {
         uuid power_id PK, FK
-        text engine "claude_code (the member's Claude subscription), codex (their ChatGPT subscription) or glyphh (the Glyphh loop)"
-        uuid model_id FK "for glyphh: the model it thinks with, one of the member's; null for a CLI, which signs in on the machine"
+        text engine "claude_code or codex: the CLI that runs it"
+        uuid model_id FK "null: on the member's subscription, signed in on the machine; else the configured model it thinks with, one of the member's, through the machine's gateway"
     }
 
     super_powers {
@@ -1293,7 +1301,7 @@ Everything a super power uses is a power: a model, a connection, a folder, a ski
 
 The database enforces it: every power has a `user_id`.
 
-Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which engine runs a super power or the main assistant: Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
+Every power is a row in `powers` (who owns it, its kind and name), and one row in the table for its kind, holding that kind's own columns: `models`, `connections`, `folders`, `browsers`, `skills`, `tasks`, `plugins` or `loops` (which CLI runs a super power or the main assistant, Claude Code or Codex, and on what: the member's subscription, or one of their models through the machine's gateway). A super power points at `powers`, whatever the kind. What skills, tasks and plugins hold beyond their files is drawn when they are built.
 
 - **A model** is a provider, the provider's model id and the API key (an optional base URL for providers that need one). rrotor calls the provider directly with that key: Glyphh never sits in the call and never sees its rates, prices, prompts or answers; rrotor reports only the tokens the provider says each call used (see Usage). What a model costs is between the person and their provider. A customer who wants limits or access rules puts their own AI gateway in front, through the base URL.
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
@@ -1320,7 +1328,7 @@ Every tool a power brings (each tool of a connection, of a plugin's MCP server, 
 
 Each member has one Glyphh, the super agent (`glyphh` true): it has every power, every super power and every machine they have, and needs no grants. Every other super power sits under it and has only its **grants**: each grant gives it one power (a folder, a connection, a model, a skill, a task or a plugin), one machine it may run on, or one other super power it may call. Nothing ungranted is ever handed to it, whether or not anyone is watching. A super power is one user's own, like every power: the org installs none.
 
-**A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex on the member's subscription, or the Glyphh loop on one of their models. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
+**A loop runs it; models are granted.** Every super power has one loop (`loop_id`): Claude Code or Codex, on the member's subscription or on one of their models through the machine's gateway. The member's Glyphh has one too: its loop is the main assistant's. A CLI's sign-in never reaches this database; it stays in the CLI on the machine. Its models are grants like any other power, as many as it needs: the super power uses them directly, and the powers it has use them too (a task's slots).
 
 **A super power's configuration** is everything its edit screen sets (ported field for field from the old app's editor): its name, description, instructions, avatar, voice, personality, directness and temperament sliders, effort, role, whether it is live, and its power map's layout. The member's Glyphh has the same fields, and has everything except what the member takes away from it: those are grants marked `denied`, so a new connection or model reaches Glyphh by itself. Left behind: per-model dollar caps (Glyphh never meters model calls) and the old per-agent guardrails, which nothing enforced.
 
@@ -1500,7 +1508,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine in TypeScript (porting the old worker and the Glyphh loop), one Debian image under s6, bubblewrap and Landlock for the fence. rrotor is headless (decided); the rest waits on Chris's yes.
+- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine in TypeScript (porting the old worker's harness), the two CLIs as the only loops with the machine's gateway for any model, one Debian image under s6, bubblewrap and Landlock for the fence. rrotor is headless (decided); the rest waits on Chris's yes.
 - **Where a session's messages are kept:** rrotor now streams every session back to the server (rrotor is headless). Conversations were decided as the server keeping the record and rrotor the messages; say whether the server now also keeps the messages, or only passes them on.
 - **The machine's own address:** with no UI on the machine, does anything still need `<machine-id>.glyphh.ai`? Outputs and a super power's own screens could stream through the server like everything else. If nothing needs it, the certificates question below goes away.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
