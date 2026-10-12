@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "Access": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "Access",
+        "type": "object"
+      },
       "AllowScreen": {
         "properties": {
           "email": {
@@ -25,6 +43,24 @@
           "orgs"
         ],
         "title": "AllowScreen",
+        "type": "object"
+      },
+      "CodeIn": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "verifier": {
+            "title": "Verifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "verifier"
+        ],
+        "title": "CodeIn",
         "type": "object"
       },
       "CreatedInvite": {
@@ -430,6 +466,20 @@
           "email"
         ],
         "title": "NewInvite",
+        "type": "object"
+      },
+      "OrgIn": {
+        "properties": {
+          "org": {
+            "format": "uuid",
+            "title": "Org",
+            "type": "string"
+          }
+        },
+        "required": [
+          "org"
+        ],
+        "title": "OrgIn",
         "type": "object"
       },
       "OrgView": {
@@ -1154,6 +1204,123 @@
         "summary": "Update Member",
         "tags": [
           "org"
+        ]
+      }
+    },
+    "/v1/session/refresh": {
+      "post": {
+        "operationId": "refreshSession",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Access"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/v1/session/sign-out": {
+      "post": {
+        "operationId": "signOut",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sign Out",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/v1/session/switch": {
+      "post": {
+        "operationId": "switchOrg",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Access"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/v1/session/token": {
+      "post": {
+        "operationId": "startSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Access"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "session"
         ]
       }
     }
