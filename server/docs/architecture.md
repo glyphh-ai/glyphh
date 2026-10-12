@@ -1379,6 +1379,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
+- **The component library gets its own repo** (decided 2026-10-12): `@glyphh-ai/ui` moves from `glyphh-ai/platform` (`ui/`) to `glyphh-ai/ui`, published to GitHub Packages and pinned by the platform and rrotor's UI, so both apps share one set of tokens and components. To do: create the repo, move `ui/` with its tests and release flow, switch the platform to the package, point `/design-sync` at it.
 None open (2026-10-12).
 
 #### To draw
