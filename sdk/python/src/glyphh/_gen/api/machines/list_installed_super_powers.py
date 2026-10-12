@@ -9,9 +9,7 @@ from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
 from ...models.installed_page import InstalledPage
-from ...models.list_installed_super_powers_status_type_0 import (
-    ListInstalledSuperPowersStatusType0,
-)
+from ...models.list_installed_super_powers_status_type_0 import ListInstalledSuperPowersStatusType0
 from ...types import UNSET, Response, Unset
 
 
@@ -28,7 +26,7 @@ def _get_kwargs(
 
     params["q"] = q
 
-    json_status: None | str | Unset
+    json_status: str | Unset | None
     if isinstance(status, Unset):
         json_status = UNSET
     elif isinstance(status, ListInstalledSuperPowersStatusType0):

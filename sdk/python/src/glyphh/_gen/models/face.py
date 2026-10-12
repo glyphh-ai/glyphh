@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar, cast
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -25,7 +25,7 @@ class Face:
         status (str):
     """
 
-    avatar_color: None | str
+    avatar_color: str | None
     avatar_variant: int
     description: str
     id: UUID
@@ -35,7 +35,7 @@ class Face:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        avatar_color: None | str
+        avatar_color: str | None
         avatar_color = self.avatar_color
 
         avatar_variant = self.avatar_variant
@@ -44,7 +44,7 @@ class Face:
 
         id = str(self.id)
 
-        last_active_at: None | str
+        last_active_at: str | None
         if isinstance(self.last_active_at, datetime.datetime):
             last_active_at = self.last_active_at.isoformat()
         else:
@@ -71,10 +71,10 @@ class Face:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
 
-        def _parse_avatar_color(data: object) -> None | str:
+        def _parse_avatar_color(data: object) -> str | None:
             if data is None:
                 return data
             return cast(None | str, data)

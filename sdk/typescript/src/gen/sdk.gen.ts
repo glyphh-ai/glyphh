@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -91,6 +91,13 @@ export const openMachine = <ThrowOnError extends boolean = false>(options: Optio
 export const listInstalledSuperPowers = <ThrowOnError extends boolean = false>(options: Options<ListInstalledSuperPowersData, ThrowOnError>): RequestResult<ListInstalledSuperPowersResponses, ListInstalledSuperPowersErrors, ThrowOnError> => (options.client ?? client).get<ListInstalledSuperPowersResponses, ListInstalledSuperPowersErrors, ThrowOnError>({ url: '/v1/machines/{machine_id}/super-powers', ...options });
 
 /**
+ * Threads
+ *
+ * A machine's threads (Recents): pinned first, then the newest; by goal, by a super power, archived or not.
+ */
+export const listThreads = <ThrowOnError extends boolean = false>(options: Options<ListThreadsData, ThrowOnError>): RequestResult<ListThreadsResponses, ListThreadsErrors, ThrowOnError> => (options.client ?? client).get<ListThreadsResponses, ListThreadsErrors, ThrowOnError>({ url: '/v1/machines/{machine_id}/threads', ...options });
+
+/**
  * Get Me
  */
 export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>): RequestResult<MeResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeResponses, unknown, ThrowOnError>({ url: '/v1/me', ...options });
@@ -130,6 +137,27 @@ export const mySettings = <ThrowOnError extends boolean = false>(options?: Optio
  */
 export const changeMySettings = <ThrowOnError extends boolean = false>(options: Options<ChangeMySettingsData, ThrowOnError>): RequestResult<ChangeMySettingsResponses, ChangeMySettingsErrors, ThrowOnError> => (options.client ?? client).patch<ChangeMySettingsResponses, ChangeMySettingsErrors, ThrowOnError>({
     url: '/v1/me/settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Needs You
+ *
+ * Every question my super powers are waiting on, across my machines, newest first.
+ */
+export const listNeedsYou = <ThrowOnError extends boolean = false>(options?: Options<ListNeedsYouData, ThrowOnError>): RequestResult<ListNeedsYouResponses, ListNeedsYouErrors, ThrowOnError> => (options?.client ?? client).get<ListNeedsYouResponses, ListNeedsYouErrors, ThrowOnError>({ url: '/v1/needs-you', ...options });
+
+/**
+ * Answer One
+ *
+ * Allow or deny, once: answered anywhere, it is closed everywhere.
+ */
+export const answerNeedsYou = <ThrowOnError extends boolean = false>(options: Options<AnswerNeedsYouData, ThrowOnError>): RequestResult<AnswerNeedsYouResponses, AnswerNeedsYouErrors, ThrowOnError> => (options.client ?? client).post<AnswerNeedsYouResponses, AnswerNeedsYouErrors, ThrowOnError>({
+    url: '/v1/needs-you/{question_id}/answer',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -225,6 +253,34 @@ export const switchOrg = <ThrowOnError extends boolean = false>(options: Options
  */
 export const startSession = <ThrowOnError extends boolean = false>(options: Options<StartSessionData, ThrowOnError>): RequestResult<StartSessionResponses, StartSessionErrors, ThrowOnError> => (options.client ?? client).post<StartSessionResponses, StartSessionErrors, ThrowOnError>({
     url: '/v1/session/token',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete
+ *
+ * Delete an archived thread for good.
+ */
+export const deleteThread = <ThrowOnError extends boolean = false>(options: Options<DeleteThreadData, ThrowOnError>): RequestResult<DeleteThreadResponses, DeleteThreadErrors, ThrowOnError> => (options.client ?? client).delete<DeleteThreadResponses, DeleteThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}', ...options });
+
+/**
+ * Thread
+ *
+ * One thread's record, its machine and its open questions. Its messages are on the machine.
+ */
+export const getThread = <ThrowOnError extends boolean = false>(options: Options<GetThreadData, ThrowOnError>): RequestResult<GetThreadResponses, GetThreadErrors, ThrowOnError> => (options.client ?? client).get<GetThreadResponses, GetThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}', ...options });
+
+/**
+ * Change
+ *
+ * Rename it, pin it to the top of Recents or not, archive it or bring it back.
+ */
+export const changeThread = <ThrowOnError extends boolean = false>(options: Options<ChangeThreadData, ThrowOnError>): RequestResult<ChangeThreadResponses, ChangeThreadErrors, ThrowOnError> => (options.client ?? client).patch<ChangeThreadResponses, ChangeThreadErrors, ThrowOnError>({
+    url: '/v1/threads/{thread_id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

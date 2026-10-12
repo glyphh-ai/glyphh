@@ -37,6 +37,34 @@ export type AllowScreen = {
 };
 
 /**
+ * AnswerIn
+ */
+export type AnswerIn = {
+    /**
+     * Allow
+     */
+    allow: boolean;
+};
+
+/**
+ * Answered
+ */
+export type Answered = {
+    /**
+     * Answer
+     */
+    answer: 'allow' | 'deny';
+    /**
+     * Answered At
+     */
+    answered_at: string;
+    /**
+     * Id
+     */
+    id: string;
+};
+
+/**
  * CodeIn
  */
 export type CodeIn = {
@@ -61,6 +89,41 @@ export type CreatedInvite = {
      * The link to send the person: shown once, never stored
      */
     link: string;
+};
+
+/**
+ * CrewCount
+ */
+export type CrewCount = {
+    super_power: CrewFace;
+    /**
+     * Threads
+     */
+    threads: number;
+};
+
+/**
+ * CrewFace
+ *
+ * A super power as a thread shows it: its face and its name.
+ */
+export type CrewFace = {
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -499,6 +562,63 @@ export type OrgView = {
 };
 
 /**
+ * Question
+ */
+export type Question = {
+    /**
+     * Asked At
+     */
+    asked_at: string;
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Machine Name
+     */
+    machine_name: string;
+    super_power: CrewFace | null;
+    /**
+     * Thread Goal
+     */
+    thread_goal: string;
+    /**
+     * Thread Id
+     */
+    thread_id: string;
+    /**
+     * Tool
+     */
+    tool: string;
+};
+
+/**
+ * QuestionPage
+ */
+export type QuestionPage = {
+    /**
+     * Questions
+     */
+    questions: Array<Question>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * RenameOrg
  */
 export type RenameOrg = {
@@ -556,6 +676,131 @@ export type SignInScreen = {
      * Providers
      */
     providers: Array<string>;
+};
+
+/**
+ * ThreadChange
+ */
+export type ThreadChange = {
+    /**
+     * Archived
+     */
+    archived?: boolean | null;
+    /**
+     * Goal
+     */
+    goal?: string | null;
+    /**
+     * Pinned
+     */
+    pinned?: boolean | null;
+};
+
+/**
+ * ThreadDetail
+ */
+export type ThreadDetail = {
+    machine: ThreadMachine;
+    /**
+     * Questions
+     */
+    questions: Array<Question>;
+    thread: ThreadRow;
+};
+
+/**
+ * ThreadMachine
+ */
+export type ThreadMachine = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Seen At
+     */
+    last_seen_at: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Online
+     */
+    online: boolean;
+};
+
+/**
+ * ThreadPage
+ */
+export type ThreadPage = {
+    /**
+     * Crew
+     */
+    crew: Array<CrewCount>;
+    /**
+     * Machine
+     */
+    machine: string;
+    /**
+     * Threads
+     */
+    threads: Array<ThreadRow>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * ThreadRow
+ */
+export type ThreadRow = {
+    /**
+     * Archived At
+     */
+    archived_at: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Crew
+     */
+    crew: Array<CrewFace>;
+    /**
+     * Goal
+     */
+    goal: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Event At
+     */
+    last_event_at: string;
+    /**
+     * Last Seq
+     */
+    last_seq: number;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Needs You
+     */
+    needs_you: number;
+    /**
+     * Pinned At
+     */
+    pinned_at: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    super_power: CrewFace | null;
 };
 
 /**
@@ -853,6 +1098,57 @@ export type ListInstalledSuperPowersResponses = {
 
 export type ListInstalledSuperPowersResponse = ListInstalledSuperPowersResponses[keyof ListInstalledSuperPowersResponses];
 
+export type ListThreadsData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Archived
+         */
+        archived?: boolean;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/machines/{machine_id}/threads';
+};
+
+export type ListThreadsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListThreadsError = ListThreadsErrors[keyof ListThreadsErrors];
+
+export type ListThreadsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadPage;
+};
+
+export type ListThreadsResponse = ListThreadsResponses[keyof ListThreadsResponses];
+
 export type MeData = {
     body?: never;
     path?: never;
@@ -975,6 +1271,70 @@ export type ChangeMySettingsResponses = {
 };
 
 export type ChangeMySettingsResponse = ChangeMySettingsResponses[keyof ChangeMySettingsResponses];
+
+export type ListNeedsYouData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/needs-you';
+};
+
+export type ListNeedsYouErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListNeedsYouError = ListNeedsYouErrors[keyof ListNeedsYouErrors];
+
+export type ListNeedsYouResponses = {
+    /**
+     * Successful Response
+     */
+    200: QuestionPage;
+};
+
+export type ListNeedsYouResponse = ListNeedsYouResponses[keyof ListNeedsYouResponses];
+
+export type AnswerNeedsYouData = {
+    body: AnswerIn;
+    path: {
+        /**
+         * Question Id
+         */
+        question_id: string;
+    };
+    query?: never;
+    url: '/v1/needs-you/{question_id}/answer';
+};
+
+export type AnswerNeedsYouErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AnswerNeedsYouError = AnswerNeedsYouErrors[keyof AnswerNeedsYouErrors];
+
+export type AnswerNeedsYouResponses = {
+    /**
+     * Successful Response
+     */
+    200: Answered;
+};
+
+export type AnswerNeedsYouResponse = AnswerNeedsYouResponses[keyof AnswerNeedsYouResponses];
 
 export type GetOrgData = {
     body?: never;
@@ -1249,3 +1609,93 @@ export type StartSessionResponses = {
 };
 
 export type StartSessionResponse = StartSessionResponses[keyof StartSessionResponses];
+
+export type DeleteThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}';
+};
+
+export type DeleteThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteThreadError = DeleteThreadErrors[keyof DeleteThreadErrors];
+
+export type DeleteThreadResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteThreadResponse = DeleteThreadResponses[keyof DeleteThreadResponses];
+
+export type GetThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}';
+};
+
+export type GetThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetThreadError = GetThreadErrors[keyof GetThreadErrors];
+
+export type GetThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadDetail;
+};
+
+export type GetThreadResponse = GetThreadResponses[keyof GetThreadResponses];
+
+export type ChangeThreadData = {
+    body: ThreadChange;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}';
+};
+
+export type ChangeThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeThreadError = ChangeThreadErrors[keyof ChangeThreadErrors];
+
+export type ChangeThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadRow;
+};
+
+export type ChangeThreadResponse = ChangeThreadResponses[keyof ChangeThreadResponses];

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar
+from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -15,8 +15,8 @@ T = TypeVar("T", bound="SettingsChangePageSizesType0")
 
 @_attrs_define
 class SettingsChangePageSizesType0:
-    additional_properties: dict[str, SettingsChangePageSizesType0AdditionalProperty] = (
-        _attrs_field(init=False, factory=dict)
+    additional_properties: dict[str, SettingsChangePageSizesType0AdditionalProperty] = _attrs_field(
+        init=False, factory=dict
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -28,15 +28,13 @@ class SettingsChangePageSizesType0:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         settings_change_page_sizes_type_0 = cls()
 
         additional_properties = {}
         for prop_name, prop_dict in d.items():
-            additional_property = SettingsChangePageSizesType0AdditionalProperty(
-                prop_dict
-            )
+            additional_property = SettingsChangePageSizesType0AdditionalProperty(prop_dict)
 
             additional_properties[prop_name] = additional_property
 
@@ -50,9 +48,7 @@ class SettingsChangePageSizesType0:
     def __getitem__(self, key: str) -> SettingsChangePageSizesType0AdditionalProperty:
         return self.additional_properties[key]
 
-    def __setitem__(
-        self, key: str, value: SettingsChangePageSizesType0AdditionalProperty
-    ) -> None:
+    def __setitem__(self, key: str, value: SettingsChangePageSizesType0AdditionalProperty) -> None:
         self.additional_properties[key] = value
 
     def __delitem__(self, key: str) -> None:

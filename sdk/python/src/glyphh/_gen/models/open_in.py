@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar, cast
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -19,11 +19,11 @@ class OpenIn:
         super_power (None | Unset | UUID):
     """
 
-    super_power: None | Unset | UUID = UNSET
+    super_power: Unset | UUID | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        super_power: None | str | Unset
+        super_power: str | Unset | None
         if isinstance(self.super_power, Unset):
             super_power = UNSET
         elif isinstance(self.super_power, UUID):
@@ -40,10 +40,10 @@ class OpenIn:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
 
-        def _parse_super_power(data: object) -> None | Unset | UUID:
+        def _parse_super_power(data: object) -> Unset | UUID | None:
             if data is None:
                 return data
             if isinstance(data, Unset):

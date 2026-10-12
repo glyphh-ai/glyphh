@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -52,7 +52,7 @@ class MachineCard:
 
         installed = self.installed
 
-        last_seen_at: None | str
+        last_seen_at: str | None
         if isinstance(self.last_seen_at, datetime.datetime):
             last_seen_at = self.last_seen_at.isoformat()
         else:
@@ -96,7 +96,7 @@ class MachineCard:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.face import Face
 
         d = dict(src_dict)

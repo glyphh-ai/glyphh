@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -20,18 +20,18 @@ class MemberChange:
         role (MemberChangeRoleType0 | None | Unset):
     """
 
-    disabled: bool | None | Unset = UNSET
-    role: MemberChangeRoleType0 | None | Unset = UNSET
+    disabled: bool | Unset | None = UNSET
+    role: MemberChangeRoleType0 | Unset | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        disabled: bool | None | Unset
+        disabled: bool | Unset | None
         if isinstance(self.disabled, Unset):
             disabled = UNSET
         else:
             disabled = self.disabled
 
-        role: None | str | Unset
+        role: str | Unset | None
         if isinstance(self.role, Unset):
             role = UNSET
         elif isinstance(self.role, MemberChangeRoleType0):
@@ -50,10 +50,10 @@ class MemberChange:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
 
-        def _parse_disabled(data: object) -> bool | None | Unset:
+        def _parse_disabled(data: object) -> bool | Unset | None:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -62,7 +62,7 @@ class MemberChange:
 
         disabled = _parse_disabled(d.pop("disabled", UNSET))
 
-        def _parse_role(data: object) -> MemberChangeRoleType0 | None | Unset:
+        def _parse_role(data: object) -> MemberChangeRoleType0 | Unset | None:
             if data is None:
                 return data
             if isinstance(data, Unset):

@@ -23,6 +23,7 @@ from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
 from glyphh._org import AsyncOrg, Org
+from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
 
 
 def _change(theme: str | None, rail_collapsed: bool | None, page_sizes: dict[str, int] | None) -> SettingsChange:
@@ -48,6 +49,8 @@ class Glyphh:
         self._client = _client(base_url, token, transport)
         self.org = Org(self._run)
         self.machines = Machines(self._run)
+        self.threads = Threads(self._run)
+        self.needs_you = NeedsYou(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -107,6 +110,8 @@ class AsyncGlyphh:
         self._client = _client(base_url, token, transport)
         self.org = AsyncOrg(self._run)
         self.machines = AsyncMachines(self._run)
+        self.threads = AsyncThreads(self._run)
+        self.needs_you = AsyncNeedsYou(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

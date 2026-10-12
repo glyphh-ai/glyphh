@@ -6,11 +6,15 @@ import type { Health, Host, Me, MeOrg, Settings, SettingsChange } from "./gen/ty
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
+import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, Settings, SettingsChange };
-export { GlyphhError, MachinesApi, OrgApi };
+export { GlyphhError, MachinesApi, NeedsYouApi, OrgApi, ThreadsApi };
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
+export type {
+  Answered, CrewCount, CrewFace, Question, QuestionPage, ThreadChange, ThreadDetail, ThreadMachine, ThreadPage, ThreadQuery, ThreadRow,
+} from "./threads.js";
 
 export interface GlyphhOptions {
   /** The Glyphh server, e.g. http://localhost:8080. Falls back to the GLYPHH_URL environment variable. */
@@ -34,6 +38,10 @@ export class Glyphh {
   readonly org: OrgApi;
   /** My machines and the super powers on them. */
   readonly machines: MachinesApi;
+  /** My machines' threads, by their record (their messages are on the machine). */
+  readonly threads: ThreadsApi;
+  /** The questions my super powers are waiting on. */
+  readonly needsYou: NeedsYouApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -44,6 +52,8 @@ export class Glyphh {
     });
     this.org = new OrgApi(this.#client);
     this.machines = new MachinesApi(this.#client);
+    this.threads = new ThreadsApi(this.#client);
+    this.needsYou = new NeedsYouApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

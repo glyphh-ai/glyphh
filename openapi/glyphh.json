@@ -45,6 +45,48 @@
         "title": "AllowScreen",
         "type": "object"
       },
+      "AnswerIn": {
+        "properties": {
+          "allow": {
+            "title": "Allow",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "allow"
+        ],
+        "title": "AnswerIn",
+        "type": "object"
+      },
+      "Answered": {
+        "properties": {
+          "answer": {
+            "enum": [
+              "allow",
+              "deny"
+            ],
+            "title": "Answer",
+            "type": "string"
+          },
+          "answered_at": {
+            "format": "date-time",
+            "title": "Answered At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "answer",
+          "answered_at"
+        ],
+        "title": "Answered",
+        "type": "object"
+      },
       "CodeIn": {
         "properties": {
           "code": {
@@ -79,6 +121,60 @@
           "link"
         ],
         "title": "CreatedInvite",
+        "type": "object"
+      },
+      "CrewCount": {
+        "properties": {
+          "super_power": {
+            "$ref": "#/components/schemas/CrewFace"
+          },
+          "threads": {
+            "title": "Threads",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "super_power",
+          "threads"
+        ],
+        "title": "CrewCount",
+        "type": "object"
+      },
+      "CrewFace": {
+        "description": "A super power as a thread shows it: its face and its name.",
+        "properties": {
+          "avatar_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Color"
+          },
+          "avatar_variant": {
+            "title": "Avatar Variant",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "avatar_variant",
+          "avatar_color"
+        ],
+        "title": "CrewFace",
         "type": "object"
       },
       "Face": {
@@ -773,6 +869,95 @@
         "title": "OrgView",
         "type": "object"
       },
+      "Question": {
+        "properties": {
+          "asked_at": {
+            "format": "date-time",
+            "title": "Asked At",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "machine_name": {
+            "title": "Machine Name",
+            "type": "string"
+          },
+          "super_power": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrewFace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thread_goal": {
+            "title": "Thread Goal",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "thread_goal",
+          "machine_id",
+          "machine_name",
+          "super_power",
+          "kind",
+          "tool",
+          "detail",
+          "asked_at"
+        ],
+        "title": "Question",
+        "type": "object"
+      },
+      "QuestionPage": {
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "questions",
+          "total"
+        ],
+        "title": "QuestionPage",
+        "type": "object"
+      },
       "RenameOrg": {
         "properties": {
           "name": {
@@ -890,6 +1075,239 @@
           "providers"
         ],
         "title": "SignInScreen",
+        "type": "object"
+      },
+      "ThreadChange": {
+        "properties": {
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "pinned": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned"
+          }
+        },
+        "title": "ThreadChange",
+        "type": "object"
+      },
+      "ThreadDetail": {
+        "properties": {
+          "machine": {
+            "$ref": "#/components/schemas/ThreadMachine"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "thread": {
+            "$ref": "#/components/schemas/ThreadRow"
+          }
+        },
+        "required": [
+          "thread",
+          "machine",
+          "questions"
+        ],
+        "title": "ThreadDetail",
+        "type": "object"
+      },
+      "ThreadMachine": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "online": {
+            "title": "Online",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "online",
+          "last_seen_at"
+        ],
+        "title": "ThreadMachine",
+        "type": "object"
+      },
+      "ThreadPage": {
+        "properties": {
+          "crew": {
+            "items": {
+              "$ref": "#/components/schemas/CrewCount"
+            },
+            "title": "Crew",
+            "type": "array"
+          },
+          "machine": {
+            "title": "Machine",
+            "type": "string"
+          },
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadRow"
+            },
+            "title": "Threads",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "machine",
+          "threads",
+          "total",
+          "crew"
+        ],
+        "title": "ThreadPage",
+        "type": "object"
+      },
+      "ThreadRow": {
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "crew": {
+            "items": {
+              "$ref": "#/components/schemas/CrewFace"
+            },
+            "title": "Crew",
+            "type": "array"
+          },
+          "goal": {
+            "title": "Goal",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_event_at": {
+            "format": "date-time",
+            "title": "Last Event At",
+            "type": "string"
+          },
+          "last_seq": {
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "needs_you": {
+            "title": "Needs You",
+            "type": "integer"
+          },
+          "pinned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "super_power": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrewFace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "machine_id",
+          "goal",
+          "status",
+          "last_seq",
+          "last_event_at",
+          "pinned_at",
+          "archived_at",
+          "created_at",
+          "super_power",
+          "crew",
+          "needs_you"
+        ],
+        "title": "ThreadRow",
         "type": "object"
       },
       "ValidationError": {
@@ -1375,6 +1793,111 @@
         ]
       }
     },
+    "/v1/machines/{machine_id}/threads": {
+      "get": {
+        "description": "A machine's threads (Recents): pinned first, then the newest; by goal, by a super power, archived or not.",
+        "operationId": "listThreads",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "super_power",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Super Power"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Threads",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
     "/v1/me": {
       "get": {
         "operationId": "me",
@@ -1544,6 +2067,117 @@
         "summary": "Change My Settings",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/v1/needs-you": {
+      "get": {
+        "description": "Every question my super powers are waiting on, across my machines, newest first.",
+        "operationId": "listNeedsYou",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Needs You",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
+    "/v1/needs-you/{question_id}/answer": {
+      "post": {
+        "description": "Allow or deny, once: answered anywhere, it is closed everywhere.",
+        "operationId": "answerNeedsYou",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answered"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Answer One",
+        "tags": [
+          "threads"
         ]
       }
     },
@@ -1933,6 +2567,137 @@
         "summary": "Start",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/v1/threads/{thread_id}": {
+      "delete": {
+        "description": "Delete an archived thread for good.",
+        "operationId": "deleteThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete",
+        "tags": [
+          "threads"
+        ]
+      },
+      "get": {
+        "description": "One thread's record, its machine and its open questions. Its messages are on the machine.",
+        "operationId": "getThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Thread",
+        "tags": [
+          "threads"
+        ]
+      },
+      "patch": {
+        "description": "Rename it, pin it to the top of Recents or not, archive it or bring it back.",
+        "operationId": "changeThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThreadChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change",
+        "tags": [
+          "threads"
         ]
       }
     }

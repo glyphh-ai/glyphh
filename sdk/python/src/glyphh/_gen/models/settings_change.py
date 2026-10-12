@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -25,17 +25,15 @@ class SettingsChange:
         theme (None | SettingsChangeThemeType0 | Unset):
     """
 
-    page_sizes: None | SettingsChangePageSizesType0 | Unset = UNSET
-    rail_collapsed: bool | None | Unset = UNSET
-    theme: None | SettingsChangeThemeType0 | Unset = UNSET
+    page_sizes: SettingsChangePageSizesType0 | Unset | None = UNSET
+    rail_collapsed: bool | Unset | None = UNSET
+    theme: SettingsChangeThemeType0 | Unset | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.settings_change_page_sizes_type_0 import (
-            SettingsChangePageSizesType0,
-        )
+        from ..models.settings_change_page_sizes_type_0 import SettingsChangePageSizesType0
 
-        page_sizes: dict[str, Any] | None | Unset
+        page_sizes: dict[str, Any] | Unset | None
         if isinstance(self.page_sizes, Unset):
             page_sizes = UNSET
         elif isinstance(self.page_sizes, SettingsChangePageSizesType0):
@@ -43,13 +41,13 @@ class SettingsChange:
         else:
             page_sizes = self.page_sizes
 
-        rail_collapsed: bool | None | Unset
+        rail_collapsed: bool | Unset | None
         if isinstance(self.rail_collapsed, Unset):
             rail_collapsed = UNSET
         else:
             rail_collapsed = self.rail_collapsed
 
-        theme: None | str | Unset
+        theme: str | Unset | None
         if isinstance(self.theme, Unset):
             theme = UNSET
         elif isinstance(self.theme, SettingsChangeThemeType0):
@@ -70,16 +68,12 @@ class SettingsChange:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
-        from ..models.settings_change_page_sizes_type_0 import (
-            SettingsChangePageSizesType0,
-        )
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.settings_change_page_sizes_type_0 import SettingsChangePageSizesType0
 
         d = dict(src_dict)
 
-        def _parse_page_sizes(
-            data: object,
-        ) -> None | SettingsChangePageSizesType0 | Unset:
+        def _parse_page_sizes(data: object) -> SettingsChangePageSizesType0 | Unset | None:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -96,7 +90,7 @@ class SettingsChange:
 
         page_sizes = _parse_page_sizes(d.pop("page_sizes", UNSET))
 
-        def _parse_rail_collapsed(data: object) -> bool | None | Unset:
+        def _parse_rail_collapsed(data: object) -> bool | Unset | None:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -105,7 +99,7 @@ class SettingsChange:
 
         rail_collapsed = _parse_rail_collapsed(d.pop("rail_collapsed", UNSET))
 
-        def _parse_theme(data: object) -> None | SettingsChangeThemeType0 | Unset:
+        def _parse_theme(data: object) -> SettingsChangeThemeType0 | Unset | None:
             if data is None:
                 return data
             if isinstance(data, Unset):

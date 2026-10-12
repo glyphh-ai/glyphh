@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -27,8 +27,8 @@ class JoinScreen:
 
     email: str
     expires_at: datetime.datetime
-    invited_by: None | str
-    invited_by_email: None | str
+    invited_by: str | None
+    invited_by_email: str | None
     org: str
     providers: list[str]
     role: JoinScreenRole
@@ -39,10 +39,10 @@ class JoinScreen:
 
         expires_at = self.expires_at.isoformat()
 
-        invited_by: None | str
+        invited_by: str | None
         invited_by = self.invited_by
 
-        invited_by_email: None | str
+        invited_by_email: str | None
         invited_by_email = self.invited_by_email
 
         org = self.org
@@ -68,20 +68,20 @@ class JoinScreen:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         email = d.pop("email")
 
         expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
-        def _parse_invited_by(data: object) -> None | str:
+        def _parse_invited_by(data: object) -> str | None:
             if data is None:
                 return data
             return cast(None | str, data)
 
         invited_by = _parse_invited_by(d.pop("invited_by"))
 
-        def _parse_invited_by_email(data: object) -> None | str:
+        def _parse_invited_by_email(data: object) -> str | None:
             if data is None:
                 return data
             return cast(None | str, data)
