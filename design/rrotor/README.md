@@ -78,9 +78,9 @@ All of it stops for people who turn motion off.
 - rrotor's **Settings** (from the account), including **archived threads**: search, restore, delete for good.
 - **Light theme** and **phone** for every board.
 - The live browser up close (watching, take control, hand back), a run's history, and the layout manager's full rules (splits, presets).
+- **A thread's messages** live on the machine and its record on the server (decided 2026-10-12; "Where a thread's messages are" in `../DESIGN.md`): the states this brings (loading from the machine, an offline machine's thread, search with a machine offline) are on the design agent's list.
 - **What the data model doesn't hold yet:**
   - Outputs hosted on rrotor: their storage, their address, how a caller is let in, versions, how long they are kept.
-  - A thread's record: where conversations live is still an open decision.
   - Grouping a run's steps into the blocks a long thread shows.
 
   These are listed under Open in the server's doc.

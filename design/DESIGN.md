@@ -210,6 +210,13 @@ Decided by Chris, 2026-10-12: rrotor's UI is for business users. **No terminal a
 - **Schedules** live with what they run: a crew's on its thread (Run: once now, or on a schedule), a super power's on its Overview (Add a schedule), and every one of them in Recents, under **Scheduled**, with how it runs and when next. A super power can be in many crews and threads at once. The centre's view is called **Crew** (not swarm): Glyphh with only this thread's crew around it.
 - **A new thread** opens a getting-started screen in the centre (a machine can hold thousands of super powers, so there is no crew view yet): what should this crew do (with starters), the crew so far, Start. Add super powers with **+** on a rail row, by dragging a row onto the crew, or with the **picker** (the + by Super powers): search across the machine, Recently used, results in pages, checks to add.
 - **Recents** (top right, a history button): every thread on the machine, whoever is picked (Glyphh or any super power), grouped **Pinned** (only while something is pinned), **Today**, **Yesterday**, **Older**; each with its goal, its crew, its status and when. Search, and a filter by super power (a checklist with how many threads each is in). Each thread's menu: **Pin to top**, **Open in the drawer**, **Archive**. Archived threads leave the list; finding and deleting them is in rrotor's Settings (opened from the account at the bottom of the rail), still to draw.
+- **Where a thread's messages are** (Chris, 2026-10-12; the server's doc, "Threads and messages"): on the machine, never on the server. The server keeps each thread's record (goal, crew, status, pinned, archived, when) and every open "needs you". So:
+  - **Recents, a thread's goal, crew, status and when** show from the server, even when the machine is offline.
+  - **A thread's messages load from the machine** when it opens, newest first, and older pages as the member scrolls up; then they arrive live.
+  - **When the machine is offline**, an opened thread shows its record and says its messages are on the machine, which is offline, with when it was last seen; they come back with it.
+  - **Search** finds a thread by its goal on any machine, and by what was said only on machines that are online; it says when an offline machine's threads were searched by goal only.
+  - **Needs you** is answered from any of them (the thread, the Glyphh panel in Claude, the hook's message) and closes everywhere.
+  - **Delete for good** (Settings, archived threads) deletes the messages from the machine too.
 - **The rail** searches super powers and filters them: All, Working, Needs you, Idle.
 
 ### Navigation
@@ -451,6 +458,8 @@ All done (2026-10-12): the Usage boards (dark and light) now let a plan's includ
 
 
 - **Every app board:** replace the top bar with the left rail from `AppShell` (the page area keeps its content; title and main action head the page). Sign-in boards keep no rail.
+- **A thread's messages come from the machine** (Decisions, "Where a thread's messages are"; `RrotorDesktop`, `RrotorDesktop3`, `MachineOpen`): draw a thread opening (the record at once, its messages loading), older messages loading as you scroll up, a thread whose machine is offline (its record, "its messages are on studio-mac, offline since 3:12 pm"), and Recents' search with one of the member's machines offline ("studio-mac is offline: its threads were searched by their goal only").
+- **The Glyphh panel's needs you** (in Claude, and the platform): every open question across the member's machines (which super power, on which machine, what it wants to do), answered there or opened in its thread; the hook's "Glyphh needs you" lands here. Not drawn yet.
 
 ### Questions
 
