@@ -188,6 +188,62 @@ Decided 2026-10-11:
 - **Everything reaches a machine only through its rrotor, and only by grants:** another machine, Claude, a browser, or a super power running unattended. A super power is fenced whether or not anyone is watching it.
 - **The old app's tools that touch files, shells, processes or a browser live in rrotor.**
 
+### The stack
+
+Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made of:
+
+| Part | Repo | Made of |
+|---|---|---|
+| Server (API, MCP, relay) | `glyphh-ai/server` | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, Redis |
+| Platform (app.glyphh.ai, the cards) | `glyphh-ai/platform` | Vite + React, static, on Fly behind Caddy |
+| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; published to GitHub Packages and shared by the platform and rrotor's UI |
+| SDKs, plugin, design | `glyphh-ai/glyphh` | TypeScript and Python clients generated from the OpenAPI spec |
+| rrotor (the machine) | `glyphh-ai/rrotor` | One Linux image: the engine and the UI in TypeScript, the services below |
+
+**rrotor, one image.** `ghcr.io/glyphh-ai/rrotor`, built for amd64 and arm64 (Apple silicon laptops, Graviton, Hetzner's Arm), on Debian 13 (trixie) slim. Every host runs the same image:
+
+- **Fly:** Fly Machines boot the image as a Firecracker VM: the image is the VM.
+- **Any other VM** (AWS, Azure, GCP, DigitalOcean, Hetzner, any VPS): the first-boot script installs Docker and runs the image as the whole machine, restarted on boot, with a volume for its data.
+- **A laptop:** Docker Desktop, OrbStack or WSL runs the same image with the same command.
+
+Everything that must outlive an update lives on one volume, `/data`: the machine's identity (its token, SSH key and certificate), Postgres and Neo4j, the folders, the browser profiles, the outputs, and the CLIs' own sign-ins. The image itself is replaced whole on every update.
+
+**Inside the image:**
+
+- **Process supervisor:** s6-overlay as PID 1, which starts the services in order, waits until each is ready, restarts what dies and stops everything cleanly. The splash's start-up steps are its readiness.
+- **The engine:** TypeScript on Node 24, one long-running process, which:
+    - holds the machine's outbound WebSocket to the server (`ws`);
+    - serves the UI's local API with live updates over Server-Sent Events (Fastify);
+    - serves rrotor's MCP surface (`@modelcontextprotocol/sdk`);
+    - runs the SSH server and its channels: watch, drive, files and shell (`ssh2`);
+    - runs the loops and the runs, and drives the browser;
+    - hosts the outputs and batches `power_events` to the server.
+
+  Its database code is Drizzle on Postgres, and its validation is zod (as the UI's).
+- **The UI:** Next.js (App Router, React 19) on `@glyphh-ai/ui` and `@glyphh-ai/sdk`, served on the machine. It talks only to the engine, never to the server; the engine holds the machine's connection and the session.
+- **The front door:** Caddy holds the machine's certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`. It takes the TLS streams the relay passes through by name and routes them: the UI, the engine's API and streams, the outputs, and each super power's own screens on their own origin.
+- **The loops:**
+    - Claude Code and Codex, installed at pinned versions and run unmodified in headless mode (`claude -p` with stream JSON, `--mcp-config` and `--strict-mcp-config`; `codex exec --json`). Their sign-ins stay in their own files on `/data`.
+    - The Glyphh loop, the engine's own, on the member's models through the AI SDK (`ai` and its providers, with OpenAI-compatible for providers it has no package for). Whether it covers the catalog's 125 providers is to check.
+- **Data:** Postgres 17 with pgvector (each super power its own schema and role, as decided), Redis (Valkey) for queues and caches, and Neo4j Community. Neo4j is a JVM that wants about a gigabyte, so it is in the image but started only when a super power with a graph runs. Schedules need no cron: the server is the clock.
+- **The browser:** headful Chromium on a virtual screen (Xvfb), driven over CDP with Playwright. Watching starts as CDP's own screencast over the encrypted channel, and take control sends the member's input through CDP, so neither needs the screen itself. WebRTC (GStreamer's `webrtcbin`) comes when watching needs to be smoother.
+- **Media:** ffmpeg, for what super powers make (reels, thumbnails, audio).
+
+**The fence: each run, sandboxed again.** Each super power runs as a Linux user of its own, and each run starts in bubblewrap:
+
+- **Folders:** new mount, PID, IPC and network namespaces. Only the granted folders are mounted, read-only or writable as granted, so a folder that was not granted does not exist inside the run.
+- **Second fence:** Landlock, applied inside, holds the same folders again. With `no_new_privs` and a seccomp filter, nothing in the run can lift either fence.
+- **Network:** the run has none of its own, only a socket to the engine's egress proxy. The proxy lets through the run's model providers, the server's connection relay and the hosts its power declares. Anything else is refused and reported as a `fence_event`.
+
+Tested on Docker Desktop (kernel 6.12), 2026-10-12:
+
+- **Landlock** (ABI 6) works in a default container. It refused a folder that was not granted and refused the network.
+- **Bubblewrap** needs the container run with `--security-opt seccomp=unconfined --security-opt systempaths=unconfined`. That widens what rrotor's container may ask of its own VM, which is fine: the VM is rrotor's alone. On Fly the image is the VM and needs neither.
+
+**Updates:** on Fly, the server moves the machine to the new image through Fly's Machines API. Elsewhere, a small updater the first-boot script installs (a systemd timer: pull, then restart) does the same. Who says when to update is still open.
+
+**Tests:** Vitest at 100% for the engine and the UI, with the same code-shape limits (200-line files, 40-line functions). CI also boots the image and proves the fence: a run that reaches past its folders or its network is refused, and the refusal is reported.
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: a server on any infrastructure, usually by one click, or their own laptop through Docker.
@@ -240,7 +296,7 @@ Decided 2026-10-11. Two UIs, split by isolation:
 
 **Doing is asking.** Creating and changing things (a skill, a task, a super power and its grants) is done by asking Glyphh in Claude, Codex or ChatGPT; the plugin's tools are the server's operations. The platform shows the result, takes quick fixes, and does what a chat cannot.
 
-**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It also holds the ui component library (`@glyphh-ai/ui`). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
+**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It is built on the component library (`@glyphh-ai/ui`, its own repo `glyphh-ai/ui`, shared with rrotor's UI). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
 
 - **The sign-in screens** (sign in, allow an AI host, approve a machine's code, join an org) are platform pages. The server keeps the OAuth endpoints and the Google and GitHub callbacks, and sends the browser to the platform for each screen; the screen's buttons send it back to the server, which still binds every flow to that browser.
 - **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex). Each machine's card shows its 8 most recently active super powers with their status, then See all (decided by Chris, 2026-10-12): a super power is **installed** on any number of machines, and every rrotor also has its Glyphh, which the card doesn't list.
@@ -1395,8 +1451,11 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **The component library gets its own repo** (decided 2026-10-12): `@glyphh-ai/ui` moves from `glyphh-ai/platform` (`ui/`) to `glyphh-ai/ui`, published to GitHub Packages and pinned by the platform and rrotor's UI, so both apps share one set of tokens and components. To do: create the repo, move `ui/` with its tests and release flow, switch the platform to the package, point `/design-sync` at it.
-None open (2026-10-12).
+- **The component library gets its own repo** (decided 2026-10-12): `@glyphh-ai/ui` moves from `glyphh-ai/platform` (`ui/`) to `glyphh-ai/ui`, published to GitHub Packages and pinned by the platform and rrotor's UI, so both apps share one set of tokens and components. To do: create the repo, move `ui/` with its tests and release flow, switch the platform to the package, point `/design-sync` at it. Done so far: `glyphh-ai/ui` made beside the platform, `ui/`'s history copied into it, its suite green in Docker, CI with publishing on a tag; the platform's own `ui/` is gone and it uses the checkout beside it (`file:../../ui`; compose mounts it, the image takes it as a build context, CI checks it out with `UI_READ_TOKEN`) until a version is published (2026-10-12). Left: create `glyphh-ai/ui` on GitHub and push it, add the platform's `UI_READ_TOKEN` secret, then pin a published version.
+- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine and UI in TypeScript, one Debian image under s6, Caddy at the front door, bubblewrap and Landlock for the fence, the browser over CDP first. Waits on Chris's yes.
+- **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
+- **Updating machines:** who decides when a machine moves to a new rrotor (the server, a rollout, the member), and what happens to a run in flight.
+- **The player:** the diagram and Access still name it. With each machine on its own address and TLS passed through to it, the platform and the cards may reach rrotor's UI without it. Keep it or drop it.
 
 #### To draw
 
