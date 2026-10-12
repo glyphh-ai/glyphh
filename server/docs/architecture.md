@@ -317,7 +317,8 @@ erDiagram
     orgs ||--o{ orgs : "parent of"
     orgs ||--o{ users : "has"
     orgs ||--o{ teams : "has"
-    teams ||--o{ users : "has"
+    teams ||--o{ team_members : "has"
+    users ||--o{ team_members : "is in"
     orgs ||--o{ allowed_models : "limits to"
     teams ||--o{ allowed_models : "limits further to"
     catalog_models ||--o{ allowed_models : "allowed as"
@@ -418,6 +419,12 @@ erDiagram
         timestamptz created_at
     }
 
+    team_members {
+        uuid team_id PK, FK
+        uuid user_id PK, FK "a person can be in many teams"
+        timestamptz created_at
+    }
+
     teams {
         uuid id PK
         uuid org_id FK
@@ -447,7 +454,6 @@ erDiagram
     users {
         uuid id PK
         uuid org_id FK
-        uuid team_id FK "null = in no team: only the org's limits apply"
         text role "super_admin | org_admin | user"
         text email UK
         text first_name
@@ -1012,7 +1018,7 @@ A user belongs to one org and has one role in it:
 - `org_admin`: runs their org's billing and members, and sees its usage.
 - `user`: works in their org.
 
-The profile is the user's first name, last name, email and profile image. A Google or GitHub sign-in finds the user by the provider's own id for them (below, Signing in), never by email alone. A user is in at most one team (`team_id`).
+The profile is the user's first name, last name, email and profile image. A Google or GitHub sign-in finds the user by the provider's own id for them (below, Signing in), never by email alone. A user can be in many teams (`team_members`).
 
 **user_settings** holds the member's own settings from the old app's Settings pages: theme, notifications, how new sessions start, voice, and the sandbox's allowed hosts. Glyphh keeps no memory of its own; memory is a power a member adds if they want it. What only ever applied to the desktop app's windows (workspaces, tabs, layouts, the dock, window sizes) is gone; a machine's own settings (its granted folders, its local ports, its shell) live on the machine.
 
@@ -1024,7 +1030,8 @@ The org's Models and Connections pages exist only to say which models and connec
 - **Everything is allowed by default:** both settings start off, and a user may add any model in the catalog and connect any service.
 - **Limiting at the org:** when the org turns a setting on, the org admin adds what is allowed, and only that is allowed, org wide.
 - **Limiting at a team:** a team turns its own setting on and lists what its members may add. Under an org that limits, a team can only narrow it: its list is part of the org's list, never more.
-- **A user adds only what applies to them:** their team's list if their team limits, otherwise the org's if the org limits, otherwise anything. A user is in at most one team; a user in none has only the org's limits.
+- **A user can be in many teams** (his rule, 2026-10-11; `team_members`), or in none.
+- **A user adds what any of their teams allows:** the union of their teams' lists, where a team that doesn't limit allows everything; always inside the org's list when the org limits. A user in no team has only the org's limits.
 - **The database enforces it:** a model or connection power outside the user's lists is refused with the reason, and taking an entry off the org's list takes it off every team's list too.
 
 **A limit set later disables what it leaves out.** A model or connection a user already has stops working the moment a limit leaves it out: the database marks it disabled with the reason, rrotor is never handed it, and its calls are refused. A disabled power can only be deleted, never edited. When the limit no longer leaves it out (the item is allowed again, or the limit is turned off), it comes back on its own: the mark is cleared and everything hanging off it works as before (its grants, tool permissions, slots, schedules, key and account), with nothing for the user to redo.
@@ -1264,7 +1271,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 - **Opening a machine:** the screens for a launch ticket that worked, one that expired or was used, a machine that is offline or waking, the wrong account, and a session that ran out (back through app.glyphh.ai for a new ticket).
 
-- **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person; a person's team is on their membership, one team per org (approved 2026-10-11).
+- **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person; a person can be in many teams in each org they belong to (2026-10-11).
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
 - **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.
 
