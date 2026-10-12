@@ -1346,3 +1346,12 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
 - **Light theme** for the admin boards, the publishing boards and rrotor's splash: the design agent draws them.
 - **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
+- **Gaps from the admin and publishing boards** (2026-10-11; each drawn one way, to confirm):
+    - **Members:** confirm dialogs for Change role and Disable aren't drawn; a disabled member is drawn as not using a seat (a seat is an active user); an invite's expiry is drawn as "[7] days".
+    - **A member's "What you can add" view** (the union of their teams' lists inside the org's) is linked from Powers but not drawn.
+    - **Comping a plan:** drawn as no invoices while comped and the card kept, not charged; whether the org's admins see "Comped by Glyphh" is open.
+    - **The catalog:** drawn so a provider's switch overrides its models', a new provider stays hidden from members until one of its models is on, imported models arrive on but without descriptions (they wait under "No description"), and importing a provider's model list uses a test key of Glyphh's (who holds it is open). The `audio` type is labelled "Voice".
+    - **Review:** drawn so a resubmit after Glyphh asks for changes goes back to the org admin first, a version Glyphh rejects is closed (a new version starts again at org review), withdraw is allowed while in review, and a listing only for the org needs no screenshots. Review times ("usually within [N] working days") and the licence options (drawn as Free) are open.
+    - **"App" as a power kind:** Custom powers and the admin boards draw apps as a kind; `powers.kind` has none.
+    - **New icons on the marketplace board:** a featured star, a drag handle and up/down arrows. Chris approves any new icon before it is built.
+    - **Admin navigation on a phone:** drawn as a "Glyphh admin ▾" button above the sub-tabs; no board shows phone navigation yet.
