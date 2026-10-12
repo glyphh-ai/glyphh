@@ -74,7 +74,7 @@ Everything that can grow is paginated, in the designs as in the build: "Showing 
   - Current plan, then Budget with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
   - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
 - **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (requested in `collaboration.md`).
-- **Open question:** server-old bills in dollars (funds, "Glyphh usage"); the server's docs bill in credits for connection calls only. The copy follows whichever is current.
+- **Dollars or credits:** moved to the server's backlog (https://github.com/glyphh-ai/server/blob/main/docs/backlog.md). The copy follows whichever is decided.
 
 ## Powers: connections and permissions
 

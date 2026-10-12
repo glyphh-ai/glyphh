@@ -96,6 +96,4 @@ From `DECISIONS.md`; repeated here because they are easy to miss:
 
 ## Open questions
 
-- **Billing currency:** server-old bills in dollars (funds); the server's docs bill in credits for connection calls only. The billing copy follows whichever is current.
-- **Undecided numbers:** credits per plan, pack sizes and prices, and the machines included per plan.
-- **Navigation:** where Powers lives. The boards put Super powers, Powers and Marketplace in the top nav.
+Closed here: billing currency, the undecided numbers and the navigation moved to the server's backlog, with every other open item (https://github.com/glyphh-ai/server/blob/main/docs/backlog.md, 2026-10-11).
