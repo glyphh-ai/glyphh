@@ -496,8 +496,7 @@ erDiagram
         timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
         uuid listing_version_id FK "the listing version it was installed from; null = made by its owner"
-        text version "from its manifest; explicit, and required to publish it"
-        text version_notes "from its manifest: what changed in this version"
+        uuid current_version_id FK "the version in use now; null until its first version"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -947,6 +946,10 @@ erDiagram
     super_powers |o--o{ listings : "listed as"
     categories ||--o{ listings : "groups"
     listings ||--o{ listing_versions : "has"
+    powers ||--o{ power_versions : "is released as"
+    super_powers ||--o{ super_power_versions : "is released as"
+    power_versions ||--o{ listing_versions : "submitted as"
+    super_power_versions ||--o{ listing_versions : "submitted as"
     listing_versions ||--o{ listing_screenshots : "shows"
     listing_versions ||--o{ listing_requirements : "needs"
     listing_versions ||--o{ reviews : "reviewed in"
@@ -981,13 +984,34 @@ erDiagram
         timestamptz updated_at
     }
 
+    power_versions {
+        uuid id PK
+        uuid power_id FK
+        text version "from the manifest, explicit: 1.0.0, 1.1.0, ...; unique per power, never reused"
+        text release_notes "from the manifest: what changed in this version"
+        jsonb manifest "the manifest as it was, frozen"
+        text bundle_key "the bundle as it was, frozen, in object storage"
+        uuid created_by FK "who made the version"
+        timestamptz created_at
+    }
+
+    super_power_versions {
+        uuid id PK
+        uuid super_power_id FK
+        text version "explicit: 1.0.0, ...; unique per super power, never reused"
+        text release_notes "what changed in this version"
+        jsonb configuration "its configuration and grants as they were, frozen"
+        text bundle_key "its files as they were, frozen"
+        uuid created_by FK
+        timestamptz created_at
+    }
+
     listing_versions {
         uuid id PK
         uuid listing_id FK
-        text version "1.0.0, ...; unique per listing"
-        text bundle_key "the bundle, frozen when submitted"
+        uuid power_version_id FK "the power version submitted (kind power)"
+        uuid super_power_version_id FK "the super power version submitted (kind super_power)"
         text state "draft, org_review, changes_requested, org_approved, glyphh_review, published, rejected"
-        text notes "what changed in this version"
         timestamptz submitted_at
         timestamptz published_at
         timestamptz created_at
@@ -1134,7 +1158,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
 - **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
-- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its notes, and a listing version is that manifest's version.
+- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its release notes, and making a version freezes it as a `power_versions` row (version, release notes, the manifest and the bundle as they were). A version number is never reused. A super power's versions are `super_power_versions` the same way, its configuration and grants frozen. What is listed and reviewed is one of these versions (`listing_versions`), and an install points at the version it came from.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - **The catalog** is what the platform and its cards show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. **A super admin adds, edits, turns off and removes providers and models** (his rule, 2026-10-11). Turning one off (`active = false`) is for now: members can't add it, and their powers on it are disabled with the reason, the same way an org's limits work, and come back when it is turned on again. Removing one (`removed_at`) is for good: it leaves the catalog, and the powers on it are disabled with the reason and can only be deleted. A provider whose mark is black has a second logo for dark grounds. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
