@@ -182,13 +182,13 @@ Everything that can grow is paginated, in the designs as in the build: "Showing 
   - Current plan, then Credit balance with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
   - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
 - **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (see Requests).
-- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. **Bought credit expires a year after purchase**, as Anthropic's does, and Billing shows when.
+- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. A plan's included usage **does not carry over**: it expires at the period's end. Auto top-up's trigger, target and cap are each $5 to $10,000, and the cap is at least one reload (target minus trigger). **Bought credit expires a year after purchase**, as Anthropic's does, and Billing shows when.
 - **Plans, first numbers** (to adjust): Free $0, 1 seat, $1 of usage a month, 2 machines; Solo $20, 1 seat, $10, 3 machines; Basic $40 a seat, up to 25 seats, $10 a seat, 10 machines; Pro $150 a seat, up to 100 seats, $50 a seat, 50 machines; Enterprise arranged. Extra machines $5 a month (none on Free). These replace the `[BRACKETS]` on the billing, usage and admin boards.
 - **Plans are versioned:** a change to a plan is its next version, sold to new orgs; an org keeps the version it is on until it changes plan or a super admin moves it, with **30 days' notice** by email and a banner on Billing.
 
 ### Versions and release notes
 
-Decided 2026-10-11. A published power or super power has explicit versions: its manifest carries the version (1.0.0, 1.1.0, ...) and its release notes, and every version is kept, frozen, with them. Publish (`ListingSubmit`) shows the version and its release notes and asks for both; a listing's page and the review screens show the version under review and its notes, and the version history with each one's notes; an installed power shows its version, and a newer version offers its notes before updating. Versions are semver and must be higher than the last; release notes are required, up to 2,000 characters; a version number is never reused.
+Decided 2026-10-11. A published power or super power has explicit versions: its manifest carries the version (1.0.0, 1.1.0, ...) and its release notes, and every version is kept, frozen, with them. Publish (`ListingSubmit`) shows the version and its release notes and asks for both; a listing's page and the review screens show the version under review and its notes, and the version history with each one's notes; an installed power shows its version, and a newer version offers its notes before updating. Versions are semver and must be higher than the last published one (a rejected version's number is used up, never reused); release notes are required, up to 2,000 characters; a version number is never reused.
 
 ### Usage of powers and super powers
 
@@ -196,7 +196,7 @@ Decided 2026-10-11. Beside the metered connection calls, every use of a power or
 
 ### Navigation
 
-Decided 2026-10-11: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
+Decided 2026-10-11 and 2026-10-12: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans, Audit log); the account menu has Usage and API keys. Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
 
 ### Admin decisions
 
@@ -411,16 +411,17 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 
 Board changes from the decisions of 2026-10-11 and 2026-10-12.
 
-All done (2026-10-12): see the handoff to the build agent, below.
+- **`UsageFlow`, `UsageMore`, `UsageAudit` and their light boards:** a plan's included usage **expires at the period's end**; it never carries over. Show it the way Billing and the admin ledger do ("$4.10 expires on 3 Nov"), and carry over only bought credit.
 
 
 ### Questions
 
-From the design agent, 2026-10-12:
+Answered by Chris, 2026-10-12:
 
-1. **Does a plan's included usage carry over?** Usage draws the included $ carrying over to the next period with bought credit; the admin ledger and Billing draw it expiring at the period's end ("$4.10 expires on 3 Nov"). Which?
-2. **"Higher than the last version":** drawn as higher than the last *published* version, so a rejected 1.3.0 is used (never reused) but 1.2.0 is the bar. Or the last *submitted*?
-3. **Auto top-up's monthly cap:** drawn as at least one reload (target minus trigger); the $5–$10,000 range applies to trigger, target and cap. Right?
+1. **Does a plan's included usage carry over?** No: it expires at the period's end, as Billing and the admin ledger draw it. The Usage boards change (the list, above).
+2. **"Higher than the last version":** the last *published* version. A rejected 1.3.0 is used up, never reused; 1.2.0 stays the bar. As drawn.
+3. **Auto top-up's monthly cap:** yes, at least one reload, and $5 to $10,000 for trigger, target and cap. As drawn.
+4. **The extra navigation** (Org: Usage, API keys, Audit log; Glyphh admin: Audit log; the account menu: Usage, API keys): yes. In Decisions → Navigation.
 
 ## Handoff to the build agent
 
