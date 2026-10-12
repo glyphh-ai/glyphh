@@ -18,6 +18,19 @@ Each board is a `.dc.html` file: plain HTML with inline styles, and a script at 
 
 **The canvas keeps moving.** The design agent and Chris are still adding to it while you build. Read a board again before you start on it, rather than working from an old copy.
 
+## How the build must be made
+
+A clean UI build: small, well-formed, reusable components, and screens made only by composing them.
+
+- **No inline styles.** No `style={…}` and no style attributes, anywhere: not in components, not in screens. The boards are full of inline styles because that is how the canvas draws; that is never the build's shape.
+- **No big stylesheets.** Each component has its own small `ComponentName.module.css`, written only in tokens. The only global CSS is `tokens.css` and the base reset in `base.css`. No page or screen stylesheets, no utility-class frameworks, no one-off CSS.
+- **Screens compose; they don't style.** A screen is components and layout components (Page, Section, Stack, Row) with props. If a screen seems to need its own CSS, a component is missing.
+- **A missing component is a request,** added under Requests in `collaboration.md`. It is never patched in a screen. The design agent styles it; you build its behaviour.
+- **Variants and states are props,** not new components or class overrides: `<Button variant="primary" size="lg" busy>`, `<Alert tone="danger" traceId="…">`.
+- **Tokens only.** No raw colour, size, font, radius, shadow or duration in any file but `tokens.css`.
+- **Small files, one job each.** A component folder holds its `.tsx`, its `.module.css` and its test, and nothing that belongs to a screen.
+- **Repeated patterns become components the first time they repeat.** For example: the trace id block, the logo tile, the list row with a status chip, and the pager.
+
 ## How to read a board
 
 - **Sketches, not specs.** The boards were drawn before the component library existed. Build every screen from `@glyphh-ai/ui` components; never copy a board's raw colours, sizes or fonts. The values in the boards are what `tokens.css` will carry once `/design-sync` runs (Ink & Violet, Red Hat; see `DECISIONS.md`).
