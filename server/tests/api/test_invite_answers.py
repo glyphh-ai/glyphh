@@ -26,8 +26,8 @@ async def test_accepting_joins_and_lists_the_org(client: httpx.AsyncClient, engi
     token = await _invite(engine, "Yes Co", "yes@answer.test")
     joined = await client.post("/v1/invites/accept", headers=auth, json={"invite": token})
     assert joined.status_code == 200 and joined.json() == {"org": "Yes Co"}
-    names = [o["name"] for o in (await client.get("/v1/me/orgs", headers=auth)).json()]
-    assert "Yes Co" in names
+    orgs = {o["name"]: o for o in (await client.get("/v1/me/orgs", headers=auth)).json()}
+    assert orgs["Yes Co"]["people"] == 2 and orgs["Yes Co"]["role"] == "user" and not orgs["Yes Co"]["personal"]
 
 
 async def test_declining_closes_the_invite_and_someone_else_cannot(

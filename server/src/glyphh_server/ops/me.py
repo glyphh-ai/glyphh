@@ -4,8 +4,9 @@ behind the API and MCP."""
 import uuid
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.orm import aliased
 
 from glyphh_server.models import Membership, Org, Plan, User
 from glyphh_server.ops.auth.principal import Principal
@@ -17,6 +18,7 @@ class MeOrg(BaseModel):
     plan: str
     personal: bool
     role: str
+    people: int
 
 
 class Me(BaseModel):
@@ -31,15 +33,23 @@ class Me(BaseModel):
 
 async def my_orgs(conn: AsyncConnection, user_id: uuid.UUID) -> list[MeOrg]:
     """Every org the person belongs to (not disabled in), their Personal org first."""
+    everyone = aliased(Membership)
+    people = (
+        select(func.count())
+        .where(everyone.org_id == Org.id, everyone.disabled_at.is_(None))
+        .correlate(Org)
+        .scalar_subquery()
+    )
     rows = await conn.execute(
-        select(Org.id, Org.name, Plan.name.label("plan"), Org.personal_user_id, Membership.role)
+        select(Org.id, Org.name, Plan.name.label("plan"), Org.personal_user_id, Membership.role, people.label("people"))
         .join(Membership, Membership.org_id == Org.id)
         .join(Plan, Plan.id == Org.plan_id)
         .where(Membership.user_id == user_id, Membership.disabled_at.is_(None))
         .order_by(Org.personal_user_id.is_(None), Org.name)
     )
     return [
-        MeOrg(id=r.id, name=r.name, plan=r.plan, personal=r.personal_user_id is not None, role=r.role) for r in rows
+        MeOrg(id=r.id, name=r.name, plan=r.plan, personal=r.personal_user_id is not None, role=r.role, people=r.people)
+        for r in rows
     ]
 
 
