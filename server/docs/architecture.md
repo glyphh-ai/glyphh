@@ -248,7 +248,7 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
 - **Members and invites** (org admins).
-- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings).
+- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (see below); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12).
 
 **rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens.
 
@@ -705,7 +705,7 @@ erDiagram
         timestamptz auto_top_up_last_at "the last attempt: one attempt per 10 minutes, taken under the org's lock"
         timestamptz auto_top_up_failed_at "the card was refused: auto top-up is off until an org admin turns it on again"
         text auto_top_up_failure "why, as Stripe said it"
-        int auto_top_up_monthly_cap_cents "the most auto top-up may charge in a period; null = no cap (the default)"
+        int auto_top_up_monthly_cap_cents "the most auto top-up may charge in a period; null = no cap (the default); at least one reload"
         timestamptz current_period_start
         timestamptz current_period_end
         timestamptz created_at
@@ -987,7 +987,7 @@ erDiagram
     power_versions {
         uuid id PK
         uuid power_id FK
-        text version "from the manifest: semver (1.0.0, 1.1.0, ...), higher than the last; unique per power, never reused"
+        text version "from the manifest: semver (1.0.0, 1.1.0, ...), higher than the last published one; unique per power, never reused (a rejected one is used up)"
         text release_notes "from the manifest, required: what changed, up to 2,000 characters"
         jsonb manifest "the manifest as it was, frozen"
         text bundle_key "the bundle as it was, frozen, in object storage"
@@ -998,7 +998,7 @@ erDiagram
     super_power_versions {
         uuid id PK
         uuid super_power_id FK
-        text version "semver, higher than the last; unique per super power, never reused"
+        text version "semver, higher than the last published one; unique per super power, never reused"
         text release_notes "required: what changed, up to 2,000 characters"
         jsonb configuration "its configuration and grants as they were, frozen"
         text bundle_key "its files as they were, frozen"
@@ -1158,7 +1158,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
 - **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
-- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its release notes, and making a version freezes it as a `power_versions` row (version, release notes, the manifest and the bundle as they were). A version is semver and must be higher than the last, release notes are required (up to 2,000 characters), and a version number is never reused (2026-10-12). A super power's versions are `super_power_versions` the same way, its configuration and grants frozen. What is listed and reviewed is one of these versions (`listing_versions`), and an install points at the version it came from.
+- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its release notes, and making a version freezes it as a `power_versions` row (version, release notes, the manifest and the bundle as they were). A version is semver and must be higher than the last published one (a rejected version's number is used up, never reused), release notes are required (up to 2,000 characters), and a version number is never reused (2026-10-12). A super power's versions are `super_power_versions` the same way, its configuration and grants frozen. What is listed and reviewed is one of these versions (`listing_versions`), and an install points at the version it came from.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - **The catalog** is what the platform and its cards show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. **A super admin adds, edits, turns off and removes providers and models** (his rule, 2026-10-11). Turning one off (`active = false`) is for now: members can't add it, and their powers on it are disabled with the reason, the same way an org's limits work, and come back when it is turned on again. Removing one (`removed_at`) is for good: it leaves the catalog, and the powers on it are disabled with the reason and can only be deleted. A provider whose mark is black has a second logo for dark grounds. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
@@ -1243,7 +1243,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 - **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credit to the ledger. A reconcile from Stripe backs the webhook up.
 - **Auto top-up, as Anthropic's auto-reload:** on, a threshold and a balance to reload to. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the difference up to the reload balance. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
 - **Credit is dollars:** a $5 top-up is $5 of credit. A plan's monthly credit ends with the period; **bought credit expires a year after purchase**, as Anthropic's does (2026-10-12), and the Billing page shows when.
-- **Auto top-up has an optional monthly cap** an org admin sets (`auto_top_up_monthly_cap_cents`), off by default.
+- **Auto top-up has an optional monthly cap** an org admin sets (`auto_top_up_monthly_cap_cents`), off by default. The trigger, the reload target and the cap are each $5 to $10,000, the target is above the trigger, and the cap is at least one reload (target minus trigger); the database refuses anything else (2026-10-12).
 - **Runs cost nothing:** they run on the member's own machine. Only connection calls spend credit.
 
 #### Changing plans, as the old server did
@@ -1394,7 +1394,6 @@ None open (2026-10-12).
     - **An audit log of admin actions** (decided by Chris, 2026-10-11: yes): every change an org admin or Glyphh staff makes (members, teams, limits, keys, review, billing, gifts, comps, plan versions, disable, catalog, marketplace), with who, when, where from, and before → after; shown as Org → Audit log and Glyphh admin → Audit log (board `AdminAudit`). Needs a table (append only, like `usage_events`), how long it's kept, and who may export it.
     - **Usage by billing period:** the Usage board defaults to the org's billing period (credits by connector, a connector's tools, a closed period matching its invoice); the Billing boards don't link to it yet.
     - **API keys** (drawn as `ApiKeys`): a member's keys under the account menu, and **Org → API keys** for org admins. Decided by Chris (2026-10-11): turning off `member_api_keys` stops members' existing keys **straight away** (org admins' own keys are not affected); drawn so they come back if it's turned on again, unless revoked or expired. Needs a way to mark a key off without revoking it.
-    - **Navigation grows:** Org gains Usage, API keys and Audit log (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); Glyphh admin gains Audit log; the account menu gains Usage and API keys. Beyond the navigation decided; Chris's yes needed.
     - **Usage** (drawn as `UsageFlow`, `UsageMore`, `UsageAudit`): which time zone times and day boundaries use (the viewer's or the org's; `usage_daily`'s day); whether a period's unused credits expire at its end (drawn as expiring); whether the service's error text in `usage_events.error` is shown to members word for word; Plans and multi-select pickers (teams in Invite, filters) not drawn open.
     - **Moving orgs to a new plan version:** the least notice ([NOTICE]) and where org admins are told (drawn on their Billing page).
     - **API keys, still open** (drawn one way in `ApiKeys`): what a key may do (no scopes: drawn as "what you can in the org"); the default and longest expiry (drawn 90 days; never allowed with a warning); names unique per person, case ignored; the key's format (drawn `gk_live_…`) and how a script sends it; what happens to a key when its owner is promoted, demoted, disabled or removed; how long revoked and expired keys stay listed; whether an expiry warning is sent; rename, rotate and a cap on keys aren't drawn; "API keys" joins the account menu.
