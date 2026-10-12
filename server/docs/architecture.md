@@ -247,6 +247,7 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
 - **Members and invites** (org admins).
+- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans).
 
 **rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens. The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
 
@@ -412,6 +413,8 @@ erDiagram
         bool limit_connections "true = only the org's allowed connections"
         text image_key "the org's picture, in object storage"
         bool member_api_keys "members may make their own API keys"
+        timestamptz disabled_at "disabled by a super admin: no sign-in, machines cut off, schedules stopped, billing paused, data kept"
+        text disabled_reason "why, as the super admin wrote it"
         timestamptz created_at
     }
 
@@ -477,6 +480,7 @@ erDiagram
         text name "unique for its owner"
         timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
+        uuid listing_version_id FK "the listing version it was installed from; null = made by its owner"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -869,6 +873,95 @@ erDiagram
         timestamptz revoked_at
         timestamptz created_at
     }
+    users ||--o{ listings : "publishes"
+    orgs ||--o{ listings : "reviews and owns"
+    powers |o--o{ listings : "listed as"
+    super_powers |o--o{ listings : "listed as"
+    categories ||--o{ listings : "groups"
+    listings ||--o{ listing_versions : "has"
+    listing_versions ||--o{ listing_screenshots : "shows"
+    listing_versions ||--o{ listing_requirements : "needs"
+    listing_versions ||--o{ reviews : "reviewed in"
+    listings ||--o{ listing_comments : "discussed in"
+    listing_versions |o--o{ powers : "installed as"
+
+    categories {
+        uuid id PK
+        text slug UK
+        text name
+        int sort "the order a super admin sets"
+    }
+
+    listings {
+        uuid id PK
+        text kind "power or super_power"
+        uuid power_id FK "the power it was made from (kind power)"
+        uuid super_power_id FK "the super power it was made from (kind super_power)"
+        uuid user_id FK "who made it"
+        uuid org_id FK "the org that reviews it, and owns it when it is listed for the org"
+        text reach "org (its org's members) or marketplace (everyone)"
+        uuid category_id FK
+        text name
+        text summary "one line"
+        text description
+        text icon_key "a power's square icon, in object storage; a super power's icon is its cat"
+        uuid published_version_id FK "the version people add; null = not published"
+        bool featured "set by a super admin"
+        int featured_sort
+        timestamptz unpublished_at "taken down: installed copies keep working, nobody can add it again"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    listing_versions {
+        uuid id PK
+        uuid listing_id FK
+        text version "1.0.0, ...; unique per listing"
+        text bundle_key "the bundle, frozen when submitted"
+        text state "draft, org_review, changes_requested, org_approved, glyphh_review, published, rejected"
+        text notes "what changed in this version"
+        timestamptz submitted_at
+        timestamptz published_at
+        timestamptz created_at
+    }
+
+    listing_screenshots {
+        uuid id PK
+        uuid listing_version_id FK
+        text image_key "re-encoded by the server, in object storage"
+        int width
+        int height
+        int sort "up to six per version"
+    }
+
+    listing_requirements {
+        uuid id PK
+        uuid listing_version_id FK
+        text kind "connection, model, skill, task, plugin, folder, browser"
+        text need "what: the service (gmail), the model type (chat), the power's listing"
+        bool optional
+    }
+
+    reviews {
+        uuid id PK
+        uuid listing_version_id FK
+        text step "org (its org admin) or glyphh (for the marketplace)"
+        uuid reviewer_id FK "the person who decided; null while only the reviewer agent has reported"
+        text decision "approved, changes_requested, rejected; null = still open"
+        text notes "what the reviewer said"
+        jsonb agent_report "Glyphh's reviewer's report: permissions asked vs used, dependencies, screenshots, description, secrets found, the test run"
+        timestamptz decided_at
+        timestamptz created_at
+    }
+
+    listing_comments {
+        uuid id PK
+        uuid listing_id FK
+        uuid user_id FK
+        text body
+        timestamptz created_at
+    }
+
 ```
 
 ![The data model](img/data-model.png)
@@ -878,6 +971,8 @@ erDiagram
 Glyphh is the parent org: the one org with no parent. Every customer org's parent is Glyphh. Every org is on a plan: Glyphh itself is on Enterprise, and a new org starts on Free.
 
 **For now an org is for billing and for limiting models and connections:** its plan, subscription, seats, machines and credits, who is in it (members and invites), and which models and connections its users may add (below). It owns no powers or super powers; those are each user's. Rows still carry `org_id` so the database keeps every org's data apart and counts its limits.
+
+**A super admin can disable an org** (`disabled_at`, with a reason): its members can't sign in to it, its machines are cut off, its schedules stop, its billing pauses and its data is kept. Enable undoes all of it.
 
 ### plans
 
@@ -996,6 +1091,18 @@ Each member has one Glyphh, the super agent (`glyphh` true): it has every power,
 **Every super power carries a voice,** part of its configuration on its edit screen, beside its avatar and name (ported from the old app's super power editor): a speech model of the member's own (`voice_model_id`) and one of that model's voices (`voice_id`), with a sample to hear before saving. The member's Glyphh also has the model it hears them with (`listen_model_id`). All are the member's own models, called directly on their keys; audio never reaches this database.
 
 A super power's own files (its workflows, pipelines and screens) are a bundle in object storage (`bundle_key`); `definition` holds the rrotor definition (to draw: see [Open](#open)). What it stores (its data, vectors and graph) lives in rrotor, never here. Where the content of its conversations lives is still open.
+
+### Discover: listings and review
+
+Decided 2026-10-11, as the boards draw it (`ListingSubmit`, `OrgReview`, `AdminMarket`).
+
+- **A listing** is a power or a super power someone offers: for their org's members (`reach` org) or for everyone (marketplace). A super power keeps its own table and is listed the same way as a power. Its icon is its cat; a power's is a square icon it uploads.
+- **Every version is reviewed:** draft → org review (an org admin) → for the marketplace, Glyphh review → published. A reviewer approves, asks for changes (back to the maker, with notes) or rejects. A new version goes through review again, while the published one stays in use. Each step's decision is a `reviews` row with who decided, when and their notes, and the maker and reviewers talk on the listing's thread (`listing_comments`).
+- **Glyphh's reviewer** is a super power of Glyphh's ("Marketplace Reviewer"). It runs on Glyphh's own machine, never a member's, reads only the submitted bundle and the listing, test-runs it sandboxed there, and writes its report on the Glyphh review step (`agent_report`): the permissions asked for against what it does, its dependencies, its screenshots and description, any secrets found, and the test run. A person makes the decision.
+- **Pictures:** a square icon (PNG, 512 px) and up to six screenshots per version (PNG or JPEG, 5 MB each), in object storage. The server re-encodes every upload, which drops its metadata, and never takes an SVG, which can carry script.
+- **Requirements** are what a version needs (`listing_requirements`): its connections, the types of model, other powers. Adding it grants them all, and what the member lacks is asked for right there.
+- **Installing** copies the published version into the member's powers, linked to it (`powers.listing_version_id`) so a newer version can be offered.
+- **Managing the marketplace** (super admins): featured listings and their order, categories and their order, and unpublishing, after which installed copies keep working and nobody can add it again.
 
 ### Slots
 
@@ -1147,22 +1254,18 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **Plans:** price per credit and monthly credits per plan, pack sizes and prices, included and extra machines for Solo, Basic and Pro, whether runs themselves spend credits, whether Free is held to one connected service. The billing boards leave these as `[BRACKETS]`.
 - **Tasks are powers:** rename tasks to powers everywhere (proposed, not confirmed).
 - **"Also use my Claude or ChatGPT connectors":** a switch per super power, letting its loop use the member's own connectors beside Glyphh's (proposed, not decided).
-- **Navigation:** where Powers lives. The boards put Super powers, Powers and Marketplace in the top nav.
 - **Conversations:** where they live. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the relay.
 - **Status page:** a hosted service (Better Stack, Instatus, OpenStatus) or our own on Cloudflare; never on Fly, so it stays up when we're down. The sign-in screens already link to `status.glyphh.ai`.
 - **Codex hosting terms:** confirm OpenAI's terms for hosting Codex signed in with a member's ChatGPT subscription; Glyphh accepts Anthropic's Commercial Terms for Claude Code.
-- **Super powers in Discover:** one more power type (`super_powers` folds into `powers`), or its own table listed the same way.
 - **Usage detail:** how long each call's row is kept.
-- **Teams:** whether a user can be in more than one (drawn as at most one).
 - **Old prod:** stopped on Fly, not destroyed (database and Redis kept); when to cut over or drop it.
 
 #### To draw
 
 - **Opening a machine:** the screens for a launch ticket that worked, one that expired or was used, a machine that is offline or waking, the wrong account, and a session that ran out (back through app.glyphh.ai for a new ticket).
 
-- **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person.
+- **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person; a person's team is on their membership, one team per org (approved 2026-10-11).
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
-- **Requirements and listings:** the tables for power dependencies and the Discover catalog.
 - **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.
 
 #### To build
@@ -1184,14 +1287,5 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 - **The design agent's requests** (`glyphh-ai/glyphh`, `design/DESIGN.md`, Requests): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar, PowerMap and FlowCanvas (the editors).
 - **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
-- **Design gaps** (found while drawing, 2026-10-11; each needs a decision or a data model change before it's built):
-    - **Publishing and review:** listings move user → org admin review → (for the marketplace) Glyphh review → published. Needs listing states (draft, org review, changes requested, approved for the org, Glyphh review, published, rejected, unpublished), a review record per step with its decision and notes, a feedback thread on a listing, and a new version going through review again. Belongs with "Requirements and listings" above. Boards: `ListingSubmit`, `OrgReview`, `AdminMarket`.
-    - **Glyphh's reviewer:** a super power of Glyphh's ("Marketplace Reviewer") checks each submission and writes a report (permissions asked vs what it does, dependencies, screenshots, description, no secrets, a sandboxed test run). Where it runs, what it may read, and how its report is stored are undecided.
-    - **A listing's icon and screenshots:** a power's icon (square, uploaded) and up to six screenshots; a super power's icon is its cat. Needs storage, sizes, and checks on upload.
-    - **Marketplace management:** featured listings, categories and their order, unpublishing (installed copies keep working, can't be added again).
-    - **Disabling an org** (super admin): no field for it on `orgs` yet; the boards draw members unable to sign in, machines disconnected, schedules stopped, data kept, billing paused, and Enable to undo.
-    - **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
-    - **Teams under many orgs per person:** the data model says a user is in one org and at most one team; with memberships, the team belongs on the membership.
-    - **Where admins find their pages:** the boards add an **Org** item to the top nav for org admins (Members, Teams, Models, Connections, Review, Billing) and **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Part of the open Navigation decision.
-    - **Light theme** for the admin boards, the publishing boards and rrotor's splash: dark only so far.
-    - **Undecided in the design:** whether the four power colours outside the palette (Bloom, Rose, Azure, Teal) stay as cat eye colours; whether laptop machines get a Docker logo (needs Chris's yes, like any new logo).
+- **Light theme** for the admin boards, the publishing boards and rrotor's splash: the design agent draws them.
+- **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
