@@ -248,7 +248,7 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
 - **Members and invites** (org admins).
-- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (see below); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12).
+- **Navigation** (decided 2026-10-11 and 2026-10-12): a **left rail**, not a top nav, collapsible to icons and remembered per person (`user_settings.rail_collapsed`), a drawer on a phone; it holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (see below); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12). You, your org and your account sit at the bottom of the rail: the account menu (your orgs to switch between, Account, Usage, API keys, Help and status, the theme, Sign out). Lists that can grow show rows per page (10, 25, 50, 100), remembered per person and list (`user_settings.page_sizes`).
 
 **rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens.
 
@@ -484,6 +484,8 @@ erDiagram
         bool voice_brief "spoken replies kept short"
         bool sandbox_strict "runs reach only the allowed hosts"
         text[] allowed_hosts "hosts every sandboxed run may reach"
+        bool rail_collapsed "the platform's left rail shown as icons only"
+        jsonb page_sizes "rows per page each list was last shown at, by list: {\"usage-log\": 50}"
         timestamptz updated_at
     }
 
