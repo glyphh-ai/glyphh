@@ -198,7 +198,7 @@ Decided 2026-10-11. Beside the metered connection calls, every use of a power or
 
 ### One component library, shared by both apps
 
-Decided by Chris, 2026-10-12: **`@glyphh-ai/ui` moves out of the platform repo into its own repo, `glyphh-ai/ui`**, published as a versioned package (GitHub Packages). The platform and rrotor's UI both depend on it, each pinning a version. It holds the tokens, fonts, base styles, the cats, logo and logo tiles, the approved icons, and every component both apps draw the same way (Button, Avatar and CatRing, LogoTile, Icon, Dialog, Menu, Pagination, SegmentedControl, Alert and TraceId, Skeleton, and the rest of the library). App-only screens stay in each app. `/design-sync` points at the new repo.
+Decided by Chris, 2026-10-12: **`@glyphh-ai/ui` moves out of the platform repo into its own repo, `glyphh-ai/ui`**, never published (Chris, 2026-10-12: it is only for building our own apps). The platform and rrotor's UI both build it from a checkout beside them. It holds the tokens, fonts, base styles, the cats, logo and logo tiles, the approved icons, and every component both apps draw the same way (Button, Avatar and CatRing, LogoTile, Icon, Dialog, Menu, Pagination, SegmentedControl, Alert and TraceId, Skeleton, and the rest of the library). App-only screens stay in each app. `/design-sync` points at the new repo.
 
 ### rrotor's UI is the business version
 
@@ -504,7 +504,7 @@ The Questions above (to Chris), and the server's Open list (`docs/architecture.m
 
 Pull `glyphh-ai/glyphh`, then see what changed in the design since you last built: `git log --oneline ea224cc..HEAD -- design/`. Decisions in this doc are the source of truth; read it again rather than a summary.
 
-**First: move `ui/` to its own repo, `glyphh-ai/ui`** (see "One component library, shared by both apps"): its tests and release flow there, published to GitHub Packages, and the platform switched to the published package (link a local checkout while developing). rrotor's build takes its shared pieces from the same package.
+**First: move `ui/` to its own repo, `glyphh-ai/ui`** (see "One component library, shared by both apps"): its tests there, never published; the platform builds it from the checkout beside it (done 2026-10-12), and rrotor's build takes its shared pieces from the same checkout.
 
 Rework what is built in `@glyphh-ai/ui`:
 
