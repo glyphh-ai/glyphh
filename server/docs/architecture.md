@@ -387,7 +387,9 @@ erDiagram
 
     plans {
         uuid id PK
-        text name UK
+        text family "Free, Solo, Basic, Pro, Enterprise: what a person sees"
+        int version "1, 2, ...: a change to a plan is a new version"
+        text name UK "the family and version: Solo v2"
         int price_cents "per seat, per month"
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "the most seats an org may have; null = no limit"
@@ -508,8 +510,10 @@ erDiagram
         text slug UK "anthropic, openai, google, fireworks, ..."
         text name "Anthropic"
         text logo_key "its logo, in object storage"
+        text logo_dark_key "a copy for dark grounds, for a black mark; null = the logo serves both"
         text base_url "the provider's endpoint"
-        bool active
+        bool active "false = turned off by a super admin, for now"
+        timestamptz removed_at "removed by a super admin, for good; the row stays for the powers that point at it"
         int sort
         timestamptz created_at
         timestamptz updated_at
@@ -523,7 +527,8 @@ erDiagram
         text description "one or two lines on what it is good for"
         text type "chat, embedding, image, audio, video"
         text logo_key "null = the provider's logo; set when the maker differs (Llama on Fireworks)"
-        bool active
+        bool active "false = turned off by a super admin, for now"
+        timestamptz removed_at "removed by a super admin, for good"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -886,7 +891,9 @@ Seats are billed as the old server billed them (his rule, 2026-09-18):
 - **The billing date never moves:** it is set when the subscription starts.
 - **At `max_seats`, an org upgrades to add more people.**
 
-`stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us). A plan that is no longer sold is set `active = false`, never deleted, so orgs on it keep working.
+`stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us).
+
+**Plans are versioned, so a change never touches an org already on the plan** (his rule, 2026-10-11). A plan is a family (Free, Solo, Basic, Pro, Enterprise) and each row is one version of it, with its own price, seats, credits, machines and Stripe prices. A super admin changes a plan by making its next version: the new version is the one sold (one `active` version per family, enforced by the database), and the old one stops being sold but is never edited or deleted. An org stays on the version it signed up to, at that version's price and terms, until it changes plan itself (it then gets the version on sale) or a super admin moves it, with notice. Stripe works the same way: a new version has new Stripe prices, and existing subscriptions keep theirs.
 
 The plans carried over from the old server:
 
@@ -963,7 +970,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
 - **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`); whether each save keeps a version: see [Open](#open).
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
-- **The catalog** is what the platform and its cards show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
+- **The catalog** is what the platform and its cards show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. **A super admin adds, edits, turns off and removes providers and models** (his rule, 2026-10-11). Turning one off (`active = false`) is for now: members can't add it, and their powers on it are disabled with the reason, the same way an org's limits work, and come back when it is turned on again. Removing one (`removed_at`) is for good: it leaves the catalog, and the powers on it are disabled with the reason and can only be deleted. A provider whose mark is black has a second logo for dark grounds. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
 
 Left behind from the old gateway: the router itself, LiteLLM's 80-odd tables, model access lists, the request log, budgets, margins and the dollar pool, spend roll-ups, auto-routers, and per-model flags nothing enforced.
@@ -1182,7 +1189,6 @@ Everything open: decisions still to make, things to draw, work found but not sta
     - **Glyphh's reviewer:** a super power of Glyphh's ("Marketplace Reviewer") checks each submission and writes a report (permissions asked vs what it does, dependencies, screenshots, description, no secrets, a sandboxed test run). Where it runs, what it may read, and how its report is stored are undecided.
     - **A listing's icon and screenshots:** a power's icon (square, uploaded) and up to six screenshots; a super power's icon is its cat. Needs storage, sizes, and checks on upload.
     - **Marketplace management:** featured listings, categories and their order, unpublishing (installed copies keep working, can't be added again).
-    - **Turning off a provider or model** (super admin, `providers.active`, `catalog_models.active`): should a member's power on it be disabled with a reason and come back when it's turned on again, the same way the org limits work? The boards draw it that way. A provider whose mark is black also needs a second logo for dark grounds (one `logo_key` today).
     - **Disabling an org** (super admin): no field for it on `orgs` yet; the boards draw members unable to sign in, machines disconnected, schedules stopped, data kept, billing paused, and Enable to undo.
     - **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
     - **Teams under many orgs per person:** the data model says a user is in one org and at most one team; with memberships, the team belongs on the membership.
