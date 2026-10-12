@@ -37,36 +37,6 @@ button,input{font:inherit}
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Every component still under Requests in DESIGN.md, with each variant and state at real size, dark on Ink beside light on Paper. The looks are the boards' own (PowersFlow, PlayerFlow, BillingFlow, SignInFlow, CodeFlow, SuperPowerEdit, TaskCanvas, UsageFlow); nothing here is new. Under each sample are the props it maps to, so the build can name them. The values are what tokens.css carries; never copy a hex from here.</p>
 </div>
 
-<!-- 7 · Pagination -->
-<section aria-label="Pagination" style="display: flex; flex-direction: column; gap: 22px">
-<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
-<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">07 · requested</div>
-<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">Pagination</div>
-<div style="font-size: 16px; line-height: 1.5; color: #8E89A0; max-width: 1400px">Under every list that can grow. "Showing 1–5 of 58", then Previous, page numbers shortened with "…", Next; on a phone, Previous, "Page 1 of 5", Next. In cursor mode (lists served by cursor, like Pipedream's catalog) only Previous and Next. Every button 44 px; the current page in violet; an end that can't go further is disabled and dimmed.</div>
-</div>
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px">
-<sc-for list="{{themes}}" as="th" hint-placeholder-count="2">
-<div class="t {{th.theme}}" style="background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: 16px; padding: 32px; display: flex; flex-direction: column; gap: 28px; min-width: 0">
-<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">{{th.name}}</div>
-<sc-for list="{{th.pagers}}" as="pg" hint-placeholder-count="6">
-<div style="display: flex; flex-direction: column; gap: 8px">
-<div style="font-size: 13px; font-weight: 600; color: var(--tx2)">{{pg.t}}</div>
-<nav aria-label="{{pg.label}}" style="width: {{pg.w}}; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--line)">
-<span style="font-size: 13px; color: var(--tx3)">{{pg.line}}</span>
-<span style="display: flex; align-items: center; gap: 4px">
-<button type="button" aria-label="Previous page" disabled="{{pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
-<sc-for list="{{pg.items}}" as="pi" hint-placeholder-count="6"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
-<button type="button" aria-label="Next page" disabled="{{pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
-</span>
-</nav>
-<code style="font-family: 'Red Hat Mono', monospace; font-size: 12px; line-height: 1.5; color: var(--tx3); white-space: pre-wrap">{{pg.props}}</code>
-</div>
-</sc-for>
-</div>
-</sc-for>
-</div>
-</section>
-
 <!-- 8 · SegmentedControl -->
 <section aria-label="SegmentedControl" style="display: flex; flex-direction: column; gap: 22px">
 <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
@@ -316,7 +286,7 @@ button,input{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3376,"height":7885}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3376,"height":6688}}'>
 var INK = '#0b0a0f';
 var B = 'assets/';
 var LOGO = {
@@ -481,17 +451,22 @@ function pager(o) {
   }
   var first = !o.cursorPrev && page === 1, last = !o.cursorNext && page === pages;
   if (o.mode === 'cursor') { first = !o.cursorPrev; last = !o.cursorNext; }
-  return { t: o.t, label: o.label, w: o.w, props: o.props, line: o.line || ('Showing ' + fmt(o.from) + '–' + fmt(o.to) + ' of ' + fmt(o.total)), items: items, first: first, last: last,
+  var size = o.size || 0;
+  return { hasSize: !!size, size: String(size), sizeId: 'rpp-' + o.label.replace(/\W+/g, '') + (o.uid || ''), sizeOpen: !!o.open, sizeOpenStr: o.open ? 'true' : 'false', sizeBorder: o.open ? '#7C4DFF' : 'var(--line2)',
+    sizes: [10, 25, 50, 100].map(function (n) { return { n: String(n), sel: n === size, on: n === size ? 'true' : 'false', bg: n === size ? 'var(--s2)' : 'transparent' }; }),
+    t: o.t, label: o.label, w: o.w, props: o.props, line: o.line || ('Showing ' + fmt(o.from) + '–' + fmt(o.to) + ' of ' + fmt(o.total)), items: items, first: first, last: last,
     prevTx: first ? 'var(--line2)' : 'var(--tx)', nextTx: last ? 'var(--line2)' : 'var(--tx)' };
 }
 function pagers() {
   return [
-    pager({ t: 'Numbered, first page: Previous disabled', label: 'Machine pages', mode: 'numbered', w: '1040px', page: 1, pages: 12, from: 1, to: 5, total: 58, props: 'page={1} pageSize={5} total={58}' }),
-    pager({ t: 'Numbered, a middle page: shortened on both sides', label: 'Machine pages', mode: 'numbered', w: '1040px', page: 6, pages: 12, from: 26, to: 30, total: 58, props: 'page={6} pageSize={5} total={58}' }),
-    pager({ t: 'Numbered, last page: Next disabled', label: 'Machine pages', mode: 'numbered', w: '1040px', page: 12, pages: 12, from: 56, to: 58, total: 58, props: 'page={12} pageSize={5} total={58}' }),
-    pager({ t: 'Phone', label: 'Connection pages', mode: 'phone', w: '358px', page: 1, pages: 5, from: 1, to: 5, total: 23, props: 'page={1} total={23}  (under 480 px: "Page 1 of 5")' }),
-    pager({ t: 'Cursor: Previous and Next only', label: 'App pages', mode: 'cursor', w: '1040px', page: 2, pages: 0, line: 'Showing 13–24 of 3,500', cursorPrev: true, cursorNext: true, props: 'mode="cursor" hasPrevious hasNext' }),
-    pager({ t: 'Cursor, phone, at the start', label: 'App pages', mode: 'cursor', w: '358px', page: 1, pages: 0, line: 'Showing 1–12 of 3,500', cursorPrev: false, cursorNext: true, props: 'mode="cursor" hasNext' })
+    pager({ t: 'A table, first page: 25 rows, Previous disabled', label: 'Member pages', uid: 'a', mode: 'numbered', w: '1040px', page: 1, pages: 13, from: 1, to: 25, total: 312, size: 25, props: 'page={1} pageSize={25} total={312} pageSizes={[10, 25, 50, 100]}' }),
+    pager({ t: 'Rows per page open: 10, 25, 50, 100', label: 'Member pages', uid: 'b', mode: 'numbered', w: '1040px', page: 1, pages: 13, from: 1, to: 25, total: 312, size: 25, open: true, props: 'choosing a size goes back to page 1 and is remembered per person for this list' }),
+    pager({ t: 'A middle page: shortened on both sides', label: 'Member pages', uid: 'c', mode: 'numbered', w: '1040px', page: 6, pages: 13, from: 126, to: 150, total: 312, size: 25, props: 'page={6} pageSize={25} total={312}' }),
+    pager({ t: 'A log, 50 rows, last page: Next disabled', label: 'Audit log pages', uid: 'd', mode: 'numbered', w: '1040px', page: 7, pages: 7, from: 301, to: 312, total: 312, size: 50, props: 'page={7} pageSize={50} total={312}' }),
+    pager({ t: 'A card grid: fixed, no rows control (12 on desktop, 6 on a phone)', label: 'Machine pages', mode: 'numbered', w: '1040px', page: 1, pages: 5, from: 1, to: 12, total: 58, props: 'page={1} pageSize={12} total={58}  (no pageSizes: grids fill whole rows)' }),
+    pager({ t: 'Phone: no rows control, the list keeps its size', label: 'Connection pages', mode: 'phone', w: '358px', page: 1, pages: 5, from: 1, to: 25, total: 112, props: 'page={1} total={112}  (under 480 px: "Page 1 of 5")' }),
+    pager({ t: 'Cursor: Previous and Next, with rows per page', label: 'App pages', uid: 'e', mode: 'cursor', w: '1040px', page: 2, pages: 0, line: 'Showing 26–50 of 3,500', size: 25, cursorPrev: true, cursorNext: true, props: 'mode="cursor" hasPrevious hasNext pageSize={25} pageSizes={[10, 25, 50, 100]}' }),
+    pager({ t: 'Cursor, phone, at the start', label: 'App pages', mode: 'cursor', w: '358px', page: 1, pages: 0, line: 'Showing 1–25 of 3,500', cursorPrev: false, cursorNext: true, props: 'mode="cursor" hasNext' })
   ];
 }
 

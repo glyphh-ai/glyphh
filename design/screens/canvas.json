@@ -131,7 +131,7 @@
       "y": 0
     },
     "Components.dc.html": {
-      "h": 4927,
+      "h": 6468,
       "page": "components",
       "title": "Requested components (1 of 2)",
       "w": 3376,
@@ -936,9 +936,9 @@
     },
     "Components2.dc.html": {
       "x": 0,
-      "y": 5127,
+      "y": 6668,
       "w": 3376,
-      "h": 7885,
+      "h": 6688,
       "title": "Requested components (2 of 2)",
       "page": "components"
     }

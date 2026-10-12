@@ -174,7 +174,7 @@ Also approved 2026-10-11: three simple stroked icons on the marketplace boards, 
 
 ### Lists
 
-Everything that can grow is paginated, in the designs as in the build: "Showing 1–5 of 23", Previous, page numbers, Next; on a phone, Previous, "Page 1 of 5", Next.
+Everything that can grow is paginated, in the designs as in the build: "Showing 1–5 of 23", Previous, page numbers, Next; on a phone, Previous, "Page 1 of 5", Next. **Rows per page** (Chris, 2026-10-12): tables and logs show a "Rows per page" select (10, 25, 50, 100) beside the count; 25 by default, 50 for logs; remembered per person for each list; choosing one goes back to page 1. Card grids keep a fixed size that fills whole rows (12 on desktop, 6 on a phone) with no control. Phones show no rows control. Cursor lists get the control but no page numbers. Drawn on `Components` (Pagination).
 
 ### Billing
 
@@ -269,7 +269,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Canvas page | Board file(s) | What it is | Build order |
 |---|---|---|---|
 | Brand | `Main`, `Palettes`, `Type`, `LogoInUse` | Logo, cats and moods, motion, Ink & Violet, Red Hat, the sign-in panel's animation | n/a |
-| Components (requested) | `Components`, `Components2` | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
+| Components (requested) | `Components` (LogoTile to Menu, Pagination), `Components2` (SegmentedControl to the editors' nodes) | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
 | App shell: the left rail | `AppShell`, `AppShell2` | The rail every app page sits in: open and collapsed, an org admin's Org group, a super admin's Glyphh admin group, the account menu at the bottom left, the phone drawer; dark and light | 1, before any app page |
 | Sign in | `SignInFlow` | Google / GitHub, loading, signed in, expired, refused, error | 1 |
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
@@ -475,4 +475,21 @@ The Questions above (to Chris), and the server's Open list (`docs/architecture.m
 - **The canvas allows boards up to 8000 px tall**, so every taller board is now split into parts on the same canvas page and in `screens/`: `Name.dc.html` is part 1, `Name2.dc.html` part 2, and so on (Billing, the plugin cards, every admin, org, publishing, usage and API keys board, and their light copies). The parts share one script; each shows its own states. Read them in order.
 - **The left rail replaces the top nav** (`AppShell`, `AppShell2`, and Decisions → Navigation). Build the shell once (a `Rail`, its `RailItem` and group, the account button and menu, the phone drawer) before the app pages; the app boards still show the old top bar until the design agent redraws them, so take the shell from `AppShell`, the page content from each board.
 - **Lucide** is approved for the rail's icons; only the ones `AppShell` names.
+
+### Update for the build agent (2026-10-12)
+
+Pull `glyphh-ai/glyphh`, then see what changed in the design since you last built: `git log --oneline ea224cc..HEAD -- design/`. Decisions in this doc are the source of truth; read it again rather than a summary.
+
+Rework what is built in `@glyphh-ai/ui`:
+
+- **tokens.css:** `--color-chip-text` is the accent text (`#B49CFF` dark, `#6A3DF0` light), not `#D2C4FF` / `#5A2FE0`; dark `--color-danger-text` is `#FF4D4D`, not `#FF8A8A`. No tint of its own anywhere.
+- **Pagination:** add the rows-per-page select (`pageSizes`, default per list, remembered per person, back to page 1 on change); none on grids or phones. See `Components` → Pagination.
+- **ThemeToggle:** only on the sign-in pages (AuthLayout). App pages take the theme from the account menu (SegmentedControl: Light, Dark, System).
+- **Icon:** Lucide's paths for the names `AppShell` lists, plus the approved star, drag handle and up/down arrows; nothing else.
+- **Page:** no top bar; the page's title and main action head the page inside the rail layout.
+- **Check against `Components` / `Components2`:** cat eyes keep their bright colours in both themes; on light, logo and cat tiles are transparent with a thin outline; kinds use the accent text, told apart by glyph.
+
+Build next, before any app page: the shell from `AppShell` / `AppShell2` (rail, items, groups, the account button and menu, the phone drawer).
+
+Reading the boards: tall boards are split into parts (`Name`, `Name2`, `Name3`, ... on one page, one script; read every part). `…Light` boards are the same layout in light tokens: one component per look. App boards still show the old top bar until redrawn: shell from `AppShell`, content from the board.
 
