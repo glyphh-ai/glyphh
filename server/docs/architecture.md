@@ -241,7 +241,7 @@ A second tool opened the machine's whole desktop in the panel. What it taught:
 
 ### The stack
 
-Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made of:
+Decided by Chris, 2026-10-12: rrotor's engine is TypeScript, and its build has started (`glyphh-ai/rrotor`). Every part of Glyphh, and what it is made of:
 
 | Part | Repo | Made of |
 |---|---|---|
@@ -294,6 +294,38 @@ Tested on Docker Desktop (kernel 6.12), 2026-10-12:
 **Updates:** on Fly, the server moves the machine to the new image through Fly's Machines API. Elsewhere, a small updater the first-boot script installs (a systemd timer: pull, then restart) does the same. Who says when to update is still open.
 
 **Tests:** Vitest at 100% for the engine, with the same code-shape limits (200-line files, 40-line functions). CI also boots the image and proves the fence: a run that reaches past its folders or its network is refused, and the refusal is reported.
+
+### The machine link: protocol 1
+
+Built in rrotor's engine, 2026-10-12 (`engine/src/link.ts`, `wire.ts`). The server's side is still to build (Open, To build).
+
+- **One outbound WebSocket** to the server's `/v1/machine/link`, signed in with the machine's own token in a header, never the URL. On every connect the machine says `hello` (the protocol, 1, and its rrotor version). After a drop it comes back after 1 s, doubling to 30 s. While it is down it keeps the newest 1,000 messages and sends them first when it is back.
+- **The server asks:**
+    - `session.start`: a session id (letters, digits, `-` and `_`, since it names the session's folder), Claude Code or Codex, the prompt, an optional model, an optional folder to work in, the session's MCP servers, and **driven or autonomous**;
+    - `session.send`: more from the member;
+    - `session.answer`: the member's answer to a "needs you", allow or deny;
+    - `session.stop`.
+- **The machine reports** each session's events, numbered from 1 so the server can pass them on in order to whoever is watching, and refuses what it cannot do with the reason (`session.refused`), never silently.
+- **A session's events,** the same from either CLI:
+    - status (working, idle, needs you, done, stuck);
+    - text;
+    - a tool and its end;
+    - a turn's end, with its cost when the CLI reports one;
+    - an error;
+    - **needs you** (a permission, which tool, and what it wants to do).
+- **How each CLI runs:**
+    - **Claude Code:** one headless process per session, stream-json in and out.
+    - **Codex:** one `codex exec --json` per turn, each later turn resuming its thread.
+- **Driven or autonomous is Claude Code's own setting** (`--permission-prompts`):
+    - **driven:** a permission prompt comes to rrotor, which sends "needs you" and passes the member's answer back;
+    - **autonomous:** anything that would ask is refused, as the architecture's rule says (Glyphh and the super powers under it).
+
+    Codex's `exec` never asks.
+
+- **What reaches a CLI:**
+    - **Only the session's own MCP servers** (Glyphh's connections and rrotor's tools), none of the CLI's own.
+    - **A bearer never on a command line:** Claude Code reads its servers from a file only its user can read; Codex reads each bearer from an environment variable.
+    - **The machine's own token never reaches a CLI at all.**
 
 ### Runtime hosting
 
@@ -1471,6 +1503,11 @@ The house order: the data model is drawn first, then built as database, API and 
 - **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`, `machines`, `super_powers` (its loop and voice columns wait for `powers`), `super_power_installs`, `launch_tickets`.
 - **Machines on the API** (2026-10-12): my machines as cards (connected first, each with its 8 most recently active super powers and its counts), every super power on one (search, status, pages, the count of each status), and opening one with a one-minute, one-time launch ticket; an offline machine says so.
 
+- **rrotor, its first slice** (`glyphh-ai/rrotor`, 2026-10-12):
+    - **The image:** headless, the engine under s6.
+    - **The engine:** the machine link and protocol 1, and sessions on Claude Code and Codex with needs you, at 100% coverage.
+    - **Not yet tried against a signed-in CLI:** the CLIs' flags are checked against the installed versions, but their output and Claude Code's permission exchange are not.
+
 ### Now
 
 **The full site, app.glyphh.ai** (Chris, 2026-10-12: the site first, then Claude's cards and the other sign-in flows): the pages in the design's build order, each end to end (tables, API, SDK, screens). First the site's own sign-in (the platform's session), the shell around every page and what it remembers for a person (`user_settings`: the theme, the rail, each list's rows per page), then Machines, Account, Billing, Powers, the editors, Marketplace, Org, Usage and Glyphh admin.
@@ -1508,7 +1545,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine in TypeScript (porting the old worker's harness), the two CLIs as the only loops with the machine's gateway for any model, one Debian image under s6, bubblewrap and Landlock for the fence. rrotor is headless (decided); the rest waits on Chris's yes.
+- **The rest of rrotor's stack** (see The stack): the engine is TypeScript (decided); the image under s6 and bubblewrap with Landlock for the fence stand as proposed until Chris says otherwise.
 - **Where a session's messages are kept:** rrotor now streams every session back to the server (rrotor is headless). Conversations were decided as the server keeping the record and rrotor the messages; say whether the server now also keeps the messages, or only passes them on.
 - **The machine's own address:** with no UI on the machine, does anything still need `<machine-id>.glyphh.ai`? Outputs and a super power's own screens could stream through the server like everything else. If nothing needs it, the certificates question below goes away.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
@@ -1523,6 +1560,18 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **Folder edits:** how edits made in a power's folder on a machine get back to the server. Not needed until rrotor is built.
 
 #### To build
+
+- **The server's side of the machine link** (protocol 1, above):
+    - `/v1/machine/link` with machine tokens;
+    - starting, sending to, answering and stopping sessions;
+    - passing each session's events on to the platform and Claude's panels;
+    - keeping a "needs you" until it is answered.
+- **rrotor, next:**
+    - a live session on a Mac signed into Claude Code and Codex, to check their output against the engine;
+    - the machine's gateway, so either CLI runs any configured model;
+    - the fence around every run;
+    - a screen per browser profile with take control;
+    - rrotor's own MCP tools.
 
 - **Allow, after the answer:** "You're connected / Back to Claude" and "Claude wasn't connected"; today the server returns straight to the host.
 - **Join while signed in:** accept or decline (the board's default state), the inviter and the expiry on the invite, "You're in" with the org's machines.
