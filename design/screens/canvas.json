@@ -989,6 +989,22 @@
       "h": 3260,
       "page": "rrotor-edit",
       "title": "rrotor: edit a super power (2 of 2)"
+    },
+    "MachineOpen.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3100,
+      "h": 5070,
+      "title": "Opening a machine",
+      "page": "machine-platform"
+    },
+    "MachineTakeover.dc.html": {
+      "x": 0,
+      "y": 5270,
+      "w": 3100,
+      "h": 6200,
+      "title": "Taking over the desktop",
+      "page": "machine-platform"
     }
   },
   "createdOnFiles": {
@@ -1355,6 +1371,14 @@
       "x": 0,
       "y": -300,
       "page": "rrotor-edit"
+    },
+    "t-machine-platform": {
+      "kind": "title1",
+      "maxW": 3100,
+      "text": "Machines on the platform",
+      "x": 0,
+      "y": -300,
+      "page": "machine-platform"
     }
   },
   "order": [
@@ -1481,7 +1505,9 @@
     "RrotorDesktop3.dc.html",
     "RrotorDesktop4.dc.html",
     "RrotorEdit.dc.html",
-    "RrotorEdit2.dc.html"
+    "RrotorEdit2.dc.html",
+    "MachineOpen.dc.html",
+    "MachineTakeover.dc.html"
   ],
   "pages": [
     {
@@ -1615,6 +1641,10 @@
     {
       "id": "admin-audit",
       "name": "Audit log of admin actions"
+    },
+    {
+      "id": "machine-platform",
+      "name": "Machines on the platform"
     }
   ],
   "title": "Glyphh Design"
