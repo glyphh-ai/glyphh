@@ -171,7 +171,7 @@ Always the real, full-colour artwork, never a one-colour silhouette. Black marks
 
 Approved 2026-10-11: the four power colours outside the palette (Bloom, Rose, Azure, Teal) stay as cat eye colours, and laptop machines (Docker hosts) get the Docker logo.
 
-Also approved 2026-10-11: three simple stroked icons on the marketplace boards, a featured star, a drag handle and up/down arrows. And **admin actions are recorded** in an audit log, beside the usage audit log: Org → Audit log for org admins, Glyphh admin → Audit log for super admins (board `AdminAudit`, being drawn).
+Also approved 2026-10-11: three simple stroked icons on the marketplace boards, a featured star, a drag handle and up/down arrows. And **admin actions are recorded** in an audit log, beside the usage audit log: Org → Audit log for org admins, Glyphh admin → Audit log for super admins (board `AdminAudit`).
 
 ### Lists
 
@@ -273,6 +273,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Glyphh admin · Models | `AdminCatalog` | Providers and models: turn off and on, add a provider (logo, API), add and import models, models with no description | Admin |
 | Glyphh admin · Marketplace | `AdminMarket` | Glyphh's review queue with the reviewer's report, publish, request changes, reject, the thread; listings, featured and categories | Admin |
 | API keys | `ApiKeys` | A member's keys (account menu): make one (shown once), revoke; when the org doesn't allow member keys; Org → API keys: the switch (turning it off stops members' keys straight away) and every key in the org | Org |
+| Audit log of admin actions | `AdminAudit` | Org → Audit log (every change in the org, Glyphh's actions marked), a row's before → after, export; Glyphh admin → Audit log (staff and the reviewer agent across orgs); an org's log from its detail | Org, Admin |
 
 Board files are at `screens/<name>.dc.html`.
 
