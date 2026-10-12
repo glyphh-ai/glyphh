@@ -1168,8 +1168,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Design
 
-- **The design agent's requests** (`glyphh-ai/glyphh`, `design/collaboration.md`): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar.
+- **The design agent's requests** (`glyphh-ai/glyphh`, `design/DESIGN.md`, Requests): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar.
 - **Requests still to write:** the power map and the editable flow canvas (React Flow) for the editors.
 - **Perplexity's logo** is on the sign-in board's models ring but not in `design/screens/assets`; the ring shows six models until it's added.
-- **`/design-sync` goes from code to design:** it uploads `@glyphh-ai/ui` into a Claude Design project so the design agent draws with the real components. `collaboration.md` says it brings the design back; correct it. It needs `/design-login` run once from an interactive session on the Mac.
 - **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
