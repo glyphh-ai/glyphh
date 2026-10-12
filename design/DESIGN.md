@@ -44,6 +44,7 @@ What is in the system for a person (powers, super powers and their grants, machi
 - **Add Glyphh to your AI:** Claude, ChatGPT and Codex, each with its setup steps.
 - **Account:** profile, plan and usage, Stripe's portal for payment details, connected AI hosts (disconnect one), sign out.
 - **Opening a machine:** connecting, and "this machine is offline".
+- **Super powers, Powers, Marketplace, Usage:** what is in the system for the person; **Org** for org admins and **Glyphh admin** for super admins (see Navigation, below).
 
 **States for every page:** loading, success, expired link, refused, error with its trace id.
 
@@ -62,11 +63,9 @@ The app every machine serves, in the browser and inside Claude. It gets a UI of 
   - its **powers map:** folders (read or write), connections, models, skills, browsers, other super powers;
   - tool permissions (allow, ask, deny), and schedules.
 - **Runs:** history and the **live view**: steps, logs, the browser screen, **take control** to sign in to a website.
-- **Connections catalog:** search 3,500 services, a native connect screen.
-- **Models catalog:** provider logos, name, description, type; add a key.
-- **Usage and billing:** credits used and left, usage by user, connection, super power and day; plan, seats, machines.
-- **Org admin:** members, invites, teams, allowed models and connections.
 - **Settings:** theme, notifications, voice.
+
+Catalogs, connections, usage, billing and org admin are the platform's (above), not rrotor's.
 
 #### 4. Cards inside Claude and ChatGPT (through the plugin)
 
@@ -160,7 +159,7 @@ The left half on desktop, collapsing to a small ring above the content on a phon
 
 - **Machine cards** show up to 8 super powers, each in an outlined square with its name under it (two lines, then an ellipsis), then "+N / See all".
 - **See all** opens a dialog with search, status filters and pages.
-- **Clicking a super power** opens it on its machine in rrotor. The web app stays a front door; nothing is edited there.
+- **Clicking a super power** opens it on its machine in rrotor. The platform shows and edits what is in the system (powers, grants, settings, catalogs, plans); the work runs on machines and is never run from the web.
 - **Every header has the light/dark toggle.** The account menu and the Account page offer Light, Dark or System.
 
 ### Logos of other companies
@@ -180,24 +179,24 @@ Everything that can grow is paginated, in the designs as in the build: "Showing 
 ### Billing
 
 - **One Billing page,** server-old's flow and copy:
-  - Current plan, then Budget with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
+  - Current plan, then Credit balance with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
   - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
 - **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (see Requests).
-- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. How long bought credit lasts is still open.
+- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. **Bought credit expires a year after purchase**, as Anthropic's does, and Billing shows when.
 - **Plans, first numbers** (to adjust): Free $0, 1 seat, $1 of usage a month, 2 machines; Solo $20, 1 seat, $10, 3 machines; Basic $40 a seat, up to 25 seats, $10 a seat, 10 machines; Pro $150 a seat, up to 100 seats, $50 a seat, 50 machines; Enterprise arranged. Extra machines $5 a month (none on Free). These replace the `[BRACKETS]` on the billing, usage and admin boards.
-- **Plans are versioned:** a change to a plan is its next version, sold to new orgs; an org keeps the version it is on until it changes plan or a super admin moves it, with notice.
+- **Plans are versioned:** a change to a plan is its next version, sold to new orgs; an org keeps the version it is on until it changes plan or a super admin moves it, with **30 days' notice** by email and a banner on Billing.
 
 ### Versions and release notes
 
-Decided 2026-10-11. A published power or super power has explicit versions: its manifest carries the version (1.0.0, 1.1.0, ...) and its release notes, and every version is kept, frozen, with them. Publish (`ListingSubmit`) shows the version and its release notes and asks for both; a listing's page and the review screens show the version under review and its notes, and the version history with each one's notes; an installed power shows its version, and a newer version offers its notes before updating. A version number is never reused.
+Decided 2026-10-11. A published power or super power has explicit versions: its manifest carries the version (1.0.0, 1.1.0, ...) and its release notes, and every version is kept, frozen, with them. Publish (`ListingSubmit`) shows the version and its release notes and asks for both; a listing's page and the review screens show the version under review and its notes, and the version history with each one's notes; an installed power shows its version, and a newer version offers its notes before updating. Versions are semver and must be higher than the last; release notes are required, up to 2,000 characters; a version number is never reused.
 
 ### Usage of powers and super powers
 
-Decided 2026-10-11. Beside the metered connection calls, every use of a power or super power is counted (never its content, never billed): model calls with their tokens in and out as the provider reports them, tool calls, skills, task steps, folders, browsers. Usage pages show models, connections and super powers side by side, by day, user, super power and power; a publisher sees their listing's installs, installs used in the last 30 days, and runs.
+Decided 2026-10-11. Beside the metered connection calls, every use of a power or super power is counted (never its content, never billed): model calls with their tokens in and out as the provider reports them, tool calls, skills, task steps, folders, browsers. Usage pages show models, connections and super powers side by side, by day, user, super power and power; an org admin sees each member's use, model token counts included (counts only, even on the member's own key); a publisher sees their listing's installs, installs used in the last 30 days, and runs.
 
 ### Navigation
 
-Decided 2026-10-11: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Plans edits each plan's versions and the billing settings (the price of a credit, the seconds a credit buys, the smallest and largest top-up).
+Decided 2026-10-11: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
 
 ### Admin decisions
 
@@ -242,10 +241,6 @@ Everything in `brand/` is the source artwork.
 - **Pop in:** a cat appears scaled from 0.6 and turned -8°, settling in 0.6 s.
 - All of it stops for people who turn motion off.
 
-### Colour today
-
-Every cat is drawn in Glyphh ink (`#0b0a0f`) inside a white sticker border, and stays black and white: a super power's colour fills only its eye (the white parts inside the `eye` group). Glyphh's own eye stays white. See Decisions, above.
-
 ## Screens
 
 ### Where they are
@@ -260,7 +255,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 - **One board, every state.** Each board lays out one page in all its states (default, loading, empty, error with trace id, success, validation), at 1200 wide (desktop) and 390 wide (phone). The state name is printed above each frame.
 - **Light and dark.** Where a page has both, they are separate canvas pages. The light board is the dark one with `[data-theme="light"]` values: no layout differences.
 - **Dialogs** are drawn over a copy of the page beneath them.
-- **Placeholders** in `[BRACKETS]` are not decided (prices, credits per plan, the install command). Leave them visible or ask; don't invent them.
+- **Placeholders** in `[BRACKETS]` are not decided. Prices, included usage and machines per plan are decided now (Billing, above); the install command is not. Leave the rest visible or ask; don't invent them.
 - **Example data** (Northwind, studio-mac, Sam Rivera, Inbox Zero, …) is only example data.
 - **The markup is the layout.** It uses `<sc-for>` (a repeat) and `<sc-if>` (a branch), with `{{holes}}` filled from the script.
 - **The script at the bottom is the content.** `STATES` (or `PAGES`, `CARDS`) lists every state; the helper functions build the rows, labels, copy and numbers each state shows. The copy is the copy to ship.
@@ -300,7 +295,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 
 Board files are at `screens/<name>.dc.html`.
 
-**The build is greenfield.** Nothing here is built yet; build every page new, on the component library and the SDK. The order above is a suggestion: the pages a browser must show first, then the app, then the editors. The design agent keeps drawing ahead of it.
+**The build is greenfield.** Every page is built new, on the component library and the SDK. Built so far (2026-10-11): the tokens and Red Hat, and the sign-in pieces (AuthLayout, BrandOrbit, CatRing, LogoTile, Icon, the Alert with TraceId, ThemeToggle); the sign-in screens are next. The order above is a suggestion: the pages a browser must show first, then the app, then the editors. The design agent keeps drawing ahead of it.
 
 ## Building it
 
@@ -314,7 +309,7 @@ A clean UI build: small, well-formed, reusable components, and screens made only
 - **A missing component is a request,** added under Requests, below. It is never patched in a screen. The design agent styles it; you build its behaviour.
 - **Variants and states are props,** not new components or class overrides: `<Button variant="primary" size="lg" busy>`, `<Alert tone="danger" traceId="…">`.
 - **Tokens only.** No raw colour, size, font, radius, shadow or duration in any file but `tokens.css`.
-- **Small files, one job each.** A component folder holds its `.tsx`, its `.module.css` and its test, and nothing that belongs to a screen.
+- **Small files, one job each.** A component folder holds its `.tsx`, its test, its `.module.css` when it has a look of its own, and nothing that belongs to a screen.
 - **Use the brand; never invent a style.** Every look comes from the brand and the boards:
   - the logo and the cats come from `design/brand/`, used as given;
   - colour, type, radius, shadow and motion come from the tokens;
@@ -326,21 +321,21 @@ A clean UI build: small, well-formed, reusable components, and screens made only
 
 ### Components each page needs
 
-The component library, `@glyphh-ai/ui` (in `glyphh-ai/platform`, `ui/`): Alert, Avatar, Badge, Button, Card, Checkbox, Code, CodeBlock, CopyButton, Dialog, EmptyState, Field, Form, FormError, Heading, IconButton, Link, Menu, Page, ProgressSteps, RadioGroup, Row, Section, Select, Skeleton, Slider, Spinner, Stack, StatusDot, SubmitButton, Switch, Table, Tabs, Text, TextArea, TextInput, Toast.
+The component library, `@glyphh-ai/ui` (in `glyphh-ai/platform`, `ui/`): Alert, Avatar, Badge, Button, Card, Checkbox, Code, CodeBlock, CopyButton, Dialog, EmptyState, Field, Form, FormError, Heading, IconButton, Link, Menu, Page, ProgressSteps, RadioGroup, Row, Section, Select, Skeleton, Slider, Spinner, Stack, StatusDot, SubmitButton, Switch, Table, Tabs, Text, TextArea, TextInput, Toast, and, built for the sign-in pages: AuthLayout, BrandOrbit, CatRing (Glyphh in its ring), Icon, LogoTile, ThemeToggle, TraceId.
 
-Still requested (see Requests, below): LogoTile, a Button icon slot, a TextInput `code` variant, DescriptionList, more Avatar kinds (person, org, ring), AuthLayout, Menu radio items, **Pagination**, **SegmentedControl**, a themed **Stripe Payment Element**, **ConnectFrame**, a **bars-by-day chart**.
+Still requested (see Requests, below): a TextInput `code` variant, DescriptionList, Avatar kinds (person, org), Menu radio items, **Pagination**, **SegmentedControl**, a themed **Stripe Payment Element**, **ConnectFrame**, a **bars-by-day chart**.
 
 | Page | Built from | Waits on |
 |---|---|---|
-| Sign-in pages | Page, Heading, Text, Button, Alert (trace id), CopyButton, Spinner, TextInput, Avatar (the cat) | AuthLayout, Avatar ring, Button icon slot, TextInput `code`, DescriptionList |
-| Machines | Card, Avatar, StatusDot, Badge, Button, Dialog, TextInput, Tabs, Skeleton, EmptyState, ProgressSteps, Menu | Pagination, Menu radio items, LogoTile |
-| Account | Section, Avatar, Button, Switch, Card | SegmentedControl (Light, Dark, System), LogoTile (Claude, Codex) |
+| Sign-in pages | AuthLayout, Heading, Text, Button (with its icon), Alert (trace id), Spinner, TextInput, CatRing, LogoTile | TextInput `code`, DescriptionList |
+| Machines | Card, Avatar, StatusDot, Badge, Button, Dialog, TextInput, Tabs, Skeleton, EmptyState, ProgressSteps, Menu, LogoTile | Pagination, Menu radio items |
+| Account | Section, Avatar, Button, Switch, Card, LogoTile | SegmentedControl (Light, Dark, System) |
 | Billing | Card, Badge, Button, Dialog, TextInput, Switch, Table, Alert, Spinner | Stripe Payment Element, bars-by-day chart, Pagination |
-| Plugin cards | Card, Avatar, StatusDot, Button, ProgressSteps, RadioGroup, Alert, Skeleton | LogoTile, bars-by-day chart, Pagination |
-| Powers | Tabs, Card, Badge, Dialog, TextInput, Button, Alert, Spinner, EmptyState | ConnectFrame, LogoTile, SegmentedControl, Pagination |
+| Plugin cards | Card, Avatar, StatusDot, Button, ProgressSteps, RadioGroup, Alert, Skeleton, LogoTile | bars-by-day chart, Pagination |
+| Powers | Tabs, Card, Badge, Dialog, TextInput, Button, Alert, Spinner, EmptyState, LogoTile | ConnectFrame, SegmentedControl, Pagination |
 | Super power editor | Avatar, Select, TextInput, TextArea, Slider, Button, Dialog, Tabs, Menu | PowerMap, Pagination |
 | Task flow | Tabs, Button, Select, TextInput, Switch, Dialog | FlowCanvas, Pagination |
-| Custom powers, Marketplace | Tabs, Card, Badge, Button, Menu, Dialog, TextInput, TextArea, EmptyState | Pagination, LogoTile |
+| Custom powers, Marketplace | Tabs, Card, Badge, Button, Menu, Dialog, TextInput, TextArea, EmptyState, LogoTile | Pagination |
 
 The power map and the editable flow canvas are new: PowerMap and FlowCanvas, under Requests.
 
@@ -373,18 +368,18 @@ Components use only tokens: never a raw colour, size or font.
 
 - **Design to code:** the boards in `screens/`, exported from the canvas. The code agent builds every screen from them, on the component library.
 - **Code to design:** `/design-sync` uploads `@glyphh-ai/ui` into a Claude Design design-system project, so the design agent draws with the real components. It needs `/design-login` once, from an interactive Claude Code session on the Mac. It does not bring designs back into code.
-- **Components:** each lives in its own folder (`Name.tsx`, `Name.module.css`, `Name.test.tsx`). Class names and props are the code agent's; the look is the design's. A need nobody has drawn is a request (below), never a one-off.
+- **Components:** each lives in its own folder (`Name.tsx`, `Name.test.tsx`, and `Name.module.css` when it has a look of its own). Class names and props are the code agent's; the look is the design's. A need nobody has drawn is a request (below), never a one-off.
 
 ## Requests
 
 From the design agent, after sketching app.glyphh.ai's sign-in pages and machines against the brief. Each is something those screens need that the library list above does not cover yet.
 
-- **LogoTile** (the brief's "provider logo tiles"): a square tile holding a third-party logo or, without one, its initials. For model providers, connections, AI hosts (Claude, ChatGPT, Codex), sign-in providers (Google, GitHub) and deploy hosts (Fly, AWS, ...). Sizes small, medium, large; states default, disabled, loading (skeleton).
-- **Button: a leading icon or logo slot.** For "Continue with Google", "Continue with GitHub" and "Add a machine". Every existing variant, size and state.
+- **LogoTile** (built 2026-10-11: the logo, sizes, highlighted; still to build: initials without a logo, disabled, loading) (the brief's "provider logo tiles"): a square tile holding a third-party logo or, without one, its initials. For model providers, connections, AI hosts (Claude, ChatGPT, Codex), sign-in providers (Google, GitHub) and deploy hosts (Fly, AWS, ...). Sizes small, medium, large; states default, disabled, loading (skeleton).
+- **Button: a leading icon or logo slot** (built: Button's `icon`). For "Continue with Google", "Continue with GitHub" and "Add a machine". Every existing variant, size and state.
 - **TextInput: a `code` variant** for one-time codes (`WDJB-MJHT`): monospace, large, centred, uppercased, the dash added as you type, pasting a whole code works. States default, focus, error, disabled.
 - **DescriptionList:** label and value pairs, two columns on wide screens and stacked on phones. For "Is this code on your new machine?" (machine, OS, location, when) and for account and machine details.
-- **Avatar: three more kinds** beside the cats: a person (initials or photo), an org (letter tile) and a `ring` option, the glowing ring with its comet, for heroes, sign-in pages and empty states. Ring states: still, turning, comet.
-- **AuthLayout** (or a Page variant): a brand panel beside the content on desktop (logo, Glyphh in its ring showing the page's mood, one line), collapsing to logo, small ring and content on a phone. For every page "only a browser can show".
+- **Avatar: three more kinds** beside the cats (the ring is built as CatRing, still and turning; the comet is still to build): a person (initials or photo), an org (letter tile) and a `ring` option, the glowing ring with its comet, for heroes, sign-in pages and empty states. Ring states: still, turning, comet.
+- **AuthLayout** (built 2026-10-11): a brand panel beside the content on desktop (logo, Glyphh in its ring showing the page's mood, one line), collapsing to logo, small ring and content on a phone. For every page "only a browser can show".
 - **Menu: radio and check items**, for the org switcher in the account menu (Personal, Acme, ...), plus a danger item (Sign out).
 
 From the design agent, after billing, Powers (connections, tool permissions) and the plugin cards:
@@ -400,3 +395,29 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 - **PowerMap:** the top of the super power editor. The super power's cat in its ring at the centre, and around it one card per power it holds (folders, connections, models, skills, tasks, plugins, browsers, other super powers), each a LogoTile or kind icon, its name and a coloured left edge for its kind, joined to the centre by a dashed line that flows while the super power runs (still when motion is off). Desktop: a dotted ground you can pan, cards you drag, ⌘-scroll to zoom, and four 44 px controls: Zoom in, Zoom out, Fit, Reset the layout. Phone: no canvas; the cat in its ring with the powers as chips under it. States: empty (only the cat, with "Add a power"), a power disabled by a limit (dimmed, with why), loading (skeleton). Saving keeps each card's position. Built on `@xyflow/react` with the same node and edge look as FlowCanvas.
 - **FlowCanvas:** a task's Flow tab, React Flow (`@xyflow/react`) made editable. Node kinds, each with its label, kind icon and kind colour from the tokens: Trigger, Agent (a slot), Model, Connection, Decide (yes and no exits), Memory, Skill, Checkpoint, Output. A node shows its title and a one-line detail (`gmail · find-email → emails`), an in handle on top and out handles below. Edges are curves in the accent; a Decide's "no" edge is muted and each exit is labelled. Desktop: pan, zoom, drag nodes, connect handles, a minimap bottom left, zoom and Fit controls bottom right, "+ Add step" and an inspector panel for the chosen node. Phone: the flow read top to bottom as a list, tap a step to edit it. States: chosen node, a broken step (danger edge and its error), an unfilled slot, empty ("Add the first step"), read-only while a run is live. Every edit is saved, never run, from the web.
 
+## Handoff to the design agent
+
+### How to work this list
+
+1. **Pull first** (`glyphh-ai/glyphh`), then read this whole doc: Decisions is what is settled, and every item below comes from it. The server's doc (`glyphh-ai/server`, `docs/architecture.md`) has the data behind each decision; never contradict it.
+2. **Take one item at a time,** in the order below. Open its boards on the canvas and change only what the item says: every state, desktop (1200) and phone (390), dark and its light board.
+3. **Use what exists:** the tokens, the components in the library (Components each page needs, above), the logos in `screens/assets/` and the artwork in `brand/`. A look nobody has drawn, or a component the library doesn't have, goes under Requests; never improvise one on a board.
+4. **The copy is the copy to ship:** plain, short, confident; errors say what happened and what to do, with the trace id. Put the decided numbers in; leave a placeholder in `[BRACKETS]` only for what is still undecided.
+5. **Ask, don't guess:** if an item is unclear or clashes with a board, add the question under Questions, below, and move on to the next item. Chris answers there.
+6. **Finish an item** by re-exporting the changed boards into `screens/`, taking the item's line out of the list, and committing with the boards' names in the message ("Billing: credit balance, reload to a target, ..."). The code agent builds from the re-exported boards.
+
+### The list
+
+Board changes from the decisions of 2026-10-11 and 2026-10-12.
+
+- **`BillingFlow`, `BillingLight`:** credits are dollars. "Budget" becomes **Credit balance** ("Credit balance: $12.40"). The Auto top-up dialog becomes **reload to a target**: "When the balance falls below $[amount], reload it to $[amount]", plus an optional **monthly cap**, off by default. Add funds stays $5 to $10,000, and that is the credit added. Bought credit **expires a year after purchase**: show the expiry on each top-up in the ledger. The plan cards take the numbers under Billing, above. A **banner** for an org being moved to a new plan version: what changes and the date, 30 days ahead.
+- **`AdminOrgActions`:** fill `[N]` machines, `[$ N]` extra machines and `[CREDITS]` with the plan numbers (in dollars); drop "that's [CREDITS] credits" from gifts and top-ups, since credit is dollars. Moving orgs to a new version shows the **30 days' notice** and the email and banner it sends. Add a **Billing settings** panel under Plans: what a connection call costs per started 30 seconds (2¢), the smallest and largest top-up ($5, $10,000), each change with who made it and from when, and validation.
+- **`UsageFlow`, `UsageMore`, `UsageAudit`:** `[ALLOWANCE]`, `[BALANCE]` and `[TOP-UPS]` become dollars ("$13.94 used of $50.00"); "Credits used" becomes "Credit used". An org admin's view of a member shows their model token counts.
+- **`AdminCatalog`:** Turn off, Turn on, Remove and the dark-ground logo are drawn. Make the **Remove** confirm say it is for good: members' powers on it are disabled and can only be deleted (Turn off's say they come back when it's turned on).
+- **`ListingSubmit`, `OrgReview`, `AdminMarket`:** "Higher than 1.2.0" is drawn. Add the **release notes** rule: required, up to 2,000 characters, with its empty and too-long validation states; and a version that isn't semver ("Use a version like 1.3.0"). Review screens show the version and its release notes.
+- **Light theme:** the admin boards, the publishing boards and `RrotorSplash` are dark only so far.
+- **Requests still to draw:** LogoTile's initials, disabled and loading states; the ring's comet; the person and org Avatar kinds; and the rest under Requests.
+
+### Questions
+
+None yet.
