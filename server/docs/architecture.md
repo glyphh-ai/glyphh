@@ -483,8 +483,8 @@ erDiagram
     }
 
     user_settings {
-        uuid user_id PK, FK
-        text theme "dark, light, system, ..."
+        uuid user_id PK, FK "one row per person, made the first time one is changed; a null is the default"
+        text theme "dark, light or system (the default)"
         text notifications "on, off, ask"
         text permission_mode "ask, plan, accept_edits, auto: how new sessions start"
         text voice_mode "off, push_to_talk, continuous"
@@ -1338,11 +1338,15 @@ The house order: the data model is drawn first, then built as database, API and 
 - **Phase 1, sign in from Claude and Codex** (2026-10-11): Google and GitHub sign-in; OAuth for MCP (metadata, `authorize`, `token` with PKCE and refresh, dynamic registration, `revoke`); `me` and the connected hosts on the API, MCP and both SDKs; the Glyphh plugin for Claude Code and Codex. Signed in and called `me` from Claude (app, iPad, Claude Code) and ChatGPT.
 - **Phase 2a, orgs:** the org (plan, seats, rename), members (roles, disable, remove), invites (one-time link, withdraw), Join; seats enforced by the database under the org's row lock; the server refuses to boot on a database behind the code.
 - **The platform** (`glyphh-ai/platform`): the component library moved there; the sign-in screens are platform pages and the server keeps every flow; each refused step says why.
-- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`.
+- **Many orgs per person** (2026-10-12): `memberships` (role and disabled per org), a Personal org for everyone, the org a token acts in, Use with on Allow; the platform's own session (`/v1/session`: a code and its verifier for tokens, the refresh token in an httpOnly cookie, switch org, sign out); accepting and declining an invite.
+- **The sign-in screens on the design:** Sign in, Allow, Join signed out, Joined and the problem page, on the brand orbit.
+- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`.
 
 ### Now
 
-The sign-in screens on the design: tokens, Red Hat, the ported cat, the trace id alert, logo tiles, the theme toggle, the brand orbit, then the sign-in frame and the four flows.
+**The full site, app.glyphh.ai** (Chris, 2026-10-12: the site first, then Claude's cards and the other sign-in flows): the pages in the design's build order, each end to end (tables, API, SDK, screens). First the site's own sign-in (the platform's session), the shell around every page and what it remembers for a person (`user_settings`: the theme, the rail, each list's rows per page), then Machines, Account, Billing, Powers, the editors, Marketplace, Org, Usage and Glyphh admin.
+
+Waiting until Chris brings them back: Allow after the answer, Join while signed in, Approve a code, and the plugin's cards.
 
 ### Drawn, not built
 
@@ -1386,7 +1390,6 @@ None open (2026-10-12).
 
 #### To build
 
-- **Sign-in screens on the design** (in progress, see Now): tokens, Red Hat, the ported cat, the trace id alert, logo tiles, the theme toggle, the brand orbit, then the sign-in frame and the four flows.
 - **Allow, after the answer:** "You're connected / Back to Claude" and "Claude wasn't connected"; today the server returns straight to the host.
 - **Join while signed in:** accept or decline (the board's default state), the inviter and the expiry on the invite, "You're in" with the org's machines.
 - **Approve a code:** the machine and CLI sign-in (enter the code, confirm the machine, approved with its start-up steps), server and screens.

@@ -9,11 +9,14 @@ from glyphh_server.models.org import Org
 from glyphh_server.models.plan import Plan
 from glyphh_server.models.token import Token
 from glyphh_server.models.user import User
+from glyphh_server.models.user_settings import PAGE_SIZES, THEMES, UserSettings
 
 __all__ = [
     "INVITE_ROLES",
+    "PAGE_SIZES",
     "PROVIDERS",
     "ROLES",
+    "THEMES",
     "Base",
     "Invite",
     "Membership",
@@ -24,4 +27,5 @@ __all__ = [
     "SignInIdentity",
     "Token",
     "User",
+    "UserSettings",
 ]
