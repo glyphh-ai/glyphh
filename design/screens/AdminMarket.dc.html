@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyphh admin: the marketplace</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font:inherit}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#B49CFF;--pink:#F062D0;--pink-bg:rgba(240,98,208,.08);--pink-line:rgba(240,98,208,.4);--red:#FF4D4D;--red-tx:#FF4D4D;--red-bg:rgba(255,77,77,.07);--red-line:rgba(255,77,77,.4);--ion:#6FD8FF;--ion-bg:rgba(111,216,255,.12);--scrim:rgba(0,0,0,.55)}
+.t a{color:var(--accent-tx)}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+@keyframes g-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes g-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.g-eye{transform-origin:center;transform-box:fill-box}
+.t main>*{flex-shrink:0}
+.g-spin{animation:g-spin .8s linear infinite}
+.g-skel{animation:g-pulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.g-anim,.g-spin,.g-skel{animation:none!important}}
+</style>
+</helmet>
+<div class="t" style="width: 3520px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Glyphh admin › Marketplace · super admins only · dark</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh admin: the marketplace</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Where Glyphh decides what goes on the marketplace. Orgs send listings once their org admin approves them; Glyphh sends its own. Each one is checked first by Glyphh's own reviewer super power, Marketplace Reviewer, which writes a report: what the listing asks for against what it does, its dependencies, its screenshots, its description, secrets in the bundle, and a run in a sandbox. Then a person decides: publish, request changes (with a note per field, the agent's findings in one click) or reject with a reason. Every word between Glyphh and the org lands in the listing's thread. Published listings are managed here too: feature, change category, unpublish, versions; and the categories and the featured row themselves. Desktop 1200 wide, phone 390 wide.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
+<sc-for list="{{states}}" as="st" hint-placeholder-count="17">
+<div style="display: flex; flex-direction: column; gap: 18px; width: 1640px">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">{{st.title}}</div>
+<div style="font-size: 16px; line-height: 1.5; color: #8E89A0; max-width: 1400px">{{st.sub}}</div>
+</div>
+<div style="display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{st.frames}}" as="f" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="t" role="img" aria-label="{{f.aria}}" style="position: relative; width: {{f.w}}; height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block">
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Machines</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Super powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Marketplace</a><a href="#" aria-current="page" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx); background: var(--s2)">Glyphh admin</a></nav></sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}"><button type="button" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--s1); color: var(--tx); font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Glyphh admin<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B9B4C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+<button type="button" aria-label="Switch to light theme" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--s1); color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">Y</button>
+</div>
+</header>
+
+<div role="tablist" aria-label="Glyphh admin" style="flex: none; display: flex; gap: 4px; padding: 0 {{f.pad}}; border-bottom: 1px solid var(--line); overflow-x: auto">
+<sc-for list="{{f.adminTabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for>
+</div>
+
+<main style="flex: 1; min-height: 0; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1104px; align-self: center">
+
+<sc-if value="{{f.v.top}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Marketplace</h2><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">{{f.topDesc}}</div></div>
+<div role="tablist" aria-label="Marketplace admin" style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); max-width: 100%; overflow-x: auto; box-sizing: border-box"><sc-for list="{{f.sec}}" as="k"><button type="button" role="tab" aria-selected="{{k.on}}" style="flex: none; height: 40px; padding: 0 14px; border-radius: 9px; border: none; background: {{k.bg}}; color: {{k.tx}}; font-size: 14px; font-weight: 600">{{k.name}}</button></sc-for></div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.toast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5 9-10"></path></svg><span style="flex: 1; font-size: 15px; line-height: 1.45">{{f.toast}}</span></div>
+</sc-if>
+
+<sc-if value="{{f.v.queue}}" hint-placeholder-val="{{ true }}">
+<div role="radiogroup" aria-label="Status" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.statusTabs}}" as="s"><button type="button" role="radio" aria-checked="{{s.on}}" style="flex: none; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{s.border}}; background: {{s.bg}}; color: {{s.tx}}; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{s.dot}}"></span>{{s.label}}<span style="font-weight: 500; opacity: .8">{{s.n}}</span></button></sc-for></div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<div style="position: relative; flex: 1 1 260px; min-width: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="q-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search the queue</label><input id="q-{{f.key}}" type="search" value="{{f.q}}" placeholder="Search by name, org or author" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.qBorder}}; background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<button type="button" aria-label="Filter by kind" style="flex: {{f.filterFlex}}; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid {{f.kindBorder}}; background: var(--s1); color: var(--tx); font-size: 15px; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px"><span><span style="color: var(--tx3)">Kind:</span> {{f.kindLabel}}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<sc-if value="{{f.error}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; border-radius: 14px; background: rgba(255,77,77,.07); border: 1px solid rgba(255,77,77,.4)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg>
+<div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">Couldn't load the review queue</div><div style="font-size: 14px; line-height: 1.5; color: #B9B4C8">Nothing was lost: every listing and report is safe. Try again; if it keeps happening, send us the trace ID. Trace ID <span style="font-family: 'Red Hat Mono', monospace; color: #F5F3FA">9c41-2e7a-b0d5-63f8</span></div></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+<button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 600; cursor: pointer">Try again</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.empty}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 44px 24px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+<span style="width: 72px; height: 72px; border-radius: 18px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{f.emptyCat.w}}" height="{{f.emptyCat.h}}" role="img" aria-label="{{f.emptyCat.label}}"><g><sc-for list="{{f.emptyCat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye g-anim" style="animation: {{f.emptyCat.blink}}"><sc-for list="{{f.emptyCat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></span>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">Nothing waiting for you</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 440px">When an org admin approves a listing, or Glyphh sends one of its own, Marketplace Reviewer checks it first, then it lands here.</div>
+<button type="button" style="height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">See published listings</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.listCard}}" hint-placeholder-val="{{ true }}">
+<section aria-label="Listings to review" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 16px; height: 40px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)"><span style="width: 48px; flex: none"></span><span style="flex: 1 1 260px">Listing</span><span style="width: 120px; flex: none">Kind</span><span style="width: 150px; flex: none">Version</span><span style="width: 150px; flex: none">{{f.whenHead}}</span><span style="width: 84px; flex: none"></span></div>
+</sc-if>
+
+<sc-if value="{{f.noRes}}" hint-placeholder-val="{{ false }}"><div style="padding: 36px 8px; border-top: 1px solid var(--line); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px"><div style="font-size: 16px; font-weight: 600">No results for "{{f.q}}"</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3); max-width: 420px">Nothing waiting matches that name, org or author with Kind: {{f.kindLabel}}. Try another word, or clear the search and the filter.</div><button type="button" style="margin-top: 6px; height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Clear search and filter</button></div></sc-if>
+
+<sc-for list="{{f.skel}}" as="k">
+<div class="g-skel" style="display: flex; align-items: center; gap: 16px; min-height: 76px; border-top: 1px solid var(--line)"><span style="width: {{f.iconSz}}; height: {{f.iconSz}}; flex: none; border-radius: 12px; background: #25222F"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span style="width: {{k.w1}}; height: 14px; border-radius: 6px; background: #25222F"></span><span style="width: {{k.w2}}; height: 12px; border-radius: 6px; background: #1F1C28"></span></span><sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><span style="width: 84px; height: 44px; border-radius: 10px; background: #1F1C28"></span></sc-if></div>
+</sc-for>
+
+<sc-for list="{{f.qrows}}" as="r">
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 16px; min-height: 76px; padding: 12px 0; border-top: 1px solid var(--line); box-sizing: border-box">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 19px"><sc-if value="{{r.ic.isCat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{r.ic.cat.w}}" height="{{r.ic.cat.h}}" role="img" aria-label="{{r.ic.cat.label}}"><g><sc-for list="{{r.ic.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{r.ic.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></sc-if>{{r.ic.glyph}}</span>
+<span style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 600">{{r.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.by}}</span></span>
+<span style="width: 120px; flex: none"><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid {{r.kc}}; color: {{r.kc}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{r.kind}}</span></span>
+<span style="width: 150px; flex: none; display: flex; flex-direction: column; gap: 3px"><span style="font-family: 'Red Hat Mono', monospace; font-size: 14px">{{r.ver}}</span><span style="font-size: 12px; color: var(--tx3)">{{r.vline}}</span></span>
+<span style="width: 150px; flex: none; display: flex; flex-direction: column; gap: 6px">
+<sc-if value="{{r.prog}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ion)"><span class="g-spin" style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #2C2938; border-top-color: #6FD8FF"></span>{{r.progLabel}}</span><span style="height: 4px; border-radius: 999px; background: var(--s3); overflow: hidden"><span style="display: block; height: 100%; width: {{r.progPct}}; background: #6FD8FF; border-radius: 999px"></span></span></sc-if>
+<sc-if value="{{r.noProg}}" hint-placeholder-val="{{ true }}"><span style="font-size: 14px; color: var(--tx2)">{{r.when}}</span></sc-if>
+</span>
+<button type="button" style="width: 84px; flex: none; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">{{r.btn}}</button>
+</div>
+</sc-if>
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: {{r.top}}; min-height: 76px; box-sizing: border-box">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 16px"><sc-if value="{{r.ic.isCat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{r.icS.cat.w}}" height="{{r.icS.cat.h}}" role="img" aria-label="{{r.icS.cat.label}}"><g><sc-for list="{{r.icS.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{r.icS.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></sc-if>{{r.ic.glyph}}</span>
+<a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--tx)"><span style="font-size: 15px; font-weight: 600">{{r.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.pl1}}</span><span style="font-size: 12px; color: {{r.pl2c}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.pl2}}</span></a>
+<a href="#" aria-label="Review {{r.name}}" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--tx3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</div>
+</sc-if>
+</sc-for>
+</section>
+<sc-if value="{{f.pgShow}}" hint-placeholder-val="{{ true }}"><nav aria-label="{{f.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pg.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav></sc-if>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.detail}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Review queue</a>
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">
+<span style="width: 64px; height: 64px; flex: none; border-radius: 16px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 26px">{{f.dt.glyph}}</span>
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.02em">{{f.dt.name}}</h2><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid #B49CFF; color: #B49CFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{f.dt.kind}}</span><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line2); color: var(--tx2); font-family: 'Red Hat Mono', monospace; font-size: 12px; display: inline-flex; align-items: center">{{f.dt.verTag}}</span><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: {{f.dt.st.bg}}; color: {{f.dt.st.tx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{f.dt.st.dot}}"></span>{{f.dt.st.label}}</span></div>
+<div style="font-size: 14px; line-height: 1.45; color: var(--tx3)">{{f.dt.byLine}}</div>
+</div>
+</div>
+<div role="tablist" aria-label="This listing" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto"><sc-for list="{{f.dt.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for></div>
+
+<sc-if value="{{f.dt.review}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: {{f.detCols}}; gap: 20px; align-items: start">
+
+<div style="order: {{f.leftOrder}}; display: flex; flex-direction: column; gap: 16px; min-width: 0">
+<section aria-label="Listing preview" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 700">Listing preview</span><span style="font-size: 13px; color: var(--tx3)">As people will see it on the marketplace</span></div>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: var(--tx2)">{{f.dt.about}}</p>
+<div style="display: grid; grid-template-columns: {{f.shotCols}}; gap: 10px">
+<sc-for list="{{f.dt.shots}}" as="sc">
+<div role="img" aria-label="{{sc.label}}" style="aspect-ratio: 16 / 10; border-radius: 10px; background: #13121A; border: 1px solid {{sc.border}}; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; position: relative">
+<span style="width: 40%; height: 8px; border-radius: 4px; background: #25222F"></span>
+<span style="flex: 1; display: flex; gap: 6px"><span style="width: 28%; border-radius: 5px; background: #25222F"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 5px"><span style="height: 8px; width: 80%; border-radius: 4px; background: #25222F"></span><span style="height: 8px; width: 60%; border-radius: 4px; background: #25222F"></span><span style="flex: 1; border-radius: 5px; background: #25222F"></span></span></span>
+<sc-if value="{{sc.flag}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; right: 8px; top: 8px; height: 20px; padding: 0 7px; border-radius: 999px; background: #141318; border: 1px solid var(--pink-line); color: var(--pink); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">Needs a look</span></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 14px; font-weight: 700">What it asks for</div>
+<sc-for list="{{f.dt.asks}}" as="a">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: {{a.top}}; flex-wrap: wrap">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 15px"><sc-if value="{{a.hasLogo}}" hint-placeholder-val="{{ true }}"><img src="{{a.src}}" alt="" style="width: 20px; height: 20px; object-fit: contain"></sc-if>{{a.glyph}}</span>
+<span style="flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">{{a.name}}</span><span style="font-size: 13px; line-height: 1.45; color: var(--tx3)">{{a.what}}</span></span>
+<sc-if value="{{a.flag}}" hint-placeholder-val="{{ false }}"><span style="height: 22px; padding: 0 8px; border-radius: 999px; background: var(--pink-bg); color: var(--pink); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{a.flag}}</span></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: {{f.factCols}}; gap: 10px">
+<sc-for list="{{f.dt.facts}}" as="fa"><div style="padding: 10px 12px; border-radius: 10px; background: var(--s2); display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: var(--tx3)">{{fa.k}}</span><span style="font-size: 14px; font-weight: 600">{{fa.v}}</span></div></sc-for>
+</div>
+</section>
+
+<sc-if value="{{f.dt.hasDiff}}" hint-placeholder-val="{{ true }}">
+<section aria-label="What changed" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 700">{{f.dt.diffTitle}}</span><a href="#" style="font-size: 14px; font-weight: 600">See the full diff</a></div>
+<div style="border-radius: 12px; border: 1px solid var(--line); background: var(--bg); overflow: hidden">
+<sc-for list="{{f.dt.diff}}" as="df"><div style="display: flex; align-items: baseline; gap: 12px; padding: 10px 14px; border-top: {{df.top}}"><span style="width: 72px; flex: none; font-family: 'Red Hat Mono', monospace; font-size: 12px; font-weight: 600; color: {{df.c}}">{{df.sign}} {{df.t}}</span><span style="flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; color: var(--tx2)">{{df.what}}</span></div></sc-for>
+</div>
+</section>
+</sc-if>
+
+<section aria-label="Org approval" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--s3); color: var(--tx); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{f.dt.note.ini}}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">{{f.dt.note.head}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.dt.note.when}}</span></span></div>
+<div style="font-size: 15px; line-height: 1.6; color: var(--tx2); padding-left: 14px; border-left: 2px solid var(--line2)">{{f.dt.note.text}}</div>
+</section>
+</div>
+
+<section aria-label="Marketplace Reviewer's report" style="order: {{f.repOrder}}; padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid {{f.dt.repLine}}; display: flex; flex-direction: column; gap: 14px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 56px; height: 56px; flex: none; border-radius: 14px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{f.dt.rcat.w}}" height="{{f.dt.rcat.h}}" role="img" aria-label="{{f.dt.rcat.label}}"><g><sc-for list="{{f.dt.rcat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye g-anim" style="animation: {{f.dt.rcat.blink}}"><sc-for list="{{f.dt.rcat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px"><span style="font-size: 16px; font-weight: 700">Marketplace Reviewer</span><span style="font-size: 13px; color: var(--tx3)">Glyphh's reviewer, a super power</span>
+<span style="flex: none; margin-top: 2px; height: 24px; padding: 0 9px; border-radius: 999px; background: {{f.dt.rst.bg}}; color: {{f.dt.rst.tx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{f.dt.rst.dot}}"></span>{{f.dt.rst.label}}</span></span>
+</div>
+<sc-if value="{{f.dt.running}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 6px; border-radius: 999px; background: var(--s3); overflow: hidden"><div style="height: 100%; width: {{f.dt.progPct}}; border-radius: 999px; background: #6FD8FF"></div></div><div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--tx3)"><span>{{f.dt.progL}}</span><span>{{f.dt.progR}}</span></div></div>
+</sc-if>
+<sc-if value="{{f.dt.done}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{f.dt.sum}}" as="su"><span style="height: 28px; padding: 0 10px; border-radius: 999px; background: {{su.bg}}; color: {{su.tx}}; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">{{su.t}}</span></sc-for></div>
+</sc-if>
+<div role="list" aria-label="Checks" style="display: flex; flex-direction: column; border-radius: 12px; border: 1px solid var(--line); background: var(--bg)">
+<sc-for list="{{f.dt.checks}}" as="c">
+<div role="listitem" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-top: {{c.top}}; opacity: {{c.op}}">
+<span style="width: 20px; height: 20px; flex: none; margin-top: 1px; display: inline-flex; align-items: center; justify-content: center">
+<sc-if value="{{c.pass}}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+<sc-if value="{{c.look}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F062D0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg></sc-if>
+<sc-if value="{{c.fail}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></sc-if>
+<sc-if value="{{c.now}}" hint-placeholder-val="{{ false }}"><span class="g-spin" style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid #2C2938; border-top-color: #6FD8FF"></span></sc-if>
+<sc-if value="{{c.wait}}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; border-radius: 50%; background: #403B50"></span></sc-if>
+</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="display: flex; justify-content: space-between; gap: 10px"><span style="font-size: 14px; font-weight: 600">{{c.t}}</span><span style="flex: none; font-size: 12px; font-weight: 600; color: {{c.rc}}">{{c.r}}</span></span><sc-if value="{{c.d}}" hint-placeholder-val="{{ true }}"><span style="font-size: 13px; line-height: 1.5; color: var(--tx2)">{{c.d}}</span></sc-if></span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap"><span style="font-size: 12px; line-height: 1.5; color: var(--tx3)">{{f.dt.repFoot}}</span><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{f.dt.rerunTx}}; font-size: 14px; font-weight: 600">{{f.dt.rerun}}</button></div>
+<div style="font-size: 12px; line-height: 1.5; color: var(--tx3); padding-top: 10px; border-top: 1px solid var(--line)">The agent only reports. A person at Glyphh decides.</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{f.dt.thread}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Thread with {{f.dt.org}}" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.dt.msgs}}" as="m">
+<div style="display: flex; gap: 12px; padding: 16px 0; border-top: {{m.top}}">
+<span style="width: 40px; height: 40px; flex: none; border-radius: {{m.avR}}; border: {{m.avBorder}}; background: {{m.avBg}}; color: var(--tx); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><sc-if value="{{m.isAgent}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{m.cat.w}}" height="{{m.cat.h}}" role="img" aria-label="{{m.cat.label}}"><g><sc-for list="{{m.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{m.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></sc-if>{{m.ini}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 700; min-width: 0; overflow-wrap: anywhere">{{m.who}}</span><span style="height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid {{m.roleLine}}; color: {{m.roleTx}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{m.role}}</span><span style="font-size: 12px; color: var(--tx3)">{{m.org}}</span><span style="margin-left: auto; font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)"><time>{{m.when}}</time></span></div>
+<div style="font-size: 14px; line-height: 1.6; color: var(--tx2)">{{m.text}}</div>
+<sc-if value="{{m.quote}}" hint-placeholder-val="{{ false }}"><div style="padding: 10px 12px; border-radius: 10px; background: var(--s2); display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700; color: var(--tx3)">{{m.quoteField}}</span><span style="font-size: 14px; line-height: 1.5; color: var(--tx)">{{m.quote}}</span></div></sc-if>
+</div>
+</div>
+</sc-for>
+</section>
+<nav aria-label="{{f.pgT.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgT.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgT.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgT.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgT.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgT.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgT.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<section aria-label="Write to {{f.dt.org}}" style="padding: 16px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px">
+<label for="msg-{{f.key}}" style="font-size: 14px; font-weight: 600">Write to {{f.dt.org}}</label>
+<textarea id="msg-{{f.key}}" rows="3" placeholder="Sam Rivera (org admin) and the author see this." style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5; resize: vertical"></textarea>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 13px; color: var(--tx3)">They're emailed too. Notes from the agent are labelled Agent.</span><button type="button" style="height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Send</button></div>
+</section>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.listings}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<div style="position: relative; flex: 1 1 260px; min-width: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="lq-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search listings</label><input id="lq-{{f.key}}" type="search" placeholder="Search 41 published listings" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<sc-for list="{{f.lfilters}}" as="fl"><button type="button" style="flex: {{f.filterFlex}}; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px"><span><span style="color: var(--tx3)">{{fl.k}}:</span> {{fl.v}}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></sc-for>
+</div>
+<section aria-label="Published listings" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px {{f.cardPad}}">
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 14px; height: 40px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)"><span style="width: 44px; flex: none">Feat.</span><span style="width: 40px; flex: none"></span><span style="flex: 1 1 220px">Listing</span><span style="width: 110px; flex: none">Kind</span><span style="width: 120px; flex: none">Category</span><span style="width: 90px; flex: none; text-align: right">Installs</span><span style="width: 120px; flex: none">Rating</span><span style="width: 44px; flex: none"></span></div>
+</sc-if>
+<sc-for list="{{f.lrows}}" as="r">
+<div style="display: flex; align-items: center; gap: {{f.rowGap}}; min-height: 72px; padding: 10px 0; border-top: {{r.top}}; box-sizing: border-box; background: {{r.bg}}">
+<button type="button" aria-pressed="{{r.featured}}" aria-label="{{r.starLabel}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; display: inline-flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="{{r.starFill}}" stroke="{{r.starStroke}}" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3.1-5.4 3.1 1.2-6-4.5-4.2 6.1-.7z"></path></svg></button>
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 16px"><sc-if value="{{r.ic.isCat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{r.ic.cat.w}}" height="{{r.ic.cat.h}}" role="img" aria-label="{{r.ic.cat.label}}"><g><sc-for list="{{r.ic.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{r.ic.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></sc-if>{{r.ic.glyph}}</span>
+<span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span><sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub2}}</span></sc-if></span>
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}">
+<span style="width: 110px; flex: none"><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid {{r.kc}}; color: {{r.kc}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{r.kind}}</span></span>
+<span style="width: 120px; flex: none; font-size: 14px; color: var(--tx2)">{{r.cat}}</span>
+<span style="width: 90px; flex: none; font-size: 14px; text-align: right; font-variant-numeric: tabular-nums">{{r.installs}}</span>
+<span style="width: 120px; flex: none; font-size: 14px; color: {{r.rateTx}}">{{r.rating}}</span>
+</sc-if>
+<button type="button" aria-label="Actions for {{r.name}}" aria-expanded="{{r.open}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid {{r.moreLine}}; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+</div>
+</sc-for>
+</section>
+<nav aria-label="{{f.pgL.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgL.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgL.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgL.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgL.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgL.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgL.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+
+<sc-if value="{{f.v.cats}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: {{f.catCols}}; gap: 20px; align-items: start">
+<section aria-label="Categories" style="padding: {{f.cardPad2}}; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 16px; font-weight: 700">Categories</span><span style="font-size: 13px; line-height: 1.5; color: var(--tx3)">Shown on the marketplace home in this order. Every listing has one.</span></div>
+<div role="list" style="display: flex; flex-direction: column">
+<sc-for list="{{f.catRows}}" as="c">
+<div role="listitem" style="display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 8px 0; border-top: {{c.top}}; box-sizing: border-box">
+<span aria-label="Drag to reorder {{c.name}}" style="width: 24px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--tx3)"><svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"></circle><circle cx="9" cy="3" r="1.6"></circle><circle cx="3" cy="9" r="1.6"></circle><circle cx="9" cy="9" r="1.6"></circle><circle cx="3" cy="15" r="1.6"></circle><circle cx="9" cy="15" r="1.6"></circle></svg></span>
+<sc-if value="{{c.editing}}" hint-placeholder-val="{{ false }}">
+<label for="cr-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Rename {{c.name}}</label><input id="cr-{{f.key}}" value="{{c.newName}}" style="flex: 1; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #7C4DFF; background: var(--bg); color: var(--tx); padding: 0 12px; font-size: 15px">
+<button type="button" style="height: 44px; flex: none; padding: 0 14px; border-radius: 10px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 14px; font-weight: 600">Save</button>
+<button type="button" style="height: 44px; flex: none; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Cancel</button>
+</sc-if>
+<sc-if value="{{c.still}}" hint-placeholder-val="{{ true }}">
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span><span style="font-size: 12px; color: var(--tx3)">{{c.n}}</span></span>
+<button type="button" aria-label="Move {{c.name}} up" disabled="{{c.first}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{c.upTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
+<button type="button" aria-label="Move {{c.name}} down" disabled="{{c.last}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{c.downTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<button type="button" style="height: 44px; flex: none; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Rename</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<nav aria-label="{{f.pgC.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgC.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgC.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgC.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgC.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgC.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgC.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<div style="display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); flex-wrap: wrap">
+<label for="nc-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">New category</label><input id="nc-{{f.key}}" placeholder="New category" style="flex: 1 1 180px; min-width: 0; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px">
+<button type="button" style="flex: {{f.filterFlex}}; height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add category</button>
+</div>
+</section>
+
+<section aria-label="Featured on the home" style="padding: {{f.cardPad2}}; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 16px; font-weight: 700">Featured on the home</span><span style="font-size: 13px; line-height: 1.5; color: var(--tx3)">The row at the top of the marketplace home, left to right. Up to 8. Add one from Listings with Feature on the marketplace home.</span></div>
+<div role="list" style="display: flex; flex-direction: column">
+<sc-for list="{{f.featRows}}" as="c">
+<div role="listitem" style="display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 8px 0; border-top: {{c.top}}; box-sizing: border-box">
+<span style="width: 24px; flex: none; text-align: center; font-family: 'Red Hat Mono', monospace; font-size: 13px; color: var(--tx3)">{{c.pos}}</span>
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: var(--accent-tx); font-size: 16px"><sc-if value="{{c.ic.isCat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{c.ic.cat.w}}" height="{{c.ic.cat.h}}" role="img" aria-label="{{c.ic.cat.label}}"><g><sc-for list="{{c.ic.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{c.ic.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></sc-if>{{c.ic.glyph}}</span></sc-if>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.sub}}</span></span>
+<button type="button" aria-label="Move {{c.name}} earlier" disabled="{{c.first}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{c.upTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
+<button type="button" aria-label="Move {{c.name}} later" disabled="{{c.last}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{c.downTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<button type="button" aria-label="Remove {{c.name}} from featured" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+</sc-for>
+</div>
+<div style="font-size: 13px; color: var(--tx3)">4 of 8 places used.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}; padding-top: 12px; border-top: 1px solid var(--line)">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Undo changes</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Save the order</button>
+</div>
+</section>
+</div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{f.bar}}" hint-placeholder-val="{{ false }}">
+<div role="region" aria-label="Your decision" style="position: absolute; left: 0; right: 0; bottom: 0; padding: {{f.barPad}}; background: var(--s1); border-top: 1px solid var(--line); box-shadow: 0 -20px 40px rgba(0,0,0,.35); display: flex; flex-direction: {{f.barDir}}; align-items: {{f.barAlign}}; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 700">{{f.dt.decideTitle}}</span><span style="font-size: 13px; line-height: 1.45; color: var(--tx3)">{{f.dt.decideNote}}</span></div>
+<div style="display: flex; flex-direction: {{f.btnDir}}; gap: 10px; opacity: {{f.dt.decideOp}}">
+<button type="button" aria-disabled="{{f.dt.decideOff}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--red-line); background: transparent; color: var(--red-tx); font-size: 15px; font-weight: 600">Reject</button>
+<button type="button" aria-disabled="{{f.dt.decideOff}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Request changes</button>
+<button type="button" aria-disabled="{{f.dt.decideOff}}" style="height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">{{f.dt.publishLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.menu}}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Actions for {{f.menuFor}}" style="position: absolute; right: {{f.menuRight}}; top: {{f.menuTop}}; width: 300px; padding: 6px; border-radius: 14px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 24px 60px rgba(0,0,0,.5); display: flex; flex-direction: column">
+<sc-for list="{{f.menuItems}}" as="mi">
+<sc-if value="{{mi.sep}}" hint-placeholder-val="{{ false }}"><div style="height: 1px; margin: 6px 4px; background: var(--line)"></div></sc-if>
+<sc-if value="{{mi.item}}" hint-placeholder-val="{{ true }}"><button type="button" role="menuitem" style="min-height: 44px; padding: 8px 12px; border-radius: 9px; border: none; background: {{mi.bg}}; color: {{mi.tx}}; font-size: 14px; font-weight: 600; text-align: left; display: flex; flex-direction: column; gap: 2px"><span>{{mi.t}}</span><sc-if value="{{mi.d}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 400; color: var(--tx3)">{{mi.d}}</span></sc-if></button></sc-if>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{f.sheet}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="menu" aria-label="Actions for {{f.menuFor}}" style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 28px; border-radius: 24px 24px 0 0; background: var(--dlg); border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 2px">
+<span style="align-self: center; width: 40px; height: 4px; border-radius: 999px; background: var(--line2); margin-bottom: 10px"></span>
+<div style="font-size: 16px; font-weight: 700; padding: 0 4px 8px">{{f.menuFor}}</div>
+<sc-for list="{{f.menuItems}}" as="mi">
+<sc-if value="{{mi.sep}}" hint-placeholder-val="{{ false }}"><div style="height: 1px; margin: 6px 0; background: var(--line)"></div></sc-if>
+<sc-if value="{{mi.item}}" hint-placeholder-val="{{ true }}"><button type="button" role="menuitem" style="min-height: 52px; padding: 8px 12px; border-radius: 12px; border: none; background: transparent; color: {{mi.tx}}; font-size: 15px; font-weight: 600; text-align: left; display: flex; flex-direction: column; justify-content: center; gap: 2px"><span>{{mi.t}}</span><sc-if value="{{mi.d}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 400; color: var(--tx3)">{{mi.d}}</span></sc-if></button></sc-if>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{f.dlg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dt-{{f.key}}" style="position: absolute; left: 50%; top: {{f.dlgTop}}; transform: translateX(-50%); width: {{f.dlgW}}; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.45); padding: {{f.dlgPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><h3 id="dt-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{f.dlgTitle}}</h3><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.dlgDesc}}</div></div>
+<button type="button" aria-label="Close" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<sc-if value="{{f.d.publish}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Category</span><button type="button" style="height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); font-size: 15px; display: flex; align-items: center; justify-content: space-between">Sales<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button><span style="font-size: 12px; color: var(--tx3)">Northwind asked for Sales. You can change it later in Listings.</span></div>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px"><span style="width: 22px; height: 22px; flex: none; border-radius: 6px; border: 1.5px solid var(--line2); box-sizing: border-box"></span>Feature it on the marketplace home</label>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="pn-{{f.key}}" style="font-size: 14px; font-weight: 600">A note to Northwind <span style="font-weight: 400; color: var(--tx3)">(optional)</span></label><textarea id="pn-{{f.key}}" rows="2" placeholder="Goes into the thread" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; resize: vertical"></textarea></div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Publish 2.1.0</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.changes}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--s2); flex-wrap: wrap">
+<span style="flex: 1 1 200px; font-size: 14px; line-height: 1.45; color: var(--tx2)">Marketplace Reviewer found 1 thing. Add it to the right field in one click.</span>
+<button type="button" aria-pressed="true" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(124,77,255,.5); background: var(--chip-bg); color: var(--accent-tx); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Agent's findings added</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 14px; font-weight: 600">Notes per field</div>
+<sc-for list="{{f.fields}}" as="fd">
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 6px 0; border-top: {{fd.top}}">
+<label style="display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; flex-wrap: wrap"><span style="width: 22px; height: 22px; flex: none; border-radius: 6px; border: 1.5px solid {{fd.boxLine}}; background: {{fd.boxBg}}; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center"><sc-if value="{{fd.on}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if></span><span style="flex: 1">{{fd.name}}</span><sc-if value="{{fd.agent}}" hint-placeholder-val="{{ false }}"><span style="height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid #B49CFF; color: #B49CFF; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">From the agent</span></sc-if></label>
+<sc-if value="{{fd.on}}" hint-placeholder-val="{{ false }}"><textarea aria-label="Note on {{fd.name}}" rows="2" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5; resize: vertical">{{fd.note}}</textarea></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="cm-{{f.key}}" style="font-size: 14px; font-weight: 600">Message</label><textarea id="cm-{{f.key}}" rows="{{f.msgRows}}" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5; resize: vertical">Thanks, Max and Sam. One thing before we publish 2.1.0: it asks to delete Slack messages, and nothing in it does. Drop that permission, or tell us what needs it, and send it again.</textarea><span style="font-size: 12px; line-height: 1.5; color: var(--tx3)">Goes to Sam Rivera (org admin) and the author, and into the thread. Nothing is published.</span></div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Send the request</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.reject}}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" aria-label="Reason" style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 14px; font-weight: 600; margin-bottom: 4px">Reason</div>
+<sc-for list="{{f.reasons}}" as="rs"><button type="button" role="radio" aria-checked="{{rs.on}}" style="min-height: 48px; padding: 8px 14px; border-radius: 12px; border: 1px solid {{rs.line}}; background: {{rs.bg}}; color: var(--tx); font-size: 15px; text-align: left; display: flex; align-items: center; gap: 12px"><span style="width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid {{rs.dotLine}}; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{rs.dot}}"></span></span>{{rs.t}}</button></sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="rj-{{f.key}}" style="font-size: 14px; font-weight: 600">Message to Globex Corporation</label><textarea id="rj-{{f.key}}" rows="3" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5; resize: vertical">The bundle holds a Google API key (config/dev.env, line 3). Revoke that key now, take it out, and send a new version.</textarea></div>
+<div style="padding: 12px 14px; border-radius: 12px; background: var(--red-bg); border: 1px solid var(--red-line); font-size: 14px; line-height: 1.5; color: var(--tx2)">Receipt filer 1.0.0 can't be published after this. Globex Corporation can send a new version.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: var(--red); color: #FFFFFF; font-size: 15px; font-weight: 600">Reject Receipt filer</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.unpublish}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 12px 14px; border-radius: 12px; background: var(--s2); font-size: 15px; line-height: 1.5">Installed copies keep working; it can't be added again.</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="up-{{f.key}}" style="font-size: 14px; font-weight: 600">Reason <span style="font-weight: 400; color: var(--tx3)">(Northwind sees this)</span></label><textarea id="up-{{f.key}}" rows="3" style="width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5; resize: vertical">Two of the six sites it reads changed their terms and no longer allow it. Send a version that drops them and we'll look again.</textarea></div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Keep it published</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: var(--red); color: #FFFFFF; font-size: 15px; font-weight: 600">Unpublish Competitor watch</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.versions}}" hint-placeholder-val="{{ false }}">
+<div style="border-radius: 12px; border: 1px solid var(--line); background: var(--bg); padding: 0 14px">
+<sc-for list="{{f.vers}}" as="vr">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 0; border-top: {{vr.top}}; box-sizing: border-box; flex-wrap: wrap">
+<span style="width: 64px; flex: none; font-family: 'Red Hat Mono', monospace; font-size: 14px; font-weight: 600">{{vr.v}}</span>
+<span style="flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px">{{vr.what}}</span><span style="font-size: 12px; color: var(--tx3)">{{vr.meta}}</span></span>
+<span style="flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: {{vr.bg}}; color: {{vr.tx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{vr.st}}</span>
+</div>
+</sc-for>
+</div>
+<nav aria-label="{{f.pgV.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgV.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgV.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgV.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgV.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgV.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgV.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Close</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3392px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="3">
+<div style="padding: 24px; border-radius: 16px; border: 1px solid #2C2938; background: #13121A; display: flex; flex-direction: column; gap: 8px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{n.t}}</div><div style="font-size: 15px; line-height: 1.55; color: #B9B4C8">{{n.b}}</div></div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":19200}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
+var TAILS = { d: 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169', 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169', 13: 'L112 150 C130 152 150 150 160 140 C150 160 134 166 124 169' };
+var FACE_EYE = { 2: 'curious', 3: 'big', 4: 'sleepy', 5: 'done', 6: 'dizzy' };
+var MOOD_EYE = { idle: 'idle', thinking: 'thinking', generating: 'big', listening: 'big', done: 'check', playful: 'done', error: 'sleepy', sleepy: 'sleepy', curious: 'curious', dizzy: 'dizzy' };
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, o) {
+  o = o || {};
+  var c = '#ffffff', ec = o.color || '#ffffff', size = o.size || 64;
+  var body = 'M40 62 ' + (HEADS[face] || HEADS.d) + ' C140 70 144 104 128 121 L112 133 ' + (TAILS[face] || TAILS.d) + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 7 ? 'M22 9 L62 42 L39 54 Z' : face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var kind = o.mood ? MOOD_EYE[o.mood] : (FACE_EYE[face] || 'idle');
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  var e = [];
+  (kind === 'done' ? e : s).push(sh(kind === 'sleepy' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], big: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (eyes[kind]) { var k = eyes[kind]; e.push(sh(circ(k[0], k[1], k[2]), ec), sh(circ(k[3], k[4], k[5]), INK)); }
+  else if (kind === 'sleepy') e.push(sh(circ(92, 107, 9), ec));
+  else if (kind === 'dizzy') e.push(sh('M93 77 L97.8 87.6 L109 88.3 L100.4 95.6 L103 106.8 L93 100.8 L83 106.8 L85.6 95.6 L77 88.3 L88.2 87.6 Z', ec));
+  else if (kind === 'check') e.push(sh('M83 95 L90 102 L103 87', 'none', ec, 7));
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, eye: e, label: o.label || 'Glyphh cat', blink: o.blink ? 'g-blink 5s infinite' : 'none' };
+}
+
+// Marketplace Reviewer: Glyphh's own reviewer super power. Face 13, Ion eye; thinking eye while it runs, the check when done.
+function reviewer(mood, size) { return cat(13, { color: '#6FD8FF', mood: mood, size: size, label: 'Marketplace Reviewer, ' + (mood === 'thinking' ? 'checking' : 'done'), blink: mood === 'thinking' }); }
+
+var TYPE = { Skill: '◆', Plugin: '▣', Task: '⟴', App: '▦' };
+var KC = { 'Super power': '#7C4DFF' };
+function icon(kind, face, color, px) {
+  if (kind === 'Super power') return { isCat: true, glyph: '', cat: cat(face, { color: color, size: Math.round(px * 0.6), label: '' }) };
+  return { isCat: false, glyph: TYPE[kind], cat: { w: 0, h: 0, shapes: [], eye: [], label: '', blink: 'none' } };
+}
+var B = 'assets/';
+var LG = { Gmail: B + 'gmail.svg', Slack: B + 'slack.svg', Salesforce: B + 'salesforce.svg', Drive: B + 'google-drive.svg' };
+
+var ST = {
+  waiting: { label: 'Waiting for you', dot: '#F062D0', bg: 'var(--pink-bg)', tx: 'var(--pink)' },
+  agent: { label: 'Agent reviewing', dot: '#6FD8FF', bg: 'var(--ion-bg)', tx: 'var(--ion)' },
+  changes: { label: 'Changes requested', dot: '#F062D0', bg: 'var(--pink-bg)', tx: 'var(--pink)' },
+  published: { label: 'Published', dot: '#7C4DFF', bg: 'var(--chip-bg)', tx: 'var(--chip-tx)' },
+  rejected: { label: 'Rejected', dot: '#FF4D4D', bg: 'var(--red-bg)', tx: 'var(--red-tx)' },
+  ready: { label: 'Report ready', dot: '#7C4DFF', bg: 'var(--chip-bg)', tx: 'var(--chip-tx)' },
+  checking: { label: 'Checking', dot: '#6FD8FF', bg: 'var(--ion-bg)', tx: 'var(--ion)' }
+};
+
+function pager(label, from, to, total, page, pages, mobile) {
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var items;
+  if (mobile) items = [{ n: 'Page ' + page + ' of ' + pages, cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2, #B9B4C8)' }];
+  else {
+    var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+    items = seq.map(function (n) { var cur = n === page; return { n: String(n), cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2, #403B50)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2, #B9B4C8)' }; });
+  }
+  var first = page === 1, last = page === pages;
+  return { label: label, line: 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)', nextTx: last ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)' };
+}
+function tabsOf(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
+
+// ---------- the review queue ----------
+var STATUS_TABS = [['waiting', 'Waiting', '7'], ['agent', 'Agent reviewing', '2'], ['changes', 'Changes requested', '3'], ['published', 'Published', '41'], ['rejected', 'Rejected', '5']];
+function statusTabs(on) {
+  return STATUS_TABS.map(function (s) { var sel = s[0] === on; return { label: s[1], n: s[2], dot: ST[s[0]].dot, on: sel ? 'true' : 'false', bg: sel ? '#7C4DFF' : 'transparent', tx: sel ? '#FFFFFF' : 'var(--tx2)', border: sel ? '#7C4DFF' : 'var(--line2)' }; });
+}
+// name, kind, face, eye colour, org, author, version, updating from, submitted
+var Q_WAIT = [
+  ['Deal stages', 'Task', 0, '', 'Northwind', 'Maximilian Alexander-Featherstonehaugh', '2.1.0', '2.0.3', '2 h ago'],
+  ['Release notes', 'Skill', 0, '', 'Glyphh', 'Ines Duarte', '1.0.0', '', '3 h ago'],
+  ['Scout', 'Super power', 12, '#FF8AD8', 'Acme', 'Bo Li', '1.2.0', '1.1.4', 'yesterday'],
+  ['Receipt filer', 'Plugin', 0, '', 'Globex Corporation', 'Dana Whitfield', '1.0.0', '', 'yesterday'],
+  ['Standup board', 'App', 0, '', 'Initech', 'Tom Okafor', '3.0.0', '2.6.1', '2 days ago']
+];
+var Q_AGENT = [
+  ['Contract checker', 'Skill', 0, '', 'Umbrella Health', 'Ana Ortiz', '1.0.0', '', '6 min ago', 4],
+  ['Lead Router', 'Super power', 11, '#5B8CFF', 'Globex Corporation', 'Bo Li', '2.0.0', '1.3.2', '1 min ago', 1]
+];
+function qrows(list) {
+  return list.map(function (d, i) {
+    var prog = d[9] !== undefined, upd = !!d[7];
+    return { ic: icon(d[1], d[2], d[3], 48), icS: icon(d[1], d[2], d[3], 40), name: d[0], kind: d[1], kc: KC[d[1]] || '#B49CFF',
+      by: 'from ' + d[4] + ' · by ' + d[5], ver: d[6], vline: upd ? 'Update from ' + d[7] : 'New listing', when: d[8], top: i === 0 ? 'none' : '1px solid var(--line)',
+      prog: prog, noProg: !prog, progPct: prog ? Math.round(d[9] / 6 * 100) + '%' : '0%', progLabel: prog ? 'Check ' + d[9] + ' of 6' : '',
+      btn: prog ? 'Watch' : 'Review',
+      pl1: d[1] + ' · ' + d[4] + ' · ' + d[5], pl2: d[6] + ' · ' + (upd ? 'Update' : 'New') + ' · ' + (prog ? 'checking, ' + d[9] + ' of 6' : d[8]), pl2c: prog ? 'var(--ion)' : 'var(--tx3)' };
+  });
+}
+
+// ---------- a listing under review ----------
+function checks(list) {
+  var R = { pass: ['Passed', 'var(--accent-tx)'], look: ['Needs a look', 'var(--pink)'], fail: ['Failed', 'var(--red-tx)'], now: ['Checking', 'var(--ion)'], wait: ['Waiting', 'var(--tx3)'] };
+  return list.map(function (c, i) { var r = R[c[0]]; return { t: c[1], d: c[2] || '', r: r[0], rc: r[1], pass: c[0] === 'pass', look: c[0] === 'look', fail: c[0] === 'fail', now: c[0] === 'now', wait: c[0] === 'wait', op: c[0] === 'wait' ? .5 : 1, top: i === 0 ? 'none' : '1px solid var(--line)' }; });
+}
+var CK = ['Permissions match what it does', 'Dependencies resolve', 'Screenshots match', 'Description is accurate', 'No secrets in the bundle', 'Runs in a sandbox'];
+var DEAL_CHECKS = [
+  ['look', CK[0], 'Asks for Slack · Delete messages; nothing in the bundle uses it. Ask the author to drop it, or to say what needs it.'],
+  ['pass', CK[1], 'Slack, Salesforce and a chat model. All in the catalog.'],
+  ['pass', CK[2], '3 screenshots; each matches a screen it draws.'],
+  ['pass', CK[3], 'Says what it does and what it needs.'],
+  ['pass', CK[4], 'Scanned 42 files: no keys, tokens or passwords.'],
+  ['pass', CK[5], 'Ran 3 times on test deals: finished in 18 s, no errors.']
+];
+var DEAL_RUN = [DEAL_CHECKS[0], DEAL_CHECKS[1], DEAL_CHECKS[2], ['now', CK[3], 'Comparing the description with what it does.'], ['wait', CK[4]], ['wait', CK[5]]];
+var DEAL_211 = [['pass', CK[0], 'Slack · Delete messages is gone. What it asks for is what it uses.'], DEAL_CHECKS[1], DEAL_CHECKS[2], DEAL_CHECKS[3], DEAL_CHECKS[4], DEAL_CHECKS[5]];
+var RF_CHECKS = [
+  ['pass', CK[0], 'Reads Gmail, writes to Google Drive; uses both.'],
+  ['pass', CK[1], 'Gmail and Google Drive. Both in the catalog.'],
+  ['look', CK[2], 'Screenshot 2 shows a settings page the plugin doesn’t have.'],
+  ['pass', CK[3], 'Says what it does and what it needs.'],
+  ['fail', CK[4], 'Found what looks like a Google API key in config/dev.env, line 3. It must come out, and be revoked.'],
+  ['pass', CK[5], 'Filed 12 test receipts in 9 s, no errors.']
+];
+function shots(n, flagAt) { var out = []; for (var i = 0; i < n; i++) out.push({ label: 'Screenshot ' + (i + 1), flag: i === flagAt, border: i === flagAt ? 'var(--pink-line)' : '#2C2938' }); return out; }
+function asks(list) { return list.map(function (a, i) { return { name: a[0], what: a[1], flag: a[2] || '', hasLogo: !!a[3], src: a[3] || '', glyph: a[3] ? '' : '◆', top: i === 0 ? 'none' : '1px solid var(--line)' }; }); }
+function summary(p, l, f) {
+  return [{ t: p + ' passed', bg: 'var(--chip-bg)', tx: 'var(--chip-tx)' }, { t: l + ' needs a look', bg: l ? 'var(--pink-bg)' : 'var(--s3)', tx: l ? 'var(--pink)' : 'var(--tx2)' }, { t: f + ' failed', bg: f ? 'var(--red-bg)' : 'var(--s3)', tx: f ? 'var(--red-tx)' : 'var(--tx2)' }];
+}
+var DEAL = {
+  name: 'Deal stages', kind: 'Task', glyph: TYPE.Task, org: 'Northwind', verTag: '2.0.3 → 2.1.0',
+  byLine: 'from Northwind · by Maximilian Alexander-Featherstonehaugh · sent by Sam Rivera, org admin, Oct 10, 4:12 pm',
+  about: 'Moves a deal to the right stage in Salesforce when the email thread says so, and posts the change in the deal’s Slack channel. You pick the channel; it never closes a deal on its own.',
+  shots: shots(3, -1),
+  asks: asks([['Slack', 'Read channels, post messages, delete messages', 'Needs a look', LG.Slack], ['Salesforce', 'Read and update opportunities', '', LG.Salesforce], ['A chat model', 'Writes the note for each stage change', '']]),
+  facts: [{ k: 'Category', v: 'Sales' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '42 files · 180 KB' }],
+  hasDiff: true, diffTitle: 'What changed since 2.0.3',
+  diff: [['+', 'Added', 'Permission: Slack · Delete messages'], ['+', 'Added', 'Permission: Salesforce · Update opportunities'], ['~', 'Changed', 'Description: 2 of 3 lines'], ['+', 'Added', 'Screenshot 3'], ['−', 'Removed', 'Dependency: Google Sheets']].map(function (d, i) {
+    return { sign: d[0], t: d[1], what: d[2], c: d[0] === '+' ? 'var(--accent-tx)' : 'var(--tx3)', top: i === 0 ? 'none' : '1px solid var(--line)' }; }),
+  note: { ini: 'SR', head: 'Approved by Sam Rivera · Org admin, Northwind', when: 'Oct 10, 4:12 pm', text: 'Our sales team has run 2.0 for a month. 2.1 moves stages in Salesforce instead of a sheet. Max and I tested it on our sandbox org.' }
+};
+var RF = {
+  name: 'Receipt filer', kind: 'Plugin', glyph: TYPE.Plugin, org: 'Globex Corporation', verTag: '1.0.0 · new',
+  byLine: 'from Globex Corporation · by Dana Whitfield · sent by Priya Shah, org admin, Oct 10, 9:30 am',
+  about: 'Finds receipts in Gmail, files them in Google Drive by month and adds a line to your expenses sheet.',
+  shots: shots(3, 1),
+  asks: asks([['Gmail', 'Read emails and attachments', '', LG.Gmail], ['Google Drive', 'Create files and folders', '', LG.Drive]]),
+  facts: [{ k: 'Category', v: 'Finance' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '18 files · 64 KB' }],
+  hasDiff: false, diffTitle: '', diff: [],
+  note: { ini: 'PS', head: 'Approved by Priya Shah · Org admin, Globex Corporation', when: 'Oct 10, 9:30 am', text: 'Our finance team files every receipt with it. Happy for other orgs to have it.' }
+};
+function detail(base, o) {
+  var d = {}; for (var k in base) d[k] = base[k];
+  var running = !!o.running;
+  d.st = ST[o.status || 'waiting'];
+  d.rst = running ? ST.checking : ST.ready;
+  d.running = running; d.done = !running;
+  d.rcat = reviewer(running ? 'thinking' : 'done', 36);
+  d.checks = checks(o.checks);
+  d.sum = o.sum || [];
+  d.progPct = '58%'; d.progL = 'Check 4 of 6'; d.progR = 'about 1 min left';
+  d.repLine = running ? 'rgba(111,216,255,.4)' : 'var(--line)';
+  d.repFoot = running ? 'Started 2 min ago, on a fresh sandbox.' : (o.repFoot || 'Ran Oct 10, 4:24 pm · took 2 min 10 s');
+  d.rerun = running ? 'Stop' : 'Run again'; d.rerunTx = 'var(--tx)';
+  d.review = !o.thread; d.thread = !!o.thread;
+  d.tabs = tabsOf(['Review', 'Thread · ' + (o.msgN || 2), 'Versions · ' + (o.verN || 4)], o.thread ? 'Thread · ' + (o.msgN || 2) : 'Review');
+  d.decideTitle = 'Your decision · ' + base.name + ' ' + (o.ver || base.verTag.split(' ').pop());
+  if (base === RF) d.decideTitle = 'Your decision · Receipt filer 1.0.0';
+  d.decideNote = running ? 'You can decide once the report is in.' : (o.decideNote || 'The org admin and the author are told either way.');
+  d.decideOp = running ? .4 : 1; d.decideOff = running ? 'true' : 'false';
+  d.publishLabel = 'Publish ' + (base === RF ? '1.0.0' : (o.ver || '2.1.0'));
+  d.msgs = o.thread ? THREAD : [];
+  if (o.verTag) d.verTag = o.verTag;
+  if (o.byLine) d.byLine = o.byLine;
+  return d;
+}
+function msg(kind, who, ini, role, org, when, text, qf, q) {
+  var agent = kind === 'agent';
+  return { isAgent: agent, cat: reviewer('done', 22), ini: agent ? '' : ini, who: who, role: role, org: org, when: when, text: text, quote: q || '', quoteField: qf || '',
+    avR: agent ? '11px' : '50%', avBorder: agent ? '1px solid var(--tile)' : 'none', avBg: agent ? 'transparent' : (org === 'Glyphh' ? '#7C4DFF' : 'var(--s3)'),
+    roleLine: agent ? '#B49CFF' : 'var(--line2)', roleTx: agent ? '#B49CFF' : 'var(--tx2)' };
+}
+var THREAD = [
+  msg('person', 'Sam Rivera', 'SR', 'Org admin', 'Northwind', 'Oct 10, 4:12 pm', 'Sent for review. Our sales team has run 2.0 for a month; 2.1 moves stages in Salesforce instead of a sheet.'),
+  msg('agent', 'Marketplace Reviewer', '', 'Agent', 'Glyphh', 'Oct 10, 4:26 pm', 'Report ready for 2.1.0: 5 passed, 1 needs a look.', 'Permissions', 'Asks for Slack · Delete messages; nothing in the bundle uses it.'),
+  msg('person', 'Ines Duarte', 'ID', 'Glyphh admin', 'Glyphh', 'Oct 11, 9:03 am', 'Changes requested. Thanks, Max and Sam: one thing before we publish.', 'Permissions · from the agent', 'Drop Slack · Delete messages, or tell us what needs it.'),
+  msg('person', 'Maximilian Alexander-Featherstonehaugh', 'MA', 'Author', 'Northwind', 'Oct 11, 10:47 am', 'Good catch: it was left over from a test. 2.1.1 drops it. Sent again, Sam approved.'),
+  msg('agent', 'Marketplace Reviewer', '', 'Agent', 'Glyphh', 'Oct 11, 10:52 am', 'Report ready for 2.1.1: 6 of 6 passed.')
+].map(function (m, i) { m.top = i === 0 ? 'none' : '1px solid var(--line)'; return m; });
+
+// ---------- listings ----------
+// name, kind, face, eye, org, category, installs, rating, featured
+var LIST = [
+  ['Standup board', 'App', 0, '', 'Glyphh', 'Productivity', '2,410', '4.8 · 311 ratings', true],
+  ['Competitor watch', 'Task', 0, '', 'Northwind', 'Research', '1,284', '4.6 · 98 ratings', true],
+  ['Deal Desk', 'Super power', 14, '#6FD8FF', 'Northwind', 'Sales', '612', '4.4 · 57 ratings', true],
+  ['Inbox Zero', 'Super power', 3, '#B49CFF', 'Glyphh', 'Email', '3,905', '4.9 · 802 ratings', false],
+  ['Release notes', 'Skill', 0, '', 'Acme', 'Engineering', '488', '', false],
+  ['Receipt filer', 'Plugin', 0, '', 'Initech', 'Finance', '97', '3.9 · 12 ratings', false]
+];
+function lrows(openAt) {
+  return LIST.map(function (d, i) {
+    var open = i === openAt;
+    return { ic: icon(d[1], d[2], d[3], 40), name: d[0], kind: d[1], kc: KC[d[1]] || '#B49CFF', sub: 'from ' + d[4], cat: d[5], installs: d[6], rating: d[7] || 'No ratings yet', rateTx: d[7] ? 'var(--tx)' : 'var(--tx3)',
+      sub2: d[1] + ' · ' + d[5] + ' · ' + d[6] + ' installs' + (d[7] ? ' · ' + d[7].split(' · ')[0] + ' rating' : ''),
+      featured: d[8] ? 'true' : 'false', starLabel: d[8] ? 'Featured. Remove ' + d[0] + ' from the home' : 'Feature ' + d[0] + ' on the home',
+      starFill: d[8] ? '#B49CFF' : 'none', starStroke: d[8] ? '#B49CFF' : 'var(--tx3)',
+      open: open ? 'true' : 'false', moreLine: open ? '#7C4DFF' : 'var(--line2)', bg: open ? 'var(--s2)' : 'transparent', top: i === 0 ? 'none' : '1px solid var(--line)' };
+  });
+}
+var MENU = [
+  { item: true, t: 'Feature on the marketplace home', d: 'Adds it to the end of the featured row' },
+  { item: true, t: 'Change category', d: 'Now: Email' },
+  { item: true, t: 'View versions', d: '7 versions · 2.2.0 is live' },
+  { sep: true },
+  { item: true, t: 'Unpublish', d: 'Installed copies keep working', danger: true }
+].map(function (m) { return { item: !!m.item, sep: !!m.sep, t: m.t || '', d: m.d || '', tx: m.danger ? 'var(--red-tx)' : 'var(--tx)', bg: 'transparent' }; });
+var VERS = [
+  ['2.4.0', 'Watches pricing pages as well', 'Published Oct 8 · 1,102 installs on it', 'Live', 'var(--chip-bg)', 'var(--chip-tx)'],
+  ['2.3.1', 'Fixes a missed change on one site', 'Published Sep 20 · 140 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
+  ['2.3.0', 'Leaves the note in Slack, not email', 'Rejected Sep 12 · asked to read a private channel', 'Rejected', 'var(--red-bg)', 'var(--red-tx)'],
+  ['2.2.0', 'You pick the sites', 'Published Aug 30 · 42 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
+  ['2.1.0', 'Remembers what it saw last time', 'Published Aug 2 · 0 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)']
+].map(function (v, i) { return { v: v[0], what: v[1], meta: v[2], st: v[3], bg: v[4], tx: v[5], top: i === 0 ? 'none' : '1px solid var(--line)' }; });
+
+// ---------- categories and featured ----------
+function catRows() {
+  var C = [['Productivity', 64], ['Sales', 38], ['Research', 21], ['Engineering', 52], ['Email', 17], ['Finance', 12]];
+  return C.map(function (c, i) { var editing = i === 2;
+    return { name: c[0], n: c[1] + ' listings', editing: editing, still: !editing, newName: 'Research and analysis', first: i === 0, last: false, upTx: i === 0 ? 'var(--line2)' : 'var(--tx)', downTx: 'var(--tx)', top: i === 0 ? 'none' : '1px solid var(--line)' }; });
+}
+function featRows() {
+  var F = [LIST[0], LIST[1], LIST[2], LIST[3]];
+  return F.map(function (d, i) { return { pos: String(i + 1), ic: icon(d[1], d[2], d[3], 40), name: d[0], sub: d[1] + ' · from ' + d[4], first: i === 0, last: i === F.length - 1, upTx: i === 0 ? 'var(--line2)' : 'var(--tx)', downTx: i === F.length - 1 ? 'var(--line2)' : 'var(--tx)', top: i === 0 ? 'none' : '1px solid var(--line)' }; });
+}
+
+// ---------- states ----------
+var STATES = [
+  { id: 'queue', title: 'Review queue: waiting', sub: 'Listings an org admin has approved, and Glyphh’s own, once Marketplace Reviewer has checked them. New listings and updates side by side; the version says which. Search by name, org or author; filter by kind. Paginated.',
+    v: 'queue', sec: 0, tab: 'waiting', rows: Q_WAIT, pg: [1, 5, 7, 1, 2], hd: 920, hp: 1020 },
+  { id: 'search', title: 'Search and filter: no results', sub: 'Searching within the tab, with the Kind filter on. When nothing matches it says what was searched and offers to clear both.',
+    v: 'queue', sec: 0, tab: 'waiting', rows: [], q: 'invoice', kind: 'Plugin', noRes: true, hd: 680, hp: 780 },
+  { id: 'agentTab', title: 'Agent reviewing', sub: 'Listings the agent is still checking. Each shows how far it has got; Watch opens the live report. They move to Waiting on their own when the report is in.',
+    v: 'queue', sec: 0, tab: 'agent', rows: Q_AGENT, pg: [1, 2, 2, 1, 1], whenHead: 'Agent', hd: 690, hp: 780 },
+  { id: 'running', title: 'Agent review: running', sub: 'Marketplace Reviewer works through six checks in a sandbox. The cat has the thinking eye; the running check spins, the rest wait. Findings show as they come. The decision bar is off until the report is in.',
+    v: 'detail', base: DEAL, running: true, status: 'agent', checks: DEAL_RUN, bar: true, hd: 1500, hp: 3000 },
+  { id: 'done', title: 'Review: the report is in', sub: 'For a person at Glyphh. The listing as people will see it, with its screenshots and what it asks for; the agent’s report beside it (on a phone, first); for an update, what changed; and the org admin’s approval note. The decision bar stays at the bottom.',
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, hd: 1500, hp: 3010 },
+  { id: 'publish', title: 'Publish', sub: 'Confirms where it goes and who it reaches. For an update: people who installed 2.0.3 are offered 2.1.0; nothing changes for them until they take it.',
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'publish', dlgTitle: 'Publish Deal stages 2.1.0?', dlgDesc: 'It goes on the marketplace now. The 1,284 people with 2.0.3 are offered the update; nothing changes for them until they take it.', hd: 1500, hp: 3010 },
+  { id: 'changes', title: 'Request changes', sub: 'A note per field (tick the fields to change), and a message. One click adds the agent’s findings to the right fields, labelled as the agent’s. It goes back to the org; nothing is published.',
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'changes', dlgTitle: 'Request changes to Deal stages 2.1.0', dlgDesc: 'It goes back to Northwind with your notes. They send a new version when it’s ready.', hd: 1500, hp: 3010 },
+  { id: 'reject', title: 'Reject, with a reason', sub: 'A listing with a failed check: a secret in the bundle. Rejecting needs a reason and a message; the dialog names the listing and what happens next.',
+    v: 'detail', base: RF, checks: RF_CHECKS, sum: summary(4, 1, 1), bar: true, dlg: 'reject', dlgTitle: 'Reject Receipt filer 1.0.0?', dlgDesc: 'Globex Corporation and the author are told why, in the thread and by email.', repFoot: 'Ran Oct 10, 9:41 am · took 1 min 48 s', hd: 1500, hp: 2460 },
+  { id: 'thread', title: 'The thread', sub: 'Every word between Glyphh and the org about this listing, oldest first. Each message says who wrote it: the agent or a person, and for whom (Glyphh, or the org’s admin or author). Paginated like any list.',
+    v: 'detail', base: DEAL, checks: DEAL_211, thread: true, bar: true, ver: '2.1.1', verTag: '2.0.3 → 2.1.1', msgN: 5, decideNote: 'Report for 2.1.1: 6 of 6 passed.', hd: 1340, hp: 1940 },
+  { id: 'listings', title: 'Listings', sub: 'Every published listing, with installs, rating if any, category, and the star for the featured row. Search and filters; paginated.',
+    v: 'listings', sec: 1, open: -1, hd: 900, hp: 1060 },
+  { id: 'menu', title: 'A listing’s actions', sub: 'Feature on the marketplace home, change category, view versions, unpublish. A menu on desktop, a sheet on a phone.',
+    v: 'listings', sec: 1, open: 3, menu: true, hd: 900, hp: 1060 },
+  { id: 'unpublish', title: 'Unpublish', sub: 'Names the listing and what happens: it comes off the marketplace now, installed copies keep working, it can’t be added again. The reason goes to the org.',
+    v: 'listings', sec: 1, open: 1, dlg: 'unpublish', dlgTitle: 'Unpublish Competitor watch?', dlgDesc: 'It comes off the marketplace and out of search now. Northwind is told why.', hd: 900, hp: 1060 },
+  { id: 'versions', title: 'Versions', sub: 'Every version sent, with what changed, when, and how many installs are on it. Rejected ones stay in the list. Paginated.',
+    v: 'listings', sec: 1, open: 1, dlg: 'versions', dlgTitle: 'Competitor watch · versions', dlgDesc: 'From Northwind. 9 versions sent; 2.4.0 is live.', hd: 900, hp: 1060 },
+  { id: 'cats', title: 'Categories and the featured row', sub: 'Add, rename and reorder categories (drag the handle, or the 44 px arrows); one is being renamed. The featured row’s order, left to right, with Remove. Nothing changes on the home until Save.',
+    v: 'cats', sec: 2, hd: 880, hp: 1580 },
+  { id: 'empty', title: 'Nothing waiting', sub: 'The last listing was just published. The reviewer’s cat with the done eye says the queue is clear.',
+    v: 'queue', sec: 0, tab: 'waiting', rows: [], empty: true, toast: 'Deal stages 2.1.1 is on the marketplace. Northwind and the author are told.', hd: 820, hp: 960 },
+  { id: 'loading', title: 'Loading', sub: 'Skeleton rows in the list’s shape while the queue loads.',
+    v: 'queue', sec: 0, tab: 'waiting', rows: [], loading: true, hd: 870, hp: 940 },
+  { id: 'error', title: 'Error', sub: 'What happened, what to do, the trace ID with a copy button, and Try again.',
+    v: 'queue', sec: 0, tab: 'waiting', rows: [], error: true, hd: 520, hp: 740 }
+];
+var TOP_DESC = ['Listings to review, from orgs and from Glyphh.', 'Everything published on the marketplace.', 'How the marketplace home is arranged.'];
+
+function frame(st, desk) {
+  var mobile = !desk, v = {}; v[st.v] = true; v.top = st.v !== 'detail';
+  var d = st.v === 'detail' ? detail(st.base, st) : detail(DEAL, { checks: DEAL_CHECKS });
+  var DLG = { publish: false, changes: false, reject: false, unpublish: false, versions: false }; if (st.dlg) DLG[st.dlg] = true;
+  var listCard = st.v === 'queue' && !st.empty && !st.error;
+  var skel = st.loading ? [['46%', '30%'], ['38%', '52%'], ['55%', '34%'], ['42%', '46%'], ['50%', '28%']].map(function (k) { return { w1: k[0], w2: k[1] }; }) : [];
+  var pgq = st.pg || [1, 5, 7, 1, 2];
+  return {
+    key: st.id + (desk ? 'd' : 'm'), label: desk ? 'Desktop' : 'Phone', aria: 'Glyphh admin, Marketplace: ' + st.title + (desk ? ', desktop' : ', phone'),
+    desk: desk, phone: mobile, w: desk ? '1200px' : '390px', h: (desk ? st.hd : st.hp) + 'px', radius: desk ? '16px' : '36px', pad: desk ? '32px' : '16px',
+    mainPad: desk ? '28px 48px 48px' : (st.bar ? '20px 16px 260px' : '20px 16px 32px'), logoH: desk ? '28px' : '24px', h1: desk ? '32px' : '26px', btnDir: desk ? 'row' : 'column-reverse',
+    adminTabs: tabsOf(['Orgs', 'Models', 'Marketplace', 'Plans'], 'Marketplace'),
+    topDesc: TOP_DESC[st.sec || 0],
+    sec: (desk ? ['Review queue · 7', 'Listings', 'Categories and featured'] : ['Queue · 7', 'Listings', 'Categories']).map(function (n, i) { var on = i === (st.sec || 0); return { name: n, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx2)' }; }),
+    v: v, toast: st.toast || '',
+    statusTabs: statusTabs(st.tab || 'waiting'), q: st.q || '', qBorder: st.q ? '#7C4DFF' : 'var(--line2)', kindLabel: st.kind || 'All', kindBorder: st.kind ? '#7C4DFF' : 'var(--line2)', filterFlex: desk ? 'none' : '1 1 100%',
+    error: !!st.error, empty: !!st.empty, emptyCat: reviewer('done', 40), listCard: listCard, noRes: !!st.noRes, skel: skel, iconSz: desk ? '48px' : '40px',
+    qrows: qrows(st.rows || []), whenHead: st.whenHead || 'Sent', pgShow: listCard && !st.noRes && !st.loading, pg: pager('Review queue pages', pgq[0], pgq[1], pgq[2], pgq[3], pgq[4], mobile),
+    dt: d, detCols: desk ? 'minmax(0, 1fr) 400px' : 'minmax(0, 1fr)', leftOrder: desk ? '0' : '1', repOrder: desk ? '1' : '0', shotCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', factCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+    pgT: pager('Thread pages', 1, 5, 5, 1, 1, mobile),
+    bar: !!st.bar, barPad: desk ? '16px 48px' : '16px 16px 28px', barDir: desk ? 'row' : 'column', barAlign: desk ? 'center' : 'stretch',
+    lfilters: [{ k: 'Kind', v: 'All' }, { k: 'Category', v: 'All' }], cardPad: desk ? '16px' : '12px', rowGap: desk ? '14px' : '8px',
+    lrows: lrows(st.open === undefined ? -1 : st.open), pgL: pager('Listings pages', 1, 6, 41, 1, 7, mobile),
+    menu: !!st.menu && desk, sheet: !!st.menu && mobile, menuFor: 'Inbox Zero', menuItems: MENU, menuRight: '112px', menuTop: '622px',
+    cardPad2: desk ? '20px' : '16px', msgRows: desk ? '4' : '6', catCols: desk ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', catRows: catRows(), featRows: featRows(), pgC: pager('Category pages', 1, 6, 9, 1, 2, mobile),
+    dlg: !!st.dlg, d: DLG, dlgTitle: st.dlgTitle || '', dlgDesc: st.dlgDesc || '', dlgW: desk ? '560px' : '366px', dlgTop: desk ? '88px' : '72px', dlgPad: desk ? '24px' : '20px',
+    fields: [['Permissions', true, 'Drop Slack · Delete messages, or tell us what needs it. Nothing in 2.1.0 uses it.', true], ['Description', false], ['Screenshots', false], ['Icon', false], ['Version notes', false]].map(function (x, i) {
+      return { name: x[0], on: x[1], note: x[2] || '', agent: !!x[3], boxLine: x[1] ? '#7C4DFF' : 'var(--line2)', boxBg: x[1] ? '#7C4DFF' : 'transparent', top: i === 0 ? 'none' : '1px solid var(--line)' }; }),
+    reasons: ['Secrets in the bundle', 'Doesn’t do what it says', 'Asks for more than it needs', 'Copies another listing', 'Something else'].map(function (t, i) { var on = i === 0;
+      return { t: t, on: on ? 'true' : 'false', line: on ? '#7C4DFF' : 'var(--line2)', bg: on ? 'var(--chip-bg)' : 'transparent', dotLine: on ? '#7C4DFF' : 'var(--line2)', dot: on ? '#7C4DFF' : 'transparent' }; }),
+    vers: VERS, pgV: pager('Version pages', 1, 5, 9, 1, 2, mobile)
+  };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      states: STATES.map(function (st, i) {
+        var n = i + 1;
+        return { title: (n < 10 ? '0' : '') + n + ' · ' + st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] };
+      }),
+      notes: [
+        { t: 'Two reviews, one decision', b: 'An org’s listing is approved by its own org admin (Org › Review) before it reaches Glyphh. Here Marketplace Reviewer, Glyphh’s own super power, checks it, and a person at Glyphh decides. The agent never publishes or rejects; its report is advice, labelled as the agent’s wherever it shows.' },
+        { t: 'Colour means status', b: 'Pink: waiting for you, changes requested, needs a look. Ion: the agent is checking. Red: failed, rejected, unpublish. Violet: published, report ready, the main action. Kinds are accent text and their glyph (◆ skill, ▣ plugin, ⟴ task, ▦ app); a super power shows its cat. The reviewer’s Ion lives only in its eye.' },
+        { t: 'What stays true', b: 'Unpublishing never breaks anyone: installed copies keep working; it just can’t be added again. Publishing an update only offers it; people take it when they choose. Every decision, note and report lands in the listing’s thread, and the org admin and author are emailed.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -261,6 +261,15 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Custom powers (dark / light) | `CustomPowers`, `CustomPowersLight` | Skills, plugins, tasks and apps in one list; New power; each type's detail | 5 |
 | Marketplace (dark / light) | `Marketplace`, `MarketplaceLight` | Discover, search with pages, a power's and a super power's detail, Add | 7 |
 | rrotor · Splash | `RrotorSplash` | rrotor's UI, not the platform: the first screen on a machine, naming the machine before anything else; starting, opening, ready, on a laptop, waking, updating, a failed step, an expired link, someone else's machine, offline | rrotor |
+| Org · Members and teams | `OrgTeams` | Members, invites and seats; teams (a person can be in many); a member's teams; remove from a team or the org | Org |
+| Org · Allowed models and connections | `OrgLimits` | The limit switches at the org and a team, the allowed lists, adding from the catalog, removing (it turns off for whoever uses it), a member's disabled power | Org |
+| Org · Review | `OrgReview` | The org admin's review queue: approve for the org, approve and send to Glyphh, request changes, reject; Glyphh's feedback | Discover |
+| Publish a listing | `ListingSubmit` | A member publishes a power or super power: icon, screenshots, what it needs, where it goes, the review timeline, changes requested, published, new version, unpublish | Discover |
+| Usage (3 pages) | `UsageFlow`, `UsageMore`, `UsageAudit` | By billing period (credits by connector, a connector's tools, a closed period); your usage by super power, power, model, connection, machine; a super power's and a model's usage; the org's usage by person and team; a publisher's stats; the audit log of connector calls and power uses | Usage |
+| Glyphh admin · Orgs | `AdminOrgs` | Every org; an org's overview, members, machines, powers, super powers, billing | Admin |
+| Glyphh admin · Org actions and plans | `AdminOrgActions` | Gift credits, change or comp a plan, move orgs to a new version, disable and enable an org; plans and their versions | Admin |
+| Glyphh admin · Models | `AdminCatalog` | Providers and models: turn off and on, add a provider (logo, API), add and import models, models with no description | Admin |
+| Glyphh admin · Marketplace | `AdminMarket` | Glyphh's review queue with the reviewer's report, publish, request changes, reject, the thread; listings, featured and categories | Admin |
 
 Board files are at `screens/<name>.dc.html`.
 

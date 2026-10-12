@@ -205,6 +205,94 @@
       "h": 6000,
       "title": "rrotor: the splash",
       "page": "rrotor-splash"
+    },
+    "ListingSubmit.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 14600,
+      "title": "Publish a power or super power",
+      "page": "listing"
+    },
+    "OrgReview.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 13800,
+      "title": "Org review",
+      "page": "org-review"
+    },
+    "AdminCatalog.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 20400,
+      "title": "Glyphh admin, models and providers",
+      "page": "admin-models"
+    },
+    "AdminMarket.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 19200,
+      "title": "Glyphh admin, the marketplace",
+      "page": "admin-market"
+    },
+    "OrgTeams.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 18800,
+      "title": "Org members and teams",
+      "page": "org-teams"
+    },
+    "OrgLimits.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 10800,
+      "title": "Org allowed models and connections",
+      "page": "org-limits"
+    },
+    "AdminOrgs.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 11600,
+      "title": "Glyphh admin, orgs",
+      "page": "admin-orgs"
+    },
+    "AdminOrgActions.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 11600,
+      "title": "Glyphh admin, org actions and plans",
+      "page": "admin-plans"
+    },
+    "UsageFlow.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 16000,
+      "title": "Usage, billing periods and yours",
+      "page": "usage"
+    },
+    "UsageMore.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 13600,
+      "title": "Usage details, org and publishers",
+      "page": "usage-more"
+    },
+    "UsageAudit.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 12400,
+      "title": "Usage audit log",
+      "page": "usage-audit"
     }
   },
   "createdOnFiles": {
@@ -372,6 +460,94 @@
       "x": 0,
       "y": -300,
       "page": "rrotor-splash"
+    },
+    "t-listing": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Publish a listing",
+      "x": 0,
+      "y": -300,
+      "page": "listing"
+    },
+    "t-org-review": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Review",
+      "x": 0,
+      "y": -300,
+      "page": "org-review"
+    },
+    "t-admin-models": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Models",
+      "x": 0,
+      "y": -300,
+      "page": "admin-models"
+    },
+    "t-admin-market": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Marketplace",
+      "x": 0,
+      "y": -300,
+      "page": "admin-market"
+    },
+    "t-org-teams": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Members and teams",
+      "x": 0,
+      "y": -300,
+      "page": "org-teams"
+    },
+    "t-org-limits": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Allowed models and connections",
+      "x": 0,
+      "y": -300,
+      "page": "org-limits"
+    },
+    "t-admin-orgs": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Orgs",
+      "x": 0,
+      "y": -300,
+      "page": "admin-orgs"
+    },
+    "t-admin-plans": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Org actions and plans",
+      "x": 0,
+      "y": -300,
+      "page": "admin-plans"
+    },
+    "t-usage": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage",
+      "x": 0,
+      "y": -300,
+      "page": "usage"
+    },
+    "t-usage-more": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage: Details, org and publishers",
+      "x": 0,
+      "y": -300,
+      "page": "usage-more"
+    },
+    "t-usage-audit": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage: Audit log",
+      "x": 0,
+      "y": -300,
+      "page": "usage-audit"
     }
   },
   "order": [
@@ -400,7 +576,18 @@
     "TaskCanvasLight.dc.html",
     "CustomPowersLight.dc.html",
     "MarketplaceLight.dc.html",
-    "RrotorSplash.dc.html"
+    "RrotorSplash.dc.html",
+    "ListingSubmit.dc.html",
+    "OrgReview.dc.html",
+    "AdminCatalog.dc.html",
+    "AdminMarket.dc.html",
+    "OrgTeams.dc.html",
+    "OrgLimits.dc.html",
+    "AdminOrgs.dc.html",
+    "AdminOrgActions.dc.html",
+    "UsageFlow.dc.html",
+    "UsageMore.dc.html",
+    "UsageAudit.dc.html"
   ],
   "pages": [
     {
@@ -494,6 +681,50 @@
     {
       "id": "rrotor-splash",
       "name": "rrotor \u00b7 Splash"
+    },
+    {
+      "id": "listing",
+      "name": "Publish a listing"
+    },
+    {
+      "id": "org-review",
+      "name": "Org \u00b7 Review"
+    },
+    {
+      "id": "admin-models",
+      "name": "Glyphh admin \u00b7 Models"
+    },
+    {
+      "id": "admin-market",
+      "name": "Glyphh admin \u00b7 Marketplace"
+    },
+    {
+      "id": "org-teams",
+      "name": "Org \u00b7 Members and teams"
+    },
+    {
+      "id": "org-limits",
+      "name": "Org \u00b7 Allowed models and connections"
+    },
+    {
+      "id": "admin-orgs",
+      "name": "Glyphh admin \u00b7 Orgs"
+    },
+    {
+      "id": "admin-plans",
+      "name": "Glyphh admin \u00b7 Org actions and plans"
+    },
+    {
+      "id": "usage",
+      "name": "Usage"
+    },
+    {
+      "id": "usage-more",
+      "name": "Usage \u00b7 Details, org and publishers"
+    },
+    {
+      "id": "usage-audit",
+      "name": "Usage \u00b7 Audit log"
     }
   ],
   "title": "Glyphh Design"
