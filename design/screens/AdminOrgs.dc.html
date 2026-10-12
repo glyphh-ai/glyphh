@@ -475,7 +475,7 @@ function cat(face, o) {
 }
 
 var B = 'assets/';
-var LOGO = { fly: 'fly-io.svg', aws: 'aws-dark.svg', hetzner: 'hetzner.svg', digitalocean: 'digitalocean.svg', gcp: 'google-cloud.svg',
+var LOGO = { docker: 'docker.svg', fly: 'fly-io.svg', aws: 'aws-dark.svg', hetzner: 'hetzner.svg', digitalocean: 'digitalocean.svg', gcp: 'google-cloud.svg',
   gmail: 'gmail.svg', salesforce: 'salesforce.svg', claude: 'claude.svg', openai: 'openai-dark.svg' };
 var TYPE = { Skill: '◆', Plugin: '▣', Task: '⟴', App: '▦' };
 var BODY = "'Red Hat Text', sans-serif", MONO = "'Red Hat Mono', monospace";
@@ -587,7 +587,7 @@ var MACHINES = [
   ['studio-mac', 'Sam Rivera', 'fly', 'Fly.io · Chicago', '1.5.0', 'online', 'now'],
   ['build-box', 'Priya Nair', 'aws', 'AWS · us-east-1', '1.5.0', 'online', 'now'],
   ['design-vps', 'Bo Li', 'hetzner', 'Hetzner · Falkenstein', '1.4.2', 'online', 'now'],
-  ['max-laptop', 'Maximilian Alexander-Featherstonehaugh', '', 'Docker on a laptop', '1.4.2', 'offline', '3 days ago'],
+  ['max-laptop', 'Maximilian Alexander-Featherstonehaugh', 'docker', 'Docker on a laptop', '1.4.2', 'offline', '3 days ago'],
   ['support-box', 'Lee Park', 'digitalocean', 'DigitalOcean · New York', '1.5.0', 'offline', '2 h ago'],
   ['ana-cloud', 'Ana Costa', 'gcp', 'Google Cloud · europe-west1', '1.3.9', 'online', 'now']
 ];
@@ -755,7 +755,7 @@ var STATES = [
   { id: 'overview', title: 'An org: Overview', sub: 'Opening an org: its name, plan and status at the top with the Actions menu, then six tabs. Overview holds the plan, seats, machines and credits, this month’s spend as bars by day (the same chart as Billing), and its org admins. There is no owner in the data model; the org admins are shown instead.', view: 'org', tab: 'Overview' },
   { id: 'menu', title: 'An org: the Actions menu', sub: 'What only Glyphh staff can do to an org: gift credits, change its plan, comp it, and (set apart, in red) disable it. Each opens a dialog; nothing happens from the menu itself.', view: 'org', tab: 'Overview', menu: true },
   { id: 'members', title: 'An org: Members', sub: 'Everyone in the org with their teams as chips (a person can be in several, or none), role (Org admin or Member) and machines, plus open invites, which hold a seat. Read only here: roles are the org admins’ to change.', view: 'org', tab: 'Members' },
-  { id: 'machines', title: 'An org: Machines', sub: 'Each machine with its owner, where it runs (the host’s logo; a laptop through Docker gets a letter tile), the rrotor build it reports, online or offline, and when it was last seen. Paginated: 6 of 12.', view: 'org', tab: 'Machines' },
+  { id: 'machines', title: 'An org: Machines', sub: 'Each machine with its owner, where it runs (the host’s logo; a laptop runs it through Docker, so it shows Docker’s), the rrotor build it reports, online or offline, and when it was last seen. Paginated: 6 of 12.', view: 'org', tab: 'Machines' },
   { id: 'powers', title: 'An org: Powers', sub: 'Every member’s powers, filtered by kind and member. Kinds are told apart by the icon and the label in accent text: models and connections show their logo, skills, tasks, plugins and apps their glyph. A power a limit leaves out is Disabled, in red, with the limit that did it.', view: 'org', tab: 'Powers' },
   { id: 'sps', title: 'An org: Super powers', sub: 'Every member’s super powers, each with its cat (the colour only in its eye), member, machine and powers. Live is violet; paused or offline are neutral with why; one that holds a disabled power says which, in red.', view: 'org', tab: 'Super powers' },
   { id: 'billing', title: 'An org: Billing', sub: 'The subscription as Stripe has it, links to its invoices and customer in Stripe, and the org’s credit ledger: allowances, top-ups, auto top-ups, gifts and usage (rolled up by day here), newest first. Credit amounts wait on the price of a credit: [CREDITS].', view: 'org', tab: 'Billing' },

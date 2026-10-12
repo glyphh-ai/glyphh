@@ -171,6 +171,8 @@ Always the real, full-colour artwork, never a one-colour silhouette. Black marks
 
 Approved 2026-10-11: the four power colours outside the palette (Bloom, Rose, Azure, Teal) stay as cat eye colours, and laptop machines (Docker hosts) get the Docker logo.
 
+Also approved 2026-10-11: three simple stroked icons on the marketplace boards, a featured star, a drag handle and up/down arrows. And **admin actions are recorded** in an audit log, beside the usage audit log: Org → Audit log for org admins, Glyphh admin → Audit log for super admins (board `AdminAudit`, being drawn).
+
 ### Lists
 
 Everything that can grow is paginated, in the designs as in the build: "Showing 1–5 of 23", Previous, page numbers, Next; on a phone, Previous, "Page 1 of 5", Next.
