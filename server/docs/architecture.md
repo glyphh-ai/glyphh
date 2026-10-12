@@ -1177,3 +1177,15 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 - **The design agent's requests** (`glyphh-ai/glyphh`, `design/DESIGN.md`, Requests): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar, PowerMap and FlowCanvas (the editors).
 - **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
+- **Design gaps** (found while drawing, 2026-10-11; each needs a decision or a data model change before it's built):
+    - **Publishing and review:** listings move user → org admin review → (for the marketplace) Glyphh review → published. Needs listing states (draft, org review, changes requested, approved for the org, Glyphh review, published, rejected, unpublished), a review record per step with its decision and notes, a feedback thread on a listing, and a new version going through review again. Belongs with "Requirements and listings" above. Boards: `ListingSubmit`, `OrgReview`, `AdminMarket`.
+    - **Glyphh's reviewer:** a super power of Glyphh's ("Marketplace Reviewer") checks each submission and writes a report (permissions asked vs what it does, dependencies, screenshots, description, no secrets, a sandboxed test run). Where it runs, what it may read, and how its report is stored are undecided.
+    - **A listing's icon and screenshots:** a power's icon (square, uploaded) and up to six screenshots; a super power's icon is its cat. Needs storage, sizes, and checks on upload.
+    - **Marketplace management:** featured listings, categories and their order, unpublishing (installed copies keep working, can't be added again).
+    - **Turning off a provider or model** (super admin, `providers.active`, `catalog_models.active`): should a member's power on it be disabled with a reason and come back when it's turned on again, the same way the org limits work? The boards draw it that way. A provider whose mark is black also needs a second logo for dark grounds (one `logo_key` today).
+    - **Disabling an org** (super admin): no field for it on `orgs` yet; the boards draw members unable to sign in, machines disconnected, schedules stopped, data kept, billing paused, and Enable to undo.
+    - **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
+    - **Teams under many orgs per person:** the data model says a user is in one org and at most one team; with memberships, the team belongs on the membership.
+    - **Where admins find their pages:** the boards add an **Org** item to the top nav for org admins (Members, Teams, Models, Connections, Review, Billing) and **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Part of the open Navigation decision.
+    - **Light theme** for the admin boards, the publishing boards and rrotor's splash: dark only so far.
+    - **Undecided in the design:** whether the four power colours outside the palette (Bloom, Rose, Azure, Teal) stay as cat eye colours; whether laptop machines get a Docker logo (needs Chris's yes, like any new logo).
