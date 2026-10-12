@@ -196,7 +196,7 @@ Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made 
 |---|---|---|
 | Server (API, MCP, relay) | `glyphh-ai/server` | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, Redis |
 | Platform (app.glyphh.ai, the cards) | `glyphh-ai/platform` | Vite + React, static, on Fly behind Caddy |
-| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; published to GitHub Packages and shared by the platform and rrotor's UI |
+| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; never published: the platform and rrotor's UI build it from a checkout beside them |
 | SDKs, plugin, design | `glyphh-ai/glyphh` | TypeScript and Python clients generated from the OpenAPI spec |
 | rrotor (the machine) | `glyphh-ai/rrotor` | One Linux image: the engine and the UI in TypeScript, the services below |
 
@@ -226,7 +226,7 @@ Everything that must outlive an update lives on one volume, `/data`: the machine
     - Claude Code and Codex, installed at pinned versions and run unmodified in headless mode (`claude -p` with stream JSON, `--mcp-config` and `--strict-mcp-config`; `codex exec --json`). Their sign-ins stay in their own files on `/data`.
     - The Glyphh loop, the engine's own, on the member's models through the AI SDK (`ai` and its providers, with OpenAI-compatible for providers it has no package for). Whether it covers the catalog's 125 providers is to check.
 - **Data:** Postgres 17 with pgvector (each super power its own schema and role, as decided), Redis (Valkey) for queues and caches, and Neo4j Community. Neo4j is a JVM that wants about a gigabyte, so it is in the image but started only when a super power with a graph runs. Schedules need no cron: the server is the clock.
-- **The browser:** headful Chromium on a virtual screen (Xvfb), driven over CDP with Playwright. Watching starts as CDP's own screencast over the encrypted channel, and take control sends the member's input through CDP, so neither needs the screen itself. WebRTC (GStreamer's `webrtcbin`) comes when watching needs to be smoother.
+- **The browser:** headful Chromium on a virtual screen (Xvfb), driven over CDP with Playwright. Watching and take control are as Browsers and RPA on rrotor says: WebRTC (GStreamer's `webrtcbin`), with screen frames over the SSH channel when WebRTC cannot connect.
 - **Media:** ffmpeg, for what super powers make (reels, thumbnails, audio).
 
 **The fence: each run, sandboxed again.** Each super power runs as a Linux user of its own, and each run starts in bubblewrap:
@@ -1408,6 +1408,7 @@ The house order: the data model is drawn first, then built as database, API and 
 
 - **Phase 1, sign in from Claude and Codex** (2026-10-11): Google and GitHub sign-in; OAuth for MCP (metadata, `authorize`, `token` with PKCE and refresh, dynamic registration, `revoke`); `me` and the connected hosts on the API, MCP and both SDKs; the Glyphh plugin for Claude Code and Codex. Signed in and called `me` from Claude (app, iPad, Claude Code) and ChatGPT.
 - **Phase 2a, orgs:** the org (plan, seats, rename), members (roles, disable, remove), invites (one-time link, withdraw), Join; seats enforced by the database under the org's row lock; the server refuses to boot on a database behind the code.
+- **The component library's own repo** (`glyphh-ai/ui`, 2026-10-12), shared by the platform and rrotor's UI and **never published** (Chris: it is only for building our own apps). Each app checks it out beside itself and depends on it by path (`file:../../ui`): dev compose mounts `../ui`, CI checks out its main with `UI_READ_TOKEN`, the image takes it as the `ui` build context. The platform is switched; rrotor's UI follows the same way.
 - **The platform** (`glyphh-ai/platform`): the component library moved there; the sign-in screens are platform pages and the server keeps every flow; each refused step says why.
 - **Many orgs per person** (2026-10-12): `memberships` (role and disabled per org), a Personal org for everyone, the org a token acts in, Use with on Allow; the platform's own session (`/v1/session`: a code and its verifier for tokens, the refresh token in an httpOnly cookie, switch org, sign out); accepting and declining an invite.
 - **The sign-in screens on the design:** Sign in, Allow, Join signed out, Joined and the problem page, on the brand orbit.
@@ -1451,8 +1452,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **The component library gets its own repo** (decided 2026-10-12): `@glyphh-ai/ui` moves from `glyphh-ai/platform` (`ui/`) to `glyphh-ai/ui`, published to GitHub Packages and pinned by the platform and rrotor's UI, so both apps share one set of tokens and components. To do: create the repo, move `ui/` with its tests and release flow, switch the platform to the package, point `/design-sync` at it. Done so far: `glyphh-ai/ui` made beside the platform, `ui/`'s history copied into it, its suite green in Docker, CI with publishing on a tag; the platform's own `ui/` is gone and it uses the checkout beside it (`file:../../ui`; compose mounts it, the image takes it as a build context, CI checks it out with `UI_READ_TOKEN`) until a version is published (2026-10-12). `glyphh-ai/ui` is on GitHub with its history (2026-10-12). Left: add the platform's `UI_READ_TOKEN` secret, tag a version to publish it, then pin it.
-- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine and UI in TypeScript, one Debian image under s6, Caddy at the front door, bubblewrap and Landlock for the fence, the browser over CDP first. Waits on Chris's yes.
+- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine and UI in TypeScript, one Debian image under s6, Caddy at the front door, bubblewrap and Landlock for the fence. Waits on Chris's yes.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
 - **Updating machines:** who decides when a machine moves to a new rrotor (the server, a rollout, the member), and what happens to a run in flight.
 - **The player:** the diagram and Access still name it. With each machine on its own address and TLS passed through to it, the platform and the cards may reach rrotor's UI without it. Keep it or drop it.
