@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     public_url: str = "http://localhost:8080"
     platform_url: str = ""
+    machines_domain: str = "glyphh.ai"
     secret_key: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""

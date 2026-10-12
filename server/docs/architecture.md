@@ -243,12 +243,12 @@ Decided 2026-10-11. Two UIs, split by isolation:
 **The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It also holds the ui component library (`@glyphh-ai/ui`). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
 
 - **The sign-in screens** (sign in, allow an AI host, approve a machine's code, join an org) are platform pages. The server keeps the OAuth endpoints and the Google and GitHub callbacks, and sends the browser to the platform for each screen; the screen's buttons send it back to the server, which still binds every flow to that browser.
-- **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex).
+- **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex). Each machine's card shows its 8 most recently active super powers with their status, then See all (decided by Chris, 2026-10-12): a super power is **installed** on any number of machines, and every rrotor also has its Glyphh, which the card doesn't list.
 - **Connections:** the catalog, which account each is, reconnect, each tool's permission. **Connecting** sends the member to Pipedream's own sign-in, and three ways reach it, one link: a card's Connect button (the host opens it), the link in the answer, and the host's own prompt where it supports MCP's URL elicitation (Claude Code does; the Claude app does not yet, tested 2026-10-11). Glyphh's MCP server also serves the member's connected accounts as tools, through Pipedream, to any host, so a connection made once reaches Claude, Codex and every loop on rrotor.
 - **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
 - **Members and invites** (org admins).
-- **Navigation** (decided 2026-10-11 and 2026-10-12): a **left rail**, not a top nav, collapsible to icons and remembered per person (`user_settings.rail_collapsed`), a drawer on a phone; it holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (see below); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12). You, your org and your account sit at the bottom of the rail: the account menu (your orgs to switch between, Account, Usage, API keys, Help and status, the theme, Sign out). Lists that can grow show rows per page (10, 25, 50, 100), remembered per person and list (`user_settings.page_sizes`).
+- **Navigation** (decided 2026-10-11 and 2026-10-12): a **left rail**, not a top nav, collapsible to icons and remembered per person (`user_settings.rail_collapsed`), a drawer on a phone; it holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (see below; in a Personal org, where there are no members or teams, Org holds only Billing, Usage and API keys: Chris, 2026-10-12); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12). You, your org and your account sit at the bottom of the rail: the account menu (your orgs to switch between, Account, Usage, API keys, Help and status, the theme, Sign out). Lists that can grow show rows per page (10, 25, 50, 100), remembered per person and list (`user_settings.page_sizes`).
 
 **rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens.
 
@@ -394,6 +394,8 @@ erDiagram
     super_powers ||--o{ power_events : "used by"
     machines ||--o{ power_events : "reported by"
     users ||--o{ machines : "registers"
+    super_powers ||--o{ super_power_installs : "is installed as"
+    machines ||--o{ super_power_installs : "has installed"
     machine_sign_ins |o--o| machines : "registers"
     orgs ||--o{ invites : "invites"
     users ||--o{ invites : "sends"
@@ -859,6 +861,7 @@ erDiagram
         text ssh_fingerprint "shown when the machine is registered, to check by eye"
         bool shell_enabled "false until the member turns it on: a shell on this machine over SSH"
         int[] local_ports "ports on this machine its runs may reach"
+        bool online "connected now; set when it connects and when it goes"
         timestamptz last_seen_at "null = never connected"
         timestamptz revoked_at
         timestamptz created_at
@@ -907,6 +910,16 @@ erDiagram
         timestamptz expires_at "a minute or so"
         timestamptz used_at "a code works once"
         timestamptz created_at
+    }
+
+    super_power_installs {
+        uuid super_power_id PK, FK
+        uuid machine_id PK, FK "a super power can be installed on many machines"
+        uuid org_id FK
+        text status "working, thinking, needs_you, idle, stuck, done: what it is doing there now, written by rrotor when it changes"
+        timestamptz status_at "since when"
+        timestamptz last_active_at "its last work there; the card shows the 8 most recent"
+        timestamptz installed_at
     }
 
     launch_tickets {
@@ -1245,6 +1258,8 @@ Signing in always happens from a machine, and signing in is how a machine is reg
 
 A machine is a registered rrotor, the same full image wherever it runs: a server on any host, or a laptop through Docker. It connects out to the server with its own token (only the hash is kept) and reports what it is: where it runs, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
+**What a super power is doing on a machine** is a row of its own (`super_power_installs`, decided by Chris, 2026-10-12): a super power is installed on any number of machines, and on each rrotor writes its status (working, thinking, needs you, idle, stuck, done) when it changes, with when it last worked there. It is kept in Postgres, not Redis, so a server restart loses nothing and a machine's card is one query. `online` says whether a machine is connected now, set as it connects and goes. The card's line is the platform and where it runs ("rrotor on macOS · Fly"); a location was drawn ("Austin") and is left out for now.
+
 **Which server process holds a machine's connection is not in this database:** it is live state that is only true right now, so it lives in Redis (see the architecture, Data). `last_seen_at` here is updated when a machine connects and disconnects, not on every heartbeat.
 
 **fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and rrotor's UI shows them ("this super power tried to leave its folders").
@@ -1340,7 +1355,8 @@ The house order: the data model is drawn first, then built as database, API and 
 - **The platform** (`glyphh-ai/platform`): the component library moved there; the sign-in screens are platform pages and the server keeps every flow; each refused step says why.
 - **Many orgs per person** (2026-10-12): `memberships` (role and disabled per org), a Personal org for everyone, the org a token acts in, Use with on Allow; the platform's own session (`/v1/session`: a code and its verifier for tokens, the refresh token in an httpOnly cookie, switch org, sign out); accepting and declining an invite.
 - **The sign-in screens on the design:** Sign in, Allow, Join signed out, Joined and the problem page, on the brand orbit.
-- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`.
+- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`, `machines`, `super_powers` (its loop and voice columns wait for `powers`), `super_power_installs`, `launch_tickets`.
+- **Machines on the API** (2026-10-12): my machines as cards (connected first, each with its 8 most recently active super powers and its counts), every super power on one (search, status, pages, the count of each status), and opening one with a one-minute, one-time launch ticket; an offline machine says so.
 
 ### Now
 

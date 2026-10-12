@@ -61,3 +61,61 @@ async def admin_of(engine: AsyncEngine, org_name: str, plan: str = "Enterprise")
     org = await make_org(engine, org_name, plan)
     user = await make_user(engine, org, f"admin@{uuid.uuid4().hex[:8]}.test", "org_admin")
     return Principal(user_id=user, org_id=org, role="org_admin")
+
+
+async def make_machine(engine: AsyncEngine, org_id: uuid.UUID, user_id: uuid.UUID, name: str, online: bool = True):  # type: ignore[no-untyped-def]
+    """A registered rrotor of this member's."""
+    from glyphh_server.models import Machine
+
+    values = {
+        "org_id": org_id,
+        "user_id": user_id,
+        "name": name,
+        "host": "fly",
+        "platform": "linux",
+        "version": "1.0.0",
+        "token_hash": f"t-{uuid.uuid4()}",
+        "ssh_public_key": f"k-{uuid.uuid4()}",
+        "ssh_fingerprint": "SHA256:x",
+        "online": online,
+    }
+    async with engine.begin() as conn:
+        return (await conn.execute(insert(Machine).values(values).returning(Machine.id))).scalar_one()
+
+
+async def install(
+    engine: AsyncEngine,
+    machine_id: uuid.UUID,
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    name: str,
+    status: str = "idle",
+    minutes_ago: int | None = None,
+    description: str = "",
+) -> uuid.UUID:
+    """A super power of this member's, installed on the machine, doing `status`, last active that long ago."""
+    from datetime import UTC, datetime, timedelta
+
+    from glyphh_server.models import SuperPower, SuperPowerInstall
+
+    active = None if minutes_ago is None else datetime.now(UTC) - timedelta(minutes=minutes_ago)
+    async with engine.begin() as conn:
+        found = (
+            await conn.execute(select(SuperPower.id).where(SuperPower.user_id == user_id, SuperPower.name == name))
+        ).scalar()
+        sp = (
+            found
+            or (
+                await conn.execute(
+                    insert(SuperPower)
+                    .values(org_id=org_id, user_id=user_id, name=name, description=description)
+                    .returning(SuperPower.id)
+                )
+            ).scalar_one()
+        )
+        await conn.execute(
+            insert(SuperPowerInstall).values(
+                super_power_id=sp, machine_id=machine_id, org_id=org_id, status=status, last_active_at=active
+            )
+        )
+        return sp

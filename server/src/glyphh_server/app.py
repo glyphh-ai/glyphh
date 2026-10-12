@@ -6,7 +6,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.applications import Starlette
 
-from glyphh_server.api import errors, health, invite_answers, me, org, session, sign_in_pages, sign_in_screens
+from glyphh_server.api import (
+    errors,
+    health,
+    invite_answers,
+    machines,
+    me,
+    org,
+    session,
+    sign_in_pages,
+    sign_in_screens,
+)
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
@@ -42,6 +52,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.include_router(sign_in_screens.router)
     app.include_router(invite_answers.router)
     app.include_router(session.router)
+    app.include_router(machines.router)
     app.router.routes.extend(mcp_app.routes)
     _layers(app, mcp_app, cfg)
     return app
