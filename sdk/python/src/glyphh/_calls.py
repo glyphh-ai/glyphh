@@ -8,8 +8,10 @@ from typing import Any
 from glyphh import _models
 from glyphh._errors import refused
 from glyphh._gen.api.health import health
-from glyphh._gen.api.me import disconnect_host, list_hosts, me
+from glyphh._gen.api.invites import accept_invite, decline_invite
+from glyphh._gen.api.me import disconnect_host, list_hosts, list_my_orgs, me
 from glyphh._gen.models.health import Health
+from glyphh._gen.models.joined import Joined
 from glyphh._gen.models.me import Me
 from glyphh._gen.types import Response
 
@@ -31,3 +33,6 @@ HEALTH = Call(health, lambda r: isinstance(r.parsed, Health), _models.health_of)
 ME = Call(me, lambda r: isinstance(r.parsed, Me), _models.me_of)
 LIST_HOSTS = Call(list_hosts, lambda r: isinstance(r.parsed, list), lambda hosts: [_models.host_of(h) for h in hosts])
 DISCONNECT_HOST = Call(disconnect_host, lambda r: int(r.status_code) == 204, lambda _: None)
+LIST_MY_ORGS = Call(list_my_orgs, lambda r: isinstance(r.parsed, list), lambda orgs: [_models.org_of(o) for o in orgs])
+ACCEPT_INVITE = Call(accept_invite, lambda r: isinstance(r.parsed, Joined), lambda joined: joined.org)
+DECLINE_INVITE = Call(decline_invite, lambda r: int(r.status_code) == 204, lambda _: None)

@@ -7,6 +7,7 @@ from typing import Literal
 from glyphh._gen.models.health import Health as _Health
 from glyphh._gen.models.host import Host as _Host
 from glyphh._gen.models.me import Me as _Me
+from glyphh._gen.models.me_org import MeOrg as _MeOrg
 from glyphh._gen.types import Unset
 
 
@@ -22,6 +23,8 @@ class MeOrg:
     id: str
     name: str
     plan: str
+    personal: bool
+    role: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,8 +61,12 @@ def me_of(m: _Me) -> Me:
         last_name=_opt(m.last_name),
         image_url=_opt(m.image_url),
         role=m.role,
-        org=MeOrg(id=str(m.org.id), name=m.org.name, plan=m.org.plan),
+        org=org_of(m.org),
     )
+
+
+def org_of(m: _MeOrg) -> MeOrg:
+    return MeOrg(id=str(m.id), name=m.name, plan=m.plan, personal=m.personal, role=m.role)
 
 
 def host_of(m: _Host) -> Host:

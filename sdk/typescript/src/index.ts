@@ -1,5 +1,5 @@
 import { type Client, createClient } from "./gen/client/index.js";
-import { disconnectHost, health, listHosts, me } from "./gen/sdk.gen.js";
+import { acceptInvite, declineInvite, disconnectHost, health, listHosts, listMyOrgs, me } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg } from "./gen/types.gen.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { OrgApi } from "./org.js";
@@ -44,9 +44,24 @@ export class Glyphh {
     return unwrap(await health({ client: this.#client }));
   }
 
-  /** Who am I signed in as: my profile, my role, my org and its plan. */
+  /** Who am I signed in as: my profile, and the org this token acts in (its plan, my role there). */
   async me(): Promise<Me> {
     return unwrap(await me({ client: this.#client }));
+  }
+
+  /** Every org I belong to, my Personal org first. */
+  async listMyOrgs(): Promise<MeOrg[]> {
+    return unwrap(await listMyOrgs({ client: this.#client }));
+  }
+
+  /** Accept an invite sent to me: I join its org and keep every other. Answers the org's name. */
+  async acceptInvite(invite: string): Promise<string> {
+    return unwrap(await acceptInvite({ client: this.#client, body: { invite } })).org;
+  }
+
+  /** Decline an invite sent to me: it closes, and its seat is free again. */
+  async declineInvite(invite: string): Promise<void> {
+    unwrap(await declineInvite({ client: this.#client, body: { invite } }));
   }
 
   /** The agent hosts (Claude, Codex, ...) connected to my Glyphh. */

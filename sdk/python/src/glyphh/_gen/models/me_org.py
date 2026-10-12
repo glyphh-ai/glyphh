@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -16,12 +16,16 @@ class MeOrg:
     Attributes:
         id (UUID):
         name (str):
+        personal (bool):
         plan (str):
+        role (str):
     """
 
     id: UUID
     name: str
+    personal: bool
     plan: str
+    role: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -29,7 +33,11 @@ class MeOrg:
 
         name = self.name
 
+        personal = self.personal
+
         plan = self.plan
+
+        role = self.role
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -37,25 +45,33 @@ class MeOrg:
             {
                 "id": id,
                 "name": name,
+                "personal": personal,
                 "plan": plan,
+                "role": role,
             }
         )
 
         return field_dict
 
     @classmethod
-    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
         name = d.pop("name")
 
+        personal = d.pop("personal")
+
         plan = d.pop("plan")
+
+        role = d.pop("role")
 
         me_org = cls(
             id=id,
             name=name,
+            personal=personal,
             plan=plan,
+            role=role,
         )
 
         me_org.additional_properties = d

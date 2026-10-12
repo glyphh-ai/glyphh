@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar, cast
+from typing import Any, Self, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -26,10 +26,10 @@ class Member:
 
     disabled: bool
     email: str
-    first_name: str | None
+    first_name: None | str
     id: UUID
     joined_at: datetime.datetime
-    last_name: str | None
+    last_name: None | str
     role: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -38,14 +38,14 @@ class Member:
 
         email = self.email
 
-        first_name: str | None
+        first_name: None | str
         first_name = self.first_name
 
         id = str(self.id)
 
         joined_at = self.joined_at.isoformat()
 
-        last_name: str | None
+        last_name: None | str
         last_name = self.last_name
 
         role = self.role
@@ -67,13 +67,13 @@ class Member:
         return field_dict
 
     @classmethod
-    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
         d = dict(src_dict)
         disabled = d.pop("disabled")
 
         email = d.pop("email")
 
-        def _parse_first_name(data: object) -> str | None:
+        def _parse_first_name(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
@@ -84,7 +84,7 @@ class Member:
 
         joined_at = datetime.datetime.fromisoformat(d.pop("joined_at"))
 
-        def _parse_last_name(data: object) -> str | None:
+        def _parse_last_name(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)

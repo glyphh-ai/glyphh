@@ -5,7 +5,7 @@ const SERVER = process.env.GLYPHH_URL ?? "http://localhost:8080";
 
 const ME = {
   id: "7f0c7b1e-0000-4000-8000-000000000001", email: "ada@acme.test", first_name: "Ada", last_name: "Lovelace",
-  image_url: null, role: "org_admin", org: { id: "7f0c7b1e-0000-4000-8000-000000000002", name: "Acme", plan: "Free" },
+  image_url: null, role: "org_admin", org: { id: "7f0c7b1e-0000-4000-8000-000000000002", name: "Acme", plan: "Free", personal: false, role: "org_admin" },
 };
 const HOST = { id: "7f0c7b1e-0000-4000-8000-000000000003", name: "Claude Code", connected_at: "2026-10-11T12:00:00Z" };
 
@@ -57,5 +57,17 @@ describe("me and hosts", () => {
       .me()
       .catch((e: unknown) => e);
     expect(error).toMatchObject({ status: 502, code: undefined, traceId: undefined, body: { error: "gateway" } });
+  });
+
+  it("lists my orgs, and accepts or declines an invite sent to me", async () => {
+    const orgs = [{ ...ME.org, name: "Personal", personal: true }, ME.org];
+    expect(await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(200, orgs) }).listMyOrgs()).toEqual(orgs);
+    const accepted: Request[] = [];
+    const joined = await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(200, { org: "Acme" }, accepted) }).acceptInvite("I1");
+    expect(joined).toBe("Acme");
+    expect([accepted[0]?.method, new URL(accepted[0]?.url ?? "").pathname, await accepted[0]?.text()]).toEqual(["POST", "/v1/invites/accept", '{"invite":"I1"}']);
+    const declined: Request[] = [];
+    await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(204, undefined, declined) }).declineInvite("I2");
+    expect(new URL(declined[0]?.url ?? "").pathname).toBe("/v1/invites/decline");
   });
 });

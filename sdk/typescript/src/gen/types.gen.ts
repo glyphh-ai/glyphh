@@ -5,6 +5,24 @@ export type ClientOptions = {
 };
 
 /**
+ * AllowScreen
+ */
+export type AllowScreen = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Orgs
+     */
+    orgs: Array<MeOrg>;
+};
+
+/**
  * CreatedInvite
  */
 export type CreatedInvite = {
@@ -64,6 +82,16 @@ export type Host = {
 };
 
 /**
+ * InviteAnswer
+ */
+export type InviteAnswer = {
+    /**
+     * Invite
+     */
+    invite: string;
+};
+
+/**
  * InviteView
  */
 export type InviteView = {
@@ -83,6 +111,46 @@ export type InviteView = {
      * Role
      */
     role: string;
+};
+
+/**
+ * JoinScreen
+ */
+export type JoinScreen = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Invited By
+     */
+    invited_by: string | null;
+    /**
+     * Org
+     */
+    org: string;
+    /**
+     * Providers
+     */
+    providers: Array<string>;
+    /**
+     * Role
+     */
+    role: 'org_admin' | 'user';
+};
+
+/**
+ * Joined
+ */
+export type Joined = {
+    /**
+     * Org
+     */
+    org: string;
 };
 
 /**
@@ -129,9 +197,17 @@ export type MeOrg = {
      */
     name: string;
     /**
+     * Personal
+     */
+    personal: boolean;
+    /**
      * Plan
      */
     plan: string;
+    /**
+     * Role
+     */
+    role: string;
 };
 
 /**
@@ -235,6 +311,16 @@ export type RenameOrg = {
 };
 
 /**
+ * SignInScreen
+ */
+export type SignInScreen = {
+    /**
+     * Providers
+     */
+    providers: Array<string>;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -262,6 +348,96 @@ export type ValidationError = {
     type: string;
 };
 
+export type AllowScreenData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Consent
+         */
+        consent: string;
+    };
+    url: '/v1/auth/allow';
+};
+
+export type AllowScreenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AllowScreenError = AllowScreenErrors[keyof AllowScreenErrors];
+
+export type AllowScreenResponses = {
+    /**
+     * Successful Response
+     */
+    200: AllowScreen;
+};
+
+export type AllowScreenResponse = AllowScreenResponses[keyof AllowScreenResponses];
+
+export type JoinScreenData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Invite
+         */
+        invite: string;
+    };
+    url: '/v1/auth/join';
+};
+
+export type JoinScreenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type JoinScreenError = JoinScreenErrors[keyof JoinScreenErrors];
+
+export type JoinScreenResponses = {
+    /**
+     * Successful Response
+     */
+    200: JoinScreen;
+};
+
+export type JoinScreenResponse = JoinScreenResponses[keyof JoinScreenResponses];
+
+export type SignInScreenData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Request
+         */
+        request: string;
+    };
+    url: '/v1/auth/sign-in';
+};
+
+export type SignInScreenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SignInScreenError = SignInScreenErrors[keyof SignInScreenErrors];
+
+export type SignInScreenResponses = {
+    /**
+     * Successful Response
+     */
+    200: SignInScreen;
+};
+
+export type SignInScreenResponse = SignInScreenResponses[keyof SignInScreenResponses];
+
 export type HealthData = {
     body?: never;
     path?: never;
@@ -277,6 +453,56 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type AcceptInviteData = {
+    body: InviteAnswer;
+    path?: never;
+    query?: never;
+    url: '/v1/invites/accept';
+};
+
+export type AcceptInviteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AcceptInviteError = AcceptInviteErrors[keyof AcceptInviteErrors];
+
+export type AcceptInviteResponses = {
+    /**
+     * Successful Response
+     */
+    200: Joined;
+};
+
+export type AcceptInviteResponse = AcceptInviteResponses[keyof AcceptInviteResponses];
+
+export type DeclineInviteData = {
+    body: InviteAnswer;
+    path?: never;
+    query?: never;
+    url: '/v1/invites/decline';
+};
+
+export type DeclineInviteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeclineInviteError = DeclineInviteErrors[keyof DeclineInviteErrors];
+
+export type DeclineInviteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeclineInviteResponse = DeclineInviteResponses[keyof DeclineInviteResponses];
 
 export type MeData = {
     body?: never;
@@ -341,6 +567,24 @@ export type DisconnectHostResponses = {
 };
 
 export type DisconnectHostResponse = DisconnectHostResponses[keyof DisconnectHostResponses];
+
+export type ListMyOrgsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me/orgs';
+};
+
+export type ListMyOrgsResponses = {
+    /**
+     * Response Listmyorgs
+     *
+     * Successful Response
+     */
+    200: Array<MeOrg>;
+};
+
+export type ListMyOrgsResponse = ListMyOrgsResponses[keyof ListMyOrgsResponses];
 
 export type GetOrgData = {
     body?: never;

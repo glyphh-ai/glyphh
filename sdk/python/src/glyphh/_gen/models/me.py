@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Self, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -28,10 +28,10 @@ class Me:
     """
 
     email: str
-    first_name: str | None
+    first_name: None | str
     id: UUID
-    image_url: str | None
-    last_name: str | None
+    image_url: None | str
+    last_name: None | str
     org: MeOrg
     role: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -39,15 +39,15 @@ class Me:
     def to_dict(self) -> dict[str, Any]:
         email = self.email
 
-        first_name: str | None
+        first_name: None | str
         first_name = self.first_name
 
         id = str(self.id)
 
-        image_url: str | None
+        image_url: None | str
         image_url = self.image_url
 
-        last_name: str | None
+        last_name: None | str
         last_name = self.last_name
 
         org = self.org.to_dict()
@@ -71,13 +71,13 @@ class Me:
         return field_dict
 
     @classmethod
-    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
         from ..models.me_org import MeOrg
 
         d = dict(src_dict)
         email = d.pop("email")
 
-        def _parse_first_name(data: object) -> str | None:
+        def _parse_first_name(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
@@ -86,14 +86,14 @@ class Me:
 
         id = UUID(d.pop("id"))
 
-        def _parse_image_url(data: object) -> str | None:
+        def _parse_image_url(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)
 
         image_url = _parse_image_url(d.pop("image_url"))
 
-        def _parse_last_name(data: object) -> str | None:
+        def _parse_last_name(data: object) -> None | str:
             if data is None:
                 return data
             return cast(None | str, data)

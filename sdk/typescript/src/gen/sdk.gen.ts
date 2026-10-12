@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { CreateInviteData, CreateInviteErrors, CreateInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, ListHostsData, ListHostsResponses, ListInvitesData, ListInvitesResponses, ListMembersData, ListMembersResponses, MeData, MeResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInvitesData, ListInvitesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, MeData, MeResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,9 +19,48 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * Allow Screen
+ */
+export const allowScreen = <ThrowOnError extends boolean = false>(options: Options<AllowScreenData, ThrowOnError>): RequestResult<AllowScreenResponses, AllowScreenErrors, ThrowOnError> => (options.client ?? client).get<AllowScreenResponses, AllowScreenErrors, ThrowOnError>({ url: '/v1/auth/allow', ...options });
+
+/**
+ * Join Screen
+ */
+export const joinScreen = <ThrowOnError extends boolean = false>(options: Options<JoinScreenData, ThrowOnError>): RequestResult<JoinScreenResponses, JoinScreenErrors, ThrowOnError> => (options.client ?? client).get<JoinScreenResponses, JoinScreenErrors, ThrowOnError>({ url: '/v1/auth/join', ...options });
+
+/**
+ * Sign In Screen
+ */
+export const signInScreen = <ThrowOnError extends boolean = false>(options: Options<SignInScreenData, ThrowOnError>): RequestResult<SignInScreenResponses, SignInScreenErrors, ThrowOnError> => (options.client ?? client).get<SignInScreenResponses, SignInScreenErrors, ThrowOnError>({ url: '/v1/auth/sign-in', ...options });
+
+/**
  * Get Health
  */
 export const health = <ThrowOnError extends boolean = false>(options?: Options<HealthData, ThrowOnError>): RequestResult<HealthResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({ url: '/v1/health', ...options });
+
+/**
+ * Accept
+ */
+export const acceptInvite = <ThrowOnError extends boolean = false>(options: Options<AcceptInviteData, ThrowOnError>): RequestResult<AcceptInviteResponses, AcceptInviteErrors, ThrowOnError> => (options.client ?? client).post<AcceptInviteResponses, AcceptInviteErrors, ThrowOnError>({
+    url: '/v1/invites/accept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Decline
+ */
+export const declineInvite = <ThrowOnError extends boolean = false>(options: Options<DeclineInviteData, ThrowOnError>): RequestResult<DeclineInviteResponses, DeclineInviteErrors, ThrowOnError> => (options.client ?? client).post<DeclineInviteResponses, DeclineInviteErrors, ThrowOnError>({
+    url: '/v1/invites/decline',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Get Me
@@ -41,6 +80,13 @@ export const listHosts = <ThrowOnError extends boolean = false>(options?: Option
  * Disconnect one host: its tokens stop working at once; the others are untouched.
  */
 export const disconnectHost = <ThrowOnError extends boolean = false>(options: Options<DisconnectHostData, ThrowOnError>): RequestResult<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError> => (options.client ?? client).delete<DisconnectHostResponses, DisconnectHostErrors, ThrowOnError>({ url: '/v1/me/hosts/{host_id}', ...options });
+
+/**
+ * List My Orgs
+ *
+ * Every org I belong to, my Personal org first.
+ */
+export const listMyOrgs = <ThrowOnError extends boolean = false>(options?: Options<ListMyOrgsData, ThrowOnError>): RequestResult<ListMyOrgsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListMyOrgsResponses, unknown, ThrowOnError>({ url: '/v1/me/orgs', ...options });
 
 /**
  * Get Org

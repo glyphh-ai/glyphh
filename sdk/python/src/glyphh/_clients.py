@@ -3,10 +3,21 @@ from uuid import UUID
 
 import httpx
 
-from glyphh._calls import DISCONNECT_HOST, HEALTH, LIST_HOSTS, ME, Call, answer
+from glyphh._calls import (
+    ACCEPT_INVITE,
+    DECLINE_INVITE,
+    DISCONNECT_HOST,
+    HEALTH,
+    LIST_HOSTS,
+    LIST_MY_ORGS,
+    ME,
+    Call,
+    answer,
+)
+from glyphh._gen.models.invite_answer import InviteAnswer
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
-from glyphh._models import Health, Host, Me
+from glyphh._models import Health, Host, Me, MeOrg
 from glyphh._org import AsyncOrg, Org
 
 
@@ -41,6 +52,18 @@ class Glyphh:
     def me(self) -> Me:
         """Who am I signed in as: my profile, my role, my org and its plan."""
         return self._run(ME)  # type: ignore[return-value]
+
+    def list_my_orgs(self) -> list[MeOrg]:
+        """Every org I belong to, my Personal org first."""
+        return self._run(LIST_MY_ORGS)  # type: ignore[return-value]
+
+    def accept_invite(self, invite: str) -> str:
+        """Accept an invite sent to me: I join its org and keep every other. Answers the org's name."""
+        return self._run(ACCEPT_INVITE, body=InviteAnswer(invite=invite))  # type: ignore[return-value]
+
+    def decline_invite(self, invite: str) -> None:
+        """Decline an invite sent to me: it closes, and its seat is free again."""
+        self._run(DECLINE_INVITE, body=InviteAnswer(invite=invite))
 
     def list_hosts(self) -> list[Host]:
         """The agent hosts (Claude, Codex, ...) connected to my Glyphh."""
@@ -77,6 +100,18 @@ class AsyncGlyphh:
     async def me(self) -> Me:
         """Who am I signed in as: my profile, my role, my org and its plan."""
         return await self._run(ME)  # type: ignore[return-value]
+
+    async def list_my_orgs(self) -> list[MeOrg]:
+        """Every org I belong to, my Personal org first."""
+        return await self._run(LIST_MY_ORGS)  # type: ignore[return-value]
+
+    async def accept_invite(self, invite: str) -> str:
+        """Accept an invite sent to me: I join its org and keep every other. Answers the org's name."""
+        return await self._run(ACCEPT_INVITE, body=InviteAnswer(invite=invite))  # type: ignore[return-value]
+
+    async def decline_invite(self, invite: str) -> None:
+        """Decline an invite sent to me: it closes, and its seat is free again."""
+        await self._run(DECLINE_INVITE, body=InviteAnswer(invite=invite))
 
     async def list_hosts(self) -> list[Host]:
         """The agent hosts (Claude, Codex, ...) connected to my Glyphh."""

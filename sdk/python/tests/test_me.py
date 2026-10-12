@@ -15,7 +15,7 @@ ME: dict = {
     "last_name": None,
     "image_url": None,
     "role": "org_admin",
-    "org": {"id": "7f0c7b1e-0000-4000-8000-000000000002", "name": "Acme", "plan": "Free"},
+    "org": {"id": "7f0c7b1e-0000-4000-8000-000000000002", "name": "Acme", "plan": "Free", "personal": False, "role": "org_admin"},
 }
 HOST: dict = {
     "id": "7f0c7b1e-0000-4000-8000-000000000003",
@@ -95,3 +95,27 @@ def test_a_refusal_that_is_not_the_servers_shape_keeps_its_body() -> None:
         Glyphh(SERVER, token="t", transport=answering(502, {"error": "gateway"})).me()
     assert (e.value.status, e.value.code, e.value.trace_id, e.value.body) == (502, None, None, {"error": "gateway"})
     assert str(e.value) == "Glyphh request failed with status 502"
+
+
+def test_my_orgs_and_answering_an_invite_sync_and_async() -> None:
+    orgs = [{**ME["org"], "name": "Personal", "personal": True}, ME["org"]]
+    listed = Glyphh(SERVER, token="t", transport=answering(200, orgs)).list_my_orgs()
+    assert [(o.name, o.personal) for o in listed] == [("Personal", True), ("Acme", False)]
+    seen: list = []
+    assert Glyphh(SERVER, token="t", transport=answering(200, {"org": "Acme"}, seen)).accept_invite("I1") == "Acme"
+    assert (seen[0].method, seen[0].url.path, seen[0].content) == ("POST", "/v1/invites/accept", b'{"invite":"I1"}')
+    Glyphh(SERVER, token="t", transport=answering(204)).decline_invite("I2")
+
+
+async def test_my_orgs_and_answering_an_invite_async() -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/me/orgs":
+            return httpx.Response(200, json=[ME["org"]])
+        if request.url.path == "/v1/invites/accept":
+            return httpx.Response(200, json={"org": "Acme"})
+        return httpx.Response(204)
+
+    sdk = AsyncGlyphh(SERVER, token="t", transport=httpx.MockTransport(handle))
+    assert [o.name for o in await sdk.list_my_orgs()] == ["Acme"]
+    assert await sdk.accept_invite("I1") == "Acme"
+    assert await sdk.decline_invite("I2") is None
