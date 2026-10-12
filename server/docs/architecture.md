@@ -144,7 +144,7 @@ A task is a program rrotor runs, by hand, from a super power or on a clock, and 
 
 **Dependencies.** A power declares what it needs: a task that needs Gmail and Slack, a chat model for its writing step and Jev says so. Adding it to a super power grants all of it at once; whatever the member does not have yet is asked for right there (connect Gmail, add a key), and it cannot run until everything is in place, naming what is missing. Jev is a dependency like any model.
 
-**Discover.** Glyphh and orgs publish powers (skills, tasks, ...) and super powers to a catalog, each a bundle with its type and its dependencies; an org's listings are visible to its own members. Installing one copies it into the member's own powers, linked to the listing and its version so updates can be offered, and brings its dependencies with it as above. The tables for requirements and listings are drawn when this is built.
+**Discover.** Glyphh and orgs publish powers (skills, tasks, ...) and super powers to a catalog, each a bundle with its type and its dependencies; an org's listings are visible to its own members. Installing one copies it into the member's own powers, linked to the listing and its version so updates can be offered, and brings its dependencies with it as above. The tables for requirements and listings: moved to the [backlog](backlog.md).
 
 ### Not in Glyphh, for now
 
@@ -173,7 +173,7 @@ It is the agent runtime: from it, a super power reaches about 3,900 models acros
 
 A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
 
-Still to draw with the rrotor definition: how a super power's data is kept apart from another's in that Postgres, and how its screens are laid out inside Glyphh's UI.
+How a super power's data is kept apart from another's in that Postgres, and how its screens are laid out inside Glyphh's UI: moved to the [backlog](backlog.md).
 
 ### rrotor is a Linux VM, and everything Glyphh runs is inside it
 
@@ -292,7 +292,7 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 - **Schema:** one schema file until relaunch, then Alembic migrations.
 - **Background work:** Postgres, with no queue table of its own: the clock reads `schedules.next_run_at`, and each job is its own table's state (a Stripe event not yet processed, a machine to unmount), taken with `FOR UPDATE SKIP LOCKED` so two processes never take the same one.
 - **Files:** object storage (R2 or S3), with references in Postgres: power and super power bundles, run logs, provider logos.
-- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](data-model.md)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. Where conversations live is still open.
+- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](data-model.md)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. Where conversations live: moved to the [backlog](backlog.md).
 
 ### Operations
 

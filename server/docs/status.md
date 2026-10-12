@@ -31,21 +31,10 @@ On the [architecture](architecture.md): voice (speech in and out on the member's
 
 ## Open
 
-Decisions still to make. Where a proposal is written, it is a proposal, not a decision.
-
-- **Conversations:** not drawn. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the player through the relay.
-- **Codex hosting terms:** confirm OpenAI's terms for hosting Codex signed in with a member's ChatGPT subscription; Glyphh accepts Anthropic's Commercial Terms for Claude Code.
-- **Super powers in Discover:** whether a super power becomes one more power type (`super_powers` folds into `powers`) or keeps its own table and is listed the same way.
-- **Requirements and listings:** the tables for power dependencies and the Discover catalog, drawn when built.
-- **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
-- **Power bundles:** whether saving a skill or task keeps each version, and how edits made in a machine's folder get back to the server.
-- **Plans:** price per credit and monthly credits per plan, included and extra machines for Solo, Basic and Pro, whether runs themselves spend credits, and whether Free is held to one connected service.
-- **Usage detail:** how long each call's row is kept.
-- **Teams:** whether a user can be in more than one (drawn as at most one).
-- **Catalog descriptions:** the old list has no descriptions for its 3,900 models; they are to be written or imported.
+Closed here: every open decision moved to the [backlog](backlog.md) (2026-10-11).
 
 ## Next
 
 Building the drawn tables when the word is given, with their limits enforced in the database and race tested; then the API (Google and GitHub sign-in, tokens, machine sign-in) and the SDK, in that order.
 
-What is decided but not started: [backlog](backlog.md).
+Everything open, decided but not started, or still to draw: [backlog](backlog.md).
