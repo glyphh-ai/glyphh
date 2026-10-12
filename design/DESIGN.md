@@ -216,7 +216,7 @@ Decided by Chris, 2026-10-12: rrotor's UI is for business users. **No terminal a
 
 **A left rail, not a top nav** (Chris, 2026-10-12; board `AppShell`, `AppShell2`). The rail collapses to icons (256 px open, 72 px collapsed, remembered per person), with **you, your org and your account at the bottom left**: a button that opens the account menu upward (your orgs to switch between, Account, Usage, API keys, Help and status, the theme Light / Dark / System, Sign out). On a phone (below 768 px) the same rail is a **drawer from the left**, opened by a menu button top left. The page's title and main action head the page itself; there is no top bar. Icons are **Lucide** (approved 2026-10-12), stroke 2, 20 px, only the ones `AppShell` lists. Sign-in pages have no rail.
 
-**The rail's logo is 36 px tall** (30 px in a phone's top bar), bigger than `AppShell` draws it (Chris, 2026-10-12; tokens `--logo-rail`, `--logo-rail-phone`).
+**The rail's logo is 42 px tall** (34 px in a phone's top bar), bigger than `AppShell` draws it (Chris, 2026-10-12; tokens `--logo-rail`, `--logo-rail-phone`).
 
 In a **Personal org** (no members or teams) the Org group holds only Billing, Usage and API keys (Chris, 2026-10-12).
 
