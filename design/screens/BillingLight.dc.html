@@ -26,7 +26,7 @@ button,input{font:inherit}
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">app.glyphh.ai · Account › Billing · flow and copy from server-old</div>
 <h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Billing</h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: var(--tx2); max-width: 1400px">One page: plan, budget with auto top-up, spend by day, plans and invoices. Every action opens a dialog; paying happens in Stripe's embedded checkout inside a 560 px modal (initEmbeddedCheckout, no redirect), then Glyphh confirms with Stripe before anything changes. Cards and payment methods live in Stripe's portal ("Manage in Stripe"). The Stripe form takes its look from Checkout branding in the Stripe Dashboard: set the brand colour to violet #7C4DFF.</p>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: var(--tx2); max-width: 1400px">One page: plan, credit balance with auto top-up, spend by day, plans and invoices. Credit is dollars, as Anthropic's is: a connection call costs 2¢ for each started 30 seconds, runs cost nothing, and bought credit expires a year after purchase. Every action opens a dialog; paying happens in Stripe's embedded checkout inside a 560 px modal (initEmbeddedCheckout, no redirect), then Glyphh confirms with Stripe before anything changes. Cards and payment methods live in Stripe's portal ("Manage in Stripe"). The Stripe form takes its look from Checkout branding in the Stripe Dashboard: set the brand colour to violet #7C4DFF.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
@@ -53,7 +53,7 @@ button,input{font:inherit}
 <main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
 
 <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap">
-<div style="display: flex; flex-direction: column; gap: 6px; max-width: 620px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Billing</h2><p style="margin: 0; font-size: 14px; line-height: 1.5; color: var(--tx3)">Your plan, seats, budget and invoices. Payments run on Stripe; nothing changes here until Stripe confirms it.</p></div>
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 620px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Billing</h2><p style="margin: 0; font-size: 14px; line-height: 1.5; color: var(--tx3)">Your plan, seats, credit balance and invoices. Payments run on Stripe; nothing changes here until Stripe confirms it.</p></div>
 <div style="display: flex; gap: 10px; flex-wrap: wrap">
 <button type="button" style="height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600">Manage in Stripe</button>
 <button type="button" style="height: 48px; padding: 0 16px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Sync with Stripe</button>
@@ -61,7 +61,11 @@ button,input{font:inherit}
 </div>
 
 <sc-if value="{{f.free}}" hint-placeholder-val="{{ false }}">
-<div style="padding: 16px 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--tx); display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">This organization is on Free</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Free runs your own CLI and connections, with $1.00 a month for connections. Choose Solo, Basic or Pro to use Glyphh models; the bigger the plan, the better the rate.</div></div>
+<div style="padding: 16px 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--tx); display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">This organization is on Free</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Free runs your own CLI and connections, with $1 of usage a month and 2 machines. Choose Solo, Basic or Pro to use Glyphh models; the bigger the plan, the better the rate.</div></div>
+</sc-if>
+
+<sc-if value="{{f.moving}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="padding: 16px 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--tx); display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">On 12 Nov your plan moves to Basic v3: $40 a seat, $10 of usage a seat, 10 machines. Nothing to do.</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Those are your plan's terms from 12 Nov; until then you stay on Basic v2. We emailed your org admins on 13 Oct, 30 days ahead.</div></div>
 </sc-if>
 
 <div style="display: grid; grid-template-columns: {{f.cols2}}; gap: 16px">
@@ -69,6 +73,7 @@ button,input{font:inherit}
 <div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Current plan</div>
 <div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">{{f.planName}}</span><span style="height: 22px; padding: 0 9px; border-radius: 999px; background: {{f.planBadgeBg}}; color: {{f.planBadgeTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{f.planBadge}}</span></div>
 <div style="font-size: 14px; color: var(--tx2)">{{f.seatLine}}</div>
+<div style="font-size: 14px; color: var(--tx2)">{{f.machLine}}</div>
 <div style="font-size: 14px; color: var(--tx2)">Card on file: {{f.card}}</div>
 <sc-if value="{{f.paid}}" hint-placeholder-val="{{ true }}">
 <div style="margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; font-size: 14px">
@@ -79,14 +84,16 @@ button,input{font:inherit}
 </sc-if>
 </section>
 
-<section aria-label="Budget" style="padding: 20px 24px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Budget</div><button type="button" style="height: 48px; padding: 0 16px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add funds</button></div>
+<section aria-label="Credit balance" style="padding: 20px 24px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Credit balance</div><button type="button" style="height: 48px; padding: 0 16px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add funds</button></div>
 <div style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">{{f.remaining}}</div>
 <div style="font-size: 14px; color: var(--tx2)">{{f.breakdown}}</div>
+<sc-if value="{{f.expLine}}" hint-placeholder-val="{{ true }}"><div style="font-size: 13px; color: var(--tx3)">{{f.expLine}}</div></sc-if>
 <div role="img" aria-label="Spend by day this month" style="display: flex; align-items: flex-end; gap: {{f.barGap}}; height: 72px; border-bottom: 1px solid var(--line); margin-top: 4px">
 <sc-for list="{{f.days}}" as="d"><span title="{{d.t}}" style="flex: 1; min-width: 0; height: {{d.h}}; border-radius: 3px 3px 0 0; background: {{d.c}}; border: {{d.b}}; box-sizing: border-box"></span></sc-for>
 </div>
 <div style="display: flex; justify-content: space-between; font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--tx3)"><span>1 Oct</span><span>today</span><span>31 Oct</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">Spend is connection calls: 2¢ for each started 30 seconds of a call. Runs cost nothing.</div>
 <div style="margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><div style="font-size: 14px; font-weight: 600">Auto top-up</div><div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">{{f.autoLine}}</div><div style="display: flex; gap: 14px"><button type="button" style="height: 44px; padding: 0; border: none; background: transparent; color: var(--accent-tx); font-size: 14px; font-weight: 600">Configure</button><sc-if value="{{f.autoOn}}" hint-placeholder-val="{{ true }}"><button type="button" style="height: 44px; padding: 0; border: none; background: transparent; color: var(--accent-tx); font-size: 14px; font-weight: 600">Check now</button></sc-if></div></div>
 <button type="button" role="switch" aria-checked="{{f.autoOnStr}}" aria-label="Auto top-up" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{f.swBg}}; position: relative"><span style="position: absolute; top: 4px; left: {{f.swKnob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button>
@@ -107,14 +114,15 @@ button,input{font:inherit}
 </div>
 </sc-for>
 </div>
+<div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">Extra machines are $5 a month each, on every plan but Free. Usage is credit in dollars, given each month and not carried over.</div>
 </section>
 
 <section aria-label="Invoices" style="padding: 8px 24px 12px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line)">
-<div style="font-size: 14px; font-weight: 600; color: var(--tx2); padding: 12px 0">Invoices</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Invoices</div><div style="font-size: 13px; color: var(--tx3)">Bought credit expires a year after purchase; each top-up shows when.</div></div>
 <sc-for list="{{f.invoices}}" as="iv">
 <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; flex-wrap: wrap">
 <span style="width: {{f.dateW}}; color: var(--tx3)">{{iv.date}}</span>
-<span style="flex: 1; min-width: 120px; font-weight: 600">{{iv.no}}</span>
+<span style="flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">{{iv.no}}</span><span style="font-size: 13px; color: var(--tx3)">{{iv.kind}}<sc-if value="{{iv.exp}}" hint-placeholder-val="{{ false }}"> · <span style="color: var(--tx2)">{{iv.exp}}</span></sc-if></span></span>
 <span style="font-family: 'Red Hat Mono', monospace">{{iv.amount}}</span>
 <span style="height: 22px; padding: 0 9px; border-radius: 999px; background: {{iv.bg}}; color: {{iv.tx}}; border: {{iv.border}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; box-sizing: border-box">{{iv.status}}</span>
 <span style="display: flex; gap: 4px"><a href="#" style="height: 44px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 10px; text-decoration: none; font-weight: 600">View</a><a href="#" style="height: 44px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 10px; text-decoration: none; font-weight: 600">PDF</a></span>
@@ -147,7 +155,7 @@ button,input{font:inherit}
 <input id="usd-{{f.key}}" type="number" min="5" max="10000" step="5" value="{{f.usd}}" aria-invalid="{{f.usdBad}}" style="height: 48px; border-radius: 12px; border: {{f.usdBorder}}; box-shadow: {{f.usdRing}}; background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%">
 <div style="font-size: 13px; color: {{f.usdHintColor}}">{{f.usdHint}}</div>
 </div>
-<div style="font-size: 13px; color: var(--tx3)">Funds are dollars, dollar for dollar. Purchased funds never expire.</div>
+<div style="font-size: 13px; color: var(--tx3)">What you pay is the credit added, dollar for dollar. Bought credit expires a year after purchase: this one on 12 Oct 2027.</div>
 <div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
 <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
 <button type="button" disabled="{{f.usdBad}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: {{f.payBg}}; color: {{f.payTx}}; font-size: 15px; font-weight: 600">Pay {{f.payAmt}}</button>
@@ -172,12 +180,21 @@ button,input{font:inherit}
 </sc-if>
 
 <sc-if value="{{f.d.auto}}" hint-placeholder-val="{{ false }}">
-<div style="display: flex; flex-direction: column; gap: 6px"><label for="below-{{f.key}}" style="font-size: 14px; font-weight: 600">When the budget falls below (USD)</label><input id="below-{{f.key}}" type="number" min="1" step="1" value="10" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%"></div>
-<div style="display: flex; flex-direction: column; gap: 6px"><label for="add-{{f.key}}" style="font-size: 14px; font-weight: 600">Add (USD)</label><input id="add-{{f.key}}" type="number" min="5" max="10000" step="5" value="45" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%"></div>
+<div style="display: grid; grid-template-columns: {{f.cols2}}; gap: 12px; align-items: start">
+<sc-for list="{{f.autoFields}}" as="af">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="{{af.id}}" style="font-size: 14px; font-weight: 600">{{af.label}}</label><div style="position: relative"><span aria-hidden="true" style="position: absolute; left: 14px; top: 0; height: 48px; display: flex; align-items: center; font-size: 15px; color: var(--tx3)">$</span><input id="{{af.id}}" type="number" min="5" max="10000" step="1" value="{{af.v}}" aria-invalid="{{af.bad}}" style="height: 48px; border-radius: 12px; border: {{af.border}}; box-shadow: {{af.ring}}; background: var(--bg); color: var(--tx); padding: 0 14px 0 28px; font-size: 15px; box-sizing: border-box; width: 100%"></div><div style="font-size: 13px; line-height: 1.4; color: {{af.hintColor}}">{{af.hint}}</div></div>
+</sc-for>
+</div>
+<div style="padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><div style="font-size: 14px; font-weight: 600">Monthly cap</div><div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">{{f.capLine}}</div></div><button type="button" role="switch" aria-checked="{{f.capOnStr}}" aria-label="Monthly cap" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{f.capSwBg}}; position: relative"><span style="position: absolute; top: 4px; left: {{f.capKnob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button></div>
+<sc-if value="{{f.capOn}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="{{f.cap.id}}" style="font-size: 14px; font-weight: 600">Reload at most</label><div style="display: flex; align-items: center; gap: 10px"><div style="position: relative; flex: 1; min-width: 0"><span aria-hidden="true" style="position: absolute; left: 14px; top: 0; height: 48px; display: flex; align-items: center; font-size: 15px; color: var(--tx3)">$</span><input id="{{f.cap.id}}" type="number" min="5" max="10000" step="1" value="{{f.cap.v}}" aria-invalid="{{f.cap.bad}}" style="height: 48px; border-radius: 12px; border: {{f.cap.border}}; box-shadow: {{f.cap.ring}}; background: var(--bg); color: var(--tx); padding: 0 14px 0 28px; font-size: 15px; box-sizing: border-box; width: 100%"></div><span style="font-size: 15px; color: var(--tx2)">a month</span></div><div style="font-size: 13px; line-height: 1.4; color: {{f.cap.hintColor}}">{{f.cap.hint}}</div></div>
+</sc-if>
+</div>
 <sc-if value="{{f.noCard}}" hint-placeholder-val="{{ false }}"><div role="alert" style="font-size: 14px; color: var(--danger-tx)">There is no card on file yet, so nothing can be charged.</div></sc-if>
 <div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
 <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
-<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Save</button>
+<button type="button" disabled="{{f.autoBad}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: {{f.saveBg}}; color: {{f.saveTx}}; font-size: 15px; font-weight: 600">Save</button>
 </div>
 </sc-if>
 
@@ -215,7 +232,7 @@ button,input{font:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":17000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":20000}}'>
 var THEME = 'light';
 var DAYS = [42, 55, 38, 61, 70, 22, 15, 66, 80, 58, 74];
 function days() {
@@ -223,15 +240,21 @@ function days() {
   for (var i = 0; i < 31; i++) { var past = i < DAYS.length; out.push({ h: past ? DAYS[i] + '%' : '6%', c: past ? (i === DAYS.length - 1 ? '#7C4DFF' : 'var(--accent-tx)') : 'transparent', b: past ? 'none' : '1px dashed var(--line2)', t: (i + 1) + ' Oct' }); }
   return out;
 }
-var INV = [['1 Oct 2026', 'GLY-0042', '$280.00', 'Paid'], ['24 Sep 2026', 'GLY-0041', '$45.00', 'Paid'], ['1 Sep 2026', 'GLY-0038', '$254.67', 'Paid'], ['19 Aug 2026', 'GLY-0036', '$45.00', 'Open']];
-function invoices() { return INV.map(function (r) { var paid = r[3] === 'Paid'; return { date: r[0], no: r[1], amount: r[2], status: r[3], bg: paid ? '#7C4DFF' : 'var(--s3)', tx: paid ? '#FFFFFF' : 'var(--tx2)', border: 'none' }; }); }
+var INV = [
+  ['12 Oct 2026', 'GLY-0043', '$20.00', 'Paid', 'Auto top-up, $5.00 to $25.00', 'Expires 12 Oct 2027'],
+  ['1 Oct 2026', 'GLY-0042', '$280.00', 'Paid', 'Basic, 7 seats, October', ''],
+  ['24 Sep 2026', 'GLY-0041', '$45.00', 'Paid', 'Credit added', 'Expires 24 Sep 2027'],
+  ['1 Sep 2026', 'GLY-0038', '$254.67', 'Paid', 'Basic, 6 to 7 seats, September', ''],
+  ['19 Aug 2026', 'GLY-0036', '$45.00', 'Open', 'Credit added once paid', '']
+];
+function invoices() { return INV.map(function (r) { var paid = r[3] === 'Paid'; return { date: r[0], no: r[1], amount: r[2], status: r[3], kind: r[4], exp: r[5], bg: paid ? '#7C4DFF' : 'var(--s3)', tx: paid ? '#FFFFFF' : 'var(--tx2)', border: 'none' }; }); }
 function plans(free) {
   var P = [
-    ['Free', '$0', ['1 seat', 'Your own CLI in the workspace', 'Connections, with $1 / month included', 'No Glyphh models']],
-    ['Solo', '$20/seat/mo', ['1 seat', '$20 of Glyphh usage / month', 'Every model, at the Solo rate', 'No governance']],
-    ['Basic', '$40/seat/mo', ['25 seats', '$40 of Glyphh usage / month', 'Every model, at the Basic rate', 'Governance and allow-lists']],
-    ['Pro', '$150/seat/mo', ['100 seats', '$150 of Glyphh usage / month', 'Every model, at the Pro rate', 'Governance and allow-lists']],
-    ['Enterprise', 'Custom', ['Unlimited seats', 'Glyphh usage sized to you', 'Every model, at the Enterprise rate', 'Governance and allow-lists', 'SSO']]
+    ['Free', '$0', ['1 seat', '$1 of usage a month', '2 machines', 'Your own CLI and connections', 'No Glyphh models']],
+    ['Solo', '$20 a month', ['1 seat', '$10 of usage a month', '3 machines', 'Every model, at the Solo rate', 'No governance']],
+    ['Basic', '$40 a seat a month', ['Up to 25 seats', '$10 of usage a seat a month', '10 machines', 'Every model, at the Basic rate', 'Governance and allow-lists']],
+    ['Pro', '$150 a seat a month', ['Up to 100 seats', '$50 of usage a seat a month', '50 machines', 'Every model, at the Pro rate', 'Governance and allow-lists']],
+    ['Enterprise', 'Arranged', ['Seats, usage and machines arranged with you', 'Every model, at the Enterprise rate', 'Governance and allow-lists', 'SSO']]
   ];
   var current = free ? 'Free' : 'Basic';
   return P.map(function (p) {
@@ -259,6 +282,7 @@ function pager(label, from, to, total, page, pages, mobile, cursor) {
 var STATES = [
   ['page', 'Billing', {}],
   ['free', 'Billing on Free', { free: true }],
+  ['moving', 'Billing: plan moving to a new version', { moving: true }],
   ['funds', 'Add funds', { dlg: 'funds' }],
   ['fundsBad', 'Add funds: out of range', { dlg: 'funds', bad: true }],
   ['loading', 'Embedded checkout: loading', { dlg: 'stripe', s: 'loading' }],
@@ -266,7 +290,11 @@ var STATES = [
   ['subscribe', 'Embedded checkout: subscribe (from Free)', { dlg: 'stripe', s: 'open', sub: true, free: true }],
   ['paid', 'Payment received, confirming', { dlg: 'stripe', s: 'paid' }],
   ['failed', 'Checkout could not load', { dlg: 'stripe', s: 'failed' }],
-  ['auto', 'Auto top-up', { dlg: 'auto' }],
+  ['auto', 'Auto top-up: reload to a target', { dlg: 'auto' }],
+  ['autoCap', 'Auto top-up: monthly cap on', { dlg: 'auto', cap: '200' }],
+  ['autoBelow', 'Auto top-up: target not above the trigger', { dlg: 'auto', below: '30' }],
+  ['autoRange', 'Auto top-up: target out of range', { dlg: 'auto', target: '12000' }],
+  ['autoCapLow', 'Auto top-up: cap below one reload', { dlg: 'auto', cap: '10' }],
   ['autoNoCard', 'Auto top-up: no card on file', { dlg: 'auto', noCard: true, free: true }],
   ['preview', 'Switch plan: preview', { dlg: 'change', c: 'preview' }],
   ['applying', 'Switch plan: applying', { dlg: 'change', c: 'applying' }],
@@ -274,6 +302,30 @@ var STATES = [
   ['changeFailed', 'Switch plan: not updated yet', { dlg: 'change', c: 'failed' }]
 ];
 var DLG_TITLE = { funds: 'Add funds', auto: 'Auto top-up' };
+function money(n) { return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function field(id, label, v, err, hint) {
+  return { id: id, label: label, v: v, bad: err ? 'true' : 'false', border: err ? '1px solid #FF4D4D' : '1px solid var(--line2)', ring: err ? '0 0 0 4px rgba(255,77,77,.18)' : 'none',
+    hint: err || hint, hintColor: err ? 'var(--danger-tx)' : 'var(--tx3)' };
+}
+function autoTopUp(o, key) {
+  var below = Number(o.below || '5'), target = Number(o.target || '25'), capOn = !!o.cap, cap = Number(o.cap || '200');
+  var inRange = function (n) { return n >= 5 && n <= 10000; };
+  var belowErr = inRange(below) ? '' : 'Use an amount from $5 to $10,000.';
+  var targetErr = !inRange(target) ? 'Use an amount from $5 to $10,000.' : (target <= below ? 'Make it more than ' + money(below) + ', the amount that starts a reload.' : '');
+  var oneReload = target - below;
+  var capErr = !capOn ? '' : (!inRange(cap) ? 'Use an amount from $5 to $10,000.' : (cap < oneReload ? 'Make it at least ' + money(oneReload) + ', enough for one reload.' : ''));
+  var bad = !!(belowErr || targetErr || capErr);
+  return {
+    autoFields: [
+      field('below-' + key, 'When the balance falls below', String(below), belowErr, '$5 to $10,000'),
+      field('target-' + key, 'Reload it to', String(target), targetErr, 'More than the amount above, up to $10,000')
+    ],
+    capOn: capOn, capOnStr: capOn ? 'true' : 'false', capSwBg: capOn ? '#7C4DFF' : 'var(--line2)', capKnob: capOn ? '24px' : '4px',
+    capLine: capOn ? 'Reloads stop for the month once they reach the cap, and start again on the 1st.' : 'Off: reloads as often as the balance needs.',
+    cap: field('cap-' + key, 'Reload at most', String(cap), capErr, 'At least one reload (' + money(oneReload > 0 ? oneReload : 0) + '), up to $10,000'),
+    autoBad: bad, saveBg: bad ? 'var(--off)' : '#7C4DFF', saveTx: bad ? 'var(--tx3)' : '#FFFFFF'
+  };
+}
 function frames() {
   var out = [];
   function add(mobile) {
@@ -281,32 +333,37 @@ function frames() {
       var o = st[2], free = !!o.free, d = {}, s = {}, c = {};
       if (o.dlg) d[o.dlg] = true; if (o.s) s[o.s] = true; if (o.c) c[o.c] = true;
       var autoOn = !free;
-      var title = o.dlg === 'stripe' ? (o.sub ? 'Subscribe to Pro' : 'Add $45.00 of funds') : (o.dlg === 'change' ? (o.c === 'done' ? 'You are on Pro' : 'Switch to Pro') : (DLG_TITLE[o.dlg] || ''));
-      var desc = o.dlg === 'auto' ? 'When the budget runs low we charge the card on file so nothing stops mid-run. Dollar for dollar, the same as adding funds by hand.'
+      var title = o.dlg === 'stripe' ? (o.sub ? 'Subscribe to Pro' : 'Add $45.00 of credit') : (o.dlg === 'change' ? (o.c === 'done' ? 'You are on Pro' : 'Switch to Pro') : (DLG_TITLE[o.dlg] || ''));
+      var desc = o.dlg === 'auto' ? 'When the credit balance runs low we charge the card on file and reload it to your target, so nothing stops mid-run. What you pay is the credit added; it expires a year after purchase.'
         : (o.dlg === 'change' ? { preview: 'Review what changes before anything is charged.', applying: 'Talking to Stripe. Keep this open until it confirms.', done: 'Stripe confirmed the change and the org now runs on the new plan.', failed: 'The change did not go through.' }[o.c] : '');
-      out.push({
+      var fr = {
         isFrame: true, theme: THEME === 'light' ? 'light' : '', desktop: !mobile, key: st[0] + (mobile ? 'm' : 'd'), label: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st[1],
-        w: mobile ? '390px' : '1200px', h: mobile ? '1500px' : '1520px', radius: mobile ? '36px' : '16px',
+        w: mobile ? '390px' : '1200px', h: mobile ? '1500px' : '1800px', radius: mobile ? '36px' : '16px',
         pad: mobile ? '20px' : '32px', mainPad: mobile ? '20px' : '32px 48px', logoH: mobile ? '24px' : '28px', h1: mobile ? '28px' : '32px',
         cols2: mobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', planCols: mobile ? 'minmax(0, 1fr)' : 'repeat(5, minmax(0, 1fr))',
         btnDir: mobile ? 'column-reverse' : 'row', barGap: mobile ? '2px' : '4px', dateW: mobile ? '100%' : '110px',
-        free: free, paid: !free,
+        free: free, paid: !free, moving: !!o.moving,
+        machLine: free ? '1 of 2 machines' : '6 of 10 machines · extra machines $5 a month each',
         planName: free ? 'Free' : 'Basic', planBadge: free ? 'No subscription' : 'Active', planBadgeBg: free ? 'var(--s3)' : '#7C4DFF', planBadgeTx: free ? 'var(--tx2)' : '#FFFFFF',
         seatLine: free ? '1 seat in use' : '7 of 25 seats in use · $40.00 per seat per month',
         card: free ? 'none' : 'Visa •••• 4242 (08/2028)',
-        remaining: free ? '$0.62' : '$186.40', breakdown: free ? 'plan $1.00 / month · funds $0.00 · spent $0.38 this month' : 'plan $280.00 / month · funds $45.00 · spent $138.60 this month',
+        remaining: free ? '$0.62' : '$186.40', breakdown: free ? '$1.00 of usage this month, $0.38 used · no bought credit' : '$70.00 of usage this month (7 seats × $10) · $160.40 bought credit · $44.00 used',
+        expLine: free ? '' : '$4.10 expires on 3 Nov',
         autoOn: autoOn, autoOnStr: autoOn ? 'true' : 'false', swBg: autoOn ? '#7C4DFF' : 'var(--line2)', swKnob: autoOn ? '24px' : '4px',
-        autoLine: autoOn ? 'Charges the card on file $45.00 when the budget falls below $10.00' : 'Off',
-        days: days(), plans: plans(free), pgInv: pager('Invoice pages', 1, 4, 23, 1, 6, mobile), invoices: free ? [] : invoices(),
+        autoLine: autoOn ? 'Reloads to $25.00 when the balance falls below $5.00 · no monthly cap' : 'Off',
+        days: days(), plans: plans(free), pgInv: pager('Invoice pages', 1, 5, 23, 1, 5, mobile), invoices: free ? [] : invoices(),
         dlg: !!o.dlg, d: d, s: s, c: c, dlgTitle: title, dlgDesc: desc, closable: o.c !== 'applying',
         dlgW: o.dlg === 'stripe' ? (mobile ? '358px' : '560px') : (mobile ? '358px' : '480px'),
         presets: ['$20', '$45', '$80', '$140'].map(function (v) { var on = !o.bad && v === '$45'; return { v: v, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx)', border: on ? 'none' : '1px solid var(--line2)' }; }),
         usd: o.bad ? '12500' : '45', usdBad: !!o.bad, usdBorder: o.bad ? '1px solid #FF4D4D' : '1px solid var(--line2)', usdRing: o.bad ? '0 0 0 4px rgba(255,77,77,.18)' : 'none',
         usdHint: o.bad ? 'Add between $5 and $10,000 at a time.' : '$5.00 to $10,000.00 at a time', usdHintColor: o.bad ? 'var(--danger-tx)' : 'var(--tx3)',
         payAmt: o.sub ? '$150.00' : (o.bad ? '$12,500.00' : '$45.00'), payBg: o.bad ? 'var(--off)' : '#7C4DFF', payTx: o.bad ? 'var(--tx3)' : '#FFFFFF',
-        stripeItem: o.sub ? 'Glyphh Pro · 1 seat, monthly' : 'Glyphh funds', stripeBtn: o.sub ? 'Subscribe' : 'Pay',
+        stripeItem: o.sub ? 'Glyphh Pro · 1 seat, monthly' : 'Glyphh credit', stripeBtn: o.sub ? 'Subscribe' : 'Pay',
         noCard: !!o.noCard
-      });
+      };
+      var at = autoTopUp(o, st[0] + (mobile ? 'm' : 'd'));
+      for (var k in at) fr[k] = at[k];
+      out.push(fr);
     });
   }
   out.push({ isBreak: true, title: THEME === 'light' ? 'Light · desktop' : 'Dark · desktop', sub: '1200 wide · dialogs 480 px, the Stripe checkout modal 560 px' });

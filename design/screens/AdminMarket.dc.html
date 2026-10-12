@@ -29,7 +29,7 @@ button,input,textarea{font:inherit}
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Glyphh admin › Marketplace · super admins only · dark</div>
 <h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh admin: the marketplace</h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Where Glyphh decides what goes on the marketplace. Orgs send listings once their org admin approves them; Glyphh sends its own. Each one is checked first by Glyphh's own reviewer super power, Marketplace Reviewer, which writes a report: what the listing asks for against what it does, its dependencies, its screenshots, its description, secrets in the bundle, and a run in a sandbox. Then a person decides: publish, request changes (with a note per field, the agent's findings in one click) or reject with a reason. Every word between Glyphh and the org lands in the listing's thread. Published listings are managed here too: feature, change category, unpublish, versions; and the categories and the featured row themselves. Desktop 1200 wide, phone 390 wide.</p>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Where Glyphh decides what goes on the marketplace. Orgs send listings once their org admin approves them; Glyphh sends its own. Each one is checked first by Glyphh's own reviewer super power, Marketplace Reviewer, which writes a report: what the listing asks for against what it does, its dependencies, its screenshots, its description, secrets in the bundle, and a run in a sandbox. Then a person decides: publish, request changes (with a note per field, the agent's findings in one click) or reject with a reason. Every listing carries its version (semver, always higher than the last, never reused) and its release notes (required, up to 2,000 characters); reviewers see both, and every earlier version keeps its own. Icons are square 512 px PNGs; screenshots are PNG or JPEG, up to six, 5 MB each; never SVG. Every word between Glyphh and the org lands in the listing's thread. Published listings are managed here too: feature, change category, unpublish, versions; and the categories and the featured row themselves. Desktop 1200 wide, phone 390 wide.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
@@ -187,14 +187,25 @@ button,input,textarea{font:inherit}
 </div>
 </section>
 
+<section aria-label="The version under review" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 700">Version under review</span><span style="height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line2); font-family: 'Red Hat Mono', monospace; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">{{f.dt.verNow}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.dt.verLine}}</span></div>
+<div style="display: grid; grid-template-columns: {{f.relCols}}; gap: 16px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 14px; font-weight: 700">Release notes</span><span style="font-size: 12px; color: var(--tx3)">{{f.dt.relCount}}</span></div>
+<div style="padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{f.dt.rel}}" as="rl"><div style="font-size: 14px; line-height: 1.55; color: var(--tx2)">{{rl.t}}</div></sc-for>
+</div>
+</div>
 <sc-if value="{{f.dt.hasDiff}}" hint-placeholder-val="{{ true }}">
-<section aria-label="What changed" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
-<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 700">{{f.dt.diffTitle}}</span><a href="#" style="font-size: 14px; font-weight: 600">See the full diff</a></div>
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 700">{{f.dt.diffTitle}}</span><a href="#" style="font-size: 13px; font-weight: 600">Full diff</a></div>
 <div style="border-radius: 12px; border: 1px solid var(--line); background: var(--bg); overflow: hidden">
-<sc-for list="{{f.dt.diff}}" as="df"><div style="display: flex; align-items: baseline; gap: 12px; padding: 10px 14px; border-top: {{df.top}}"><span style="width: 72px; flex: none; font-family: 'Red Hat Mono', monospace; font-size: 12px; font-weight: 600; color: {{df.c}}">{{df.sign}} {{df.t}}</span><span style="flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; color: var(--tx2)">{{df.what}}</span></div></sc-for>
+<sc-for list="{{f.dt.diff}}" as="df"><div style="display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; border-top: {{df.top}}"><span style="width: 68px; flex: none; font-family: 'Red Hat Mono', monospace; font-size: 12px; font-weight: 600; color: {{df.c}}">{{df.sign}} {{df.t}}</span><span style="flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--tx2)">{{df.what}}</span></div></sc-for>
+</div>
+</div>
+</sc-if>
 </div>
 </section>
-</sc-if>
 
 <section aria-label="Org approval" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px">
 <div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--s3); color: var(--tx); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{f.dt.note.ini}}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">{{f.dt.note.head}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.dt.note.when}}</span></span></div>
@@ -456,8 +467,9 @@ button,input,textarea{font:inherit}
 <sc-for list="{{f.vers}}" as="vr">
 <div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 0; border-top: {{vr.top}}; box-sizing: border-box; flex-wrap: wrap">
 <span style="width: 64px; flex: none; font-family: 'Red Hat Mono', monospace; font-size: 14px; font-weight: 600">{{vr.v}}</span>
-<span style="flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px">{{vr.what}}</span><span style="font-size: 12px; color: var(--tx3)">{{vr.meta}}</span></span>
+<span style="flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: var(--tx3)">{{vr.meta}}</span></span>
 <span style="flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: {{vr.bg}}; color: {{vr.tx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{vr.st}}</span>
+<div style="flex: 1 1 100%; display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid var(--line2)"><span style="font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tx3)">Release notes</span><span style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{vr.what}}</span></div>
 </div>
 </sc-for>
 </div>
@@ -492,7 +504,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":19200}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":20800}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -624,8 +636,9 @@ var DEAL = {
   about: 'Moves a deal to the right stage in Salesforce when the email thread says so, and posts the change in the deal’s Slack channel. You pick the channel; it never closes a deal on its own.',
   shots: shots(3, -1),
   asks: asks([['Slack', 'Read channels, post messages, delete messages', 'Needs a look', LG.Slack], ['Salesforce', 'Read and update opportunities', '', LG.Salesforce], ['A chat model', 'Writes the note for each stage change', '']]),
-  facts: [{ k: 'Category', v: 'Sales' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '42 files · 180 KB' }],
-  hasDiff: true, diffTitle: 'What changed since 2.0.3',
+  facts: [{ k: 'Category', v: 'Sales' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '42 files · 180 KB' }, { k: 'Icon', v: 'PNG · 512 × 512' }, { k: 'Screenshots', v: '3 of 6 · PNG, JPEG' }, { k: 'Largest file', v: '1.8 MB of 5 MB' }],
+  hasDiff: true, diffTitle: 'What changed since 2.0.3', verNow: '2.1.0', verLine: 'Update from 2.0.3 · sent Oct 10',
+  rel: ['Deal stages now moves the stage in Salesforce itself, instead of writing it to a Google Sheet.', 'It posts each change in the deal’s Slack channel, with who moved it and why.', 'New screenshot of the Slack post. Google Sheets is no longer needed.'].map(function (t) { return { t: t }; }), relCount: '231 of 2,000 characters',
   diff: [['+', 'Added', 'Permission: Slack · Delete messages'], ['+', 'Added', 'Permission: Salesforce · Update opportunities'], ['~', 'Changed', 'Description: 2 of 3 lines'], ['+', 'Added', 'Screenshot 3'], ['−', 'Removed', 'Dependency: Google Sheets']].map(function (d, i) {
     return { sign: d[0], t: d[1], what: d[2], c: d[0] === '+' ? 'var(--accent-tx)' : 'var(--tx3)', top: i === 0 ? 'none' : '1px solid var(--line)' }; }),
   note: { ini: 'SR', head: 'Approved by Sam Rivera · Org admin, Northwind', when: 'Oct 10, 4:12 pm', text: 'Our sales team has run 2.0 for a month. 2.1 moves stages in Salesforce instead of a sheet. Max and I tested it on our sandbox org.' }
@@ -636,8 +649,9 @@ var RF = {
   about: 'Finds receipts in Gmail, files them in Google Drive by month and adds a line to your expenses sheet.',
   shots: shots(3, 1),
   asks: asks([['Gmail', 'Read emails and attachments', '', LG.Gmail], ['Google Drive', 'Create files and folders', '', LG.Drive]]),
-  facts: [{ k: 'Category', v: 'Finance' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '18 files · 64 KB' }],
-  hasDiff: false, diffTitle: '', diff: [],
+  facts: [{ k: 'Category', v: 'Finance' }, { k: 'Price', v: 'Free' }, { k: 'Bundle', v: '18 files · 64 KB' }, { k: 'Icon', v: 'PNG · 512 × 512' }, { k: 'Screenshots', v: '3 of 6 · PNG, JPEG' }, { k: 'Largest file', v: '2.4 MB of 5 MB' }],
+  hasDiff: false, diffTitle: '', diff: [], verNow: '1.0.0', verLine: 'First version · sent Oct 10',
+  rel: [{ t: 'First release. Files receipts from Gmail in Google Drive by month, and adds a line to your expenses sheet.' }], relCount: '108 of 2,000 characters',
   note: { ini: 'PS', head: 'Approved by Priya Shah · Org admin, Globex Corporation', when: 'Oct 10, 9:30 am', text: 'Our finance team files every receipt with it. Happy for other orgs to have it.' }
 };
 function detail(base, o) {
@@ -661,7 +675,7 @@ function detail(base, o) {
   d.decideOp = running ? .4 : 1; d.decideOff = running ? 'true' : 'false';
   d.publishLabel = 'Publish ' + (base === RF ? '1.0.0' : (o.ver || '2.1.0'));
   d.msgs = o.thread ? THREAD : [];
-  if (o.verTag) d.verTag = o.verTag;
+  if (o.verTag) d.verTag = o.verTag; if (o.ver) { d.verNow = o.ver; d.verLine = 'Update from 2.0.3 · sent Oct 11'; d.rel = [{ t: 'Drops the Slack permission to delete messages; nothing used it.' }].concat(base.rel); d.relCount = '294 of 2,000 characters'; }
   if (o.byLine) d.byLine = o.byLine;
   return d;
 }
@@ -707,11 +721,11 @@ var MENU = [
   { item: true, t: 'Unpublish', d: 'Installed copies keep working', danger: true }
 ].map(function (m) { return { item: !!m.item, sep: !!m.sep, t: m.t || '', d: m.d || '', tx: m.danger ? 'var(--red-tx)' : 'var(--tx)', bg: 'transparent' }; });
 var VERS = [
-  ['2.4.0', 'Watches pricing pages as well', 'Published Oct 8 · 1,102 installs on it', 'Live', 'var(--chip-bg)', 'var(--chip-tx)'],
-  ['2.3.1', 'Fixes a missed change on one site', 'Published Sep 20 · 140 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
-  ['2.3.0', 'Leaves the note in Slack, not email', 'Rejected Sep 12 · asked to read a private channel', 'Rejected', 'var(--red-bg)', 'var(--red-tx)'],
-  ['2.2.0', 'You pick the sites', 'Published Aug 30 · 42 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
-  ['2.1.0', 'Remembers what it saw last time', 'Published Aug 2 · 0 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)']
+  ['2.4.0', 'Watches pricing pages as well as feature pages, and says which price changed and by how much.', 'Published Oct 8 · 1,102 installs on it', 'Live', 'var(--chip-bg)', 'var(--chip-tx)'],
+  ['2.3.1', 'Fixes a change it missed when a site loaded its prices late.', 'Published Sep 20 · 140 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
+  ['2.3.0', 'Leaves the morning note in Slack instead of email.', 'Rejected Sep 12 · asked to read a private channel', 'Rejected', 'var(--red-bg)', 'var(--red-tx)'],
+  ['2.2.0', 'You pick the sites to watch, up to six.', 'Published Aug 30 · 42 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)'],
+  ['2.1.0', 'Remembers what it saw last time, so the note only has what changed.', 'Published Aug 2 · 0 installs on it', 'Earlier', 'var(--s3)', 'var(--tx2)']
 ].map(function (v, i) { return { v: v[0], what: v[1], meta: v[2], st: v[3], bg: v[4], tx: v[5], top: i === 0 ? 'none' : '1px solid var(--line)' }; });
 
 // ---------- categories and featured ----------
@@ -734,15 +748,15 @@ var STATES = [
   { id: 'agentTab', title: 'Agent reviewing', sub: 'Listings the agent is still checking. Each shows how far it has got; Watch opens the live report. They move to Waiting on their own when the report is in.',
     v: 'queue', sec: 0, tab: 'agent', rows: Q_AGENT, pg: [1, 2, 2, 1, 1], whenHead: 'Agent', hd: 690, hp: 780 },
   { id: 'running', title: 'Agent review: running', sub: 'Marketplace Reviewer works through six checks in a sandbox. The cat has the thinking eye; the running check spins, the rest wait. Findings show as they come. The decision bar is off until the report is in.',
-    v: 'detail', base: DEAL, running: true, status: 'agent', checks: DEAL_RUN, bar: true, hd: 1500, hp: 3000 },
-  { id: 'done', title: 'Review: the report is in', sub: 'For a person at Glyphh. The listing as people will see it, with its screenshots and what it asks for; the agent’s report beside it (on a phone, first); for an update, what changed; and the org admin’s approval note. The decision bar stays at the bottom.',
-    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, hd: 1500, hp: 3010 },
+    v: 'detail', base: DEAL, running: true, status: 'agent', checks: DEAL_RUN, bar: true, hd: 1660, hp: 3500 },
+  { id: 'done', title: 'Review: the report is in', sub: 'For a person at Glyphh. The listing as people will see it, with its screenshots and what it asks for; the agent’s report beside it (on a phone, first); the version under review with its release notes (required, up to 2,000 characters) and, for an update, what changed beside them; and the org admin’s approval note. The decision bar stays at the bottom.',
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, hd: 1660, hp: 3500 },
   { id: 'publish', title: 'Publish', sub: 'Confirms where it goes and who it reaches. For an update: people who installed 2.0.3 are offered 2.1.0; nothing changes for them until they take it.',
-    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'publish', dlgTitle: 'Publish Deal stages 2.1.0?', dlgDesc: 'It goes on the marketplace now. The 1,284 people with 2.0.3 are offered the update; nothing changes for them until they take it.', hd: 1500, hp: 3010 },
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'publish', dlgTitle: 'Publish Deal stages 2.1.0?', dlgDesc: 'It goes on the marketplace now. The 1,284 people with 2.0.3 are offered the update; nothing changes for them until they take it.', hd: 1660, hp: 3500 },
   { id: 'changes', title: 'Request changes', sub: 'A note per field (tick the fields to change), and a message. One click adds the agent’s findings to the right fields, labelled as the agent’s. It goes back to the org; nothing is published.',
-    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'changes', dlgTitle: 'Request changes to Deal stages 2.1.0', dlgDesc: 'It goes back to Northwind with your notes. They send a new version when it’s ready.', hd: 1500, hp: 3010 },
+    v: 'detail', base: DEAL, checks: DEAL_CHECKS, sum: summary(5, 1, 0), bar: true, dlg: 'changes', dlgTitle: 'Request changes to Deal stages 2.1.0', dlgDesc: 'It goes back to Northwind with your notes. They send a new version when it’s ready.', hd: 1660, hp: 3500 },
   { id: 'reject', title: 'Reject, with a reason', sub: 'A listing with a failed check: a secret in the bundle. Rejecting needs a reason and a message; the dialog names the listing and what happens next.',
-    v: 'detail', base: RF, checks: RF_CHECKS, sum: summary(4, 1, 1), bar: true, dlg: 'reject', dlgTitle: 'Reject Receipt filer 1.0.0?', dlgDesc: 'Globex Corporation and the author are told why, in the thread and by email.', repFoot: 'Ran Oct 10, 9:41 am · took 1 min 48 s', hd: 1500, hp: 2460 },
+    v: 'detail', base: RF, checks: RF_CHECKS, sum: summary(4, 1, 1), bar: true, dlg: 'reject', dlgTitle: 'Reject Receipt filer 1.0.0?', dlgDesc: 'Globex Corporation and the author are told why, in the thread and by email.', repFoot: 'Ran Oct 10, 9:41 am · took 1 min 48 s', hd: 1500, hp: 2920 },
   { id: 'thread', title: 'The thread', sub: 'Every word between Glyphh and the org about this listing, oldest first. Each message says who wrote it: the agent or a person, and for whom (Glyphh, or the org’s admin or author). Paginated like any list.',
     v: 'detail', base: DEAL, checks: DEAL_211, thread: true, bar: true, ver: '2.1.1', verTag: '2.0.3 → 2.1.1', msgN: 5, decideNote: 'Report for 2.1.1: 6 of 6 passed.', hd: 1340, hp: 1940 },
   { id: 'listings', title: 'Listings', sub: 'Every published listing, with installs, rating if any, category, and the star for the featured row. Search and filters; paginated.',
@@ -751,8 +765,8 @@ var STATES = [
     v: 'listings', sec: 1, open: 3, menu: true, hd: 900, hp: 1060 },
   { id: 'unpublish', title: 'Unpublish', sub: 'Names the listing and what happens: it comes off the marketplace now, installed copies keep working, it can’t be added again. The reason goes to the org.',
     v: 'listings', sec: 1, open: 1, dlg: 'unpublish', dlgTitle: 'Unpublish Competitor watch?', dlgDesc: 'It comes off the marketplace and out of search now. Northwind is told why.', hd: 900, hp: 1060 },
-  { id: 'versions', title: 'Versions', sub: 'Every version sent, with what changed, when, and how many installs are on it. Rejected ones stay in the list. Paginated.',
-    v: 'listings', sec: 1, open: 1, dlg: 'versions', dlgTitle: 'Competitor watch · versions', dlgDesc: 'From Northwind. 9 versions sent; 2.4.0 is live.', hd: 900, hp: 1060 },
+  { id: 'versions', title: 'Versions', sub: 'Every version sent, newest first, each with its release notes as the author wrote them, when, and how many installs are on it. Versions are semver, always higher than the last, never reused; rejected ones stay in the list. Paginated.',
+    v: 'listings', sec: 1, open: 1, dlg: 'versions', dlgTitle: 'Competitor watch · versions', dlgDesc: 'From Northwind. 9 versions sent, each with its release notes, kept as sent; 2.4.0 is live. A version number is never reused.', hd: 1000, hp: 1200 },
   { id: 'cats', title: 'Categories and the featured row', sub: 'Add, rename and reorder categories (drag the handle, or the 44 px arrows); one is being renamed. The featured row’s order, left to right, with Remove. Nothing changes on the home until Save.',
     v: 'cats', sec: 2, hd: 880, hp: 1580 },
   { id: 'empty', title: 'Nothing waiting', sub: 'The last listing was just published. The reviewer’s cat with the done eye says the queue is clear.',
@@ -782,7 +796,7 @@ function frame(st, desk) {
     statusTabs: statusTabs(st.tab || 'waiting'), q: st.q || '', qBorder: st.q ? '#7C4DFF' : 'var(--line2)', kindLabel: st.kind || 'All', kindBorder: st.kind ? '#7C4DFF' : 'var(--line2)', filterFlex: desk ? 'none' : '1 1 100%',
     error: !!st.error, empty: !!st.empty, emptyCat: reviewer('done', 40), listCard: listCard, noRes: !!st.noRes, skel: skel, iconSz: desk ? '48px' : '40px',
     qrows: qrows(st.rows || []), whenHead: st.whenHead || 'Sent', pgShow: listCard && !st.noRes && !st.loading, pg: pager('Review queue pages', pgq[0], pgq[1], pgq[2], pgq[3], pgq[4], mobile),
-    dt: d, detCols: desk ? 'minmax(0, 1fr) 400px' : 'minmax(0, 1fr)', leftOrder: desk ? '0' : '1', repOrder: desk ? '1' : '0', shotCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', factCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+    relCols: desk ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', dt: d, detCols: desk ? 'minmax(0, 1fr) 400px' : 'minmax(0, 1fr)', leftOrder: desk ? '0' : '1', repOrder: desk ? '1' : '0', shotCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', factCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)',
     pgT: pager('Thread pages', 1, 5, 5, 1, 1, mobile),
     bar: !!st.bar, barPad: desk ? '16px 48px' : '16px 16px 28px', barDir: desk ? 'row' : 'column', barAlign: desk ? 'center' : 'stretch',
     lfilters: [{ k: 'Kind', v: 'All' }, { k: 'Category', v: 'All' }], cardPad: desk ? '16px' : '12px', rowGap: desk ? '14px' : '8px',

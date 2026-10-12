@@ -24,7 +24,7 @@ button,input,textarea{font:inherit}
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">app.glyphh.ai · Glyphh admin › Orgs and › Plans · super admins only · dark</div>
 <h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Org actions and plans</h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Only Glyphh's own staff (super admins, users of the parent org) see Glyphh admin in the top nav, with Orgs, Models, Marketplace and Plans under it. Orgs lists every org with its plan, seats, machines, credits, spend and status; opening one shows its overview, members, machines, powers, super powers and billing, and the actions only staff have: gift credits (a grant with a note, in the org's ledger), change or comp its plan, and disable it. Plans holds each plan family and its versions: a change is a new version, sold to new orgs, while every org keeps the version it is on, at its price, until it changes plan or is moved with notice. Numbers not yet decided stay in [BRACKETS]. Desktop 1200 × 1120, phone 390 × 1460.</p>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Only Glyphh's own staff (super admins, users of the parent org) see Glyphh admin in the top nav, with Orgs, Models, Marketplace and Plans under it. Orgs lists every org with its plan, seats, machines, credit balance, spend and status; opening one shows its overview, members, machines, powers, super powers and billing, and the actions only staff have: gift credit (dollars, with a note, in the org's ledger), change or comp its plan, and disable it. Plans holds each plan family and its versions: a change is a new version, sold to new orgs, while every org keeps the version it is on, at its price, until it changes plan or is moved with notice. It also holds the billing settings: what a connection call costs per started 30 seconds and the smallest and largest top-up, each change kept with who made it and from when. Credit is dollars. Desktop 1200 × 1120, phone 390 × 1460.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
@@ -64,6 +64,11 @@ button,input,textarea{font:inherit}
 <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
 <div style="display: flex; flex-direction: column; gap: 6px; max-width: 680px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">{{f.ph.title}}</h2><p style="margin: 0; font-size: 14px; line-height: 1.5; color: var(--tx3)">{{f.ph.sub}}</p></div>
 <span style="font-size: 14px; color: var(--tx2)">{{f.ph.count}}</span>
+</div>
+</sc-if>
+<sc-if value="{{f.hasPtabs}}" hint-placeholder-val="{{ false }}">
+<div role="tablist" aria-label="Plans" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none">
+<sc-for list="{{f.ptabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for>
 </div>
 </sc-if>
 
@@ -117,9 +122,9 @@ button,input,textarea{font:inherit}
 <div style="display: grid; grid-template-columns: {{f.ovCols}}; gap: 12px">
 <section aria-label="Spend this month" style="padding: 18px 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; min-width: 0">
 <div style="font-size: 13px; font-weight: 600; color: var(--tx2)">Spend this month</div>
-<div style="font-family: 'Red Hat Display', sans-serif; font-size: 26px; font-weight: 700">6,120 credits used</div>
-<div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">$280.00 plan · $45.00 top-ups · 2,310 connection calls</div>
-<div role="img" aria-label="Credits used by day this month" style="display: flex; align-items: flex-end; gap: {{f.barGap}}; height: 88px; border-bottom: 1px solid var(--line); margin-top: 6px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 26px; font-weight: 700">$122.40 of credit used</div>
+<div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">$290.00 billed (plan and 2 extra machines) · 6,120 connection calls at 2¢</div>
+<div role="img" aria-label="Credit used by day this month" style="display: flex; align-items: flex-end; gap: {{f.barGap}}; height: 88px; border-bottom: 1px solid var(--line); margin-top: 6px">
 <sc-for list="{{f.ov.days}}" as="d"><span title="{{d.t}}" style="flex: 1; min-width: 0; height: {{d.h}}; border-radius: 3px 3px 0 0; background: {{d.c}}; border: {{d.b}}; box-sizing: border-box"></span></sc-for>
 </div>
 <div style="display: flex; justify-content: space-between; font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--tx3)"><span>1 Oct</span><span>today</span><span>31 Oct</span></div>
@@ -152,7 +157,7 @@ button,input,textarea{font:inherit}
 </dl>
 </section>
 <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
-<div style="display: flex; flex-direction: column; gap: 4px; max-width: 620px"><div style="font-size: 18px; font-weight: 600">Ledger</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Every credit in and out, newest first. A gift shows the note it was given with, here and on the org's own Billing page.</div></div>
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 620px"><div style="font-size: 18px; font-weight: 600">Ledger</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Every dollar of credit in and out, newest first. Bought credit expires a year after purchase, a plan's credit at the period's end. A gift shows its note here and on the org's own Billing page.</div></div>
 <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Gift credits</button>
 </div>
 </sc-if>
@@ -259,6 +264,28 @@ button,input,textarea{font:inherit}
 </sc-if>
 </sc-if>
 
+<sc-if value="{{f.hasSet}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 640px"><div style="font-size: 18px; font-weight: 600">Billing settings</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">What every org pays for a connection call, and how much it can add at a time. A change applies from its date; calls already made and credit already bought are never repriced.</div></div>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; width: {{f.setBtnW}}">Change billing settings</button>
+</div>
+<sc-if value="{{f.setToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5 9-10"></path></svg><span style="flex: 1; font-size: 15px">{{f.setToast}}</span></div>
+</sc-if>
+<div style="display: grid; grid-template-columns: {{f.setCols}}; gap: 12px; align-items: start">
+<sc-for list="{{f.set}}" as="sg" hint-placeholder-count="3">
+<section aria-label="{{sg.label}}" style="padding: 18px 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="font-size: 13px; font-weight: 600; color: var(--tx2)">{{sg.label}}</div>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">{{sg.value}}</div>
+<div style="font-size: 13px; color: var(--tx3)">{{sg.since}}</div>
+<sc-if value="{{sg.pending}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ion)"><span style="width: 7px; height: 7px; flex: none; border-radius: 50%; background: #6FD8FF"></span>{{sg.pending}}</div></sc-if>
+<div style="margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">History</div>
+<sc-for list="{{sg.hist}}" as="hr"><div style="display: flex; align-items: baseline; gap: 10px; font-size: 13px; flex-wrap: wrap"><span style="width: 84px; flex: none; font-family: 'Red Hat Mono', monospace; color: {{hr.tx}}">{{hr.v}}</span><span style="flex: 1 1 120px; color: var(--tx2)">{{hr.when}}</span><span style="color: var(--tx3)">{{hr.by}}</span></div></sc-for>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
 <sc-if value="{{f.hasVers}}" hint-placeholder-val="{{ false }}">
 <section aria-label="Pro versions" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px 8px; flex: none">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0">
@@ -294,7 +321,7 @@ button,input,textarea{font:inherit}
 <div style="display: flex; flex-direction: column; gap: 6px">
 <label for="amt-{{f.key}}" style="font-size: 14px; font-weight: 600">Amount (USD)</label>
 <input id="amt-{{f.key}}" type="number" min="5" max="10000" step="5" value="100" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%">
-<div style="font-size: 13px; color: var(--tx3)">$5.00 to $10,000.00 · that's [CREDITS] credits</div>
+<div style="font-size: 13px; color: var(--tx3)">$5.00 to $10,000.00 of credit, added as it is</div>
 </div>
 <div style="display: flex; flex-direction: column; gap: 6px">
 <label for="why-{{f.key}}" style="font-size: 14px; font-weight: 600">Why (required)</label>
@@ -303,7 +330,7 @@ button,input,textarea{font:inherit}
 </div>
 <div style="padding: 12px 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">In Northwind's ledger</div>
-<div style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Gift from Glyphh · {{f.g.noteShow}}</span><span style="font-family: 'Red Hat Mono', monospace; white-space: nowrap">+[CREDITS]</span></div>
+<div style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Gift from Glyphh · {{f.g.noteShow}}</span><span style="font-family: 'Red Hat Mono', monospace; white-space: nowrap">+$100.00</span></div>
 </div>
 <div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
 <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
@@ -314,9 +341,9 @@ button,input,textarea{font:inherit}
 <sc-if value="{{f.d.giftDone}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; align-items: center; gap: 14px">
 <span style="width: 48px; height: 48px; flex: none; border-radius: 50%; border: 2px solid #7C4DFF; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">It's in their ledger now, behind this dialog, and on their own Billing page. Their balance is 18,240 + [CREDITS] credits.</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">It's in their ledger now, behind this dialog, and on their own Billing page. Their credit balance is now $132.60.</div>
 </div>
-<div style="padding: 12px 14px; border-radius: 12px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4); display: flex; justify-content: space-between; gap: 10px; font-size: 14px"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Gift from Glyphh · Launch week thank-you</span><span style="font-family: 'Red Hat Mono', monospace; white-space: nowrap">+[CREDITS]</span></div>
+<div style="padding: 12px 14px; border-radius: 12px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4); display: flex; justify-content: space-between; gap: 10px; font-size: 14px"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Gift from Glyphh · Launch week thank-you</span><span style="font-family: 'Red Hat Mono', monospace; white-space: nowrap">+$100.00</span></div>
 <div style="display: flex; justify-content: flex-end"><button type="button" style="height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; width: {{f.doneW}}">Done</button></div>
 </sc-if>
 
@@ -402,6 +429,24 @@ button,input,textarea{font:inherit}
 </div>
 </sc-if>
 
+<sc-if value="{{f.d.settings}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: {{f.s.cols}}; gap: 14px">
+<sc-for list="{{f.s.fields}}" as="sf"><div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><label for="{{sf.id}}" style="font-size: 14px; font-weight: 600">{{sf.k}}</label><input id="{{sf.id}}" value="{{sf.v}}" aria-invalid="{{sf.bad}}" style="height: 48px; border-radius: 12px; border: {{sf.border}}; box-shadow: {{sf.ring}}; background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%"><div role="{{sf.role}}" style="font-size: 12px; line-height: 1.4; color: {{sf.hintTx}}">{{sf.hint}}</div></div></sc-for>
+</div>
+<sc-if value="{{f.s.prevOn}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line)">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">What changes</div>
+<dl style="margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; font-size: 14px">
+<sc-for list="{{f.s.prev}}" as="r"><dt style="color: {{r.kTx}}; font-weight: {{r.fw}}">{{r.k}}</dt><dd style="margin: 0; text-align: right; font-weight: {{r.fw}}; font-family: {{r.ff}}">{{r.v}}</dd></sc-for>
+</dl>
+</div>
+</sc-if>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" disabled="{{f.s.off}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: {{f.s.bg}}; color: {{f.s.tx}}; font-size: 15px; font-weight: 600">{{f.s.btn}}</button>
+</div>
+</sc-if>
+
 <sc-if value="{{f.d.move}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 8px">
 <div style="font-size: 14px; font-weight: 600">Move orgs on</div>
@@ -410,16 +455,20 @@ button,input,textarea{font:inherit}
 <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{mv.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{mv.line}}</span></span>
 </button></sc-for>
 </div>
-<div style="display: flex; flex-direction: column; gap: 6px"><label for="mo-{{f.key}}" style="font-size: 14px; font-weight: 600">Move on</label><input id="mo-{{f.key}}" type="text" value="1 Dec 2026" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%"><div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">Each org's admins are told today, on their Billing page. The least notice allowed is [NOTICE].</div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="mo-{{f.key}}" style="font-size: 14px; font-weight: 600">Move on</label><input id="mo-{{f.key}}" type="text" value="12 Nov 2026" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%"><div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">At least 30 days from today: 11 Nov 2026 is the earliest. We'll email their org admins today and show a banner on their Billing page.</div></div>
 <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line)">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">What changes for them</div>
 <dl style="margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; font-size: 14px">
 <sc-for list="{{f.m.prev}}" as="r"><dt style="color: {{r.kTx}}; font-weight: {{r.fw}}">{{r.k}}</dt><dd style="margin: 0; text-align: right; font-weight: {{r.fw}}; font-family: {{r.ff}}">{{r.v}}</dd></sc-for>
 </dl>
 </div>
+<div style="padding: 12px 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line2); display: flex; flex-direction: column; gap: 4px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">Their email and Billing banner</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">On 12 Nov 2026 your plan moves from Pro v2 to Pro v3: $150 per seat a month, 50 machines and $50 of credit a seat. Nothing else changes. Questions? Reply to this email.</div>
+</div>
 <div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
 <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
-<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Move 9 orgs on 1 Dec 2026</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Move 9 orgs on 12 Nov 2026</button>
 </div>
 </sc-if>
 </div>
@@ -441,7 +490,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":11600}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":15000}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -541,28 +590,28 @@ function chips(list, on) { return list.map(function (l) { var s = l === on; retu
 
 /* ---------- Orgs ---------- */
 var ORGS = [
-  ['Northwind', 'sam@northwind.com', 'Basic v2', '7 / 25', '12', 'of [N]', '18,240', '$280.00', 'active', '3 Mar 2026'],
-  ['Acme', 'ops@acme.com', 'Pro v3', '64 / 100', '41', 'of [N] + 10', '212,900', '$9,600.00', 'active', '18 Jan 2026'],
-  ['Globex Corporation', 'it-admin@globex.com', 'Enterprise v1', '412', '138', 'no limit', '1,204,500', '[ARRANGED]', 'active', '2 Dec 2025'],
-  ['Initech', 'bill@initech.com', 'Solo v1', '1 / 1', '2', 'of [N]', '1,320', '$20.00', 'past_due', '9 Aug 2026'],
-  ['Umbrella Health', 'admin@umbrella.health', 'Pro v2', '23 / 100', '9', 'of [N]', '96,400', '$0.00', 'comped', '21 Feb 2026'],
-  ['Mei Tanaka', 'Personal · mei@tanaka.dev', 'Free v1', '1 / 1', '1', 'of 2', '410', '$0.00', 'active', '10 Oct 2026'],
-  ['Oluwaseun Adeyemi-Whitfield', 'Personal · seun@adeyemi-whitfield.co.uk', 'Free v1', '1 / 1', '2', 'of 2', '0', '$0.00', 'active', '8 Oct 2026'],
-  ['Kai Müller', 'Personal · kai@mueller.io', 'Solo v2', '1 / 1', '1', 'of [N]', '2,050', '$20.00', 'past_due', '30 Sep 2026'],
-  ['Tomás Ruiz', 'Personal · tomas@ruiz.mx', 'Free v1', '1 / 1', '0', 'of 2', '0', '$0.00', 'disabled', '27 Sep 2026'],
+  ['Northwind', 'sam@northwind.com', 'Basic v2', '7 / 25', '12', 'of 10 + 2', '$32.60', '$290.00', 'active', '3 Mar 2026'],
+  ['Acme', 'ops@acme.com', 'Pro v3', '64 / 100', '41', 'of 50', '$1,842.10', '$9,600.00', 'active', '18 Jan 2026'],
+  ['Globex Corporation', 'it-admin@globex.com', 'Enterprise v1', '412', '138', 'no limit', '$12,045.00', 'Arranged', 'active', '2 Dec 2025'],
+  ['Initech', 'bill@initech.com', 'Solo v1', '1 / 1', '2', 'of 3', '$3.20', '$20.00', 'past_due', '9 Aug 2026'],
+  ['Umbrella Health', 'admin@umbrella.health', 'Pro v2', '23 / 100', '9', 'of 40', '$964.00', '$0.00', 'comped', '21 Feb 2026'],
+  ['Mei Tanaka', 'Personal · mei@tanaka.dev', 'Free v1', '1 / 1', '1', 'of 2', '$0.41', '$0.00', 'active', '10 Oct 2026'],
+  ['Oluwaseun Adeyemi-Whitfield', 'Personal · seun@adeyemi-whitfield.co.uk', 'Free v1', '1 / 1', '2', 'of 2', '$0.00', '$0.00', 'active', '8 Oct 2026'],
+  ['Kai Müller', 'Personal · kai@mueller.io', 'Solo v2', '1 / 1', '1', 'of 3', '$6.85', '$20.00', 'past_due', '30 Sep 2026'],
+  ['Tomás Ruiz', 'Personal · tomas@ruiz.mx', 'Free v1', '1 / 1', '0', 'of 2', '$0.00', '$0.00', 'disabled', '27 Sep 2026'],
   ['Glyphh', 'Parent org · staff', 'Enterprise v1', '9', '14', 'no limit', '—', '$0.00', 'active', '1 Jan 2025']
 ];
 function orgTable(rows) {
   return {
     label: 'Orgs',
     cols: 'minmax(0,2.4fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,.8fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.9fr)',
-    head: head(['Org', 'Plan', 'Seats', 'Machines', '>Credits left', '>Spend this month', 'Status', 'Created']),
+    head: head(['Org', 'Plan', 'Seats', 'Machines', '>Credit balance', '>Spend this month', 'Status', 'Created']),
     rows: rows.map(function (o) {
       return { bg: 'transparent', cells: [
         C({ v: avOrg(o[0].charAt(0)), t: o[0], sub: o[1], fw: '600' }), C({ t: o[2] }), C({ t: o[3], ff: MONO }), C({ t: o[4], sub: o[5], ff: MONO }),
         C({ t: o[6], ff: MONO, jc: 'flex-end' }), C({ t: o[7], ff: MONO, jc: 'flex-end' }), C({ hasT: false, chip: CH[o[8]] }), C({ t: o[9], tx: 'var(--tx2)' })] };
     }),
-    prows: rows.map(function (o, i) { var c = CH[o[8]]; return PR({ v: avOrg(o[0].charAt(0)), t: o[0], sub: o[2] + ' · ' + o[3] + ' seats · ' + o[4] + ' machines', line: c.t + ' · ' + o[6] + ' credits left', lineTx: c.tx, dot: c.dot }, i); })
+    prows: rows.map(function (o, i) { var c = CH[o[8]]; return PR({ v: avOrg(o[0].charAt(0)), t: o[0], sub: o[2] + ' · ' + o[3] + ' seats · ' + o[4] + ' machines', line: c.t + ' · ' + o[6] + ' credit', lineTx: c.tx, dot: c.dot }, i); })
   };
 }
 
@@ -634,42 +683,42 @@ function spTable() {
       return PR({ v: vCat(s[0], s[1], s[2], true, s[7] !== 'live'), t: s[2], sub: s[4] + ' · ' + s[5], line: s[8] ? c.t + ' · ' + s[8] : c.t + ' · ' + s[6] + ' powers', lineTx: red ? 'var(--red-tx)' : c.tx, dot: red ? '#FF4D4D' : c.dot }, i); }) };
 }
 var LEDGER = [
-  ['11 Oct', 'Usage', '412 connection calls · 6 members', 'members', '', '−612'],
-  ['10 Oct', 'Usage', '388 connection calls · 5 members', 'members', '', '−540'],
-  ['9 Oct', 'Auto top-up', 'Visa •••• 4242, below $10.00', 'Stripe', '$45.00', '+[CREDITS]'],
-  ['9 Oct', 'Usage', '501 connection calls · 7 members', 'members', '', '−701'],
-  ['2 Oct', 'Gift from Glyphh', 'Sorry for the relay outage on 1 Oct', 'You', '$20.00', '+[CREDITS]'],
-  ['1 Oct', 'Allowance', 'Basic, October · ends 31 Oct', 'Plan', '', '+[CREDITS]'],
-  ['24 Sep', 'Top-up', 'Added by Sam Rivera', 'Sam Rivera', '$45.00', '+[CREDITS]']
+  ['11 Oct', 'Usage', '612 connection calls · 6 members', 'members', '', '−$12.24'],
+  ['10 Oct', 'Usage', '540 connection calls · 5 members', 'members', '', '−$10.80'],
+  ['9 Oct', 'Auto top-up', 'Visa •••• 4242 · fell below $5.00, reloaded to $25.00', 'Stripe', '9 Oct 2027', '+$21.30'],
+  ['9 Oct', 'Usage', '701 connection calls · 7 members', 'members', '', '−$14.02'],
+  ['2 Oct', 'Gift from Glyphh', 'Sorry for the relay outage on 1 Oct', 'You', '', '+$20.00'],
+  ['1 Oct', 'Plan credit', 'Basic v2, October · 7 seats × $10.00', 'Plan', '31 Oct 2026', '+$70.00'],
+  ['24 Sep', 'Top-up', 'Added by Sam Rivera', 'Sam Rivera', '24 Sep 2027', '+$45.00']
 ];
 function ledgerTable(withGift) {
   var L = LEDGER.slice();
-  if (withGift) L.unshift(['11 Oct', 'Gift from Glyphh', 'Launch week thank-you', 'You', '$100.00', '+[CREDITS]', true]);
-  else L.push(['24 Sep', 'Usage', '455 connection calls · 7 members', 'members', '', '−633']);
-  return { label: 'Ledger of Northwind', cols: 'minmax(0,.7fr) minmax(0,2.6fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr)',
-    head: head(['Date', 'Entry', 'By', '>Amount', '>Credits']),
-    rows: L.map(function (e) { var gift = e[1] === 'Gift from Glyphh'; return { bg: e[6] ? 'var(--chip-bg)' : 'transparent', cells: [C({ t: e[0], tx: 'var(--tx2)' }), C({ t: e[1], sub: e[2], fw: '600', subTx: gift ? 'var(--tx2)' : 'var(--tx3)' }), C({ t: e[3], tx: 'var(--tx2)' }), C({ t: e[4] || '—', ff: MONO, jc: 'flex-end', tx: e[4] ? 'var(--tx)' : 'var(--tx3)' }), C({ t: e[5], ff: MONO, jc: 'flex-end', fw: '600' })] }; }),
-    prows: L.map(function (e, i) { return PR({ t: e[1], sub: e[2], line: e[0] + ' · ' + e[3] + ' · ' + e[5] + ' credits', lineTx: 'var(--tx2)', dot: '', chev: false, bg: e[6] ? 'var(--chip-bg)' : 'transparent' }, i); }) };
+  if (withGift) L.unshift(['11 Oct', 'Gift from Glyphh', 'Launch week thank-you', 'You', '', '+$100.00', true]);
+  else L.push(['24 Sep', 'Usage', '633 connection calls · 7 members', 'members', '', '−$12.66']);
+  return { label: 'Ledger of Northwind', cols: 'minmax(0,.7fr) minmax(0,2.8fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.8fr)',
+    head: head(['Date', 'Entry', 'By', 'Expires', '>Amount']),
+    rows: L.map(function (e) { var gift = e[1] === 'Gift from Glyphh'; return { bg: e[6] ? 'var(--chip-bg)' : 'transparent', cells: [C({ t: e[0], tx: 'var(--tx2)' }), C({ t: e[1], sub: e[2], fw: '600', subTx: gift ? 'var(--tx2)' : 'var(--tx3)' }), C({ t: e[3], tx: 'var(--tx2)' }), C({ t: e[4] || '—', tx: e[4] ? 'var(--tx2)' : 'var(--tx3)' }), C({ t: e[5], ff: MONO, jc: 'flex-end', fw: '600' })] }; }),
+    prows: L.map(function (e, i) { return PR({ t: e[1] + '  ' + e[5], sub: e[2], line: e[0] + ' · ' + e[3] + (e[4] ? ' · expires ' + e[4] : ''), lineTx: 'var(--tx2)', dot: '', chev: false, bg: e[6] ? 'var(--chip-bg)' : 'transparent' }, i); }) };
 }
 
 /* ---------- Plans ---------- */
 var PLANS = [
-  ['Free', 'v1', '$0', '1', '2', 'none', '[CREDITS]', '959', '—', 'since 1 Jan 2025'],
-  ['Solo', 'v2', '$20', '1', '[N]', '[$ N]', '[CREDITS]', '64', '18 on v1', 'since 1 Jun 2026'],
-  ['Basic', 'v2', '$40', '25', '[N]', '[$ N]', '[CREDITS]', '76', '12 on v1', 'since 1 Jun 2026'],
-  ['Pro', 'v3', '$150', '100', '[N]', '[$ N]', '[CREDITS]', '142', '9 on v1–v2', 'since 1 Sep 2026'],
+  ['Free', 'v1', '$0', '1', '2', 'none', '$1', '959', '—', 'since 1 Jan 2025'],
+  ['Solo', 'v2', '$20', '1', '3', '$5', '$10', '64', '18 on v1', 'since 1 Jun 2026'],
+  ['Basic', 'v2', '$40', '25', '10', '$5', '$10 a seat', '76', '12 on v1', 'since 1 Jun 2026'],
+  ['Pro', 'v3', '$150', '100', '50', '$5', '$50 a seat', '142', '9 on v1–v2', 'since 1 Sep 2026'],
   ['Enterprise', 'v1', 'Arranged', 'No limit', 'No limit', 'n/a', 'Arranged', '4', '—', 'arranged with us']
 ];
 function planTable(open) {
   return { label: 'Plans', cols: 'minmax(0,1.3fr) minmax(0,.7fr) minmax(0,.8fr) minmax(0,1.1fr) minmax(0,.9fr) minmax(0,.6fr) minmax(0,.9fr) minmax(0,.8fr) 132px',
-    head: head(['Plan on sale', 'Per seat', 'Most seats', 'Machines', 'Credits a month', '>Orgs', 'On older versions', 'Status', '']),
+    head: head(['Plan on sale', 'Per seat', 'Most seats', 'Machines', 'Credit a month', '>Orgs', 'On older versions', 'Status', '']),
     rows: PLANS.map(function (p) { var x = p[5] === 'none' || p[5] === 'n/a'; return { bg: open && p[0] === 'Pro' ? 'var(--s2)' : 'transparent', cells: [C({ t: p[0] + ' ' + p[1], sub: 'On sale ' + p[9], fw: '600' }), C({ t: p[2], ff: MONO }), C({ t: p[3], ff: MONO }), C({ t: p[4], sub: x ? '' : '+ ' + p[5] + ' each extra', ff: MONO }), C({ t: p[6], ff: MONO }), C({ t: p[7], ff: MONO, jc: 'flex-end' }), C({ t: p[8], tx: p[8] === '—' ? 'var(--tx3)' : 'var(--tx2)' }), C({ hasT: false, chip: CH.sold }), C({ hasT: false, btn: 'New version', jc: 'flex-end' })] }; }),
     prows: PLANS.map(function (p, i) { return PR({ t: p[0] + ' ' + p[1], sub: p[2] + (p[2] === 'Arranged' ? '' : ' per seat') + ' · ' + p[3] + ' seats · ' + p[7] + ' orgs', line: 'On sale' + (p[8] === '—' ? '' : ' · ' + p[8]), lineTx: 'var(--chip-tx)', dot: '#7C4DFF', chev: false, btn: 'New version', bg: open && p[0] === 'Pro' ? 'var(--s2)' : 'transparent' }, i); }) };
 }
 var PRO_VERS = [
-  ['v3', '$150 per seat · 100 seats · [N] machines · [CREDITS] credits', 'On sale since 1 Sep 2026', 'sold', '142 orgs'],
-  ['v2', '[$ PRICE] per seat · 100 seats · [N] machines · [CREDITS] credits', 'Sold 1 Mar – 31 Aug 2026', 'unsold', '7 orgs'],
-  ['v1', '[$ PRICE] per seat · 100 seats · [N] machines · [CREDITS] credits', 'Sold 1 Jan 2025 – 28 Feb 2026', 'unsold', '2 orgs']
+  ['v3', '$150 per seat · 100 seats · 50 machines · $50 of credit a seat', 'On sale since 1 Sep 2026', 'sold', '142 orgs'],
+  ['v2', '$140 per seat · 100 seats · 40 machines · $40 of credit a seat', 'Sold 1 Mar – 31 Aug 2026', 'unsold', '7 orgs'],
+  ['v1', '$120 per seat · 100 seats · 25 machines · $30 of credit a seat', 'Sold 1 Jan 2025 – 28 Feb 2026', 'unsold', '2 orgs']
 ];
 function versions() { return PRO_VERS.map(function (v) { return { v: v[0], terms: v[1], when: v[2], chip: CH[v[3]], orgs: v[4] }; }); }
 
@@ -685,25 +734,25 @@ function overview(off) {
     stats: [
       { label: 'Plan', big: 'Basic v2', sub: off ? '$40 per seat a month · billing paused' : '$40 per seat a month · renews 1 Nov 2026', bar: false, pct: '0' },
       { label: 'Seats', big: '7 of 25', sub: '1 open invite holds one more', bar: true, pct: '32%' },
-      { label: 'Machines', big: '12', sub: off ? '[N] included · all disconnected' : '[N] included · 9 online', bar: false, pct: '0' },
-      { label: 'Credits left', big: '18,240', sub: '[CREDITS] more on 1 Nov', bar: false, pct: '0' }
+      { label: 'Machines', big: '12', sub: off ? '10 included + 2 extra · all disconnected' : '10 included + 2 extra · 9 online', bar: false, pct: '0' },
+      { label: 'Credit balance', big: '$32.60', sub: '$70.00 more on 1 Nov', bar: false, pct: '0' }
     ],
     days: days(),
     admins: [{ l: 'S', n: 'Sam Rivera', e: 'sam@northwind.com' }, { l: 'B', n: 'Bo Li', e: 'bo@northwind.com' }]
   };
 }
-var SUB = [['Plan', 'Basic v2 · Active'], ['Seats billed', '7 (25 at most)'], ['Price', '$40.00 per seat a month'], ['Extra machines', 'None bought'], ['This period', '1 – 31 Oct 2026'], ['Next invoice', '$293.33 on 1 Nov 2026'], ['Card on file', 'Visa •••• 4242 (08/2028)'], ['Auto top-up', '$45.00 when below $10.00'], ['Stripe customer', 'cus_Q8fZ2mN4kT', 1]];
+var SUB = [['Plan', 'Basic v2 · Active'], ['Seats billed', '7 (25 at most)'], ['Price', '$40.00 per seat a month'], ['Extra machines', '2 × $5.00 a month'], ['Credit included', '$70.00 a month ($10.00 a seat)'], ['This period', '1 – 31 Oct 2026'], ['Next invoice', '$303.33 on 1 Nov 2026'], ['Card on file', 'Visa •••• 4242 (08/2028)'], ['Auto top-up', 'Below $5.00, reload to $25.00 · no monthly cap'], ['Stripe customer', 'cus_Q8fZ2mN4kT', 1]];
 
 /* ---------- dialogs ---------- */
-var PLAN_OPTS = [['Free v1', '$0 · 1 seat · 2 machines'], ['Solo v2', '$20 per seat · 1 seat · [N] machines'], ['Basic v2', '$40 per seat · 25 seats · [N] machines'], ['Pro v3', '$150 per seat · 100 seats · [N] machines'], ['Enterprise', 'Arranged · no limits']];
+var PLAN_OPTS = [['Free v1', '$0 · 1 seat · 2 machines · $1 of credit'], ['Solo v2', '$20 · 1 seat · 3 machines · $10 of credit'], ['Basic v2', '$40 per seat · 25 seats · 10 machines · $10 a seat'], ['Pro v3', '$150 per seat · 100 seats · 50 machines · $50 a seat'], ['Enterprise', 'Arranged · no limits']];
 function planDlg(comp) {
   var r = function (k, v, strong, mono) { return { k: k, v: v, fw: strong ? '600' : '400', kTx: strong ? 'var(--tx)' : 'var(--tx3)', ff: mono ? MONO : BODY }; };
   return {
     comp: comp, compStr: comp ? 'true' : 'false', swBg: comp ? '#7C4DFF' : 'var(--line2)', swKnob: comp ? '24px' : '4px',
     opts: PLAN_OPTS.map(function (o) { var on = o[0] === 'Pro v3'; return { name: o[0], line: o[1], cur: o[0] === 'Basic v2', on: on ? 'true' : 'false', border: on ? '2px solid #7C4DFF' : '1px solid var(--line2)', bg: on ? 'var(--chip-bg)' : 'transparent', ring: on ? '#7C4DFF' : 'var(--line2)', dot: on ? '#7C4DFF' : 'transparent' }; }),
     effHint: comp ? 'Comped from today. The card on file stays, and nothing is charged to it while the comp lasts.' : 'Upgrades apply now and are prorated on the next invoice. Downgrades wait for the period’s end, so only 1 Nov is offered for them.',
-    prev: comp ? [r('Plan', 'Basic v2 → Pro v3, comped'), r('Seats', '7 · up to 100'), r('Credits each month', '[CREDITS]'), r('Invoices', 'None while comped', true), r('Card on file', 'Kept, not charged')]
-      : [r('Plan', 'Basic v2 → Pro v3'), r('Seats', '7 · up to 100 (was 25)'), r('Machines included', '[N] → [N]'), r('Credits each month', '[CREDITS] → [CREDITS]'), r('Next invoice, 1 Nov 2026', '$1,582.26', true, true), r('of which the rest of October', '$532.26', false, true)],
+    prev: comp ? [r('Plan', 'Basic v2 → Pro v3, comped'), r('Seats', '7 · up to 100'), r('Credit each month', '$350.00 (7 × $50.00)'), r('Invoices', 'None while comped', true), r('Card on file', 'Kept, not charged')]
+      : [r('Plan', 'Basic v2 → Pro v3'), r('Seats', '7 · up to 100 (was 25)'), r('Machines included', '10 → 50 (no extras needed)'), r('Credit each month', '$70.00 → $350.00'), r('Next invoice, 1 Nov 2026', '$1,582.26', true, true), r('of which the rest of October', '$532.26', false, true)],
     btn: comp ? 'Comp Pro v3 for Northwind' : 'Change to Pro v3'
   };
 }
@@ -730,7 +779,7 @@ function disableDlg(typed) {
   };
 }
 function editDlg(phone) {
-  var F = [['Price per seat (USD a month)', '150.00', ''], ['Most seats', '100', 'Empty means no limit'], ['Machines included', '[N]', 'Empty means no limit'], ['Extra machine (USD a month)', '[N]', 'Empty means extras aren’t sold'], ['Credits each month', '[CREDITS]', ''], ['Stripe prices', 'Made when you save', 'New prices for v4; v3 keeps its own', 1]];
+  var F = [['Price per seat (USD a month)', '150.00', ''], ['Most seats', '100', 'Empty means no limit'], ['Machines included', '50', 'Empty means no limit'], ['Extra machine (USD a month)', '5.00', 'Empty means extras aren’t sold'], ['Credit each month (USD a seat)', '50.00', ''], ['Stripe prices', 'Made when you save', 'New prices for v4; v3 keeps its own', 1]];
   return {
     from: 'Pro v3', to: 'Pro v4', stay: '142 orgs stay on v3 at its price', cols: phone ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
     fields: F.map(function (x, i) { return { id: 'pf' + i + (phone ? 'm' : 'd'), k: x[0], v: x[1], hint: x[2], ro: !!x[3], bg: x[3] ? 'var(--s2)' : 'var(--bg)', tx: x[3] ? 'var(--tx2)' : 'var(--tx)', ff: BODY }; })
@@ -739,27 +788,48 @@ function editDlg(phone) {
 function moveDlg() {
   var r = function (k, v, strong, mono) { return { k: k, v: v, fw: strong ? '600' : '400', kTx: strong ? 'var(--tx)' : 'var(--tx3)', ff: mono ? MONO : BODY }; };
   return {
-    vers: [{ name: 'Pro v2', line: '[$ PRICE] per seat · 7 orgs' }, { name: 'Pro v1', line: '[$ PRICE] per seat · 2 orgs' }],
-    prev: [r('Orgs moving', '9', true), r('Price per seat', '[$ PRICE] → $150.00', false, true), r('Most seats', '100 → 100'), r('Machines included', '[N] → [N]'), r('Credits each month', '[CREDITS] → [CREDITS]'), r('From', '1 Dec 2026, at their next renewal', true)]
+    vers: [{ name: 'Pro v2', line: '$140 per seat · 40 machines · 7 orgs' }, { name: 'Pro v1', line: '$120 per seat · 25 machines · 2 orgs' }],
+    prev: [r('Orgs moving', '9', true), r('Price per seat', '$120–$140 → $150.00', false, true), r('Most seats', '100 → 100'), r('Machines included', '25–40 → 50'), r('Credit each month', '$30–$40 → $50.00 a seat'), r('On', '12 Nov 2026, 31 days from today', true)]
+  };
+}
+
+function settingsPanel(saved) {
+  var H = function (v, when, by, now) { return { v: v, when: when, by: by, tx: now ? 'var(--tx)' : 'var(--tx3)' }; };
+  return [
+    { label: 'Connection call, per started 30 seconds', value: '2¢', since: 'Since 12 Oct 2026 · set by you', pending: '', hist: [H('2¢', 'from 12 Oct 2026', 'You', 1), H('1.2¢', '1 Jan 2025 – 11 Oct 2026', 'Rae Okafor')] },
+    { label: 'Smallest top-up', value: '$5.00', since: 'Since 1 Jan 2025 · set by Rae Okafor', pending: '', hist: [H('$5.00', 'from 1 Jan 2025', 'Rae Okafor', 1)] },
+    { label: 'Largest top-up', value: '$10,000.00', since: 'Since 1 Jan 2025 · set by Rae Okafor', pending: saved ? '$25,000.00 from 1 Nov 2026, set by you' : '',
+      hist: saved ? [H('$25,000.00', 'from 1 Nov 2026 · scheduled', 'You'), H('$10,000.00', 'from 1 Jan 2025', 'Rae Okafor', 1)] : [H('$10,000.00', 'from 1 Jan 2025', 'Rae Okafor', 1)] }
+  ];
+}
+function settingsDlg(bad, phone) {
+  var r = function (k, v, strong, mono) { return { k: k, v: v, fw: strong ? '600' : '400', kTx: strong ? 'var(--tx)' : 'var(--tx3)', ff: mono ? MONO : BODY }; };
+  var fd = function (i, k, v, hint, err) { return { id: 'bs' + i + (bad ? 'b' : 'e') + (phone ? 'm' : 'd'), k: k, v: v, hint: err || hint, bad: err ? 'true' : 'false', role: err ? 'alert' : 'note', hintTx: err ? 'var(--red-tx)' : 'var(--tx3)', border: err ? '1px solid #FF4D4D' : '1px solid var(--line2)', ring: err ? '0 0 0 4px rgba(255,77,77,.18)' : 'none' }; };
+  return {
+    cols: phone ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', prevOn: !bad, off: bad, bg: bad ? 'var(--s3)' : '#7C4DFF', tx: bad ? 'var(--tx3)' : '#FFFFFF', btn: 'Save from 1 Nov 2026',
+    fields: bad ? [fd(0, 'Connection call (¢ per started 30 s)', '0', '', 'A connection call must cost more than 0¢.'), fd(1, 'Takes effect on', '1 Nov 2026', 'Today or later. Until then, the current values apply.'),
+      fd(2, 'Smallest top-up (USD)', '500.00', '', 'Must be less than the largest top-up ($100.00).'), fd(3, 'Largest top-up (USD)', '100.00', '', 'Must be more than the smallest top-up ($500.00).')]
+      : [fd(0, 'Connection call (¢ per started 30 s)', '2', 'Now 2¢'), fd(1, 'Takes effect on', '1 Nov 2026', 'Today or later. Until then, the current values apply.'), fd(2, 'Smallest top-up (USD)', '5.00', 'Now $5.00'), fd(3, 'Largest top-up (USD)', '25,000.00', 'Now $10,000.00')],
+    prev: [r('Largest top-up', '$10,000.00 → $25,000.00', true, true), r('Connection call', '2¢, unchanged'), r('Smallest top-up', '$5.00, unchanged'), r('From', '1 Nov 2026, for every org', true)]
   };
 }
 
 /* ---------- states ---------- */
-var PART = ['gift', 'giftBad', 'giftDone', 'plan', 'comp', 'disType', 'disReady', 'disabled', 'plans', 'edit', 'retire', 'move'];
+var PART = ['gift', 'giftBad', 'giftDone', 'plan', 'comp', 'disType', 'disReady', 'disabled', 'plans', 'edit', 'retire', 'move', 'settings', 'settingsEdit', 'settingsBad', 'settingsSaved'];
 var STATES = [
-  { id: 'orgs', title: 'Orgs', sub: 'Every org on Glyphh, newest first, ten to a page. Search by name, an admin’s email or the org ID; filter by plan and by status. Status comes from the subscription (active, past due, comped) plus disabled; a Free org with no subscription shows Active. Credits are counted in the ledger’s own unit; spend is what the org was billed this month. Phones get one row per org with its status line.', view: 'orgs' },
+  { id: 'orgs', title: 'Orgs', sub: 'Every org on Glyphh, newest first, ten to a page. Search by name, an admin’s email or the org ID; filter by plan and by status. Status comes from the subscription (active, past due, comped) plus disabled; a Free org with no subscription shows Active. Credit balance is in dollars, as the org sees it; spend is what the org was billed this month. Phones get one row per org with its status line.', view: 'orgs' },
   { id: 'filtered', title: 'Orgs: filtered to Past due', sub: 'A status chip narrows the list; the page and the count follow it. Past due is pink: someone should look (the card was refused and Stripe is retrying).', view: 'orgs', filter: 'Past due' },
   { id: 'empty', title: 'Orgs: no results', sub: 'A search with no match says what was searched, how to search, and which filters still apply, with a way out.', view: 'orgs', q: 'wayne enterprises' },
   { id: 'loading', title: 'Orgs: loading', sub: 'Skeleton rows the shape of the real ones, still (no shimmer), with one spinner saying what is loading.', view: 'orgs', load: true },
   { id: 'error', title: 'Orgs: couldn’t load', sub: 'What happened, what to do, and the trace ID with its copy button. The search and filters stay so nothing typed is lost.', view: 'orgs', err: true },
-  { id: 'overview', title: 'An org: Overview', sub: 'Opening an org: its name, plan and status at the top with the Actions menu, then six tabs. Overview holds the plan, seats, machines and credits, this month’s spend as bars by day (the same chart as Billing), and its org admins. There is no owner in the data model; the org admins are shown instead.', view: 'org', tab: 'Overview' },
+  { id: 'overview', title: 'An org: Overview', sub: 'Opening an org: its name, plan and status at the top with the Actions menu, then six tabs. Overview holds the plan, seats, machines and credit balance, this month’s spend as bars by day (the same chart as Billing), and its org admins. There is no owner in the data model; the org admins are shown instead.', view: 'org', tab: 'Overview' },
   { id: 'menu', title: 'An org: the Actions menu', sub: 'What only Glyphh staff can do to an org: gift credits, change its plan, comp it, and (set apart, in red) disable it. Each opens a dialog; nothing happens from the menu itself.', view: 'org', tab: 'Overview', menu: true },
   { id: 'members', title: 'An org: Members', sub: 'Everyone in the org with their teams as chips (a person can be in several, or none), role (Org admin or Member) and machines, plus open invites, which hold a seat. Read only here: roles are the org admins’ to change.', view: 'org', tab: 'Members' },
   { id: 'machines', title: 'An org: Machines', sub: 'Each machine with its owner, where it runs (the host’s logo; a laptop runs it through Docker, so it shows Docker’s), the rrotor build it reports, online or offline, and when it was last seen. Paginated: 6 of 12.', view: 'org', tab: 'Machines' },
   { id: 'powers', title: 'An org: Powers', sub: 'Every member’s powers, filtered by kind and member. Kinds are told apart by the icon and the label in accent text: models and connections show their logo, skills, tasks, plugins and apps their glyph. A power a limit leaves out is Disabled, in red, with the limit that did it.', view: 'org', tab: 'Powers' },
   { id: 'sps', title: 'An org: Super powers', sub: 'Every member’s super powers, each with its cat (the colour only in its eye), member, machine and powers. Live is violet; paused or offline are neutral with why; one that holds a disabled power says which, in red.', view: 'org', tab: 'Super powers' },
-  { id: 'billing', title: 'An org: Billing', sub: 'The subscription as Stripe has it, links to its invoices and customer in Stripe, and the org’s credit ledger: allowances, top-ups, auto top-ups, gifts and usage (rolled up by day here), newest first. Credit amounts wait on the price of a credit: [CREDITS].', view: 'org', tab: 'Billing' },
-  { id: 'gift', title: 'Gift credits', sub: 'Presets and a custom amount, in dollars like Add funds ($5 to $10,000) with the credits it buys shown as [CREDITS] until dollars versus credits is decided. A note is required; the preview shows the ledger line the org will see.', view: 'org', tab: 'Overview', dlg: 'gift' },
+  { id: 'billing', title: 'An org: Billing', sub: 'The subscription as Stripe has it (plan, seats, extra machines, the credit it includes, auto top-up reloading to a target), links to its invoices and customer in Stripe, and the org’s ledger in dollars: plan credit, top-ups, auto top-ups, gifts and usage (rolled up by day here, at 2¢ a started 30 seconds), with when bought credit expires.', view: 'org', tab: 'Billing' },
+  { id: 'gift', title: 'Gift credits', sub: 'Presets and a custom amount, $5 to $10,000 like Add funds; credit is dollars, so the gift is the amount. A note is required; the preview shows the ledger line the org will see.', view: 'org', tab: 'Overview', dlg: 'gift' },
   { id: 'giftBad', title: 'Gift credits: no note', sub: 'Gift pressed without a note: the field says what is missing and why it matters. Nothing is added until there is one.', view: 'org', tab: 'Overview', dlg: 'giftBad' },
   { id: 'giftDone', title: 'Gift credits: done', sub: 'The gift is in the ledger at once (highlighted behind the dialog) as “Gift from Glyphh · Launch week thank-you”, on the org’s own Billing page too.', view: 'org', tab: 'Billing', dlg: 'giftDone' },
   { id: 'plan', title: 'Change plan', sub: 'Choose the plan, when it takes effect, and see what changes before anything does: Stripe’s numbers for an upgrade (prorated onto the next invoice), the new limits. Downgrades only take effect at the period’s end; an org over its new limits keeps everyone and can’t add more.', view: 'org', tab: 'Overview', dlg: 'plan' },
@@ -767,10 +837,14 @@ var STATES = [
   { id: 'disType', title: 'Disable an org: typing its name', sub: 'The most destructive action. The dialog names each consequence (members, machines, schedules, billing) and what is kept, and the red button stays off until the org’s name is typed exactly.', view: 'org', tab: 'Overview', dlg: 'disable', typed: 'North' },
   { id: 'disReady', title: 'Disable an org: ready', sub: 'The name matches, so Disable Northwind turns red and can be pressed. Keep it on is the safe way out.', view: 'org', tab: 'Overview', dlg: 'disable', typed: 'Northwind' },
   { id: 'disabled', title: 'A disabled org', sub: 'A red Disabled chip beside the name, a banner saying since when, by whom and what it means, and Enable Northwind as the main action. Its machines show offline. In the list it shows Disabled too.', view: 'org', tab: 'Overview', disabled: true },
-  { id: 'plans', title: 'Plans and their versions', sub: 'Glyphh admin › Plans: each family with the version on sale (Pro v3), its price per seat, seats, machines, credits, the orgs on it and how many stay on older versions. Opening a family lists its versions: on sale or not sold, with the orgs on each. A version is never edited or deleted. Numbers not yet set stay [BRACKETS].', view: 'plans' },
+  { id: 'plans', title: 'Plans and their versions', sub: 'Glyphh admin › Plans, first tab: each family with the version on sale (Pro v3), its price per seat, most seats, machines (extras $5 a month, none on Free), credit a month, the orgs on it and how many stay on older versions. Opening a family lists its versions: on sale or not sold, with the orgs on each. A version is never edited or deleted.', view: 'plans' },
   { id: 'edit', title: 'New version of Pro', sub: 'Changing a plan makes its next version, prefilled from the one on sale. Saving makes v4 the one sold and v3 stops being sold; the orgs on v3 stay on it at its price. New Stripe prices are made on save.', view: 'plans', dlg: 'edit' },
   { id: 'retire', title: 'Stop selling Solo', sub: 'A family can stop being sold: it leaves checkout and the Plans page, and every org on it keeps its version and its price. Nothing is deleted; a new version sells it again.', view: 'plans', dlg: 'retire' },
-  { id: 'move', title: 'Move orgs to the new version', sub: 'A separate action: choose the older versions to move, the date they move on, and see what changes for them. Their admins are told first; the least notice is [NOTICE].', view: 'plans', dlg: 'move' }
+  { id: 'move', title: 'Move orgs to the new version', sub: 'A separate action: choose the older versions to move and the date, at least 30 days out, and see what changes for them and the words they get. We email their org admins today and show a banner on their Billing page.', view: 'plans', dlg: 'move' },
+  { id: 'settings', title: 'Billing settings', sub: 'Plans, second tab: what a connection call costs per started 30 seconds (2¢) and the smallest and largest top-up ($5, $10,000), each with its history: the value, from when, and who set it.', view: 'plans', ptab: 'settings' },
+  { id: 'settingsEdit', title: 'Change billing settings', sub: 'One dialog for all three, with the date the change takes effect (today or later) and a preview of what changes. Here the largest top-up rises to $25,000 from 1 Nov.', view: 'plans', ptab: 'settings', dlg: 'settings' },
+  { id: 'settingsBad', title: 'Change billing settings: not valid', sub: 'A call must cost more than 0¢, and the smallest top-up must be less than the largest. Each field says what is wrong; Save stays off until they are fixed.', view: 'plans', ptab: 'settings', dlg: 'settingsBad' },
+  { id: 'settingsSaved', title: 'Billing settings: a change scheduled', sub: 'Saved for a later date: the current value stays until then, the new one shows as scheduled (cyan, in progress) and goes into the history with who set it.', view: 'plans', ptab: 'settings', saved: true }
 ];
 
 var ORG_TABS = ['Overview', 'Members', 'Machines', 'Powers', 'Super powers', 'Billing'];
@@ -794,7 +868,7 @@ function frame(st, desk) {
     otabs: [], menu: !!st.menu, menuStr: st.menu ? 'true' : 'false', menuW: desk ? '280px' : '100%', actBg: st.menu ? 'var(--s2)' : 'transparent',
     actW: desk ? 'auto' : '100%', actDir: desk ? 'row' : 'column', actFlex: desk ? 'none' : '1',
     menuItems: [
-      { item: true, sep: false, t: 'Gift credits', sub: 'Add credits, with a note', bg: 'transparent', tx: 'var(--tx)' },
+      { item: true, sep: false, t: 'Gift credits', sub: 'Add credit in dollars, with a note', bg: 'transparent', tx: 'var(--tx)' },
       { item: true, sep: false, t: 'Change plan', sub: 'Basic v2 now', bg: 'transparent', tx: 'var(--tx)' },
       { item: true, sep: false, t: 'Comp the plan', sub: 'No charge, with a note', bg: 'transparent', tx: 'var(--tx)' },
       { item: false, sep: true, t: '', sub: '', bg: '', tx: '' },
@@ -806,8 +880,8 @@ function frame(st, desk) {
     hasTool: false, tool: { search: false, ph: '', q: '', qBorder: 'var(--line2)', selects: [], hasChips: false, chips: [], chipLabel: '' },
     tLoading: !!st.load, tError: !!st.err, tEmpty: !!st.q, skel: [],
     hasTbl: false, tbl: { label: '', cols: '', head: [], rows: [], prows: [] }, hasPg: false, pg: pager('', 1, 1, 1, 1, 1, phone),
-    dlg: !!dlg, dlgW: desk ? '560px' : '358px', dlgTitle: '', dlgDesc: '', d: { gift: false, giftDone: false, plan: false, disable: false, edit: false, stop: false, move: false },
-    g: giftDlg(false), p: planDlg(false), x: disableDlg(''), e: editDlg(phone), m: moveDlg(), hasVers: st.view === 'plans', vers: versions(), vBtnW: desk ? 'auto' : '100%', vOrgW: desk ? '80px' : 'auto', doneW: desk ? 'auto' : '100%'
+    dlg: !!dlg, dlgW: desk ? '560px' : '358px', dlgTitle: '', dlgDesc: '', d: { gift: false, giftDone: false, plan: false, disable: false, edit: false, stop: false, move: false, settings: false },
+    g: giftDlg(false), p: planDlg(false), x: disableDlg(''), e: editDlg(phone), m: moveDlg(), hasVers: st.view === 'plans' && !st.ptab, hasPtabs: st.view === 'plans', ptabs: tabsOf(['Plans and versions', 'Billing settings'], st.ptab ? 'Billing settings' : 'Plans and versions'), hasSet: !!st.ptab, set: settingsPanel(!!st.saved), setToast: st.saved ? 'Saved. The largest top-up becomes $25,000.00 on 1 Nov 2026; until then it stays $10,000.00.' : '', setCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)', setBtnW: desk ? 'auto' : '100%', s: settingsDlg(false, phone), vers: versions(), vBtnW: desk ? 'auto' : '100%', vOrgW: desk ? '80px' : 'auto', doneW: desk ? 'auto' : '100%'
   };
 
   if (st.view === 'orgs') {
@@ -824,7 +898,7 @@ function frame(st, desk) {
   }
   if (st.view === 'plans') {
     f.ph = { title: 'Plans', sub: 'What an org pays per seat each month, and what it gets. A change is a new version, sold to new orgs; every org keeps its version, at its price, until it changes plan or is moved with notice.', count: '5 plans · 1,284 orgs' };
-    f.hasTbl = true; f.tbl = planTable(true);
+    if (!st.ptab) { f.hasTbl = true; f.tbl = planTable(true); }
   }
   if (st.view === 'org') {
     f.otabs = tabsOf(ORG_TABS, st.tab);
@@ -849,6 +923,7 @@ function frame(st, desk) {
   if (dlg === 'disable') { f.d.disable = true; f.x = disableDlg(st.typed); f.dlgTitle = 'Disable Northwind?'; f.dlgDesc = 'Northwind stops working until a super admin enables it again.'; f.dlgW = desk ? '520px' : '358px'; }
   if (dlg === 'edit') { f.d.edit = true; f.dlgTitle = 'New version of Pro'; f.dlgDesc = 'Pro v4: what new orgs get from now on. Orgs already on Pro keep the version they are on.'; f.dlgW = desk ? '600px' : '358px'; }
   if (dlg === 'retire') { f.d.stop = true; f.dlgTitle = 'Stop selling Solo?'; f.dlgDesc = 'Solo stops being offered. Nobody on it loses anything.'; f.dlgW = desk ? '520px' : '358px'; }
+  if (dlg === 'settings' || dlg === 'settingsBad') { f.d.settings = true; f.s = settingsDlg(dlg === 'settingsBad', phone); f.dlgTitle = 'Change billing settings'; f.dlgDesc = 'For every org, from the date you choose. Calls already made and credit already bought keep the old values.'; f.dlgW = desk ? '600px' : '358px'; }
   if (dlg === 'move') { f.d.move = true; f.dlgTitle = 'Move orgs to Pro v3'; f.dlgDesc = 'Moves orgs on older Pro versions to the one on sale, at its price, on the date you set.'; f.dlgW = desk ? '560px' : '358px'; }
   return f;
 }
@@ -859,7 +934,7 @@ class Component extends DCLogic {
       states: STATES.filter(function (s) { return PART.indexOf(s.id) >= 0; }).map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [
         { t: 'Only Glyphh staff', b: 'Glyphh admin is in the top nav only for super admins (users of Glyphh, the parent org), with Orgs, Models, Marketplace and Plans under it. An org admin never sees it; they have Org. Every action here is the server’s to check again, not the page’s.' },
-        { t: 'Gifts and comps leave a note', b: 'A gift is a grant in the org’s credit ledger with the note it was given with, shown as “Gift from Glyphh · note” to the org too. A comp is the subscription’s comped status, also with a note. Dollars or credits is still open: the dialog takes dollars like Add funds, and credits show as [CREDITS].' },
+        { t: 'Gifts and comps leave a note', b: 'A gift is a grant in the org’s credit ledger with the note it was given with, shown as “Gift from Glyphh · note” to the org too. A comp is the subscription’s comped status, also with a note. Credit is dollars, so a gift is the dollars it adds.' },
         { t: 'Disable keeps everything', b: 'Disabling signs members out, disconnects machines, stops schedules and pauses billing, and deletes nothing. It is the one action that asks you to type the org’s name; Enable puts everything back as it was.' }
       ]
     };

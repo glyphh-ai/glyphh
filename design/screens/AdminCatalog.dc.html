@@ -24,7 +24,7 @@ button,input,textarea{font:inherit}
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Glyphh admin › Models · super admins only · dark</div>
 <h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Models and providers</h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">The catalog everyone picks models from: about 3,900 models across 125 providers. It is Glyphh's reference data, the same for every org; anyone signed in reads it, only super admins change it. Two tables: providers (name, logo, how to reach it) and catalog models (the provider's model id, a name, a description, a type). It holds no keys, prices or limits. Turning a provider or a model off follows the org limits' rule: what people already use stops now and comes back, untouched, when it is turned on again. The old list came without descriptions, so writing them is a job of its own. Providers without artwork on this board (DeepSeek, Cohere, Cerebras, …) show the LogoTile's initials; in the build a provider shows its uploaded mark. Desktop 1200, phone 390.</p>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">The catalog everyone picks models from: about 3,900 models across 125 providers. It is Glyphh's reference data, the same for every org; anyone signed in reads it, only super admins change it. Two tables: providers (name, logo, how to reach it) and catalog models (the provider's model id, a name, a description, a type). It holds no keys, prices or limits. A super admin can turn a provider or a model off, or remove it. Off is for now, the org limits' rule: members' powers on it are disabled with the reason and come back, untouched, when it is on again. Removed is for good: those powers can only be deleted, so removing asks you to type the name. The old list came without descriptions, so writing them is a job of its own. Providers without artwork on this board (DeepSeek, Cohere, Cerebras, …) show the LogoTile's initials; in the build a provider shows its uploaded mark. Desktop 1200, phone 390.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
@@ -183,16 +183,17 @@ button,input,textarea{font:inherit}
 <div role="radiogroup" aria-label="Type" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.pv.types}}" as="ch" hint-placeholder-count="5"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font-size: 13px; font-weight: 600">{{ch.label}}</button></sc-for></div>
 <section aria-label="{{f.pv.name}} models" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
 <sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
-<div style="display: grid; grid-template-columns: 232px 88px minmax(0, 1fr) 128px 64px 52px; gap: 14px; align-items: center; padding: 10px 0; font-size: 12px; color: var(--tx3); font-weight: 600"><span>Model</span><span>Type</span><span>Description</span><span>Used by</span><span></span><span>On</span></div>
+<div style="display: grid; grid-template-columns: 220px 84px minmax(0, 1fr) 120px 64px 88px 52px; gap: 14px; align-items: center; padding: 10px 0; font-size: 12px; color: var(--tx3); font-weight: 600"><span>Model</span><span>Type</span><span>Description</span><span>Used by</span><span></span><span></span><span>On</span></div>
 </sc-if>
 <sc-for list="{{f.pv.models}}" as="m" hint-placeholder-count="10">
 <sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
-<div style="display: grid; grid-template-columns: 232px 88px minmax(0, 1fr) 128px 64px 52px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line)">
+<div style="display: grid; grid-template-columns: 220px 84px minmax(0, 1fr) 120px 64px 88px 52px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line)">
 <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px; opacity: {{m.op}}"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.id}}</span></span>
 <span><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: var(--s3); color: var(--tx2); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{m.type}}</span></span>
 <span style="font-size: 13px; line-height: 1.45; color: {{m.descTx}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{m.desc}}</span>
 <span style="font-size: 13px; color: var(--tx2)">{{m.used}}</span>
 <button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Edit</button>
+<button type="button" aria-label="Remove {{m.name}}" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--red-line); background: transparent; color: var(--red-tx); font-size: 14px; font-weight: 600">Remove</button>
 <button type="button" role="switch" aria-checked="{{m.onStr}}" aria-label="{{m.name}} on" aria-disabled="{{m.lockStr}}" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{m.swBg}}; position: relative; opacity: {{m.swOp}}"><span style="position: absolute; top: 4px; left: {{m.knob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button>
 </div>
 </sc-if>
@@ -278,6 +279,9 @@ button,input,textarea{font:inherit}
 </div>
 <div style="font-size: 15px; line-height: 1.55">{{f.c.body}}</div>
 <div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.c.note}}</div>
+<sc-if value="{{f.c.typed}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="cf-{{f.key}}" style="font-size: 14px; font-weight: 600">Type {{f.c.name}} to confirm</label><input id="cf-{{f.key}}" value="{{f.c.typedVal}}" placeholder="{{f.c.name}}" autocomplete="off" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.c.typedBorder}}; background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px"></div>
+</sc-if>
 </sc-if>
 
 <sc-if value="{{f.d.form}}" hint-placeholder-val="{{ false }}">
@@ -428,7 +432,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":20400}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":21800}}'>
 var B = 'assets/';
 var LOGO = { 'OpenAI': 'openai-dark.svg', 'Anthropic': 'anthropic-dark.svg', 'Google': 'gemini.svg',
   'xAI': 'grok-dark.svg', 'Mistral': 'mistral.svg', 'Meta': 'meta.svg', 'Perplexity': 'perplexity.svg' };
@@ -636,8 +640,12 @@ var STATES = [
     page: 'provider', dlg: 'offprov' },
   { id: 'provoff', title: 'Provider turned off', sub: 'Red chip, a line on what that means, and Turn on again as the main action. Its models’ switches are greyed and locked: the provider’s switch wins. In the list, the row dims with the same chip.',
     page: 'provider', provOff: true },
+  { id: 'rmprov', title: 'Remove a provider', sub: 'Removing is for good, so it says so, with the count, and asks you to type the provider’s name. The red button works only once the name matches. Turning it off is offered as the way to stop it for now.',
+    page: 'provider', dlg: 'rmprov' },
   { id: 'offmodel', title: 'Turn off one model', sub: 'Flipping a model’s switch off asks first when anyone uses it. A model nobody uses turns off without asking.',
     page: 'provider', dlg: 'offmodel' },
+  { id: 'rmmodel', title: 'Remove one model', sub: 'From a model’s row or its edit dialog. For good, with who it affects; type the model’s name. Until it matches, the red button stays disabled.',
+    page: 'provider', dlg: 'rmmodel' },
   { id: 'addprov', title: 'Add a provider', sub: 'Name, website, logo, API type, base URL, how keys are checked, key format. The logo is required: full colour, PNG, square. A second copy for dark grounds only when the mark is black (as OpenAI’s, Anthropic’s and Grok’s are). Here the logo is in and the dark copy is uploading. No Cerebras artwork is on this board, so its tile shows initials.',
     page: 'providers', dlg: 'addprov' },
   { id: 'addprovbad', title: 'Add a provider: validation', sub: 'Each problem next to its field, in words: the name is taken (with a link to the one that exists), the URL isn’t a full address, no logo. Add provider stays available and says what is left.',
@@ -663,10 +671,12 @@ var STATES = [
 var DLG = {
   offprov: { title: 'Turn off Mistral?', w: 520, c: 'Mistral', btns: [btn('Keep it on', SEC), btn('Turn off Mistral', DANGER)] },
   offmodel: { title: 'Turn off Codestral?', w: 520, c: 'Codestral', btns: [btn('Keep it on', SEC), btn('Turn off Codestral', DANGER)] },
+  rmprov: { title: 'Remove Mistral for good?', w: 560, c: 'rmMistral', btns: [btn('Cancel', SEC), btn('Remove Mistral', DANGER)] },
+  rmmodel: { title: 'Remove Codestral for good?', w: 560, c: 'rmCodestral', btns: [btn('Cancel', SEC), btn('Remove Codestral', DANGER, { dis: 'true', bg: 'transparent', tx: 'var(--line2)', border: '1px solid var(--line2)' })] },
   addprov: { title: 'Add a provider', desc: 'It joins the catalog for every org. Add its models next.', w: 720, form: 'provider', btns: [btn('Cancel', SEC), btn('Add provider', PRI)] },
   addprovbad: { title: 'Add a provider', desc: 'It joins the catalog for every org. Add its models next.', w: 720, form: 'provider', formErr: '3 things to fix before it can be added.', btns: [btn('Cancel', SEC), btn('Add provider', PRI)] },
   addmodel: { title: 'Add a model', w: 720, form: 'model', formErr: '4 things to fix before it can be added.', btns: [btn('Cancel', SEC), btn('Add model', PRI)] },
-  editmodel: { title: 'Edit Codestral', desc: 'Changes show in every org’s catalog straight away.', w: 720, form: 'edit', btns: [btn('Cancel', SEC), btn('Save changes', PRI)] },
+  editmodel: { title: 'Edit Codestral', desc: 'Changes show in every org’s catalog straight away.', w: 720, form: 'edit', btns: [btn('Remove Codestral', DANGER_OUT), btn('Cancel', SEC), btn('Save changes', PRI)] },
   fetch: { title: 'Add models from Cerebras', w: 640, imp: 'fetching', btns: [btn('Cancel', SEC), btn('Add models', PRI, { dis: 'true', bg: 'transparent', tx: 'var(--line2)', border: '1px solid var(--line2)' })] },
   pick: { title: 'Add models from Cerebras', w: 640, imp: 'pick', btns: [btn('Cancel', SEC), btn('Add 14 models', PRI)] },
   progress: { title: 'Adding 14 models', w: 640, imp: 'progress', btns: [btn('Close', SEC), btn('Adding…', PRI, { busy: true, dis: 'true' })] },
@@ -675,10 +685,16 @@ var DLG = {
 var CONFIRM = {
   Mistral: { t: tile('Mistral'), name: 'Mistral', line: '46 models · 41 on · 312 people use it',
     body: '312 people use models from Mistral. They stop working now and come back if you turn it on again.',
-    note: 'Nothing is deleted: their keys, grants and schedules stay. Mistral disappears from the catalog until it’s on again.' },
+    note: 'Their powers on Mistral are disabled with the reason; nothing is deleted. Keys, grants and schedules stay, and Mistral leaves the catalog until it’s on again.', typed: false, typedVal: '', typedBorder: 'var(--line2)' },
+  rmMistral: { t: tile('Mistral'), name: 'Mistral', line: '46 models · 41 on · 312 people use it', typed: true, typedVal: 'Mistral', typedBorder: '#7C4DFF',
+    body: '312 people use models from Mistral. Their powers on it stop working for good and can only be deleted.',
+    note: 'Mistral and its 46 models leave the catalog. This can’t be undone. To stop it for now instead, turn it off: it comes back when it’s on again.' },
+  rmCodestral: { t: tile('Mistral'), name: 'Codestral', line: 'Mistral · codestral-latest · Chat', typed: true, typedVal: '', typedBorder: 'var(--line2)',
+    body: '48 people use Codestral. Their powers on it stop working for good and can only be deleted.',
+    note: 'Codestral leaves Mistral’s models. This can’t be undone. To stop it for now instead, turn it off: it comes back when it’s on again.' },
   Codestral: { t: tile('Mistral'), name: 'Codestral', line: 'Mistral · codestral-latest · Chat',
     body: '48 people use Codestral. It stops working for them now and comes back if you turn it on again.',
-    note: 'Nothing is deleted. It disappears from the catalog until it’s on again.' }
+    note: 'Their powers on it are disabled with the reason; nothing is deleted. It leaves the catalog until it’s on again.', typed: false, typedVal: '', typedBorder: 'var(--line2)' }
 };
 var IMP = {
   fetching: { fetching: true, hasHead: false, hasRows: false, pick: false, bar: false, fail: false },
@@ -725,7 +741,7 @@ function frame(st, desk) {
       name: cer ? 'Cerebras' : 'Mistral', t: tile(cer ? 'Cerebras' : 'Mistral'), op: off ? 0.6 : 1, off: off, offBody: OFF_BODY,
       status: cer ? 'Supported · not in the catalog yet' : c[0], dot: cer ? '#8E89A0' : c[1], chipBg: cer ? 'var(--s3)' : c[2], chipTx: cer ? 'var(--tx2)' : c[3],
       line: cer ? 'cerebras · added just now by you' : (off ? 'mistral · 46 models · turned off today by you' : 'mistral · 46 models · 41 on · 312 people use it'),
-      btns: off ? [btn('Edit provider', SEC), btn('Turn on again', PRI)] : [btn('Edit provider', SEC), btn(cer ? 'Remove Cerebras' : 'Turn off Mistral', DANGER_OUT)],
+      btns: off ? [btn('Edit provider', SEC), btn('Remove Mistral', DANGER_OUT), btn('Turn on again', PRI)] : (cer ? [btn('Edit provider', SEC), btn('Remove Cerebras', DANGER_OUT)] : [btn('Edit provider', SEC), btn('Remove Mistral', DANGER_OUT), btn('Turn off Mistral', DANGER_OUT)]),
       dl: dl, hasModels: !cer, empty: cer,
       modelsLine: cer ? 'None yet.' : (off ? '46 models · all stopped while Mistral is off' : '46 models · 41 on · 5 need a description'),
       types: typeChips(['All · 46', 'Chat · 31', 'Embedding · 6', 'Image · 6', 'Voice · 3'], 'All'),
@@ -757,7 +773,7 @@ function frame(st, desk) {
       if (D.imp === 'fail') f.traceId = 'a41d-7c2e-905b-e3f8';
       if (D.imp === 'fetching') f.skel = skel().slice(0, 4);
     }
-    var tall = { offprov: [780, 844], offmodel: [780, 844], addprov: [980, 1480], addprovbad: [1080, 1660], addmodel: [1140, 1500], editmodel: [1060, 1420], fetch: [780, 844], pick: [1020, 1080], progress: [940, 980], fail: [1100, 1160] }[st.dlg];
+    var tall = { rmprov: [780, 844], rmmodel: [780, 844], offprov: [780, 844], offmodel: [780, 844], addprov: [980, 1480], addprovbad: [1080, 1660], addmodel: [1140, 1500], editmodel: [1060, 1500], fetch: [780, 844], pick: [1020, 1080], progress: [940, 980], fail: [1100, 1160] }[st.dlg];
     f.fixH = (desk ? tall[0] : tall[1]) + 'px'; f.minH = f.fixH;
   }
   return f;
@@ -769,7 +785,7 @@ class Component extends DCLogic {
       states: STATES.map(function (st, i) { return { title: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [
         { t: 'Who sees this', b: 'Only super admins (Glyphh staff). Their header has Glyphh admin, with sub-tabs Orgs, Models, Marketplace and Plans. Everyone else only reads the catalog, when they pick a model.' },
-        { t: 'Off is not deleted', b: 'Turning a provider or a model off works like an org limit set later: what people already have is marked disabled with the reason, rrotor isn’t handed it, and its calls are refused. Turning it on again brings it all back with nothing to redo. A provider’s switch wins over its models’ switches.' },
+        { t: 'Off for now, removed for good', b: 'Removing is for good: those powers can only be deleted, so the dialog asks for the name. Turning a provider or a model off works like an org limit set later: what people already have is marked disabled with the reason, rrotor isn’t handed it, and its calls are refused. Turning it on again brings it all back with nothing to redo. A provider’s switch wins over its models’ switches.' },
         { t: 'Logos', b: 'Every new provider needs a logo: the company’s own full-colour mark, PNG, square. Black marks get a second, off-white copy for dark grounds. Providers imported from the old list without artwork show the LogoTile’s initials until someone uploads one.' },
         { t: 'Descriptions', b: 'Required for a model added or edited by hand. Imported models arrive without one and wait under No description (3,412 today, from the old list), which is paged and edited in place, one Save per row.' },
         { t: 'Types', b: 'Chat, Embedding, Image, Voice and Video, as filter chips with counts. Voice is the catalog’s audio type, named the way members say it.' },

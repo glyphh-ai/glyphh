@@ -410,14 +410,13 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 
 Board changes from the decisions of 2026-10-11 and 2026-10-12.
 
-- **`BillingFlow`, `BillingLight`:** credits are dollars. "Budget" becomes **Credit balance** ("Credit balance: $12.40"). The Auto top-up dialog becomes **reload to a target**: "When the balance falls below $[amount], reload it to $[amount]", plus an optional **monthly cap**, off by default. Add funds stays $5 to $10,000, and that is the credit added. Bought credit **expires a year after purchase**: show the expiry on each top-up in the ledger. The plan cards take the numbers under Billing, above. A **banner** for an org being moved to a new plan version: what changes and the date, 30 days ahead.
-- **`AdminOrgActions`:** fill `[N]` machines, `[$ N]` extra machines and `[CREDITS]` with the plan numbers (in dollars); drop "that's [CREDITS] credits" from gifts and top-ups, since credit is dollars. Moving orgs to a new version shows the **30 days' notice** and the email and banner it sends. Add a **Billing settings** panel under Plans: what a connection call costs per started 30 seconds (2¢), the smallest and largest top-up ($5, $10,000), each change with who made it and from when, and validation.
-- **`UsageFlow`, `UsageMore`, `UsageAudit`:** `[ALLOWANCE]`, `[BALANCE]` and `[TOP-UPS]` become dollars ("$13.94 used of $50.00"); "Credits used" becomes "Credit used". An org admin's view of a member shows their model token counts.
-- **`AdminCatalog`:** Turn off, Turn on, Remove and the dark-ground logo are drawn. Make the **Remove** confirm say it is for good: members' powers on it are disabled and can only be deleted (Turn off's say they come back when it's turned on).
-- **`ListingSubmit`, `OrgReview`, `AdminMarket`:** "Higher than 1.2.0" is drawn. Add the **release notes** rule: required, up to 2,000 characters, with its empty and too-long validation states; and a version that isn't semver ("Use a version like 1.3.0"). Review screens show the version and its release notes.
 - **Light theme:** the admin boards, the publishing boards and `RrotorSplash` are dark only so far.
 - **Requests still to draw:** LogoTile's initials, disabled and loading states; the ring's comet; the person and org Avatar kinds; and the rest under Requests.
 
 ### Questions
 
-None yet.
+From the design agent, 2026-10-12:
+
+1. **Does a plan's included usage carry over?** Usage draws the included $ carrying over to the next period with bought credit; the admin ledger and Billing draw it expiring at the period's end ("$4.10 expires on 3 Nov"). Which?
+2. **"Higher than the last version":** drawn as higher than the last *published* version, so a rejected 1.3.0 is used (never reused) but 1.2.0 is the bar. Or the last *submitted*?
+3. **Auto top-up's monthly cap:** drawn as at least one reload (target minus trigger); the $5–$10,000 range applies to trigger, target and cap. Right?

@@ -90,7 +90,7 @@
       "x": 0,
       "y": 0,
       "w": 5072,
-      "h": 17000,
+      "h": 20000,
       "title": "Billing, dark",
       "page": "billing"
     },
@@ -98,7 +98,7 @@
       "x": 0,
       "y": 0,
       "w": 5072,
-      "h": 17000,
+      "h": 20000,
       "title": "Billing, light",
       "page": "billing-light"
     },
@@ -210,7 +210,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 14600,
+      "h": 18800,
       "title": "Publish a power or super power",
       "page": "listing"
     },
@@ -218,7 +218,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 13800,
+      "h": 14600,
       "title": "Org review",
       "page": "org-review"
     },
@@ -226,7 +226,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 20400,
+      "h": 21800,
       "title": "Glyphh admin, models and providers",
       "page": "admin-models"
     },
@@ -234,7 +234,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 19200,
+      "h": 20800,
       "title": "Glyphh admin, the marketplace",
       "page": "admin-market"
     },
@@ -266,7 +266,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 11600,
+      "h": 15000,
       "title": "Glyphh admin, org actions and plans",
       "page": "admin-plans"
     },
@@ -274,7 +274,7 @@
       "x": 0,
       "y": 0,
       "w": 3520,
-      "h": 16000,
+      "h": 18000,
       "title": "Usage, billing periods and yours",
       "page": "usage"
     },

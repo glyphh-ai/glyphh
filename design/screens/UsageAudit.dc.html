@@ -175,6 +175,8 @@ function mix(a, b) { var o = {}; var k; for (k in a) o[k] = a[k]; for (k in b) o
 var TYPES = ['head', 'h', 'tabs', 'seg', 'ctrls', 'tiles', 'chart', 'bal', 'table', 'hbars', 'alert', 'pager', 'cursor', 'empty', 'sk', 'skel', 'facts', 'quote', 'trace', 'fields', 'note', 'btns'];
 function blk(t, p) { var o = {}; TYPES.forEach(function (k) { o['is_' + k] = false; }); o['is_' + t] = true; return mix(o, p); }
 function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Credit is dollars: a connection call costs 2¢ for each started 30 seconds. Data below counts those 2¢ units.
+function usd(units) { var c = Math.round(units * 2); return '$' + fmt(Math.floor(c / 100)) + '.' + ('0' + (c % 100)).slice(-2); }
 
 // Status chips: signal colours only for status
 var CH = {
@@ -221,10 +223,11 @@ function bars(vals, n, labels, o) {
   var out = [];
   for (var i = 0; i < n; i++) {
     var past = i < vals.length, today = i === todayI;
-    var t = labels[i] + (past ? ': ' + fmt(vals[i]) + ' ' + (o.unit || '') + (today ? ' so far, still counting' : '') : '');
+    var vt = past ? (o.money ? usd(vals[i]) : fmt(vals[i]) + ' ' + (o.unit || '')) : '';
+    var t = labels[i] + (past ? ': ' + vt + (today ? ' so far, still counting' : '') : '');
     var dd = { h: past ? Math.max(3, Math.round(vals[i] / max * 100)) + '%' : '6%', c: past ? (today ? '#7C4DFF' : 'var(--accent-tx)') : 'transparent', b: past ? 'none' : '1px dashed var(--line2)', t: t,
       hasTip: false, tip1: '', tip2: '', tip3: '', tipR: '0', tipW: '0' };
-    if (today && o.tip) { dd.hasTip = true; dd.tip1 = 'Today, ' + labels[i]; dd.tip2 = fmt(vals[i]) + ' ' + o.unit + ' so far'; dd.tip3 = 'Still counting · updated 2 minutes ago'; dd.tipR = '-6px'; dd.tipW = o.tipW || '220px'; }
+    if (today && o.tip) { dd.hasTip = true; dd.tip1 = 'Today, ' + labels[i]; dd.tip2 = vt + ' so far'; dd.tip3 = 'Still counting · updated 2 minutes ago'; dd.tipR = '-6px'; dd.tipW = o.tipW || '220px'; }
     out.push(dd);
   }
   return out;
@@ -240,11 +243,11 @@ function chart(d, o) {
   var axis = o.closed ? [labels[0], labels[labels.length - 1]] : (vals.length === labels.length ? [labels[0], 'today'] : [labels[0], 'today', labels[labels.length - 1]]);
   return blk('chart', { title: o.title, total: o.total, sub: o.sub || '', hasSeg: !!o.seg, seg: o.seg ? segObj(o.title, o.seg, o.segOn) : segObj('', [], ''),
     aria: o.title + ', by day', gap: d ? (labels.length > 20 ? '4px' : '10px') : (labels.length > 20 ? '2px' : '6px'), hgt: o.hgt || (d ? '120px' : '96px'), mt: o.tip ? '64px' : '4px',
-    days: bars(vals, labels.length, labels, { unit: o.unit, closed: o.closed, tip: o.tip, tipW: d ? '230px' : '200px' }), axis: axis.map(function (t) { return { t: t }; }),
+    days: bars(vals, labels.length, labels, { unit: o.unit, money: o.money, closed: o.closed, tip: o.tip, tipW: d ? '230px' : '200px' }), axis: axis.map(function (t) { return { t: t }; }),
     hasToday: !o.closed, today: o.today || TODAY_NOTE });
 }
 function bal(d, o) {
-  return blk('bal', mix({ title: o.title || 'Northwind’s credits', hasLink: !!o.link, link: o.link || '', v: o.v, vTx: o.red ? 'var(--red)' : 'var(--tx)', line: o.line, pct: o.pct + '%', pctN: String(o.pct), mc: o.red ? 'var(--red)' : '#7C4DFF',
+  return blk('bal', mix({ title: o.title || 'Northwind’s credit balance', hasLink: !!o.link, link: o.link || '', v: o.v, vTx: o.red ? 'var(--red)' : 'var(--tx)', line: o.line, pct: o.pct + '%', pctN: String(o.pct), mc: o.red ? 'var(--red)' : '#7C4DFF',
     ml: o.ml, mr: o.mr, hasNote: !!o.note, note: o.note || '', hasBtns: !!(o.btns && o.btns.length) }, btnSet(d, o.btns || [], 'flex-start')));
 }
 function hd(t, al) { return { t: t, al: al || 'left' }; }
@@ -327,20 +330,20 @@ var SP_ROWS = [
 function bySP(d, rows, o) {
   o = o || {};
   return table(d, { label: 'By super power', grid: 'minmax(0, 2.2fr) 64px 80px 96px 96px 150px 76px 130px',
-    heads: [hd(o.who ? 'Super power · owner' : 'Super power'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Model tokens', 'right'), hd('Credits', 'right'), hd('Share of uses')],
-    rows: rows.map(function (r) { return [cName(spIc(r[0], 40), r[0], r[1]), cNum(fmt(r[2])), cNum(fmt(r[3])), cErr(fmt(r[4]), r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cNum(r[7], { tx: 'var(--tx2)' }), cNum(fmt(r[8])), cShare(r[9])]; }),
-    prows: rows.map(function (r) { return prow(spIc(r[0], 40), r[0], r[1], fmt(r[2]) + ' runs · ' + fmt(r[3]) + ' uses · ' + fmt(r[4]) + ' errors (' + r[5] + ') · ' + r[6] + ' · ' + r[7] + ' tokens', { right: fmt(r[8]) + ' cr', pct: r[9] }); }) });
+    heads: [hd(o.who ? 'Super power · owner' : 'Super power'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Model tokens', 'right'), hd('Credit', 'right'), hd('Share of uses')],
+    rows: rows.map(function (r) { return [cName(spIc(r[0], 40), r[0], r[1]), cNum(fmt(r[2])), cNum(fmt(r[3])), cErr(fmt(r[4]), r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cNum(r[7], { tx: 'var(--tx2)' }), cNum(usd(r[8])), cShare(r[9])]; }),
+    prows: rows.map(function (r) { return prow(spIc(r[0], 40), r[0], r[1], fmt(r[2]) + ' runs · ' + fmt(r[3]) + ' uses · ' + fmt(r[4]) + ' errors (' + r[5] + ') · ' + r[6] + ' · ' + r[7] + ' tokens', { right: usd(r[8]), pct: r[9] }); }) });
 }
 var POW_ROWS = [
   ['Claude Sonnet 4.5', icLogo('Anthropic', 40), 'Model', 'Anthropic · your key', 2140, 18, '0.8%', '6 h 02 m', '11.6M in · 1.3M out', 22],
   ['Deal stages', icKind('Skill', 40), 'Skill', 'loaded by Deal Desk', 1904, 0, '0%', '2 m', '—', 19],
-  ['Gmail', icLogo('Gmail', 40), 'Connection', 'bo@northwind.com', 812, 21, '2.6%', '3 h 10 m', '980 credits', 8],
+  ['Gmail', icLogo('Gmail', 40), 'Connection', 'bo@northwind.com', 812, 21, '2.6%', '3 h 10 m', '$19.60 credit', 8],
   ['Receipt filer', icKind('Task', 40), 'Task', 'steps run by Inbox Zero', 640, 12, '1.9%', '4 h 22 m', '—', 7],
   ['~/Deals', icText('~/', 40), 'Folder', 'on studio-mac · read and write', 588, 3, '0.5%', '1 m', '—', 6]
 ];
 function byPowers(d) {
   return table(d, { label: 'By power', grid: 'minmax(0, 2.4fr) 90px 100px 100px 190px 140px',
-    heads: [hd('Power'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Tokens or credits', 'right'), hd('Share of uses')],
+    heads: [hd('Power'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Tokens or credit', 'right'), hd('Share of uses')],
     rows: POW_ROWS.map(function (r) { return [cName(r[1], r[0], r[3], r[2]), cNum(fmt(r[4])), cErr(fmt(r[5]), r[6]), cNum(r[7], { tx: 'var(--tx2)' }), cNum(r[8], { tx: r[8] === '—' ? 'var(--tx3)' : 'var(--tx2)' }), cShare(r[9])]; }),
     prows: POW_ROWS.map(function (r) { return prow(r[1], r[0], r[2] + ' · ' + r[3], fmt(r[4]) + ' uses · ' + fmt(r[5]) + ' errors (' + r[6] + ') · ' + r[7] + (r[8] === '—' ? '' : ' · ' + r[8]), { pct: r[9] }); }) });
 }
@@ -349,43 +352,44 @@ var MOD_ROWS = [
   ['GPT-5 mini', 'OpenAI', 1310, 9, '0.7%', '4.9M', '0.5M', '2.6M', 26],
   ['Gemini 2.5 Flash', 'Google', 604, 11, '1.8%', '1.9M', '0.3M', '0.5M', 11]
 ];
-function byModels(d) {
+function byModels(d, o) {
+  o = o || {}; var key = o.key || 'your key';
   return table(d, { label: 'By model', grid: 'minmax(0, 2.2fr) 80px 96px 80px 80px 80px 140px',
     heads: [hd('Model'), hd('Calls', 'right'), hd('Errors', 'right'), hd('In', 'right'), hd('Out', 'right'), hd('Cached', 'right'), hd('Share of tokens')],
-    rows: MOD_ROWS.map(function (r) { return [cName(icLogo(r[1], 40), r[0], r[1] + ' · your key'), cNum(fmt(r[2])), cErr(fmt(r[3]), r[4]), cNum(r[5]), cNum(r[6]), cNum(r[7], { tx: 'var(--tx2)' }), cShare(r[8])]; }),
-    prows: MOD_ROWS.map(function (r) { return prow(icLogo(r[1], 40), r[0], r[1] + ' · your key', fmt(r[2]) + ' calls · ' + fmt(r[3]) + ' errors (' + r[4] + ') · ' + r[5] + ' in · ' + r[6] + ' out · ' + r[7] + ' cached', { pct: r[8] }); }),
-    foot: 'Tokens as each provider reported them. Model calls are on your own keys: no credits.' });
+    rows: MOD_ROWS.map(function (r) { return [cName(icLogo(r[1], 40), r[0], r[1] + ' · ' + key), cNum(fmt(r[2])), cErr(fmt(r[3]), r[4]), cNum(r[5]), cNum(r[6]), cNum(r[7], { tx: 'var(--tx2)' }), cShare(r[8])]; }),
+    prows: MOD_ROWS.map(function (r) { return prow(icLogo(r[1], 40), r[0], r[1] + ' · ' + key, fmt(r[2]) + ' calls · ' + fmt(r[3]) + ' errors (' + r[4] + ') · ' + r[5] + ' in · ' + r[6] + ' out · ' + r[7] + ' cached', { pct: r[8] }); }),
+    foot: o.foot || 'Tokens as each provider reported them. Model calls are on your own keys: no credit used.' });
 }
-// Connectors, sorted by credits
+// Connectors, sorted by credit used (2¢ units)
 var CON_ME = [['Gmail', 'bo@northwind.com', 812, 21, '2.6%', '3 h 10 m', 980, 65], ['Slack', 'Northwind workspace', 288, 4, '1.4%', '41 m', 292, 19], ['Salesforce', 'bo@northwind.com', 142, 9, '6.3%', '1 h 55 m', 188, 12], ['Notion', 'Bo’s workspace', 42, 0, '0%', '6 m', 52, 3]];
 var CON_ORG = [['Gmail', '18 accounts', 6120, 129, '2.1%', '27 h 40 m', 7210, 50], ['Salesforce', '9 accounts', 2040, 98, '4.8%', '19 h 02 m', 3020, 21], ['Slack', '22 accounts', 2610, 31, '1.2%', '6 h 15 m', 2690, 19], ['Notion', '7 accounts', 640, 6, '0.9%', '1 h 34 m', 702, 5], ['Jira', '5 accounts', 310, 5, '1.6%', '58 m', 384, 3]];
 var CON_PAST = [['Gmail', '17 accounts', 5890, 118, '2.0%', '26 h 12 m', 6940, 50], ['Salesforce', '9 accounts', 1980, 91, '4.6%', '18 h 30 m', 2910, 21], ['Slack', '21 accounts', 2520, 28, '1.1%', '6 h 02 m', 2600, 19], ['Notion', '7 accounts', 610, 5, '0.8%', '1 h 31 m', 690, 5], ['Jira', '5 accounts', 300, 4, '1.3%', '55 m', 370, 3]];
 function byCon(d, rows, o) {
   o = o || {};
-  return table(d, { label: 'Credits by connector', grid: 'minmax(0, 2.2fr) 90px 110px 100px 100px 160px',
-    heads: [hd('Connector'), hd('Calls', 'right'), hd('Error rate', 'right'), hd('Time', 'right'), hd('Credits', 'right'), hd(o.shareT || 'Share of credits')],
-    rows: rows.map(function (r, i) { return { cells: [cName(icLogo(r[0], 40), r[0], r[1]), cNum(fmt(r[2])), cErr(r[4], fmt(r[3]) + ' errors'), cNum(r[5], { tx: 'var(--tx2)' }), cNum(fmt(r[6])), cShare(r[7])], bg: o.hi === i ? 'var(--s2)' : 'transparent' }; }),
-    prows: rows.map(function (r) { return prow(icLogo(r[0], 40), r[0], r[1], fmt(r[2]) + ' calls · ' + r[4] + ' errors · ' + r[5], { right: fmt(r[6]) + ' cr', pct: r[7] }); }),
+  return table(d, { label: 'Credit by connector', grid: 'minmax(0, 2.2fr) 90px 110px 100px 100px 160px',
+    heads: [hd('Connector'), hd('Calls', 'right'), hd('Error rate', 'right'), hd('Time', 'right'), hd('Credit', 'right'), hd(o.shareT || 'Share of credit')],
+    rows: rows.map(function (r, i) { return { cells: [cName(icLogo(r[0], 40), r[0], r[1]), cNum(fmt(r[2])), cErr(r[4], fmt(r[3]) + ' errors'), cNum(r[5], { tx: 'var(--tx2)' }), cNum(usd(r[6])), cShare(r[7])], bg: o.hi === i ? 'var(--s2)' : 'transparent' }; }),
+    prows: rows.map(function (r) { return prow(icLogo(r[0], 40), r[0], r[1], fmt(r[2]) + ' calls · ' + r[4] + ' errors · ' + r[5], { right: usd(r[6]), pct: r[7] }); }),
     foot: o.foot });
 }
 function byMachines(d) {
   var M = [['studio-mac', 'Fly.io · Chicago', 354, 8518, 113, '1.3%', '25 h 48 m', 1460, 87], ['build-box', 'Hetzner · Falkenstein', 58, 1318, 29, '2.2%', '5 h 24 m', 52, 13]];
   return table(d, { label: 'By machine', grid: 'minmax(0, 2.2fr) 70px 90px 100px 100px 90px 150px',
-    heads: [hd('Machine'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Credits', 'right'), hd('Share of uses')],
-    rows: M.map(function (r) { return [cName(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1]), cNum(fmt(r[2])), cNum(fmt(r[3])), cErr(fmt(r[4]), r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cNum(fmt(r[7])), cShare(r[8])]; }),
-    prows: M.map(function (r) { return prow(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1], fmt(r[2]) + ' runs · ' + fmt(r[3]) + ' uses · ' + fmt(r[4]) + ' errors (' + r[5] + ') · ' + r[6], { right: fmt(r[7]) + ' cr', pct: r[8] }); }) });
+    heads: [hd('Machine'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Credit', 'right'), hd('Share of uses')],
+    rows: M.map(function (r) { return [cName(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1]), cNum(fmt(r[2])), cNum(fmt(r[3])), cErr(fmt(r[4]), r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cNum(usd(r[7])), cShare(r[8])]; }),
+    prows: M.map(function (r) { return prow(icLogo(r[0] === 'studio-mac' ? 'Fly.io' : 'Hetzner', 40), r[0], r[1], fmt(r[2]) + ' runs · ' + fmt(r[3]) + ' uses · ' + fmt(r[4]) + ' errors (' + r[5] + ') · ' + r[6], { right: usd(r[7]), pct: r[8] }); }) });
 }
 var USERS = [[MAX, 'MA', 'Sales', 610, 14902, 388, '2.6%', '48 h 10 m', 3104, 22], ['Ana Ruiz', 'AR', 'Sales', 398, 11260, 201, '1.8%', '36 h 44 m', 2890, 20], ['Bo Li', 'BL', 'Design', 412, 9836, 142, '1.4%', '31 h 12 m', 1512, 11], ['Kenji Watanabe', 'KW', 'Support', 366, 8410, 97, '1.2%', '28 h 05 m', 1290, 9], ['Sam Rivera', 'SR', 'Sales · Design', 301, 6022, 64, '1.1%', '19 h 30 m', 1104, 8]];
 function byUsers(d) {
   return table(d, { label: 'By user', grid: 'minmax(0, 2.4fr) 64px 84px 96px 100px 84px 130px',
-    heads: [hd('Member · teams'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Credits', 'right'), hd('Share of credits')],
-    rows: USERS.map(function (r) { return [cName(icPerson(r[1], 40), r[0], r[2]), cNum(fmt(r[3])), cNum(fmt(r[4])), cErr(fmt(r[5]), r[6]), cNum(r[7], { tx: 'var(--tx2)' }), cNum(fmt(r[8])), cShare(r[9])]; }),
-    prows: USERS.map(function (r) { return prow(icPerson(r[1], 40), r[0], r[2], fmt(r[3]) + ' runs · ' + fmt(r[4]) + ' uses · ' + fmt(r[5]) + ' errors (' + r[6] + ') · ' + r[7], { right: fmt(r[8]) + ' cr', pct: r[9] }); }) });
+    heads: [hd('Member · teams'), hd('Runs', 'right'), hd('Uses', 'right'), hd('Errors', 'right'), hd('Time', 'right'), hd('Credit', 'right'), hd('Share of credit')],
+    rows: USERS.map(function (r) { return [cName(icPerson(r[1], 40), r[0], r[2]), cNum(fmt(r[3])), cNum(fmt(r[4])), cErr(fmt(r[5]), r[6]), cNum(r[7], { tx: 'var(--tx2)' }), cNum(usd(r[8])), cShare(r[9])]; }),
+    prows: USERS.map(function (r) { return prow(icPerson(r[1], 40), r[0], r[2], fmt(r[3]) + ' runs · ' + fmt(r[4]) + ' uses · ' + fmt(r[5]) + ' errors (' + r[6] + ') · ' + r[7], { right: usd(r[8]), pct: r[9] }); }) });
 }
 // The audit log: every column usage_events and power_events keep. Counts and times only.
 var TZ = 'CEST';
-var REFUSED_WHY = 'Out of credits: Northwind’s balance is 0';
-// usage_events: [time, user, machine, super power, run, connector, tool, status, error, took, credits, sent, received]
+var REFUSED_WHY = 'Out of credit: Northwind’s balance is $0.00';
+// usage_events: [time, user, machine, super power, run, connector, tool, status, error, took, cost in 2¢ units, sent, received]
 var CALLS = [
   ['14:32:08', 'Bo Li', 'studio-mac', 'Inbox Zero', 'run_7f3k2q9a', 'Gmail', 'gmail-send-email', 'ok', '', '4.2 s', '1', '6.1 KB', '0.4 KB'],
   ['14:31:40', 'Bo Li', 'studio-mac', 'Inbox Zero', 'run_7f3k2q9a', 'Gmail', 'gmail-find-email', 'ok', '', '2.1 s', '1', '0.3 KB', '48.2 KB'],
@@ -415,17 +419,17 @@ function auditCalls(d, rows, o) {
   o = o || {};
   var user = !!o.user;
   var grid = user ? '84px minmax(0, 0.9fr) minmax(0, 0.9fr) 74px minmax(0, 1.6fr) 76px minmax(0, 1.5fr) 46px 46px 64px' : '92px minmax(0, 1fr) 80px minmax(0, 1.6fr) 80px minmax(0, 1.6fr) 56px 52px 72px';
-  var heads = [hd('Started, ' + TZ)].concat(user ? [hd('User')] : []).concat([hd('Super power · machine'), hd('Run'), hd('Connector · tool'), hd('Status'), hd('Error reason'), hd('Took', 'right'), hd('Credits', 'right'), hd('Sent / got', 'right')]);
+  var heads = [hd('Started, ' + TZ)].concat(user ? [hd('User')] : []).concat([hd('Super power · machine'), hd('Run'), hd('Connector · tool'), hd('Status'), hd('Error reason'), hd('Took', 'right'), hd('Cost', 'right'), hd('Sent / got', 'right')]);
   return table(d, { label: 'Connector calls', grid: grid, heads: heads, rowH: '64px',
     rows: rows.map(function (r, i) {
       var cells = [cText(r[0], { mono: true, tx: 'var(--tx)', sub: '11 Oct 2026' })];
       if (user) cells.push(cText(r[1], { tx: 'var(--tx)', wrap: true }));
       cells.push(cText(r[3], { tx: 'var(--tx)', sub: r[2], wrap: true }), cText(r[4].slice(0, 8), { mono: true, tx: 'var(--accent-tx)' }), cName(icLogo(r[5], 28), r[6], r[5], '', '13px'), cChip(r[7]),
-        cText(r[8] || '—', { tx: r[8] ? (r[7] === 'refused' ? 'var(--tx2)' : 'var(--red)') : 'var(--tx3)', mono: !!r[8] && r[7] !== 'refused', wrap: true }), cNum(r[9], { tx: 'var(--tx2)' }), cNum(r[10]), cNum(r[11], { tx: 'var(--tx2)', sub: r[12] }));
+        cText(r[8] || '—', { tx: r[8] ? (r[7] === 'refused' ? 'var(--tx2)' : 'var(--red)') : 'var(--tx3)', mono: !!r[8] && r[7] !== 'refused', wrap: true }), cNum(r[9], { tx: 'var(--tx2)' }), cNum(usd(+r[10])), cNum(r[11], { tx: 'var(--tx2)', sub: r[12] }));
       return { cells: cells, bg: o.hi === i ? 'var(--s2)' : 'transparent' };
     }),
     prows: rows.map(function (r, i) { return prow(icLogo(r[5], 36), r[6], r[3] + ' · ' + r[2] + (user ? ' · ' + r[1] : ''),
-      stamp(r[0]) + ' ' + TZ + ' · ' + r[4].slice(0, 8) + ' · took ' + r[9] + ' · ' + r[10] + (r[10] === '1' ? ' credit' : ' credits') + ' · ' + r[11] + ' sent, ' + r[12] + ' got' + (r[8] ? ' · ' + r[8] : ''), { chip: r[7], bg: o.hi === i ? 'var(--s2)' : 'transparent' }); }) });
+      stamp(r[0]) + ' ' + TZ + ' · ' + r[4].slice(0, 8) + ' · took ' + r[9] + ' · cost ' + usd(+r[10]) + ' · ' + r[11] + ' sent, ' + r[12] + ' got' + (r[8] ? ' · ' + r[8] : ''), { chip: r[7], bg: o.hi === i ? 'var(--s2)' : 'transparent' }); }) });
 }
 // power_events: [time, user, machine, super power, run, kind, what, icon, tokens, status, error code, took]
 var POWS = [
@@ -467,14 +471,15 @@ function auditFilters(d, kind, o) {
 }
 
 var COUNTS_ONLY = 'Counts and times only. What went through a call (prompts, arguments, results) is never kept, so it is never shown here.';
-var CREDITS_ONLY = 'Only connection calls cost credits: 1 credit for every 30 seconds a call takes, at least 1. Model calls go on your own keys, and everything else your super powers do on your machines is free.';
+var CREDITS_ONLY = 'Only connection calls use credit: 2¢ for each started 30 seconds a call takes. Runs cost nothing, model calls go on your own keys, and everything else your super powers do on your machines is free.';
 
-function memberTiles(d) {
+function memberTiles(d, keys) {
+  keys = keys || 'on your own keys';
   return tiles(d, [tile('Runs', '412', 'across 3 super powers'), tile('Uses', '9,836', 'powers used in runs'), tile('Errors', '142', '1.4% of uses'), tile('Time', '31 h 12 m', 'spent in runs'),
-    tile('Tokens in', '18.4M', 'on your own keys'), tile('Tokens out', '2.1M', 'on your own keys'), tile('Tokens cached', '11.2M', '61% of input'), tile('Connection calls', '1,284', '1,512 credits')]);
+    tile('Tokens in', '18.4M', keys), tile('Tokens out', '2.1M', keys), tile('Tokens cached', '11.2M', '61% of input'), tile('Connection calls', '1,284', '$30.24 credit used')]);
 }
-function memberChart(d, o) { o = o || {}; return chart(d, { title: 'Uses by day', total: '9,836', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credits'] : null, segOn: 'Uses', tip: o.tip }); }
-function memberBal(d) { return bal(d, { v: '[BALANCE] left', line: 'Of [ALLOWANCE] this billing period. You used 1,512 of them.', pct: 62, ml: '62% used', mr: 'renews 4 Nov', note: 'Shared by everyone in Northwind. Sam Rivera, your org admin, can add more.' }); }
+function memberChart(d, o) { o = o || {}; return chart(d, { title: 'Uses by day', total: '9,836', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credit'] : null, segOn: 'Uses', tip: o.tip }); }
+function memberBal(d) { return bal(d, { v: '$263.44 left', line: 'Northwind has used $287.76 of $551.20 this billing period; $30.24 of it was yours.', pct: 52, ml: '52% used', mr: '+$240.00 on 4 Nov', note: 'Shared by everyone in Northwind. Sam Rivera, your org admin, can add more.' }); }
 function usageHead(d, o) { o = o || {}; return head(d, { title: o.title || 'Usage', size: d ? '32px' : '28px', btns: [btn('secondary', 'Audit log')], meta: o.meta || 'What your super powers used in Northwind: runs, powers, models and connection calls. ' + COUNTS_ONLY }); }
 function memberTop(d, o) {
   o = o || {};
@@ -500,12 +505,12 @@ function orgTop(d, o) {
   return [R(d, [orgTabs()]), R(d, [head(d, { title: o.title || 'Usage', size: d ? '32px' : '28px', meta: o.meta || 'Everything Northwind’s 24 members used: by user, super power, power, model, connection and machine. ' + COUNTS_ONLY, btns: o.btns })]),
     R(d, [ctrls(d, { period: o.period === undefined ? NOW : o.period, range: o.range || RANGE, items: periodItems(d, { team: o.team || 'All teams', earlier: o.earlier }) })])];
 }
-function orgBal(d) { return bal(d, { link: 'Billing', v: '[BALANCE] left', line: 'Of [ALLOWANCE] this billing period. 14,388 used so far.', pct: 62, ml: '62% used', mr: 'renews 4 Nov', btns: [btn('primary', 'Add funds')] }); }
+function orgBal(d) { return bal(d, { link: 'Billing', v: '$263.44 left', line: '$287.76 used of $551.20 this billing period: $61.20 carried over, $240.00 from Basic (24 seats × $10) on 4 Oct, and $250.00 added on 6 Oct.', pct: 52, ml: '52% used', mr: '+$240.00 on 4 Nov', note: 'Bought credit expires a year after purchase: the $250.00 on 6 Oct 2027.', btns: [btn('primary', 'Add funds')] }); }
 
-// Billing period: credits
+// Billing period: credit used, in dollars
 function creditsChart(d, vals, total, o) {
   o = o || {};
-  return chart(d, { title: 'Credits by day', total: total, sub: o.sub || '4 Oct – 3 Nov · days to come are outlined', labels: o.labels || L_PERIOD, vals: vals, unit: 'credits', closed: o.closed, today: o.today });
+  return chart(d, { title: 'Credit used by day', total: total, sub: o.sub || '4 Oct – 3 Nov · days to come are outlined', labels: o.labels || L_PERIOD, vals: vals, money: true, closed: o.closed, today: o.today });
 }
 
 
@@ -517,8 +522,8 @@ function detailOf(d, i) {
   if (err) blocks.push(quote('Error reason, from ' + r[5], r[8], 'Salesforce caps the calls your account can make in a day. Try again tomorrow, or ask your Salesforce admin to raise the limit.'));
   blocks.push(
     facts('', [['Started', stamp(r[0]) + '.214 ' + TZ, 'mono'], ['Recorded', stamp(r[0].slice(0, 6) + (err ? '59' : '12')) + '.402 ' + TZ, 'mono'], ['User', r[1]], ['Machine', r[2]], ['Super power', r[3]], ['Run', r[4] + ' · open in rrotor'], ['Connector', r[5] + ' · bo@northwind.com'], ['Tool', r[6], 'mono'],
-      ['Status', err ? 'error' : 'ok', err ? 'red' : ''], ['Error reason', err ? 'shown above' : 'none'], ['Took', r[9] + ' · timed by Glyphh', 'mono'], ['Credits', r[10], 'mono'], ['Sent', r[11], 'mono'], ['Received', r[12], 'mono']],
-      'One credit for every 30 seconds a call takes, at least one; a failed call still costs what the service bills; a refused call costs 0.'),
+      ['Status', err ? 'error' : 'ok', err ? 'red' : ''], ['Error reason', err ? 'shown above' : 'none'], ['Took', r[9] + ' · timed by Glyphh', 'mono'], ['Cost', usd(+r[10]), 'mono'], ['Sent', r[11], 'mono'], ['Received', r[12], 'mono']],
+      '2¢ for each started 30 seconds, timed by Glyphh. A failed call still costs; a refused call costs $0.00.'),
     facts('Ids', [['Event', err ? 'ue_01JA7Q1F4ZC0WE' : 'ue_01JA7Q3M8X2KD9', 'mono'], ['Run', r[4], 'mono']]),
     trace(err ? '8e03-17bd-c5a2-90f6' : '4c1e-9a07-d2b8-61f3'),
     alert(d, 'plain', { title: 'What went through the call isn’t kept. Rows can’t be changed or deleted.', body: 'No arguments, results or message bodies: they stay between your machine and ' + r[5] + '. The audit log keeps who, what, when, how long, how big and what it cost.' }),
@@ -534,33 +539,33 @@ var STATES = [
   { id: 'menu', title: '1 · Getting there', who: 'm', sub: 'From the account menu (Usage, under your name), and from Powers, where every tab links to its usage. Bo Li is a member of Northwind; org admins also get Org › Usage.',
     build: function (d) {
       var t = tabsOf(['Loops', 'Connections', 'Models', 'Folders', 'Skills'], 'Connections');
-      return { nav: 'Powers', menu: true, rows: [R(d, [head(d, { title: 'Powers', size: d ? '32px' : '28px', meta: 'Your connections, models, folders and skills.' })]), R(d, [blk('tabs', { label: 'Powers', tabs: t }), h({ title: 'Connections', desc: 'Each is your own account. 4 connected.', link: 'See usage' }), byCon(d, CON_ME.slice(0, 3), { shareT: 'Share of credits' })])] };
+      return { nav: 'Powers', menu: true, rows: [R(d, [head(d, { title: 'Powers', size: d ? '32px' : '28px', meta: 'Your connections, models, folders and skills.' })]), R(d, [blk('tabs', { label: 'Powers', tabs: t }), h({ title: 'Connections', desc: 'Each is your own account. 4 connected.', link: 'See usage' }), byCon(d, CON_ME.slice(0, 3), { shareT: 'Share of credit' })])] };
     } },
-  { id: 'credits', title: '2 · Credits this billing period (member)', who: 'm', sub: 'The page opens on the org’s billing period, 4 Oct – 3 Nov, never the calendar month. Credits used and left, bars by day across the whole period (days to come outlined), then credits by connector, sorted by credits. Only connection calls cost credits, and the page says so.',
+  { id: 'credits', title: '2 · Credit this billing period (member)', who: 'm', sub: 'The page opens on the org’s billing period, 4 Oct – 3 Nov, never the calendar month. Credit used and left, in dollars, bars by day across the whole period (days to come outlined), then credit used by connector, most first. Only connection calls use credit (2¢ per started 30 seconds; runs cost nothing), and the page says so.',
     build: function (d) {
       var rows = [R(d, [usageHead(d)]), R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d) })]),
-        R(d, [alert(d, 'plain', { title: 'Only connection calls cost credits', body: CREDITS_ONLY })]),
-        R(d, [creditsChart(d, CRED_ME, '1,512')], [memberBal(d)]),
-        R(d, [h({ title: 'Credits by connector', desc: 'Your calls this billing period, most credits first.', mt: '8px' }), byCon(d, CON_ME, { foot: 'Error rate is the share of calls that failed. A failed call still costs what the service bills for it.' }), pager(d, 'Connectors', 1, 4, 4, 1, 1)])];
+        R(d, [alert(d, 'plain', { title: 'Only connection calls use credit', body: CREDITS_ONLY })]),
+        R(d, [creditsChart(d, CRED_ME, '$30.24')], [memberBal(d)]),
+        R(d, [h({ title: 'Credit by connector', desc: 'Your calls this billing period, most credit used first.', mt: '8px' }), byCon(d, CON_ME, { foot: 'Error rate is the share of calls that failed. A failed call still costs what the service bills for it.' }), pager(d, 'Connectors', 1, 4, 4, 1, 1)])];
       return { nav: '', rows: rows };
     } },
-  { id: 'creditsOrg', title: '3 · Credits this billing period (org admin)', who: 'a', sub: 'Org › Usage, the new sub-tab after Review. The same view for all of Northwind: the balance with a link to Billing and Add funds, credits by day, and every connector the org called, paginated.',
+  { id: 'creditsOrg', title: '3 · Credit this billing period (org admin)', who: 'a', sub: 'Org › Usage, the new sub-tab after Review. The same view for all of Northwind: the balance with a link to Billing and Add funds, credit used by day, and every connector the org called, paginated.',
     build: function (d) {
-      var rows = orgTop(d).concat([R(d, [alert(d, 'plain', { title: 'Only connection calls cost credits', body: CREDITS_ONLY })]),
-        R(d, [creditsChart(d, CRED_ORG, '14,388')], [orgBal(d)]),
-        R(d, [h({ title: 'Credits by connector', desc: 'All of Northwind this billing period, most credits first.', mt: '8px' }), byCon(d, CON_ORG, { hi: 0 }), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
+      var rows = orgTop(d).concat([R(d, [alert(d, 'plain', { title: 'Only connection calls use credit', body: CREDITS_ONLY })]),
+        R(d, [creditsChart(d, CRED_ORG, '$287.76')], [orgBal(d)]),
+        R(d, [h({ title: 'Credit by connector', desc: 'All of Northwind this billing period, most credit used first.', mt: '8px' }), byCon(d, CON_ORG, { hi: 0 }), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
       return { nav: 'Org', rows: rows };
     } },
-  { id: 'gmail', title: '4 · A connector opened: Gmail', who: 'a', sub: 'From a connector’s row. Its credits and calls by tool, by super power and by user, by day; then its rows in the audit log, already filtered to Gmail, with cursor paging and Export CSV. A member sees the same for their own calls, without By user.',
+  { id: 'gmail', title: '4 · A connector opened: Gmail', who: 'a', sub: 'From a connector’s row. Its credit used and calls by tool, by super power and by user, by day; then its rows in the audit log, already filtered to Gmail, with cursor paging and Export CSV. A member sees the same for their own calls, without By user.',
     build: function (d) {
-      var tools = [['gmail-find-email', '3,410 calls · 3,520 cr', 49], ['gmail-send-email', '1,620 calls · 1,890 cr', 26], ['gmail-get-attachment', '450 calls · 1,160 cr', 16], ['gmail-list-labels', '640 calls · 640 cr', 9]];
-      var bySp = [['Inbox Zero · Ana Ruiz', '2,410 cr', 33, icCat('Inbox Zero', 28)], ['Deal Desk · ' + MAX, '1,980 cr', 27, icCat('Deal Desk', 28)], ['Inbox Zero · Bo Li', '828 cr', 11, icCat('Inbox Zero', 28)], ['Scout · Kenji Watanabe', '712 cr', 10, icCat('Scout', 28)], ['6 more', '1,280 cr', 18]];
-      var byU = [[MAX, '2,640 cr', 37, icPerson('MA', 28)], ['Ana Ruiz', '2,410 cr', 33, icPerson('AR', 28)], ['Bo Li', '980 cr', 14, icPerson('BL', 28)], ['Kenji Watanabe', '712 cr', 10, icPerson('KW', 28)], ['20 more', '468 cr', 6]];
+      var tools = [['gmail-find-email', '3,410 calls · $70.40', 49], ['gmail-send-email', '1,620 calls · $37.80', 26], ['gmail-get-attachment', '450 calls · $23.20', 16], ['gmail-list-labels', '640 calls · $12.80', 9]];
+      var bySp = [['Inbox Zero · Ana Ruiz', '$48.20', 33, icCat('Inbox Zero', 28)], ['Deal Desk · ' + MAX, '$39.60', 27, icCat('Deal Desk', 28)], ['Inbox Zero · Bo Li', '$16.56', 11, icCat('Inbox Zero', 28)], ['Scout · Kenji Watanabe', '$14.24', 10, icCat('Scout', 28)], ['6 more', '$25.60', 18]];
+      var byU = [[MAX, '$52.80', 37, icPerson('MA', 28)], ['Ana Ruiz', '$48.20', 33, icPerson('AR', 28)], ['Bo Li', '$19.60', 14, icPerson('BL', 28)], ['Kenji Watanabe', '$14.24', 10, icPerson('KW', 28)], ['20 more', '$9.36', 6]];
       var rows = [R(d, [orgTabs()]), R(d, [head(d, { crumb: 'Usage', icon: icLogo('Gmail', d ? 64 : 52), title: 'Gmail', meta: 'Connector · 18 members’ own accounts · this billing period, 4 Oct – 3 Nov', btns: [btn('secondary', 'Export CSV')] })]),
         R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d, { team: 'All teams' }) })]),
-        R(d, [tiles(d, [tile('Credits', '7,210', '50% of Northwind’s'), tile('Calls', '6,120', 'through Pipedream'), tile('Errors', '129', '2.1% of calls'), tile('Time', '27 h 40 m', 'in calls')])]),
-        R(d, [chart(d, { title: 'Gmail credits by day', total: '7,210', sub: '4 Oct – 3 Nov', labels: L_PERIOD, vals: CRED_GMAIL, unit: 'credits' })], [hbars('By tool', 'Credits, with calls', tools)]),
-        R(d, [hbars('By super power', 'Credits this period', bySp)], [hbars('By user', 'Credits this period', byU)], 'minmax(0, 1fr) minmax(0, 1fr)'),
+        R(d, [tiles(d, [tile('Credit used', '$144.20', '50% of Northwind’s'), tile('Calls', '6,120', 'through Pipedream'), tile('Errors', '129', '2.1% of calls'), tile('Time', '27 h 40 m', 'in calls')])]),
+        R(d, [chart(d, { title: 'Gmail credit used by day', total: '$144.20', sub: '4 Oct – 3 Nov', labels: L_PERIOD, vals: CRED_GMAIL, money: true })], [hbars('By tool', 'Calls and credit used', tools)]),
+        R(d, [hbars('By super power', 'Credit used this period', bySp)], [hbars('By user', 'Credit used this period', byU)], 'minmax(0, 1fr) minmax(0, 1fr)'),
         R(d, [h({ title: 'Gmail calls', desc: 'The audit log’s connector calls, filtered to Gmail. Newest first.', link: 'Open in the audit log', mt: '8px' }), auditFilters(d, 'calls', { user: true, con: 'Gmail', clear: true }),
           auditCalls(d, CALLS_GMAIL, { user: true }), cursor(d, 'Gmail calls', 'Newest first · 6,120 rows · 50 a page', true), btns(d, [btn('secondary', 'Export 6,120 rows as CSV', true)])])];
       return { nav: 'Org', rows: rows };
@@ -569,22 +574,22 @@ var STATES = [
     build: function (d) {
       var rows = orgTop(d, { period: null, range: '4 Sep – 3 Oct · closed', earlier: '4 Sep – 3 Oct' }).concat([
         R(d, [alert(d, 'plain', { title: 'This period is closed', body: 'These totals are final and match the invoice for 4 Sep – 3 Oct.' })]),
-        R(d, [tiles(d, [tile('Credits used', '13,940', 'of [ALLOWANCE]'), tile('Connection calls', '11,530', 'only these cost credits'), tile('Runs', '14,206', '24 members'), tile('Model tokens', '602M', 'on members’ keys, not billed')])]),
-        R(d, [creditsChart(d, CRED_PAST, '13,940', { labels: L_PAST, closed: true, sub: '4 Sep – 3 Oct · 30 days' })],
-          [bal(d, { title: 'The period’s credits', link: 'Invoice for Sep 4 – Oct 3', v: '13,940 used', line: 'Of [ALLOWANCE], plus [TOP-UPS] added in the period. What was left expired on 3 Oct.', pct: 88, ml: '88% used', mr: 'closed 3 Oct' })]),
-        R(d, [h({ title: 'Credits by connector', desc: '4 Sep – 3 Oct, most credits first.', mt: '8px' }), byCon(d, CON_PAST), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
+        R(d, [tiles(d, [tile('Credit used', '$278.80', 'of $340.00'), tile('Connection calls', '11,530', 'only these use credit'), tile('Runs', '14,206', '24 members'), tile('Model tokens', '602M', 'on members’ keys, not billed')])]),
+        R(d, [creditsChart(d, CRED_PAST, '$278.80', { labels: L_PAST, closed: true, sub: '4 Sep – 3 Oct · 30 days' })],
+          [bal(d, { title: 'The period’s credit', link: 'Invoice for Sep 4 – Oct 3', v: '$278.80 used', line: '$278.80 used of $340.00: $240.00 from Basic on 4 Sep and $100.00 added on 19 Sep. Nothing expires at the end of a period: the $61.20 left carried on.', note: 'Bought credit expires a year after purchase: the $100.00 on 19 Sep 2027.', pct: 82, ml: '82% used', mr: 'closed 3 Oct' })]),
+        R(d, [h({ title: 'Credit by connector', desc: '4 Sep – 3 Oct, most credit used first.', mt: '8px' }), byCon(d, CON_PAST), pager(d, 'Connectors', 1, 5, 9, 1, 2)])]);
       return { nav: 'Org', rows: rows };
     } },
-  { id: 'sp', title: '6 · Your usage, by super power', who: 'm', sub: 'Summary tiles, uses by day (today still counting), the org’s balance, then the By switch. Each grouping is a paginated table: its name with its cat, logo or kind, uses, errors with the rate, time, tokens or credits as fits, and a share bar. The latest calls sit under it.',
+  { id: 'sp', title: '6 · Your usage, by super power', who: 'm', sub: 'Summary tiles, uses by day (today still counting), the org’s balance, then the By switch. Each grouping is a paginated table: its name with its cat, logo or kind, uses, errors with the rate, time, tokens or credit used as fits, and a share bar. The latest calls sit under it.',
     build: function (d) { var o = memberPage(d, 'Super powers', { latest: true }); o.nav = ''; return o; } },
-  { id: 'powers', title: '7 · By powers, last 30 days', who: 'm', sub: 'Every power a run used: models, connections, skills, tasks, folders. Tokens for a model, credits for a connection, nothing for the rest. Last 30 days spans two billing periods, so the balance stays on the current one.',
+  { id: 'powers', title: '7 · By powers, last 30 days', who: 'm', sub: 'Every power a run used: models, connections, skills, tasks, folders. Tokens for a model, credit used for a connection, nothing for the rest. Last 30 days spans two billing periods, so the balance stays on the current one.',
     build: function (d) {
-      var c = chart(d, { title: 'Uses by day', total: '31,534', sub: '12 Sep – 11 Oct · last 30 days', labels: L_30, vals: USES_30, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credits'] : null, segOn: 'Uses' });
+      var c = chart(d, { title: 'Uses by day', total: '31,534', sub: '12 Sep – 11 Oct · last 30 days', labels: L_30, vals: USES_30, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credit'] : null, segOn: 'Uses' });
       var o = memberPage(d, 'Powers', { period: 'Last 30 days', range: '12 Sep – 11 Oct', chart: c }); o.nav = ''; return o;
     } },
-  { id: 'models', title: '8 · By models', who: 'm', sub: 'Calls, errors and tokens in, out and cached, exactly as each provider reported them. Never credits: model calls are on the member’s own key.',
+  { id: 'models', title: '8 · By models', who: 'm', sub: 'Calls, errors and tokens in, out and cached, exactly as each provider reported them. Never credit: model calls are on the member’s own key.',
     build: function (d) { var o = memberPage(d, 'Models'); o.nav = ''; return o; } },
-  { id: 'cons', title: '9 · By connections', who: 'm', sub: 'Calls, errors, time and credits for each of the member’s own connections, with the rule for credits right above.',
+  { id: 'cons', title: '9 · By connections', who: 'm', sub: 'Calls, errors, time and credit used for each of the member’s own connections, with the rule for credit right above.',
     build: function (d) { var o = memberPage(d, 'Connections'); o.nav = ''; return o; } },
   { id: 'machines', title: '10 · By machines', who: 'm', sub: 'Where the work ran: each machine with its host’s logo and region.',
     build: function (d) { var o = memberPage(d, 'Machines'); o.nav = ''; return o; } },
@@ -600,28 +605,28 @@ var STATES = [
     build: function (d) {
       return { nav: '', rows: memberTop(d).concat([R(d, [memberChart(d, { tip: true })], [memberBal(d)])]) };
     } },
-  { id: 'spOne', title: '13 · A super power’s usage: Inbox Zero', who: 'm', sub: 'Opened from its row. Its runs by day; the powers it used; its models and tokens; its connection calls and credits; then its runs, newest first, paginated. A run opens in rrotor, on its machine, where its steps and logs live.',
+  { id: 'spOne', title: '13 · A super power’s usage: Inbox Zero', who: 'm', sub: 'Opened from its row. Its runs by day; the powers it used; its models and tokens; its connection calls and credit used; then its runs, newest first, paginated. A run opens in rrotor, on its machine, where its steps and logs live.',
     build: function (d) {
       var pw = [['Claude Sonnet 4.5', '1,402 calls', 26, icLogo('Anthropic', 28)], ['Gmail', '690 calls', 13, icLogo('Gmail', 28)], ['Receipt filer', '640 steps', 12, icKind('Task', 28)], ['GPT-5 mini', '1,288 calls', 24, icLogo('OpenAI', 28)], ['5 more', '1,392 uses', 25]];
       var mods = table(d, { label: 'Models and tokens', grid: 'minmax(0, 1.6fr) 70px 70px 70px 80px', heads: [hd('Model'), hd('In', 'right'), hd('Out', 'right'), hd('Cached', 'right'), hd('Errors', 'right')], rowH: '56px',
         rows: [[cName(icLogo('Anthropic', 32), 'Claude Sonnet 4.5', 'your key', '', '14px'), cNum('7.9M'), cNum('0.9M'), cNum('5.2M', { tx: 'var(--tx2)' }), cErr('9', '0.6%')], [cName(icLogo('OpenAI', 32), 'GPT-5 mini', 'your key', '', '14px'), cNum('1.9M'), cNum('0.2M'), cNum('0.8M', { tx: 'var(--tx2)' }), cErr('6', '0.5%')]],
         prows: [prow(icLogo('Anthropic', 36), 'Claude Sonnet 4.5', 'your key', '7.9M in · 0.9M out · 5.2M cached · 9 errors (0.6%)'), prow(icLogo('OpenAI', 36), 'GPT-5 mini', 'your key', '1.9M in · 0.2M out · 0.8M cached · 6 errors (0.5%)')], foot: 'Not billed: your keys, your bill.' });
-      var cons = table(d, { label: 'Connection calls', grid: 'minmax(0, 1.6fr) 70px 80px 80px', heads: [hd('Connector'), hd('Calls', 'right'), hd('Errors', 'right'), hd('Credits', 'right')], rowH: '56px',
-        rows: [[cName(icLogo('Gmail', 32), 'Gmail', 'bo@northwind.com', '', '14px'), cNum('690'), cErr('12', '1.7%'), cNum('828')], [cName(icLogo('Slack', 32), 'Slack', 'Northwind workspace', '', '14px'), cNum('100'), cErr('1', '1.0%'), cNum('120')]],
-        prows: [prow(icLogo('Gmail', 36), 'Gmail', 'bo@northwind.com', '690 calls · 12 errors (1.7%)', { right: '828 cr' }), prow(icLogo('Slack', 36), 'Slack', 'Northwind workspace', '100 calls · 1 error (1.0%)', { right: '120 cr' })], foot: '948 credits in all this period.' });
+      var cons = table(d, { label: 'Connection calls', grid: 'minmax(0, 1.6fr) 70px 80px 80px', heads: [hd('Connector'), hd('Calls', 'right'), hd('Errors', 'right'), hd('Credit', 'right')], rowH: '56px',
+        rows: [[cName(icLogo('Gmail', 32), 'Gmail', 'bo@northwind.com', '', '14px'), cNum('690'), cErr('12', '1.7%'), cNum('$16.56')], [cName(icLogo('Slack', 32), 'Slack', 'Northwind workspace', '', '14px'), cNum('100'), cErr('1', '1.0%'), cNum('$2.40')]],
+        prows: [prow(icLogo('Gmail', 36), 'Gmail', 'bo@northwind.com', '690 calls · 12 errors (1.7%)', { right: '$16.56' }), prow(icLogo('Slack', 36), 'Slack', 'Northwind workspace', '100 calls · 1 error (1.0%)', { right: '$2.40' })], foot: '$18.96 in all this period.' });
       var RUNS = [['running', 'Today 14:32', '1 m 12 s so far', 'studio-mac', 'Schedule · every 30 min', '3'], ['done', 'Today 14:00', '2 m 40 s', 'studio-mac', 'Schedule · every 30 min', '6'], ['failed', 'Today 13:30', '48 s', 'studio-mac', 'Schedule · every 30 min', '1'], ['done', 'Today 13:12', '3 m 05 s', 'studio-mac', 'You, from Claude', '7'], ['missed', 'Today 12:30', '—', 'studio-mac', 'Schedule · machine offline', '0']];
-      var runs = table(d, { label: 'Runs', grid: '120px minmax(0, 1fr) 130px 110px minmax(0, 1.3fr) 70px 24px', heads: [hd('Status'), hd('When'), hd('Took', 'right'), hd('Machine'), hd('Started by'), hd('Credits', 'right'), hd('')], rowH: '56px',
-        rows: RUNS.map(function (r) { return [cChip(r[0]), cText(r[1], { tx: 'var(--tx)' }), cNum(r[2], { tx: 'var(--tx2)' }), cText(r[3], { mono: true }), cText(r[4]), cNum(r[5]), cChev()]; }),
-        prows: RUNS.map(function (r) { return prow(icCat('Inbox Zero', 36), r[1], r[4], 'Took ' + r[2] + ' · ' + r[3] + ' · ' + r[5] + ' credits', { chip: r[0] }); }) });
+      var runs = table(d, { label: 'Runs', grid: '120px minmax(0, 1fr) 130px 110px minmax(0, 1.3fr) 70px 24px', heads: [hd('Status'), hd('When'), hd('Took', 'right'), hd('Machine'), hd('Started by'), hd('Cost', 'right'), hd('')], rowH: '56px',
+        rows: RUNS.map(function (r) { return [cChip(r[0]), cText(r[1], { tx: 'var(--tx)' }), cNum(r[2], { tx: 'var(--tx2)' }), cText(r[3], { mono: true }), cText(r[4]), cNum(usd(+r[5]), { sub: 'its calls' }), cChev()]; }),
+        prows: RUNS.map(function (r) { return prow(icCat('Inbox Zero', 36), r[1], r[4], 'Took ' + r[2] + ' · ' + r[3] + ' · its calls cost ' + usd(+r[5]), { chip: r[0] }); }) });
       var rows = [R(d, [head(d, { crumb: 'Usage', icon: icCat('Inbox Zero', d ? 64 : 52), title: 'Inbox Zero', meta: 'Super power on studio-mac · this billing period, 4 Oct – 3 Nov. ' + COUNTS_ONLY })]),
         R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d) })]),
-        R(d, [tiles(d, [tile('Runs', '236', '8 failed · 1 missed'), tile('Uses', '5,412', 'powers used'), tile('Errors', '61', '1.1% of uses'), tile('Time', '14 h 08 m', 'in runs'), tile('Tokens in', '9.8M', 'your keys'), tile('Tokens out', '1.1M', 'your keys'), tile('Tokens cached', '6.0M', '61% of input'), tile('Credits', '948', '790 connection calls')])]),
+        R(d, [tiles(d, [tile('Runs', '236', '8 failed · 1 missed'), tile('Uses', '5,412', 'powers used'), tile('Errors', '61', '1.1% of uses'), tile('Time', '14 h 08 m', 'in runs'), tile('Tokens in', '9.8M', 'your keys'), tile('Tokens out', '1.1M', 'your keys'), tile('Tokens cached', '6.0M', '61% of input'), tile('Credit used', '$18.96', '790 connection calls')])]),
         R(d, [chart(d, { title: 'Runs by day', total: '236', sub: '4 Oct – 3 Nov', labels: L_PERIOD, vals: RUNS_IZ, unit: 'runs' })], [hbars('Powers it used', 'Uses this period', pw)]),
         R(d, [h({ title: 'Models and tokens' }), mods], [h({ title: 'Connection calls' }), cons], 'minmax(0, 1fr) minmax(0, 1fr)'),
         R(d, [h({ title: 'Runs', desc: 'Newest first. A run opens in rrotor on its machine.', mt: '8px' }), runs, pager(d, 'Runs', 1, 5, 236, 1, 48)])];
       return { nav: '', rows: rows };
     } },
-  { id: 'model', title: '14 · A model’s usage: Claude Sonnet 4.5', who: 'm', sub: 'Tokens in, out or cached by day (one series at a time, same bars), by super power, and the error rate with what the provider said. Never credits.',
+  { id: 'model', title: '14 · A model’s usage: Claude Sonnet 4.5', who: 'm', sub: 'Tokens in, out or cached by day (one series at a time, same bars), by super power, and the error rate with what the provider said. Never credit: it is the member’s own key.',
     build: function (d) {
       var bySp = table(d, { label: 'By super power', grid: 'minmax(0, 1.8fr) 80px 96px 80px 80px 80px 130px', heads: [hd('Super power'), hd('Calls', 'right'), hd('Errors', 'right'), hd('In', 'right'), hd('Out', 'right'), hd('Cached', 'right'), hd('Share of tokens')],
         rows: [['Inbox Zero', 1402, 9, '0.6%', '7.9M', '0.9M', '5.2M', 68], ['Deal Desk', 610, 7, '1.1%', '3.1M', '0.3M', '2.6M', 26], ['Scout', 128, 2, '1.6%', '0.6M', '0.1M', '0.3M', 6]].map(function (r) { return [cName(icCat(r[0], 40), r[0], r[0] === 'Scout' ? 'build-box' : 'studio-mac'), cNum(fmt(r[1])), cErr(String(r[2]), r[3]), cNum(r[4]), cNum(r[5]), cNum(r[6], { tx: 'var(--tx2)' }), cShare(r[7])]; }),
@@ -635,7 +640,7 @@ var STATES = [
         R(d, [h({ title: 'By super power', mt: '8px' }), bySp, pager(d, 'Super powers', 1, 3, 3, 1, 1)])];
       return { nav: '', rows: rows };
     } },
-  { id: 'log', title: '15 · Audit log: connector calls (member)', who: 'm', sub: 'Usage › Audit log. Every column usage_events keeps: when it started (to the second, with the time zone), machine, super power, the run (opens it), connector and tool, status, the error reason, the time it took as Glyphh timed it, credits, and bytes sent and received. Newest first, cursor paging, a filter on every column plus a date-time range. Export takes exactly the filtered rows and says how many. A member sees only their own rows.',
+  { id: 'log', title: '15 · Audit log: connector calls (member)', who: 'm', sub: 'Usage › Audit log. Every column usage_events keeps: when it started (to the second, with the time zone), machine, super power, the run (opens it), connector and tool, status, the error reason, the time it took as Glyphh timed it, the cost in dollars, and bytes sent and received. Newest first, cursor paging, a filter on every column plus a date-time range. Export takes exactly the filtered rows and says how many. A member sees only their own rows.',
     build: function (d) {
       return { nav: '', rows: [R(d, [head(d, { crumb: 'Usage', title: 'Audit log', meta: 'Every connector call and power use of yours, newest first. ' + COUNTS_ONLY + ' Rows can’t be changed or deleted.' })]),
         R(d, [auditTabs('Connector calls'), auditFilters(d, 'calls'),
@@ -671,30 +676,39 @@ var STATES = [
       var base = STATES[14].build(d);
       base.dlg = { title: 'Export 1,284 rows as CSV', desc: 'The connector calls the audit log shows now, with its filters, as one file.', blocks: [
         facts('', [['Rows', '1,284 connector calls'], ['From', '4 Oct 2026, 00:00 ' + TZ], ['To', 'now (11 Oct 2026, 14:33 ' + TZ + ')'], ['Filters', 'None']]),
-        facts('Columns', [['', 'started_at, user, machine, super_power, run_id, connector, tool, status, error, duration_ms, credits, request_bytes, response_bytes, event_id, trace_id', 'mono']]),
+        facts('Columns', [['', 'started_at, user, machine, super_power, run_id, connector, tool, status, error, duration_ms, cost, request_bytes, response_bytes, event_id, trace_id', 'mono']]),
         note('Counts and times only: no prompts, arguments or results, because Glyphh never keeps them.')], btns: [btn('secondary', 'Cancel'), btn('primary', 'Export 1,284 rows')] };
       return base;
     } },
   { id: 'org', title: '20 · The org’s usage, by user', who: 'a', sub: 'Org › Usage for Sam Rivera. The same page for all of Northwind, with By users first and a Team filter. The balance links to Billing. A user’s row opens their usage, the member page with a crumb back.',
     build: function (d) {
       var rows = orgTop(d).concat([R(d, [tiles(d, [tile('Runs', '3,980', '18 of 24 members'), tile('Uses', '96,410', 'powers used in runs'), tile('Errors', '1,722', '1.8% of uses'), tile('Time', '302 h', 'spent in runs'),
-          tile('Tokens in', '171M', 'on members’ keys'), tile('Tokens out', '19.6M', 'on members’ keys'), tile('Tokens cached', '98M', '57% of input'), tile('Connection calls', '11,920', '14,388 credits')])]),
-        R(d, [chart(d, { title: 'Uses by day', total: '96,410', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES_ORG, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credits'] : null, segOn: 'Uses' })], [orgBal(d)]),
+          tile('Tokens in', '171M', 'on members’ keys'), tile('Tokens out', '19.6M', 'on members’ keys'), tile('Tokens cached', '98M', '57% of input'), tile('Connection calls', '11,920', '$287.76 credit used')])]),
+        R(d, [chart(d, { title: 'Uses by day', total: '96,410', sub: '4 Oct – 3 Nov · 8 of 31 days', labels: L_PERIOD, vals: USES_ORG, unit: 'uses', seg: d ? ['Uses', 'Errors', 'Tokens', 'Credit'] : null, segOn: 'Uses' })], [orgBal(d)]),
         R(d, byBlock(d, 'Users', BY_ORG).concat([byUsers(d), pager(d, 'Members', 1, 5, 24, 1, 5)]))]);
       return { nav: 'Org', rows: rows };
     } },
   { id: 'orgTeam', title: '21 · The org’s usage, one team', who: 'a', sub: 'Team: Sales narrows everything on the page: tiles, bars, balance share and the table. By super powers shows each one’s owner, since super powers belong to members.',
     build: function (d) {
       var rows = [R(d, [orgTabs()]), R(d, [head(d, { title: 'Usage', size: d ? '32px' : '28px', meta: 'Sales: 9 members. ' + COUNTS_ONLY })]), R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d, { team: 'Sales' }) })]),
-        R(d, [tiles(d, [tile('Runs', '1,840', '8 of 9 members'), tile('Uses', '44,120', 'powers used in runs'), tile('Errors', '1,012', '2.3% of uses'), tile('Credits', '8,210', '57% of Northwind’s')])]),
+        R(d, [tiles(d, [tile('Runs', '1,840', '8 of 9 members'), tile('Uses', '44,120', 'powers used in runs'), tile('Errors', '1,012', '2.3% of uses'), tile('Credit used', '$164.20', '57% of Northwind’s')])]),
         R(d, byBlock(d, 'Super powers', BY_ORG).concat([bySP(d, [['Deal Desk', MAX + ' · max-mac', 402, 10110, 296, '2.9%', '30 h 02 m', '14.1M in · 1.6M out', 2620, 23], ['Inbox Zero', 'Ana Ruiz · ana-box', 288, 8040, 120, '1.5%', '22 h 40 m', '10.2M in · 1.2M out', 2410, 18], ['Scout', 'Sam Rivera · studio-sam', 140, 3360, 41, '1.2%', '9 h 12 m', '4.0M in · 0.5M out', 610, 8]], { who: true }), pager(d, 'Super powers', 1, 3, 14, 1, 5)]))];
       return { nav: 'Org', rows: rows };
     } },
-  { id: 'out', title: '22 · Out of credits', who: 'm', sub: 'Credits ran out: connection calls are refused (0 credits, logged as Refused) until the period renews or an org admin adds funds. Nothing else stops. A member is told who can fix it.',
+  { id: 'orgMember', title: '22 · An org admin’s view of a member', who: 'a', sub: 'From a row of By users: Bo Li’s usage as Sam Rivera sees it. The same page as Bo’s own, with a crumb back, and Bo’s model token counts: counts only, even though the models run on Bo’s own keys. Sam never sees prompts, replies or keys.',
     build: function (d) {
-      return { nav: '', rows: memberTop(d).concat([R(d, [alert(d, 'red', { title: 'Northwind is out of credits', body: 'Connection calls stop until 4 Nov, when the credits renew. Model calls and everything else on your machines keep working. Sam Rivera, your org admin, can add funds now.' })]),
-        R(d, [creditsChart(d, CRED_ME, '1,512')], [bal(d, { v: '0 left', red: true, line: 'All [ALLOWANCE] used this billing period.', pct: 100, ml: '100% used', mr: 'renews 4 Nov', note: 'Calls refused while out of credits cost nothing.' })]),
-        R(d, [h({ title: 'Latest connector calls', desc: 'Refused calls are logged with 0 credits and the reason.', link: 'Open the audit log', mt: '8px' }), auditCalls(d, CALLS_REFUSED)])]) };
+      var rows = [R(d, [orgTabs()]), R(d, [head(d, { crumb: 'Usage', icon: icPerson('BL', d ? 64 : 52), title: 'Bo Li', meta: 'Member · Design · bo@northwind.com · this billing period, 4 Oct – 3 Nov. ' + COUNTS_ONLY })]),
+        R(d, [ctrls(d, { period: NOW, range: RANGE, items: periodItems(d) })]),
+        R(d, [memberTiles(d, 'on Bo’s own keys')]),
+        R(d, [alert(d, 'plain', { title: 'Model tokens are counts only', body: 'Bo’s models run on Bo’s own keys, so they use no credit. You see the token counts Bo’s machines reported, never the prompts, the replies or the keys.' })]),
+        R(d, byBlock(d, 'Models').concat([byModels(d, { key: 'Bo’s key', foot: 'Tokens as each provider reported them, on Bo’s own keys: no credit used.' }), pager(d, 'Models', 1, 3, 3, 1, 1)]))];
+      return { nav: 'Org', rows: rows };
+    } },
+  { id: 'out', title: '22 · Out of credit', who: 'm', sub: 'The balance reached $0.00: connection calls are refused ($0.00, logged as Refused with the reason) until Basic adds $240.00 on 4 Nov or an org admin adds funds. Nothing else stops. A member is told who can fix it.',
+    build: function (d) {
+      return { nav: '', rows: memberTop(d).concat([R(d, [alert(d, 'red', { title: 'Northwind is out of credit', body: 'Connection calls stop until 4 Nov, when Basic adds $240.00. Model calls and everything else on your machines keep working. Sam Rivera, your org admin, can add funds now.' })]),
+        R(d, [creditsChart(d, CRED_ME, '$30.24')], [bal(d, { v: '$0.00 left', red: true, line: '$551.20 used of $551.20 this billing period.', pct: 100, ml: '100% used', mr: '+$240.00 on 4 Nov', note: 'Calls refused while out of credit cost nothing.' })]),
+        R(d, [h({ title: 'Latest connector calls', desc: 'Refused calls are logged at $0.00 with the reason.', link: 'Open the audit log', mt: '8px' }), auditCalls(d, CALLS_REFUSED)])]) };
     } },
   { id: 'listing', title: '23 · A publisher’s listing stats: Receipt filer', who: 'm', sub: 'From a published listing: Stats. Installs, installs used in the last 30 days, runs, by day, by version. Counts only: a publisher never sees who installed it or what it ran on.',
     build: function (d) {
@@ -738,13 +752,13 @@ var PART = [15, 16, 17, 18, 19, 20, 21];
 class Component extends DCLogic {
   renderVals() {
     return {
-      intro: 'What a member, an org admin and a publisher can see of what was used: runs, powers, model tokens and connection calls, counted by day. It opens on the org’s billing period (4 Oct – 3 Nov here), with earlier periods by their dates, Last 30 days and Custom. Only connection calls cost credits; model calls are on members’ own keys and show tokens, never credits. Counts and times only: no prompts, arguments or results anywhere. Credits are plain counts; undecided amounts stay in [BRACKETS]. Desktop 1200, phone 390.',
+      intro: 'What a member, an org admin and a publisher can see of what was used: runs, powers, model tokens and connection calls, counted by day. It opens on the org’s billing period (4 Oct – 3 Nov here), with earlier periods by their dates, Last 30 days and Custom. Credit is dollars: only connection calls use it, 2¢ for each started 30 seconds; runs cost nothing; model calls are on members’ own keys and show tokens, never dollars. Counts and times only: no prompts, arguments or results anywhere. Desktop 1200, phone 390.',
       states: STATES.filter(function (s, i) { return PART.indexOf(i + 1) >= 0; }).map(function (s, i) { return { title: (i + 1) + ' · ' + s.title.replace(/^\d+ · /, ''), sub: s.sub, frames: [frame(s, true), frame(s, false)] }; }),
       notes: [
-        { t: 'By billing period', b: 'Every usage page opens on the org’s current billing period, not the calendar month, so credits match the balance and, once closed, the invoice. Earlier periods are listed by their dates; Last 30 days and Custom are for looking, not for matching bills.' },
-        { t: 'Only connection calls cost credits', b: 'The server times every connection call it relays: 1 credit per 30 seconds, at least 1, failed calls included, refused calls free. Model calls never cost credits (members’ own keys): they show tokens in, out and cached. Skills, tasks, folders and browsers are counted, never billed.' },
-        { t: 'Counts, never content', b: 'usage_events and power_events hold who, what, when, how long, tokens and credits. No prompts, arguments, results or keys, so none of it can appear on these pages, in a row’s detail or in the CSV. The detail panel says so.' },
-        { t: 'Who sees what', b: 'A member sees their own usage and the org’s balance. An org admin sees all of the org under Org › Usage (after Review), with By users, a Team filter, everyone’s rows in the audit log, Add funds and the link to Billing. A publisher sees their listing’s counts, never who.' },
+        { t: 'By billing period', b: 'Every usage page opens on the org’s current billing period, not the calendar month, so credit used matches the balance and, once closed, the invoice. Nothing expires at the end of a period; bought credit expires a year after purchase. Earlier periods are listed by their dates; Last 30 days and Custom are for looking, not for matching bills.' },
+        { t: 'Only connection calls use credit', b: 'Credit is dollars. The server times every connection call it relays: 2¢ for each started 30 seconds, failed calls included, refused calls $0.00. Runs cost nothing. Model calls never use credit (members’ own keys): they show tokens in, out and cached. Skills, tasks, folders and browsers are counted, never billed.' },
+        { t: 'Counts, never content', b: 'usage_events and power_events hold who, what, when, how long, tokens and cost. No prompts, arguments, results or keys, so none of it can appear on these pages, in a row’s detail or in the CSV. The detail panel says so.' },
+        { t: 'Who sees what', b: 'A member sees their own usage and the org’s balance. An org admin sees all of the org under Org › Usage (after Review), each member’s usage including their model token counts (counts only, even on the member’s own key), with By users, a Team filter, everyone’s rows in the audit log, Add funds and the link to Billing. A publisher sees their listing’s counts, never who.' },
         { t: 'One chart, one bar list', b: 'Every chart is Billing’s bars by day: past days filled, today violet and still counting, days to come outlined, a title per bar. A chart with several series shows one at a time with a switch. Breakdowns are plain horizontal bars or a share bar in a table row.' },
         { t: 'Lists that grow', b: 'Every grouping is a paginated table (Showing 1–5 of 24; Page 1 of 5 on a phone). The audit log (two tabs: connector calls and power uses) pages by cursor, newest first, Previous and Next only, with a filter on every column and a date-time range; Export CSV takes exactly the filtered rows and says how many.' }
       ]
