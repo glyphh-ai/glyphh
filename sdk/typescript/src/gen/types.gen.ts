@@ -19,6 +19,28 @@ export type Access = {
 };
 
 /**
+ * Added
+ */
+export type Added = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Needs
+     */
+    needs: Array<Have>;
+};
+
+/**
  * AllowScreen
  */
 export type AllowScreen = {
@@ -319,6 +341,28 @@ export type CodeIn = {
      * Verifier
      */
     verifier: string;
+};
+
+/**
+ * Comment
+ */
+export type Comment = {
+    /**
+     * Body
+     */
+    body: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Who
+     */
+    who: string | null;
 };
 
 /**
@@ -781,6 +825,28 @@ export type HttpValidationError = {
 };
 
 /**
+ * Have
+ */
+export type Have = {
+    /**
+     * Have
+     */
+    have: boolean;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Need
+     */
+    need: string;
+    /**
+     * Optional
+     */
+    optional: boolean;
+};
+
+/**
  * Health
  */
 export type Health = {
@@ -826,6 +892,30 @@ export type Hit = {
      * Thread Id
      */
     thread_id: string;
+};
+
+/**
+ * Home
+ */
+export type Home = {
+    /**
+     * Categories
+     */
+    categories: Array<{
+        [key: string]: string;
+    }>;
+    /**
+     * Featured
+     */
+    featured: Array<GlyphhServerOpsDiscoverMarketCard>;
+    /**
+     * Newest
+     */
+    newest: Array<GlyphhServerOpsDiscoverMarketCard>;
+    /**
+     * Popular
+     */
+    popular: Array<GlyphhServerOpsDiscoverMarketCard>;
 };
 
 /**
@@ -909,25 +999,43 @@ export type InviteView = {
 };
 
 /**
- * Invoice
+ * InvoicePage
  */
-export type Invoice = {
+export type InvoicePage = {
+    /**
+     * Invoices
+     */
+    invoices: Array<InvoiceRow>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * InvoiceRow
+ */
+export type InvoiceRow = {
     /**
      * Amount Cents
      */
     amount_cents: number;
     /**
-     * Created At
-     */
-    created_at: string;
-    /**
      * Description
      */
     description: string | null;
     /**
-     * Id
+     * Expires At
      */
-    id: string;
+    expires_at: string | null;
+    /**
+     * Issued At
+     */
+    issued_at: string;
+    /**
+     * Kind
+     */
+    kind: string;
     /**
      * Number
      */
@@ -944,20 +1052,6 @@ export type Invoice = {
      * View Url
      */
     view_url: string | null;
-};
-
-/**
- * InvoicePage
- */
-export type InvoicePage = {
-    /**
-     * Has More
-     */
-    has_more: boolean;
-    /**
-     * Invoices
-     */
-    invoices: Array<Invoice>;
 };
 
 /**
@@ -1095,6 +1189,96 @@ export type Link = {
 };
 
 /**
+ * ListingChange
+ */
+export type ListingChange = {
+    /**
+     * Category
+     */
+    category?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Reach
+     */
+    reach?: 'org' | 'marketplace' | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+};
+
+/**
+ * ListingView
+ */
+export type ListingView = {
+    /**
+     * Adds
+     */
+    adds: number;
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Has Icon
+     */
+    has_icon: boolean;
+    /**
+     * History
+     */
+    history: Array<VersionInfo>;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    open: VersionDetail | null;
+    /**
+     * Org
+     */
+    org: string;
+    published: VersionInfo | null;
+    /**
+     * Reach
+     */
+    reach: string;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Target Id
+     */
+    target_id: string | null;
+    /**
+     * Unpublished At
+     */
+    unpublished_at: string | null;
+};
+
+/**
  * LoopChoice
  */
 export type LoopChoice = {
@@ -1196,6 +1380,110 @@ export type MachinePage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * MarketDetail
+ */
+export type MarketDetail = {
+    /**
+     * Added
+     */
+    added: boolean;
+    /**
+     * Adds
+     */
+    adds: number;
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number | null;
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Has Icon
+     */
+    has_icon: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Mine
+     */
+    mine: Array<MyCopy>;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Needs
+     */
+    needs: Array<Have>;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Screenshots
+     */
+    screenshots: Array<Shot>;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Version
+     */
+    version: string;
+    /**
+     * Versions
+     */
+    versions: Array<VersionInfo>;
+};
+
+/**
+ * MarketPage
+ */
+export type MarketPage = {
+    /**
+     * Categories
+     */
+    categories: {
+        [key: string]: number;
+    };
+    /**
+     * Listings
+     */
+    listings: Array<GlyphhServerOpsDiscoverMarketCard>;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Types
+     */
+    types: {
+        [key: string]: number;
+    };
 };
 
 /**
@@ -1386,6 +1674,24 @@ export type ModelView = {
 };
 
 /**
+ * MyCopy
+ */
+export type MyCopy = {
+    /**
+     * Newer
+     */
+    newer: string | null;
+    /**
+     * Power Id
+     */
+    power_id: string;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
  * Needed
  */
 export type Needed = {
@@ -1415,6 +1721,16 @@ export type NewBrowser = {
      * Super Power Id
      */
     super_power_id: string;
+};
+
+/**
+ * NewComment
+ */
+export type NewComment = {
+    /**
+     * Body
+     */
+    body: string;
 };
 
 /**
@@ -1461,6 +1777,24 @@ export type NewInvite = {
      * Role
      */
     role?: 'org_admin' | 'user';
+};
+
+/**
+ * NewListing
+ */
+export type NewListing = {
+    /**
+     * Power Id
+     */
+    power_id?: string | null;
+    /**
+     * Reach
+     */
+    reach?: 'org' | 'marketplace';
+    /**
+     * Super Power Id
+     */
+    super_power_id?: string | null;
 };
 
 /**
@@ -1539,6 +1873,16 @@ export type OpenIn = {
      * Super Power
      */
     super_power?: string | null;
+};
+
+/**
+ * Order
+ */
+export type Order = {
+    /**
+     * Screenshots
+     */
+    screenshots: Array<string>;
 };
 
 /**
@@ -1689,6 +2033,10 @@ export type PaymentStart = {
      */
     payment_id: string;
     /**
+     * Return Url
+     */
+    return_url?: string | null;
+    /**
      * Stripe Publishable Key
      */
     stripe_publishable_key: string;
@@ -1731,6 +2079,10 @@ export type Place = {
      */
     profile: string | null;
     /**
+     * Signed In Sites
+     */
+    signed_in_sites: Array<string>;
+    /**
      * Used By
      */
     used_by: Array<User>;
@@ -1745,9 +2097,17 @@ export type PlanChange = {
      */
     applies_at?: string | null;
     /**
+     * Cancel Url
+     */
+    cancel_url?: string | null;
+    /**
      * Client Secret
      */
     client_secret?: string | null;
+    /**
+     * Return Url
+     */
+    return_url?: string | null;
     /**
      * State
      */
@@ -1965,6 +2325,70 @@ export type RenameOrg = {
      * Name
      */
     name: string;
+};
+
+/**
+ * Requirement
+ */
+export type Requirement = {
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Need
+     */
+    need: string;
+    /**
+     * Optional
+     */
+    optional: boolean;
+};
+
+/**
+ * ReviewDecision
+ */
+export type ReviewDecision = {
+    /**
+     * Decision
+     */
+    decision: 'approved' | 'changes_requested' | 'rejected';
+    /**
+     * Notes
+     */
+    notes?: string;
+};
+
+/**
+ * ReviewView
+ */
+export type ReviewView = {
+    /**
+     * Agent Report
+     */
+    agent_report: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Decided At
+     */
+    decided_at: string | null;
+    /**
+     * Decision
+     */
+    decision: string | null;
+    /**
+     * Notes
+     */
+    notes: string | null;
+    /**
+     * Reviewer
+     */
+    reviewer: string | null;
+    /**
+     * Step
+     */
+    step: string;
 };
 
 /**
@@ -2189,6 +2613,28 @@ export type SettingsChange = {
      * Theme
      */
     theme?: 'dark' | 'light' | 'system' | null;
+};
+
+/**
+ * Shot
+ */
+export type Shot = {
+    /**
+     * Height
+     */
+    height: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Sort
+     */
+    sort: number;
+    /**
+     * Width
+     */
+    width: number;
 };
 
 /**
@@ -2782,6 +3228,130 @@ export type ValidationError = {
 };
 
 /**
+ * VersionChange
+ */
+export type VersionChange = {
+    /**
+     * Release Notes
+     */
+    release_notes?: string | null;
+    /**
+     * Version
+     */
+    version?: string | null;
+};
+
+/**
+ * VersionDetail
+ */
+export type VersionDetail = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Needs
+     */
+    needs: Array<Requirement>;
+    /**
+     * Published At
+     */
+    published_at: string | null;
+    /**
+     * Release Notes
+     */
+    release_notes: string;
+    /**
+     * Reviews
+     */
+    reviews: Array<ReviewView>;
+    /**
+     * Screenshots
+     */
+    screenshots: Array<Shot>;
+    /**
+     * State
+     */
+    state: string;
+    /**
+     * Submitted At
+     */
+    submitted_at: string | null;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
+ * VersionInfo
+ */
+export type VersionInfo = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Published At
+     */
+    published_at: string | null;
+    /**
+     * Release Notes
+     */
+    release_notes: string;
+    /**
+     * State
+     */
+    state: string;
+    /**
+     * Submitted At
+     */
+    submitted_at: string | null;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
+ * Waiting
+ */
+export type Waiting = {
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Listing Id
+     */
+    listing_id: string;
+    /**
+     * Listing Version Id
+     */
+    listing_version_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Reach
+     */
+    reach: string;
+    /**
+     * Submitted At
+     */
+    submitted_at: string | null;
+    /**
+     * Version
+     */
+    version: string;
+};
+
+/**
  * Card
  */
 export type GlyphhServerOpsBillingSummaryCard = {
@@ -2801,6 +3371,64 @@ export type GlyphhServerOpsBillingSummaryCard = {
      * Last4
      */
     last4: string;
+};
+
+/**
+ * Card
+ */
+export type GlyphhServerOpsDiscoverMarketCard = {
+    /**
+     * Added
+     */
+    added: boolean;
+    /**
+     * Adds
+     */
+    adds: number;
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number | null;
+    /**
+     * By
+     */
+    by: string;
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Has Icon
+     */
+    has_icon: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Version
+     */
+    version: string;
 };
 
 /**
@@ -3109,6 +3737,489 @@ export type DeclineInviteResponses = {
 
 export type DeclineInviteResponse = DeclineInviteResponses[keyof DeclineInviteResponses];
 
+export type MyListingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/listings';
+};
+
+export type MyListingsResponses = {
+    /**
+     * Response Mylistings
+     *
+     * Successful Response
+     */
+    200: Array<ListingView>;
+};
+
+export type MyListingsResponse = MyListingsResponses[keyof MyListingsResponses];
+
+export type CreateListingData = {
+    body: NewListing;
+    path?: never;
+    query?: never;
+    url: '/v1/listings';
+};
+
+export type CreateListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateListingError = CreateListingErrors[keyof CreateListingErrors];
+
+export type CreateListingResponses = {
+    /**
+     * Successful Response
+     */
+    201: ListingView;
+};
+
+export type CreateListingResponse = CreateListingResponses[keyof CreateListingResponses];
+
+export type GetListingData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}';
+};
+
+export type GetListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetListingError = GetListingErrors[keyof GetListingErrors];
+
+export type GetListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type GetListingResponse = GetListingResponses[keyof GetListingResponses];
+
+export type ChangeListingData = {
+    body: ListingChange;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}';
+};
+
+export type ChangeListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeListingError = ChangeListingErrors[keyof ChangeListingErrors];
+
+export type ChangeListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type ChangeListingResponse = ChangeListingResponses[keyof ChangeListingResponses];
+
+export type ListingCommentsData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/comments';
+};
+
+export type ListingCommentsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListingCommentsError = ListingCommentsErrors[keyof ListingCommentsErrors];
+
+export type ListingCommentsResponses = {
+    /**
+     * Response Listingcomments
+     *
+     * Successful Response
+     */
+    200: Array<Comment>;
+};
+
+export type ListingCommentsResponse = ListingCommentsResponses[keyof ListingCommentsResponses];
+
+export type CommentOnListingData = {
+    body: NewComment;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/comments';
+};
+
+export type CommentOnListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CommentOnListingError = CommentOnListingErrors[keyof CommentOnListingErrors];
+
+export type CommentOnListingResponses = {
+    /**
+     * Response Commentonlisting
+     *
+     * Successful Response
+     */
+    200: Array<Comment>;
+};
+
+export type CommentOnListingResponse = CommentOnListingResponses[keyof CommentOnListingResponses];
+
+export type ListingIconData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/icon';
+};
+
+export type ListingIconErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListingIconError = ListingIconErrors[keyof ListingIconErrors];
+
+export type ListingIconResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type SetListingIconData = {
+    body: Blob | File;
+    headers?: {
+        /**
+         * X-File-Name
+         */
+        'x-file-name'?: string;
+    };
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/icon';
+};
+
+export type SetListingIconErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetListingIconError = SetListingIconErrors[keyof SetListingIconErrors];
+
+export type SetListingIconResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type SetListingIconResponse = SetListingIconResponses[keyof SetListingIconResponses];
+
+export type AddListingScreenshotData = {
+    body: Blob | File;
+    headers?: {
+        /**
+         * X-File-Name
+         */
+        'x-file-name'?: string;
+    };
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/screenshots';
+};
+
+export type AddListingScreenshotErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddListingScreenshotError = AddListingScreenshotErrors[keyof AddListingScreenshotErrors];
+
+export type AddListingScreenshotResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type AddListingScreenshotResponse = AddListingScreenshotResponses[keyof AddListingScreenshotResponses];
+
+export type OrderListingScreenshotsData = {
+    body: Order;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/screenshots';
+};
+
+export type OrderListingScreenshotsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type OrderListingScreenshotsError = OrderListingScreenshotsErrors[keyof OrderListingScreenshotsErrors];
+
+export type OrderListingScreenshotsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type OrderListingScreenshotsResponse = OrderListingScreenshotsResponses[keyof OrderListingScreenshotsResponses];
+
+export type RemoveListingScreenshotData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+        /**
+         * Shot Id
+         */
+        shot_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/screenshots/{shot_id}';
+};
+
+export type RemoveListingScreenshotErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveListingScreenshotError = RemoveListingScreenshotErrors[keyof RemoveListingScreenshotErrors];
+
+export type RemoveListingScreenshotResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type RemoveListingScreenshotResponse = RemoveListingScreenshotResponses[keyof RemoveListingScreenshotResponses];
+
+export type ListingScreenshotData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+        /**
+         * Shot Id
+         */
+        shot_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/screenshots/{shot_id}';
+};
+
+export type ListingScreenshotErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListingScreenshotError = ListingScreenshotErrors[keyof ListingScreenshotErrors];
+
+export type ListingScreenshotResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type SubmitListingData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/submit';
+};
+
+export type SubmitListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SubmitListingError = SubmitListingErrors[keyof SubmitListingErrors];
+
+export type SubmitListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type SubmitListingResponse = SubmitListingResponses[keyof SubmitListingResponses];
+
+export type UnpublishListingData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/unpublish';
+};
+
+export type UnpublishListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UnpublishListingError = UnpublishListingErrors[keyof UnpublishListingErrors];
+
+export type UnpublishListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type UnpublishListingResponse = UnpublishListingResponses[keyof UnpublishListingResponses];
+
+export type ChangeListingVersionData = {
+    body: VersionChange;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/version';
+};
+
+export type ChangeListingVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeListingVersionError = ChangeListingVersionErrors[keyof ChangeListingVersionErrors];
+
+export type ChangeListingVersionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type ChangeListingVersionResponse = ChangeListingVersionResponses[keyof ChangeListingVersionResponses];
+
+export type WithdrawListingData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/listings/{listing_id}/withdraw';
+};
+
+export type WithdrawListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type WithdrawListingError = WithdrawListingErrors[keyof WithdrawListingErrors];
+
+export type WithdrawListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type WithdrawListingResponse = WithdrawListingResponses[keyof WithdrawListingResponses];
+
 export type ListMachinesData = {
     body?: never;
     path?: never;
@@ -3300,6 +4411,146 @@ export type StartThreadResponses = {
 };
 
 export type StartThreadResponse = StartThreadResponses[keyof StartThreadResponses];
+
+export type BrowseMarketplaceData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Kind
+         */
+        kind?: 'custom' | 'super_power' | null;
+        /**
+         * Type
+         */
+        type?: string | null;
+        /**
+         * Category
+         */
+        category?: string | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/marketplace';
+};
+
+export type BrowseMarketplaceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type BrowseMarketplaceError = BrowseMarketplaceErrors[keyof BrowseMarketplaceErrors];
+
+export type BrowseMarketplaceResponses = {
+    /**
+     * Successful Response
+     */
+    200: MarketPage;
+};
+
+export type BrowseMarketplaceResponse = BrowseMarketplaceResponses[keyof BrowseMarketplaceResponses];
+
+export type MarketplaceHomeData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Kind
+         */
+        kind?: 'custom' | 'super_power' | null;
+    };
+    url: '/v1/marketplace/home';
+};
+
+export type MarketplaceHomeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MarketplaceHomeError = MarketplaceHomeErrors[keyof MarketplaceHomeErrors];
+
+export type MarketplaceHomeResponses = {
+    /**
+     * Successful Response
+     */
+    200: Home;
+};
+
+export type MarketplaceHomeResponse = MarketplaceHomeResponses[keyof MarketplaceHomeResponses];
+
+export type MarketplaceListingData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/marketplace/{listing_id}';
+};
+
+export type MarketplaceListingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MarketplaceListingError = MarketplaceListingErrors[keyof MarketplaceListingErrors];
+
+export type MarketplaceListingResponses = {
+    /**
+     * Successful Response
+     */
+    200: MarketDetail;
+};
+
+export type MarketplaceListingResponse = MarketplaceListingResponses[keyof MarketplaceListingResponses];
+
+export type AddFromMarketplaceData = {
+    body?: never;
+    path: {
+        /**
+         * Listing Id
+         */
+        listing_id: string;
+    };
+    query?: never;
+    url: '/v1/marketplace/{listing_id}/add';
+};
+
+export type AddFromMarketplaceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddFromMarketplaceError = AddFromMarketplaceErrors[keyof AddFromMarketplaceErrors];
+
+export type AddFromMarketplaceResponses = {
+    /**
+     * Successful Response
+     */
+    201: Added;
+};
+
+export type AddFromMarketplaceResponse = AddFromMarketplaceResponses[keyof AddFromMarketplaceResponses];
 
 export type MeData = {
     body?: never;
@@ -3632,13 +4883,13 @@ export type ListInvoicesData = {
     path?: never;
     query?: {
         /**
-         * After
+         * Page
          */
-        after?: string | null;
+        page?: number;
         /**
-         * Limit
+         * Size
          */
-        limit?: number;
+        size?: number;
     };
     url: '/v1/org/billing/invoices';
 };
@@ -4699,6 +5950,36 @@ export type SetTaskSlotsResponses = {
 
 export type SetTaskSlotsResponse = SetTaskSlotsResponses[keyof SetTaskSlotsResponses];
 
+export type UpdateFromMarketplaceData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}/update';
+};
+
+export type UpdateFromMarketplaceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateFromMarketplaceError = UpdateFromMarketplaceErrors[keyof UpdateFromMarketplaceErrors];
+
+export type UpdateFromMarketplaceResponses = {
+    /**
+     * Successful Response
+     */
+    200: Added;
+};
+
+export type UpdateFromMarketplaceResponse = UpdateFromMarketplaceResponses[keyof UpdateFromMarketplaceResponses];
+
 export type ListFoldersData = {
     body?: never;
     path?: never;
@@ -4904,6 +6185,68 @@ export type ReplaceModelKeyResponses = {
 };
 
 export type ReplaceModelKeyResponse = ReplaceModelKeyResponses[keyof ReplaceModelKeyResponses];
+
+export type ReviewQueueData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Step
+         */
+        step?: 'org' | 'glyphh';
+    };
+    url: '/v1/reviews';
+};
+
+export type ReviewQueueErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReviewQueueError = ReviewQueueErrors[keyof ReviewQueueErrors];
+
+export type ReviewQueueResponses = {
+    /**
+     * Response Reviewqueue
+     *
+     * Successful Response
+     */
+    200: Array<Waiting>;
+};
+
+export type ReviewQueueResponse = ReviewQueueResponses[keyof ReviewQueueResponses];
+
+export type DecideReviewData = {
+    body: ReviewDecision;
+    path: {
+        /**
+         * Listing Version Id
+         */
+        listing_version_id: string;
+    };
+    query?: never;
+    url: '/v1/reviews/{listing_version_id}';
+};
+
+export type DecideReviewErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DecideReviewError = DecideReviewErrors[keyof DecideReviewErrors];
+
+export type DecideReviewResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListingView;
+};
+
+export type DecideReviewResponse = DecideReviewResponses[keyof DecideReviewResponses];
 
 export type ListSchedulesData = {
     body?: never;

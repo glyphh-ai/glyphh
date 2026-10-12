@@ -28,7 +28,6 @@ from glyphh._gen.api.billing import (
 from glyphh._gen.models.auto_top_up_change import AutoTopUpChange
 from glyphh._gen.models.funds_in import FundsIn
 from glyphh._gen.models.plan_in import PlanIn
-from glyphh._gen.types import UNSET
 
 PLANS, CREDIT, GET, SYNC = _call(list_plans), _call(org_credit), _call(get_billing), _call(sync_billing)
 ADD_FUNDS, TOP_UPS, SET_AUTO, CHECK_AUTO = (
@@ -55,10 +54,6 @@ def _auto(on: bool, below_cents: int, to_cents: int, monthly_cap_cents: int | No
 
 def _plan(plan_id: str) -> dict[str, Any]:
     return {"body": PlanIn(plan_id=UUID(plan_id))}
-
-
-def _invoices(after: str | None, limit: int) -> dict[str, Any]:
-    return {"after": after if after else UNSET, "limit": limit}
 
 
 class Billing:
@@ -112,8 +107,9 @@ class Billing:
     def spend_by_day(self) -> Any:
         return self._run(SPEND)
 
-    def invoices(self, after: str | None = None, limit: int = 25) -> Any:
-        return self._run(INVOICES, **_invoices(after, limit))
+    def invoices(self, page: int = 1, size: int = 25) -> Any:
+        """Stripe's invoices and the org's top-ups, newest first, in pages."""
+        return self._run(INVOICES, page=page, size=size)
 
     def next_invoice(self) -> Any:
         return self._run(NEXT)
@@ -169,8 +165,8 @@ class AsyncBilling:
     async def spend_by_day(self) -> Any:
         return await self._run(SPEND)
 
-    async def invoices(self, after: str | None = None, limit: int = 25) -> Any:
-        return await self._run(INVOICES, **_invoices(after, limit))
+    async def invoices(self, page: int = 1, size: int = 25) -> Any:
+        return await self._run(INVOICES, page=page, size=size)
 
     async def next_invoice(self) -> Any:
         return await self._run(NEXT)

@@ -27,6 +27,7 @@ class Place:
         name (str):
         path (None | str):
         profile (None | str):
+        signed_in_sites (list[str]):
         used_by (list[User]):
     """
 
@@ -38,6 +39,7 @@ class Place:
     name: str
     path: str | None
     profile: str | None
+    signed_in_sites: list[str]
     used_by: list[User]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -64,6 +66,8 @@ class Place:
         profile: str | None
         profile = self.profile
 
+        signed_in_sites = self.signed_in_sites
+
         used_by = []
         for used_by_item_data in self.used_by:
             used_by_item = used_by_item_data.to_dict()
@@ -81,6 +85,7 @@ class Place:
                 "name": name,
                 "path": path,
                 "profile": profile,
+                "signed_in_sites": signed_in_sites,
                 "used_by": used_by,
             }
         )
@@ -131,6 +136,8 @@ class Place:
 
         profile = _parse_profile(d.pop("profile"))
 
+        signed_in_sites = cast(list[str], d.pop("signed_in_sites"))
+
         used_by = []
         _used_by = d.pop("used_by")
         for used_by_item_data in _used_by:
@@ -147,6 +154,7 @@ class Place:
             name=name,
             path=path,
             profile=profile,
+            signed_in_sites=signed_in_sites,
             used_by=used_by,
         )
 

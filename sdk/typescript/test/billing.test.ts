@@ -37,7 +37,7 @@ describe("billing", () => {
       call("sync", (g) => g.billing.sync()),
       call("ledger", (g) => g.billing.ledger(2, 10)),
       call("spendByDay", (g) => g.billing.spendByDay()),
-      call("invoices", (g) => g.billing.invoices("in_1", 10)),
+      call("invoices", (g) => g.billing.invoices(2, 10)),
       call("nextInvoice", (g) => g.billing.nextInvoice()),
       call("portal", (g) => g.billing.portal()),
     ]);
@@ -55,7 +55,7 @@ describe("billing", () => {
       ["sync", "POST", "/v1/org/billing/sync", "", ""],
       ["ledger", "GET", "/v1/org/billing/ledger", "?page=2&size=10", null],
       ["spendByDay", "GET", "/v1/org/billing/spend", "", null],
-      ["invoices", "GET", "/v1/org/billing/invoices", "?after=in_1&limit=10", null],
+      ["invoices", "GET", "/v1/org/billing/invoices", "?page=2&size=10", null],
       ["nextInvoice", "GET", "/v1/org/billing/next-invoice", "", null],
       ["portal", "POST", "/v1/org/billing/portal", "", ""],
     ]);

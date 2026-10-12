@@ -12,20 +12,15 @@ from ...types import UNSET, Response, Unset
 
 def _get_kwargs(
     *,
-    after: None | str | Unset = UNSET,
-    limit: int | Unset = 25,
+    page: int | Unset = 1,
+    size: int | Unset = 25,
 ) -> dict[str, Any]:
 
     params: dict[str, Any] = {}
 
-    json_after: str | Unset | None
-    if isinstance(after, Unset):
-        json_after = UNSET
-    else:
-        json_after = after
-    params["after"] = json_after
+    params["page"] = page
 
-    params["limit"] = limit
+    params["size"] = size
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -71,16 +66,16 @@ def _build_response(
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    after: None | str | Unset = UNSET,
-    limit: int | Unset = 25,
+    page: int | Unset = 1,
+    size: int | Unset = 25,
 ) -> Response[HTTPValidationError | InvoicePage]:
     """List Invoices
 
-     Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+     Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.
 
     Args:
-        after (None | str | Unset):
-        limit (int | Unset):  Default: 25.
+        page (int | Unset):  Default: 1.
+        size (int | Unset):  Default: 25.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -91,8 +86,8 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        after=after,
-        limit=limit,
+        page=page,
+        size=size,
     )
 
     response = client.get_httpx_client().request(
@@ -105,16 +100,16 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    after: None | str | Unset = UNSET,
-    limit: int | Unset = 25,
+    page: int | Unset = 1,
+    size: int | Unset = 25,
 ) -> HTTPValidationError | InvoicePage | None:
     """List Invoices
 
-     Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+     Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.
 
     Args:
-        after (None | str | Unset):
-        limit (int | Unset):  Default: 25.
+        page (int | Unset):  Default: 1.
+        size (int | Unset):  Default: 25.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -126,24 +121,24 @@ def sync(
 
     return sync_detailed(
         client=client,
-        after=after,
-        limit=limit,
+        page=page,
+        size=size,
     ).parsed
 
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    after: None | str | Unset = UNSET,
-    limit: int | Unset = 25,
+    page: int | Unset = 1,
+    size: int | Unset = 25,
 ) -> Response[HTTPValidationError | InvoicePage]:
     """List Invoices
 
-     Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+     Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.
 
     Args:
-        after (None | str | Unset):
-        limit (int | Unset):  Default: 25.
+        page (int | Unset):  Default: 1.
+        size (int | Unset):  Default: 25.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -154,8 +149,8 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        after=after,
-        limit=limit,
+        page=page,
+        size=size,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -166,16 +161,16 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    after: None | str | Unset = UNSET,
-    limit: int | Unset = 25,
+    page: int | Unset = 1,
+    size: int | Unset = 25,
 ) -> HTTPValidationError | InvoicePage | None:
     """List Invoices
 
-     Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+     Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.
 
     Args:
-        after (None | str | Unset):
-        limit (int | Unset):  Default: 25.
+        page (int | Unset):  Default: 1.
+        size (int | Unset):  Default: 25.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -188,7 +183,7 @@ async def asyncio(
     return (
         await asyncio_detailed(
             client=client,
-            after=after,
-            limit=limit,
+            page=page,
+            size=size,
         )
     ).parsed

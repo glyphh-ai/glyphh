@@ -87,7 +87,7 @@ ANSWERS = {
     "change_plan": {"state": "applying"},
     "ledger": {"entries": [], "total": 0},
     "spend_by_day": [{"day": "2026-10-12", "cents": 40}],
-    "invoices": {"invoices": [], "has_more": False},
+    "invoices": {"invoices": [], "total": 0},
     "next_invoice": {"amount_cents": 100, "at": None, "prorated_cents": 0},
     "portal": PORTAL,
 }
@@ -114,8 +114,8 @@ CALLS = [
     ("sync", (), "POST", "/v1/org/billing/sync", "", None),
     ("ledger", (2, 10), "GET", "/v1/org/billing/ledger", "page=2&size=10", None),
     ("spend_by_day", (), "GET", "/v1/org/billing/spend", "", None),
-    ("invoices", ("in_1", 10), "GET", "/v1/org/billing/invoices", "after=in_1&limit=10", None),
-    ("invoices", (), "GET", "/v1/org/billing/invoices", "limit=25", None),
+    ("invoices", (2, 10), "GET", "/v1/org/billing/invoices", "page=2&size=10", None),
+    ("invoices", (), "GET", "/v1/org/billing/invoices", "page=1&size=25", None),
     ("next_invoice", (), "GET", "/v1/org/billing/next-invoice", "", None),
     ("portal", (), "POST", "/v1/org/billing/portal", "", None),
 ]

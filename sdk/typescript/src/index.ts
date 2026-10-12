@@ -5,6 +5,7 @@ import {
 } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange } from "./gen/types.gen.js";
 import { BillingApi } from "./billing.js";
+import { ListingsApi, MarketplaceApi } from "./discover.js";
 import { CustomPowersApi, SchedulesApi, SuperPowersApi } from "./editors.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
@@ -13,7 +14,7 @@ import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { BillingApi, CustomPowersApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
+export { BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -26,6 +27,10 @@ export type {
   CustomChange, CustomPage, CustomPower, CustomQuery, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, ScheduleIn,
   ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerQuery, SuperPowerView,
 } from "./editors.js";
+export type {
+  Added, Comment, Home, ListingChange, ListingView, MarketDetail, MarketPage, MarketQuery, NewListing, Picture, ReviewDecision,
+  VersionChange, Waiting,
+} from "./discover.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -68,6 +73,10 @@ export class Glyphh {
   readonly custom: CustomPowersApi;
   /** Super powers and tasks on the clock. */
   readonly schedules: SchedulesApi;
+  /** Publishing my powers and reviewing listings. */
+  readonly listings: ListingsApi;
+  /** The Marketplace. */
+  readonly marketplace: MarketplaceApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -85,6 +94,8 @@ export class Glyphh {
     this.superPowers = new SuperPowersApi(this.#client);
     this.custom = new CustomPowersApi(this.#client);
     this.schedules = new SchedulesApi(this.#client);
+    this.listings = new ListingsApi(this.#client);
+    this.marketplace = new MarketplaceApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

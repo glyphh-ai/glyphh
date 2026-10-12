@@ -7,7 +7,7 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
-    from ..models.invoice import Invoice
+    from ..models.invoice_row import InvoiceRow
 
 
 T = TypeVar("T", bound="InvoicePage")
@@ -17,28 +17,28 @@ T = TypeVar("T", bound="InvoicePage")
 class InvoicePage:
     """
     Attributes:
-        has_more (bool):
-        invoices (list[Invoice]):
+        invoices (list[InvoiceRow]):
+        total (int):
     """
 
-    has_more: bool
-    invoices: list[Invoice]
+    invoices: list[InvoiceRow]
+    total: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        has_more = self.has_more
-
         invoices = []
         for invoices_item_data in self.invoices:
             invoices_item = invoices_item_data.to_dict()
             invoices.append(invoices_item)
 
+        total = self.total
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "has_more": has_more,
                 "invoices": invoices,
+                "total": total,
             }
         )
 
@@ -46,21 +46,21 @@ class InvoicePage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.invoice import Invoice
+        from ..models.invoice_row import InvoiceRow
 
         d = dict(src_dict)
-        has_more = d.pop("has_more")
-
         invoices = []
         _invoices = d.pop("invoices")
         for invoices_item_data in _invoices:
-            invoices_item = Invoice.from_dict(invoices_item_data)
+            invoices_item = InvoiceRow.from_dict(invoices_item_data)
 
             invoices.append(invoices_item)
 
+        total = d.pop("total")
+
         invoice_page = cls(
-            has_more=has_more,
             invoices=invoices,
+            total=total,
         )
 
         invoice_page.additional_properties = d

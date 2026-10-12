@@ -19,6 +19,7 @@ from glyphh._calls import (
     Call,
     answer,
 )
+from glyphh._discover_specs import LISTING_SPECS, MARKETPLACE_SPECS
 from glyphh._editor_specs import CUSTOM_SPECS, SCHEDULE_SPECS, SUPER_POWER_SPECS
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
@@ -67,6 +68,8 @@ class Glyphh:
         self.super_powers = SpecApi(self._run, SUPER_POWER_SPECS)
         self.custom = SpecApi(self._run, CUSTOM_SPECS)
         self.schedules = SpecApi(self._run, SCHEDULE_SPECS)
+        self.listings = SpecApi(self._run, LISTING_SPECS)
+        self.marketplace = SpecApi(self._run, MARKETPLACE_SPECS)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -141,6 +144,8 @@ class AsyncGlyphh:
         self.super_powers = AsyncSpecApi(self._run, SUPER_POWER_SPECS)
         self.custom = AsyncSpecApi(self._run, CUSTOM_SPECS)
         self.schedules = AsyncSpecApi(self._run, SCHEDULE_SPECS)
+        self.listings = AsyncSpecApi(self._run, LISTING_SPECS)
+        self.marketplace = AsyncSpecApi(self._run, MARKETPLACE_SPECS)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

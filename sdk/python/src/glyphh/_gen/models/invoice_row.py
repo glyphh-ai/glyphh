@@ -7,17 +7,18 @@ from typing import Any, TypeVar, cast
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-T = TypeVar("T", bound="Invoice")
+T = TypeVar("T", bound="InvoiceRow")
 
 
 @_attrs_define
-class Invoice:
+class InvoiceRow:
     """
     Attributes:
         amount_cents (int):
-        created_at (datetime.datetime):
         description (None | str):
-        id (str):
+        expires_at (datetime.datetime | None):
+        issued_at (datetime.datetime):
+        kind (str):
         number (None | str):
         pdf_url (None | str):
         status (str):
@@ -25,9 +26,10 @@ class Invoice:
     """
 
     amount_cents: int
-    created_at: datetime.datetime
     description: str | None
-    id: str
+    expires_at: datetime.datetime | None
+    issued_at: datetime.datetime
+    kind: str
     number: str | None
     pdf_url: str | None
     status: str
@@ -37,12 +39,18 @@ class Invoice:
     def to_dict(self) -> dict[str, Any]:
         amount_cents = self.amount_cents
 
-        created_at = self.created_at.isoformat()
-
         description: str | None
         description = self.description
 
-        id = self.id
+        expires_at: str | None
+        if isinstance(self.expires_at, datetime.datetime):
+            expires_at = self.expires_at.isoformat()
+        else:
+            expires_at = self.expires_at
+
+        issued_at = self.issued_at.isoformat()
+
+        kind = self.kind
 
         number: str | None
         number = self.number
@@ -60,9 +68,10 @@ class Invoice:
         field_dict.update(
             {
                 "amount_cents": amount_cents,
-                "created_at": created_at,
                 "description": description,
-                "id": id,
+                "expires_at": expires_at,
+                "issued_at": issued_at,
+                "kind": kind,
                 "number": number,
                 "pdf_url": pdf_url,
                 "status": status,
@@ -77,8 +86,6 @@ class Invoice:
         d = dict(src_dict)
         amount_cents = d.pop("amount_cents")
 
-        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
-
         def _parse_description(data: object) -> str | None:
             if data is None:
                 return data
@@ -86,7 +93,24 @@ class Invoice:
 
         description = _parse_description(d.pop("description"))
 
-        id = d.pop("id")
+        def _parse_expires_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                expires_at_type_0 = datetime.datetime.fromisoformat(data)
+
+                return expires_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        expires_at = _parse_expires_at(d.pop("expires_at"))
+
+        issued_at = datetime.datetime.fromisoformat(d.pop("issued_at"))
+
+        kind = d.pop("kind")
 
         def _parse_number(data: object) -> str | None:
             if data is None:
@@ -111,19 +135,20 @@ class Invoice:
 
         view_url = _parse_view_url(d.pop("view_url"))
 
-        invoice = cls(
+        invoice_row = cls(
             amount_cents=amount_cents,
-            created_at=created_at,
             description=description,
-            id=id,
+            expires_at=expires_at,
+            issued_at=issued_at,
+            kind=kind,
             number=number,
             pdf_url=pdf_url,
             status=status,
             view_url=view_url,
         )
 
-        invoice.additional_properties = d
-        return invoice
+        invoice_row.additional_properties = d
+        return invoice_row
 
     @property
     def additional_keys(self) -> list[str]:

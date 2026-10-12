@@ -19,13 +19,17 @@ class PlanChange:
     Attributes:
         state (PlanChangeState):
         applies_at (datetime.datetime | None | Unset):
+        cancel_url (None | str | Unset):
         client_secret (None | str | Unset):
+        return_url (None | str | Unset):
         stripe_publishable_key (None | str | Unset):
     """
 
     state: PlanChangeState
     applies_at: datetime.datetime | Unset | None = UNSET
+    cancel_url: str | Unset | None = UNSET
     client_secret: str | Unset | None = UNSET
+    return_url: str | Unset | None = UNSET
     stripe_publishable_key: str | Unset | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -40,11 +44,23 @@ class PlanChange:
         else:
             applies_at = self.applies_at
 
+        cancel_url: str | Unset | None
+        if isinstance(self.cancel_url, Unset):
+            cancel_url = UNSET
+        else:
+            cancel_url = self.cancel_url
+
         client_secret: str | Unset | None
         if isinstance(self.client_secret, Unset):
             client_secret = UNSET
         else:
             client_secret = self.client_secret
+
+        return_url: str | Unset | None
+        if isinstance(self.return_url, Unset):
+            return_url = UNSET
+        else:
+            return_url = self.return_url
 
         stripe_publishable_key: str | Unset | None
         if isinstance(self.stripe_publishable_key, Unset):
@@ -61,8 +77,12 @@ class PlanChange:
         )
         if applies_at is not UNSET:
             field_dict["applies_at"] = applies_at
+        if cancel_url is not UNSET:
+            field_dict["cancel_url"] = cancel_url
         if client_secret is not UNSET:
             field_dict["client_secret"] = client_secret
+        if return_url is not UNSET:
+            field_dict["return_url"] = return_url
         if stripe_publishable_key is not UNSET:
             field_dict["stripe_publishable_key"] = stripe_publishable_key
 
@@ -90,6 +110,15 @@ class PlanChange:
 
         applies_at = _parse_applies_at(d.pop("applies_at", UNSET))
 
+        def _parse_cancel_url(data: object) -> str | Unset | None:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        cancel_url = _parse_cancel_url(d.pop("cancel_url", UNSET))
+
         def _parse_client_secret(data: object) -> str | Unset | None:
             if data is None:
                 return data
@@ -98,6 +127,15 @@ class PlanChange:
             return cast(None | str | Unset, data)
 
         client_secret = _parse_client_secret(d.pop("client_secret", UNSET))
+
+        def _parse_return_url(data: object) -> str | Unset | None:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        return_url = _parse_return_url(d.pop("return_url", UNSET))
 
         def _parse_stripe_publishable_key(data: object) -> str | Unset | None:
             if data is None:
@@ -111,7 +149,9 @@ class PlanChange:
         plan_change = cls(
             state=state,
             applies_at=applies_at,
+            cancel_url=cancel_url,
             client_secret=client_secret,
+            return_url=return_url,
             stripe_publishable_key=stripe_publishable_key,
         )
 

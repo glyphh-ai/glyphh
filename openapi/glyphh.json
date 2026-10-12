@@ -19,6 +19,38 @@
         "title": "Access",
         "type": "object"
       },
+      "Added": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/Have"
+            },
+            "title": "Needs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "needs"
+        ],
+        "title": "Added",
+        "type": "object"
+      },
       "AllowScreen": {
         "properties": {
           "email": {
@@ -558,6 +590,43 @@
           "verifier"
         ],
         "title": "CodeIn",
+        "type": "object"
+      },
+      "Comment": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "who": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Who"
+          }
+        },
+        "required": [
+          "id",
+          "who",
+          "body",
+          "created_at"
+        ],
+        "title": "Comment",
         "type": "object"
       },
       "ConnectLink": {
@@ -1328,6 +1397,34 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "Have": {
+        "properties": {
+          "have": {
+            "title": "Have",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "need": {
+            "title": "Need",
+            "type": "string"
+          },
+          "optional": {
+            "title": "Optional",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "need",
+          "optional",
+          "have"
+        ],
+        "title": "Have",
+        "type": "object"
+      },
       "Health": {
         "properties": {
           "database": {
@@ -1408,6 +1505,49 @@
           "snippet"
         ],
         "title": "Hit",
+        "type": "object"
+      },
+      "Home": {
+        "properties": {
+          "categories": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "featured": {
+            "items": {
+              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+            },
+            "title": "Featured",
+            "type": "array"
+          },
+          "newest": {
+            "items": {
+              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+            },
+            "title": "Newest",
+            "type": "array"
+          },
+          "popular": {
+            "items": {
+              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+            },
+            "title": "Popular",
+            "type": "array"
+          }
+        },
+        "required": [
+          "featured",
+          "popular",
+          "newest",
+          "categories"
+        ],
+        "title": "Home",
         "type": "object"
       },
       "Host": {
@@ -1525,16 +1665,32 @@
         "title": "InviteView",
         "type": "object"
       },
-      "Invoice": {
+      "InvoicePage": {
+        "properties": {
+          "invoices": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceRow"
+            },
+            "title": "Invoices",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoices",
+          "total"
+        ],
+        "title": "InvoicePage",
+        "type": "object"
+      },
+      "InvoiceRow": {
         "properties": {
           "amount_cents": {
             "title": "Amount Cents",
             "type": "integer"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
           },
           "description": {
             "anyOf": [
@@ -1547,8 +1703,25 @@
             ],
             "title": "Description"
           },
-          "id": {
-            "title": "Id",
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
             "type": "string"
           },
           "number": {
@@ -1590,37 +1763,17 @@
           }
         },
         "required": [
-          "id",
+          "kind",
           "number",
-          "created_at",
+          "issued_at",
+          "description",
           "amount_cents",
           "status",
-          "description",
+          "expires_at",
           "view_url",
           "pdf_url"
         ],
-        "title": "Invoice",
-        "type": "object"
-      },
-      "InvoicePage": {
-        "properties": {
-          "has_more": {
-            "title": "Has More",
-            "type": "boolean"
-          },
-          "invoices": {
-            "items": {
-              "$ref": "#/components/schemas/Invoice"
-            },
-            "title": "Invoices",
-            "type": "array"
-          }
-        },
-        "required": [
-          "invoices",
-          "has_more"
-        ],
-        "title": "InvoicePage",
+        "title": "InvoiceRow",
         "type": "object"
       },
       "JoinScreen": {
@@ -1858,6 +2011,202 @@
         "title": "Link",
         "type": "object"
       },
+      "ListingChange": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "enum": [
+                  "org",
+                  "marketplace"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "title": "ListingChange",
+        "type": "object"
+      },
+      "ListingView": {
+        "properties": {
+          "adds": {
+            "title": "Adds",
+            "type": "integer"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "has_icon": {
+            "title": "Has Icon",
+            "type": "boolean"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/VersionInfo"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "org": {
+            "title": "Org",
+            "type": "string"
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reach": {
+            "title": "Reach",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "unpublished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unpublished At"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "target_id",
+          "name",
+          "summary",
+          "description",
+          "category",
+          "reach",
+          "has_icon",
+          "by",
+          "org",
+          "adds",
+          "published",
+          "unpublished_at",
+          "open",
+          "history"
+        ],
+        "title": "ListingView",
+        "type": "object"
+      },
       "LoopChoice": {
         "properties": {
           "engine": {
@@ -2030,6 +2379,176 @@
           "online"
         ],
         "title": "MachinePage",
+        "type": "object"
+      },
+      "MarketDetail": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "boolean"
+          },
+          "adds": {
+            "title": "Adds",
+            "type": "integer"
+          },
+          "avatar_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Color"
+          },
+          "avatar_variant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Variant"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "has_icon": {
+            "title": "Has Icon",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mine": {
+            "items": {
+              "$ref": "#/components/schemas/MyCopy"
+            },
+            "title": "Mine",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/Have"
+            },
+            "title": "Needs",
+            "type": "array"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Shot"
+            },
+            "title": "Screenshots",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionInfo"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "summary",
+          "by",
+          "category",
+          "adds",
+          "version",
+          "published_at",
+          "has_icon",
+          "avatar_variant",
+          "avatar_color",
+          "added",
+          "description",
+          "screenshots",
+          "needs",
+          "versions",
+          "mine"
+        ],
+        "title": "MarketDetail",
+        "type": "object"
+      },
+      "MarketPage": {
+        "properties": {
+          "categories": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories",
+            "type": "object"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/glyphh_server__ops__discover__market__Card"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "types": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Types",
+            "type": "object"
+          }
+        },
+        "required": [
+          "listings",
+          "total",
+          "types",
+          "categories"
+        ],
+        "title": "MarketPage",
         "type": "object"
       },
       "Me": {
@@ -2401,6 +2920,37 @@
         "title": "ModelView",
         "type": "object"
       },
+      "MyCopy": {
+        "properties": {
+          "newer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newer"
+          },
+          "power_id": {
+            "format": "uuid",
+            "title": "Power Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "power_id",
+          "version",
+          "newer"
+        ],
+        "title": "MyCopy",
+        "type": "object"
+      },
       "Needed": {
         "properties": {
           "connected": {
@@ -2444,6 +2994,21 @@
           "super_power_id"
         ],
         "title": "NewBrowser",
+        "type": "object"
+      },
+      "NewComment": {
+        "properties": {
+          "body": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "NewComment",
         "type": "object"
       },
       "NewCustom": {
@@ -2522,6 +3087,45 @@
           "email"
         ],
         "title": "NewInvite",
+        "type": "object"
+      },
+      "NewListing": {
+        "properties": {
+          "power_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power Id"
+          },
+          "reach": {
+            "default": "marketplace",
+            "enum": [
+              "org",
+              "marketplace"
+            ],
+            "title": "Reach",
+            "type": "string"
+          },
+          "super_power_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Super Power Id"
+          }
+        },
+        "title": "NewListing",
         "type": "object"
       },
       "NewModel": {
@@ -2673,6 +3277,24 @@
           }
         },
         "title": "OpenIn",
+        "type": "object"
+      },
+      "Order": {
+        "properties": {
+          "screenshots": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Screenshots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "screenshots"
+        ],
+        "title": "Order",
         "type": "object"
       },
       "OrgCredit": {
@@ -2891,6 +3513,17 @@
             "title": "Payment Id",
             "type": "string"
           },
+          "return_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Url"
+          },
           "stripe_publishable_key": {
             "title": "Stripe Publishable Key",
             "type": "string"
@@ -2963,6 +3596,13 @@
             ],
             "title": "Profile"
           },
+          "signed_in_sites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signed In Sites",
+            "type": "array"
+          },
           "used_by": {
             "items": {
               "$ref": "#/components/schemas/User"
@@ -2976,6 +3616,7 @@
           "name",
           "path",
           "profile",
+          "signed_in_sites",
           "machine_id",
           "machine",
           "machine_online",
@@ -2999,6 +3640,17 @@
             ],
             "title": "Applies At"
           },
+          "cancel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Url"
+          },
           "client_secret": {
             "anyOf": [
               {
@@ -3009,6 +3661,17 @@
               }
             ],
             "title": "Client Secret"
+          },
+          "return_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Url"
           },
           "state": {
             "enum": [
@@ -3402,6 +4065,128 @@
           "name"
         ],
         "title": "RenameOrg",
+        "type": "object"
+      },
+      "Requirement": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "need": {
+            "title": "Need",
+            "type": "string"
+          },
+          "optional": {
+            "title": "Optional",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "need",
+          "optional"
+        ],
+        "title": "Requirement",
+        "type": "object"
+      },
+      "ReviewDecision": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "changes_requested",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewDecision",
+        "type": "object"
+      },
+      "ReviewView": {
+        "properties": {
+          "agent_report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Report"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "decision",
+          "notes",
+          "reviewer",
+          "agent_report",
+          "decided_at"
+        ],
+        "title": "ReviewView",
         "type": "object"
       },
       "Say": {
@@ -3804,6 +4589,35 @@
           }
         },
         "title": "SettingsChange",
+        "type": "object"
+      },
+      "Shot": {
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sort": {
+            "title": "Sort",
+            "type": "integer"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "width",
+          "height",
+          "sort"
+        ],
+        "title": "Shot",
         "type": "object"
       },
       "SignInScreen": {
@@ -4939,6 +5753,228 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VersionChange": {
+        "properties": {
+          "release_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Notes"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "title": "VersionChange",
+        "type": "object"
+      },
+      "VersionDetail": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            },
+            "title": "Needs",
+            "type": "array"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "release_notes": {
+            "title": "Release Notes",
+            "type": "string"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewView"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "screenshots": {
+            "items": {
+              "$ref": "#/components/schemas/Shot"
+            },
+            "title": "Screenshots",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "release_notes",
+          "state",
+          "submitted_at",
+          "published_at",
+          "screenshots",
+          "needs",
+          "reviews"
+        ],
+        "title": "VersionDetail",
+        "type": "object"
+      },
+      "VersionInfo": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "release_notes": {
+            "title": "Release Notes",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "release_notes",
+          "state",
+          "submitted_at",
+          "published_at"
+        ],
+        "title": "VersionInfo",
+        "type": "object"
+      },
+      "Waiting": {
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "listing_version_id": {
+            "format": "uuid",
+            "title": "Listing Version Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reach": {
+            "title": "Reach",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_version_id",
+          "listing_id",
+          "name",
+          "kind",
+          "reach",
+          "version",
+          "by",
+          "submitted_at"
+        ],
+        "title": "Waiting",
+        "type": "object"
+      },
       "glyphh_server__ops__billing__summary__Card": {
         "properties": {
           "brand": {
@@ -4977,6 +6013,102 @@
           "last4",
           "exp_month",
           "exp_year"
+        ],
+        "title": "Card",
+        "type": "object"
+      },
+      "glyphh_server__ops__discover__market__Card": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "boolean"
+          },
+          "adds": {
+            "title": "Adds",
+            "type": "integer"
+          },
+          "avatar_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Color"
+          },
+          "avatar_variant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Variant"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "has_icon": {
+            "title": "Has Icon",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "summary",
+          "by",
+          "category",
+          "adds",
+          "version",
+          "published_at",
+          "has_icon",
+          "avatar_variant",
+          "avatar_color",
+          "added"
         ],
         "title": "Card",
         "type": "object"
@@ -5484,6 +6616,778 @@
         ]
       }
     },
+    "/v1/listings": {
+      "get": {
+        "operationId": "myListings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ListingView"
+                  },
+                  "title": "Response Mylistings",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Listings",
+        "tags": [
+          "listings"
+        ]
+      },
+      "post": {
+        "description": "List one of my custom powers or super powers, for my org or the marketplace, with a draft first version.",
+        "operationId": "createListing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewListing"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Listing",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}": {
+      "get": {
+        "operationId": "getListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Listing",
+        "tags": [
+          "listings"
+        ]
+      },
+      "patch": {
+        "operationId": "changeListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Listing",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/comments": {
+      "get": {
+        "operationId": "listingComments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Comment"
+                  },
+                  "title": "Response Listingcomments",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listing Comments",
+        "tags": [
+          "listings"
+        ]
+      },
+      "post": {
+        "operationId": "commentOnListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewComment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Comment"
+                  },
+                  "title": "Response Commentonlisting",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Comment",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/icon": {
+      "get": {
+        "operationId": "listingIcon",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Icon",
+        "tags": [
+          "listings"
+        ]
+      },
+      "put": {
+        "description": "A square PNG, re-encoded at 512 px.",
+        "operationId": "setListingIcon",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-file-name",
+            "required": false,
+            "schema": {
+              "default": "icon.png",
+              "maxLength": 200,
+              "title": "X-File-Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Icon",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/screenshots": {
+      "post": {
+        "description": "A PNG or JPEG of up to 5 MB, re-encoded; up to six per version.",
+        "operationId": "addListingScreenshot",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-file-name",
+            "required": false,
+            "schema": {
+              "default": "screenshot",
+              "maxLength": 200,
+              "title": "X-File-Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Screenshot",
+        "tags": [
+          "listings"
+        ]
+      },
+      "put": {
+        "operationId": "orderListingScreenshots",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Order Screenshots",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/screenshots/{shot_id}": {
+      "delete": {
+        "operationId": "removeListingScreenshot",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "shot_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Shot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Screenshot",
+        "tags": [
+          "listings"
+        ]
+      },
+      "get": {
+        "operationId": "listingScreenshot",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "shot_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Shot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Screenshot",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/submit": {
+      "post": {
+        "description": "Check everything (naming each thing to fix), freeze the version, and send it for review.",
+        "operationId": "submitListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Listing",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/unpublish": {
+      "post": {
+        "description": "It leaves the marketplace now; people who added it keep their copy but get no updates.",
+        "operationId": "unpublishListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unpublish Listing",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/version": {
+      "patch": {
+        "description": "The version on its way: its number and release notes. With none on its way, this starts one.",
+        "operationId": "changeListingVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Version",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/listings/{listing_id}/withdraw": {
+      "post": {
+        "operationId": "withdrawListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Withdraw Listing",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
     "/v1/machines": {
       "get": {
         "description": "My machines, connected first, each with its 8 most recently active super powers.",
@@ -5851,6 +7755,267 @@
         "summary": "Start",
         "tags": [
           "threads"
+        ]
+      }
+    },
+    "/v1/marketplace": {
+      "get": {
+        "description": "Search what is listed for me, most added first, with how many of each type and category.",
+        "operationId": "browseMarketplace",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "custom",
+                    "super_power"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/v1/marketplace/home": {
+      "get": {
+        "description": "Discover: the featured picks, the most added, the newest, and the categories.",
+        "operationId": "marketplaceHome",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "custom",
+                    "super_power"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Home"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Home",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/v1/marketplace/{listing_id}": {
+      "get": {
+        "operationId": "marketplaceListing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listing Page",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/v1/marketplace/{listing_id}/add": {
+      "post": {
+        "description": "Copy the live version into my own; what it needs that I lack is listed, to connect or add.",
+        "operationId": "addFromMarketplace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Added"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add",
+        "tags": [
+          "marketplace"
         ]
       }
     },
@@ -6347,34 +8512,29 @@
     },
     "/v1/org/billing/invoices": {
       "get": {
-        "description": "Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).",
+        "description": "Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.",
         "operationId": "listInvoices",
         "parameters": [
           {
             "in": "query",
-            "name": "after",
+            "name": "page",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "After"
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
             }
           },
           {
             "in": "query",
-            "name": "limit",
+            "name": "size",
             "required": false,
             "schema": {
               "default": 25,
               "maximum": 100,
               "minimum": 1,
-              "title": "Limit",
+              "title": "Size",
               "type": "integer"
             }
           }
@@ -7995,6 +10155,50 @@
         ]
       }
     },
+    "/v1/powers/custom/{power_id}/update": {
+      "post": {
+        "description": "Move my copy to its listing's newest version; nothing updates until I say so.",
+        "operationId": "updateFromMarketplace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Added"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
     "/v1/powers/folders": {
       "get": {
         "operationId": "listFolders",
@@ -8291,6 +10495,112 @@
         "summary": "Replace Key",
         "tags": [
           "powers"
+        ]
+      }
+    },
+    "/v1/reviews": {
+      "get": {
+        "description": "What waits for me to review: my org's (org admins) or the marketplace's (super admins).",
+        "operationId": "reviewQueue",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "step",
+            "required": false,
+            "schema": {
+              "default": "org",
+              "enum": [
+                "org",
+                "glyphh"
+              ],
+              "title": "Step",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Waiting"
+                  },
+                  "title": "Response Reviewqueue",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Queue",
+        "tags": [
+          "listings"
+        ]
+      }
+    },
+    "/v1/reviews/{listing_version_id}": {
+      "post": {
+        "description": "Approve, ask for changes (with notes) or reject (with why).",
+        "operationId": "decideReview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "listings"
         ]
       }
     },

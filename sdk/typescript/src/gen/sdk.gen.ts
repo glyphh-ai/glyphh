@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddModelData, AddModelErrors, AddModelResponses, AddScheduleData, AddScheduleErrors, AddScheduleResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeCustomPowerData, ChangeCustomPowerErrors, ChangeCustomPowerResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeScheduleData, ChangeScheduleErrors, ChangeScheduleResponses, ChangeSuperPowerData, ChangeSuperPowerErrors, ChangeSuperPowerResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, ConnectData, ConnectErrors, ConnectResponses, CreateCustomPowerData, CreateCustomPowerErrors, CreateCustomPowerResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateSuperPowerData, CreateSuperPowerErrors, CreateSuperPowerResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteCustomFileData, DeleteCustomFileErrors, DeleteCustomFileResponses, DeleteCustomPowerData, DeleteCustomPowerErrors, DeleteCustomPowerResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteSuperPowerData, DeleteSuperPowerErrors, DeleteSuperPowerResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, GetBillingData, GetBillingResponses, GetCustomPowerData, GetCustomPowerErrors, GetCustomPowerResponses, GetOrgData, GetOrgResponses, GetSuperPowerData, GetSuperPowerErrors, GetSuperPowerResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListCustomPowersData, ListCustomPowersErrors, ListCustomPowersResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListSuperPowersData, ListSuperPowersErrors, ListSuperPowersResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MyGlyphhData, MyGlyphhResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadCustomFileData, ReadCustomFileErrors, ReadCustomFileResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SaveTaskFlowData, SaveTaskFlowErrors, SaveTaskFlowResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetGrantData, SetGrantErrors, SetGrantResponses, SetLoopData, SetLoopErrors, SetLoopResponses, SetTaskSlotsData, SetTaskSlotsErrors, SetTaskSlotsResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, TaskSlotsData, TaskSlotsErrors, TaskSlotsResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses, WriteCustomFileData, WriteCustomFileErrors, WriteCustomFileResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFromMarketplaceData, AddFromMarketplaceErrors, AddFromMarketplaceResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddListingScreenshotData, AddListingScreenshotErrors, AddListingScreenshotResponses, AddModelData, AddModelErrors, AddModelResponses, AddScheduleData, AddScheduleErrors, AddScheduleResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, BrowseMarketplaceData, BrowseMarketplaceErrors, BrowseMarketplaceResponses, ChangeCustomPowerData, ChangeCustomPowerErrors, ChangeCustomPowerResponses, ChangeListingData, ChangeListingErrors, ChangeListingResponses, ChangeListingVersionData, ChangeListingVersionErrors, ChangeListingVersionResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeScheduleData, ChangeScheduleErrors, ChangeScheduleResponses, ChangeSuperPowerData, ChangeSuperPowerErrors, ChangeSuperPowerResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, CommentOnListingData, CommentOnListingErrors, CommentOnListingResponses, ConnectData, ConnectErrors, ConnectResponses, CreateCustomPowerData, CreateCustomPowerErrors, CreateCustomPowerResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateListingData, CreateListingErrors, CreateListingResponses, CreateSuperPowerData, CreateSuperPowerErrors, CreateSuperPowerResponses, DecideReviewData, DecideReviewErrors, DecideReviewResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteCustomFileData, DeleteCustomFileErrors, DeleteCustomFileResponses, DeleteCustomPowerData, DeleteCustomPowerErrors, DeleteCustomPowerResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteSuperPowerData, DeleteSuperPowerErrors, DeleteSuperPowerResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, GetBillingData, GetBillingResponses, GetCustomPowerData, GetCustomPowerErrors, GetCustomPowerResponses, GetListingData, GetListingErrors, GetListingResponses, GetOrgData, GetOrgResponses, GetSuperPowerData, GetSuperPowerErrors, GetSuperPowerResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListCustomPowersData, ListCustomPowersErrors, ListCustomPowersResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListingCommentsData, ListingCommentsErrors, ListingCommentsResponses, ListingIconData, ListingIconErrors, ListingIconResponses, ListingScreenshotData, ListingScreenshotErrors, ListingScreenshotResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListSuperPowersData, ListSuperPowersErrors, ListSuperPowersResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MarketplaceHomeData, MarketplaceHomeErrors, MarketplaceHomeResponses, MarketplaceListingData, MarketplaceListingErrors, MarketplaceListingResponses, MeData, MeResponses, MyGlyphhData, MyGlyphhResponses, MyListingsData, MyListingsResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrderListingScreenshotsData, OrderListingScreenshotsErrors, OrderListingScreenshotsResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadCustomFileData, ReadCustomFileErrors, ReadCustomFileResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveListingScreenshotData, RemoveListingScreenshotErrors, RemoveListingScreenshotResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, ReviewQueueData, ReviewQueueErrors, ReviewQueueResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SaveTaskFlowData, SaveTaskFlowErrors, SaveTaskFlowResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetGrantData, SetGrantErrors, SetGrantResponses, SetListingIconData, SetListingIconErrors, SetListingIconResponses, SetLoopData, SetLoopErrors, SetLoopResponses, SetTaskSlotsData, SetTaskSlotsErrors, SetTaskSlotsResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SubmitListingData, SubmitListingErrors, SubmitListingResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, TaskSlotsData, TaskSlotsErrors, TaskSlotsResponses, UnpublishListingData, UnpublishListingErrors, UnpublishListingResponses, UpdateFromMarketplaceData, UpdateFromMarketplaceErrors, UpdateFromMarketplaceResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses, WithdrawListingData, WithdrawListingErrors, WithdrawListingResponses, WriteCustomFileData, WriteCustomFileErrors, WriteCustomFileResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -84,6 +84,149 @@ export const declineInvite = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * My Listings
+ */
+export const myListings = <ThrowOnError extends boolean = false>(options?: Options<MyListingsData, ThrowOnError>): RequestResult<MyListingsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MyListingsResponses, unknown, ThrowOnError>({ url: '/v1/listings', ...options });
+
+/**
+ * Create Listing
+ *
+ * List one of my custom powers or super powers, for my org or the marketplace, with a draft first version.
+ */
+export const createListing = <ThrowOnError extends boolean = false>(options: Options<CreateListingData, ThrowOnError>): RequestResult<CreateListingResponses, CreateListingErrors, ThrowOnError> => (options.client ?? client).post<CreateListingResponses, CreateListingErrors, ThrowOnError>({
+    url: '/v1/listings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get Listing
+ */
+export const getListing = <ThrowOnError extends boolean = false>(options: Options<GetListingData, ThrowOnError>): RequestResult<GetListingResponses, GetListingErrors, ThrowOnError> => (options.client ?? client).get<GetListingResponses, GetListingErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}', ...options });
+
+/**
+ * Change Listing
+ */
+export const changeListing = <ThrowOnError extends boolean = false>(options: Options<ChangeListingData, ThrowOnError>): RequestResult<ChangeListingResponses, ChangeListingErrors, ThrowOnError> => (options.client ?? client).patch<ChangeListingResponses, ChangeListingErrors, ThrowOnError>({
+    url: '/v1/listings/{listing_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Listing Comments
+ */
+export const listingComments = <ThrowOnError extends boolean = false>(options: Options<ListingCommentsData, ThrowOnError>): RequestResult<ListingCommentsResponses, ListingCommentsErrors, ThrowOnError> => (options.client ?? client).get<ListingCommentsResponses, ListingCommentsErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/comments', ...options });
+
+/**
+ * Comment
+ */
+export const commentOnListing = <ThrowOnError extends boolean = false>(options: Options<CommentOnListingData, ThrowOnError>): RequestResult<CommentOnListingResponses, CommentOnListingErrors, ThrowOnError> => (options.client ?? client).post<CommentOnListingResponses, CommentOnListingErrors, ThrowOnError>({
+    url: '/v1/listings/{listing_id}/comments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Icon
+ */
+export const listingIcon = <ThrowOnError extends boolean = false>(options: Options<ListingIconData, ThrowOnError>): RequestResult<ListingIconResponses, ListingIconErrors, ThrowOnError> => (options.client ?? client).get<ListingIconResponses, ListingIconErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/icon', ...options });
+
+/**
+ * Set Icon
+ *
+ * A square PNG, re-encoded at 512 px.
+ */
+export const setListingIcon = <ThrowOnError extends boolean = false>(options: Options<SetListingIconData, ThrowOnError>): RequestResult<SetListingIconResponses, SetListingIconErrors, ThrowOnError> => (options.client ?? client).put<SetListingIconResponses, SetListingIconErrors, ThrowOnError>({
+    bodySerializer: null,
+    url: '/v1/listings/{listing_id}/icon',
+    ...options,
+    headers: {
+        'Content-Type': 'image/jpeg',
+        ...options.headers
+    }
+});
+
+/**
+ * Add Screenshot
+ *
+ * A PNG or JPEG of up to 5 MB, re-encoded; up to six per version.
+ */
+export const addListingScreenshot = <ThrowOnError extends boolean = false>(options: Options<AddListingScreenshotData, ThrowOnError>): RequestResult<AddListingScreenshotResponses, AddListingScreenshotErrors, ThrowOnError> => (options.client ?? client).post<AddListingScreenshotResponses, AddListingScreenshotErrors, ThrowOnError>({
+    bodySerializer: null,
+    url: '/v1/listings/{listing_id}/screenshots',
+    ...options,
+    headers: {
+        'Content-Type': 'image/jpeg',
+        ...options.headers
+    }
+});
+
+/**
+ * Order Screenshots
+ */
+export const orderListingScreenshots = <ThrowOnError extends boolean = false>(options: Options<OrderListingScreenshotsData, ThrowOnError>): RequestResult<OrderListingScreenshotsResponses, OrderListingScreenshotsErrors, ThrowOnError> => (options.client ?? client).put<OrderListingScreenshotsResponses, OrderListingScreenshotsErrors, ThrowOnError>({
+    url: '/v1/listings/{listing_id}/screenshots',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove Screenshot
+ */
+export const removeListingScreenshot = <ThrowOnError extends boolean = false>(options: Options<RemoveListingScreenshotData, ThrowOnError>): RequestResult<RemoveListingScreenshotResponses, RemoveListingScreenshotErrors, ThrowOnError> => (options.client ?? client).delete<RemoveListingScreenshotResponses, RemoveListingScreenshotErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/screenshots/{shot_id}', ...options });
+
+/**
+ * Screenshot
+ */
+export const listingScreenshot = <ThrowOnError extends boolean = false>(options: Options<ListingScreenshotData, ThrowOnError>): RequestResult<ListingScreenshotResponses, ListingScreenshotErrors, ThrowOnError> => (options.client ?? client).get<ListingScreenshotResponses, ListingScreenshotErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/screenshots/{shot_id}', ...options });
+
+/**
+ * Submit Listing
+ *
+ * Check everything (naming each thing to fix), freeze the version, and send it for review.
+ */
+export const submitListing = <ThrowOnError extends boolean = false>(options: Options<SubmitListingData, ThrowOnError>): RequestResult<SubmitListingResponses, SubmitListingErrors, ThrowOnError> => (options.client ?? client).post<SubmitListingResponses, SubmitListingErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/submit', ...options });
+
+/**
+ * Unpublish Listing
+ *
+ * It leaves the marketplace now; people who added it keep their copy but get no updates.
+ */
+export const unpublishListing = <ThrowOnError extends boolean = false>(options: Options<UnpublishListingData, ThrowOnError>): RequestResult<UnpublishListingResponses, UnpublishListingErrors, ThrowOnError> => (options.client ?? client).post<UnpublishListingResponses, UnpublishListingErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/unpublish', ...options });
+
+/**
+ * Change Version
+ *
+ * The version on its way: its number and release notes. With none on its way, this starts one.
+ */
+export const changeListingVersion = <ThrowOnError extends boolean = false>(options: Options<ChangeListingVersionData, ThrowOnError>): RequestResult<ChangeListingVersionResponses, ChangeListingVersionErrors, ThrowOnError> => (options.client ?? client).patch<ChangeListingVersionResponses, ChangeListingVersionErrors, ThrowOnError>({
+    url: '/v1/listings/{listing_id}/version',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Withdraw Listing
+ */
+export const withdrawListing = <ThrowOnError extends boolean = false>(options: Options<WithdrawListingData, ThrowOnError>): RequestResult<WithdrawListingResponses, WithdrawListingErrors, ThrowOnError> => (options.client ?? client).post<WithdrawListingResponses, WithdrawListingErrors, ThrowOnError>({ url: '/v1/listings/{listing_id}/withdraw', ...options });
+
+/**
  * Machines
  *
  * My machines, connected first, each with its 8 most recently active super powers.
@@ -131,6 +274,32 @@ export const startThread = <ThrowOnError extends boolean = false>(options: Optio
         ...options.headers
     }
 });
+
+/**
+ * Browse
+ *
+ * Search what is listed for me, most added first, with how many of each type and category.
+ */
+export const browseMarketplace = <ThrowOnError extends boolean = false>(options?: Options<BrowseMarketplaceData, ThrowOnError>): RequestResult<BrowseMarketplaceResponses, BrowseMarketplaceErrors, ThrowOnError> => (options?.client ?? client).get<BrowseMarketplaceResponses, BrowseMarketplaceErrors, ThrowOnError>({ url: '/v1/marketplace', ...options });
+
+/**
+ * Home
+ *
+ * Discover: the featured picks, the most added, the newest, and the categories.
+ */
+export const marketplaceHome = <ThrowOnError extends boolean = false>(options?: Options<MarketplaceHomeData, ThrowOnError>): RequestResult<MarketplaceHomeResponses, MarketplaceHomeErrors, ThrowOnError> => (options?.client ?? client).get<MarketplaceHomeResponses, MarketplaceHomeErrors, ThrowOnError>({ url: '/v1/marketplace/home', ...options });
+
+/**
+ * Listing Page
+ */
+export const marketplaceListing = <ThrowOnError extends boolean = false>(options: Options<MarketplaceListingData, ThrowOnError>): RequestResult<MarketplaceListingResponses, MarketplaceListingErrors, ThrowOnError> => (options.client ?? client).get<MarketplaceListingResponses, MarketplaceListingErrors, ThrowOnError>({ url: '/v1/marketplace/{listing_id}', ...options });
+
+/**
+ * Add
+ *
+ * Copy the live version into my own; what it needs that I lack is listed, to connect or add.
+ */
+export const addFromMarketplace = <ThrowOnError extends boolean = false>(options: Options<AddFromMarketplaceData, ThrowOnError>): RequestResult<AddFromMarketplaceResponses, AddFromMarketplaceErrors, ThrowOnError> => (options.client ?? client).post<AddFromMarketplaceResponses, AddFromMarketplaceErrors, ThrowOnError>({ url: '/v1/marketplace/{listing_id}/add', ...options });
 
 /**
  * Get Me
@@ -269,7 +438,7 @@ export const startCardSetup = <ThrowOnError extends boolean = false>(options?: O
 /**
  * List Invoices
  *
- * Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+ * Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages.
  */
 export const listInvoices = <ThrowOnError extends boolean = false>(options?: Options<ListInvoicesData, ThrowOnError>): RequestResult<ListInvoicesResponses, ListInvoicesErrors, ThrowOnError> => (options?.client ?? client).get<ListInvoicesResponses, ListInvoicesErrors, ThrowOnError>({ url: '/v1/org/billing/invoices', ...options });
 
@@ -602,6 +771,13 @@ export const setTaskSlots = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * Update
+ *
+ * Move my copy to its listing's newest version; nothing updates until I say so.
+ */
+export const updateFromMarketplace = <ThrowOnError extends boolean = false>(options: Options<UpdateFromMarketplaceData, ThrowOnError>): RequestResult<UpdateFromMarketplaceResponses, UpdateFromMarketplaceErrors, ThrowOnError> => (options.client ?? client).post<UpdateFromMarketplaceResponses, UpdateFromMarketplaceErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}/update', ...options });
+
+/**
  * List Folders
  */
 export const listFolders = <ThrowOnError extends boolean = false>(options?: Options<ListFoldersData, ThrowOnError>): RequestResult<ListFoldersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListFoldersResponses, unknown, ThrowOnError>({ url: '/v1/powers/folders', ...options });
@@ -661,6 +837,27 @@ export const checkModelKey = <ThrowOnError extends boolean = false>(options: Opt
  */
 export const replaceModelKey = <ThrowOnError extends boolean = false>(options: Options<ReplaceModelKeyData, ThrowOnError>): RequestResult<ReplaceModelKeyResponses, ReplaceModelKeyErrors, ThrowOnError> => (options.client ?? client).put<ReplaceModelKeyResponses, ReplaceModelKeyErrors, ThrowOnError>({
     url: '/v1/powers/models/{power_id}/key',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Review Queue
+ *
+ * What waits for me to review: my org's (org admins) or the marketplace's (super admins).
+ */
+export const reviewQueue = <ThrowOnError extends boolean = false>(options?: Options<ReviewQueueData, ThrowOnError>): RequestResult<ReviewQueueResponses, ReviewQueueErrors, ThrowOnError> => (options?.client ?? client).get<ReviewQueueResponses, ReviewQueueErrors, ThrowOnError>({ url: '/v1/reviews', ...options });
+
+/**
+ * Decide
+ *
+ * Approve, ask for changes (with notes) or reject (with why).
+ */
+export const decideReview = <ThrowOnError extends boolean = false>(options: Options<DecideReviewData, ThrowOnError>): RequestResult<DecideReviewResponses, DecideReviewErrors, ThrowOnError> => (options.client ?? client).post<DecideReviewResponses, DecideReviewErrors, ThrowOnError>({
+    url: '/v1/reviews/{listing_version_id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

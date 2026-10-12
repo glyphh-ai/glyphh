@@ -87,9 +87,9 @@ export class BillingApi {
     return unwrap(await spendByDay({ client: this.#client }));
   }
 
-  /** Stripe's invoices, newest first, by cursor: pass the last invoice's id as `after`. */
-  async invoices(after?: string, limit = 25): Promise<InvoicePage> {
-    return unwrap(await listInvoices({ client: this.#client, query: { after, limit } }));
+  /** Stripe's invoices and the org's top-ups (each with when its credit expires), newest first, in pages. */
+  async invoices(page = 1, size = 25): Promise<InvoicePage> {
+    return unwrap(await listInvoices({ client: this.#client, query: { page, size } }));
   }
 
   /** What Stripe will bill next; null without a paid plan. */
