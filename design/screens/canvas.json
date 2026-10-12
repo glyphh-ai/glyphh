@@ -131,9 +131,9 @@
       "y": 0
     },
     "Components.dc.html": {
-      "h": 8000,
+      "h": 4927,
       "page": "components",
-      "title": "Requested components",
+      "title": "Requested components (1 of 2)",
       "w": 3376,
       "x": 0,
       "y": 0
@@ -933,6 +933,14 @@
       "h": 3801,
       "page": "plugin",
       "title": "The plugin: cards in Claude and ChatGPT (2 of 2)"
+    },
+    "Components2.dc.html": {
+      "x": 0,
+      "y": 5127,
+      "w": 3376,
+      "h": 7885,
+      "title": "Requested components (2 of 2)",
+      "page": "components"
     }
   },
   "createdOnFiles": {
@@ -1406,6 +1414,7 @@
     "OrgTeamsLight.dc.html",
     "OrgLimitsLight.dc.html",
     "Components.dc.html",
+    "Components2.dc.html",
     "Main.dc.html",
     "Palettes.dc.html",
     "Type.dc.html",

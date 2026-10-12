@@ -269,7 +269,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Canvas page | Board file(s) | What it is | Build order |
 |---|---|---|---|
 | Brand | `Main`, `Palettes`, `Type`, `LogoInUse` | Logo, cats and moods, motion, Ink & Violet, Red Hat, the sign-in panel's animation | n/a |
-| Components (requested) | `Components` | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
+| Components (requested) | `Components`, `Components2` | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
 | App shell: the left rail | `AppShell`, `AppShell2` | The rail every app page sits in: open and collapsed, an org admin's Org group, a super admin's Glyphh admin group, the account menu at the bottom left, the phone drawer; dark and light | 1, before any app page |
 | Sign in | `SignInFlow` | Google / GitHub, loading, signed in, expired, refused, error | 1 |
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
