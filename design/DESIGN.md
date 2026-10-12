@@ -50,7 +50,7 @@ What is in the system for a person (powers, super powers and their grants, machi
 
 #### 3. rrotor's views (the old app, reworked), now the platform's
 
-**rrotor is headless** (Chris, 2026-10-12): the machine serves no UI. It streams every session to the server, and these views are **pages on app.glyphh.ai and live panels in Claude**, built from `@glyphh-ai/ui` and reading those streams. The boards in `design/rrotor/` stand; they become platform pages, and the splash becomes the platform's "opening a machine".
+**rrotor is headless** (Chris, 2026-10-12): the machine serves no UI. It streams every session to the server, and these views are **pages on app.glyphh.ai and live panels in Claude**, built from `@glyphh-ai/ui` and reading those streams. They are drawn as platform pages: canvas pages "Machine · 1" to "Machine · 5" (`MachineOpen`, `MachineSplash`, `MachineDesktop`, `MachineEdit`, `MachineTakeover`).
 
 - **Home:** the machine, its super powers, what is running now.
 - **Glyphh, the main assistant:** chat, with a **talk button** (voice), and the swarm's live status beside it.
