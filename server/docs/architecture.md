@@ -496,6 +496,8 @@ erDiagram
         timestamptz disabled_at "set while a limit leaves it out: it stops working and can only be deleted; cleared when allowed again"
         text disabled_reason "which limit left it out"
         uuid listing_version_id FK "the listing version it was installed from; null = made by its owner"
+        text version "from its manifest; explicit, and required to publish it"
+        text version_notes "from its manifest: what changed in this version"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -596,6 +598,8 @@ erDiagram
 
     super_powers {
         uuid id PK
+        text data_schema "its own schema in rrotor's Postgres: its data, vectors and graph"
+        text data_role "the database role that reaches that schema and nothing else"
         uuid org_id FK
         uuid user_id FK "whose it is: every super power is one user's"
         text name "unique for its owner"
