@@ -161,14 +161,45 @@ button,input,textarea{font:inherit}
 </div>
 
 </sc-if>
-<sc-if value="{{f.whole}}" hint-placeholder-val="{{ false }}"><div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; padding: 16px {{f.pad}} 32px; align-items: start">
-<div style="display: flex; flex-direction: column; gap: 10px">
-<div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{f.kinds}}" as="k"><span style="height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid {{k.bd}}; background: {{k.bg}}; color: {{k.tx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{k.t}}</span></sc-for></div>
-<div style="display: flex; gap: 10px; align-items: center"><span style="font-size: 13px; color: var(--tx3)">Glyphh runs on</span><span style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s2); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Claude Code ▾</span><span style="font-size: 13px; color: var(--tx3)">Voice</span><span style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s2); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Atlas ▾</span></div>
-</div>
-<aside style="padding: 16px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px"><span style="font-family: 'Red Hat Display', sans-serif; font-size: 18px; font-weight: 700">{{f.wp.title}}</span><span style="font-size: 12px; color: var(--tx3)">{{f.wp.sub}}</span>
-<sc-for list="{{f.wp.rows}}" as="r"><div style="min-height: 44px; padding: 0 8px; border-radius: 9px; border: 1px solid var(--line); display: flex; align-items: center; gap: 10px"><sc-if value="{{r.cat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{r.cat.w}}" height="{{r.cat.h}}" aria-hidden="true"><sc-for list="{{r.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></sc-if><span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">{{r.t}}</span><span style="font-size: 11px; color: var(--tx3)">{{r.d}}</span></span></div></sc-for>
-</aside></div></sc-if>
+<sc-if value="{{f.whole}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 16px; padding: 16px {{f.pad}} 32px">
+<sc-for list="{{f.glyphhMaps}}" as="m"><div style="position: relative; height: {{m.h}}; border-radius: 14px; border: 1px solid {{m.dropBd}}; background: var(--s1); background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 18px 18px; overflow: hidden">
+<svg width="100%" height="100%" style="position: absolute; inset: 0" aria-hidden="true"><sc-for list="{{m.edges}}" as="e"><path class="flow" d="{{e.d}}" fill="none" stroke="{{e.c}}" stroke-width="2" stroke-linecap="round" opacity="{{e.op}}"></path></sc-for></svg>
+<sc-for list="{{m.groups}}" as="g"><div style="position: absolute; left: {{g.x}}; top: {{g.y}}; display: flex; align-items: center; gap: 6px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{g.c}}"></span>{{g.name}} · {{g.n}}</div></sc-for>
+<sc-for list="{{m.cards}}" as="c"><button type="button" aria-label="{{c.name}}" style="position: absolute; left: {{c.x}}; top: {{c.y}}; width: 196px; height: 46px; box-sizing: border-box; border-radius: 10px; border: 1px solid {{c.bd}}; box-shadow: {{c.glow}}; border-left: 3px solid {{c.c}}; background: var(--s2); color: var(--tx); display: flex; align-items: center; gap: 8px; padding: 0 10px; text-align: left; cursor: pointer">
+<span style="width: 24px; height: 24px; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: var(--s3)"><sc-if value="{{c.src}}" hint-placeholder-val="{{ true }}"><img src="{{c.src}}" alt="" style="width: 16px; height: 16px; object-fit: contain"></sc-if><sc-if value="{{c.glyph}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: {{c.c}}">{{c.glyph}}</span></sc-if><sc-if value="{{c.cat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{c.cat.w}}" height="{{c.cat.h}}" aria-hidden="true"><sc-for list="{{c.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></sc-if></span>
+<span style="min-width: 0; display: flex; flex-direction: column"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span><span style="font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.sub}}</span></span>
+</button></sc-for>
+<div style="position: absolute; left: calc(50% - 54px); top: {{m.cTop}}; width: 108px; height: 108px; border-radius: 50%; border: 2px solid rgba(124,77,255,.75); box-shadow: 0 0 40px rgba(124,77,255,.25); background: var(--bg); display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{m.face.w}}" height="{{m.face.h}}" aria-hidden="true"><sc-for list="{{m.face.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></div>
+<div style="position: absolute; left: 0; right: 0; top: {{m.nTop}}; text-align: center; font-size: 14px; font-weight: 700">{{m.name}}</div>
+<sc-if value="{{m.hasPop}}" hint-placeholder-val="{{ false }}"><div role="dialog" aria-label="{{m.popover.t}}" style="position: absolute; left: {{m.popover.x}}; top: {{m.popover.y}}; z-index: 3; width: 290px; padding: 14px; border-radius: 14px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 20px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><img src="{{m.popover.src}}" alt="" style="width: 22px; height: 22px"><span style="display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700">{{m.popover.t}}</span><span style="font-size: 12px; color: var(--tx3)">{{m.popover.d}}</span></span></div>
+<span style="font-size: 13px; color: var(--tx2); line-height: 1.5">{{m.popover.body}}</span>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); font-size: 14px; font-weight: 600; display: flex; align-items: center">Permissions · 9 allow, 2 ask, 1 deny</span><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); font-size: 14px; font-weight: 600; display: flex; align-items: center">Open Gmail in Powers</span><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); color: var(--red-tx); font-size: 14px; font-weight: 600; display: flex; align-items: center">Take it from Inbox Zero</span></div></div></sc-if>
+<sc-if value="{{m.hasGhost}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: {{m.ghost.x}}; top: {{m.ghost.y}}; z-index: 3; width: 196px; height: 46px; box-sizing: border-box; border-radius: 10px; border: 1.5px dashed #7C4DFF; background: rgba(124,77,255,.14); display: flex; align-items: center; gap: 8px; padding: 0 10px; transform: rotate(-3deg); box-shadow: 0 16px 40px rgba(0,0,0,.5)"><img src="{{m.ghost.src}}" alt="" style="width: 16px; height: 16px"><span style="display: flex; flex-direction: column"><span style="font-size: 12.5px; font-weight: 700">{{m.ghost.t}}</span><span style="font-size: 11px; color: #B49CFF">{{m.ghost.d}}</span></span></div></sc-if>
+<div style="position: absolute; left: 16px; bottom: 10px; font-size: 12px; color: var(--tx3)">{{m.hint}}</div>
+</div></sc-for>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">What every super power can touch</span><span style="font-size: 13px; color: var(--tx3)">The same map for each one. Pick anything to open it; drag a power onto another super power to give it.</span></span>
+<label style="height: 40px; width: 240px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); display: flex; align-items: center; padding: 0 10px; color: #67637A; font-size: 14px">Search super powers</label></div>
+<sc-for list="{{f.spMaps}}" as="m"><div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px"><svg viewBox="0 0 165 200" width="{{m.titleCat.w}}" height="{{m.titleCat.h}}" aria-hidden="true"><sc-for list="{{m.titleCat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg><span style="font-size: 16px; font-weight: 700">{{m.title}}</span><span style="font-size: 12px; color: var(--tx3)">{{m.count}} powers</span><span style="flex: 1"></span><span style="height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line2); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Edit</span><span style="height: 36px; padding: 0 12px; border-radius: 9px; background: #7C4DFF; color: #FFFFFF; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">+ Add a power</span></div>
+<div style="position: relative; height: {{m.h}}; border-radius: 14px; border: 1px solid {{m.dropBd}}; background: var(--s1); background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 18px 18px; overflow: hidden">
+<svg width="100%" height="100%" style="position: absolute; inset: 0" aria-hidden="true"><sc-for list="{{m.edges}}" as="e"><path class="flow" d="{{e.d}}" fill="none" stroke="{{e.c}}" stroke-width="2" stroke-linecap="round" opacity="{{e.op}}"></path></sc-for></svg>
+<sc-for list="{{m.groups}}" as="g"><div style="position: absolute; left: {{g.x}}; top: {{g.y}}; display: flex; align-items: center; gap: 6px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{g.c}}"></span>{{g.name}} · {{g.n}}</div></sc-for>
+<sc-for list="{{m.cards}}" as="c"><button type="button" aria-label="{{c.name}}" style="position: absolute; left: {{c.x}}; top: {{c.y}}; width: 196px; height: 46px; box-sizing: border-box; border-radius: 10px; border: 1px solid {{c.bd}}; box-shadow: {{c.glow}}; border-left: 3px solid {{c.c}}; background: var(--s2); color: var(--tx); display: flex; align-items: center; gap: 8px; padding: 0 10px; text-align: left; cursor: pointer">
+<span style="width: 24px; height: 24px; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: var(--s3)"><sc-if value="{{c.src}}" hint-placeholder-val="{{ true }}"><img src="{{c.src}}" alt="" style="width: 16px; height: 16px; object-fit: contain"></sc-if><sc-if value="{{c.glyph}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: {{c.c}}">{{c.glyph}}</span></sc-if><sc-if value="{{c.cat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="{{c.cat.w}}" height="{{c.cat.h}}" aria-hidden="true"><sc-for list="{{c.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></sc-if></span>
+<span style="min-width: 0; display: flex; flex-direction: column"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span><span style="font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.sub}}</span></span>
+</button></sc-for>
+<div style="position: absolute; left: calc(50% - 54px); top: {{m.cTop}}; width: 108px; height: 108px; border-radius: 50%; border: 2px solid rgba(124,77,255,.75); box-shadow: 0 0 40px rgba(124,77,255,.25); background: var(--bg); display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{m.face.w}}" height="{{m.face.h}}" aria-hidden="true"><sc-for list="{{m.face.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></div>
+<div style="position: absolute; left: 0; right: 0; top: {{m.nTop}}; text-align: center; font-size: 14px; font-weight: 700">{{m.name}}</div>
+<sc-if value="{{m.hasPop}}" hint-placeholder-val="{{ false }}"><div role="dialog" aria-label="{{m.popover.t}}" style="position: absolute; left: {{m.popover.x}}; top: {{m.popover.y}}; z-index: 3; width: 290px; padding: 14px; border-radius: 14px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 20px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><img src="{{m.popover.src}}" alt="" style="width: 22px; height: 22px"><span style="display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700">{{m.popover.t}}</span><span style="font-size: 12px; color: var(--tx3)">{{m.popover.d}}</span></span></div>
+<span style="font-size: 13px; color: var(--tx2); line-height: 1.5">{{m.popover.body}}</span>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); font-size: 14px; font-weight: 600; display: flex; align-items: center">Permissions · 9 allow, 2 ask, 1 deny</span><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); font-size: 14px; font-weight: 600; display: flex; align-items: center">Open Gmail in Powers</span><span style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); color: var(--red-tx); font-size: 14px; font-weight: 600; display: flex; align-items: center">Take it from Inbox Zero</span></div></div></sc-if>
+<sc-if value="{{m.hasGhost}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: {{m.ghost.x}}; top: {{m.ghost.y}}; z-index: 3; width: 196px; height: 46px; box-sizing: border-box; border-radius: 10px; border: 1.5px dashed #7C4DFF; background: rgba(124,77,255,.14); display: flex; align-items: center; gap: 8px; padding: 0 10px; transform: rotate(-3deg); box-shadow: 0 16px 40px rgba(0,0,0,.5)"><img src="{{m.ghost.src}}" alt="" style="width: 16px; height: 16px"><span style="display: flex; flex-direction: column"><span style="font-size: 12.5px; font-weight: 700">{{m.ghost.t}}</span><span style="font-size: 11px; color: #B49CFF">{{m.ghost.d}}</span></span></div></sc-if>
+<div style="position: absolute; left: 16px; bottom: 10px; font-size: 12px; color: var(--tx3)">{{m.hint}}</div>
+</div></div></sc-for>
+<nav aria-label="Pages" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line)"><span style="font-size: 13px; color: var(--tx3)">Showing 1–4 of 8</span><span style="display: flex; gap: 4px"><span style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); color: var(--line2); display: inline-flex; align-items: center; justify-content: center">‹</span><span style="min-width: 44px; height: 44px; border-radius: 10px; background: #7C4DFF; color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">1</span><span style="min-width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); display: inline-flex; align-items: center; justify-content: center">2</span><span style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); display: inline-flex; align-items: center; justify-content: center">›</span></span></nav>
+</div></sc-if>
 <sc-if value="{{f.modal}}" hint-placeholder-val="{{ false }}">
 <div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
 <div role="dialog" aria-modal="true" aria-labelledby="pm-{{f.key}}" style="position: absolute; left: 50%; top: 80px; transform: translateX(-50%); width: {{f.mW}}; height: {{f.mH}}; border-radius: {{f.mR}}; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(0,0,0,.55); display: flex; flex-direction: column; overflow: hidden">
@@ -407,6 +438,62 @@ function wholePanel(o) {
   }
   return { title: 'Everything on studio-mac', sub: Object.keys(SPG).length + ' super powers · ' + Object.keys(PW).length + ' powers', rows: Object.keys(SPG).map(function (k) { return { cat: cat(SPG[k].face, SPG[k].eye, 26), t: SPG[k].name, d: SPG[k].p.length + ' powers · hands work to ' + SPG[k].uses.length }; }) };
 }
+// --- the machine view: the platform's power map, drawn for Glyphh and for every super power on the machine
+var KINDS_L = [['Connection', 'Connections'], ['Folder', 'Folders']], KINDS_R = [['Skill', 'Custom powers'], ['Task', 'Custom powers'], ['Model', 'Models'], ['Browser', 'Browser']];
+function pcard(pid, extra) {
+  var p = PW[pid];
+  return Object.assign({ id: pid, name: p[0], sub: p[1] === 'Connection' ? 'Connected' : (p[1] === 'Folder' ? 'read and write' : p[1]), src: GLG[p[2]] ? 'assets/' + GLG[p[2]] : '',
+    glyph: GLG[p[2]] ? '' : (p[3] || p[2]), c: '#B49CFF', cat: null, bd: 'var(--line2)', glow: 'none', op: '1' }, extra || {});
+}
+function layout(L, R, W, name, centerCat, o) {
+  o = o || {};
+  var cards = [], groups = [], edges = [], cx = W / 2;
+  function height(list) { var y = 22; list.forEach(function (g) { y += 22 + g[1].length * 54 + 6; }); return y; }
+  var H = Math.max(260, height(L), height(R)) + 24, cy = Math.round(H / 2) - 10;
+  function col(list, x, right) {
+    var y = 22;
+    list.forEach(function (g) {
+      groups.push({ name: g[0], n: g[2] || g[1].length, c: '#B49CFF', x: x + 'px', y: y + 'px' }); y += 22;
+      g[1].forEach(function (cd) {
+        cd.x = x + 'px'; cd.y = y + 'px'; cards.push(cd);
+        var ex = right ? x : x + 196, ey = y + 23, tx = right ? cx + 56 : cx - 56;
+        edges.push({ c: cd.edgeC || '#B49CFF', op: cd.op === '1' ? '1' : '.25', d: 'M' + ex + ' ' + ey + ' C' + ((ex + tx) / 2) + ' ' + ey + ' ' + ((ex + tx) / 2) + ' ' + cy + ' ' + tx + ' ' + cy });
+        y += 54;
+      });
+      y += 6;
+    });
+  }
+  col(L, 24, false); col(R, W - 24 - 196, true);
+  return { cards: cards, groups: groups, edges: edges, h: H + 'px', cTop: (cy - 54) + 'px', nTop: (cy + 64) + 'px', name: name, face: centerCat, popover: o.popover || null, hasPop: !!o.popover, ghost: o.ghost || null, hasGhost: !!o.ghost, dropOn: !!o.dropOn, dropBd: o.dropOn ? '#7C4DFF' : 'var(--line)' };
+}
+function mapFor(id, W, o) {
+  o = o || {};
+  var s = SPG[id], by = {};
+  s.p.forEach(function (pid) { var k = PW[pid][1]; (by[k] = by[k] || []).push(pcard(pid, o.pick === pid ? { bd: '#7C4DFF', glow: '0 0 0 3px rgba(124,77,255,.25)' } : {})); });
+  var L = [], R = [];
+  if (by.Connection) L.push(['Connections', by.Connection]);
+  if (by.Folder) L.push(['Folders', by.Folder]);
+  if (s.uses.length) L.push(['Super powers', s.uses.map(function (t) { return { id: t, name: SPG[t].name, sub: 'Hands work to it', src: '', glyph: '', cat: cat(SPG[t].face, SPG[t].eye, 18), c: '#6FD8FF', edgeC: '#6FD8FF', bd: 'var(--line2)', glow: 'none', op: '1' }; })]);
+  var custom = (by.Skill || []).concat(by.Task || []);
+  if (custom.length) R.push(['Custom powers', custom]);
+  if (by.Model) R.push(['Models', by.Model]);
+  if (by.Browser) R.push(['Browser', by.Browser]);
+  if (o.extraRight) R.push(o.extraRight);
+  var m = layout(L, R, W, s.name, cat(s.face, s.eye, 64), o);
+  m.id = id; m.count = s.p.length + s.uses.length; m.title = s.name; m.titleCat = cat(s.face, s.eye, 30);
+  return m;
+}
+function glyphhMap(W) {
+  var ids = Object.keys(SPG);
+  var sps = ids.map(function (k) { return { id: k, name: SPG[k].name, sub: (SPG[k].p.length + SPG[k].uses.length) + ' powers', src: '', glyph: '', cat: cat(SPG[k].face, SPG[k].eye, 18), c: '#6FD8FF', edgeC: '#6FD8FF', bd: 'var(--line2)', glow: 'none', op: '1' }; });
+  var L = [['Super powers', sps.slice(0, 4), 8], ['', sps.slice(4)]];
+  var R = [['Runs on', [{ name: 'Claude Code', sub: 'Your Claude subscription', src: 'assets/' + GLG.Claude, glyph: '', cat: null, c: '#B49CFF', bd: 'var(--line2)', glow: 'none', op: '1' }]],
+    ['Voice', [{ name: 'Atlas', sub: 'Calm · narration', src: '', glyph: '♪', cat: null, c: '#B49CFF', bd: 'var(--line2)', glow: 'none', op: '1' }]],
+    ['Everything they can touch', [{ name: '6 connections', sub: 'Gmail, Slack, Salesforce, +3', src: '', glyph: '⇄', cat: null, c: '#B49CFF', bd: 'var(--line2)', glow: 'none', op: '1' }, { name: '3 folders · 1 browser', sub: 'on studio-mac', src: '', glyph: '▤', cat: null, c: '#B49CFF', bd: 'var(--line2)', glow: 'none', op: '1' }, { name: '9 custom powers · 3 models', sub: 'skills, tasks, models', src: '', glyph: '◆', cat: null, c: '#B49CFF', bd: 'var(--line2)', glow: 'none', op: '1' }]]];
+  var m = layout(L, R, W, 'Glyphh', cat(1, '#ffffff', 64));
+  m.groups = m.groups.filter(function (g) { return g.name; });
+  return m;
+}
 
 function ic(name) { return (ICON[name] || []).map(function (d) { return { d: d }; }); }
 var RR_SP = [[9, '#B49CFF', 'Inbox Zero', 'Being edited', '#7C4DFF', true], [14, '#6FD8FF', 'Deal Desk', 'Updating 3 Salesforce stages', '#7C4DFF'], [12, '#F062D0', 'Scout', 'Wants to post in #launch', '#F062D0'],
@@ -428,17 +515,19 @@ class Component extends DCLogic {
     fs.push(extra);
     function lv(on) { return ['Its powers', 'A level deeper', 'Everything'].map(function (t) { return { t: t, bg: t === on ? '#25222F' : 'transparent', tx: t === on ? '#F5F3FA' : '#8E89A0' }; }); }
     function kinds(on) { return ['Everything', 'Super powers', 'Connections', 'Models', 'Folders', 'Custom powers'].map(function (t) { return { t: t, bd: t === on ? '#7C4DFF' : 'var(--line2)', bg: t === on ? 'rgba(124,77,255,.14)' : 'transparent', tx: t === on ? '#F5F3FA' : 'var(--tx2)' }; }); }
-    var deep = Object.assign({}, fs[0], { label: '09 · A level deeper: the super powers it can use, and theirs', key: 'deepd', _deep: true });
-    deep.gr = deepMap('inbox', 1104, 540); deep.gr.levels = lv('A level deeper');
-    fs.push(deep);
-    [['10 · Glyphh: the whole map', {}], ['11 · The whole map, Inbox Zero picked', { focus: 'inbox' }], ['12 · The whole map, Gmail picked', { focusPower: 'gmail' }]].forEach(function (w) {
+    var W = 1440 - 272 - 64;
+    function maps(o) { var ms = ['inbox', 'deal', 'scout', 'clips'].map(function (id) { var mo = {}; if (o.touch && id === 'inbox') { mo.pick = 'gmail'; mo.popover = { t: 'Gmail', d: 'Connection · sam@northwind.com', src: 'assets/' + GLG.Gmail, body: 'Inbox Zero reads, labels and drafts here. Deal Desk, Ledger, Morning Briefing and Lead Router use it too.', x: '240px', y: '14px' }; }
+      if (o.touch && id === 'scout') { mo.dropOn = true; mo.ghost = { t: 'Gmail', d: 'Drop to give it to Scout', src: 'assets/' + GLG.Gmail, x: '300px', y: '40px' }; }
+      var m = mapFor(id, W, mo); m.hint = 'Pick a card to open it · drag a power here to give it'; return m; }); return ms; }
+    [['09 · Glyphh: the machine view, everything they can touch', {}], ['10 · Touch it: open a power, give one to another super power', { touch: true }]].forEach(function (w) {
       var f = Object.assign({}, fs[0], { label: w[0], key: 'whole' + w[0].slice(0, 2), _whole: true, state: 'Saved', stateDot: '#7C4DFF', stateTx: 'var(--tx3)', toast: '' });
-      f.gr = wholeMap(1104, 680, w[1]); f.gr.levels = lv('Everything'); f.wp = wholePanel(w[1]); f.kinds = kinds('Everything'); f._focus = w[1].focus;
+      var g = glyphhMap(W); g.hint = 'Glyphh can hand work to every super power, and reach everything they can touch';
+      f.glyphhMaps = [g]; f.spMaps = maps(w[1]);
       fs.push(f);
     });
     fs.forEach(function (f) {
       var o = { drawer: !!f._drawer, collapsed: !!f._drawer };
-      f.flatMap = !f._deep && !f._whole; f.deep = !!(f._deep || f._whole); f.whole = !!f._whole; f.notWhole = !f._whole;
+      f.flatMap = !f._whole; f.deep = false; f.whole = !!f._whole; f.notWhole = !f._whole;
       f.rrTitle = f._whole ? 'Glyphh' : 'Inbox Zero';
       f.rr = rr(o); if (f._whole) { f.rr.gBg = 'rgba(124,77,255,.16)'; f.rr.rows.forEach(function (r) { r.bg = 'transparent'; r.on = 'false'; }); } else { f.rr.gBg = 'transparent'; } f.pad = '32px'; f.cols = o.drawer ? 'minmax(0, 1fr) minmax(280px, 320px)' : 'minmax(0, 1fr) minmax(300px, 360px)'; f.gap = o.drawer ? '24px' : '32px';
       f.rrState = f.state === 'Unsaved changes' ? 'Unsaved changes' : 'Saved · it runs on this machine';
