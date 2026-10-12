@@ -866,7 +866,7 @@ erDiagram
         uuid user_id FK "whose thread it is"
         uuid machine_id FK "where its messages live"
         uuid super_power_id FK "a super power on its own; null = a crew, which Glyphh leads"
-        uuid schedule_id FK "the schedule that keeps it going, if any"
+        uuid schedule_id FK "the schedule that keeps it going, if any (arrives with schedules)"
         text goal "what it is for: the first thing asked, or what the member named it"
         text status "working, idle, needs_you, done, stuck: the newest the machine reported"
         bigint last_seq "the number of the newest event the server passed on"
@@ -888,7 +888,8 @@ erDiagram
         uuid org_id FK
         uuid user_id FK "who is asked"
         uuid thread_id FK
-        uuid run_id FK "the session that asked"
+        uuid super_power_id FK "the super power that asked, for the panel; null = Glyphh"
+        uuid run_id FK "the session that asked (arrives with runs)"
         text ask_id "the CLI's own id for the question, sent back with the answer"
         text kind "permission (more kinds as they are drawn)"
         text tool "what it wants to use"
@@ -1460,7 +1461,7 @@ A thread's record, its crew and its open "needs you" are the server's; its messa
 
 - **threads:** one per thread, on one machine, for one member. A super power on its own (`super_power_id`) or a crew Glyphh leads (null, with `thread_crew`). Its id is the same on the machine.
 - **thread_crew:** who is in a crew, so Recents can filter by a super power and count its threads.
-- **needs_you:** one row per question, open until answered; the answer, who gave it and when are kept.
+- **needs_you:** one row per question, open until answered; which super power asked; the answer, who gave it and when are kept. Answered once: two answers at the same moment, the first wins and the second is told.
 - **runs:** each session of a super power in a thread is a run (`thread_id`), as it was: its status, its mode, what it cost.
 
 ### Machines
@@ -1569,8 +1570,9 @@ The house order: the data model is drawn first, then built as database, API and 
 - **The platform** (`glyphh-ai/platform`): the component library moved there; the sign-in screens are platform pages and the server keeps every flow; each refused step says why.
 - **Many orgs per person** (2026-10-12): `memberships` (role and disabled per org), a Personal org for everyone, the org a token acts in, Use with on Allow; the platform's own session (`/v1/session`: a code and its verifier for tokens, the refresh token in an httpOnly cookie, switch org, sign out); accepting and declining an invite.
 - **The sign-in screens on the design:** Sign in, Allow, Join signed out, Joined and the problem page, on the brand orbit.
-- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`, `machines`, `super_powers` (its loop and voice columns wait for `powers`), `super_power_installs`, `launch_tickets`.
+- **Built tables:** `plans` (Free, Solo, Basic, Pro, Enterprise, with their Stripe prices), `orgs`, `users`, `memberships`, `tokens`, `sign_in_identities`, `oauth_clients`, `oauth_codes`, `invites`, `user_settings`, `machines`, `super_powers` (its loop and voice columns wait for `powers`), `super_power_installs`, `launch_tickets`, `threads`, `thread_crew`, `needs_you`.
 - **Machines on the API** (2026-10-12): my machines as cards (connected first, each with its 8 most recently active super powers and its counts), every super power on one (search, status, pages, the count of each status), and opening one with a one-minute, one-time launch ticket; an offline machine says so.
+- **Threads on the API** (2026-10-12): `threads`, `thread_crew` and `needs_you` (their links to `runs` and `schedules` arrive with those tables); a machine's Recents (pinned first, then the newest; by goal, by a super power with how many threads each is in, archived or not, in pages), one thread with its machine and open questions, rename, pin, archive, delete an archived one for good; my open questions across my machines and answering one once. What the machine reports (a thread opened, its status, a question asked) arrives with the machine link.
 
 - **rrotor, its first slice** (`glyphh-ai/rrotor`, 2026-10-12):
     - **The image:** headless, the engine under s6.

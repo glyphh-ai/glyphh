@@ -119,3 +119,71 @@ async def install(
             )
         )
         return sp
+
+
+async def make_thread(  # type: ignore[no-untyped-def]
+    engine: AsyncEngine,
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    machine_id: uuid.UUID,
+    goal: str,
+    super_power: uuid.UUID | None = None,
+    crew: tuple[uuid.UUID, ...] = (),
+    minutes_ago: int = 0,
+    pinned: bool = False,
+    archived: bool = False,
+):
+    """A thread of this member's on the machine: one super power's, or a crew's; last active that long ago."""
+    from datetime import UTC, datetime, timedelta
+
+    from glyphh_server.models import Thread, ThreadCrew
+
+    at = datetime.now(UTC) - timedelta(minutes=minutes_ago)
+    values = {
+        "org_id": org_id,
+        "user_id": user_id,
+        "machine_id": machine_id,
+        "goal": goal,
+        "super_power_id": super_power,
+        "last_event_at": at,
+        "pinned_at": at if pinned else None,
+        "archived_at": at if archived else None,
+    }
+    async with engine.begin() as conn:
+        thread = (await conn.execute(insert(Thread).values(values).returning(Thread.id))).scalar_one()
+        for i, sp in enumerate(crew):
+            added = at - timedelta(seconds=len(crew) - i)
+            await conn.execute(insert(ThreadCrew).values(thread_id=thread, super_power_id=sp, added_at=added))
+        return thread
+
+
+async def ask(  # type: ignore[no-untyped-def]
+    engine: AsyncEngine,
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    thread_id: uuid.UUID,
+    tool: str,
+    super_power: uuid.UUID | None = None,
+    minutes_ago: int = 0,
+    answer: str | None = None,
+):
+    """A question a super power asked in this thread; open unless given an answer."""
+    from datetime import UTC, datetime, timedelta
+
+    from glyphh_server.models import NeedsYou
+
+    at = datetime.now(UTC) - timedelta(minutes=minutes_ago)
+    values = {
+        "org_id": org_id,
+        "user_id": user_id,
+        "thread_id": thread_id,
+        "super_power_id": super_power,
+        "ask_id": f"req-{uuid.uuid4()}",
+        "tool": tool,
+        "detail": f"{tool} something",
+        "asked_at": at,
+        "answer": answer,
+        "answered_at": at if answer else None,
+    }
+    async with engine.begin() as conn:
+        return (await conn.execute(insert(NeedsYou).values(values).returning(NeedsYou.id))).scalar_one()

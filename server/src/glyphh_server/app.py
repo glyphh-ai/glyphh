@@ -16,6 +16,7 @@ from glyphh_server.api import (
     session,
     sign_in_pages,
     sign_in_screens,
+    threads,
 )
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
@@ -53,6 +54,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.include_router(invite_answers.router)
     app.include_router(session.router)
     app.include_router(machines.router)
+    app.include_router(threads.router)
     app.router.routes.extend(mcp_app.routes)
     _layers(app, mcp_app, cfg)
     return app
