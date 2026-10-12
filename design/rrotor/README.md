@@ -13,7 +13,7 @@ rrotor's UI is the screen every Glyphh machine serves: you open a machine and wa
 - **Served by the machine:** a Next.js server inside rrotor, at the machine's own address `<machine-id>.glyphh.ai`, reached through Glyphh's relay. It opens in a browser tab, or from Claude.
 - **Opened with a launch ticket:** one member, one machine, one page, valid for a minute and usable once. rrotor checks the ticket with the server and starts its own session. A member signs in on the server, never on a machine.
 - **The business version:** no terminal anywhere. Work shows as **Activity** in plain words and as **Outputs**. Developers get their own terminal later, as a separate way in.
-- **Its own UI on the shared brand:** the same tokens (Ink & Violet, Red Hat), the same cats, logo and icon rules. It is not built from the platform's `@glyphh-ai/ui` pages, but it should share the tokens and the small pieces both apps draw the same way (Button, Avatar/cat, LogoTile, Dialog, Menu, Pagination). Agree with the platform agent which pieces are shared rather than copying them.
+- **Its own app, one shared library:** rrotor's UI takes its tokens, fonts, cats, logo tiles, icons and every shared component from **`@glyphh-ai/ui`**, the package published from its own repo `glyphh-ai/ui` (decided by Chris, 2026-10-12; see "One component library" in `../DESIGN.md`). Pin a version. Never copy a component out of it. rrotor's own pieces (the rail, the stage, the drawer, the workbench tiles) live in rrotor. A piece both apps need that the library lacks is a request, added under Requests in `../DESIGN.md`, and it lands in the library, not in rrotor.
 
 ## The words
 

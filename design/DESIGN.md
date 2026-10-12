@@ -195,6 +195,10 @@ Decided 2026-10-11. A published power or super power has explicit versions: its 
 
 Decided 2026-10-11. Beside the metered connection calls, every use of a power or super power is counted (never its content, never billed): model calls with their tokens in and out as the provider reports them, tool calls, skills, task steps, folders, browsers. Usage pages show models, connections and super powers side by side, by day, user, super power and power; an org admin sees each member's use, model token counts included (counts only, even on the member's own key); a publisher sees their listing's installs, installs used in the last 30 days, and runs.
 
+### One component library, shared by both apps
+
+Decided by Chris, 2026-10-12: **`@glyphh-ai/ui` moves out of the platform repo into its own repo, `glyphh-ai/ui`**, published as a versioned package (GitHub Packages). The platform and rrotor's UI both depend on it, each pinning a version. It holds the tokens, fonts, base styles, the cats, logo and logo tiles, the approved icons, and every component both apps draw the same way (Button, Avatar and CatRing, LogoTile, Icon, Dialog, Menu, Pagination, SegmentedControl, Alert and TraceId, Skeleton, and the rest of the library). App-only screens stay in each app. `/design-sync` points at the new repo.
+
 ### rrotor's UI is the business version
 
 **rrotor's UI has its own folder: `design/rrotor/`**, with its boards in `design/rrotor/screens/` and a handoff for the agent that builds it in `design/rrotor/README.md`.
@@ -493,6 +497,8 @@ The Questions above (to Chris), and the server's Open list (`docs/architecture.m
 ### Update for the build agent (2026-10-12)
 
 Pull `glyphh-ai/glyphh`, then see what changed in the design since you last built: `git log --oneline ea224cc..HEAD -- design/`. Decisions in this doc are the source of truth; read it again rather than a summary.
+
+**First: move `ui/` to its own repo, `glyphh-ai/ui`** (see "One component library, shared by both apps"): its tests and release flow there, published to GitHub Packages, and the platform switched to the published package (link a local checkout while developing). rrotor's build takes its shared pieces from the same package.
 
 Rework what is built in `@glyphh-ai/ui`:
 
