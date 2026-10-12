@@ -257,8 +257,8 @@ Decided 2026-10-11. Two UIs, split by isolation:
 
 **Usage and billing** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 
-- **Usage:** the period's credits used and left, then the same calls grouped by user, by connector, by super power, by machine and by day, and the call log under it: time, user, super power, machine, connector, tool, duration, credits and status, filtered by any of them and exported as CSV. Each row opens to its full detail.
-- **Billing** (org admins): the plan, seats, included and extra machines, the period's dates, the credit allowance and packs with their ledger, upgrading, buying a pack, and Stripe's own pages for checkout, invoices and payment methods.
+- **Usage:** the period's credit used and left, in dollars, then the same calls grouped by user, by connector, by super power, by machine and by day, and the call log under it: time, user, super power, machine, connector, tool, duration, credits and status, filtered by any of them and exported as CSV. Each row opens to its full detail.
+- **Billing** (org admins): the plan, seats, included and extra machines, the period's dates, the included usage credit, the balance and its ledger in dollars, upgrading, adding funds, and Stripe's own pages for checkout, invoices and payment methods.
 
 The API behind them is three operations, also MCP tools so an agent can answer "what did we spend on Gmail this month": a summary grouped by one dimension over a time range, the call log (filtered, newest first, paged by cursor), and the balance with its ledger.
 
@@ -404,7 +404,7 @@ erDiagram
         int price_cents "per seat, per month"
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "the most seats an org may have; null = no limit"
-        int monthly_credits "included each billing period, per seat"
+        int monthly_credit_cents "usage credit included each billing period, per seat, in dollars (cents)"
         int included_machines "null = no limit"
         int extra_machine_cents "per extra machine per month; null = no extras on this plan"
         text stripe_machine_price_id UK "the Stripe price extras are billed on"
@@ -701,7 +701,7 @@ erDiagram
         text billing_email
         bool auto_top_up "charge the card on file when the balance runs low"
         int auto_top_up_below_cents "the balance that triggers it"
-        int auto_top_up_cents "how much it adds: $5 to $10,000"
+        int auto_top_up_to_cents "the balance it reloads to (it charges the difference, $5 to $10,000)"
         timestamptz auto_top_up_last_at "the last attempt: one attempt per 10 minutes, taken under the org's lock"
         timestamptz auto_top_up_failed_at "the card was refused: auto top-up is off until an org admin turns it on again"
         text auto_top_up_failure "why, as Stripe said it"
@@ -717,7 +717,7 @@ erDiagram
         uuid org_id FK
         uuid user_id FK "who spent it; null for allowances and purchases"
         text entry "allowance, top_up, auto_top_up, grant, usage"
-        int credits "plus for allowance, top-ups and grants, minus for usage"
+        int cents "credit, in dollars (cents): plus for allowance, top-ups and grants, minus for usage"
         uuid payment_id FK, UK "the payment a top-up came from; at most one entry per payment"
         text note "a grant's reason, from the super admin"
         uuid usage_event_id FK, UK "the call a usage entry pays for"
@@ -738,7 +738,7 @@ erDiagram
         text status "ok, error, refused"
         text error "the reason, for error and refused"
         int duration_ms "the time the call took, timed by the server"
-        int credits "max(1, ceil(seconds / 30)) for a call made; 0 when refused"
+        int cost_cents "call_cents for each started seconds_per_charge (2¢ per started 30 s); 0 when refused"
         int request_bytes
         int response_bytes
         timestamptz started_at
@@ -747,8 +747,8 @@ erDiagram
 
     billing_settings {
         uuid id PK
-        int credit_cents "what one credit costs: 2 = $0.02"
-        int seconds_per_credit "a connection call's seconds per credit: 30"
+        int call_cents "what each started stretch of a connection call costs: 2 = $0.02"
+        int seconds_per_charge "the stretch: 30 seconds, as Pipedream counts it"
         int top_up_min_cents "500"
         int top_up_max_cents "1000000"
         timestamptz effective_from "the row in force is the newest one already started"
@@ -790,7 +790,7 @@ erDiagram
         bigint input_tokens
         bigint output_tokens
         int connection_calls
-        int credits
+        int cost_cents
     }
 
     payments {
@@ -1084,15 +1084,15 @@ Seats are billed as the old server billed them (his rule, 2026-09-18):
 
 The plans carried over from the old server:
 
-| Plan | Price per seat | Seats | Credits each month | Machines included | Extra machine |
+| Plan | Price per seat | Seats | Usage credit each month | Machines included | Extra machine |
 |---|---|---|---|---|---|
-| Free | $0 | 1 | 100 | 2 | none |
-| Solo | $20 | 1 | 2,000 | 3 | $5 a month |
-| Basic | $40 | up to 25 | 2,500 per seat | 10 | $5 a month |
-| Pro | $150 | up to 100 | 10,000 per seat | 50 | $5 a month |
+| Free | $0 | 1 | $1 | 2 | none |
+| Solo | $20 | 1 | $10 | 3 | $5 a month |
+| Basic | $40 | up to 25 | $10 per seat | 10 | $5 a month |
+| Pro | $150 | up to 100 | $50 per seat | 50 | $5 a month |
 | Enterprise | arranged | no limit | arranged | no limit | n/a |
 
-These are a first pick (2026-10-11), to adjust. **Every number lives in the database and a super admin changes it on Glyphh admin → Plans:** a plan's price, seats, credits, machines and Stripe prices (each change is the plan's next version, above), and the billing settings (`billing_settings`: the price of a credit, the seconds a credit buys, the smallest and largest top-up), each kept with who set it and from when.
+These are a first pick (2026-10-11), to adjust. **Every number lives in the database and a super admin changes it on Glyphh admin → Plans:** a plan's price, seats, credits, machines and Stripe prices (each change is the plan's next version, above), and the billing settings (`billing_settings`: what a connection call costs per started stretch, the stretch's seconds, the smallest and largest top-up), each kept with who set it and from when.
 
 An org that already has its included machines plus its extras cannot register another: signing in from one more machine is refused with the reason (on Free: "Free includes 2 machines. Upgrade, or remove one."), and nothing is half registered.
 
@@ -1229,22 +1229,22 @@ A machine's shell over SSH is off until the member turns it on (`shell_enabled`)
 
 ### Billing and usage
 
-An org pays a monthly fee for its plan, and the plan includes credits each billing period. Usage spends credits, and a Glyphh credit is a Pipedream credit: 30 seconds of a connection call. The server relays every connection call and times it, so a call costs `max(1, ceil(seconds / 30))` credits, exactly what Pipedream bills Glyphh for it. Model calls cost nothing here: they go straight to the provider on the member's own key.
+An org pays a monthly fee for its plan, and the plan includes usage credit each billing period. **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, the allowance, top-ups and every charge are shown and kept in dollars. Usage spends credit, and Pipedream counts a connection call in 30-second stretches. The server relays every connection call and times it, so a call costs 2¢ for each started 30 seconds (`billing_settings`: `call_cents`, `seconds_per_charge`), above the $0.012 Pipedream charges Glyphh for each stretch. Model calls cost nothing here: they go straight to the provider on the member's own key.
 
-What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annually ($150 monthly) for 100 external users and 10,000 credits a month, then $2 per external user and $0.012 per credit. A connected user is a seat cost, so it belongs in the plan's price per seat; a call is a credit.
+What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annually ($150 monthly) for 100 external users and 10,000 credits a month, then $2 per external user and $0.012 per credit. A connected user is a seat cost, so it belongs in the plan's price per seat; a call is usage.
 
 - **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or add funds.
 - **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period, as the old server did, plus what the old server lacked: a downgrade waiting for the period's end (`pending_plan_id`), and the card on file for display (brand, last four, expiry), kept current from Stripe's webhooks. Stripe keeps the card itself and the invoices; the invoice list is read from Stripe.
-- **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each top-up and grant, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for; a top-up entry at its payment, at most one entry per payment, so a webhook and a reconcile arriving together can never add the same money twice.
-- **Grants and comped plans** (super admins): a grant (a gift) adds credits with a note; a comped plan is a plan with no charge (`status` comped).
+- **credit_ledger** is the whole story of an org's credit, in dollars (cents), append only: each period's allowance, each top-up and grant, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for; a top-up entry at its payment, at most one entry per payment, so a webhook and a reconcile arriving together can never add the same money twice.
+- **Grants and comped plans** (super admins): a grant (a gift) adds credit, in dollars, with a note; a comped plan is a plan with no charge (`status` comped).
 
 #### Adding funds, as the old server did
 
-- **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credits to the ledger. A reconcile from Stripe backs the webhook up.
-- **Auto top-up:** on, a threshold and an amount. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the amount. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
-- **How dollars become credits** (decided 2026-10-11): Glyphh bills in credits. **One credit is $0.02**, above Pipedream's $0.012, and a top-up becomes credits at the price in force that day (`billing_settings`), so a $5 top-up is 250 credits. Bought credits never expire; a plan's monthly credits end with the period.
+- **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credit to the ledger. A reconcile from Stripe backs the webhook up.
+- **Auto top-up, as Anthropic's auto-reload:** on, a threshold and a balance to reload to. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the difference up to the reload balance. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
+- **Credit is dollars:** a $5 top-up is $5 of credit. A plan's monthly credit ends with the period; how long bought credit lasts is open (see [Open](#open)).
 - **Auto top-up has an optional monthly cap** an org admin sets (`auto_top_up_monthly_cap_cents`), off by default.
-- **Runs cost nothing:** they run on the member's own machine. Only connection calls spend credits.
+- **Runs cost nothing:** they run on the member's own machine. Only connection calls spend credit.
 
 #### Changing plans, as the old server did
 
@@ -1259,7 +1259,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 One call, as the relay handles it:
 
-1. **Check:** lock the org's row and read the balance. At 0, the call is refused with the reason and logged as `refused` (0 credits). Nothing reaches Pipedream.
+1. **Check:** lock the org's row and read the balance. At $0, the call is refused with the reason and logged as `refused` ($0). Nothing reaches Pipedream.
 2. **Call:** relay it to Pipedream and time it.
 3. **Record:** in one transaction, a `usage_events` row and its `credit_ledger` usage entry. A call that fails at Pipedream is still logged (`error`) and still costs what Pipedream bills for it.
 
@@ -1275,7 +1275,7 @@ The check runs before the cost is known, so calls already in flight when the bal
 Decided 2026-10-11. Beside the metered connection calls, rrotor reports each use of a power inside a run, so members, org admins and publishers can see what is used, how often and how well. Counts and times only, **never content**: no prompts, arguments, results or keys. None of it is billed, and it never decides a charge.
 
 - **power_events:** one row per use, sent by rrotor over its machine connection in batches: the model call (with the input, output and cached tokens exactly as the provider reported them, and the provider's model id), a tool call of a plugin or of rrotor's own, a skill loaded, a task step, a folder read or written, a browser session. Each carries its run, super power, power, machine, user and org, its status and how long it took. Each has rrotor's own event id (unique per machine), so a batch sent twice is counted once. Append only, partitioned by month like `usage_events`.
-- **usage_daily:** the nightly roll-up of both tables, per day, org, user, super power and power: uses, errors, time, tokens, and connection calls and credits. Every usage page reads it, and a day still running is read from the raw rows.
+- **usage_daily:** the nightly roll-up of both tables, per day, org, user, super power and power: uses, errors, time, tokens, and connection calls and their cost. Every usage page reads it, and a day still running is read from the raw rows.
 - **Listings:** a publisher sees their listing's installs (powers installed from its versions), installs used in the last 30 days, and runs; the marketplace ranks by them.
 - **Trust:** a modified rrotor can only misreport its own member's insight, never a bill: what is billed is counted by the server.
 
@@ -1285,7 +1285,7 @@ The same rows serve every view, scoped by the principal:
 
 - **A user** sees their own calls and their org's balance.
 - **An org admin** sees every call in the org, by user, by connector, by super power, by machine and by day, and the ledger.
-- **A super admin** sees every org, and what Glyphh owes Pipedream for it: the same credits, at Pipedream's price.
+- **A super admin** sees every org, and what Glyphh owes Pipedream for it: the same calls' 30-second stretches, at Pipedream's $0.012.
 
 ### Stripe
 
@@ -1351,7 +1351,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-None open: every decision so far is made (2026-10-11).
+- **How long bought credit lasts:** a year after purchase, as Anthropic's does, or never.
 
 #### To draw
 
