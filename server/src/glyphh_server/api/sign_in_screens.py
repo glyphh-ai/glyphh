@@ -1,6 +1,7 @@
 """What the platform's sign-in screens show, read with the step's own signed value; nothing here signs anyone
 in. Each answer is only what the screen needs, and a forged or expired value is refused."""
 
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Query, Request
@@ -28,6 +29,8 @@ class JoinScreen(BaseModel):
     org: str
     email: str
     role: Literal["org_admin", "user"]
+    invited_by: str | None
+    expires_at: datetime
     providers: list[str]
 
 
@@ -46,4 +49,11 @@ async def allow_screen(request: Request, consent: str) -> AllowScreen:
 @router.get("/join", operation_id="joinScreen")
 async def join_screen(request: Request, conn: Conn, invite: str) -> JoinScreen:
     found = await invites.read_invite(conn, invite)
-    return JoinScreen(org=found.org, email=found.email, role=found.role, providers=available(cfg(request)))
+    return JoinScreen(
+        org=found.org,
+        email=found.email,
+        role=found.role,
+        invited_by=found.invited_by,
+        expires_at=found.expires_at,
+        providers=available(cfg(request)),
+    )

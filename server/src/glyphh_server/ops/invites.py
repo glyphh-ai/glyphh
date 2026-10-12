@@ -31,6 +31,8 @@ class OpenInvite(BaseModel):
     org: str
     email: str
     role: str
+    invited_by: str | None = None
+    expires_at: datetime
 
 
 def _open():
@@ -87,14 +89,26 @@ async def revoke_invite(conn: AsyncConnection, who: Principal, invite_id: uuid.U
 async def read_invite(conn: AsyncConnection, token: str) -> OpenInvite:
     row = (
         await conn.execute(
-            select(Org.name, Invite.email, Invite.role)
+            select(
+                Org.name,
+                Invite.email,
+                Invite.role,
+                Invite.expires_at,
+                User.first_name,
+                User.last_name,
+                User.email.label("by_email"),
+            )
             .join(Org, Org.id == Invite.org_id)
+            .outerjoin(User, User.id == Invite.invited_by)
             .where(Invite.token_hash == hash_secret(token), *_open())
         )
     ).first()
     if row is None:
-        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="expired")
-    return OpenInvite(org=row.name, email=row.email, role=row.role)
+        raise Invalid(
+            "This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="invite_expired"
+        )
+    by = " ".join(n for n in (row.first_name, row.last_name) if n) or row.by_email
+    return OpenInvite(org=row.name, email=row.email, role=row.role, invited_by=by, expires_at=row.expires_at)
 
 
 async def accept_invite(conn: AsyncConnection, token: str, email: str, first: str | None, last: str | None) -> str:
@@ -116,7 +130,9 @@ async def accept_invite(conn: AsyncConnection, token: str, email: str, first: st
         )
     ).first()
     if row is None:
-        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="expired")
+        raise Invalid(
+            "This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="invite_expired"
+        )
     with refusals("That email already has a Glyphh account."):
         await conn.execute(
             insert(User).values(org_id=row.org_id, role=row.role, email=invite.email, first_name=first, last_name=last)

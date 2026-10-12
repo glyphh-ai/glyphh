@@ -32,6 +32,7 @@ async def _invite(engine: AsyncEngine, email: str) -> str:
 async def _sign_in_from(browser: httpx.AsyncClient, token: str) -> httpx.Response:
     shown = (await browser.get("/v1/auth/join", params={"invite": token})).json()
     assert shown["org"].startswith("Join Co") and shown["role"] == "user" and shown["providers"] == ["google", "github"]
+    assert shown["invited_by"] and shown["expires_at"]
     started = await browser.get("/auth/google/start", params={"invite": token})
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
     return await browser.get("/auth/google/callback", params={"code": "c", "state": state})
@@ -61,4 +62,4 @@ async def test_a_dead_invite_is_refused_on_the_screen_and_the_step(browser: http
     shown = await browser.get("/v1/auth/join", params={"invite": "nope"})
     assert shown.status_code == 422 and "expired" in shown.json()["error"]["message"]
     problem = screen(await browser.get("/auth/google/start", params={"invite": "nope"}), "/problem")
-    assert problem["code"] == "E_INVALID" and "expired" in problem["message"] and problem["reason"] == "expired"
+    assert problem["code"] == "E_INVALID" and "expired" in problem["message"] and problem["reason"] == "invite_expired"

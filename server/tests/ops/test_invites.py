@@ -79,7 +79,9 @@ async def test_an_expired_invite_or_one_raced_away_cannot_be_used(engine: AsyncE
     from unittest.mock import patch
 
     async def raced(*_: object) -> invites.OpenInvite:
-        return invites.OpenInvite(org="Late Invite Co", email="race@late.test", role="user")
+        return invites.OpenInvite(
+            org="Late Invite Co", email="race@late.test", role="user", expires_at=datetime.now(UTC)
+        )
 
     async with engine.begin() as conn:
         await conn.execute(update(Invite).where(Invite.id == view2.id).values(accepted_at=datetime.now(UTC)))
