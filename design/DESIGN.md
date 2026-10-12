@@ -182,7 +182,7 @@ Everything that can grow is paginated, in the designs as in the build: "Showing 
   - Current plan, then Credit balance with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
   - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
 - **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (see Requests).
-- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. A plan's included usage **does not carry over**: it expires at the period's end. Auto top-up's trigger, target and cap are each $5 to $10,000, and the cap is at least one reload (target minus trigger). **Bought credit expires a year after purchase**, as Anthropic's does, and Billing shows when.
+- **Credits are dollars** (decided 2026-10-11, as Anthropic does it): the balance, what a plan includes, top-ups and every charge are shown in dollars ("Credit balance: $12.40"). A connection call costs 2¢ for each started 30 seconds; runs cost nothing. Add funds takes $5 to $10,000, and that is the credit added. **Auto top-up reloads to a target:** "when the balance falls below $5, reload to $25", with an optional monthly cap an org admin sets, off by default. Gifts are credit grants in dollars. A plan's included usage **does not carry over**: it expires at the period's end. **The usage a subscription includes is always spent before bought credit** (Chris, 2026-10-12), so bought credit waits, for its year, until the included usage is gone. Auto top-up's trigger, target and cap are each $5 to $10,000, and the cap is at least one reload (target minus trigger). **Bought credit expires a year after purchase**, as Anthropic's does, and Billing shows when.
 - **Plans, first numbers** (to adjust): Free $0, 1 seat, $1 of usage a month, 2 machines; Solo $20, 1 seat, $10, 3 machines; Basic $40 a seat, up to 25 seats, $10 a seat, 10 machines; Pro $150 a seat, up to 100 seats, $50 a seat, 50 machines; Enterprise arranged. Extra machines $5 a month (none on Free). These replace the `[BRACKETS]` on the billing, usage and admin boards.
 - **Plans are versioned:** a change to a plan is its next version, sold to new orgs; an org keeps the version it is on until it changes plan or a super admin moves it, with **30 days' notice** by email and a banner on Billing.
 
@@ -411,7 +411,7 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 
 Board changes from the decisions of 2026-10-11 and 2026-10-12.
 
-All done (2026-10-12): the Usage boards (dark and light) now let a plan's included usage expire at the period's end and carry over only bought credit. They assume included usage is spent before bought credit; say if it's the other way round.
+All done (2026-10-12): the Usage boards (dark and light) now let a plan's included usage expire at the period's end and carry over only bought credit. Included usage is spent before bought credit, as decided.
 
 
 ### Questions
