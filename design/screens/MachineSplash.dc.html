@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>rrotor: the splash</title>
+<title>Machines: the splash</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -21,17 +21,17 @@ button{font:inherit}
 @media (prefers-reduced-motion:reduce){.g-anim{animation:none!important}}
 </style>
 </helmet>
-<div style="width: 3520px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
+<div style="width: 4000px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
 
 <div style="display: flex; flex-direction: column; gap: 10px">
-<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">rrotor's UI · 1 · the machine starts</div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Machines on the platform · the splash</div>
 <h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">The splash</h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">The first thing every tab on a machine shows, before its desktop. It says at once that you are on a machine and which one: its name is the headline, with where it runs, what it is and its own address. While it starts it lists what it is doing in plain words. The machine's name, address and account stay in the bar at the bottom, and carry on into the desktop. Desktop 1200 × 760, phone 390 × 844. Motion: the ring's comet, the blink and the steps' spinners; all still when motion is off.</p>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1700px">What opening a machine shows, every state of it, in the centre of the platform beside the machine rail (← Machines, the machine and its status, Glyphh and the super powers still loading). It says at once that you are on a machine and which one: its name is the headline, with where it runs and what it is. While it starts it lists what it is doing in plain words. The machine’s name and your account stay in the bar at the bottom. On a phone the rail is the menu. Desktop 1440 × 900, phone 390 × 844. Motion: the ring’s comet, the blink and the steps’ spinners; all still when motion is off.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
 <sc-for list="{{states}}" as="st" hint-placeholder-count="10">
-<div style="display: flex; flex-direction: column; gap: 18px; width: 1640px">
+<div style="display: flex; flex-direction: column; gap: 18px; width: 1880px">
 <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
 <div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">{{st.title}}</div>
 <div style="font-size: 16px; line-height: 1.5; color: #8E89A0; max-width: 1400px">{{st.sub}}</div>
@@ -40,10 +40,20 @@ button{font:inherit}
 <sc-for list="{{st.frames}}" as="f" hint-placeholder-count="2">
 <div style="display: flex; flex-direction: column; gap: 12px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
-<div role="img" aria-label="{{f.aria}}" style="width: {{f.w}}; height: {{f.h}}; background: #0B0A0F; border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
-
+<div role="img" aria-label="{{f.aria}}" style="width: {{f.w}}; height: {{f.h}}; background: #0B0A0F; border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: row; box-sizing: border-box">
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><nav aria-label="Machine" style="width: 256px; flex: none; height: 100%; box-sizing: border-box; background: #13121A; border-right: 1px solid #2C2938; display: flex; flex-direction: column">
+<div style="height: 64px; flex: none; padding: 0 12px; display: flex; align-items: center; justify-content: space-between"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 42px; width: auto"><span style="width: 44px; height: 44px; color: #B9B4C8; display: inline-flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v18"></path><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="m16 15-3-3 3-3"></path></svg></span></div>
+<div style="padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px">
+<a href="#" style="height: 36px; padding: 0 8px; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #B9B4C8; text-decoration: none; font-size: 13px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>Machines</a>
+<div style="min-height: 56px; box-sizing: border-box; padding: 8px 10px; border-radius: 12px; border: 1px solid #2C2938; background: #0B0A0F; display: flex; align-items: center; gap: 10px"><span style="position: relative; width: 36px; height: 36px; flex: none; border-radius: 10px; background: #1B1924; color: #B49CFF; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><path d="M6 6h.01"></path><path d="M6 18h.01"></path></svg><span style="position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%; background: {{f.dot}}; border: 2px solid #0B0A0F"></span></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 700; color: #F5F3FA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.name}}</span><span style="font-size: 12px; color: #8E89A0">{{f.status}}</span></span><span style="color: #8E89A0; display: inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></span></div>
+</div>
+<div style="padding: 4px 14px 10px"><div style="min-height: 60px; box-sizing: border-box; padding: 8px 10px; border-radius: 14px; border: 1px solid #2C2938; display: flex; align-items: center; gap: 12px"><span style="width: 44px; height: 44px; flex: none; border-radius: 50%; border: 2px solid rgba(124,77,255,.5); box-sizing: border-box"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 60%; height: 12px; border-radius: 6px; background: #25222F"></span><span style="width: 80%; height: 9px; border-radius: 5px; background: #1B1924"></span></span></div></div>
+<div style="flex: 1; min-height: 0; padding: 4px 14px; display: flex; flex-direction: column; gap: 2px"><div style="min-height: 52px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1B1924"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 70%; height: 10px; border-radius: 5px; background: #25222F"></span><span style="width: 50%; height: 8px; border-radius: 4px; background: #1B1924"></span></span></div><div style="min-height: 52px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1B1924"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 55%; height: 10px; border-radius: 5px; background: #25222F"></span><span style="width: 65%; height: 8px; border-radius: 4px; background: #1B1924"></span></span></div><div style="min-height: 52px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1B1924"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 62%; height: 10px; border-radius: 5px; background: #25222F"></span><span style="width: 40%; height: 8px; border-radius: 4px; background: #1B1924"></span></span></div><div style="min-height: 52px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1B1924"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 48%; height: 10px; border-radius: 5px; background: #25222F"></span><span style="width: 58%; height: 8px; border-radius: 4px; background: #1B1924"></span></span></div><div style="min-height: 52px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1B1924"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 6px"><span style="width: 66%; height: 10px; border-radius: 5px; background: #25222F"></span><span style="width: 45%; height: 8px; border-radius: 4px; background: #1B1924"></span></span></div></div>
+<div style="flex: none; border-top: 1px solid #2C2938; padding: 10px 12px"><div style="min-height: 56px; padding: 6px 8px; display: flex; align-items: center; gap: 10px"><span style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center">SR</span><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600; color: #F5F3FA">Sam Rivera</span><span style="font-size: 12px; color: #8E89A0">Northwind · Org admin</span></span></div></div>
+</nav></sc-if>
+<div style="flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column">
 <div style="height: 56px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between">
-<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 24px; width: auto">
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}"><span style="display: inline-flex; align-items: center; gap: 4px; margin-left: -8px"><span style="width: 44px; height: 44px; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M4 6h16"></path><path d="M4 18h16"></path></svg></span><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 34px; width: auto"></span></sc-if><sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><span></span></sc-if>
 <span style="display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #2C2938; font-size: 13px; color: #B9B4C8"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{f.dot}}"></span>{{f.status}}</span>
 </div>
 
@@ -118,13 +128,14 @@ button{font:inherit}
 
 </div>
 </div>
+</div>
 </sc-for>
 </div>
 </div>
 </sc-for>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3392px">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3872px">
 <sc-for list="{{notes}}" as="n" hint-placeholder-count="3">
 <div style="padding: 24px; border-radius: 16px; border: 1px solid #2C2938; background: #13121A; display: flex; flex-direction: column; gap: 8px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{n.t}}</div><div style="font-size: 15px; line-height: 1.55; color: #B9B4C8">{{n.b}}</div></div>
 </sc-for>
@@ -132,7 +143,7 @@ button{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":6000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4000,"height":6200}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -156,7 +167,7 @@ function glyphh(mood, size) {
 }
 
 var FLY = 'assets/fly-io.svg';
-var M = { name: 'studio-mac', addr: 'm-7f3k2q.glyphh.ai', who: 'Sam Rivera · Northwind' };
+var M = { name: 'studio-mac', addr: '', who: 'Sam Rivera · Northwind' };
 var HOST = [{ logo: true, src: FLY, t: 'Fly.io · Chicago' }, { t: 'Linux · rrotor 1.4.2' }];
 var DOCKER = 'assets/docker.svg';
 var LAPTOP = [{ logo: true, src: DOCKER, t: "Docker on Sam's MacBook Pro" }, { t: 'Linux · rrotor 1.4.2' }];
@@ -190,8 +201,8 @@ var STATES = [
     status: 'starting', mood: 'thinking', eyebrow: 'Your machine is starting', steps: 4, meta: LAPTOP, motion: true, name: 'sams-macbook-pro-docker-2' },
   { id: 'waking', title: 'Waking a machine that was asleep', sub: 'The host had stopped it to save money. Glyphh sleeps (low eye) until it answers; there is a time to expect, then the steps from the top.',
     status: 'waking', mood: 'sleepy', eyebrow: 'Waking your machine', bar: ['Fly.io is starting it', 'usually about 20 s', '35%'], meta: HOST, motion: true },
-  { id: 'updating', title: 'Updating rrotor', sub: 'A new rrotor was ready when it started. It updates before the desktop opens, and says nothing is lost.',
-    status: 'updating', mood: 'generating', eyebrow: 'Updating your machine', bar: ['rrotor 1.4.2 to 1.5.0', '64%', '64%'], meta: HOST, motion: true,
+  { id: 'updating', title: 'Updating the machine', sub: 'A new version of the machine’s software was ready when it started. It updates before the desktop opens, and says nothing is lost.',
+    status: 'updating', mood: 'generating', eyebrow: 'Updating your machine', bar: ['1.4.2 to 1.5.0', '64%', '64%'], meta: HOST, motion: true,
     note: 'Super powers pick up where they left off when it is back.' },
   { id: 'failed', title: 'A step failed', sub: 'Which step failed, in words, with what you can do and the trace ID; the step list gives way to the message. The machine is still yours to open without the part that failed.',
     status: 'error', mood: 'error', eyebrow: 'Your machine started, with a problem', meta: HOST,
@@ -212,7 +223,7 @@ function frame(st, desk) {
   var btns = st.msg ? st.msg[2].map(function (b) { return b[1] ? { t: b[0], bg: '#7C4DFF', tx: '#FFFFFF', border: 'none' } : { t: b[0], bg: 'transparent', tx: '#F5F3FA', border: '1px solid #403B50' }; }) : [];
   return {
     label: desk ? 'Desktop' : 'Phone', aria: 'The splash on ' + name + ': ' + st.title,
-    desk: desk, phone: !desk, w: desk ? '1200px' : '390px', h: desk ? '760px' : '844px', radius: desk ? '14px' : '36px', pad: desk ? '28px' : '20px',
+    desk: desk, phone: !desk, w: desk ? '1440px' : '390px', h: desk ? '900px' : '844px', radius: desk ? '14px' : '36px', pad: desk ? '28px' : '20px',
     gap: desk ? '22px' : '18px', ring: desk ? '168px' : '128px', cat: glyphh(st.mood, desk ? 92 : 70),
     ringLine: st.dim ? '#403B50' : 'rgba(124,77,255,.75)', ringGlow: st.dim ? 'none' : '0 0 60px rgba(124,77,255,.28), inset 0 0 40px rgba(124,77,255,.22)',
     cometAnim: st.motion ? 'g-comet 7s cubic-bezier(.55,0,.25,1) infinite' : 'none', blink: st.mood === 'sleepy' || st.mood === 'done' ? 'none' : 'g-blink 5s infinite',

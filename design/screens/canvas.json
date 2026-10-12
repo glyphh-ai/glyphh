@@ -695,14 +695,6 @@
       "x": 1520,
       "y": 0
     },
-    "PlayerFlow.dc.html": {
-      "h": 5400,
-      "page": "player",
-      "title": "Machines (the page, inside the rail)",
-      "w": 5072,
-      "x": 0,
-      "y": 0
-    },
     "PluginCards.dc.html": {
       "h": 5541,
       "page": "plugin",
@@ -749,22 +741,6 @@
       "title": "Powers, dark, mobile",
       "w": 5072,
       "x": 0,
-      "y": 0
-    },
-    "RrotorSplash.dc.html": {
-      "h": 6000,
-      "page": "rrotor-splash",
-      "title": "rrotor: the splash",
-      "w": 3520,
-      "x": 0,
-      "y": 0
-    },
-    "RrotorSplashLight.dc.html": {
-      "h": 6000,
-      "page": "rrotor-splash",
-      "title": "rrotor: the splash, light",
-      "w": 3520,
-      "x": 3920,
       "y": 0
     },
     "SignInFlow.dc.html": {
@@ -942,117 +918,93 @@
       "y": 11322,
       "page": "usage-more"
     },
-    "RrotorDesktop.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 3100,
-      "h": 3920,
-      "title": "rrotor: the desktop (1 of 4)",
-      "page": "rrotor-desktop"
-    },
-    "RrotorDesktop2.dc.html": {
-      "x": 0,
-      "y": 4120,
-      "w": 3100,
-      "h": 5050,
-      "title": "rrotor: the desktop (2 of 4)",
-      "page": "rrotor-desktop"
-    },
-    "RrotorDesktop3.dc.html": {
-      "x": 0,
-      "y": 9370,
-      "w": 3100,
-      "h": 3920,
-      "title": "rrotor: the desktop (3 of 4)",
-      "page": "rrotor-desktop"
-    },
-    "RrotorDesktop4.dc.html": {
-      "x": 0,
-      "y": 13490,
-      "w": 3100,
-      "h": 2920,
-      "page": "rrotor-desktop",
-      "title": "rrotor: the desktop (4 of 4)"
-    },
-    "RrotorEdit.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 3100,
-      "h": 5920,
-      "title": "rrotor: edit a super power (1 of 2)",
-      "page": "rrotor-edit"
-    },
-    "RrotorEdit2.dc.html": {
-      "x": 0,
-      "y": 6120,
-      "w": 3100,
-      "h": 3260,
-      "page": "rrotor-edit",
-      "title": "rrotor: edit a super power (2 of 2)"
-    },
     "MachineOpen.dc.html": {
       "x": 0,
       "y": 0,
       "w": 3100,
-      "h": 5070,
-      "title": "Opening a machine",
-      "page": "machine-platform"
+      "h": 3940,
+      "page": "m-open",
+      "title": "Opening a machine: from the card to the crew view"
     },
     "MachineTakeover.dc.html": {
       "x": 0,
-      "y": 32030,
+      "y": 0,
       "w": 3100,
       "h": 6200,
-      "title": "Taking over the desktop",
-      "page": "machine-platform"
+      "title": "Take over the desktop, on the platform and in Claude",
+      "page": "m-take"
     },
     "MachineDesktop.dc.html": {
       "x": 0,
-      "y": 5270,
+      "y": 0,
       "w": 3100,
       "h": 3790,
       "title": "The machine view (1 of 4)",
-      "page": "machine-platform"
+      "page": "m-view"
     },
     "MachineDesktop2.dc.html": {
       "x": 0,
-      "y": 9260,
+      "y": 3990,
       "w": 3100,
       "h": 4920,
       "title": "The machine view (2 of 4)",
-      "page": "machine-platform"
+      "page": "m-view"
     },
     "MachineDesktop3.dc.html": {
       "x": 0,
-      "y": 14380,
+      "y": 9110,
       "w": 3100,
       "h": 3790,
       "title": "The machine view (3 of 4)",
-      "page": "machine-platform"
+      "page": "m-view"
     },
     "MachineDesktop4.dc.html": {
       "x": 0,
-      "y": 18370,
+      "y": 13100,
       "w": 3100,
       "h": 3920,
       "title": "The machine view (4 of 4)",
-      "page": "machine-platform"
+      "page": "m-view"
     },
     "MachineEdit.dc.html": {
       "x": 0,
-      "y": 22490,
+      "y": 0,
       "w": 3100,
       "h": 5850,
-      "title": "Edit a super power (1 of 2)",
-      "page": "machine-platform"
+      "title": "Edit a super power in the machine view (1 of 2)",
+      "page": "m-edit"
     },
     "MachineEdit2.dc.html": {
       "x": 0,
-      "y": 28540,
+      "y": 6050,
       "w": 3100,
       "h": 3290,
-      "title": "Edit a super power (2 of 2)",
-      "page": "machine-platform"
+      "title": "Edit a super power in the machine view (2 of 2)",
+      "page": "m-edit"
+    },
+    "MachinesPage.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 5400,
+      "page": "player",
+      "title": "Machines page: every state, desktop and phone"
+    },
+    "MachineSplash.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4000,
+      "h": 6120,
+      "page": "m-splash",
+      "title": "The splash, dark"
+    },
+    "MachineSplashLight.dc.html": {
+      "x": 4400,
+      "y": 0,
+      "w": 4000,
+      "h": 6120,
+      "page": "m-splash",
+      "title": "The splash, light"
     }
   },
   "createdOnFiles": {
@@ -1079,7 +1031,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "admin-audit",
-      "text": "Audit log of admin actions",
+      "text": "Glyphh admin \u00b7 audit log",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1096,7 +1048,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "admin-market",
-      "text": "Glyphh admin: Marketplace",
+      "text": "Glyphh admin \u00b7 marketplace",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1113,7 +1065,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "admin-models",
-      "text": "Glyphh admin: Models",
+      "text": "Glyphh admin \u00b7 models and providers",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1130,7 +1082,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "admin-orgs",
-      "text": "Glyphh admin: Orgs",
+      "text": "Glyphh admin \u00b7 orgs",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1147,7 +1099,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "admin-plans",
-      "text": "Glyphh admin: Org actions and plans",
+      "text": "Glyphh admin \u00b7 org actions and plans",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1181,7 +1133,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "app-shell",
-      "text": "The app shell: the left rail",
+      "text": "App shell \u00b7 the left rail",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1190,7 +1142,7 @@
       "kind": "title1",
       "maxW": 3376,
       "page": "components",
-      "text": "Requested components, dark and light",
+      "text": "Components \u00b7 requested",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1199,7 +1151,7 @@
       "kind": "title1",
       "maxW": 4300,
       "page": "custom",
-      "text": "Custom powers",
+      "text": "Powers \u00b7 custom powers",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1208,7 +1160,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "listing",
-      "text": "Publish a listing",
+      "text": "Marketplace \u00b7 publish a listing",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1225,7 +1177,7 @@
       "kind": "title1",
       "maxW": 4300,
       "page": "market",
-      "text": "Marketplace",
+      "text": "Marketplace \u00b7 browse",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1234,7 +1186,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "org-limits",
-      "text": "Org: Allowed models and connections",
+      "text": "Org \u00b7 allowed models and connections",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1251,7 +1203,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "org-review",
-      "text": "Org: Review",
+      "text": "Org \u00b7 review",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1268,16 +1220,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "org-teams",
-      "text": "Org: Members and teams",
-      "w": 240,
-      "x": 0,
-      "y": -300
-    },
-    "t-rrotor-splash": {
-      "kind": "title1",
-      "maxW": 3520,
-      "page": "rrotor-splash",
-      "text": "rrotor's UI: the splash",
+      "text": "Org \u00b7 members and teams",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1286,7 +1229,7 @@
       "kind": "title1",
       "maxW": 4300,
       "page": "sp-edit",
-      "text": "Super power editor",
+      "text": "Super powers \u00b7 the editor",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1295,7 +1238,7 @@
       "kind": "title1",
       "maxW": 4300,
       "page": "task-flow",
-      "text": "Task flow",
+      "text": "Super powers \u00b7 task flow",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1304,7 +1247,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "usage",
-      "text": "Usage",
+      "text": "Usage \u00b7 billing periods and yours",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1313,7 +1256,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "usage-audit",
-      "text": "Usage: Audit log",
+      "text": "Usage \u00b7 audit log",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1338,7 +1281,7 @@
       "kind": "title1",
       "maxW": 3520,
       "page": "usage-more",
-      "text": "Usage: Details, org and publishers",
+      "text": "Usage \u00b7 details, org and publishers",
       "w": 240,
       "x": 0,
       "y": -300
@@ -1404,29 +1347,53 @@
       "x": 0,
       "y": -300
     },
-    "t-rrotor-desktop": {
+    "t-m-open": {
       "kind": "title1",
       "maxW": 3100,
-      "text": "rrotor's UI: the desktop",
+      "text": "Machine \u00b7 1 opening it",
       "x": 0,
       "y": -300,
-      "page": "rrotor-desktop"
+      "page": "m-open"
     },
-    "t-rrotor-edit": {
+    "t-m-splash": {
       "kind": "title1",
       "maxW": 3100,
-      "text": "rrotor's UI: edit a super power",
+      "text": "Machine \u00b7 2 the splash",
       "x": 0,
       "y": -300,
-      "page": "rrotor-edit"
+      "page": "m-splash"
     },
-    "t-machine-platform": {
+    "t-m-view": {
       "kind": "title1",
       "maxW": 3100,
-      "text": "Machines on the platform",
+      "text": "Machine \u00b7 3 the machine view",
       "x": 0,
       "y": -300,
-      "page": "machine-platform"
+      "page": "m-view"
+    },
+    "t-m-edit": {
+      "kind": "title1",
+      "maxW": 3100,
+      "text": "Machine \u00b7 4 edit a super power",
+      "x": 0,
+      "y": -300,
+      "page": "m-edit"
+    },
+    "t-m-take": {
+      "kind": "title1",
+      "maxW": 3100,
+      "text": "Machine \u00b7 5 take over the desktop",
+      "x": 0,
+      "y": -300,
+      "page": "m-take"
+    },
+    "t-player": {
+      "kind": "title1",
+      "maxW": 5072,
+      "x": 0,
+      "y": -300,
+      "page": "player",
+      "text": "Machines \u00b7 the Machines page"
     }
   },
   "order": [
@@ -1434,7 +1401,6 @@
     "AllowFlow.dc.html",
     "CodeFlow.dc.html",
     "JoinFlow.dc.html",
-    "PlayerFlow.dc.html",
     "LightAccount.dc.html",
     "PluginCards.dc.html",
     "BillingFlow.dc.html",
@@ -1451,7 +1417,6 @@
     "TaskCanvasLight.dc.html",
     "CustomPowersLight.dc.html",
     "MarketplaceLight.dc.html",
-    "RrotorSplash.dc.html",
     "ListingSubmit.dc.html",
     "OrgReview.dc.html",
     "AdminCatalog.dc.html",
@@ -1547,13 +1512,6 @@
     "BillingLight3.dc.html",
     "BillingLight4.dc.html",
     "PluginCards2.dc.html",
-    "RrotorSplashLight.dc.html",
-    "RrotorDesktop.dc.html",
-    "RrotorDesktop2.dc.html",
-    "RrotorDesktop3.dc.html",
-    "RrotorDesktop4.dc.html",
-    "RrotorEdit.dc.html",
-    "RrotorEdit2.dc.html",
     "MachineOpen.dc.html",
     "MachineTakeover.dc.html",
     "MachineDesktop.dc.html",
@@ -1561,7 +1519,10 @@
     "MachineDesktop3.dc.html",
     "MachineDesktop4.dc.html",
     "MachineEdit.dc.html",
-    "MachineEdit2.dc.html"
+    "MachineEdit2.dc.html",
+    "MachinesPage.dc.html",
+    "MachineSplash.dc.html",
+    "MachineSplashLight.dc.html"
   ],
   "pages": [
     {
@@ -1570,135 +1531,139 @@
     },
     {
       "id": "components",
-      "name": "Components (requested)"
+      "name": "Components \u00b7 requested"
     },
     {
       "id": "app-shell",
-      "name": "App shell: the left rail"
+      "name": "App shell \u00b7 the left rail"
     },
     {
       "id": "signin",
-      "name": "Sign in"
+      "name": "Sign in \u00b7 1 sign in"
     },
     {
       "id": "allow",
-      "name": "Allow a host"
+      "name": "Sign in \u00b7 2 allow a host"
     },
     {
       "id": "code",
-      "name": "Approve a code"
+      "name": "Sign in \u00b7 3 approve a code"
     },
     {
       "id": "join",
-      "name": "Join an org"
+      "name": "Sign in \u00b7 4 join an org"
     },
     {
       "id": "player",
-      "name": "Machines"
+      "name": "Machines \u00b7 the Machines page"
     },
     {
-      "id": "light",
-      "name": "Light and account"
+      "id": "m-open",
+      "name": "Machine \u00b7 1 opening it"
     },
     {
-      "id": "billing",
-      "name": "Billing"
+      "id": "m-splash",
+      "name": "Machine \u00b7 2 the splash"
     },
     {
-      "id": "plugin",
-      "name": "Plugin"
+      "id": "m-view",
+      "name": "Machine \u00b7 3 the machine view"
+    },
+    {
+      "id": "m-edit",
+      "name": "Machine \u00b7 4 edit a super power"
+    },
+    {
+      "id": "m-take",
+      "name": "Machine \u00b7 5 take over the desktop"
     },
     {
       "id": "powers",
-      "name": "Powers (desktop)"
+      "name": "Powers \u00b7 desktop"
     },
     {
       "id": "powers-mobile",
-      "name": "Powers (mobile)"
-    },
-    {
-      "id": "sp-edit",
-      "name": "Super power editor"
-    },
-    {
-      "id": "task-flow",
-      "name": "Task flow"
+      "name": "Powers \u00b7 phone"
     },
     {
       "id": "custom",
-      "name": "Custom powers"
+      "name": "Powers \u00b7 custom powers"
+    },
+    {
+      "id": "sp-edit",
+      "name": "Super powers \u00b7 the editor"
+    },
+    {
+      "id": "task-flow",
+      "name": "Super powers \u00b7 task flow"
     },
     {
       "id": "market",
-      "name": "Marketplace"
-    },
-    {
-      "id": "rrotor-splash",
-      "name": "rrotor \u00b7 Splash"
-    },
-    {
-      "id": "rrotor-desktop",
-      "name": "rrotor \u00b7 Desktop"
-    },
-    {
-      "id": "rrotor-edit",
-      "name": "rrotor \u00b7 Edit a super power"
+      "name": "Marketplace \u00b7 browse"
     },
     {
       "id": "listing",
-      "name": "Publish a listing"
+      "name": "Marketplace \u00b7 publish a listing"
     },
     {
-      "id": "org-review",
-      "name": "Org \u00b7 Review"
-    },
-    {
-      "id": "admin-models",
-      "name": "Glyphh admin \u00b7 Models"
-    },
-    {
-      "id": "admin-market",
-      "name": "Glyphh admin \u00b7 Marketplace"
-    },
-    {
-      "id": "org-teams",
-      "name": "Org \u00b7 Members and teams"
-    },
-    {
-      "id": "org-limits",
-      "name": "Org \u00b7 Allowed models and connections"
-    },
-    {
-      "id": "admin-orgs",
-      "name": "Glyphh admin \u00b7 Orgs"
-    },
-    {
-      "id": "admin-plans",
-      "name": "Glyphh admin \u00b7 Org actions and plans"
+      "id": "plugin",
+      "name": "Claude and ChatGPT \u00b7 the cards"
     },
     {
       "id": "usage",
-      "name": "Usage"
+      "name": "Usage \u00b7 billing periods and yours"
     },
     {
       "id": "usage-more",
-      "name": "Usage \u00b7 Details, org and publishers"
+      "name": "Usage \u00b7 details, org and publishers"
     },
     {
       "id": "usage-audit",
-      "name": "Usage \u00b7 Audit log"
+      "name": "Usage \u00b7 audit log"
     },
     {
       "id": "api-keys",
       "name": "API keys"
     },
     {
-      "id": "admin-audit",
-      "name": "Audit log of admin actions"
+      "id": "billing",
+      "name": "Billing"
     },
     {
-      "id": "machine-platform",
-      "name": "Machines on the platform"
+      "id": "light",
+      "name": "Account \u00b7 light theme and sign out"
+    },
+    {
+      "id": "org-teams",
+      "name": "Org \u00b7 members and teams"
+    },
+    {
+      "id": "org-limits",
+      "name": "Org \u00b7 allowed models and connections"
+    },
+    {
+      "id": "org-review",
+      "name": "Org \u00b7 review"
+    },
+    {
+      "id": "admin-orgs",
+      "name": "Glyphh admin \u00b7 orgs"
+    },
+    {
+      "id": "admin-plans",
+      "name": "Glyphh admin \u00b7 org actions and plans"
+    },
+    {
+      "id": "admin-models",
+      "name": "Glyphh admin \u00b7 models and providers"
+    },
+    {
+      "id": "admin-market",
+      "name": "Glyphh admin \u00b7 marketplace"
+    },
+    {
+      "id": "admin-audit",
+      "name": "Glyphh admin \u00b7 audit log"
     }
   ],
   "title": "Glyphh Design"
