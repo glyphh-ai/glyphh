@@ -373,6 +373,13 @@ Components use only tokens: never a raw colour, size or font.
 
 ## Requests
 
+**Built 2026-10-12 from the `Components` board:** LogoTile (with initials, disabled, loading), CatRing (still, turning, the comet), Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Stripe Payment Element, ConnectFrame, bars by day (`DayBars`), and the PowerMap and FlowCanvas nodes (`PowerCard`, `PowerChip`, `FlowNode`). The canvases themselves (pan, zoom, drag, connect) are built with the editors.
+
+**Still to draw:** kind glyphs for a plugin, a folder, a browser and a super power on PowerCard (the board draws only a task ◆, a skill ◆ and an app ▦; until then those show their logo).
+
+The requests as they were made:
+
+
 From the design agent, after sketching app.glyphh.ai's sign-in pages and machines against the brief. Each is something those screens need that the library list above does not cover yet.
 
 - **LogoTile** (built 2026-10-11: the logo, sizes, highlighted; still to build: initials without a logo, disabled, loading) (the brief's "provider logo tiles"): a square tile holding a third-party logo or, without one, its initials. For model providers, connections, AI hosts (Claude, ChatGPT, Codex), sign-in providers (Google, GitHub) and deploy hosts (Fly, AWS, ...). Sizes small, medium, large; states default, disabled, loading (skeleton).
