@@ -32,6 +32,7 @@ class OpenInvite(BaseModel):
     email: str
     role: str
     invited_by: str | None = None
+    invited_by_email: str | None = None
     expires_at: datetime
 
 
@@ -119,7 +120,14 @@ async def read_invite(conn: AsyncConnection, token: str) -> OpenInvite:
             "This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="invite_expired"
         )
     by = " ".join(n for n in (row.first_name, row.last_name) if n) or row.by_email
-    return OpenInvite(org=row.name, email=row.email, role=row.role, invited_by=by, expires_at=row.expires_at)
+    return OpenInvite(
+        org=row.name,
+        email=row.email,
+        role=row.role,
+        invited_by=by,
+        invited_by_email=row.by_email,
+        expires_at=row.expires_at,
+    )
 
 
 def _wrong(invite: OpenInvite, email: str) -> Forbidden:

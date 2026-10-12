@@ -33,6 +33,7 @@ class JoinScreen(BaseModel):
     email: str
     role: Literal["org_admin", "user"]
     invited_by: str | None
+    invited_by_email: str | None
     expires_at: datetime
     providers: list[str]
 
@@ -57,6 +58,7 @@ async def join_screen(request: Request, conn: Conn, invite: str) -> JoinScreen:
         email=found.email,
         role=found.role,
         invited_by=found.invited_by,
+        invited_by_email=found.invited_by_email,
         expires_at=found.expires_at,
         providers=available(cfg(request)),
     )

@@ -32,7 +32,7 @@ async def _invite(engine: AsyncEngine, email: str) -> str:
 async def _sign_in_from(browser: httpx.AsyncClient, token: str) -> httpx.Response:
     shown = (await browser.get("/v1/auth/join", params={"invite": token})).json()
     assert shown["org"].startswith("Join Co") and shown["role"] == "user" and shown["providers"] == ["google", "github"]
-    assert shown["invited_by"] and shown["expires_at"]
+    assert shown["invited_by"] and shown["invited_by_email"] and shown["expires_at"]
     started = await browser.get("/auth/google/start", params={"invite": token})
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
     return await browser.get("/auth/google/callback", params={"code": "c", "state": state})
