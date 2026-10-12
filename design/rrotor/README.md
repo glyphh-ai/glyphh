@@ -44,7 +44,7 @@ A tall board is split into parts that share one script. `RrotorDesktop` to `Rrot
 
 ## The layout
 
-- **Rail:** 272 px open, 72 px collapsed (remembered per person). From the top: the logo (42 px, as the platform's rail) and, under it, the machine and its address; the Glyphh card; Super powers with +, search and filter chips (All, Working, Needs you, Idle); the list (cat with a status dot, name, a live line, a pink You when it needs you); the account at the bottom. Clicking the account opens rrotor's Settings, which is not drawn yet.
+- **Rail:** 256 px open, 72 px collapsed (remembered per person): the platform's rail, one component in both modes (decided by Chris, 2026-10-12). From the top: the logo (42 px, as the platform's rail) and, under it, the machine and its address; the Glyphh card; Super powers with +, search and filter chips (All, Working, Needs you, Idle); the list (cat with a status dot, name, a live line, a pink You when it needs you); the account at the bottom. Clicking the account opens rrotor's Settings, which is not drawn yet.
 - **The centre's views:**
   - **Crew:** Glyphh in its ring with this thread's crew around it, lines between whoever is working or talking, and the Now feed underneath.
   - **Workbench:** the layout manager. The picked super power's live surfaces as tiles: its browser, Activity, Outputs, a preview. Tiles resize by dragging the gaps, open full screen, and the layout is remembered per super power.
