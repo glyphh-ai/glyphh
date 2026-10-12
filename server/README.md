@@ -4,6 +4,12 @@ The Glyphh server: headless, multi-tenant. Every capability is built SDK first, 
 
 ## Run it
 
+Everything on this Mac (database, server, the platform from `../platform`, and the ngrok tunnel to `GLYPHH_PUBLIC_URL`) in one command:
+
+    scripts/local.sh start      # or stop, restart, status, logs
+
+The server alone:
+
     docker compose up --build
 
 The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`) and MCP on http://localhost:8080/mcp.
