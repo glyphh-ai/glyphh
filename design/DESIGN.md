@@ -167,6 +167,10 @@ The left half on desktop, collapsing to a small ring above the content on a phon
 
 Always the real, full-colour artwork, never a one-colour silhouette. Black marks (OpenAI, GitHub, Grok, Cursor, Anthropic, the AWS wordmark) get an off-white copy for dark grounds. Claude shows the Claude mark; Codex shows OpenAI's.
 
+### Eye colours and the Docker logo
+
+Approved 2026-10-11: the four power colours outside the palette (Bloom, Rose, Azure, Teal) stay as cat eye colours, and laptop machines (Docker hosts) get the Docker logo.
+
 ### Lists
 
 Everything that can grow is paginated, in the designs as in the build: "Showing 1–5 of 23", Previous, page numbers, Next; on a phone, Previous, "Page 1 of 5", Next.
