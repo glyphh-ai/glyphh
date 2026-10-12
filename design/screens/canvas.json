@@ -1000,10 +1000,58 @@
     },
     "MachineTakeover.dc.html": {
       "x": 0,
-      "y": 5270,
+      "y": 32030,
       "w": 3100,
       "h": 6200,
       "title": "Taking over the desktop",
+      "page": "machine-platform"
+    },
+    "MachineDesktop.dc.html": {
+      "x": 0,
+      "y": 5270,
+      "w": 3100,
+      "h": 3790,
+      "title": "The machine view (1 of 4)",
+      "page": "machine-platform"
+    },
+    "MachineDesktop2.dc.html": {
+      "x": 0,
+      "y": 9260,
+      "w": 3100,
+      "h": 4920,
+      "title": "The machine view (2 of 4)",
+      "page": "machine-platform"
+    },
+    "MachineDesktop3.dc.html": {
+      "x": 0,
+      "y": 14380,
+      "w": 3100,
+      "h": 3790,
+      "title": "The machine view (3 of 4)",
+      "page": "machine-platform"
+    },
+    "MachineDesktop4.dc.html": {
+      "x": 0,
+      "y": 18370,
+      "w": 3100,
+      "h": 3920,
+      "title": "The machine view (4 of 4)",
+      "page": "machine-platform"
+    },
+    "MachineEdit.dc.html": {
+      "x": 0,
+      "y": 22490,
+      "w": 3100,
+      "h": 5850,
+      "title": "Edit a super power (1 of 2)",
+      "page": "machine-platform"
+    },
+    "MachineEdit2.dc.html": {
+      "x": 0,
+      "y": 28540,
+      "w": 3100,
+      "h": 3290,
+      "title": "Edit a super power (2 of 2)",
       "page": "machine-platform"
     }
   },
@@ -1507,7 +1555,13 @@
     "RrotorEdit.dc.html",
     "RrotorEdit2.dc.html",
     "MachineOpen.dc.html",
-    "MachineTakeover.dc.html"
+    "MachineTakeover.dc.html",
+    "MachineDesktop.dc.html",
+    "MachineDesktop2.dc.html",
+    "MachineDesktop3.dc.html",
+    "MachineDesktop4.dc.html",
+    "MachineEdit.dc.html",
+    "MachineEdit2.dc.html"
   ],
   "pages": [
     {
