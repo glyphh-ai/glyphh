@@ -947,15 +947,23 @@
       "y": 0,
       "w": 3100,
       "h": 3920,
-      "title": "rrotor: the desktop (1 of 2)",
+      "title": "rrotor: the desktop (1 of 3)",
       "page": "rrotor-desktop"
     },
     "RrotorDesktop2.dc.html": {
       "x": 0,
       "y": 4120,
       "w": 3100,
-      "h": 5180,
-      "title": "rrotor: the desktop (2 of 2)",
+      "h": 5050,
+      "title": "rrotor: the desktop (2 of 3)",
+      "page": "rrotor-desktop"
+    },
+    "RrotorDesktop3.dc.html": {
+      "x": 0,
+      "y": 9370,
+      "w": 3100,
+      "h": 4050,
+      "title": "rrotor: the desktop (3 of 3)",
       "page": "rrotor-desktop"
     }
   },
@@ -1437,7 +1445,8 @@
     "PluginCards2.dc.html",
     "RrotorSplashLight.dc.html",
     "RrotorDesktop.dc.html",
-    "RrotorDesktop2.dc.html"
+    "RrotorDesktop2.dc.html",
+    "RrotorDesktop3.dc.html"
   ],
   "pages": [
     {
