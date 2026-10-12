@@ -304,7 +304,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
 | Approve a code | `CodeFlow` | Enter a code (validation), confirm the machine, approved | 1 |
 | Join an org | `JoinFlow` | Invite: signed out, accept, wrong account, joined | 1 |
-| Machines | `PlayerFlow` | Inside the rail (shell from `AppShell`; the card as `MachineOpen` draws it, which is this card). Machine cards (8 super powers, then See all), the See all dialog with search and pages, add a machine, connecting, offline, account menu | 2 |
+| Machines | `PlayerFlow` | **The Machines page, redrawn inside the rail** (1440 × 900 desktop, the phone bar with the menu button): the same card as `MachineOpen`. Machine cards (8 super powers, then See all), the See all dialog with search and pages, add a machine, connecting, offline, account menu | 2 |
 | Light and account | `LightAccount` | The light theme, the Account page, the account menu, signed out | 2 |
 | Billing (dark / light) | `BillingFlow`, `BillingLight` | Plan, credit balance in dollars and auto top-up (reload to a target, monthly cap), spend by day, plans with their numbers, invoices with each top-up's expiry; dialogs for Add funds, Auto top-up, Switch plan; Stripe checkout inside the page; the plan-move banner | 3 |
 | Plugin | `PluginCards` | The cards in Claude and ChatGPT: machines, deploy, usage, the swarm, needs you | 8 |
@@ -552,7 +552,7 @@ Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the 
 **The Machines page, answered (2026-10-12):**
 
 1. **One card: PlayerFlow’s**, now drawn inside the rail in `MachineOpen`: name, where it runs, Online or Offline, the first 8 super powers as cats, +N and See all, the counts line, a full-width Open (Details on an offline machine). PlayerFlow stays the source for the page’s other states.
-2. **The other states follow PlayerFlow as drawn**, inside the rail: the empty state, See all (search, status chips, pages), Add a machine, connecting, offline, the load error with its trace ID, loading. Shell from `AppShell`, content from `PlayerFlow`, as for every app board not yet redrawn. The pager sits under the grid (`MachineOpen` state 1).
+2. **`PlayerFlow` is now drawn inside the rail**, every state: the cards with the pager, See all (search, status chips, pages, no results), loading, the empty state, Add a machine, connecting, offline, the account menu (from the rail’s account button; a sheet on a phone), the load error with its trace ID. It is the Machines page; `MachineOpen` state 1 is the same page, the start of opening one.
 3. **The page head is AppShell’s and `Page`’s:** the mono uppercase crumb over the 36 px title, the main action on the right. `MachineOpen` now matches; nothing else changes.
 4. **Every app page fills the content area** at 32 px top and bottom, 36 px left and right. No page is a centred column; blocks inside a page (a form, a dialog, a paragraph) keep the max width their board draws.
 5. **The rail head is 64 px** with the 42 px logo, as `AppShell`, in both modes. The machine boards now match.
