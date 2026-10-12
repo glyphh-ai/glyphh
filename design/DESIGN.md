@@ -304,7 +304,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
 | Approve a code | `CodeFlow` | Enter a code (validation), confirm the machine, approved | 1 |
 | Join an org | `JoinFlow` | Invite: signed out, accept, wrong account, joined | 1 |
-| Machines | `PlayerFlow` | Machine cards (8 super powers, then See all), the See all dialog with search and pages, add a machine, connecting, offline, account menu | 2 |
+| Machines | `PlayerFlow` | Inside the rail (shell from `AppShell`; the card as `MachineOpen` draws it, which is this card). Machine cards (8 super powers, then See all), the See all dialog with search and pages, add a machine, connecting, offline, account menu | 2 |
 | Light and account | `LightAccount` | The light theme, the Account page, the account menu, signed out | 2 |
 | Billing (dark / light) | `BillingFlow`, `BillingLight` | Plan, credit balance in dollars and auto top-up (reload to a target, monthly cap), spend by day, plans with their numbers, invoices with each top-up's expiry; dialogs for Add funds, Auto top-up, Switch plan; Stripe checkout inside the page; the plan-move banner | 3 |
 | Plugin | `PluginCards` | The cards in Claude and ChatGPT: machines, deploy, usage, the swarm, needs you | 8 |
@@ -548,4 +548,15 @@ Reading the boards: tall boards are split into parts (`Name`, `Name2`, `Name3`, 
 - **`MachineTakeover`:** the Desktop view (watch, take control, hand back) and Glyphh's panels in Claude (the card, the desktop panel, give a sign-in, hand back, an ask, full screen).
 
 Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the take-over shows the whole desktop or only the browser window.
+
+**The Machines page, answered (2026-10-12):**
+
+1. **One card: PlayerFlow’s**, now drawn inside the rail in `MachineOpen`: name, where it runs, Online or Offline, the first 8 super powers as cats, +N and See all, the counts line, a full-width Open (Details on an offline machine). PlayerFlow stays the source for the page’s other states.
+2. **The other states follow PlayerFlow as drawn**, inside the rail: the empty state, See all (search, status chips, pages), Add a machine, connecting, offline, the load error with its trace ID, loading. Shell from `AppShell`, content from `PlayerFlow`, as for every app board not yet redrawn. The pager sits under the grid (`MachineOpen` state 1).
+3. **The page head is AppShell’s and `Page`’s:** the mono uppercase crumb over the 36 px title, the main action on the right. `MachineOpen` now matches; nothing else changes.
+4. **Every app page fills the content area** at 32 px top and bottom, 36 px left and right. No page is a centred column; blocks inside a page (a form, a dialog, a paragraph) keep the max width their board draws.
+5. **The rail head is 64 px** with the 42 px logo, as `AppShell`, in both modes. The machine boards now match.
+6. **No machine address anywhere** until Chris decides whether machines keep one: not on the card, the switcher, the splash or the Claude panel. Where the address was, the machine shows where it runs (macOS · Austin). Output links in the machine view still show the old form; treat them as placeholders.
+7. **Status words:** Online and Offline (an offline machine’s line ends “last seen 3 days ago”). The counts line is “N super powers · N working · N need you”, dropping parts that are zero; with nothing working it reads “N super powers · all quiet”; on an offline machine “· asleep”.
+8. **No … menu on the card.** It was not in PlayerFlow and is gone from `MachineOpen`. Open, or Details on an offline machine, is the only action.
 
