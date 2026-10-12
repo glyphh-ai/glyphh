@@ -15,10 +15,10 @@ Two agents build Glyphh's UI. This page is the contract between them. Read it be
 
 ## The order
 
-1. **The code agent builds the component library** in `ui/` (the package `@glyphh-ai/ui`): every component, every variant and state, with bare styling on placeholder tokens.
+1. **The code agent builds the component library** in `ui/` of the `glyphh-ai/platform` repo (the package `@glyphh-ai/ui`): every component, every variant and state, with bare styling on placeholder tokens.
 2. **The library goes to Claude Design** through "Create using Claude Code" (`/design-sync`), so the design system starts from the real components, not a parallel set.
 3. **The design agent designs on those components:** token values first, then each component's look, then the screens.
-4. **`/design-sync` brings the design back** into `ui/`: token values and component styles. The code agent's tests guard behaviour, so a restyle cannot break a form.
+4. **`/design-sync` brings the design back** into the platform repo's `ui/`: token values and component styles. The code agent's tests guard behaviour, so a restyle cannot break a form.
 5. **Repeat** as screens are added: a new need is raised as a component request (below), never drawn as a one-off.
 
 Until step 2, the design agent explores direction only: palette, typefaces, the brand, motion, mood, using `design/BRIEF.md` and `design/brand/`.
@@ -27,7 +27,7 @@ Until step 2, the design agent explores direction only: palette, typefaces, the 
 
 ### Tokens
 
-One file, `ui/src/tokens.css`: CSS custom properties on `:root` (dark) and `[data-theme="light"]`. The code agent defines the names; the design agent sets every value and may propose new names.
+One file, `ui/src/tokens.css` in `glyphh-ai/platform`: CSS custom properties on `:root` (dark) and `[data-theme="light"]`. The code agent defines the names; the design agent sets every value and may propose new names.
 
 - **Colour:** `--color-bg`, `--color-surface`, `--color-surface-raised`, `--color-line`, `--color-text`, `--color-text-muted`, `--color-accent`, `--color-on-accent`, `--color-ok`, `--color-warn`, `--color-danger`, `--color-focus`
 - **Type:** `--font-display`, `--font-body`, `--font-mono`, `--text-xs` … `--text-3xl`, `--weight-regular`, `--weight-medium`, `--weight-bold`, `--leading-tight`, `--leading-normal`
@@ -67,7 +67,7 @@ The same components serve all three surfaces, so each must look right in all thr
 
 ## Where we are
 
-- **Step 1 is done (2026-10-11):** the whole library above is built in `ui/`, with bare styling on placeholder tokens, tested at 100%. See `ui/README.md`.
+- **Step 1 is done (2026-10-11):** the whole library above is built in `ui/` (moved to `glyphh-ai/platform` on 2026-10-11, with the platform app beside it), with bare styling on placeholder tokens, tested at 100%. See `ui/README.md`.
 - **Next, step 2:** start `/design-sync` in the code agent's session to bring it into Claude Design.
 
 ## Requests

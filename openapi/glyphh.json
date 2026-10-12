@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "AllowScreen": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "email"
+        ],
+        "title": "AllowScreen",
+        "type": "object"
+      },
       "CreatedInvite": {
         "properties": {
           "invite": {
@@ -112,6 +130,41 @@
           "expires_at"
         ],
         "title": "InviteView",
+        "type": "object"
+      },
+      "JoinScreen": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "org": {
+            "title": "Org",
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "role": {
+            "enum": [
+              "org_admin",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "org",
+          "email",
+          "role",
+          "providers"
+        ],
+        "title": "JoinScreen",
         "type": "object"
       },
       "Me": {
@@ -374,6 +427,22 @@
         "title": "RenameOrg",
         "type": "object"
       },
+      "SignInScreen": {
+        "properties": {
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Providers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "providers"
+        ],
+        "title": "SignInScreen",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -422,6 +491,132 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/auth/allow": {
+      "get": {
+        "operationId": "allowScreen",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "consent",
+            "required": true,
+            "schema": {
+              "title": "Consent",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowScreen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Allow Screen",
+        "tags": [
+          "sign-in"
+        ]
+      }
+    },
+    "/v1/auth/join": {
+      "get": {
+        "operationId": "joinScreen",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "invite",
+            "required": true,
+            "schema": {
+              "title": "Invite",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinScreen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Join Screen",
+        "tags": [
+          "sign-in"
+        ]
+      }
+    },
+    "/v1/auth/sign-in": {
+      "get": {
+        "operationId": "signInScreen",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "title": "Request",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInScreen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sign In Screen",
+        "tags": [
+          "sign-in"
+        ]
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "health",

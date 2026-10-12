@@ -1,6 +1,0 @@
-/* The few rules every surface shares. Everything else belongs to a component. */
-*, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; background: var(--color-bg); color: var(--color-text);
-  font: var(--weight-regular) var(--text-md) / var(--leading-normal) var(--font-body); }
-:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

@@ -1,5 +1,0 @@
-.region { position: fixed; bottom: var(--space-5); right: var(--space-5); display: grid; gap: var(--space-2); z-index: 50; }
-.toast { display: flex; align-items: center; gap: var(--space-3); min-width: 260px; max-width: 420px; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface-raised); box-shadow: var(--shadow-lg); }
-.toast[data-tone="ok"] { border-color: var(--color-ok); } .toast[data-tone="danger"] { border-color: var(--color-danger); }
-.trace { font: var(--text-xs) var(--font-mono); color: var(--color-text-muted); }

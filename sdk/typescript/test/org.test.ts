@@ -47,7 +47,7 @@ describe("org", () => {
 
   it("invites, lists and withdraws", async () => {
     const made: Request[] = [];
-    const created = { invite: INVITE, link: "https://api.glyphh.ai/auth/join?invite=x" };
+    const created = { invite: INVITE, link: "https://app.glyphh.ai/join?invite=x" };
     expect(await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(201, created, made) }).org.invite("new@acme.test"))
       .toEqual(created);
     expect(await sent(made)).toEqual({ method: "POST", path: "/v1/org/invites", body: { email: "new@acme.test", role: "user" } });

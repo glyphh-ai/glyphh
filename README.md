@@ -4,7 +4,7 @@ The official ways in to Glyphh:
 
 - `sdk/typescript`: the TypeScript SDK (`@glyphh-ai/sdk`)
 - `sdk/python`: the Python SDK (`glyphh`)
-- `ui`: the component library (`@glyphh-ai/ui`) for app.glyphh.ai, rrotor's UI and the cards in Claude and ChatGPT
+- The component library (`@glyphh-ai/ui`) lives with the platform, in `glyphh-ai/platform` (`ui/`)
 - `design`: the brief, the brand assets and how the design agent and the code agent work together
 - `plugins/glyphh`: the Glyphh plugin for Claude and Codex: Glyphh's MCP server (signed in with Google or GitHub) and a skill that teaches the agent Glyphh. One folder, two manifests (`.claude-plugin/`, `.codex-plugin/`).
 

@@ -1,4 +1,0 @@
-.icon { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: var(--radius-md);
-  border: 1px solid transparent; background: transparent; color: var(--color-text); cursor: pointer; }
-.icon[data-variant="secondary"] { background: var(--color-surface-raised); border-color: var(--color-line); }
-.icon:disabled { opacity: 0.55; cursor: not-allowed; }

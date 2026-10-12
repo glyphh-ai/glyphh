@@ -1,9 +1,0 @@
-.status { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
-.dot { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-text-muted); }
-.status[data-status="online"] .dot { background: var(--color-ok); }
-.status[data-status="working"] .dot { background: var(--color-accent); animation: pulse 1.2s ease-in-out infinite; }
-.status[data-status="waiting"] .dot { background: var(--color-warn); }
-.status[data-status="failed"] .dot { background: var(--color-danger); }
-.label { color: var(--color-text-muted); }
-.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@keyframes pulse { 50% { opacity: 0.4; } }
