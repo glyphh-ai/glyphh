@@ -1,0 +1,479 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "AllowFlow.dc.html": {
+      "h": 3150,
+      "title": "Allow a host",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "allow"
+    },
+    "CodeFlow.dc.html": {
+      "h": 3150,
+      "title": "Approve a code",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "code"
+    },
+    "JoinFlow.dc.html": {
+      "h": 3150,
+      "title": "Join an org",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "join"
+    },
+    "LightAccount.dc.html": {
+      "h": 4900,
+      "title": "Light theme, account and sign out",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "light"
+    },
+    "LogoInUse.dc.html": {
+      "h": 980,
+      "title": "The logo in use",
+      "w": 2960,
+      "x": 1520,
+      "y": 1620
+    },
+    "Main.dc.html": {
+      "h": 2600,
+      "title": "Brand board",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Palettes.dc.html": {
+      "h": 1500,
+      "title": "Colour palette: Ink & Violet",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "PlayerFlow.dc.html": {
+      "h": 4700,
+      "title": "app.glyphh.ai player",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "player"
+    },
+    "PluginCards.dc.html": {
+      "h": 13500,
+      "title": "The plugin: cards in Claude and ChatGPT",
+      "w": 3152,
+      "x": 0,
+      "y": 0,
+      "page": "plugin"
+    },
+    "SignInFlow.dc.html": {
+      "h": 3150,
+      "title": "Sign in",
+      "w": 5072,
+      "x": 0,
+      "y": 0,
+      "page": "signin"
+    },
+    "Type.dc.html": {
+      "h": 1500,
+      "title": "Type: Red Hat",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "BillingFlow.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 17000,
+      "title": "Billing, dark",
+      "page": "billing"
+    },
+    "BillingLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 17000,
+      "title": "Billing, light",
+      "page": "billing-light"
+    },
+    "PowersFlow.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 7600,
+      "title": "Powers, dark, desktop",
+      "page": "powers"
+    },
+    "PowersLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 7600,
+      "title": "Powers, light, desktop",
+      "page": "powers-light"
+    },
+    "PowersMobile.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 4400,
+      "title": "Powers, dark, mobile",
+      "page": "powers-mobile"
+    },
+    "PowersLightMobile.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 5072,
+      "h": 4400,
+      "title": "Powers, light, mobile",
+      "page": "powers-light-mobile"
+    },
+    "SuperPowerEdit.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 8000,
+      "title": "Super power editor, dark",
+      "page": "sp-edit"
+    },
+    "TaskCanvas.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 4600,
+      "title": "Task flow, dark",
+      "page": "task-flow"
+    },
+    "CustomPowers.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 5600,
+      "title": "Custom powers, dark",
+      "page": "custom"
+    },
+    "Marketplace.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 6600,
+      "title": "Marketplace, dark",
+      "page": "market"
+    },
+    "SuperPowerEditLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 8000,
+      "title": "Super power editor, light",
+      "page": "sp-edit-light"
+    },
+    "TaskCanvasLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 4600,
+      "title": "Task flow, light",
+      "page": "task-flow-light"
+    },
+    "CustomPowersLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 5600,
+      "title": "Custom powers, light",
+      "page": "custom-light"
+    },
+    "MarketplaceLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 4300,
+      "h": 6600,
+      "title": "Marketplace, light",
+      "page": "market-light"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-11T19:45:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas",
+    "page": "brand"
+  },
+  "notes": {
+    "n1": {
+      "fill": "purple",
+      "maxH": 760,
+      "size": 40,
+      "text": "Direction sketches, not specs.\n\nDrawn before the component library existed. Per design/collaboration.md, these get redrawn on the real @glyphh-ai/ui components once /design-sync brings them in.\n\nThe brief has since grown: return pages (checkout done or cancelled, a service connected), deploy with one-click hosts (Fly, AWS, Azure, GCP, DigitalOcean, Hetzner, any VPS), Add Glyphh to your AI, and Account. Those come with the redraw.\n\nComponents these sketches need that the library lacks are listed under Requests in collaboration.md.",
+      "w": 520,
+      "x": 5200,
+      "y": 0,
+      "page": "signin"
+    },
+    "t1": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Glyphh brand: explorations",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "app.glyphh.ai: sign-in pages and the player",
+      "w": 240,
+      "x": 0,
+      "y": -300,
+      "page": "signin"
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 3152,
+      "text": "The plugin: Glyphh in the chat",
+      "w": 240,
+      "x": 0,
+      "y": -300,
+      "page": "plugin"
+    },
+    "t4": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Plan, credits and invoices",
+      "x": 0,
+      "y": -300,
+      "page": "billing"
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Billing on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "billing-light"
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Powers: connections and permissions",
+      "x": 0,
+      "y": -300,
+      "page": "powers"
+    },
+    "t7": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Powers on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "powers-light"
+    },
+    "t8": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Powers on phones, dark",
+      "x": 0,
+      "y": -300,
+      "page": "powers-mobile"
+    },
+    "t9": {
+      "kind": "title1",
+      "maxW": 5072,
+      "text": "Powers on phones, light",
+      "x": 0,
+      "y": -300,
+      "page": "powers-light-mobile"
+    },
+    "t-sp-edit": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Super power editor",
+      "x": 0,
+      "y": -300,
+      "page": "sp-edit"
+    },
+    "t-task-flow": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Task flow",
+      "x": 0,
+      "y": -300,
+      "page": "task-flow"
+    },
+    "t-custom": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Custom powers",
+      "x": 0,
+      "y": -300,
+      "page": "custom"
+    },
+    "t-market": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Marketplace",
+      "x": 0,
+      "y": -300,
+      "page": "market"
+    },
+    "t-sp-edit-light": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Super power editor on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "sp-edit-light"
+    },
+    "t-task-flow-light": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Task flow on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "task-flow-light"
+    },
+    "t-custom-light": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Custom powers on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "custom-light"
+    },
+    "t-market-light": {
+      "kind": "title1",
+      "maxW": 4300,
+      "text": "Marketplace on the light theme",
+      "x": 0,
+      "y": -300,
+      "page": "market-light"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Palettes.dc.html",
+    "Type.dc.html",
+    "LogoInUse.dc.html",
+    "SignInFlow.dc.html",
+    "AllowFlow.dc.html",
+    "CodeFlow.dc.html",
+    "JoinFlow.dc.html",
+    "PlayerFlow.dc.html",
+    "LightAccount.dc.html",
+    "PluginCards.dc.html",
+    "BillingFlow.dc.html",
+    "BillingLight.dc.html",
+    "PowersFlow.dc.html",
+    "PowersLight.dc.html",
+    "PowersMobile.dc.html",
+    "PowersLightMobile.dc.html",
+    "SuperPowerEdit.dc.html",
+    "TaskCanvas.dc.html",
+    "CustomPowers.dc.html",
+    "Marketplace.dc.html",
+    "SuperPowerEditLight.dc.html",
+    "TaskCanvasLight.dc.html",
+    "CustomPowersLight.dc.html",
+    "MarketplaceLight.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "brand",
+      "name": "Brand"
+    },
+    {
+      "id": "signin",
+      "name": "Sign in"
+    },
+    {
+      "id": "allow",
+      "name": "Allow a host"
+    },
+    {
+      "id": "code",
+      "name": "Approve a code"
+    },
+    {
+      "id": "join",
+      "name": "Join an org"
+    },
+    {
+      "id": "player",
+      "name": "Machines"
+    },
+    {
+      "id": "light",
+      "name": "Light and account"
+    },
+    {
+      "id": "billing",
+      "name": "Billing (dark)"
+    },
+    {
+      "id": "billing-light",
+      "name": "Billing (light)"
+    },
+    {
+      "id": "plugin",
+      "name": "Plugin"
+    },
+    {
+      "id": "powers",
+      "name": "Powers (dark, desktop)"
+    },
+    {
+      "id": "powers-mobile",
+      "name": "Powers (dark, mobile)"
+    },
+    {
+      "id": "powers-light",
+      "name": "Powers (light, desktop)"
+    },
+    {
+      "id": "powers-light-mobile",
+      "name": "Powers (light, mobile)"
+    },
+    {
+      "id": "sp-edit",
+      "name": "Super power editor (dark)"
+    },
+    {
+      "id": "sp-edit-light",
+      "name": "Super power editor (light)"
+    },
+    {
+      "id": "task-flow",
+      "name": "Task flow (dark)"
+    },
+    {
+      "id": "task-flow-light",
+      "name": "Task flow (light)"
+    },
+    {
+      "id": "custom",
+      "name": "Custom powers (dark)"
+    },
+    {
+      "id": "custom-light",
+      "name": "Custom powers (light)"
+    },
+    {
+      "id": "market",
+      "name": "Marketplace (dark)"
+    },
+    {
+      "id": "market-light",
+      "name": "Marketplace (light)"
+    }
+  ],
+  "title": "Glyphh Design"
+}

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyphh palettes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6FD8FF}a:hover{color:#F5F3FA}
+.g-eye{transform-origin:center;transform-box:fill-box;animation:g-blink 5s infinite}
+@keyframes g-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@media (prefers-reduced-motion:reduce){.g-eye{animation:none}}
+</style>
+</helmet>
+<div style="width: 1440px; box-sizing: border-box; padding: 64px 64px 80px; background: #0B0A0F; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Colour · the palette</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 52px; font-weight: 700; letter-spacing: -0.035em">Ink & Violet.</h1>
+<p style="margin: 0; font-size: 17px; line-height: 1.55; color: #B9B4C8; max-width: 760px">Glyphh ink is the ground, violet is the one loud colour, and the cats stay black and white with colour only in their eyes.</p>
+</div>
+<div style="display: grid; grid-template-columns: minmax(0, 520px); gap: 24px">
+<sc-for list="{{palettes}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">{{p.name}}</div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: #8E89A0">{{p.tag}}</div>
+</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; min-height: 42px">{{p.mood}}</div>
+
+<div style="border-radius: 24px; background: {{p.bg}}; border: 1px solid {{p.line}}; padding: 28px; display: flex; flex-direction: column; gap: 22px; min-height: 560px; box-sizing: border-box">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 26px; width: auto">
+<span style="font-size: 13px; color: {{p.tx2}}">Sign in</span>
+</div>
+<div style="display: flex; justify-content: center; padding: 8px 0">
+<div style="width: 168px; height: 168px; border-radius: 50%; border: 2px solid {{p.accent}}; box-shadow: 0 0 60px {{p.glow}}, inset 0 0 40px {{p.glow}}; display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{p.cat.w}}" height="{{p.cat.h}}" role="img" aria-label="Glyphh"><g><sc-for list="{{p.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{p.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; line-height: 1.02; font-weight: 700; letter-spacing: -0.03em; color: {{p.tx}}">Every AI super power, in one.</div>
+<div style="display: flex; gap: 10px">
+<span style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; background: {{p.accent}}; color: {{p.onAccent}}; font-weight: 600; font-size: 15px">Sign up for the beta</span>
+<span style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid {{p.line2}}; color: {{p.tx}}; font-size: 15px">Learn more</span>
+</div>
+<div style="border-radius: 16px; background: {{p.s1}}; border: 1px solid {{p.line}}; padding: 6px">
+<sc-for list="{{p.rows}}" as="r" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+<svg viewBox="0 0 165 200" width="{{r.cat.w}}" height="{{r.cat.h}}" role="img" aria-label="{{r.name}}"><g><sc-for list="{{r.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{r.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 14px; font-weight: 600; color: {{p.tx}}">{{r.name}}</div><div style="font-size: 12px; color: {{p.tx2}}">{{r.doing}}</div></div>
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: {{r.chipBg}}; color: {{r.chipTx}}; font-size: 12px; font-weight: 500"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{r.dot}}"></span>{{r.status}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{p.swatches}}" as="sw" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; gap: 6px"><div style="height: 56px; border-radius: 10px; background: {{sw.hex}}; border: 1px solid #2C2938"></div><div style="font-size: 11px; font-weight: 600">{{sw.name}}</div><div style="font-family: 'Red Hat Mono', monospace; font-size: 10px; color: #8E89A0">{{sw.hex}}</div></div>
+</sc-for>
+</div>
+
+<div style="border-radius: 18px; background: {{p.lightBg}}; padding: 20px; display: flex; align-items: center; gap: 14px">
+<svg viewBox="0 0 165 200" width="{{p.lightCat.w}}" height="{{p.lightCat.h}}" role="img" aria-label="Glyphh on the light theme"><g><sc-for list="{{p.lightCat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{p.lightCat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><div style="font-size: 14px; font-weight: 600; color: #0B0A0F">Light theme</div><div style="font-size: 12px; color: #45414F">Accent text darkens to {{p.lightAccentTx}}</div></div>
+<span style="display: inline-flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 10px; background: {{p.lightBtn}}; color: {{p.lightOnBtn}}; font-size: 13px; font-weight: 600">Continue</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
+var TAILS = { d: 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169', 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169', 13: 'L112 150 C130 152 150 150 160 140 C150 160 134 166 124 169' };
+var FACE_EYE = { 2: 'curious', 3: 'big', 4: 'sleepy', 5: 'done', 6: 'dizzy' };
+var MOOD_EYE = { idle: 'idle', thinking: 'thinking', generating: 'big', listening: 'big', done: 'check', playful: 'done', error: 'sleepy', sleepy: 'sleepy', curious: 'curious', dizzy: 'dizzy' };
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, o) {
+  o = o || {};
+  var c = '#ffffff', ec = o.color || '#ffffff', size = o.size || 64;
+  var body = 'M40 62 ' + (HEADS[face] || HEADS.d) + ' C140 70 144 104 128 121 L112 133 ' + (TAILS[face] || TAILS.d) + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 7 ? 'M22 9 L62 42 L39 54 Z' : face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var kind = o.mood ? MOOD_EYE[o.mood] : (FACE_EYE[face] || 'idle');
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  var e = [];
+  (kind === 'done' ? e : s).push(sh(kind === 'sleepy' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], big: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (eyes[kind]) { var k = eyes[kind]; e.push(sh(circ(k[0], k[1], k[2]), ec), sh(circ(k[3], k[4], k[5]), INK)); }
+  else if (kind === 'sleepy') e.push(sh(circ(92, 107, 9), ec));
+  else if (kind === 'dizzy') e.push(sh('M93 77 L97.8 87.6 L109 88.3 L100.4 95.6 L103 106.8 L93 100.8 L83 106.8 L85.6 95.6 L77 88.3 L88.2 87.6 Z', ec));
+  else if (kind === 'check') e.push(sh('M83 95 L90 102 L103 87', 'none', ec, 7));
+  else if (kind === 'done') { e.push(sh('M92 108 C79 99 74 92 76 86.5 C78 80 87 79 92 86 C97 79 106 80 108 86.5 C110 92 105 99 92 108 Z', ec), sh('M84 65 Q81 58 78 52 M100 61 Q101 54 104 47 M114 63 Q119 56 125 51 M122 74 Q129 70 136 69', 'none', c, 5)); s.push(sh('M68 70 L70 75.5 L75.5 77.5 L70 79.5 L68 85 L66 79.5 L60.5 77.5 L66 75.5 Z', c)); }
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, eye: e, label: o.label || 'Glyphh cat', delay: (o.delay || 0) + 's' };
+}
+var DEFS = [
+  { name: 'Ink & Violet', tag: 'chosen', mood: 'Electric violet on near-black, white text on it in both themes. Cyan thinks, pink needs you.',
+    bg: '#0B0A0F', s1: '#13121A', line: '#2C2938', line2: '#403B50', tx: '#F5F3FA', tx2: '#B9B4C8',
+    accent: '#7C4DFF', onAccent: '#FFFFFF', second: '#6FD8FF', glow: 'rgba(124,77,255,.32)', warn: '#F062D0', err: '#FF4D4D',
+    powers: ['#B49CFF', '#6FD8FF', '#F062D0'], lightBg: '#F5F5F7', lightBtn: '#7C4DFF', lightOnBtn: '#FFFFFF', lightAccentTx: '#6A3DF0',
+    sw: [['Ink', '#0B0A0F'], ['Night', '#1B1924'], ['Violet', '#7C4DFF'], ['Ion', '#6FD8FF'], ['Pink', '#F062D0'], ['Red', '#FF4D4D']] },
+  { name: 'Hot Pink', tag: 'B · warm', mood: 'A hot pink lead with a soft lilac beside it. Friendlier, more consumer, still sharp.',
+    bg: '#0D0A0D', s1: '#171217', line: '#2E252D', line2: '#473944', tx: '#FBF3F7', tx2: '#C6B4C0',
+    accent: '#FF4FA3', onAccent: '#0D0A0D', second: '#A58BFF', glow: 'rgba(255,79,163,.26)', warn: '#6FD8FF', err: '#FF4D4D',
+    powers: ['#FF4FA3', '#A58BFF', '#6FD8FF'], lightBg: '#F8F3F6', lightBtn: '#D6267F', lightOnBtn: '#FFFFFF', lightAccentTx: '#B0195F',
+    sw: [['Ink', '#0D0A0D'], ['Plum', '#1F161D'], ['Hot pink', '#FF4FA3'], ['Lilac', '#A58BFF'], ['Sky', '#6FD8FF'], ['Red', '#FF4D4D']] },
+  { name: 'Deep Current', tag: 'C · cool', mood: 'Electric blue on a midnight navy, mint for good news. Calm, trustworthy, enterprise-ready.',
+    bg: '#070B16', s1: '#0E1424', line: '#1F2940', line2: '#33405E', tx: '#EEF3FF', tx2: '#A9B5D1',
+    accent: '#4C82FF', onAccent: '#FFFFFF', second: '#3CF0C0', glow: 'rgba(76,130,255,.28)', warn: '#F062D0', err: '#FF5C7A',
+    powers: ['#4C82FF', '#3CF0C0', '#F062D0'], lightBg: '#F3F6FC', lightBtn: '#2A5FE0', lightOnBtn: '#FFFFFF', lightAccentTx: '#1F4FC4',
+    sw: [['Midnight', '#070B16'], ['Deep', '#141C30'], ['Current', '#4C82FF'], ['Mint', '#3CF0C0'], ['Pink', '#F062D0'], ['Coral', '#FF5C7A']] }
+];
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      palettes: DEFS.slice(0, 1).map(function (d, i) {
+        var rows = [
+          { face: 3, name: 'Inbox Zero', doing: 'Sorting 41 emails', status: 'Working', dot: d.accent, c: d.powers[0], mood: 'generating' },
+          { face: 14, name: 'Deal Desk', doing: 'Planning a Salesforce update', status: 'Thinking', dot: d.second, c: d.powers[1], mood: 'thinking' },
+          { face: 12, name: 'Scout', doing: 'Wants to post in #launch', status: 'Needs you', dot: d.warn, c: d.powers[2], mood: 'curious' }
+        ].map(function (r, j) {
+          r.cat = cat(r.face, { color: r.c, size: 34, mood: r.mood, label: r.name });
+          r.chipBg = r.dot + '22'; r.chipTx = d.tx;
+          return r;
+        });
+        return Object.assign({}, d, {
+          cat: cat(1, { size: 96, label: 'Glyphh' }),
+          lightCat: cat(1, { size: 40, color: '#ffffff' }),
+          rows: rows,
+          swatches: d.sw.map(function (s) { return { name: s[0], hex: s[1] }; })
+        });
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

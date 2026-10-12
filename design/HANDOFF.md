@@ -4,19 +4,11 @@ For the code agent building app.glyphh.ai in `glyphh-ai/platform`. Read this wit
 
 ## Where the screens are
 
-All screens live on one Claude Design canvas, **Glyphh Design**:
+**In this repo: `design/screens/`.** Every board is there as a `.dc.html` file, with the logos it uses in `design/screens/assets/` and the canvas index in `canvas.json`. Read `design/screens/README.md` for how to read a board. The table below names each page's files.
 
-**https://claude.ai/artifact/DMiUf6vx7u61MNLDd4anLq**
+The boards come from one Claude Design canvas, **Glyphh Design** (https://claude.ai/artifact/DMiUf6vx7u61MNLDd4anLq). The canvas is private to Chris, and the code agent can't open it; work from the repo copy. The design agent re-exports it after each round of changes.
 
-It is private to Chris; you run as Chris, so you can read it. Read it with the Artifact tool, never a web fetch:
-
-- the whole canvas: `{ "action": "read", "url": "<the link>" }`
-- one board's source: `{ "action": "read", "url": "<the link>", "path": "project/BillingFlow.dc.html" }`
-- the page and board list: `path: "project/canvas.json"`
-
-Each board is a `.dc.html` file: plain HTML with inline styles, and a script at the bottom that holds the screen data (states, rows, labels). The copy in it is the copy to ship. Images are `/_blob/<id>` URLs on the canvas; the real files are in `design/brand/`, and third-party logos are the full-colour sets from Iconify `logos` and Lobe icons.
-
-**The canvas keeps moving.** The design agent and Chris are still adding to it while you build. Read a board again before you start on it, rather than working from an old copy.
+**The design keeps moving.** Chris and the design agent are still adding to it while you build. Pull before you start a page, and read its board again rather than working from memory.
 
 ## How the build must be made
 
@@ -66,7 +58,7 @@ A clean UI build: small, well-formed, reusable components, and screens made only
 | Custom powers (dark / light) | `CustomPowers`, `CustomPowersLight` | Skills, plugins, tasks and apps in one list; New power; each type's detail | 5 |
 | Marketplace (dark / light) | `Marketplace`, `MarketplaceLight` | Discover, search with pages, a power's and a super power's detail, Add | 7 |
 
-Board files are at `project/<name>.dc.html` on the canvas.
+Board files are at `design/screens/<name>.dc.html`.
 
 **The build is greenfield.** Nothing here is built yet; build every page new, on the component library and the SDK. The order above is a suggestion: the pages a browser must show first, then the app, then the editors. The design agent keeps drawing ahead of it.
 

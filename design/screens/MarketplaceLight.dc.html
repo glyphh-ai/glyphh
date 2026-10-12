@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marketplace, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font:inherit}
+.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#5A2FE0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
+.t a{color:var(--accent-tx)}
+</style>
+</helmet>
+<div class="t" style="width: 4300px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">app.glyphh.ai · Marketplace</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Marketplace</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Find custom powers and whole super powers other people made, and add them to your own. Shaped like the app's Discover: a featured pick, shelves, categories, then a detail page. Adding copies it into your account; you edit your copy like anything you made.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="8">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div><div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div></div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="t" style="position: relative; width: {{f.w}}; min-height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block"><sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Machines</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Super powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Powers</a><a href="#" aria-current="page" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx); background: var(--s2)">Marketplace</a></nav></sc-if></div>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">Y</button>
+</header>
+<main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1104px; align-self: center">
+
+<sc-if value="{{f.toast}}" hint-placeholder-val="{{ false }}"><div role="status" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4); font-size: 14px"><span style="flex: 1 1 200px">{{f.toast}}</span><a href="#" style="font-weight: 600">Open it</a></div></sc-if>
+
+<sc-if value="{{f.v.home}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<div role="tablist" aria-label="What" style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line)"><sc-for list="{{f.kinds}}" as="k"><button type="button" role="tab" aria-selected="{{k.on}}" style="height: 40px; padding: 0 14px; border-radius: 9px; border: none; background: {{k.bg}}; color: {{k.tx}}; font-size: 14px; font-weight: 600">{{k.name}}</button></sc-for></div>
+<input aria-label="Search the marketplace" value="{{f.q}}" placeholder="Search powers and super powers" style="flex: 1 1 240px; min-width: 0; height: 48px; border-radius: 12px; border: 1px solid {{f.qBorder}}; background: var(--s1); color: var(--tx); padding: 0 14px; font-size: 15px">
+</div>
+
+<sc-if value="{{f.isHome}}" hint-placeholder-val="{{ true }}">
+<section aria-label="Featured" style="display: grid; grid-template-columns: {{f.featCols}}; gap: 16px; padding: 20px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line)">
+<div style="height: {{f.featH}}; border-radius: 14px; border: 1px dashed var(--line2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--tx3)">[ its screenshot ]</div>
+<div style="display: flex; flex-direction: column; gap: 10px; justify-content: center"><span style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-tx)">Featured · from Glyphh</span><span style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700">Standup board</span><span style="font-size: 15px; line-height: 1.5; color: var(--tx2)">The team's day at a glance: what shipped, what's stuck, who's out. Reads Slack, GitHub and the calendar.</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid #0E8C82; color: #0E8C82; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">App</span><span style="font-size: 13px; color: var(--tx3)">2,410 adds</span></span><button type="button" style="align-self: flex-start; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add to my powers</button></div>
+</section>
+<sc-for list="{{f.shelves}}" as="sh">
+<section aria-label="{{sh.name}}" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 18px; font-weight: 700">{{sh.name}}</span><a href="#" style="font-size: 14px">See all ›</a></div>
+<div style="display: grid; grid-template-columns: {{f.shelfCols}}; gap: 12px">
+<sc-for list="{{sh.items}}" as="it">
+<a href="#" style="padding: 14px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); text-decoration: none; color: var(--tx); display: flex; flex-direction: column; gap: 8px">
+<span style="display: flex; align-items: center; gap: 10px"><span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: {{it.c}}; font-size: 16px"><sc-if value="{{it.cat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="26" height="32" aria-hidden="true"><sc-for list="{{it.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></sc-if>{{it.glyph}}</span><span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; color: var(--tx3)">from {{it.by}}</span></span></span>
+<span style="font-size: 13px; line-height: 1.45; color: var(--tx2)">{{it.desc}}</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid {{it.c}}; color: {{it.c}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{it.type}}</span><span style="font-size: 12px; color: var(--tx3)">{{it.adds}} adds</span></span>
+</a>
+</sc-for>
+</div>
+</section>
+</sc-for>
+<section aria-label="Categories" style="display: flex; flex-direction: column; gap: 10px"><span style="font-size: 18px; font-weight: 700">Browse by category</span><div style="display: grid; grid-template-columns: {{f.catCols}}; gap: 8px"><sc-for list="{{f.cats}}" as="ct"><a href="#" style="min-height: 56px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--s1); text-decoration: none; color: var(--tx); display: flex; align-items: center; justify-content: space-between"><span style="font-size: 14px; font-weight: 600">{{ct.name}}</span><span style="font-size: 12px; color: var(--tx3)">{{ct.n}}</span></a></sc-for></div></section>
+</sc-if>
+
+<sc-if value="{{f.isResults}}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" aria-label="Type" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.types}}" as="ty"><button type="button" role="radio" aria-checked="{{ty.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ty.border}}; background: {{ty.bg}}; color: {{ty.tx}}; font-size: 13px; font-weight: 600">{{ty.label}}</button></sc-for></div>
+<section style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 2px 16px">
+<sc-for list="{{f.results}}" as="r"><div style="display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 10px 0; border-top: {{r.top}}; box-sizing: border-box"><span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: {{r.c}}; font-size: 16px">{{r.glyph}}</span><a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--tx)"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600">{{r.name}}</span><span style="height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid {{r.c}}; color: {{r.c}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{r.type}}</span></span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">from {{r.by}} · {{r.desc}}</span></a><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; border: {{r.btnBorder}}; background: {{r.btnBg}}; color: {{r.btnTx}}; font-size: 14px; font-weight: 600">{{r.btn}}</button></div></sc-for>
+</section>
+<nav aria-label="Pages" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 13px; color: var(--tx3)">Showing 1–6 of 48 for "rev"</span><span style="display: flex; gap: 4px"><sc-for list="{{f.pages}}" as="p"><button type="button" aria-current="{{p.cur}}" aria-label="{{p.aria}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{p.border}}; background: {{p.bg}}; color: {{p.tx}}; font-size: 14px; font-weight: 600">{{p.n}}</button></sc-for></span></nav>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.detail}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none">‹ Marketplace</a>
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">
+<span style="width: 72px; height: 72px; flex: none; border-radius: 18px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: {{f.d.c}}; font-size: 28px"><sc-if value="{{f.d.cat}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 165 200" width="44" height="54" aria-hidden="true"><sc-for list="{{f.d.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></sc-if>{{f.d.glyph}}</span>
+<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700">{{f.d.name}}</h2><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid {{f.d.c}}; color: {{f.d.c}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{f.d.type}}</span></div><div style="font-size: 14px; color: var(--tx3)">from {{f.d.by}} · {{f.d.adds}} adds · updated {{f.d.updated}}</div></div>
+<button type="button" style="height: 48px; padding: 0 22px; border-radius: 12px; border: {{f.addBorder}}; background: {{f.addBg}}; color: {{f.addTx}}; font-size: 15px; font-weight: 600">{{f.addLabel}}</button>
+</div>
+<div role="tablist" aria-label="About it" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto"><sc-for list="{{f.d.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for></div>
+<div style="display: grid; grid-template-columns: {{f.cols}}; gap: 20px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: var(--tx2)">{{f.d.about}}</p>
+<div style="font-size: 15px; font-weight: 700">{{f.d.listTitle}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px"><sc-for list="{{f.d.chips}}" as="ch"><span style="height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line2); border-left: 3px solid {{ch.c}}; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><sc-if value="{{ch.src}}" hint-placeholder-val="{{ false }}"><img src="{{ch.src}}" alt="" style="width: 16px; height: 16px"></sc-if>{{ch.name}}</span></sc-for></div>
+</div>
+<aside style="padding: 16px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<sc-for list="{{f.d.facts}}" as="fa"><div style="display: flex; justify-content: space-between; gap: 10px"><span style="color: var(--tx3)">{{fa.k}}</span><span style="text-align: right">{{fa.v}}</span></div></sc-for>
+<div style="height: 1px; background: var(--line)"></div>
+<div style="font-size: 12px; line-height: 1.5; color: var(--tx3)">Adding copies it into your account. You'll connect your own accounts for anything it needs.</div>
+</aside>
+</div>
+</sc-if>
+</main>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4300,"height":6600}}'>
+var INK = '#0b0a0f';
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, color) {
+  var c = '#ffffff', H = { 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
+  var body = 'M40 62 ' + (H[face] || 'L135 13 L123 57') + ' C140 70 144 104 128 121 L112 133 L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169 L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z', ear = 'M28 15 L62 42 L39 54 Z';
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16), sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c), sh('M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z', 'none', c, 8), sh(circ(92, 94, 12), color), sh(circ(96.2, 89.8, 3.6), INK));
+  return { shapes: s };
+}
+var TYPE = { Skill: ['#6A3DF0', '◆'], Plugin: ['#2A5FE0', '▣'], Task: ['#B8168F', '⟴'], App: ['#0E8C82', '▦'], 'Super power': ['#7C4DFF', ''] };
+function item(n, t, by, d, adds, face) { var ty = TYPE[t]; return { name: n, type: t, by: by, desc: d, adds: adds, c: ty[0], glyph: ty[1], cat: face ? cat(face, '#6A3DF0') : null }; }
+var B = 'assets/', LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', GitHub: 'github.svg', Salesforce: 'salesforce.svg' };
+function tabsOf(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
+var DET = {
+  power: { name: 'Competitor watch', type: 'Task', by: 'Northwind', adds: '1,284', updated: '3 days ago', tabs: tabsOf(['Overview', 'Flow', 'Connections', 'Versions'], 'Overview'),
+    about: 'Every morning it checks six rival sites for price and feature changes and leaves a short note with links. You pick the sites; it remembers what it saw last time.', listTitle: 'What it uses',
+    chips: [{ name: 'Slot main', c: '#7C4DFF' }, { name: 'Browser', c: '#00679E' }, { name: 'Slack', c: '#00679E', src: B + LG.Slack }, { name: 'Memory', c: '#2A5FE0' }],
+    facts: [{ k: 'Type', v: 'Task' }, { k: 'Version', v: '2.4.0' }, { k: 'Runs', v: 'Every day at 7am' }, { k: 'Needs', v: 'Slack' }, { k: 'Licence', v: 'Free' }] },
+  sp: { name: 'Deal Desk', type: 'Super power', by: 'Sam Rivera', adds: '612', updated: 'last week', tabs: tabsOf(['Overview', 'Its powers', 'Versions'], 'Its powers'),
+    about: 'Keeps Salesforce in step with your inbox: logs calls, moves stages, drafts the follow-up. Comes with its own brief, voice and avatar; you change any of them.', listTitle: 'Its powers',
+    chips: [{ name: 'Gmail', c: '#00679E', src: B + LG.Gmail }, { name: 'Salesforce', c: '#00679E', src: B + LG.Salesforce }, { name: 'Deal stages', c: '#6A3DF0' }, { name: 'Follow-up writer', c: '#B8168F' }, { name: 'Claude Sonnet', c: '#0E8C82' }],
+    facts: [{ k: 'Type', v: 'Super power' }, { k: 'Custom powers', v: '2 come with it' }, { k: 'Needs', v: 'Gmail, Salesforce' }, { k: 'Licence', v: 'Free' }] }
+};
+DET.power.c = TYPE.Task[0]; DET.power.glyph = TYPE.Task[1]; DET.power.cat = null;
+DET.sp.c = '#7C4DFF'; DET.sp.glyph = ''; DET.sp.cat = cat(14, '#00679E');
+var STATES = [
+  ['home', 'Discover', { v: 'home', home: true }],
+  ['sp', 'Discover: super powers', { v: 'home', home: true, kind: 'Super powers' }],
+  ['results', 'Search results, with pages', { v: 'home', results: true, q: 'rev' }],
+  ['power', 'A custom power', { v: 'detail', d: 'power' }],
+  ['spd', 'A super power', { v: 'detail', d: 'sp' }],
+  ['added', 'Added', { v: 'detail', d: 'power', added: true }]
+];
+function frames() {
+  var out = [];
+  function add(mobile, list) {
+    list.forEach(function (st, i) {
+      var o = st[2], v = {}; v[o.v] = true; var spKind = o.kind === 'Super powers';
+      out.push({
+        isFrame: true, desktop: !mobile, key: st[0] + (mobile ? 'm' : 'd'), label: '0' + (i + 1) + ' · ' + st[1], v: v,
+        w: mobile ? '390px' : '1200px', h: mobile ? '844px' : '780px', radius: mobile ? '36px' : '16px', pad: mobile ? '16px' : '32px', mainPad: mobile ? '16px' : '32px 48px 48px', logoH: mobile ? '24px' : '28px', h1: mobile ? '26px' : '32px',
+        featCols: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.2fr) minmax(0, 1fr)', featH: mobile ? '160px' : '220px', shelfCols: mobile ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))', catCols: mobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', cols: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 300px',
+        kinds: ['Custom powers', 'Super powers'].map(function (k) { var on = k === (o.kind || 'Custom powers'); return { name: k, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx2)' }; }),
+        q: o.q || '', qBorder: o.q ? '#7C4DFF' : 'var(--line2)', isHome: !!o.home, isResults: !!o.results,
+        shelves: spKind ? [{ name: 'For you', items: [item('Deal Desk', 'Super power', 'Sam Rivera', 'Keeps Salesforce in step with your inbox', '612', 14), item('Recruiter', 'Super power', 'Northwind', 'Screens applicants and books the first call', '441', 9), item('Night Owl', 'Super power', 'Glyphh', 'Watches the build overnight and files what broke', '1,903', 15)] }]
+          : [{ name: 'For you', items: [item('Competitor watch', 'Task', 'Northwind', 'Daily changes on six rival sites', '1,284'), item('SQL helper', 'Skill', 'Sam Rivera', 'Writes and explains Postgres', '3,067'), item('Release notes', 'Plugin', 'Glyphh', 'Merged PRs into customer notes', '958')] }, { name: 'New', items: [item('Invoice chaser', 'Task', 'Ledgerly', 'Nudges unpaid invoices, politely', '88'), item('Brand voice', 'Skill', 'Studio Nine', 'Writes like your style guide', '204'), item('Pipeline board', 'App', 'Northwind', 'Deals by stage, with 8 tools', '57')] }],
+        cats: [['Sales', '214'], ['Engineering', '388'], ['Support', '172'], ['Finance', '96'], ['Marketing', '241'], ['Research', '133'], ['Ops', '109'], ['Personal', '312']].map(function (c) { return { name: c[0], n: c[1] }; }),
+        types: ['All 48', 'Skills 19', 'Plugins 6', 'Tasks 14', 'Apps 5', 'Super powers 4'].map(function (t, j) { var on = j === 0; return { label: t, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx2)', border: on ? '#7C4DFF' : 'var(--line2)' }; }),
+        results: [['Revenue Forecaster', 'Skill', 'Ledgerly', 'projects next quarter from the pipeline', ''], ['Review: pull requests', 'Task', 'Glyphh', 'reviews every PR on the main repo', 'added'], ['Release notes', 'Plugin', 'Glyphh', 'merged PRs into customer notes', ''], ['Revenue board', 'App', 'Northwind', 'MRR, churn and expansion, with 5 tools', ''], ['Reverse ETL', 'Task', 'Datafold', 'syncs the warehouse back into the CRM', ''], ['Review writer', 'Skill', 'Studio Nine', 'drafts replies to app store reviews', '']].map(function (r, j) { var t = TYPE[r[1]], added = r[4] === 'added'; return { name: r[0], type: r[1], by: r[2], desc: r[3], c: t[0], glyph: t[1], top: j === 0 ? 'none' : '1px solid var(--line)', btn: added ? 'Added ✓' : 'Add', btnBg: added ? 'var(--chip-bg)' : 'transparent', btnTx: added ? 'var(--accent-tx)' : 'var(--tx)', btnBorder: added ? '1px solid rgba(124,77,255,.5)' : '1px solid var(--line2)' }; }),
+        pages: [['‹', 'Previous page', 0], ['1', 'Page 1', 1], ['2', 'Page 2', 0], ['3', 'Page 3', 0], ['…', 'More pages', 0], ['8', 'Page 8', 0], ['›', 'Next page', 0]].map(function (p) { return { n: p[0], aria: p[1], cur: p[2] ? 'page' : 'false', bg: p[2] ? '#7C4DFF' : 'transparent', tx: p[2] ? '#FFFFFF' : 'var(--tx2)', border: p[2] ? '1px solid #7C4DFF' : (p[0] === '…' ? 'none' : '1px solid var(--line2)') }; }),
+        d: DET[o.d] || DET.power,
+        addLabel: o.added ? 'Added ✓' : (o.d === 'sp' ? 'Add to my super powers' : 'Add to my powers'), addBg: o.added ? 'var(--chip-bg)' : '#7C4DFF', addTx: o.added ? 'var(--accent-tx)' : '#FFFFFF', addBorder: o.added ? '1px solid rgba(124,77,255,.5)' : 'none',
+        toast: o.added ? 'Competitor watch is in your custom powers. Connect Slack to finish setting it up.' : ''
+      });
+    });
+  }
+  out.push({ isBreak: true, title: 'Desktop', sub: '1200 wide' });
+  add(false, STATES);
+  out.push({ isBreak: true, title: 'Mobile', sub: '390 wide' });
+  add(true, [STATES[0], STATES[3]]);
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() { return { frames: frames() }; }
+}
+</script>
+</body>
+</html>

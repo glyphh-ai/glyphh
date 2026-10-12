@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyphh logo in use</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#6FD8FF}a:hover{color:#F5F3FA}
+.g-eye{transform-origin:center;transform-box:fill-box;animation:g-blink 5s infinite}
+@keyframes g-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@media (prefers-reduced-motion:reduce){.g-eye{animation:none}}
+</style>
+</helmet>
+<div style="width: 2960px; box-sizing: border-box; padding: 64px; background: #0B0A0F; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Logo · in use</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 52px; font-weight: 700; letter-spacing: -0.035em">One logo, everywhere it lands.</h1>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px">
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="height: 640px; border-radius: 24px; background: #1B1924; border: 1px solid #2C2938; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px">
+<div style="width: 200px; height: 200px; border-radius: 46px; background: #0B0A0F; box-shadow: 0 0 0 1px #2C2938, 0 24px 60px rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center">
+<div style="width: 150px; height: 150px; border-radius: 50%; border: 2px solid #7C4DFF; box-shadow: 0 0 40px rgba(124,77,255,.25), inset 0 0 30px rgba(124,77,255,.12); display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{icon.w}}" height="{{icon.h}}" role="img" aria-label="Glyphh app icon"><g><sc-for list="{{icon.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{icon.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+<div style="display: flex; align-items: flex-end; gap: 28px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px"><div style="width: 96px; height: 96px; border-radius: 22px; background: #0B0A0F; box-shadow: 0 0 0 1px #2C2938; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{iconM.w}}" height="{{iconM.h}}" role="img" aria-label="Icon, 96"><g><sc-for list="{{iconM.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{iconM.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></div><div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; color: #8E89A0">96</div></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px"><div style="width: 60px; height: 60px; border-radius: 14px; background: #7C4DFF; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{iconS.w}}" height="{{iconS.h}}" role="img" aria-label="Icon on Violet, 60"><g><sc-for list="{{iconS.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{iconS.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></div><div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; color: #8E89A0">60</div></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px"><div style="width: 32px; height: 32px; border-radius: 8px; background: #0B0A0F; box-shadow: 0 0 0 1px #403B50; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{iconXs.w}}" height="{{iconXs.h}}" role="img" aria-label="Favicon, 32"><g><sc-for list="{{iconXs.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{iconXs.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></div><div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; color: #8E89A0">32</div></div>
+</div>
+</div>
+<div style="font-weight: 600">App icon</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; margin-top: -8px">The cat alone, in its ring on ink. Below 64 px the ring goes; at the smallest sizes Violet can be the ground.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="height: 640px; border-radius: 24px; background: #1B1924; border: 1px solid #2C2938; padding: 32px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 0">
+<div style="border-radius: 14px 14px 0 0; background: #25222F; padding: 10px 10px 0; display: flex; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 10px 10px 0 0; background: #0B0A0F; font-size: 13px; min-width: 0; flex: 0 1 200px">
+<svg viewBox="0 0 165 200" width="{{fav.w}}" height="{{fav.h}}" role="img" aria-label="favicon"><g><sc-for list="{{fav.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{fav.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Glyphh · your super powers</span>
+</div>
+<div style="display: flex; align-items: center; height: 36px; padding: 0 12px; font-size: 13px; color: #8E89A0">Inbox</div>
+</div>
+<div style="background: #0B0A0F; padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2C2938">
+<div style="flex: 1; height: 34px; border-radius: 999px; background: #1B1924; display: flex; align-items: center; padding: 0 14px; font-family: 'Red Hat Mono', monospace; font-size: 13px; color: #B9B4C8">app.glyphh.ai</div>
+</div>
+<div style="background: #0B0A0F; border-radius: 0 0 14px 14px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="width: 200px; height: auto">
+<div style="font-size: 14px; color: #8E89A0">Pick a machine to open</div>
+</div>
+</div>
+<div style="font-weight: 600">Browser tab</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; margin-top: -8px">The favicon is the cat, never the wordmark. The full logo greets you once the page loads.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="height: 640px; border-radius: 24px; background: #1B1924; border: 1px solid #2C2938; padding: 32px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 14px">
+<div style="aspect-ratio: 1200 / 630; border-radius: 14px; background: #0B0A0F; border: 1px solid #2C2938; overflow: hidden; display: flex; align-items: center; padding: 28px; box-sizing: border-box; gap: 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="width: 110px; height: auto">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 26px; line-height: 1; font-weight: 700; letter-spacing: -0.035em">Every AI super power, in one.</div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; color: #B49CFF">glyphh.ai · beta</div>
+</div>
+<div style="width: 120px; height: 120px; flex: none; border-radius: 50%; border: 2px solid #7C4DFF; box-shadow: 0 0 40px rgba(124,77,255,.22); display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{og.w}}" height="{{og.h}}" role="img" aria-label="Glyphh"><g><sc-for list="{{og.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{og.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 0 4px"><div style="font-size: 13px; color: #8E89A0">glyphh.ai</div><div style="font-size: 15px; font-weight: 600">Glyphh: every AI super power, in one</div></div>
+</div>
+<div style="font-weight: 600">Link preview</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; margin-top: -8px">The share card for Slack, X and iMessage: logo, one line, the cat in its ring.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="height: 640px; border-radius: 24px; background: #1B1924; border: 1px solid #2C2938; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px">
+<div style="width: 350px; height: 200px; border-radius: 12px; background: #0B0A0F; box-shadow: 0 0 0 1px #2C2938, 0 20px 50px rgba(0,0,0,.5); transform: rotate(-4deg); display: flex; align-items: center; justify-content: center">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="width: 200px; height: auto">
+</div>
+<div style="width: 350px; height: 200px; border-radius: 12px; background: #7C4DFF; color: #FFFFFF; box-shadow: 0 20px 50px rgba(0,0,0,.5); transform: rotate(3deg); padding: 22px; box-sizing: border-box; display: flex; justify-content: space-between">
+<div style="display: flex; flex-direction: column; justify-content: space-between">
+<div><div style="font-family: 'Red Hat Display', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">[YOUR NAME]</div><div style="font-size: 13px; margin-top: 2px">[YOUR ROLE]</div></div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; line-height: 1.5">sales@glyphh.ai<br>glyphh.ai</div>
+</div>
+<svg viewBox="0 0 165 200" width="{{card.w}}" height="{{card.h}}" role="img" aria-label="Glyphh"><g><sc-for list="{{card.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{card.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+<div style="font-weight: 600">Business card</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; margin-top: -8px">Logo on ink on the front; Violet on the back with the cat. Its white sticker border keeps it crisp on both.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="height: 640px; border-radius: 24px; background: #F5F5F7; position: relative; overflow: hidden">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh sticker" style="position: absolute; left: 40px; top: 60px; width: 300px; height: auto; transform: rotate(-6deg); filter: drop-shadow(0 6px 10px rgba(11,10,15,.18))">
+<sc-for list="{{stickers}}" as="c" hint-placeholder-count="6">
+<div style="position: absolute; left: {{c.x}}; top: {{c.y}}; transform: rotate({{c.r}}); filter: drop-shadow(0 6px 10px rgba(11,10,15,.18))">
+<svg viewBox="0 0 165 200" width="{{c.w}}" height="{{c.h}}" role="img" aria-label="{{c.label}}"><g><sc-for list="{{c.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{c.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</sc-for>
+</div>
+<div style="font-weight: 600">Sticker sheet</div>
+<div style="font-size: 14px; line-height: 1.5; color: #B9B4C8; margin-top: -8px">The logo already is a sticker. The super power cats come with it, black and white with a coloured eye.</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2960,"height":980}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
+var TAILS = { d: 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169', 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169', 13: 'L112 150 C130 152 150 150 160 140 C150 160 134 166 124 169' };
+var FACE_EYE = { 2: 'curious', 3: 'big', 4: 'sleepy', 5: 'done', 6: 'dizzy' };
+var MOOD_EYE = { idle: 'idle', thinking: 'thinking', generating: 'big', listening: 'big', done: 'check', playful: 'done', error: 'sleepy', sleepy: 'sleepy', curious: 'curious', dizzy: 'dizzy' };
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, o) {
+  o = o || {};
+  var c = '#ffffff', ec = o.color || '#ffffff', size = o.size || 64;
+  var body = 'M40 62 ' + (HEADS[face] || HEADS.d) + ' C140 70 144 104 128 121 L112 133 ' + (TAILS[face] || TAILS.d) + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 7 ? 'M22 9 L62 42 L39 54 Z' : face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var kind = o.mood ? MOOD_EYE[o.mood] : (FACE_EYE[face] || 'idle');
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  var e = [];
+  (kind === 'done' ? e : s).push(sh(kind === 'sleepy' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], big: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (eyes[kind]) { var k = eyes[kind]; e.push(sh(circ(k[0], k[1], k[2]), ec), sh(circ(k[3], k[4], k[5]), INK)); }
+  else if (kind === 'sleepy') e.push(sh(circ(92, 107, 9), ec));
+  else if (kind === 'dizzy') e.push(sh('M93 77 L97.8 87.6 L109 88.3 L100.4 95.6 L103 106.8 L93 100.8 L83 106.8 L85.6 95.6 L77 88.3 L88.2 87.6 Z', ec));
+  else if (kind === 'check') e.push(sh('M83 95 L90 102 L103 87', 'none', ec, 7));
+  else if (kind === 'done') { e.push(sh('M92 108 C79 99 74 92 76 86.5 C78 80 87 79 92 86 C97 79 106 80 108 86.5 C110 92 105 99 92 108 Z', ec), sh('M84 65 Q81 58 78 52 M100 61 Q101 54 104 47 M114 63 Q119 56 125 51 M122 74 Q129 70 136 69', 'none', c, 5)); s.push(sh('M68 70 L70 75.5 L75.5 77.5 L70 79.5 L68 85 L66 79.5 L60.5 77.5 L66 75.5 Z', c)); }
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, eye: e, label: o.label || 'Glyphh cat', delay: (o.delay || 0) + 's' };
+}
+class Component extends DCLogic {
+  renderVals() {
+    var st = [[3, '#7C4DFF', '360px', '40px', '8deg', 'Big eye'], [14, '#6FD8FF', '60px', '250px', '-10deg', 'Antenna'], [12, '#FF8AD8', '260px', '300px', '5deg', 'Curl tail'], [15, '#5B8CFF', '400px', '250px', '-4deg', 'Cape'], [5, '#2EE6D6', '90px', '450px', '12deg', 'Wink'], [16, '#FF6B9A', '300px', '460px', '-8deg', 'Bolt mark']];
+    return {
+      icon: cat(1, { size: 92 }),
+      iconM: cat(1, { size: 60 }),
+      iconS: cat(1, { size: 40 }),
+      iconXs: cat(1, { size: 22 }),
+      fav: cat(1, { size: 14 }),
+      og: cat(1, { size: 70 }),
+      card: cat(1, { size: 90 }),
+      stickers: st.map(function (d) {
+        var c = cat(d[0], { color: d[1], size: 110, label: d[5] });
+        c.x = d[2]; c.y = d[3]; c.r = d[4];
+        return c;
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

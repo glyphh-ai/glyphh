@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Join an org: all states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B49CFF}a:hover{color:#F5F3FA}
+button{font:inherit}
+.g-eye{}
+@keyframes g-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.g-ring{position:relative;border-radius:50%}
+.g-ring::before{content:"";position:absolute;inset:0;border-radius:50%;padding:2px;background:conic-gradient(from 0deg,rgba(124,77,255,0) 0deg,rgba(124,77,255,.95) 70deg,rgba(124,77,255,.15) 150deg,rgba(124,77,255,.05) 360deg);display:none}
+.g-ring{border:2px solid rgba(124,77,255,.75);box-sizing:border-box}
+.g-spin{animation:g-spin .8s linear infinite}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+.g-orbit{animation:g-spin 90s linear infinite}.g-counter{animation:g-spin 90s linear infinite reverse}.g-orbit-rev{animation:g-spin 70s linear infinite reverse}.g-counter-rev{animation:g-spin 70s linear infinite}
+.g-r1{animation:g-spin 40s linear infinite}.g-c1{animation:g-spin 40s linear infinite reverse}
+.g-r2{animation:g-spin 65s linear infinite reverse}.g-c2{animation:g-spin 65s linear infinite}
+.g-r3{animation:g-spin 110s linear infinite}.g-c3{animation:g-spin 110s linear infinite reverse}
+.g-pop{animation:g-pop 9s cubic-bezier(.34,1.56,.64,1) infinite}
+@keyframes g-pop{0%,8%{transform:scale(0) rotate(-8deg);opacity:0}14%{transform:scale(1.12) rotate(0);opacity:1}18%,88%{transform:scale(1) rotate(0);opacity:1}96%,100%{transform:scale(0);opacity:0}}
+.g-wn{animation:g-wn 9s infinite}.g-ww{animation:g-ww 9s infinite}
+@keyframes g-wn{0%,80%,92%,100%{opacity:1}82%,90%{opacity:0}}
+@keyframes g-ww{0%,80%,92%,100%{opacity:0}82%,90%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.g-anim{animation:none!important}.g-orbit,.g-counter,.g-orbit-rev,.g-counter-rev,.g-r1,.g-c1,.g-r2,.g-c2,.g-r3,.g-c3,.g-pop,.g-wn,.g-ww,.g-eye,.g-ring::before,.g-spin{animation:none}}
+</style>
+</helmet>
+<div style="width: 5072px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Sign-in pages · 4 of 4</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Join an org</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1100px">Someone invites you to their org. You land here from the email, signed in or not, and accept. The page checks you're signed in as the person the invite was sent to.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="18">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div>
+<div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div>
+</div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div style="width: {{f.w}}; height: {{f.h}}; background: #0B0A0F; border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; box-sizing: border-box">
+
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="width: 50%; flex: none; background: #13121A; border-right: 1px solid #2C2938; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 34px; width: auto; align-self: flex-start">
+<div style="position: relative; width: 500px; height: 500px; align-self: center; margin: 0 auto; flex: none">
+<div style="position: absolute; left: 26px; top: 26px; width: 448px; height: 448px; border-radius: 50%; border: 1px dashed #2C2938; box-sizing: border-box"></div>
+<div style="position: absolute; left: 86px; top: 86px; width: 328px; height: 328px; border-radius: 50%; border: 1px dashed #2C2938; box-sizing: border-box"></div>
+<div style="position: absolute; left: 148px; top: 148px; width: 204px; height: 204px; border-radius: 50%; border: 1px dashed #2C2938; box-sizing: border-box"></div>
+<sc-for list="{{f.rings}}" as="rg" hint-placeholder-count="3">
+<div class="g-anim" style="position: absolute; inset: 0; animation: {{rg.anim}}">
+<sc-for list="{{rg.tiles}}" as="t" hint-placeholder-count="6">
+<div class="g-anim" style="animation: {{rg.canim}}; position: absolute; left: {{t.x}}; top: {{t.y}}; width: {{t.size}}; height: {{t.size}}; border-radius: {{t.radius}}; background: {{t.bg}}; border: {{t.border}}; box-shadow: {{t.glow}}; display: flex; align-items: center; justify-content: center; box-sizing: border-box">
+<sc-if value="{{t.isLogo}}" hint-placeholder-val="{{ true }}"><img src="{{t.src}}" alt="{{t.name}}" style="width: {{t.icon}}px; height: {{t.icon}}px; object-fit: contain"></sc-if>
+<sc-if value="{{t.isCat}}" hint-placeholder-val="{{ false }}"><div class="g-anim" style="animation: {{t.popAnim}}; width: 100%; height: 100%; border-radius: 50%; background: #0B0A0F; border: {{t.catBorder}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 165 200" width="{{t.cat.w}}" height="{{t.cat.h}}" role="img" aria-label="{{t.name}}"><sc-for list="{{t.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div class="g-ring" style="position: absolute; left: 180px; top: 180px; width: 140px; height: 140px; background: #0B0A0F; display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="{{f.cat.label}}"><g><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-anim" style="animation: {{f.winkNA}}"><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g><g class="g-anim" style="opacity: 0; animation: {{f.winkWA}}"><sc-for list="{{f.wink}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Create AI <span style="color: #B49CFF">super powers.</span></div>
+<div style="font-size: 14px; color: #8E89A0">Glyphh combines your models, connections and agents into super powers you run on Glyphh machines, anywhere.</div>
+</div>
+</div>
+</sc-if>
+
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<div style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between">
+<div>
+<sc-if value="{{f.mobile}}" hint-placeholder-val="{{ false }}"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 26px; width: auto; display: block"></sc-if>
+</div>
+<sc-if value="{{f.signedIn}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: #B9B4C8"><button type="button" aria-label="Switch to light theme" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #2C2938; background: #13121A; color: #B9B4C8; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button><span style="width: 28px; height: 28px; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center">Y</span><span>you@example.com</span></div>
+</sc-if>
+<sc-if value="{{f.signedOut}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 20px; font-size: 14px"><a href="#" style="color: #B9B4C8; text-decoration: none">Help</a><button type="button" aria-label="Switch to light theme" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #2C2938; background: #13121A; color: #B9B4C8; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button></div>
+</sc-if>
+</div>
+
+<main style="flex: 1; display: flex; align-items: {{f.align}}; justify-content: center; padding: {{f.mainPad}}; overflow: hidden">
+<div style="width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: {{f.gap}}">
+
+<sc-if value="{{f.mobile}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: center; gap: 14px">
+<div style="width: 64px; height: 64px; border-radius: 18px; background: #2A1F55; border: 1px solid #7C4DFF; display: flex; align-items: center; justify-content: center; font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 800; color: #E7DEFF">N</div>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E89A0" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+<div class="g-ring" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="{{f.cat.label}}"><g><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-anim" style="animation: {{f.winkNA}}"><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g><g class="g-anim" style="opacity: 0; animation: {{f.winkWA}}"><sc-for list="{{f.wink}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.signedout}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Join Northwind on Glyphh</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Sam Rivera invited you@example.com to join as a Member. Sign in with that account to accept.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<button type="button" style="height: 52px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer"><span style="width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.850C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.620 14.62 48 24 48z"></path></svg></span>Continue with Google</button>
+<button type="button" style="height: 52px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer"><svg width="24" height="24" viewBox="0 0 16 16" aria-hidden="true"><path fill="#F5F3FA" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>Continue with GitHub</button>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8E89A0">By continuing you agree to the <a href="#" style="color: #B9B4C8">Terms</a> and <a href="#" style="color: #B9B4C8">Privacy Policy</a>.</p>
+</sc-if>
+
+<sc-if value="{{f.invite}}" hint-placeholder-val="{{ true }}">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Join Northwind on Glyphh</h2>
+<div style="display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 14px; background: #13121A; border: 1px solid #2C2938">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 50%; background: #403B50; color: #F5F3FA; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none">SR</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">Sam Rivera invited you</div><div style="font-size: 13px; color: #8E89A0">to you@example.com · expires in 6 days</div></div>
+<span style="height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(124,77,255,.18); color: #D2C4FF; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Member</span>
+</div>
+<div style="height: 1px; background: #2C2938"></div>
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.45; color: #B9B4C8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12l5 5 9-10"></path></svg>Use Northwind's 12 machines and their super powers</div>
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.45; color: #B9B4C8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12l5 5 9-10"></path></svg>Its allowed models and connections</div>
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.45; color: #B9B4C8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12l5 5 9-10"></path></svg>Your own machines stay yours</div>
+</div>
+<sc-if value="{{f.st.default}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 12px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: {{f.btnFlex}}; height: 52px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Accept and join</button>
+<button type="button" style="flex: {{f.btnFlex}}; height: 52px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 16px; font-weight: 600; cursor: pointer">Decline</button>
+</div>
+</sc-if>
+<sc-if value="{{f.st.loading}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 12px; flex-direction: {{f.btnDir}}">
+<button type="button" disabled style="flex: {{f.btnFlex}}; height: 52px; border-radius: 12px; border: none; background: #5B3BC4; color: #FFFFFF; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px"><span class="g-spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: #FFFFFF; box-sizing: border-box"></span>Joining…</button>
+<button type="button" disabled style="flex: {{f.btnFlex}}; height: 52px; border-radius: 12px; border: 1px solid #2C2938; background: #0F0E14; color: #8E89A0; font-size: 16px; font-weight: 600">Decline</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.st.wrong}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">This invite is for someone else</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Invites only work for the email they were sent to.</p>
+</div>
+<div role="alert" style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 14px; background: rgba(240,98,208,.08); border: 1px solid rgba(240,98,208,.4); font-size: 14px">
+<div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 14px"><span style="color: #8E89A0">Invite sent to</span><span style="font-weight: 600">dana@northwind.co</span><span style="color: #8E89A0">You're signed in as</span><span style="font-weight: 600">you@example.com</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<button type="button" style="height: 52px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Switch to dana@northwind.co</button>
+<button type="button" style="height: 52px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 16px; font-weight: 600; cursor: pointer">Ask Sam to invite you@example.com</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.success}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">You're in</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Welcome to Northwind. Its machines now show up alongside yours.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: #13121A; border: 1px solid #2C2938">
+<span style="width: 40px; height: 40px; border-radius: 12px; background: #2A1F55; border: 1px solid #7C4DFF; color: #E7DEFF; font-family: 'Red Hat Display', sans-serif; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none">N</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">Northwind</div><div style="font-size: 13px; color: #8E89A0">Member · 12 machines · 9 online</div></div>
+</div>
+<button type="button" style="height: 52px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Open Northwind's machines</button>
+</sc-if>
+
+<sc-if value="{{f.st.expired}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">This invite has expired</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Sam Rivera's invite to Northwind ran out on 3 October. Ask Sam to send a new one.</p>
+</div>
+<button type="button" style="height: 52px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 16px; font-weight: 600; cursor: pointer">Email Sam Rivera</button>
+</sc-if>
+
+<sc-if value="{{f.st.refused}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Verify your email first</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Northwind can only add people whose email is verified.</p>
+</div>
+<div role="alert" style="display: flex; gap: 12px; padding: 16px; border-radius: 14px; background: rgba(240,98,208,.08); border: 1px solid rgba(240,98,208,.4)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F062D0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">you@example.com isn't verified</div><div style="font-size: 14px; line-height: 1.5; color: #B9B4C8">Verify it with Google or GitHub, then open the invite again.</div></div>
+</div>
+<button type="button" style="height: 52px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Try again</button>
+</sc-if>
+
+<sc-if value="{{f.st.error}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Couldn't add you to Northwind</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Something broke on our side. Your invite still works. Try again; if it keeps happening, send us the trace ID.</p>
+</div>
+<div role="alert" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; background: rgba(255,77,77,.07); border: 1px solid rgba(255,77,77,.4)">
+<div style="display: flex; gap: 10px; align-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg><span style="font-size: 15px; font-weight: 600">Joining didn't finish</span></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #0B0A0F; border: 1px solid #2C2938">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 12px; color: #8E89A0">Trace ID</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">e902-14af-c7d3-0b6e</span></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<button type="button" style="height: 52px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Try again</button>
+<a href="#" style="text-align: center; font-size: 15px">Check Glyphh status</a>
+</div>
+</sc-if>
+
+</div>
+</main>
+
+<div style="height: 56px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; gap: 16px; font-size: 13px; color: #8E89A0">
+<span>© 2026 Glyphh AI</span><a href="#" style="color: #8E89A0">Terms</a><a href="#" style="color: #8E89A0">Privacy</a>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":3150}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var MOOD_EYE = { idle: 'idle', thinking: 'thinking', generating: 'big', listening: 'big', done: 'check', playful: 'done', error: 'sleepy', sleepy: 'sleepy', curious: 'curious', dizzy: 'dizzy' };
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function glyphh(mood, size) {
+  var c = '#ffffff', ec = EYE[mood] || c;
+  var body = 'M40 62 L135 13 L123 57 C140 70 144 104 128 121 L112 133 L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169 L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = 'M28 15 L62 42 L39 54 Z';
+  var kind = MOOD_EYE[mood] || 'idle';
+  var s = [sh(body, c, c, 16), sh(ear, c, c, 16), sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c)];
+  var e = [];
+  (kind === 'done' ? e : s).push(sh(kind === 'sleepy' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], big: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (eyes[kind]) { var k = eyes[kind]; e.push(sh(circ(k[0], k[1], k[2]), ec), sh(circ(k[3], k[4], k[5]), INK)); }
+  else if (kind === 'sleepy') e.push(sh(circ(92, 107, 9), ec));
+  else if (kind === 'dizzy') e.push(sh('M93 77 L97.8 87.6 L109 88.3 L100.4 95.6 L103 106.8 L93 100.8 L83 106.8 L85.6 95.6 L77 88.3 L88.2 87.6 Z', ec));
+  else if (kind === 'check') e.push(sh('M83 95 L90 102 L103 87', 'none', ec, 7));
+  else if (kind === 'done') { e.push(sh('M92 108 C79 99 74 92 76 86.5 C78 80 87 79 92 86 C97 79 106 80 108 86.5 C110 92 105 99 92 108 Z', ec), sh('M84 65 Q81 58 78 52 M100 61 Q101 54 104 47 M114 63 Q119 56 125 51 M122 74 Q129 70 136 69', 'none', c, 5)); s.push(sh('M68 70 L70 75.5 L75.5 77.5 L70 79.5 L68 85 L66 79.5 L60.5 77.5 L66 75.5 Z', c)); }
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, eye: e, label: 'Glyphh, ' + mood };
+}
+var EYE = { done: '#B49CFF', error: '#FF4D4D', curious: '#F062D0', dizzy: '#F062D0', playful: '#F062D0', thinking: '#6FD8FF', generating: '#6FD8FF', listening: '#6FD8FF' };
+function orbit(ICON, hi) {
+  var inner = ['OpenAI', 'Anthropic', 'Gemini', 'Meta', 'Perplexity', 'Claude'];
+  var outer = ['Gmail', 'Slack', 'GitHub', 'Notion', 'Google Drive', 'Salesforce'];
+  var out = [];
+  function put(names, r, off) {
+    names.forEach(function (n, i) {
+      var a = (i / names.length) * Math.PI * 2 + off, on = n === hi;
+      out.push({ name: n, d: ICON[n] || '', x: Math.round(194 + r * Math.cos(a)) + 'px', y: Math.round(194 + r * Math.sin(a)) + 'px', border: on ? '2px solid #7C4DFF' : '1px solid #403B50', glow: on ? '0 0 24px rgba(124,77,255,.5)' : 'none' });
+    });
+  }
+  put(inner, 130, -Math.PI / 2);
+  put(outer, 200, -Math.PI / 3);
+  return out;
+}
+var BRAND = { 'OpenAI': ['#10A37F', '#10A37F'], 'Anthropic': ['#F0EEE6', '#191919'], 'Gemini': ['#4285F4', '#4285F4'], 'Meta': ['#0081FB', '#0081FB'], 'Perplexity': ['#20B8CD', '#20808D'], 'Claude': ['#D97757', '#D97757'], 'Gmail': ['#EA4335', '#EA4335'], 'Slack': ['#E01E5A', '#E01E5A'], 'GitHub': ['#F5F3FA', '#181717'], 'Notion': ['#FFFFFF', '#000000'], 'Google Drive': ['#1FA463', '#1FA463'], 'Salesforce': ['#00A1E0', '#00A1E0'], 'Grok': ['#F5F3FA', '#000000'], 'Mistral': ['#FA520F', '#FA520F'], 'Neo4j': ['#4581C3', '#4581C3'], 'Airtable': ['#18BFFF', '#0A8BC2'], 'pgvector': ['#5A86F0', '#336791'], 'MongoDB': ['#47A248', '#47A248'], 'Snowflake': ['#29B5E8', '#1A8DB8'], 'Jira': ['#2684FF', '#0052CC'], 'Cursor': ['#F5F3FA', '#000000'] };
+function spCat(face, color, mood, size) {
+  var c = '#ffffff', H = { 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' }, T = { 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169' };
+  var body = 'M40 62 ' + (H[face] || 'L135 13 L123 57') + ' C140 70 144 104 128 121 L112 133 ' + (T[face] || 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169') + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var s = [sh(body, c, c, 16), sh(ear, c, c, 16)];
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  if (face === 15) s.unshift(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(BROW, 'none', c, 8));
+  var k = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], generating: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] }[mood] || [92, 94, 12, 96.2, 89.8, 3.6];
+  s.push(sh(circ(k[0], k[1], k[2]), color), sh(circ(k[3], k[4], k[5]), INK));
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s };
+}
+var WINK = [sh('M92 108 C79 99 74 92 76 86.5 C78 80 87 79 92 86 C97 79 106 80 108 86.5 C110 92 105 99 92 108 Z', '#F062D0'), sh('M84 65 Q81 58 78 52 M100 61 Q101 54 104 47 M114 63 Q119 56 125 51 M122 74 Q129 70 136 69', 'none', '#ffffff', 5), sh('M68 70 L70 75.5 L75.5 77.5 L70 79.5 L68 85 L66 79.5 L60.5 77.5 L66 75.5 Z', '#ffffff')];
+function rings(ICON, hi, live, light) {
+  var line = light ? '1px solid #C9C5D4' : '1px solid rgba(245,243,250,.3)';
+  function ring(items, r, off, cls, counter, size) {
+    return { anim: live ? cls : 'none', canim: live ? counter : 'none', tiles: items.map(function (it, i) {
+      var a = (i / items.length) * Math.PI * 2 + off, isCat = typeof it !== 'string', n = isCat ? it.name : it, on = n === hi, b = BRAND[n] || ['#E9E6F2', '#0B0A0F'];
+      var t = { name: n, isCat: isCat, isLogo: !isCat, size: size + 'px', icon: Math.round(size / 2), radius: isCat ? '50%' : '12px',
+        x: Math.round(250 - size / 2 + r * Math.cos(a)) + 'px', y: Math.round(250 - size / 2 + r * Math.sin(a)) + 'px',
+        bg: isCat ? 'transparent' : (light ? '#FFFFFF' : '#1B1924'),
+        border: isCat ? (it.pop ? line.replace('solid', 'dashed') : 'none') : (on ? '2px solid #7C4DFF' : line),
+        glow: on ? '0 0 0 4px rgba(124,77,255,.3), 0 0 24px rgba(124,77,255,.5)' : 'none' };
+      if (isCat) { t.cat = spCat(it.face, it.color, it.mood, Math.round(size * 0.6)); t.popAnim = live && it.pop ? 'g-pop 9s cubic-bezier(.34,1.56,.64,1) infinite' : 'none'; t.catBorder = line; }
+      else { t.src = logoSrc(n, light); t.icon = Math.round(size * 0.56); t.d = ICON[n] || ''; t.fg = light ? b[1] : b[0]; t.rule = n === 'Cursor' || n === 'Grok' ? 'evenodd' : 'nonzero'; }
+      return t;
+    }) };
+  }
+  var powers = [{ name: 'Inbox Zero, working', face: 9, color: '#B49CFF', mood: 'generating' }, { name: 'Deal Desk, thinking', face: 14, color: '#6FD8FF', mood: 'thinking' }, { name: 'Scout', face: 15, color: '#F062D0', mood: 'idle' }, { name: 'Ledger', face: 10, color: '#5B8CFF', mood: 'idle' }, { name: 'A new super power', face: 2, color: '#2EE6D6', mood: 'curious', pop: true }];
+  return [ring(powers, 102, -Math.PI / 4, 'g-spin 16s linear infinite', 'g-spin 16s linear infinite reverse', 44),
+    ring(['OpenAI', 'Claude', 'Gemini', 'Grok', 'Mistral', 'Meta', 'Perplexity'], 164, -Math.PI / 2, 'g-spin 32s linear infinite reverse', 'g-spin 32s linear infinite', 42),
+    ring(['Gmail', 'Slack', 'GitHub', 'Neo4j', 'Airtable', 'pgvector', 'Notion', 'Cursor', 'MongoDB', 'Snowflake', 'Jira', 'Salesforce'], 224, -Math.PI / 8, 'g-spin 55s linear infinite', 'g-spin 55s linear infinite reverse', 38)];
+}
+var LOGO = { 'OpenAI': ['assets/openai.svg', 'assets/openai-dark.svg'], 'Anthropic': ['assets/anthropic.svg', 'assets/anthropic-dark.svg'], 'Claude': ['assets/claude.svg', 'assets/claude.svg'], 'Gemini': ['assets/gemini.svg', 'assets/gemini.svg'], 'Grok': ['assets/grok.svg', 'assets/grok-dark.svg'], 'Mistral': ['assets/mistral.svg', 'assets/mistral.svg'], 'Meta': ['assets/meta.svg', 'assets/meta.svg'], 'Perplexity': ['assets/perplexity.svg', 'assets/perplexity.svg'], 'Gmail': ['assets/gmail.svg', 'assets/gmail.svg'], 'Slack': ['assets/slack.svg', 'assets/slack.svg'], 'GitHub': ['assets/github.svg', 'assets/github-dark.svg'], 'Neo4j': ['assets/neo4j.svg', 'assets/neo4j.svg'], 'Airtable': ['assets/airtable.svg', 'assets/airtable.svg'], 'pgvector': ['assets/pgvector.svg', 'assets/pgvector.svg'], 'Notion': ['assets/notion.svg', 'assets/notion.svg'], 'Cursor': ['assets/cursor.svg', 'assets/cursor-dark.svg'], 'MongoDB': ['assets/mongodb.svg', 'assets/mongodb.svg'], 'Snowflake': ['assets/snowflake.svg', 'assets/snowflake.svg'], 'Jira': ['assets/jira.svg', 'assets/jira.svg'], 'Salesforce': ['assets/salesforce.svg', 'assets/salesforce.svg'], 'Google Drive': ['assets/google-drive.svg', 'assets/google-drive.svg'], 'Fly.io': ['assets/fly-io.svg', 'assets/fly-io.svg'], 'AWS': ['assets/aws.svg', 'assets/aws-dark.svg'], 'Azure': ['assets/azure.svg', 'assets/azure.svg'], 'Google Cloud': ['assets/google-cloud.svg', 'assets/google-cloud.svg'], 'DigitalOcean': ['assets/digitalocean.svg', 'assets/digitalocean.svg'], 'Hetzner': ['assets/hetzner.svg', 'assets/hetzner.svg'], 'Any VPS': ['assets/any-vps.svg', 'assets/any-vps.svg'] };
+function logoSrc(n, light) { var l = LOGO[n]; return l ? l[light ? 0 : 1] : ''; }
+var STATES = [
+  ['signedout', 'Signed out: sign in to accept', 'idle'],
+  ['default', 'Signed in: accept or decline', 'playful'],
+  ['wrong', 'Validation: wrong account', 'dizzy'],
+  ['loading', 'Joining', 'generating'],
+  ['success', 'Success', 'done'],
+  ['expired', 'Expired invite', 'sleepy'],
+  ['refused', 'Refused: unverified email', 'curious'],
+  ['error', 'Error, with trace ID', 'error']
+];
+function frames(ICON) {
+  var out = [{ isBreak: true, title: 'Desktop', sub: '1200 × 780' }];
+  function add(mobile) {
+    STATES.forEach(function (st, i) {
+      var flags = {}; flags[st[0]] = true;
+      out.push({
+        isFrame: true, desktop: !mobile, mobile: mobile, st: flags,
+        signedOut: st[0] === 'signedout', signedIn: st[0] !== 'signedout',
+        invite: st[0] === 'default' || st[0] === 'loading',
+        label: '0' + (i + 1) + ' · ' + st[1],
+        w: mobile ? '390px' : '1200px', h: mobile ? '844px' : '780px', radius: mobile ? '36px' : '16px',
+        pad: mobile ? '24px' : '40px', mainPad: mobile ? '8px 24px 24px' : '16px 56px',
+        align: mobile ? 'flex-start' : 'center', h1: mobile ? '28px' : '36px', gap: mobile ? '20px' : '22px',
+        btnDir: mobile ? 'column' : 'row', btnFlex: mobile ? 'none' : '1',
+        cat: glyphh(st[2], mobile ? 42 : 72), rings: mobile ? [] : rings(ICON, null, i === 0), wink: WINK, winkNA: i === 0 ? 'g-wn 9s infinite' : 'none', winkWA: i === 0 ? 'g-ww 9s infinite' : 'none',
+        orbitClass: i === 0 && !mobile ? 'g-orbit' : '', counterClass: i === 0 && !mobile ? 'g-counter' : ''
+      });
+    });
+  }
+  add(false);
+  out.push({ isBreak: true, title: 'Mobile', sub: '390 × 844' });
+  add(true);
+  return out;
+}
+class Component extends DCLogic {
+  componentDidMount() {
+    var self = this;
+    fetch('assets/glyphh-icons-2.json').then(function (r) { return r.json(); }).then(function (j) { self.setState({ icons: j }); }).catch(function () {});
+  }
+  renderVals() { return { frames: frames((this.state && this.state.icons) || {}) }; }
+}
+</script>
+</body>
+</html>

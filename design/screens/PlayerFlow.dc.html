@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>app.glyphh.ai player: all states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B49CFF}a:hover{color:#F5F3FA}
+button{font:inherit}
+.g-eye{}
+@keyframes g-blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.g-ring{position:relative;border-radius:50%}
+.g-ring::before{content:"";position:absolute;inset:0;border-radius:50%;padding:2px;background:conic-gradient(from 0deg,rgba(124,77,255,0) 0deg,rgba(124,77,255,.95) 70deg,rgba(124,77,255,.15) 150deg,rgba(124,77,255,.05) 360deg);display:none}
+.g-ring{border:2px solid rgba(124,77,255,.75);box-sizing:border-box}
+.g-spin{animation:g-spin .8s linear infinite}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+.g-skel{animation:g-pulse 1.6s ease-in-out infinite}
+@keyframes g-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.g-eye,.g-ring::before,.g-spin,.g-skel{animation:none}}
+</style>
+</helmet>
+<div style="width: 5072px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">The player · app.glyphh.ai</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Your machines, from anywhere</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1100px">After sign-in, this is everything you do on the web: pick a machine and open its rrotor, add a new one, see when one is offline, switch org or sign out. Each super power shows as its cat; its eye says what it's doing.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="18">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div>
+<div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div>
+</div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div style="position: relative; width: {{f.w}}; height: {{f.h}}; background: #0B0A0F; border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2C2938; background: #0B0A0F">
+<div style="display: flex; align-items: center; gap: 20px">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<button type="button" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #2C2938; background: #13121A; color: #F5F3FA; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer">Personal<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B9B4C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 14px">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><a href="#" style="font-size: 14px; color: #B9B4C8; text-decoration: none">Help</a></sc-if>
+<button type="button" aria-label="Switch to light theme" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #2C2938; background: #13121A; color: #B9B4C8; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: {{f.avatarBorder}}; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; cursor: pointer">Y</button>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+
+<sc-if value="{{f.list}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: {{f.headAlign}}; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Your machines</h2>
+<div style="font-size: 15px; color: #8E89A0">{{f.countLine}}</div>
+</div>
+<button type="button" style="height: 44px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a machine</button>
+</div>
+
+<sc-if value="{{f.st.error}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; border-radius: 14px; background: rgba(255,77,77,.07); border: 1px solid rgba(255,77,77,.4)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg>
+<div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">Couldn't load your machines</div><div style="font-size: 14px; color: #B9B4C8">Your machines are fine; we just couldn't reach them. Trace ID <span style="font-family: 'Red Hat Mono', monospace; color: #F5F3FA">5be7-0c19-a34f-d208</span></div></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+<button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 600; cursor: pointer">Try again</button>
+</div>
+</sc-if>
+
+<div style="display: grid; grid-template-columns: {{f.cols}}; gap: 16px">
+<sc-for list="{{f.machines}}" as="m" hint-placeholder-count="3">
+<sc-if value="{{m.skel}}" hint-placeholder-val="{{ false }}">
+<div class="g-skel" style="min-height: {{f.cardH}}; border-radius: 18px; background: #13121A; border: 1px solid #2C2938; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+<div style="width: 55%; height: 20px; border-radius: 6px; background: #25222F"></div>
+<div style="width: 35%; height: 14px; border-radius: 6px; background: #1F1C28"></div>
+<div style="display: flex; gap: 8px"><div style="width: 32px; height: 38px; border-radius: 8px; background: #1F1C28"></div><div style="width: 32px; height: 38px; border-radius: 8px; background: #1F1C28"></div><div style="width: 32px; height: 38px; border-radius: 8px; background: #1F1C28"></div></div>
+<div style="margin-top: auto; flex: none; height: 48px; border-radius: 12px; background: #1F1C28"></div>
+</div>
+</sc-if>
+<sc-if value="{{m.real}}" hint-placeholder-val="{{ true }}">
+<div style="min-height: {{f.cardH}}; border-radius: 18px; background: #13121A; border: 1px solid #2C2938; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; opacity: {{m.opacity}}">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{m.name}}</div>
+<div style="font-size: 13px; color: #8E89A0">{{m.meta}}</div>
+</div>
+<span style="flex: none; height: 26px; padding: 0 10px; border-radius: 999px; background: {{m.chipBg}}; color: {{m.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{m.dot}}"></span>{{m.status}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px">
+<sc-for list="{{m.cats}}" as="c">
+<a href="#" title="Open {{c.name}} on {{m.name}}" style="width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none">
+<span style="width: 50px; height: 50px; border-radius: 12px; border: 1px solid rgba(245,243,250,.3); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{c.w}}" height="{{c.h}}" role="img" aria-label="{{c.label}}"><g><sc-for list="{{c.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye" style="animation-delay: {{c.delay}}"><sc-for list="{{c.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg></span>
+<span title="{{c.name}}" style="width: 64px; font-size: 11px; line-height: 1.3; color: #B9B4C8; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere">{{c.name}}</span>
+</a>
+</sc-for>
+<sc-if value="{{m.hasMore}}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-label="See all {{m.total}} super powers on {{m.name}}" style="width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; border: none; background: transparent; padding: 0; cursor: pointer; font: inherit"><span style="width: 50px; height: 50px; border-radius: 12px; border: 1px dashed rgba(245,243,250,.4); display: inline-flex; align-items: center; justify-content: center; font-family: 'Red Hat Display', sans-serif; font-weight: 700; font-size: 15px; color: #F5F3FA; box-sizing: border-box">{{m.more}}</span><span style="font-size: 11px; line-height: 1.3; font-weight: 600; color: #B49CFF">See all</span></button>
+</sc-if>
+</div>
+<div style="font-size: 13px; color: #B9B4C8">{{m.powers}}</div>
+<button type="button" style="margin-top: auto; flex: none; height: 48px; border-radius: 12px; border: {{m.btnBorder}}; background: {{m.btnBg}}; color: {{m.btnTx}}; font-size: 15px; font-weight: 600; cursor: pointer">{{m.btn}}</button>
+</div>
+</sc-if>
+</sc-for>
+</div>
+<sc-if value="{{f.pgShow}}" hint-placeholder-val="{{ true }}"><nav aria-label="{{f.pgMachines.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgMachines.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgMachines.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgMachines.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgMachines.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgMachines.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgMachines.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.st.empty}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; display: flex; align-items: center; justify-content: center">
+<div style="max-width: 460px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px">
+<div class="g-ring" style="width: {{f.ring}}; height: {{f.ring}}; display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="{{f.cat.label}}"><g><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">No machines yet</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">A machine runs rrotor, the home for your super powers. Add your laptop, a desktop or a server; it stays on so they can work while you don't.</p>
+<button type="button" style="height: 52px; padding: 0 24px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer">Add your first machine</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.deploy}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; max-width: 640px; align-self: center; display: flex; flex-direction: column; gap: 20px">
+<a href="#" style="font-size: 14px; color: #B9B4C8; text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Your machines</a>
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Add a machine</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px">
+<li style="display: flex; gap: 14px; padding: 16px; border-radius: 14px; background: #13121A; border: 1px solid #2C2938">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center">1</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 600">On the new machine, install rrotor</div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #0B0A0F; border: 1px solid #2C2938"><code style="flex: 1; min-width: 0; font-family: 'Red Hat Mono', monospace; font-size: 13px; color: #D2C4FF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">[INSTALL COMMAND]</code><button type="button" aria-label="Copy command" style="width: 36px; height: 36px; flex: none; border-radius: 8px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button></div>
+</div>
+</li>
+<li style="display: flex; gap: 14px; padding: 16px; border-radius: 14px; background: #13121A; border: 1px solid #2C2938">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center">2</span>
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">Approve its code</div><div style="font-size: 14px; color: #B9B4C8">It opens a page with a code. Check it matches, then approve.</div></div>
+</li>
+<li style="display: flex; gap: 14px; padding: 16px; border-radius: 14px; background: #13121A; border: 1px solid #7C4DFF">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 50%; border: 2px solid #7C4DFF; color: #D2C4FF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box">3</span>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 15px; font-weight: 600">Watch it come online</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(124,77,255,.16); color: #D2C4FF; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Waiting</span>
+<span style="height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(124,77,255,.16); color: #D2C4FF; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Registered</span>
+<span style="height: 30px; padding: 0 12px; border-radius: 999px; background: #7C4DFF; color: #FFFFFF; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><span class="g-spin" style="width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #FFFFFF; box-sizing: border-box"></span>Starting</span>
+<span style="height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #403B50; color: #8E89A0; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Ready</span>
+</div>
+<div style="font-size: 13px; color: #8E89A0">studio-mac registered 20 s ago. Starting usually takes under a minute.</div>
+</div>
+</li>
+</ol>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.connecting}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; display: flex; align-items: center; justify-content: center">
+<div style="max-width: 420px; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px">
+<div class="g-ring" style="width: {{f.ring}}; height: {{f.ring}}; display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="{{f.cat.label}}"><g><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g class="g-eye"><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Connecting to studio-mac</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; text-align: left; align-self: stretch; font-size: 15px">
+<li style="display: flex; align-items: center; gap: 12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Found your machine</li>
+<li style="display: flex; align-items: center; gap: 12px"><span class="g-spin" style="width: 18px; height: 18px; margin: 1px; border-radius: 50%; border: 2px solid rgba(124,77,255,.3); border-top-color: #B49CFF; box-sizing: border-box"></span>Opening a private link</li>
+<li style="display: flex; align-items: center; gap: 12px; color: #8E89A0"><span style="width: 10px; height: 10px; margin: 5px; border-radius: 50%; border: 2px solid #403B50; box-sizing: border-box"></span>Loading rrotor</li>
+</ol>
+<button type="button" style="height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 15px; font-weight: 600; cursor: pointer">Cancel</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.offline}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; display: flex; align-items: center; justify-content: center">
+<div style="max-width: 440px; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px">
+<div style="width: {{f.ring}}; height: {{f.ring}}; border-radius: 50%; border: 2px dashed #403B50; display: flex; align-items: center; justify-content: center; box-sizing: border-box">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="{{f.cat.label}}"><g><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><g><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></g></g></svg>
+</div>
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">old-laptop is offline</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #B9B4C8">Last seen 3 days ago. Turn it on and check rrotor is running; it'll reconnect by itself and this page will open it.</p>
+<div style="display: flex; gap: 12px; flex-direction: {{f.btnDir}}; align-self: stretch">
+<button type="button" style="flex: {{f.btnFlex}}; height: 48px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">Try again</button>
+<button type="button" style="flex: {{f.btnFlex}}; height: 48px; border-radius: 12px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; font-size: 15px; font-weight: 600; cursor: pointer">Pick another machine</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{f.modal}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(7,6,10,.65)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="sp-{{f.key}}" style="position: absolute; left: {{f.dlgLeft}}; top: {{f.dlgTop}}; width: {{f.dlgW}}; height: {{f.dlgH}}; border-radius: {{f.dlgR}}; background: #13121A; border: 1px solid #403B50; box-shadow: 0 30px 80px rgba(0,0,0,.6); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box">
+<div style="padding: 20px {{f.dlgPad}} 14px; display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid #2C2938">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><h2 id="sp-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Super powers on studio-mac</h2><div style="font-size: 14px; color: #8E89A0">136 super powers · 9 working · 2 need you</div></div>
+<button type="button" aria-label="Close" style="width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1px solid #2C2938; background: #1B1924; color: #B9B4C8; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="position: relative">
+<label for="spq-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search super powers</label>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E89A0" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input id="spq-{{f.key}}" type="search" value="{{f.query}}" placeholder="Search by name or what it does" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.qBorder}}; box-shadow: {{f.qRing}}; background: #0B0A0F; color: #F5F3FA; padding: 0 14px 0 42px; font: inherit; font-size: 15px; outline: none">
+</div>
+<div role="radiogroup" aria-label="Filter by status" style="display: flex; gap: 8px; overflow-x: auto">
+<sc-for list="{{f.chips}}" as="ch"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">{{ch.label}}</button></sc-for>
+</div>
+</div>
+<div style="flex: 1; min-height: 0; overflow: hidden; padding: 8px {{f.dlgPadSm}}">
+<sc-if value="{{f.empty}}" hint-placeholder-val="{{ false }}">
+<div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 24px">
+<svg viewBox="0 0 165 200" width="{{f.cat.w}}" height="{{f.cat.h}}" role="img" aria-label="Glyphh, looking"><sc-for list="{{f.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><sc-for list="{{f.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No super powers match "{{f.query}}"</div>
+<div style="font-size: 14px; color: #B9B4C8; max-width: 320px">Check the spelling, or search for what it does, like "invoices" or "standup".</div>
+<button type="button" style="height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid #403B50; background: #1B1924; color: #F5F3FA; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer">Clear search</button>
+</div>
+</sc-if>
+<sc-for list="{{f.rows}}" as="r" hint-placeholder-count="8">
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; text-decoration: none; color: #F5F3FA; background: {{r.bg}}">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; border: 1px solid rgba(245,243,250,.3); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{r.cat.w}}" height="{{r.cat.h}}" aria-hidden="true"><sc-for list="{{r.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for><sc-for list="{{r.cat.eye}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 13px; color: #8E89A0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.what}}</span></span>
+<span style="flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: {{r.chipBg}}; color: {{r.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{r.dot}}"></span>{{r.status}}</span>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 88px; text-align: right; font-size: 13px; color: #8E89A0">{{r.last}}</span></sc-if>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E89A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+</sc-for>
+</div>
+<div style="padding: 12px {{f.dlgPad}}; border-top: 1px solid #2C2938; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="font-size: 13px; color: #8E89A0">{{f.resultLine}}</div>
+<sc-if value="{{f.paged}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Pages" style="display: flex; align-items: center; gap: 4px">
+<button type="button" disabled aria-label="Previous page" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #2C2938; background: transparent; color: #5E5970; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pages}}" as="p"><button type="button" aria-current="{{p.current}}" style="min-width: 36px; height: 36px; padding: 0 6px; border-radius: 10px; border: {{p.border}}; background: {{p.bg}}; color: {{p.tx}}; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">{{p.n}}</button></sc-for>
+<button type="button" aria-label="Next page" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #403B50; background: #1B1924; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</nav>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.st.menu}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 64px 0 0 0; background: rgba(7,6,10,.55)"></div>
+<div role="menu" aria-label="Account" style="position: absolute; top: 72px; right: {{f.menuRight}}; width: {{f.menuW}}; border-radius: 16px; background: #1B1924; border: 1px solid #403B50; box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 8px; box-sizing: border-box; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px">
+<span style="width: 40px; height: 40px; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none">Y</span>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><div style="font-size: 15px; font-weight: 600">You</div><div style="font-size: 13px; color: #8E89A0">you@example.com</div></div>
+</div>
+<div style="height: 1px; background: #2C2938; margin: 4px 0"></div>
+<div style="padding: 8px 12px 4px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Org</div>
+<button type="button" role="menuitemradio" aria-checked="true" style="height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: #25222F; color: #F5F3FA; font-size: 15px; text-align: left; display: flex; align-items: center; justify-content: space-between; cursor: pointer">Personal<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></button>
+<button type="button" role="menuitemradio" aria-checked="false" style="height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: transparent; color: #F5F3FA; font-size: 15px; text-align: left; display: flex; align-items: center; justify-content: space-between; cursor: pointer">Northwind<span style="font-size: 13px; color: #8E89A0">12 machines</span></button>
+<div style="height: 1px; background: #2C2938; margin: 4px 0"></div>
+<button type="button" role="menuitem" style="height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: transparent; color: #F5F3FA; font-size: 15px; text-align: left; cursor: pointer">Help and status</button>
+<button type="button" role="menuitem" style="height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: transparent; color: #FF8A8A; font-size: 15px; text-align: left; cursor: pointer">Sign out</button>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":4000}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
+var TAILS = { d: 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169', 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169', 13: 'L112 150 C130 152 150 150 160 140 C150 160 134 166 124 169' };
+var FACE_EYE = { 2: 'curious', 3: 'big', 4: 'sleepy', 5: 'done', 6: 'dizzy' };
+var MOOD_EYE = { idle: 'idle', thinking: 'thinking', generating: 'big', listening: 'big', done: 'check', playful: 'done', error: 'sleepy', sleepy: 'sleepy', curious: 'curious', dizzy: 'dizzy' };
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, o) {
+  o = o || {};
+  var c = '#ffffff', ec = o.color || '#ffffff', size = o.size || 64;
+  var body = 'M40 62 ' + (HEADS[face] || HEADS.d) + ' C140 70 144 104 128 121 L112 133 ' + (TAILS[face] || TAILS.d) + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 7 ? 'M22 9 L62 42 L39 54 Z' : face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var kind = o.mood ? MOOD_EYE[o.mood] : (FACE_EYE[face] || 'idle');
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  var e = [];
+  (kind === 'done' ? e : s).push(sh(kind === 'sleepy' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], big: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (eyes[kind]) { var k = eyes[kind]; e.push(sh(circ(k[0], k[1], k[2]), ec), sh(circ(k[3], k[4], k[5]), INK)); }
+  else if (kind === 'sleepy') e.push(sh(circ(92, 107, 9), ec));
+  else if (kind === 'dizzy') e.push(sh('M93 77 L97.8 87.6 L109 88.3 L100.4 95.6 L103 106.8 L93 100.8 L83 106.8 L85.6 95.6 L77 88.3 L88.2 87.6 Z', ec));
+  else if (kind === 'check') e.push(sh('M83 95 L90 102 L103 87', 'none', ec, 7));
+  else if (kind === 'done') { e.push(sh('M92 108 C79 99 74 92 76 86.5 C78 80 87 79 92 86 C97 79 106 80 108 86.5 C110 92 105 99 92 108 Z', ec), sh('M84 65 Q81 58 78 52 M100 61 Q101 54 104 47 M114 63 Q119 56 125 51 M122 74 Q129 70 136 69', 'none', c, 5)); s.push(sh('M68 70 L70 75.5 L75.5 77.5 L70 79.5 L68 85 L66 79.5 L60.5 77.5 L66 75.5 Z', c)); }
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, eye: e, label: o.label || 'Glyphh cat', delay: (o.delay || 0) + 's' };
+}
+function machines(sz) {
+  function cats(list) { return list.map(function (d, i) { var c = cat(d[0], { color: d[1], mood: d[2], size: sz, label: d[3], delay: -i * 1.7 }); c.name = d[3].split(',')[0]; return c; }); }
+  return [
+    { real: true, name: 'studio-mac', meta: 'rrotor on macOS · Austin', status: 'Online', dot: '#7C4DFF', chipBg: 'rgba(124,77,255,.16)', chipTx: '#D2C4FF',
+      cats: cats([[3, '#B49CFF', 'generating', 'Inbox Zero, working'], [14, '#6FD8FF', 'thinking', 'Quarterly Revenue Reconciliation, thinking'], [12, '#F062D0', 'curious', 'Scout, needs you'], [9, '#2EE6D6', 'idle', 'Ledger, idle'], [5, '#FF6B9A', 'done', 'Standup Notes, done'], [11, '#5B8CFF', 'generating', 'Lead Router, working'], [7, '#B49CFF', 'idle', 'Ox, idle'], [16, '#FF6B9A', 'error', 'Contract Checker, stuck']]),
+      powers: '136 super powers · 9 working · 2 need you', hasMore: true, more: '+128', total: 136, btn: 'Open', btnBg: '#7C4DFF', btnTx: '#FFFFFF', btnBorder: 'none', opacity: 1 },
+    { real: true, name: 'office-linux', meta: 'rrotor on Ubuntu · Northwind office', status: 'Online', dot: '#7C4DFF', chipBg: 'rgba(124,77,255,.16)', chipTx: '#D2C4FF',
+      cats: cats([[11, '#5B8CFF', 'idle', 'Nightly Build Watcher, idle'], [16, '#FF6B9A', 'done', 'Reporter, done'], [7, '#B49CFF', 'idle', 'Ox, idle']]),
+      powers: '2 super powers · all quiet', btn: 'Open', btnBg: '#7C4DFF', btnTx: '#FFFFFF', btnBorder: 'none', opacity: 1 },
+    { real: true, name: 'old-laptop', meta: 'rrotor on Windows · last seen 3 days ago', status: 'Offline', dot: '#5E5970', chipBg: '#25222F', chipTx: '#B9B4C8',
+      cats: cats([[4, '#8E89A0', 'sleepy', 'Archivist, asleep']]),
+      powers: '1 super power · asleep', btn: 'Details', btnBg: '#13121A', btnTx: '#F5F3FA', btnBorder: '1px solid #403B50', opacity: 0.75 }
+  ];
+}
+var SP_STATUS = { generating: ['Working', '#7C4DFF', 'rgba(124,77,255,.16)', '#D2C4FF'], thinking: ['Thinking', '#6FD8FF', 'rgba(111,216,255,.14)', '#BDEBFF'], curious: ['Needs you', '#F062D0', 'rgba(240,98,208,.14)', '#F8C2EC'], idle: ['Idle', '#8E89A0', '#25222F', '#B9B4C8'], error: ['Stuck', '#FF4D4D', 'rgba(255,77,77,.14)', '#FFB3B3'], done: ['Done', '#B49CFF', 'rgba(124,77,255,.12)', '#D2C4FF'] };
+var SP_ALL = [
+  [3, '#B49CFF', 'generating', 'Inbox Zero', 'Sorts and answers your email', '2 min ago'],
+  [14, '#6FD8FF', 'thinking', 'Quarterly Revenue Reconciliation', 'Matches Stripe payouts to the ledger', 'now'],
+  [12, '#F062D0', 'curious', 'Scout', 'Wants to post in #launch', '5 min ago'],
+  [9, '#2EE6D6', 'idle', 'Ledger', 'Keeps the books tidy', 'yesterday'],
+  [5, '#FF6B9A', 'done', 'Standup Notes', 'Writes the daily standup', '9:02 am'],
+  [11, '#5B8CFF', 'generating', 'Lead Router', 'Sends new leads to the right rep', 'now'],
+  [7, '#B49CFF', 'idle', 'Ox', 'Pulls things from one place to another', '3 days ago'],
+  [16, '#FF6B9A', 'error', 'Contract Checker', 'Reads contracts for risky clauses', '1 hr ago'],
+  [10, '#6FD8FF', 'idle', 'Revenue Forecaster', 'Projects next quarter from the pipeline', 'Monday'],
+  [13, '#2EE6D6', 'idle', 'Reviewer: Pull Requests', 'Reviews every PR on the main repo', '20 min ago']
+];
+function spRows(list) {
+  return list.map(function (d, i) {
+    var st = SP_STATUS[d[2]];
+    return { cat: cat(d[0], { color: d[1], mood: d[2], size: 30, label: d[3] }), name: d[3], what: d[4], last: d[5], status: st[0], dot: st[1], chipBg: st[2], chipTx: st[3], bg: i === 1 ? '#1B1924' : 'transparent' };
+  });
+}
+function spChips(on) {
+  return [['All', '136'], ['Working', '9'], ['Needs you', '2'], ['Stuck', '1'], ['Idle', '124']].map(function (c, i) {
+    var sel = i === on;
+    return { label: c[0] + ' ' + c[1], on: sel ? 'true' : 'false', bg: sel ? '#7C4DFF' : 'transparent', tx: sel ? '#FFFFFF' : '#B9B4C8', border: sel ? '#7C4DFF' : '#403B50' };
+  });
+}
+function spPages() {
+  return ['1', '2', '3', '…', '6'].map(function (n, i) { var cur = i === 0; return { n: n, current: cur ? 'page' : 'false', bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : '#B9B4C8', border: cur ? '1px solid #7C4DFF' : '1px solid transparent' }; });
+}
+function pager(label, from, to, total, page, pages, mobile, cursor) {
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var items = [];
+  if (!cursor) {
+    if (mobile) items = [{ n: 'Page ' + page + ' of ' + pages, cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2, #B9B4C8)' }];
+    else {
+      var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+      items = seq.map(function (n) { var cur = n === page; return { n: String(n), cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2, #403B50)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2, #B9B4C8)' }; });
+    }
+  }
+  var first = page === 1, last = page === pages;
+  return { label: label, line: 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)', nextTx: last ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)' };
+}
+var STATES = [
+  ['machines', 'Your machines: 8 shown, then See all', 'idle'],
+  ['more', 'See all: dialog with search and pages', 'idle'],
+  ['search', 'See all: searching', 'idle'],
+  ['noresults', 'See all: no results', 'curious'],
+  ['loading', 'Loading: skeletons', 'thinking'],
+  ['empty', 'Empty: no machines yet', 'curious'],
+  ['deploy', 'Add a machine: live status', 'generating'],
+  ['connecting', 'Connecting to a machine', 'thinking'],
+  ['offline', 'Machine is offline', 'sleepy'],
+  ['menu', 'Account menu: switch org, sign out', 'idle'],
+  ['error', 'Error, with trace ID', 'error']
+];
+function frames() {
+  var out = [{ isBreak: true, title: 'Desktop', sub: '1200 × 780' }];
+  function add(mobile) {
+    STATES.forEach(function (st, i) {
+      var id = st[0], flags = {}; flags[id] = true;
+      var modal = id === 'more' || id === 'search' || id === 'noresults';
+      var list = id === 'machines' || id === 'loading' || id === 'menu' || id === 'error' || modal;
+      var ms = machines(mobile ? 26 : 30);
+      if (id === 'loading' || id === 'error') ms = [{ skel: true }, { skel: true }, { skel: true }];
+      out.push({
+        isFrame: true, desktop: !mobile, mobile: mobile, st: flags, list: list, machines: ms,
+        countLine: id === 'loading' || id === 'error' ? 'Checking your machines…' : '27 machines · 19 online', pgShow: id !== 'loading' && id !== 'error', pgMachines: pager('Machine pages', 1, 3, 27, 1, 9, mobile),
+        modal: modal, key: id + (mobile ? '-m' : '-d'), empty: id === 'noresults', paged: id === 'more',
+        query: id === 'search' ? 'rev' : (id === 'noresults' ? 'payroll' : ''),
+        qBorder: id === 'more' ? '#403B50' : '#7C4DFF', qRing: id === 'more' ? 'none' : '0 0 0 4px rgba(124,77,255,.25)',
+        chips: spChips(0), pages: spPages(),
+        rows: id === 'more' ? spRows(SP_ALL.slice(0, 8)) : (id === 'search' ? spRows([SP_ALL[1], SP_ALL[8], SP_ALL[9]]) : []),
+        resultLine: id === 'more' ? 'Showing 1–24 of 136' : (id === 'search' ? '3 results for "rev"' : '0 results'),
+        dlgLeft: mobile ? '0px' : '220px', dlgTop: mobile ? '40px' : '40px', dlgW: mobile ? '390px' : '760px', dlgH: mobile ? '804px' : '700px', dlgR: mobile ? '24px 24px 0 0' : '20px',
+        dlgPad: mobile ? '20px' : '24px', dlgPadSm: mobile ? '10px' : '14px',
+        label: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st[1],
+        w: mobile ? '390px' : '1200px', h: mobile ? '844px' : '780px', radius: mobile ? '36px' : '16px',
+        pad: mobile ? '20px' : '32px', mainPad: mobile ? '24px 20px' : '40px 48px', logoH: mobile ? '24px' : '28px',
+        h1: mobile ? '28px' : '36px', headAlign: mobile ? 'flex-start' : 'flex-end',
+        cols: mobile ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))', cardH: mobile ? '0px' : '470px',
+        ring: mobile ? '120px' : '180px', btnDir: mobile ? 'column' : 'row', btnFlex: mobile ? 'none' : '1',
+        menuRight: mobile ? '12px' : '24px', menuW: mobile ? '366px' : '300px',
+        avatarBorder: id === 'menu' ? '2px solid #F5F3FA' : 'none',
+        cat: cat(1, { mood: st[2], size: mobile ? 64 : 96, label: 'Glyphh, ' + st[2] })
+      });
+    });
+  }
+  add(false);
+  out.push({ isBreak: true, title: 'Mobile', sub: '390 × 844' });
+  add(true);
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() { return { frames: frames() }; }
+}
+</script>
+</body>
+</html>

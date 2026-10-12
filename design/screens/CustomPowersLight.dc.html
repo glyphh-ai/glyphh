@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Custom powers, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font:inherit}
+.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#5A2FE0;--red:#C21D3C;--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--dot:rgba(11,10,15,.08)}
+.t a{color:var(--accent-tx)}
+</style>
+</helmet>
+<div class="t" style="width: 4300px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Powers › Custom powers</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Custom powers</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">A member's own powers, in one list: Skills (a SKILL.md of know-how), Plugins (a bundle of skills), Tasks (a flow of model and loop steps through slots) and Apps (a Next.js app with its own tools and data). Same row, same detail page, a type chip for each; the tabs change with the type. Tasks open on their Flow. Editing and saving only; they run on your machines.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="10">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div><div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div></div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="t" style="position: relative; width: {{f.w}}; min-height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block"><sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Machines</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Super powers</a><a href="#" aria-current="page" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx); background: var(--s2)">Powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Marketplace</a></nav></sc-if></div>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">Y</button>
+</header>
+
+<main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 1040px; align-self: center">
+
+<sc-if value="{{f.v.list}}" hint-placeholder-val="{{ true }}">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Powers</h2>
+<div role="tablist" aria-label="Powers" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto"><sc-for list="{{f.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for></div>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; position: relative">
+<input aria-label="Search custom powers" placeholder="Search your custom powers" style="flex: 1 1 220px; min-width: 0; height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px; font-size: 15px">
+<button type="button" aria-expanded="{{f.menuStr}}" style="height: 48px; padding: 0 16px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">+ New power ▾</button>
+<sc-if value="{{f.menu}}" hint-placeholder-val="{{ false }}"><div role="menu" style="position: absolute; right: 0; top: 56px; z-index: 2; width: 300px; padding: 6px; border-radius: 14px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 20px 50px rgba(11,10,15,.16); display: flex; flex-direction: column"><sc-for list="{{f.menuItems}}" as="mi"><button type="button" role="menuitem" style="display: flex; flex-direction: column; gap: 2px; min-height: 52px; padding: 8px 12px; border: none; border-radius: 10px; background: {{mi.bg}}; color: var(--tx); text-align: left"><span style="font-size: 14px; font-weight: 600">{{mi.t}}</span><span style="font-size: 12px; color: var(--tx3)">{{mi.d}}</span></button></sc-for></div></sc-if>
+</div>
+<div role="radiogroup" aria-label="Type" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.types}}" as="ty"><button type="button" role="radio" aria-checked="{{ty.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ty.border}}; background: {{ty.bg}}; color: {{ty.tx}}; font-size: 13px; font-weight: 600">{{ty.label}}</button></sc-for></div>
+<sc-if value="{{f.empty}}" hint-placeholder-val="{{ false }}"><div style="padding: 40px 20px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No custom powers yet</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 440px">Write a skill, bundle a plugin, build a task flow or bring an app. Or find one someone else made.</div><div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center"><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">New power</button><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Browse the marketplace</button></div></div></sc-if>
+<sc-for list="{{f.groups}}" as="gr">
+<div style="font-size: 13px; font-weight: 600; color: var(--tx3); margin-top: 6px">{{gr.name}}</div>
+<section style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 2px 16px">
+<sc-for list="{{gr.rows}}" as="r">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 0; border-top: {{r.top}}; box-sizing: border-box">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: {{r.c}}; font-size: 16px">{{r.glyph}}</span>
+<a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--tx)"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="flex: none; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid {{r.c}}; color: {{r.c}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{r.type}}</span></span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span></a>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 150px; font-size: 13px; color: var(--tx3)">{{r.used}}</span></sc-if>
+<button type="button" aria-label="More for {{r.name}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx2)">⋯</button>
+</div>
+</sc-for>
+</section>
+</sc-for>
+<sc-if value="{{f.hasRows}}" hint-placeholder-val="{{ true }}"><nav aria-label="Pages" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 13px; color: var(--tx3)">Showing 1–9 of 31</span><span style="display: flex; gap: 4px"><sc-for list="{{f.pages}}" as="p"><button type="button" aria-current="{{p.cur}}" aria-label="{{p.aria}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{p.border}}; background: {{p.bg}}; color: {{p.tx}}; font-size: 14px; font-weight: 600">{{p.n}}</button></sc-for></span></nav></sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.detail}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none">‹ Custom powers</a>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<span style="width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; color: {{f.d.c}}; font-size: 22px">{{f.d.glyph}}</span>
+<div style="flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 3px"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700">{{f.d.name}}</h2><span style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid {{f.d.c}}; color: {{f.d.c}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{f.d.type}}</span></div><div style="font-size: 13px; color: var(--tx3)">by you · saved 2 h ago · used by {{f.d.usedBy}}</div></div>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 10px"><button type="button" style="height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Share to the marketplace</button><button type="button" style="height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Save</button></div></sc-if>
+</div>
+<div role="tablist" aria-label="{{f.d.type}}" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto"><sc-for list="{{f.d.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for></div>
+<div style="display: grid; grid-template-columns: {{f.cols}}; gap: 20px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 14px; min-width: 0">
+<sc-for list="{{f.d.fields}}" as="fd"><label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; font-weight: 600">{{fd.label}}</span><span style="min-height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); padding: 12px 14px; box-sizing: border-box; font-size: 15px; line-height: 1.5; font-family: {{fd.font}}; white-space: pre-line">{{fd.value}}</span></label></sc-for>
+<sc-if value="{{f.d.listTitle}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">{{f.d.listTitle}}</span><button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">{{f.d.listAdd}}</button></div>
+<section style="border-radius: 14px; background: var(--s1); border: 1px solid var(--line); padding: 2px 14px"><sc-for list="{{f.d.list}}" as="li"><div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 0; border-top: {{li.top}}; box-sizing: border-box"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600; font-family: {{li.font}}">{{li.name}}</span><span style="font-size: 12px; color: var(--tx3)">{{li.sub}}</span></span><button type="button" aria-label="Edit {{li.name}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx2)">✎</button></div></sc-for></section>
+</sc-if>
+<sc-if value="{{f.d.shots}}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 10px; overflow-x: auto"><sc-for list="{{f.d.shots}}" as="sht"><div style="flex: none; width: 220px; height: 140px; border-radius: 12px; border: 1px dashed var(--line2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--tx3)">{{sht}}</div></sc-for></div></sc-if>
+</div>
+<aside style="padding: 16px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 13px; font-weight: 600; color: var(--tx3)">Connections it needs</div>
+<sc-for list="{{f.d.conns}}" as="cn"><div style="display: flex; align-items: center; gap: 10px; min-height: 44px"><img src="{{cn.src}}" alt="" style="width: 20px; height: 20px"><span style="flex: 1; font-size: 14px">{{cn.name}}</span><span style="font-size: 12px; color: {{cn.c}}">{{cn.state}}</span></div></sc-for>
+<div style="height: 1px; background: var(--line)"></div>
+<div style="font-size: 13px; font-weight: 600; color: var(--tx3)">Used by</div>
+<div style="font-size: 14px; line-height: 1.6">{{f.d.usedNames}}</div>
+<div style="height: 1px; background: var(--line)"></div>
+<div style="font-size: 12px; line-height: 1.5; color: var(--tx3)">{{f.d.note}}</div>
+</aside>
+</div>
+</sc-if>
+</main>
+
+<sc-if value="{{f.newDlg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="np-{{f.key}}" style="position: absolute; left: 50%; top: 96px; transform: translateX(-50%); width: {{f.dlgW}}; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(11,10,15,.18); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+<h3 id="np-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">New power</h3>
+<div role="radiogroup" aria-label="What kind" style="display: grid; grid-template-columns: {{f.typeCols}}; gap: 8px"><sc-for list="{{f.newTypes}}" as="nt"><button type="button" role="radio" aria-checked="{{nt.on}}" style="min-height: 92px; padding: 12px; border-radius: 12px; border: {{nt.border}}; background: {{nt.bg}}; color: var(--tx); text-align: left; display: flex; flex-direction: column; gap: 4px"><span style="color: {{nt.c}}; font-size: 16px">{{nt.glyph}}</span><span style="font-size: 14px; font-weight: 700">{{nt.name}}</span><span style="font-size: 12px; line-height: 1.4; color: var(--tx3)">{{nt.desc}}</span></button></sc-for></div>
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">Name</span><input value="Receipt filer" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px"></label>
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">What it does</span><textarea rows="3" style="border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; resize: vertical">Finds receipts in Gmail every Friday and files them in Drive by month.</textarea></label>
+<div style="font-size: 13px; color: var(--tx3)">A Task opens on its Flow with a Trigger and an Output to start from.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}"><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button><button type="button" style="height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Create</button></div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4300,"height":5600}}'>
+var TYPE = { Skill: ['#6A3DF0', '◆'], Plugin: ['#2A5FE0', '▣'], Task: ['#B8168F', '⟴'], App: ['#0E8C82', '▦'] };
+var B = 'assets/', LG = { Gmail: 'gmail.svg', Slack: 'slack.svg', 'Google Drive': 'google-drive.svg', GitHub: 'github.svg' };
+function rows(list) { return list.map(function (r, i) { var t = TYPE[r[1]]; return { name: r[0], type: r[1], c: t[0], glyph: t[1], sub: r[2], used: r[3], top: i === 0 ? 'none' : '1px solid var(--line)' }; }); }
+var MINE = rows([['Morning briefing', 'Task', 'by you · unread mail and the calendar, as one note', 'Inbox Zero, Ledger'], ['Triage rules', 'Skill', 'by you · how this inbox sorts: labels, VIPs, what waits', 'Inbox Zero'], ['Inbox dashboard', 'App', 'by you · a board of what’s waiting, with 6 tools', 'Inbox Zero'], ['Release notes', 'Plugin', 'by you · 3 skills for turning PRs into notes', 'Scout'], ['Receipt filer', 'Task', 'by you · receipts from Gmail into Drive, every Friday', 'not used yet'], ['Tone guide', 'Skill', 'by you · how we write: short, plain, warm', 'all 5']]);
+var THEIRS = rows([['Competitor watch', 'Task', 'from Northwind · daily changes on 6 rival sites', 'Scout'], ['SQL helper', 'Skill', 'from Sam Rivera · writes and explains Postgres', 'Ledger'], ['Standup board', 'App', 'from Glyphh · the team’s day at a glance', 'Standup Notes']]);
+function tabsOf(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
+function conn(n, ok) { return { name: n, src: B + LG[n], state: ok ? 'Connected' : 'Connect', c: ok ? 'var(--accent-tx)' : '#B8168F' }; }
+var DETAIL = {
+  skill: { name: 'Triage rules', type: 'Skill', usedBy: 1, usedNames: 'Inbox Zero', tabs: tabsOf(['Overview', 'Contents', 'Connections', 'Used by'], 'Overview'),
+    fields: [{ label: 'Name', value: 'triage-rules', font: "'Red Hat Mono', monospace" }, { label: 'Description · the main agent reads this to decide when to use it', value: 'How this inbox sorts mail: which labels, who counts as a VIP, what can wait a day.', font: "'Red Hat Text', sans-serif" },
+      { label: 'SKILL.md', value: '# Triage rules\n\n- VIPs: anyone at northwind.co, and Sam.\n- Receipts → label Receipts, archive.\n- Newsletters → label Read later.\n- Anything with "contract" → leave a draft and flag it.', font: "'Red Hat Mono', monospace" }],
+    conns: [conn('Gmail', true)], note: 'A skill is know-how in SKILL.md. Super powers read it when the description matches the job.' },
+  plugin: { name: 'Release notes', type: 'Plugin', usedBy: 1, usedNames: 'Scout', tabs: tabsOf(['Overview', 'Skills', 'Contents', 'Used by'], 'Skills'),
+    fields: [{ label: 'Name and version', value: 'release-notes · 1.3.0', font: "'Red Hat Mono', monospace" }, { label: 'Description', value: 'Turns merged pull requests into notes customers can read.', font: "'Red Hat Text', sans-serif" }],
+    listTitle: 'Skills inside', listAdd: '+ Add a skill', list: [['summarize-prs', 'Groups merged PRs by area and drops chores'], ['customer-voice', 'Rewrites changes as benefits, not diffs'], ['changelog-format', 'Our headings, dates and links']].map(function (s, i) { return { name: s[0], sub: s[1], font: "'Red Hat Mono', monospace", top: i === 0 ? 'none' : '1px solid var(--line)' }; }),
+    conns: [conn('GitHub', true), conn('Slack', true)], note: 'A plugin is a bundle: .claude-plugin/plugin.json and its skills.' },
+  app: { name: 'Inbox dashboard', type: 'App', usedBy: 1, usedNames: 'Inbox Zero', tabs: tabsOf(['Overview', 'Tools', 'Data', 'Contents', 'Used by'], 'Tools'),
+    fields: [{ label: 'Description', value: 'A board of what’s waiting in the inbox, grouped by who it’s from and how urgent it is.', font: "'Red Hat Text', sans-serif" }],
+    shots: ['[ screenshot 1 ]', '[ screenshot 2 ]', '+ Add a screenshot'],
+    listTitle: 'Tools · from tools/manifest.json', listAdd: '+ Add a tool', list: [['list_waiting', 'What’s waiting, grouped by sender'], ['mark_done', 'Clears an item from the board'], ['snooze', 'Brings it back later'], ['save_view', 'Saves a filter as a view'], ['get_counts', 'Totals for the header'], ['export_csv', 'Downloads the board']].map(function (s, i) { return { name: s[0], sub: s[1], font: "'Red Hat Mono', monospace", top: i === 0 ? 'none' : '1px solid var(--line)' }; }),
+    conns: [conn('Gmail', true), conn('Google Drive', false)], note: 'An app is a Next.js app with its own tools and data. It opens on a machine; here you edit what it is.' }
+};
+Object.keys(DETAIL).forEach(function (k) { var d = DETAIL[k]; d.c = TYPE[d.type][0]; d.glyph = TYPE[d.type][1]; d.listTitle = d.listTitle || ''; d.list = d.list || []; d.shots = d.shots || null; });
+var STATES = [
+  ['list', 'Custom powers', { v: 'list' }],
+  ['menu', '+ New power', { v: 'list', menu: true }],
+  ['new', 'New power: pick a kind', { v: 'list', newDlg: true }],
+  ['empty', 'None yet', { v: 'list', empty: true }],
+  ['skill', 'A Skill', { v: 'detail', d: 'skill' }],
+  ['plugin', 'A Plugin: its skills', { v: 'detail', d: 'plugin' }],
+  ['app', 'An App: its tools', { v: 'detail', d: 'app' }]
+];
+function frames() {
+  var out = [];
+  function add(mobile, list) {
+    list.forEach(function (st, i) {
+      var o = st[2], v = {}; v[o.v] = true;
+      out.push({
+        isFrame: true, desktop: !mobile, key: st[0] + (mobile ? 'm' : 'd'), label: '0' + (i + 1) + ' · ' + st[1], v: v,
+        w: mobile ? '390px' : '1200px', h: mobile ? '844px' : '780px', radius: mobile ? '36px' : '16px', pad: mobile ? '16px' : '32px', mainPad: mobile ? '16px' : '32px 48px 48px', logoH: mobile ? '24px' : '28px', h1: mobile ? '26px' : '30px',
+        cols: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 300px', btnDir: mobile ? 'column-reverse' : 'row', dlgW: mobile ? '358px' : '640px', typeCols: mobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+        tabs: tabsOf(['Loops', 'Connections', 'Models', 'Folders', 'Custom powers'], 'Custom powers'),
+        menu: !!o.menu, menuStr: o.menu ? 'true' : 'false',
+        menuItems: [['New power', 'A skill, plugin, task or app, from scratch'], ['Import from a file', 'A .zip or a folder with SKILL.md'], ['Find one in the marketplace', 'Powers other people made']].map(function (m, j) { return { t: m[0], d: m[1], bg: j === 0 ? 'var(--s2)' : 'transparent' }; }),
+        types: ['All 31', 'Skills 12', 'Plugins 4', 'Tasks 9', 'Apps 6'].map(function (t, j) { var on = j === 0; return { label: t, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx2)', border: on ? '#7C4DFF' : 'var(--line2)' }; }),
+        empty: !!o.empty, hasRows: !o.empty, groups: o.empty ? [] : [{ name: 'Made by you · 6', rows: MINE }, { name: 'From the marketplace · 3', rows: THEIRS }],
+        pages: [['‹', 'Previous page', 0], ['1', 'Page 1', 1], ['2', 'Page 2', 0], ['3', 'Page 3', 0], ['4', 'Page 4', 0], ['›', 'Next page', 0]].map(function (p) { return { n: p[0], aria: p[1], cur: p[2] ? 'page' : 'false', bg: p[2] ? '#7C4DFF' : 'transparent', tx: p[2] ? '#FFFFFF' : 'var(--tx2)', border: p[2] ? '1px solid #7C4DFF' : '1px solid var(--line2)' }; }),
+        newDlg: !!o.newDlg,
+        newTypes: [['Skill', 'Know-how in SKILL.md'], ['Plugin', 'A bundle of skills'], ['Task', 'A flow of steps through slots'], ['App', 'A Next.js app with tools']].map(function (t) { var on = t[0] === 'Task'; return { name: t[0], desc: t[1], c: TYPE[t[0]][0], glyph: TYPE[t[0]][1], on: on ? 'true' : 'false', border: on ? '2px solid #7C4DFF' : '1px solid var(--line2)', bg: on ? 'var(--chip-bg)' : 'transparent' }; }),
+        d: DETAIL[o.d] || DETAIL.skill
+      });
+    });
+  }
+  out.push({ isBreak: true, title: 'Desktop', sub: '1200 wide' });
+  add(false, STATES);
+  out.push({ isBreak: true, title: 'Mobile', sub: '390 wide' });
+  add(true, [STATES[0], STATES[2], STATES[4]]);
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() { return { frames: frames() }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Powers, dark desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font:inherit}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#D2C4FF;--pink:#F062D0;--pink-bg:rgba(240,98,208,.08);--pink-line:rgba(240,98,208,.4);--red:#FF4D4D;--red-tx:#FF8A8A;--red-bg:rgba(255,77,77,.07);--red-line:rgba(255,77,77,.4);--ion:#6FD8FF;--ion-bg:rgba(111,216,255,.12);--scrim:rgba(0,0,0,.55);--frame:#FFFFFF;--frame-tx:#1A1A1A;--frame-line:#E3E3E8}
+.t.light{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#5A2FE0;--pink:#C2189C;--pink-bg:rgba(240,98,208,.07);--pink-line:rgba(194,24,156,.35);--red:#C21D3C;--red-tx:#C21D3C;--red-bg:rgba(255,77,77,.06);--red-line:rgba(194,29,60,.35);--ion:#00679E;--ion-bg:rgba(0,103,158,.08);--scrim:rgba(11,10,15,.28)}
+.t a{color:var(--accent-tx)}
+.g-spin{animation:g-spin .8s linear infinite}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.g-spin{animation:none}}
+</style>
+</helmet>
+<div class="t" style="width: 5072px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Powers › Connections, then tool permissions · {{themeName}}</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Connections and what they may do</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Powers sit beside Loops: everything a super power can use. A connection is always your own account; Pipedream holds it and its sign-in, Glyphh stores no secret. Connect from the catalog, sign in on Pipedream's own page inside a modal (or its own window when a provider won't open in a frame), then set each tool to Allow, Ask or Deny. A tool with no setting asks; in a run nobody is watching, Ask is refused. Grouped by risk, as in server-old: Read, Create and update, Delete, Other.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="26">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div>
+<div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div>
+</div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="t {{f.theme}}" style="position: relative; width: {{f.w}}; min-height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Machines</a><a href="#" aria-current="page" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx); background: var(--s2)">Powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Connected AI</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Account</a></nav></sc-if>
+</div>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">Y</button>
+</header>
+
+<main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1040px; align-self: center">
+
+<sc-if value="{{f.v.list}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Powers</h2>
+<div role="tablist" aria-label="Powers" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto">
+<sc-for list="{{f.tabs}}" as="tb"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for>
+</div>
+</div>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px"><div style="font-size: 18px; font-weight: 600">Connections</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Your own accounts, signed in through Pipedream. Your super powers use them only where you allow.</div></div>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a connection</button>
+</div>
+
+<sc-if value="{{f.toast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span style="flex: 1; font-size: 15px">{{f.toast}}</span></div>
+</sc-if>
+
+<sc-if value="{{f.empty}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 40px 24px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+<div style="display: flex; gap: 10px"><sc-for list="{{f.teaser}}" as="lg"><span style="width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1)"><img src="{{lg.src}}" alt="" style="width: 26px; height: 26px; object-fit: contain"></span></sc-for></div>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No connections yet</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 420px">Connect Gmail, Slack, GitHub or any of 3,500 apps. Each one is your own account; you sign in on Pipedream's page and Glyphh never sees the password.</div>
+<button type="button" style="height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Browse connections</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.hasList}}" hint-placeholder-val="{{ true }}">
+<section aria-label="Your connections" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.conns}}" as="c">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: {{c.top}}; flex-wrap: wrap">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{c.src}}" alt="" style="width: 26px; height: 26px; object-fit: contain"></span>
+<span style="flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{c.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.account}}</span></span>
+<span style="flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: {{c.chipBg}}; color: {{c.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.dot}}"></span>{{c.status}}</span>
+<span style="flex: none; font-size: 13px; color: var(--tx3); width: {{f.toolsW}}">{{c.tools}}</span>
+<span style="display: flex; gap: 8px; flex: none">
+<button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; border: {{c.btnBorder}}; background: {{c.btnBg}}; color: {{c.btnTx}}; font-size: 14px; font-weight: 600">{{c.btn}}</button>
+<button type="button" aria-label="More for {{c.name}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+</span>
+</div>
+</sc-if>
+<sc-if value="{{f.mobile}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: {{c.top}}; min-height: 68px; box-sizing: border-box">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{c.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></span>
+<a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--tx)"><span style="font-size: 15px; font-weight: 600">{{c.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.account}}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{c.chipTx}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="width: 7px; height: 7px; flex: none; border-radius: 50%; background: {{c.dot}}"></span>{{c.status}} · {{c.tools}}</span></a>
+<sc-if value="{{c.re}}" hint-placeholder-val="{{ false }}"><button type="button" style="flex: none; height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 14px; font-weight: 600">Reconnect</button></sc-if>
+<sc-if value="{{c.ok}}" hint-placeholder-val="{{ true }}"><a href="#" aria-label="Open {{c.name}}" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--tx3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a></sc-if>
+</div>
+</sc-if>
+</sc-for>
+</section>
+<nav aria-label="{{f.pgConns.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgConns.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgConns.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgConns.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgConns.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgConns.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgConns.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<div style="font-size: 13px; color: var(--tx3)">Your org allows 41 of 3,500 apps. <a href="#">Why some are locked</a></div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.perms}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Connections</a>
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">
+<span style="width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{f.gmail}}" alt="" style="width: 30px; height: 30px"></span>
+<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">Gmail permissions</h2><div style="font-size: 14px; color: var(--tx3)">you@example.com · 14 tools · used by 3 super powers</div></div>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--tx2)">
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line2)"><b style="color: var(--tx)">Allow</b> runs without asking</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line2)"><b style="color: var(--tx)">Ask</b> asks you each time</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line2)"><b style="color: var(--tx)">Deny</b> never runs</span>
+</div>
+<div style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="ts-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search tools</label><input id="ts-{{f.key}}" placeholder="Search Gmail's tools" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+
+<sc-for list="{{f.groups}}" as="g">
+<section aria-label="{{g.name}}" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: {{g.headBg}}; flex-wrap: wrap">
+<div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 700">{{g.name}}</span><span style="height: 20px; padding: 0 8px; border-radius: 999px; background: {{g.riskBg}}; color: {{g.riskTx}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{g.risk}}</span></div><span style="font-size: 13px; color: var(--tx3)">{{g.desc}}</span></div>
+<span style="font-size: 13px; color: var(--tx3)">Set all</span>
+<div role="radiogroup" aria-label="Set all {{g.name}}" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg)"><sc-for list="{{g.all}}" as="o"><button type="button" role="radio" aria-checked="{{o.on}}" style="height: 40px; min-width: 64px; padding: 0 10px; border: none; border-radius: 9px; background: {{o.bg}}; color: {{o.tx}}; font-size: 13px; font-weight: 600">{{o.label}}</button></sc-for></div>
+</div>
+<sc-for list="{{g.tools}}" as="tl">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); flex-wrap: wrap">
+<span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">{{tl.name}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">{{tl.id}}</span></span>
+<sc-if value="{{tl.override}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--accent-tx)">{{tl.override}}</span></sc-if>
+<div role="radiogroup" aria-label="{{tl.name}}" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg)"><sc-for list="{{tl.opts}}" as="o"><button type="button" role="radio" aria-checked="{{o.on}}" style="height: 40px; min-width: 64px; padding: 0 10px; border: none; border-radius: 9px; background: {{o.bg}}; color: {{o.tx}}; font-size: 13px; font-weight: 600">{{o.label}}</button></sc-for></div>
+</div>
+</sc-for>
+</section>
+</sc-for>
+
+<nav aria-label="{{f.pgTools.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgTools.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgTools.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgTools.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgTools.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgTools.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgTools.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<section aria-label="Per super power" style="padding: 18px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 700">When nobody is watching</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Scheduled and background runs can't ask, so Ask is refused there. Give a super power its own Allow or Deny for a tool when it should run alone.</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--s2); flex-wrap: wrap"><span style="flex: 1 1 200px; font-size: 14px"><b>Inbox Zero</b> · Send an email</span><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: var(--chip-bg); color: var(--chip-tx); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Allow on its own</span><button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Change</button></div>
+<button type="button" style="align-self: flex-start; height: 44px; padding: 0 12px; border-radius: 10px; border: none; background: transparent; color: var(--accent-tx); font-size: 14px; font-weight: 600">+ Add a rule for a super power</button>
+</section>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}; justify-content: flex-end">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Reset to Ask</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Save permissions</button>
+</div>
+</sc-if>
+</main>
+
+<sc-if value="{{f.dlg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dt-{{f.key}}" style="position: absolute; left: 50%; top: 88px; transform: translateX(-50%); width: {{f.dlgW}}; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.45); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h3 id="dt-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{f.dlgTitle}}</h3><sc-if value="{{f.dlgDesc}}" hint-placeholder-val="{{ false }}"><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.dlgDesc}}</div></sc-if></div>
+<button type="button" aria-label="Close" style="width: 40px; height: 40px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<sc-if value="{{f.d.catalog}}" hint-placeholder-val="{{ false }}">
+<div style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="cq-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search apps</label><input id="cq-{{f.key}}" type="search" value="{{f.query}}" placeholder="Search apps (Gmail, Slack, Notion…)" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.qBorder}}; background: var(--bg); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<div role="radiogroup" aria-label="Category" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.cats}}" as="ch"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font-size: 13px; font-weight: 600">{{ch.label}}</button></sc-for></div>
+<sc-if value="{{f.noApps}}" hint-placeholder-val="{{ false }}"><div style="padding: 28px 8px; text-align: center; display: flex; flex-direction: column; gap: 8px"><div style="font-size: 16px; font-weight: 600">No apps match "{{f.query}}"</div><div style="font-size: 14px; color: var(--tx3)">Try the app's name, or what it does: "email", "crm", "tickets".</div></div></sc-if>
+<div style="display: grid; grid-template-columns: {{f.tileCols}}; gap: 8px">
+<sc-for list="{{f.apps}}" as="a">
+<button type="button" aria-disabled="{{a.locked}}" style="height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 12px; border: {{a.border}}; background: {{a.bg}}; color: var(--tx); text-align: left; opacity: {{a.op}}; box-sizing: border-box">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1)"><img src="{{a.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.note}}</span></span>
+<sc-if value="{{a.done}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Connected"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+<sc-if value="{{a.lock}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Not allowed by your org"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{f.catPaged}}" hint-placeholder-val="{{ true }}"><nav aria-label="{{f.pgApps.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgApps.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgApps.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgApps.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgApps.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgApps.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgApps.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--tx3)"><span>{{f.appCount}}</span><span>Locked apps aren't on your org's list. Ask an admin.</span></div>
+</sc-if>
+
+<sc-if value="{{f.d.signin}}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{f.frameOpen}}" hint-placeholder-val="{{ true }}">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3)">Pipedream's own page loads here</div>
+<div style="height: {{f.frameH}}; border-radius: 12px; border: 1px solid var(--line); background: var(--frame); color: var(--frame-tx); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; box-sizing: border-box; text-align: center">
+<img src="{{f.gmail}}" alt="" style="width: 44px; height: 44px">
+<div style="font-size: 17px; font-weight: 700">Connect your Gmail account</div>
+<div style="font-size: 13px; color: #6B6B76; max-width: 300px">Glyphh uses Pipedream to connect your account. You'll sign in with Google next.</div>
+<div style="height: 44px; width: 220px; border-radius: 8px; background: #1A1A1A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600">Continue with Google</div>
+<div style="font-size: 11px; color: #8A8A94">Secured by Pipedream</div>
+</div>
+</sc-if>
+<sc-if value="{{f.fallback}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px; border-radius: 12px; border: 1px dashed var(--line2); display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 600">Gmail won't open inside another page</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Sign in through its own window, then come back and choose Done.</div>
+<button type="button" style="align-self: flex-start; height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600">Open the sign-in ↗</button>
+</div>
+</sc-if>
+<sc-if value="{{f.checking}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tx2); padding: 20px 0"><span class="g-spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(124,77,255,.3); border-top-color: #7C4DFF; box-sizing: border-box"></span>Checking with Pipedream…</div></sc-if>
+<sc-if value="{{f.connErr}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--red-bg); border: 1px solid var(--red-line)">
+<div style="font-size: 15px; font-weight: 600">Gmail didn't connect</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">The sign-in was closed before Google said yes, so nothing was saved. Try again; if it keeps happening, send us the trace ID.</div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">Trace ID 4d20-a8e1-77c3-0f95</div>
+</div>
+</sc-if>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: {{f.doneBg}}; color: {{f.doneTx}}; font-size: 15px; font-weight: 600">{{f.doneLabel}}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.connected}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line)"><span style="width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{f.gmail}}" alt="" style="width: 26px; height: 26px"></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Gmail · you@example.com</span><span style="font-size: 13px; color: var(--tx3)">14 tools · every one set to Ask until you choose</span></span></div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Pick what your super powers may do without asking. Reading is usually safe to allow; sending and deleting usually aren't.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Leave everything on Ask</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Set permissions</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.disconnect}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">Inbox Zero, Scout and Standup Notes use it. Their Gmail steps will stop until you connect it again. Pipedream forgets the sign-in.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Keep it</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: var(--red); color: #FFFFFF; font-size: 15px; font-weight: 600">Disconnect Gmail</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":7600}}'>
+var THEME = 'dark';
+var SIZE = 'desktop';
+var B = 'assets/';
+var LOGO = { 'Gmail': ['gmail.svg'], 'Slack': ['slack.svg'], 'GitHub': ['github.svg', 'github-dark.svg'], 'Notion': ['notion.svg'],
+  'Google Drive': ['google-drive.svg'], 'Salesforce': ['salesforce.svg'], 'Airtable': ['airtable.svg'], 'Jira': ['jira.svg'],
+  'MongoDB': ['mongodb.svg'], 'Snowflake': ['snowflake.svg'], 'Neo4j': ['neo4j.svg'], 'pgvector': ['pgvector.svg'], 'Cursor': ['cursor.svg', 'cursor-dark.svg'] };
+function src(n) { var l = LOGO[n]; if (!l) return ''; return B + (THEME === 'light' ? l[0] : (l[1] || l[0])); }
+var CHIPS = { ok: ['Connected', '#7C4DFF', 'var(--chip-bg)', 'var(--chip-tx)'], re: ['Reconnect', '#F062D0', 'var(--pink-bg)', 'var(--pink)'], off: ['Off', '#8E89A0', 'var(--s3)', 'var(--tx2)'] };
+function conns(reconnect, fresh) {
+  var L = [['Gmail', 'you@example.com', 'ok', '14 tools · 4 allowed'], ['Slack', 'Northwind workspace', 'ok', '22 tools · 6 allowed'], ['GitHub', 'you-on-github', 'ok', '31 tools · 9 allowed'], ['Notion', 'Product team space', reconnect ? 're' : 'ok', '12 tools · all ask']];
+  if (fresh) L.unshift(['Airtable', 'you@example.com', 'ok', '9 tools · all ask']);
+  return L.map(function (c, i) { var s = CHIPS[c[2]]; return { name: c[0], account: c[2] === 're' ? 'Its sign-in expired · ' + c[1] : c[1], src: src(c[0]), status: s[0], dot: s[1], chipBg: s[2], chipTx: s[3], tools: c[3], top: i === 0 ? 'none' : '1px solid var(--line)',
+    re: c[2] === 're', ok: c[2] !== 're', btn: c[2] === 're' ? 'Reconnect' : 'Permissions', btnBg: c[2] === 're' ? '#7C4DFF' : 'transparent', btnTx: c[2] === 're' ? '#FFFFFF' : 'var(--tx)', btnBorder: c[2] === 're' ? 'none' : '1px solid var(--line2)' }; });
+}
+function apps(q) {
+  var all = [['Gmail', 'Email', 'done'], ['Slack', 'Chat', 'done'], ['GitHub', 'Code', 'done'], ['Notion', 'Docs', 'done'], ['Google Drive', 'Files', ''], ['Salesforce', 'CRM', 'lock'], ['Airtable', 'Data', ''], ['Jira', 'Tickets', ''], ['MongoDB', 'Database', ''], ['Snowflake', 'Warehouse', 'lock'], ['Neo4j', 'Graph database', ''], ['pgvector', 'Postgres vectors', '']];
+  if (q === 'sal') all = [['Salesforce', 'CRM · not on your org’s list', 'lock']];
+  if (q === 'zzz') all = [];
+  return all.map(function (a, i) { var lock = a[2] === 'lock'; var sel = !q && i === 6;
+    return { name: a[0], note: a[2] === 'done' ? a[1] + ' · connected' : a[1], src: src(a[0]), done: a[2] === 'done', lock: lock, locked: lock ? 'true' : 'false', op: lock ? 0.55 : 1,
+      border: sel ? '2px solid #7C4DFF' : '1px solid var(--line)', bg: sel ? 'var(--chip-bg)' : 'transparent' }; });
+}
+var SEG = function (on) { return ['Allow', 'Ask', 'Deny'].map(function (l) { var s = l === on; return { label: l, on: s ? 'true' : 'false', bg: s ? (l === 'Deny' ? 'var(--red)' : '#7C4DFF') : 'transparent', tx: s ? '#FFFFFF' : 'var(--tx2)' }; }); };
+function groups() {
+  var G = [
+    ['Read', 'Safe', 'Looks things up; changes nothing.', 'var(--chip-bg)', 'var(--chip-tx)', 'Allow', [['Find emails', 'gmail-find-email', 'Allow'], ['Get an email', 'gmail-get-message', 'Allow'], ['List labels', 'gmail-list-labels', 'Allow'], ['Download an attachment', 'gmail-download-attachment', 'Ask']]],
+    ['Create and update', 'Medium risk', 'Writes for you: sends, drafts, labels.', 'var(--ion-bg)', 'var(--ion)', '', [['Send an email', 'gmail-send-email', 'Ask', 'Inbox Zero: Allow on its own'], ['Create a draft', 'gmail-create-draft', 'Allow'], ['Add a label', 'gmail-add-label-to-email', 'Ask'], ['Reply to a thread', 'gmail-reply-to-email', 'Ask']]],
+    ['Delete', 'High risk', 'Destructive: removes, trashes, purges.', 'var(--red-bg)', 'var(--red-tx)', 'Deny', [['Delete an email', 'gmail-delete-email', 'Deny'], ['Move to trash', 'gmail-trash-email', 'Deny']]]
+  ];
+  return G.map(function (g) { return { name: g[0], risk: g[1], desc: g[2], riskBg: g[3], riskTx: g[4], headBg: 'var(--s2)', all: SEG(g[5]),
+    tools: g[6].map(function (t) { return { name: t[0], id: t[1], opts: SEG(t[2]), override: t[3] || '' }; }) }; });
+}
+function pager(label, from, to, total, page, pages, mobile, cursor) {
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var items = [];
+  if (!cursor) {
+    if (mobile) items = [{ n: 'Page ' + page + ' of ' + pages, cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2, #B9B4C8)' }];
+    else {
+      var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+      items = seq.map(function (n) { var cur = n === page; return { n: String(n), cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2, #403B50)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2, #B9B4C8)' }; });
+    }
+  }
+  var first = page === 1, last = page === pages;
+  return { label: label, line: 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)', nextTx: last ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)' };
+}
+var STATES = [
+  ['list', 'Powers › Connections', { v: 'list' }],
+  ['empty', 'No connections yet', { v: 'list', empty: true }],
+  ['catalog', 'Add a connection: the catalog', { v: 'list', dlg: 'catalog' }],
+  ['search', 'Catalog: search, an app your org hasn’t allowed', { v: 'list', dlg: 'catalog', q: 'sal' }],
+  ['none', 'Catalog: no match', { v: 'list', dlg: 'catalog', q: 'zzz' }],
+  ['signin', 'Sign in on Pipedream’s page', { v: 'list', dlg: 'signin' }],
+  ['fallback', 'Provider won’t open in a frame', { v: 'list', dlg: 'signin', fallback: true }],
+  ['checking', 'Checking with Pipedream', { v: 'list', dlg: 'signin', checking: true }],
+  ['connerr', 'Didn’t connect, with trace ID', { v: 'list', dlg: 'signin', err: true }],
+  ['connected', 'Connected: set its permissions next', { v: 'list', dlg: 'connected', fresh: true }],
+  ['reconnect', 'A sign-in expired: reconnect', { v: 'list', reconnect: true }],
+  ['disconnect', 'Disconnect, with what it affects', { v: 'list', dlg: 'disconnect' }],
+  ['perms', 'MCP permissions: Allow, Ask, Deny per tool', { v: 'perms' }],
+  ['saved', 'Permissions saved', { v: 'list', toast: 'Gmail permissions saved: 5 allowed, 4 ask, 2 denied.' }]
+];
+function frames() {
+  var out = [];
+  function add(mobile) {
+    STATES.forEach(function (st, i) {
+      var o = st[2], v = {}, d = {}; v[o.v] = true; if (o.dlg) d[o.dlg] = true;
+      var q = o.q || '';
+      out.push({
+        isFrame: true, theme: THEME === 'light' ? 'light' : '', desktop: !mobile, mobile: mobile, key: st[0] + (mobile ? 'm' : 'd'), label: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st[1],
+        w: mobile ? '390px' : '1200px', h: o.dlg ? (mobile ? '1400px' : '1000px') : (mobile ? '844px' : '780px'), radius: mobile ? '36px' : '16px', pad: mobile ? '20px' : '32px', mainPad: mobile ? '20px' : '32px 48px 48px',
+        logoH: mobile ? '24px' : '28px', h1: mobile ? '28px' : '32px', btnDir: mobile ? 'column-reverse' : 'row', toolsW: mobile ? '100%' : '150px',
+        v: v, d: d, dlg: !!o.dlg, empty: !!o.empty, hasList: !o.empty, toast: o.toast || '',
+        tabs: ['Loops', 'Connections', 'Models', 'Folders', 'Skills'].map(function (t) { var on = t === 'Connections'; return { name: t, on: on ? 'true' : 'false', line: on ? '#7C4DFF' : 'transparent', tx: on ? 'var(--tx)' : 'var(--tx3)' }; }),
+        conns: conns(!!o.reconnect, !!o.fresh), teaser: ['Gmail', 'Slack', 'GitHub', 'Notion'].map(function (n) { return { src: src(n) }; }),
+        gmail: src('Gmail'), groups: groups(),
+        pgConns: pager('Connection pages', 1, o.fresh ? 5 : 4, 23, 1, o.fresh ? 5 : 6, mobile),
+        pgApps: pager('App pages', 1, 12, 3500, 1, 292, mobile, true), catPaged: !q,
+        pgTools: pager('Tool pages', 1, 10, 14, 1, 2, mobile),
+        dlgW: mobile ? '358px' : (o.dlg === 'catalog' ? '760px' : '560px'),
+        dlgTitle: { catalog: 'Add a connection', signin: 'Sign in to Gmail', connected: 'Gmail is connected', disconnect: 'Disconnect Gmail?' }[o.dlg] || '',
+        dlgDesc: { catalog: 'Pick an app. It connects your own account; nobody else rides it.', signin: o.fallback ? '' : 'This is your own Gmail. Pipedream keeps the sign-in; Glyphh never sees your password.', connected: '', disconnect: '' }[o.dlg] || '',
+        query: q === 'zzz' ? 'zzz' : q, qBorder: q ? '#7C4DFF' : 'var(--line2)', noApps: q === 'zzz',
+        cats: ['Popular', 'Email', 'Chat', 'Code', 'Docs', 'CRM', 'Data', 'All 3,500'].map(function (c, j) { var on = j === 0 && !q; return { label: c, on: on ? 'true' : 'false', bg: on ? '#7C4DFF' : 'transparent', tx: on ? '#FFFFFF' : 'var(--tx2)', border: on ? '#7C4DFF' : 'var(--line2)' }; }),
+        apps: apps(q), tileCols: mobile ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))', appCount: q === 'sal' ? '1 match' : (q ? '0 matches' : 'Popular · 12 of 3,500'),
+        frameOpen: !o.fallback && !o.checking && !o.err, fallback: !!o.fallback, checking: !!o.checking, connErr: !!o.err, frameH: mobile ? '360px' : '400px',
+        doneLabel: o.err ? 'Try again' : 'Done', doneBg: o.checking ? 'var(--s3)' : '#7C4DFF', doneTx: o.checking ? 'var(--tx3)' : '#FFFFFF'
+      });
+    });
+  }
+  var phone = SIZE === 'mobile';
+  out.push({ isBreak: true, title: (THEME === 'light' ? 'Light' : 'Dark') + (phone ? ' · mobile' : ' · desktop'), sub: phone ? '390 wide' : '1200 wide' });
+  add(phone);
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() { return { frames: frames(), themeName: THEME === 'light' ? 'light theme' : 'dark theme' }; }
+}
+</script>
+</body>
+</html>
