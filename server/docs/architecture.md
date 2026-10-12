@@ -1131,6 +1131,11 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
+- **Each machine has its own address** (decided 2026-10-11): `<machine-id>.glyphh.ai`, an opaque id, never the machine's name. rrotor's UI and every super power's screens and streams hang off it. `*.glyphh.ai` points at the relay, which reaches the machine over its outbound connection. Still to decide:
+    - **Where TLS ends:** at the relay (simple, but the relay can read the page), or passed through by name (SNI) to rrotor, which holds its own certificate got through the server, so the relay forwards only ciphertext as it does for SSH.
+    - **A super power's own screens** (its app) on the machine's origin, or on one of their own (`<power>.<machine-id>.glyphh.ai`) so an app a member installed can't read rrotor's session.
+    - **How long a machine's session lasts,** and how it learns a member was removed or a token revoked.
+
 - **Billing: dollars or credits**, and the monthly spend cap (a limit on auto top-ups, or none). Billing (phase 2b) waits on both.
 - **Plans:** price per credit and monthly credits per plan, pack sizes and prices, included and extra machines for Solo, Basic and Pro, whether runs themselves spend credits, whether Free is held to one connected service. The billing boards leave these as `[BRACKETS]`.
 - **Tasks are powers:** rename tasks to powers everywhere (proposed, not confirmed).
@@ -1145,6 +1150,8 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **Old prod:** stopped on Fly, not destroyed (database and Redis kept); when to cut over or drop it.
 
 #### To draw
+
+- **Opening a machine:** the screens for a launch ticket that worked, one that expired or was used, a machine that is offline or waking, the wrong account, and a session that ran out (back through app.glyphh.ai for a new ticket).
 
 - **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person.
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), how one super power's data is kept apart from another's in rrotor's Postgres, and how its screens are laid out inside Glyphh's UI.
