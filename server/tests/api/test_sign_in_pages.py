@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from glyphh_server.models import OAuthClient
-from tests.conftest import PLATFORM_URL, _client
+from glyphh_server.ops.auth import signed
+from tests.conftest import PLATFORM_URL, SECRET_KEY, _client
 from tests.fake_providers import PROVIDER_SETTINGS, provider_transport
 from tests.mcp.test_oauth_flow import REDIRECT, _pkce, _register
 
@@ -25,6 +26,9 @@ async def browser(engine: AsyncEngine) -> AsyncIterator[httpx.AsyncClient]:
     app.add_api_route("/auth/probe-crash", crash, methods=["GET"])
     async for c in _client(app):
         yield c
+
+
+EXPIRED = signed.sign(SECRET_KEY, {"c": "x"}, -1)
 
 
 def screen(res: httpx.Response, path: str) -> dict[str, str]:
@@ -102,7 +106,12 @@ async def test_a_sign_in_from_another_browser_is_refused(browser: httpx.AsyncCli
 async def test_a_cancelled_or_crossed_provider_sign_in_is_refused(browser: httpx.AsyncClient) -> None:
     _, ctx = await _to_allow(browser)
     cancelled = await browser.get("/auth/google/callback", params={"state": ctx["state"], "error": "access_denied"})
-    assert screen(cancelled, "/problem")["code"] == "E_FORBIDDEN"
+    assert screen(cancelled, "/problem") | {"message": "", "trace": ""} == {
+        "code": "E_FORBIDDEN",
+        "message": "",
+        "trace": "",
+        "reason": "cancelled",
+    }
     crossed = await browser.get("/auth/github/callback", params={"code": "c", "state": ctx["state"]})
     assert screen(crossed, "/problem")["code"] == "E_INVALID"
 
@@ -118,6 +127,7 @@ async def test_a_host_removed_mid_sign_in_is_refused(browser: httpx.AsyncClient,
 async def test_bad_steps_land_on_the_problem_screen_with_a_trace(browser: httpx.AsyncClient) -> None:
     for path, code in (
         ("/auth/google/start?request=forged.0", "E_INVALID"),
+        ("/auth/google/start?request=" + EXPIRED, "E_INVALID"),
         ("/auth/google/start", "E_INVALID"),
         ("/auth/microsoft/start?request=x", "E_NOT_FOUND"),
         ("/auth/google/callback", "E_INVALID"),
@@ -146,3 +156,9 @@ async def test_only_the_platform_may_call_the_api_from_a_browser(browser: httpx.
     assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == PLATFORM_URL
     other = await browser.options("/v1/me", headers={"origin": "https://evil.test", **ask})
     assert "access-control-allow-origin" not in other.headers
+
+
+async def test_each_refusal_says_why_so_the_screen_can_show_it(browser: httpx.AsyncClient) -> None:
+    expired = screen(await browser.get("/auth/google/start", params={"request": EXPIRED}), "/problem")
+    forged = screen(await browser.get("/auth/google/start", params={"request": "forged.0"}), "/problem")
+    assert (expired["reason"], forged["reason"]) == ("expired", "invalid")

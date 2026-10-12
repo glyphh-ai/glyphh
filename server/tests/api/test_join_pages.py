@@ -50,10 +50,15 @@ async def test_signing_in_as_someone_else_is_refused(browser: httpx.AsyncClient,
     token = await _invite(engine, "someone-else@join.test")
     problem = screen(await _sign_in_from(browser, token), "/problem")
     assert problem["code"] == "E_FORBIDDEN" and "someone-else@join.test" in problem["message"]
+    assert (problem["reason"], problem["invited"], problem["email"]) == (
+        "wrong_account",
+        "someone-else@join.test",
+        GOOGLE_ME["email"],
+    )
 
 
 async def test_a_dead_invite_is_refused_on_the_screen_and_the_step(browser: httpx.AsyncClient) -> None:
     shown = await browser.get("/v1/auth/join", params={"invite": "nope"})
     assert shown.status_code == 422 and "expired" in shown.json()["error"]["message"]
     problem = screen(await browser.get("/auth/google/start", params={"invite": "nope"}), "/problem")
-    assert problem["code"] == "E_INVALID" and "expired" in problem["message"]
+    assert problem["code"] == "E_INVALID" and "expired" in problem["message"] and problem["reason"] == "expired"

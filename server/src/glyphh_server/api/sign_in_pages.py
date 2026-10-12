@@ -55,7 +55,7 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
     if st["p"] != name or st["n"] != browser(request):
         raise Invalid(START_AGAIN)
     if not code:
-        raise Forbidden("Signing in was cancelled. Start again from your app when you're ready.")
+        raise Forbidden("Signing in was cancelled. Start again from your app when you're ready.", reason="cancelled")
     if "i" in st:
         return await finish_join(request, conn, chosen, st["i"], code)
     pending = codes.read_pending(settings.secret_key, st["r"])

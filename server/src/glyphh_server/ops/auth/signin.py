@@ -34,7 +34,12 @@ class ProviderProfile(BaseModel):
 
 async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
     if not profile.email_verified:
-        raise Forbidden("Sign in with an account whose email is verified.", provider=profile.provider)
+        raise Forbidden(
+            "Sign in with an account whose email is verified.",
+            provider=profile.provider,
+            reason="unverified",
+            email=profile.email,
+        )
     email = profile.email.strip().lower()
     await _lock(conn, f"email:{email}")
     await _lock(conn, f"{profile.provider}:{profile.subject}")
@@ -54,7 +59,9 @@ async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
             )
         )
     if (await conn.execute(select(User.disabled_at).where(User.id == user_id))).scalar_one() is not None:
-        raise Forbidden("Your account in this org is disabled. Ask an org admin.", provider=profile.provider)
+        raise Forbidden(
+            "Your account in this org is disabled. Ask an org admin.", provider=profile.provider, reason="disabled"
+        )
     log.info("signed in", extra=fields(user=str(user_id), provider=profile.provider, how=how))
     return user_id
 

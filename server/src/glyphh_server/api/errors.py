@@ -27,6 +27,10 @@ _HTTP_CODES: dict[int, str] = {
 }
 
 
+# What a refused sign-in step tells the platform's problem screen, beyond its code: which state to show.
+SCREEN_DETAIL: frozenset[str] = frozenset({"reason", "email", "invited", "provider"})
+
+
 def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "trace_id": current_trace_id(), **detail}}
 
@@ -34,7 +38,8 @@ def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
 def refusal(path: str, platform: str, code: str, message: str, status: int, **detail: Any) -> Response:
     """A person on a sign-in step is sent to the platform's problem page; a program gets JSON."""
     if path.startswith("/auth/"):
-        query = urlencode({"code": code, "message": message, "trace": current_trace_id()})
+        said = {k: str(v) for k, v in detail.items() if k in SCREEN_DETAIL}
+        query = urlencode({"code": code, "message": message, "trace": current_trace_id(), **said})
         return RedirectResponse(f"{platform}/problem?{query}", status_code=303)
     return JSONResponse(error_body(code, message, **detail), status_code=status)
 

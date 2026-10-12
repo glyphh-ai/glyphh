@@ -93,7 +93,7 @@ async def read_invite(conn: AsyncConnection, token: str) -> OpenInvite:
         )
     ).first()
     if row is None:
-        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.")
+        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="expired")
     return OpenInvite(org=row.name, email=row.email, role=row.role)
 
 
@@ -101,7 +101,12 @@ async def accept_invite(conn: AsyncConnection, token: str, email: str, first: st
     """Make the person a member of the invite's org, as the invite's email only. Answers the org's name."""
     invite = await read_invite(conn, token)
     if email.strip().lower() != invite.email:
-        raise Forbidden(f"This invite is for {invite.email}. Sign in with that account.")
+        raise Forbidden(
+            f"This invite is for {invite.email}. Sign in with that account.",
+            reason="wrong_account",
+            invited=invite.email,
+            email=email,
+        )
     row = (
         await conn.execute(
             update(Invite)
@@ -111,7 +116,7 @@ async def accept_invite(conn: AsyncConnection, token: str, email: str, first: st
         )
     ).first()
     if row is None:
-        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.")
+        raise Invalid("This invite has expired, was used, or was withdrawn. Ask for a new one.", reason="expired")
     with refusals("That email already has a Glyphh account."):
         await conn.execute(
             insert(User).values(org_id=row.org_id, role=row.role, email=invite.email, first_name=first, last_name=last)

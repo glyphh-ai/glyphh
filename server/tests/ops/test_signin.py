@@ -75,7 +75,7 @@ async def test_an_unverified_email_is_refused(engine: AsyncEngine) -> None:
     profile = ProviderProfile(provider="github", subject="gh-x", email="x@unverified.test", email_verified=False)
     with pytest.raises(Forbidden) as caught:
         await _sign_in(engine, profile)
-    assert caught.value.detail == {"provider": "github"}
+    assert caught.value.detail == {"provider": "github", "reason": "unverified", "email": "x@unverified.test"}
     assert await _count(engine, User, func.lower(User.email) == "x@unverified.test") == 0
 
 
