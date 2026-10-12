@@ -1,6 +1,6 @@
 # Design decisions
 
-What the brand exploration settled, in the Claude Design canvas "Glyphh Design" (https://claude.ai/artifact/DMiUf6vx7u61MNLDd4anLq). Values here are the direction; the token values themselves land in `ui/src/tokens.css` through `/design-sync`, as `collaboration.md` says.
+What the brand exploration settled, in the Claude Design canvas "Glyphh Design" (https://claude.ai/artifact/DMiUf6vx7u61MNLDd4anLq). Values here are the direction; the token values themselves land in `ui/src/tokens.css` (in `glyphh-ai/platform`) through `/design-sync`, as `collaboration.md` says. Where every screen is, and what to build it from: `HANDOFF.md`.
 
 ## Logo
 
