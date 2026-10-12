@@ -339,7 +339,7 @@
       "y": 0
     },
     "AppShell2.dc.html": {
-      "h": 3959,
+      "h": 3960,
       "page": "app-shell",
       "title": "The left rail (2 of 2)",
       "w": 3520,
@@ -978,9 +978,17 @@
       "x": 0,
       "y": 0,
       "w": 3100,
-      "h": 5950,
-      "title": "rrotor: edit a super power",
+      "h": 5920,
+      "title": "rrotor: edit a super power (1 of 2)",
       "page": "rrotor-edit"
+    },
+    "RrotorEdit2.dc.html": {
+      "x": 0,
+      "y": 6120,
+      "w": 3100,
+      "h": 3320,
+      "page": "rrotor-edit",
+      "title": "rrotor: edit a super power (2 of 2)"
     }
   },
   "createdOnFiles": {
@@ -1472,7 +1480,8 @@
     "RrotorDesktop2.dc.html",
     "RrotorDesktop3.dc.html",
     "RrotorDesktop4.dc.html",
-    "RrotorEdit.dc.html"
+    "RrotorEdit.dc.html",
+    "RrotorEdit2.dc.html"
   ],
   "pages": [
     {
