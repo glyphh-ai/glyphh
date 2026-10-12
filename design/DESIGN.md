@@ -183,7 +183,30 @@ Everything that can grow is paginated, in the designs as in the build: "Showing 
   - Current plan, then Budget with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
   - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
 - **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (see Requests).
-- **Dollars or credits:** moved to the server's backlog (https://github.com/glyphh-ai/server/blob/main/docs/backlog.md). The copy follows whichever is decided.
+- **Credits** (decided 2026-10-11): Glyphh bills in credits. One credit is $0.02; a top-up ($5 to $10,000) turns into credits at the price that day, so $5 is 250 credits. Bought credits never expire; a plan's monthly credits end with the period. Runs cost nothing; only connection calls spend credits (1 per 30 seconds of a call). Auto top-up has an optional monthly cap an org admin sets, off by default. Gifts are credit grants.
+- **Plans, first numbers** (to adjust): Free $0, 1 seat, 100 credits, 2 machines; Solo $20, 1 seat, 2,000 credits, 3 machines; Basic $40 a seat, up to 25 seats, 2,500 credits a seat, 10 machines; Pro $150 a seat, up to 100 seats, 10,000 credits a seat, 50 machines; Enterprise arranged. Extra machines $5 a month (none on Free). These replace the `[BRACKETS]` on the billing boards.
+- **Plans are versioned:** a change to a plan is its next version, sold to new orgs; an org keeps the version it is on until it changes plan or a super admin moves it, with notice.
+
+### Versions and release notes
+
+Decided 2026-10-11. A published power or super power has explicit versions: its manifest carries the version (1.0.0, 1.1.0, ...) and its release notes, and every version is kept, frozen, with them. Publish (`ListingSubmit`) shows the version and its release notes and asks for both; a listing's page and the review screens show the version under review and its notes, and the version history with each one's notes; an installed power shows its version, and a newer version offers its notes before updating. A version number is never reused.
+
+### Usage of powers and super powers
+
+Decided 2026-10-11. Beside the metered connection calls, every use of a power or super power is counted (never its content, never billed): model calls with their tokens in and out as the provider reports them, tool calls, skills, task steps, folders, browsers. Usage pages show models, connections and super powers side by side, by day, user, super power and power; a publisher sees their listing's installs, installs used in the last 30 days, and runs.
+
+### Navigation
+
+Decided 2026-10-11: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans). Plans edits each plan's versions and the billing settings (the price of a credit, the seconds a credit buys, the smallest and largest top-up).
+
+### Admin decisions
+
+Decided 2026-10-11, as the admin boards draw them:
+- **Providers and models:** a super admin adds, edits, turns off and removes them. Off is for now: members' powers on it are disabled with the reason and come back when it's on again. Removed is for good: those powers can only be deleted. A provider with a black mark has a second logo for dark grounds.
+- **Disabling an org:** members can't sign in to it, its machines are cut off, its schedules stop, its billing pauses, its data is kept; Enable undoes it.
+- **Teams:** a person can be in many teams; they may add what any of their teams allows, inside the org's list.
+- **Many orgs per person:** everyone has a Personal org plus any orgs they join; the host picks which at Allow ("Use with").
+- **Review:** org review, then Glyphh review for the marketplace, each step approve, ask for changes or reject, with a thread on the listing; Glyphh's reviewer (a super power on Glyphh's own machine) writes a report a person decides on. Icons are square PNGs (512 px), up to six screenshots (PNG or JPEG, 5 MB each), never SVG uploads.
 
 ### Powers: connections and permissions
 
