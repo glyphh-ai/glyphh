@@ -138,6 +138,22 @@
             "title": "Email",
             "type": "string"
           },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By"
+          },
           "org": {
             "title": "Org",
             "type": "string"
@@ -162,6 +178,8 @@
           "org",
           "email",
           "role",
+          "invited_by",
+          "expires_at",
           "providers"
         ],
         "title": "JoinScreen",
