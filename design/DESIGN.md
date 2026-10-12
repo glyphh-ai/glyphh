@@ -267,31 +267,32 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Canvas page | Board file(s) | What it is | Build order |
 |---|---|---|---|
 | Brand | `Main`, `Palettes`, `Type`, `LogoInUse` | Logo, cats and moods, motion, Ink & Violet, Red Hat, the sign-in panel's animation | n/a |
+| Components (requested) | `Components` | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
 | Sign in | `SignInFlow` | Google / GitHub, loading, signed in, expired, refused, error | 1 |
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
 | Approve a code | `CodeFlow` | Enter a code (validation), confirm the machine, approved | 1 |
 | Join an org | `JoinFlow` | Invite: signed out, accept, wrong account, joined | 1 |
 | Machines | `PlayerFlow` | Machine cards (8 super powers, then See all), the See all dialog with search and pages, add a machine, connecting, offline, account menu | 2 |
 | Light and account | `LightAccount` | The light theme, the Account page, the account menu, signed out | 2 |
-| Billing (dark / light) | `BillingFlow`, `BillingLight` | Plan, budget and auto top-up, spend by day, plans, invoices; dialogs for Add funds, Auto top-up, Switch plan; Stripe checkout inside the page | 3 |
+| Billing (dark / light) | `BillingFlow`, `BillingLight` | Plan, credit balance in dollars and auto top-up (reload to a target, monthly cap), spend by day, plans with their numbers, invoices with each top-up's expiry; dialogs for Add funds, Auto top-up, Switch plan; Stripe checkout inside the page; the plan-move banner | 3 |
 | Plugin | `PluginCards` | The cards in Claude and ChatGPT: machines, deploy, usage, the swarm, needs you | 8 |
 | Powers (4 pages) | `PowersFlow`, `PowersMobile`, `PowersLight`, `PowersLightMobile` | Connections through Pipedream (catalog, sign-in, reconnect, disconnect) and tool permissions (Allow, Ask, Deny) | 4 |
 | Super power editor (dark / light) | `SuperPowerEdit`, `SuperPowerEditLight` | The power map, identity, sliders, brief, the Powers rail, the Add a power dialog | 5 |
 | Task flow (dark / light) | `TaskCanvas`, `TaskCanvasLight` | A Task's Flow tab: the React Flow canvas made editable, the inspector, slots, schedule | 6 |
 | Custom powers (dark / light) | `CustomPowers`, `CustomPowersLight` | Skills, plugins, tasks and apps in one list; New power; each type's detail | 5 |
 | Marketplace (dark / light) | `Marketplace`, `MarketplaceLight` | Discover, search with pages, a power's and a super power's detail, Add | 7 |
-| rrotor · Splash | `RrotorSplash` | rrotor's UI, not the platform: the first screen on a machine, naming the machine before anything else; starting, opening, ready, on a laptop, waking, updating, a failed step, an expired link, someone else's machine, offline | rrotor |
-| Org · Members and teams | `OrgTeams` | Members, invites and seats; teams (a person can be in many); a member's teams; remove from a team or the org | Org |
-| Org · Allowed models and connections | `OrgLimits` | The limit switches at the org and a team, the allowed lists, adding from the catalog, removing (it turns off for whoever uses it), a member's disabled power | Org |
-| Org · Review | `OrgReview` | The org admin's review queue: approve for the org, approve and send to Glyphh, request changes, reject; Glyphh's feedback | Discover |
-| Publish a listing | `ListingSubmit` | A member publishes a power or super power: icon, screenshots, what it needs, where it goes, the review timeline, changes requested, published, new version, unpublish | Discover |
-| Usage (3 pages) | `UsageFlow`, `UsageMore`, `UsageAudit` | By billing period (credits by connector, a connector's tools, a closed period); your usage by super power, power, model, connection, machine; a super power's and a model's usage; the org's usage by person and team; a publisher's stats; the audit log of connector calls and power uses | Usage |
-| Glyphh admin · Orgs | `AdminOrgs` | Every org; an org's overview, members, machines, powers, super powers, billing | Admin |
-| Glyphh admin · Org actions and plans | `AdminOrgActions` | Gift credits, change or comp a plan, move orgs to a new version, disable and enable an org; plans and their versions | Admin |
-| Glyphh admin · Models | `AdminCatalog` | Providers and models: turn off and on, add a provider (logo, API), add and import models, models with no description | Admin |
-| Glyphh admin · Marketplace | `AdminMarket` | Glyphh's review queue with the reviewer's report, publish, request changes, reject, the thread; listings, featured and categories | Admin |
-| API keys | `ApiKeys` | A member's keys (account menu): make one (shown once), revoke; when the org doesn't allow member keys; Org → API keys: the switch (turning it off stops members' keys straight away) and every key in the org | Org |
-| Audit log of admin actions | `AdminAudit` | Org → Audit log (every change in the org, Glyphh's actions marked), a row's before → after, export; Glyphh admin → Audit log (staff and the reviewer agent across orgs); an org's log from its detail | Org, Admin |
+| rrotor · Splash (dark / light) | `RrotorSplash`, `RrotorSplashLight` | rrotor's UI, not the platform: the first screen on a machine, naming the machine before anything else; starting, opening, ready, on a laptop, waking, updating, a failed step, an expired link, someone else's machine, offline | rrotor |
+| Org · Members and teams (dark / light) | `OrgTeams`, `OrgTeamsLight` | Members, invites and seats; teams (a person can be in many); a member's teams; remove from a team or the org | Org |
+| Org · Allowed models and connections (dark / light) | `OrgLimits`, `OrgLimitsLight` | The limit switches at the org and a team, the allowed lists, adding from the catalog, removing (it turns off for whoever uses it), a member's disabled power | Org |
+| Org · Review (dark / light) | `OrgReview`, `OrgReviewLight` | The org admin's review queue: approve for the org, approve and send to Glyphh, request changes, reject; Glyphh's feedback | Discover |
+| Publish a listing (dark / light) | `ListingSubmit`, `ListingSubmitLight` | A member publishes a power or super power: icon, screenshots, what it needs, where it goes, the review timeline, changes requested, published, new version, unpublish | Discover |
+| Usage (3 pages, dark / light) | `UsageFlow`, `UsageMore`, `UsageAudit` and each `…Light` | By billing period (credits by connector, a connector's tools, a closed period); your usage by super power, power, model, connection, machine; a super power's and a model's usage; the org's usage by person and team; a publisher's stats; the audit log of connector calls and power uses | Usage |
+| Glyphh admin · Orgs (dark / light) | `AdminOrgs`, `AdminOrgsLight` | Every org; an org's overview, members, machines, powers, super powers, billing | Admin |
+| Glyphh admin · Org actions and plans (dark / light) | `AdminOrgActions`, `AdminOrgActionsLight` | Gift credits, change or comp a plan, move orgs to a new version, disable and enable an org; plans and their versions | Admin |
+| Glyphh admin · Models (dark / light) | `AdminCatalog`, `AdminCatalogLight` | Providers and models: turn off and on, add a provider (logo, API), add and import models, models with no description | Admin |
+| Glyphh admin · Marketplace (dark / light) | `AdminMarket`, `AdminMarketLight` | Glyphh's review queue with the reviewer's report, publish, request changes, reject, the thread; listings, featured and categories | Admin |
+| API keys (dark / light) | `ApiKeys`, `ApiKeysLight` | A member's keys (account menu): make one (shown once), revoke; when the org doesn't allow member keys; Org → API keys: the switch (turning it off stops members' keys straight away) and every key in the org | Org |
+| Audit log of admin actions (dark / light) | `AdminAudit`, `AdminAuditLight` | Org → Audit log (every change in the org, Glyphh's actions marked), a row's before → after, export; Glyphh admin → Audit log (staff and the reviewer agent across orgs); an org's log from its detail | Org, Admin |
 
 Board files are at `screens/<name>.dc.html`.
 
@@ -410,8 +411,8 @@ From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their
 
 Board changes from the decisions of 2026-10-11 and 2026-10-12.
 
-- **Light theme:** the admin boards, the publishing boards and `RrotorSplash` are dark only so far.
-- **Requests still to draw:** LogoTile's initials, disabled and loading states; the ring's comet; the person and org Avatar kinds; and the rest under Requests.
+All done (2026-10-12): see the handoff to the build agent, below.
+
 
 ### Questions
 
@@ -420,3 +421,39 @@ From the design agent, 2026-10-12:
 1. **Does a plan's included usage carry over?** Usage draws the included $ carrying over to the next period with bought credit; the admin ledger and Billing draw it expiring at the period's end ("$4.10 expires on 3 Nov"). Which?
 2. **"Higher than the last version":** drawn as higher than the last *published* version, so a rejected 1.3.0 is used (never reused) but 1.2.0 is the bar. Or the last *submitted*?
 3. **Auto top-up's monthly cap:** drawn as at least one reload (target minus trigger); the $5–$10,000 range applies to trigger, target and cap. Right?
+
+## Handoff to the build agent
+
+From the design agent, 2026-10-12. What changed on the boards since the last handoff, what to build from it, and how. Pull first; every board named here is re-exported in `screens/`.
+
+### Start here
+
+1. **Read Decisions** (above) again: credits are dollars, plans are versioned with their first numbers, a connection call costs 2¢ for each started 30 seconds, bought credit expires a year after purchase, versions are semver with required release notes, a person can be in many teams, and Remove is for good where Turn off is for now. The boards follow them; where a board and Decisions disagree, Decisions wins and you tell the design agent.
+2. **Open `Components` first.** It is the look of every component under Requests, each variant and state, dark and light side by side, with suggested props under each sample (the names are yours). Build those components before the pages that wait on them (Components each page needs, above).
+3. **Then the pages, in the build order of the table above.** The sign-in screens are next (they wait only on TextInput `code` and DescriptionList, both on `Components`).
+
+### New boards
+
+- **Org:** `OrgTeams` (members, invites, seats, teams, a member's teams), `OrgLimits` (allowed models and connections at the org and a team), `OrgReview`, `ApiKeys` (yours and Org → API keys), `AdminAudit` (Org → Audit log).
+- **Publishing:** `ListingSubmit` (icon, screenshots, what it needs, version and release notes with their validation, the review timeline).
+- **Usage:** `UsageFlow` (by billing period: credit by connector, a connector's tools, a closed period), `UsageMore` (a super power, a model, the org by user and team, a member for org admins, a publisher's stats), `UsageAudit` (the audit log of connector calls and power uses). The three files share one script; each shows its own states (`var PART`).
+- **Glyphh admin:** `AdminOrgs` and `AdminOrgActions` (one script, split the same way: orgs and an org's tabs; gift, plan, comp, move with 30 days' notice, disable; plans, versions and Billing settings), `AdminCatalog` (providers and models: turn off, remove, add, import, descriptions), `AdminMarket` (Glyphh's review with the reviewer's report, listings, featured, categories), `AdminAudit` (Glyphh admin → Audit log).
+- **rrotor:** `RrotorSplash`, the first screen on a machine. It belongs to rrotor's own UI, not the platform library.
+- **Light:** every board above has a `…Light` copy: the same layout with the light tokens. Build one component per look and let `[data-theme="light"]` do the rest; never a second component for light.
+
+### Changed boards
+
+- **`BillingFlow`, `BillingLight`:** Credit balance in dollars; auto top-up reloads to a target with an optional monthly cap (and its validation); each top-up's expiry; the plan numbers; the plan-move banner.
+- **`RrotorSplash`:** laptop machines show the Docker logo; "A step failed" shows the message without the step list.
+- **Navigation:** Org gains **Usage**, **API keys** and **Audit log** (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); Glyphh admin gains **Audit log** (Orgs, Models, Marketplace, Plans, Audit log); the account menu gains **Usage** and **API keys**. These go beyond the navigation under Decisions and are in the server's Open list for Chris's yes; build the pages, hold the nav items until he answers.
+
+### Assets
+
+- **New:** `screens/assets/docker.svg` (approved by Chris), for laptop machines. Nothing else is new; ask before adding any other asset.
+- **Approved icons:** a featured star, a drag handle and up/down arrows (marketplace and categories). Draw them as simple strokes in the Icon component, nothing more.
+- **Uploads members make** (listing icons, screenshots, provider logos) are PNG (icons and logos square, 512 px) or JPEG for screenshots, 5 MB each, never SVG.
+
+### What the boards still leave open
+
+The Questions above (to Chris), and the server's Open list (`docs/architecture.md`, Open → Design): API key details, usage time zones, the audit log's retention and export, multi-select pickers, admin navigation on a phone. Build what is decided; leave a `[BRACKETS]` placeholder or ask for the rest. Never invent a value or a look.
+

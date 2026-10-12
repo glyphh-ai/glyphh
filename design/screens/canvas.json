@@ -309,6 +309,126 @@
       "h": 17000,
       "title": "Audit log of admin actions",
       "page": "admin-audit"
+    },
+    "RrotorSplashLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 6000,
+      "title": "rrotor: the splash, light",
+      "page": "rrotor-splash-light"
+    },
+    "OrgTeamsLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 18800,
+      "title": "Org members and teams, light",
+      "page": "org-teams-light"
+    },
+    "OrgLimitsLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 10800,
+      "title": "Org allowed models and connections, light",
+      "page": "org-limits-light"
+    },
+    "OrgReviewLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 14600,
+      "title": "Org review, light",
+      "page": "org-review-light"
+    },
+    "ListingSubmitLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 18800,
+      "title": "Publish a power or super power, light",
+      "page": "listing-light"
+    },
+    "UsageFlowLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 18000,
+      "title": "Usage, billing periods and yours, light",
+      "page": "usage-light"
+    },
+    "UsageMoreLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 13600,
+      "title": "Usage details, org and publishers, light",
+      "page": "usage-more-light"
+    },
+    "UsageAuditLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 12400,
+      "title": "Usage audit log, light",
+      "page": "usage-audit-light"
+    },
+    "AdminOrgsLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 11600,
+      "title": "Glyphh admin, orgs, light",
+      "page": "admin-orgs-light"
+    },
+    "AdminOrgActionsLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 15000,
+      "title": "Glyphh admin, org actions and plans, light",
+      "page": "admin-plans-light"
+    },
+    "AdminCatalogLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 21800,
+      "title": "Glyphh admin, models and providers, light",
+      "page": "admin-models-light"
+    },
+    "AdminMarketLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 20800,
+      "title": "Glyphh admin, the marketplace, light",
+      "page": "admin-market-light"
+    },
+    "ApiKeysLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 17200,
+      "title": "API keys, yours and the org's, light",
+      "page": "api-keys-light"
+    },
+    "AdminAuditLight.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 17000,
+      "title": "Audit log of admin actions, light",
+      "page": "admin-audit-light"
+    },
+    "Components.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3376,
+      "h": 12400,
+      "title": "Requested components",
+      "page": "components"
     }
   },
   "createdOnFiles": {
@@ -580,6 +700,126 @@
       "x": 0,
       "y": -300,
       "page": "admin-audit"
+    },
+    "t-rrotor-splash-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "rrotor: Splash (light)",
+      "x": 0,
+      "y": -300,
+      "page": "rrotor-splash-light"
+    },
+    "t-org-teams-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Members and teams (light)",
+      "x": 0,
+      "y": -300,
+      "page": "org-teams-light"
+    },
+    "t-org-limits-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Allowed models and connections (light)",
+      "x": 0,
+      "y": -300,
+      "page": "org-limits-light"
+    },
+    "t-org-review-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Org: Review (light)",
+      "x": 0,
+      "y": -300,
+      "page": "org-review-light"
+    },
+    "t-listing-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Publish a listing (light)",
+      "x": 0,
+      "y": -300,
+      "page": "listing-light"
+    },
+    "t-usage-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage (light)",
+      "x": 0,
+      "y": -300,
+      "page": "usage-light"
+    },
+    "t-usage-more-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage: Details, org and publishers (light)",
+      "x": 0,
+      "y": -300,
+      "page": "usage-more-light"
+    },
+    "t-usage-audit-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Usage: Audit log (light)",
+      "x": 0,
+      "y": -300,
+      "page": "usage-audit-light"
+    },
+    "t-admin-orgs-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Orgs (light)",
+      "x": 0,
+      "y": -300,
+      "page": "admin-orgs-light"
+    },
+    "t-admin-plans-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Org actions and plans (light)",
+      "x": 0,
+      "y": -300,
+      "page": "admin-plans-light"
+    },
+    "t-admin-models-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Models (light)",
+      "x": 0,
+      "y": -300,
+      "page": "admin-models-light"
+    },
+    "t-admin-market-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Glyphh admin: Marketplace (light)",
+      "x": 0,
+      "y": -300,
+      "page": "admin-market-light"
+    },
+    "t-api-keys-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "API keys (light)",
+      "x": 0,
+      "y": -300,
+      "page": "api-keys-light"
+    },
+    "t-admin-audit-light": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "Audit log of admin actions (light)",
+      "x": 0,
+      "y": -300,
+      "page": "admin-audit-light"
+    },
+    "t-components": {
+      "kind": "title1",
+      "maxW": 3376,
+      "text": "Requested components, dark and light",
+      "x": 0,
+      "y": -300,
+      "page": "components"
     }
   },
   "order": [
@@ -621,12 +861,31 @@
     "UsageMore.dc.html",
     "UsageAudit.dc.html",
     "ApiKeys.dc.html",
-    "AdminAudit.dc.html"
+    "AdminAudit.dc.html",
+    "RrotorSplashLight.dc.html",
+    "OrgTeamsLight.dc.html",
+    "OrgLimitsLight.dc.html",
+    "OrgReviewLight.dc.html",
+    "ListingSubmitLight.dc.html",
+    "UsageFlowLight.dc.html",
+    "UsageMoreLight.dc.html",
+    "UsageAuditLight.dc.html",
+    "AdminOrgsLight.dc.html",
+    "AdminOrgActionsLight.dc.html",
+    "AdminCatalogLight.dc.html",
+    "AdminMarketLight.dc.html",
+    "ApiKeysLight.dc.html",
+    "AdminAuditLight.dc.html",
+    "Components.dc.html"
   ],
   "pages": [
     {
       "id": "brand",
       "name": "Brand"
+    },
+    {
+      "id": "components",
+      "name": "Components (requested)"
     },
     {
       "id": "signin",
@@ -767,6 +1026,62 @@
     {
       "id": "admin-audit",
       "name": "Audit log of admin actions"
+    },
+    {
+      "id": "rrotor-splash-light",
+      "name": "rrotor \u00b7 Splash (light)"
+    },
+    {
+      "id": "org-teams-light",
+      "name": "Org \u00b7 Members and teams (light)"
+    },
+    {
+      "id": "org-limits-light",
+      "name": "Org \u00b7 Allowed models and connections (light)"
+    },
+    {
+      "id": "org-review-light",
+      "name": "Org \u00b7 Review (light)"
+    },
+    {
+      "id": "listing-light",
+      "name": "Publish a listing (light)"
+    },
+    {
+      "id": "usage-light",
+      "name": "Usage (light)"
+    },
+    {
+      "id": "usage-more-light",
+      "name": "Usage \u00b7 Details, org and publishers (light)"
+    },
+    {
+      "id": "usage-audit-light",
+      "name": "Usage \u00b7 Audit log (light)"
+    },
+    {
+      "id": "admin-orgs-light",
+      "name": "Glyphh admin \u00b7 Orgs (light)"
+    },
+    {
+      "id": "admin-plans-light",
+      "name": "Glyphh admin \u00b7 Org actions and plans (light)"
+    },
+    {
+      "id": "admin-models-light",
+      "name": "Glyphh admin \u00b7 Models (light)"
+    },
+    {
+      "id": "admin-market-light",
+      "name": "Glyphh admin \u00b7 Marketplace (light)"
+    },
+    {
+      "id": "api-keys-light",
+      "name": "API keys (light)"
+    },
+    {
+      "id": "admin-audit-light",
+      "name": "Audit log of admin actions (light)"
     }
   ],
   "title": "Glyphh Design"
