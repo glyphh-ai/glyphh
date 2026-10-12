@@ -721,7 +721,7 @@ erDiagram
         uuid payment_id FK, UK "the payment a top-up came from; at most one entry per payment"
         text note "a grant's reason, from the super admin"
         uuid usage_event_id FK, UK "the call a usage entry pays for"
-        timestamptz expires_at "the period's end for an allowance; null for a purchase"
+        timestamptz expires_at "the period's end for an allowance; a year after purchase for a top-up, as Anthropic's"
         timestamptz created_at
     }
 
@@ -987,8 +987,8 @@ erDiagram
     power_versions {
         uuid id PK
         uuid power_id FK
-        text version "from the manifest, explicit: 1.0.0, 1.1.0, ...; unique per power, never reused"
-        text release_notes "from the manifest: what changed in this version"
+        text version "from the manifest: semver (1.0.0, 1.1.0, ...), higher than the last; unique per power, never reused"
+        text release_notes "from the manifest, required: what changed, up to 2,000 characters"
         jsonb manifest "the manifest as it was, frozen"
         text bundle_key "the bundle as it was, frozen, in object storage"
         uuid created_by FK "who made the version"
@@ -998,8 +998,8 @@ erDiagram
     super_power_versions {
         uuid id PK
         uuid super_power_id FK
-        text version "explicit: 1.0.0, ...; unique per super power, never reused"
-        text release_notes "what changed in this version"
+        text version "semver, higher than the last; unique per super power, never reused"
+        text release_notes "required: what changed, up to 2,000 characters"
         jsonb configuration "its configuration and grants as they were, frozen"
         text bundle_key "its files as they were, frozen"
         uuid created_by FK
@@ -1080,7 +1080,7 @@ Seats are billed as the old server billed them (his rule, 2026-09-18):
 
 `stripe_price_id` is the Stripe price an org subscribes to; Free and Enterprise have none (Free needs no checkout, Enterprise is arranged with us).
 
-**Plans are versioned, so a change never touches an org already on the plan** (his rule, 2026-10-11). A plan is a family (Free, Solo, Basic, Pro, Enterprise) and each row is one version of it, with its own price, seats, credits, machines and Stripe prices. A super admin changes a plan by making its next version: the new version is the one sold (one `active` version per family, enforced by the database), and the old one stops being sold but is never edited or deleted. An org stays on the version it signed up to, at that version's price and terms, until it changes plan itself (it then gets the version on sale) or a super admin moves it, with notice. Stripe works the same way: a new version has new Stripe prices, and existing subscriptions keep theirs.
+**Plans are versioned, so a change never touches an org already on the plan** (his rule, 2026-10-11). A plan is a family (Free, Solo, Basic, Pro, Enterprise) and each row is one version of it, with its own price, seats, credits, machines and Stripe prices. A super admin changes a plan by making its next version: the new version is the one sold (one `active` version per family, enforced by the database), and the old one stops being sold but is never edited or deleted. An org stays on the version it signed up to, at that version's price and terms, until it changes plan itself (it then gets the version on sale) or a super admin moves it, with **30 days' notice** by email and a banner on Billing (2026-10-12). Stripe works the same way: a new version has new Stripe prices, and existing subscriptions keep theirs.
 
 The plans carried over from the old server:
 
@@ -1158,7 +1158,7 @@ Every power is a row in `powers` (who owns it, its kind and name), and one row i
 - **A connection** is a user's own account at Pipedream: the service it connects to (Gmail, Slack, ...) and the account id. Pipedream calls a service an app; Glyphh says service, because an app is something else here. Glyphh stores no sign-in for it: Pipedream holds the account and its tokens, under the Glyphh user's id as Pipedream's external user id. Linking one: the server asks Pipedream for a connect token for that user, and Pipedream's own page does the sign-in. Using one: the loop reaches Pipedream's MCP server (`remote.mcp.pipedream.net/v3`) with the Pipedream project, environment, service (`x-pd-app-slug`) and the user's id as headers, and a short-lived Pipedream access token the server mints for the run (Glyphh's Pipedream client credentials never leave the server). Only Glyphh's connections are used: a super power's loop gets exactly its connections, nothing of the loop's own.
 - **A folder** is a path on one machine (`machine_id`): the same path on two machines is two folders, and a folder grant says read or write.
 - **A browser** is a browser profile on one rrotor: its cookies and signed-in sessions live there and never leave that machine or reach the server. It is granted like a folder, so one super power's signed-in sites are never another's.
-- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its release notes, and making a version freezes it as a `power_versions` row (version, release notes, the manifest and the bundle as they were). A version number is never reused. A super power's versions are `super_power_versions` the same way, its configuration and grants frozen. What is listed and reviewed is one of these versions (`listing_versions`), and an install points at the version it came from.
+- **Skills, tasks and plugins** are bundles of files in object storage (`bundle_key`). **Versions are explicit, for published powers** (2026-10-11): the manifest carries the version and its release notes, and making a version freezes it as a `power_versions` row (version, release notes, the manifest and the bundle as they were). A version is semver and must be higher than the last, release notes are required (up to 2,000 characters), and a version number is never reused (2026-10-12). A super power's versions are `super_power_versions` the same way, its configuration and grants frozen. What is listed and reviewed is one of these versions (`listing_versions`), and an install points at the version it came from.
 - **A secret** (a key, a sign-in) is encrypted at rest, never returned after it is saved, and handed only to the member's own runtime when a super power runs.
 - **The catalog** is what the platform and its cards show when someone picks a model, and where every model's logo comes from: `providers` (each with its name and logo) and `catalog_models` (each provider's models, with a name, a description and a type). Every entry shows the provider's logo, the provider, the model's name, its description and its type. It is Glyphh's reference data, the same for every org: anyone signed in reads it, only super admins change it. **A super admin adds, edits, turns off and removes providers and models** (his rule, 2026-10-11). Turning one off (`active = false`) is for now: members can't add it, and their powers on it are disabled with the reason, the same way an org's limits work, and come back when it is turned on again. Removing one (`removed_at`) is for good: it leaves the catalog, and the powers on it are disabled with the reason and can only be deleted. A provider whose mark is black has a second logo for dark grounds. It starts from the old server's list (about 3,900 models across about 125 providers) and its 143 provider logos, kept in object storage. It holds no prices, rates or limits.
 - **A model power** points at its provider (always) and at the catalog entry it was picked from (when there is one), so it shows that logo and name wherever it appears. A model the catalog does not have (a fine-tune, a private model) is still added, by its provider and model id, and wears the provider's logo.
@@ -1242,7 +1242,7 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 
 - **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credit to the ledger. A reconcile from Stripe backs the webhook up.
 - **Auto top-up, as Anthropic's auto-reload:** on, a threshold and a balance to reload to. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the difference up to the reload balance. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
-- **Credit is dollars:** a $5 top-up is $5 of credit. A plan's monthly credit ends with the period; how long bought credit lasts is open (see [Open](#open)).
+- **Credit is dollars:** a $5 top-up is $5 of credit. A plan's monthly credit ends with the period; **bought credit expires a year after purchase**, as Anthropic's does (2026-10-12), and the Billing page shows when.
 - **Auto top-up has an optional monthly cap** an org admin sets (`auto_top_up_monthly_cap_cents`), off by default.
 - **Runs cost nothing:** they run on the member's own machine. Only connection calls spend credit.
 
@@ -1284,7 +1284,7 @@ Decided 2026-10-11. Beside the metered connection calls, rrotor reports each use
 The same rows serve every view, scoped by the principal:
 
 - **A user** sees their own calls and their org's balance.
-- **An org admin** sees every call in the org, by user, by connector, by super power, by machine and by day, and the ledger.
+- **An org admin** sees every call in the org, and each member's power use with its model token counts (counts only, even on a member's own key; 2026-10-12), by user, by connector, by super power, by machine and by day, and the ledger.
 - **A super admin** sees every org, and what Glyphh owes Pipedream for it: the same calls' 30-second stretches, at Pipedream's $0.012.
 
 ### Stripe
@@ -1351,7 +1351,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **How long bought credit lasts:** a year after purchase, as Anthropic's does, or never.
+None open (2026-10-12).
 
 #### To draw
 
