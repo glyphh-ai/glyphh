@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>rrotor: the desktop (1 of 5)</title>
+<title>rrotor: the desktop (1 of 4)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -26,7 +26,7 @@ input::placeholder{color:#67637A}
 <div style="width: 3100px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">rrotor's UI · 2 · the desktop</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">The desktop: watch the crew work · 1 of 5</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">The desktop: watch the crew work · 1 of 4</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1600px">What the splash opens into. The left rail: the machine you are on, Glyphh the orchestrator at the top, its super powers under it, you at the bottom. The stage in the middle is for watching: the crew works around Glyphh, the ones talking to each other light up, and every step runs past in the Now feed. Workbench turns the stage into the layout manager: the picked super power's live browser, its activity in plain words and its outputs, as tiles. The drawer on the right is one thread at a time: Glyphh's, or the super power you picked. Desktop 1440 × 900, dark first.</p>
 </div>
 <div style="display: grid; grid-template-columns: repeat(2, 1440px); gap: 72px 80px">
@@ -765,10 +765,7 @@ var STATES = [
   { label: 'A new thread with one super power', sub: 'Work with one super power directly: no crew, no Glyphh. A new thread from Clip Studio opens on its job: its inputs as the form (the video link, the brand guide it already knows), what it will make and where that lands, and whether to run it once or on a schedule. A super power\'s schedules live on its Overview; every schedule is also in Recents, under Scheduled.', o: { newSolo: true, newCrew: true, pick: 'clips', focus: true } },
   { label: 'Recents: Scheduled', sub: 'Recents has a second tab, Scheduled: every schedule on this machine, for crews (Glyphh leads them) and for single super powers, with how it runs and when it runs next.', o: { recents: true, schedTab: true } },
   { label: 'The picker: search thousands', sub: 'The + by Super powers opens the picker over the centre: search across every super power on the machine, Recently used first, results in pages, a check to add; the count of who is picked stays at the bottom.', o: { newCrew: true, crew: ['clips', 'inbox'], picker: true, goal: 'Turn Thursday\'s demo day talk into reels, and send the leads it mentions to Deal Desk.' } }
-,
-  { label: 'Edit a super power', sub: 'Edit sits beside Overview, Crew and Workbench when a super power is picked. It is the platform\'s editor, the same screen, in rrotor\'s layout: the power map across the top (the cat in the middle, everything it can use around it), the form on the left (its cat, voice and name; when to use it; the sliders; the brief, with Write it with AI) and its powers on the right, with + Add a power. The drawer closes to give it room. Delete, Cancel and Save at the bottom of the form; nothing is saved until Save.', o: { pick: 'clips', focus: true, edit: true, noDrawer: true, dirty: '2 unsaved changes' } },
-  { label: 'Edit, with Glyphh helping', sub: 'Open the drawer and Glyphh edits with you: say what to change and it changes the form (here the brief), with Undo. The rail collapses to keep the editor wide enough.', o: { pick: 'clips', focus: true, edit: true, collapsed: true, dirty: '1 unsaved change' } },
-  { label: 'Edit: add a power', sub: 'The platform\'s Add a power dialog: five tabs (Folders, Connections, Models, Custom powers, Super powers), search, pages, + to add and ✓ when added.', o: { pick: 'clips', focus: true, edit: true, noDrawer: true, adding: true, dirty: '2 unsaved changes' } }
+
 ];
 
 class Component extends DCLogic {
