@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Glyphh admin: the marketplace, light</title>
+<title>Glyphh admin: the marketplace, light (1 of 5)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -28,7 +28,7 @@ button,input,textarea{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">Glyphh admin › Marketplace · super admins only · light</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh admin: the marketplace (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh admin: the marketplace (light) · 1 of 5</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">Where Glyphh decides what goes on the marketplace. Orgs send listings once their org admin approves them; Glyphh sends its own. Each one is checked first by Glyphh's own reviewer super power, Marketplace Reviewer, which writes a report: what the listing asks for against what it does, its dependencies, its screenshots, its description, secrets in the bundle, and a run in a sandbox. Then a person decides: publish, request changes (with a note per field, the agent's findings in one click) or reject with a reason. Every listing carries its version (semver, always higher than the last, never reused) and its release notes (required, up to 2,000 characters); reviewers see both, and every earlier version keeps its own. Icons are square 512 px PNGs; screenshots are PNG or JPEG, up to six, 5 MB each; never SVG. Every word between Glyphh and the org lands in the listing's thread. Published listings are managed here too: feature, change category, unpublish, versions; and the categories and the featured row themselves. Desktop 1200 wide, phone 390 wide.</p>
 </div>
 
@@ -504,7 +504,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":20800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":5613}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -813,7 +813,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (st, i) {
         var n = i + 1;

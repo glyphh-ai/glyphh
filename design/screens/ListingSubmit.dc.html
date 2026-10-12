@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Publish a power or super power</title>
+<title>Publish a power or super power (1 of 4)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -23,7 +23,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">app.glyphh.ai · a power’s or super power’s page › Publish</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Publish a power or super power</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Publish a power or super power · 1 of 4</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">A member lists something they made: for Northwind only, or for everyone in the Glyphh marketplace. The editor takes the icon (a super power wears its cat), name, a one-line summary, description, category, screenshots, version and what’s new; what it needs is read from what it uses. Submitting sends it to the org admin, and marketplace listings on to Glyphh. Every step shows where it is and who has it; changes requested come back as notes on the fields. Desktop 1200, phone 390.</p>
 </div>
 
@@ -89,7 +89,7 @@ button,input{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":18800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":7007}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
@@ -489,7 +489,8 @@ var STATES = [
 ];
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (s) { return { title: (STATES.indexOf(s) + 1) + ' · ' + s.title, sub: s.sub, frames: [frame(s, true, 'B', NAV), frame(s, false, 'B', NAV)] }; }),
       notes: [

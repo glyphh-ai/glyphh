@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Billing, light</title>
+<title>Billing, light (1 of 4)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -25,7 +25,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">app.glyphh.ai · Account › Billing · flow and copy from server-old</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Billing</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Billing · 1 of 4</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: var(--tx2); max-width: 1400px">One page: plan, credit balance with auto top-up, spend by day, plans and invoices. Credit is dollars, as Anthropic's is: a connection call costs 2¢ for each started 30 seconds, runs cost nothing, and bought credit expires a year after purchase. Every action opens a dialog; paying happens in Stripe's embedded checkout inside a 560 px modal (initEmbeddedCheckout, no redirect), then Glyphh confirms with Stripe before anything changes. Cards and payment methods live in Stripe's portal ("Manage in Stripe"). The Stripe form takes its look from Checkout branding in the Stripe Dashboard: set the brand colour to violet #7C4DFF.</p>
 </div>
 
@@ -232,7 +232,7 @@ button,input{font:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":20000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5072,"height":6277}}'>
 var THEME = 'light';
 var DAYS = [42, 55, 38, 61, 70, 22, 15, 66, 80, 58, 74];
 function days() {
@@ -373,7 +373,8 @@ function frames() {
   return out;
 }
 class Component extends DCLogic {
-  renderVals() { return { frames: frames() }; }
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; v.frames = keep.map(function (i) { return v.frames[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() { return { frames: frames() }; }
 }
 </script>
 </body>

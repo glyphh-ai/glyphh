@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Org: allowed models and connections</title>
+<title>Org: allowed models and connections (1 of 2)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -23,7 +23,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Org › Models · Org › Connections · Org › Teams › Sales · org admin · dark</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Allowed models and connections</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Allowed models and connections · 1 of 2</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">An org admin's Models and Connections pages only say which models and services people may add. They hold no keys and no accounts: everyone still adds their own model with their own key, and connects their own account. Both limits start off, so anything in the catalog can be added. Turned on, only what is on the list can be added, org wide; a team can turn on its own limit and, under an org that limits, only narrow the org's list. Someone in several teams may add what any of their teams allows. A model or connection a limit leaves out stops working for whoever has it, and comes back on its own when it is allowed again. Desktop 1200, phone 390.</p>
 </div>
 
@@ -299,7 +299,7 @@ button,input{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":10800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":6326}}'>
 var B = 'assets/';
 var LG = {
   Anthropic: 'anthropic-dark.svg', OpenAI: 'openai-dark.svg', Google: 'gemini.svg', xAI: 'grok-dark.svg',
@@ -551,7 +551,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5, 6, 7]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [

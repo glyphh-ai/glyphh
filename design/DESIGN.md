@@ -160,7 +160,7 @@ The left half on desktop, collapsing to a small ring above the content on a phon
 - **Machine cards** show up to 8 super powers, each in an outlined square with its name under it (two lines, then an ellipsis), then "+N / See all".
 - **See all** opens a dialog with search, status filters and pages.
 - **Clicking a super power** opens it on its machine in rrotor. The platform shows and edits what is in the system (powers, grants, settings, catalogs, plans); the work runs on machines and is never run from the web.
-- **Every header has the light/dark toggle.** The account menu and the Account page offer Light, Dark or System.
+- **The theme is in the account menu** (bottom of the rail) and on the Account page: Light, Dark or System.
 
 ### Logos of other companies
 
@@ -196,7 +196,9 @@ Decided 2026-10-11. Beside the metered connection calls, every use of a power or
 
 ### Navigation
 
-Decided 2026-10-11 and 2026-10-12: the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans, Audit log); the account menu has Usage and API keys. Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
+**A left rail, not a top nav** (Chris, 2026-10-12; board `AppShell`, `AppShell2`). The rail collapses to icons (256 px open, 72 px collapsed, remembered per person), with **you, your org and your account at the bottom left**: a button that opens the account menu upward (your orgs to switch between, Account, Usage, API keys, Help and status, the theme Light / Dark / System, Sign out). On a phone (below 768 px) the same rail is a **drawer from the left**, opened by a menu button top left. The page's title and main action head the page itself; there is no top bar. Icons are **Lucide** (approved 2026-10-12), stroke 2, 20 px, only the ones `AppShell` lists. Sign-in pages have no rail.
+
+Decided 2026-10-11 and 2026-10-12: the rail holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans, Audit log); the account menu has Usage and API keys. Plans edits each plan's versions and the billing settings: what a connection call costs per started 30 seconds (2¢), and the smallest and largest top-up ($5, $10,000), each change kept with who made it and from when.
 
 ### Admin decisions
 
@@ -268,6 +270,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 |---|---|---|---|
 | Brand | `Main`, `Palettes`, `Type`, `LogoInUse` | Logo, cats and moods, motion, Ink & Violet, Red Hat, the sign-in panel's animation | n/a |
 | Components (requested) | `Components` | Every requested component, each variant and state, dark and light side by side, props named under each: LogoTile, CatRing with the comet, Avatar person and org, TextInput `code`, DescriptionList, Menu radio, check and danger items, Pagination, SegmentedControl, the themed Payment Element, ConnectFrame, bars by day, PowerMap and FlowCanvas nodes | with the page that needs it |
+| App shell: the left rail | `AppShell`, `AppShell2` | The rail every app page sits in: open and collapsed, an org admin's Org group, a super admin's Glyphh admin group, the account menu at the bottom left, the phone drawer; dark and light | 1, before any app page |
 | Sign in | `SignInFlow` | Google / GitHub, loading, signed in, expired, refused, error | 1 |
 | Allow a host | `AllowFlow` | "Claude wants to use your Glyphh": allow, deny, connected | 1 |
 | Approve a code | `CodeFlow` | Enter a code (validation), confirm the machine, approved | 1 |
@@ -421,6 +424,8 @@ Board changes from the decisions of 2026-10-11 and 2026-10-12.
 All done (2026-10-12): the Usage boards (dark and light) now let a plan's included usage expire at the period's end and carry over only bought credit. Included usage is spent before bought credit, as decided.
 
 
+- **Every app board:** replace the top bar with the left rail from `AppShell` (the page area keeps its content; title and main action head the page). Sign-in boards keep no rail.
+
 ### Questions
 
 Answered by Chris, 2026-10-12:
@@ -464,4 +469,10 @@ From the design agent, 2026-10-12. What changed on the boards since the last han
 ### What the boards still leave open
 
 The Questions above (to Chris), and the server's Open list (`docs/architecture.md`, Open → Design): API key details, usage time zones, the audit log's retention and export, multi-select pickers, admin navigation on a phone. Build what is decided; leave a `[BRACKETS]` placeholder or ask for the rest. Never invent a value or a look.
+
+### Since the handoff (2026-10-12)
+
+- **The canvas allows boards up to 8000 px tall**, so every taller board is now split into parts on the same canvas page and in `screens/`: `Name.dc.html` is part 1, `Name2.dc.html` part 2, and so on (Billing, the plugin cards, every admin, org, publishing, usage and API keys board, and their light copies). The parts share one script; each shows its own states. Read them in order.
+- **The left rail replaces the top nav** (`AppShell`, `AppShell2`, and Decisions → Navigation). Build the shell once (a `Rail`, its `RailItem` and group, the account button and menu, the phone drawer) before the app pages; the app boards still show the old top bar until the design agent redraws them, so take the shell from `AppShell`, the page content from each board.
+- **Lucide** is approved for the rail's icons; only the ones `AppShell` names.
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>API keys, light</title>
+<title>API keys, light (1 of 3)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -19,7 +19,7 @@ a{color:#6A3DF0}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">app.glyphh.ai · Account › API keys, Org › API keys · light</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">API keys (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">API keys (light) · 1 of 3</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">Keys for scripts, CI and CLIs that would rather send a key than sign in; Claude, Codex and machines sign in their own way. A member finds their keys in the account menu: each key's name, its prefix to tell it apart, when it was made, last used and expires, and its status. A key is shown once, when made: Glyphh stores only its hash. Org admins decide whether members may make their own keys, and see and revoke every key in the org under Org › API keys. Desktop 1200 wide, phone 390 wide.</p>
 </div>
 
@@ -270,7 +270,7 @@ a{color:#6A3DF0}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":17200}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":6263}}'>
 var VIOLET = '#7C4DFF', CHIP_BG = 'rgba(124,77,255,.12)';
 
 function initials(name) {
@@ -482,7 +482,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5, 6, 7]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [

@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyphh admin: models and providers (3 of 4)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font:inherit}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#B49CFF;--pink:#F062D0;--pink-bg:rgba(240,98,208,.08);--pink-line:rgba(240,98,208,.4);--red:#FF4D4D;--red-tx:#FF4D4D;--red-bg:rgba(255,77,77,.07);--red-line:rgba(255,77,77,.4);--ion:#6FD8FF;--ion-bg:rgba(111,216,255,.12);--scrim:rgba(0,0,0,.55)}
+.t a{color:var(--accent-tx)}
+.g-anim.g-spin{animation:g-spin .8s linear infinite}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.g-anim{animation:none!important}}
+</style>
+</helmet>
+<div class="t" style="width: 3520px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">Glyphh admin › Models · super admins only · dark</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Models and providers · 3 of 4</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">The catalog everyone picks models from: about 3,900 models across 125 providers. It is Glyphh's reference data, the same for every org; anyone signed in reads it, only super admins change it. Two tables: providers (name, logo, how to reach it) and catalog models (the provider's model id, a name, a description, a type). It holds no keys, prices or limits. A super admin can turn a provider or a model off, or remove it. Off is for now, the org limits' rule: members' powers on it are disabled with the reason and come back, untouched, when it is on again. Removed is for good: those powers can only be deleted, so removing asks you to type the name. The old list came without descriptions, so writing them is a job of its own. Providers without artwork on this board (DeepSeek, Cohere, Cerebras, …) show the LogoTile's initials; in the build a provider shows its uploaded mark. Desktop 1200, phone 390.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
+<sc-for list="{{states}}" as="st" hint-placeholder-count="18">
+<div style="display: flex; flex-direction: column; gap: 18px; width: 1640px">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">{{st.title}}</div>
+<div style="font-size: 16px; line-height: 1.5; color: #8E89A0; max-width: 1400px">{{st.sub}}</div>
+</div>
+<div style="display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{st.frames}}" as="f" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div role="img" aria-label="{{f.aria}}" style="position: relative; width: {{f.w}}; min-height: {{f.minH}}; height: {{f.fixH}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block"><sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Machines</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Super powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Powers</a><a href="#" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx2)">Marketplace</a><a href="#" aria-current="page" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--tx); background: var(--s2)">Glyphh admin</a></nav></sc-if></div>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">Y</button>
+</header>
+
+<main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1104px; align-self: center">
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h2}}; font-weight: 700; letter-spacing: -0.03em">Glyphh admin</h2>
+<div role="tablist" aria-label="Glyphh admin" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto">
+<sc-for list="{{f.subtabs}}" as="tb" hint-placeholder-count="4"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for>
+</div>
+</div>
+
+<sc-if value="{{f.showSeg}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div role="radiogroup" aria-label="Show" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); width: {{f.segW}}; box-sizing: border-box"><sc-for list="{{f.seg}}" as="o" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{o.on}}" style="height: 40px; padding: 0 14px; border: none; border-radius: 9px; background: {{o.bg}}; color: {{o.tx}}; font-size: 14px; font-weight: 600; white-space: nowrap">{{o.label}}</button></sc-for></div>
+<sc-if value="{{f.v.providers}}" hint-placeholder-val="{{ true }}"><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: {{f.addW}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a provider</button></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{f.hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--chip-bg); border: 1px solid rgba(124,77,255,.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5 9-10"></path></svg><span style="flex: 1; font-size: 15px">{{f.toast}}</span></div>
+</sc-if>
+
+<sc-if value="{{f.v.providers}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 18px; font-weight: 600">Providers</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Every org picks models from these. Turn a provider off and its models stop for everyone using them.</div></div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.toolDir}}">
+<div style="position: relative; flex: 1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="ps-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search providers</label><input id="ps-{{f.key}}" type="search" value="{{f.query}}" placeholder="Search providers by name or id" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.qBorder}}; background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<button type="button" aria-label="Sort providers" style="height: 48px; flex: none; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px"><span><span style="color: var(--tx3)">Sort:</span> Most used</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<sc-if value="{{f.loading}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Loading providers" aria-busy="true" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.skel}}" as="k" hint-placeholder-count="8">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: {{k.top}}">
+<span style="width: {{f.tileBox}}; height: {{f.tileBox}}; flex: none; border-radius: 12px; background: #25222F"></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span style="height: 12px; width: {{k.w1}}; border-radius: 6px; background: #25222F"></span><span style="height: 10px; width: {{k.w2}}; border-radius: 5px; background: #1B1924"></span></span>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><span style="width: 280px; height: 12px; border-radius: 6px; background: #1B1924"></span><span style="width: 90px; height: 24px; border-radius: 999px; background: #25222F"></span></sc-if>
+</div>
+</sc-for>
+</section>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tx2)"><span class="g-anim g-spin" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid #2C2938; border-top-color: #6FD8FF; box-sizing: border-box"></span>Loading 125 providers…</div>
+</sc-if>
+
+<sc-if value="{{f.err}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 14px; background: var(--red-bg); border: 1px solid var(--red-line)">
+<div style="display: flex; flex-direction: column; gap: 6px"><div style="font-size: 16px; font-weight: 600">Providers didn’t load</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">The catalog didn’t answer in time. Nothing was changed. Try again; if it keeps happening, send us the trace ID.</div></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; border: 1px solid #2C2938; background: #13121A; box-sizing: border-box">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 12px; color: #8E89A0">Trace ID</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.traceId}}</span></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+</div>
+<button type="button" style="align-self: {{f.btnAlign}}; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Try again</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.noMatch}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 40px 24px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No providers match “{{f.query}}”</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 440px">Search by the provider’s name or its id (mistral, openai). If it isn’t in the catalog yet, add it.</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}; width: {{f.emptyBtnW}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Clear search</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add {{f.query}} as a provider</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.hasRows}}" hint-placeholder-val="{{ true }}">
+<section aria-label="Providers" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 72px 64px 120px 112px 44px; gap: 14px; align-items: center; padding: 10px 0; font-size: 12px; color: var(--tx3); font-weight: 600"><span></span><span>Provider</span><span style="text-align: right">Models</span><span style="text-align: right">On</span><span style="text-align: right">People using it</span><span>Status</span><span></span></div>
+</sc-if>
+<sc-for list="{{f.rows}}" as="p" hint-placeholder-count="25">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 72px 64px 120px 112px 44px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); opacity: {{p.op}}">
+<span style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box"><sc-if value="{{p.t.logo}}" hint-placeholder-val="{{ true }}"><img src="{{p.t.src}}" alt="" style="width: 24px; height: 24px; object-fit: contain"></sc-if><sc-if value="{{p.t.noLogo}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 15px; font-weight: 700; color: var(--tx2)">{{p.t.ini}}</span></sc-if></span>
+<a href="#" style="min-width: 0; display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--tx)"><span style="font-size: 15px; font-weight: 600">{{p.name}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">{{p.slug}}</span></a>
+<span style="font-size: 14px; text-align: right">{{p.models}}</span>
+<span style="font-size: 14px; text-align: right; color: var(--tx2)">{{p.on}}</span>
+<span style="font-size: 14px; text-align: right; color: var(--tx2)">{{p.people}}</span>
+<span><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: {{p.chipBg}}; color: {{p.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{p.dot}}"></span>{{p.status}}</span></span>
+<a href="#" aria-label="Open {{p.name}}" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--tx3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</div>
+</sc-if>
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: {{p.top}}; min-height: 72px; box-sizing: border-box">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box; opacity: {{p.op}}"><sc-if value="{{p.t.logo}}" hint-placeholder-val="{{ true }}"><img src="{{p.t.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></sc-if><sc-if value="{{p.t.noLogo}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 14px; font-weight: 700; color: var(--tx2)">{{p.t.ini}}</span></sc-if></span>
+<a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-decoration: none; color: var(--tx)"><span style="font-size: 15px; font-weight: 600">{{p.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.phoneLine}}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{p.chipTx}}"><span style="width: 7px; height: 7px; flex: none; border-radius: 50%; background: {{p.dot}}"></span>{{p.status}}</span></a>
+<a href="#" aria-label="Open {{p.name}}" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--tx3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</div>
+</sc-if>
+</sc-for>
+</section>
+<nav aria-label="{{f.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pg.items}}" as="pi" hint-placeholder-count="5"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.provider}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; height: 44px; align-self: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Providers</a>
+<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<span style="width: {{f.pvTile}}; height: {{f.pvTile}}; flex: none; border-radius: 16px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box; opacity: {{f.pv.op}}"><sc-if value="{{f.pv.t.logo}}" hint-placeholder-val="{{ true }}"><img src="{{f.pv.t.src}}" alt="" style="width: {{f.pvImg}}; height: {{f.pvImg}}; object-fit: contain"></sc-if><sc-if value="{{f.pv.t.noLogo}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700; color: var(--tx2)">{{f.pv.t.ini}}</span></sc-if></span>
+<div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><h3 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h2}}; font-weight: 700; letter-spacing: -0.03em">{{f.pv.name}}</h3><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: {{f.pv.chipBg}}; color: {{f.pv.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{f.pv.dot}}"></span>{{f.pv.status}}</span></div>
+<div style="font-size: 14px; color: var(--tx3)">{{f.pv.line}}</div>
+</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}; width: {{f.pvBtnW}}">
+<sc-for list="{{f.pv.btns}}" as="b" hint-placeholder-count="2"><button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: {{b.border}}; background: {{b.bg}}; color: {{b.tx}}; font-size: 15px; font-weight: 600; white-space: nowrap">{{b.t}}</button></sc-for>
+</div>
+</div>
+
+<sc-if value="{{f.pv.off}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 14px; background: var(--red-bg); border: 1px solid var(--red-line)"><div style="font-size: 15px; font-weight: 600">{{f.pv.name}} is turned off</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.pv.offBody}}</div></div>
+</sc-if>
+
+<section aria-label="How Glyphh reaches {{f.pv.name}}" style="display: grid; grid-template-columns: {{f.dlCols}}; column-gap: 20px; padding: 6px 20px 14px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line)">
+<sc-for list="{{f.pv.dl}}" as="d" hint-placeholder-count="5">
+<div style="padding: {{d.kPad}}; font-size: 13px; color: var(--tx3); border-top: {{d.top}}">{{d.k}}</div>
+<div style="padding: {{d.vPad}}; font-size: 14px; line-height: 1.5; font-family: {{d.font}}; border-top: {{d.vTop}}; min-width: 0; overflow-wrap: anywhere">{{d.v}}</div>
+</sc-for>
+</section>
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 6px">
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 18px; font-weight: 600">Models</div><div style="font-size: 14px; color: var(--tx3)">{{f.pv.modelsLine}}</div></div>
+<sc-if value="{{f.pv.hasModels}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}; width: {{f.pvBtnW}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600; white-space: nowrap">Import from {{f.pv.name}}</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a model</button>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{f.pv.hasModels}}" hint-placeholder-val="{{ true }}">
+<div style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="ms-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search models</label><input id="ms-{{f.key}}" type="search" placeholder="Search {{f.pv.name}}’s models" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<div role="radiogroup" aria-label="Type" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.pv.types}}" as="ch" hint-placeholder-count="5"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font-size: 13px; font-weight: 600">{{ch.label}}</button></sc-for></div>
+<section aria-label="{{f.pv.name}} models" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: 220px 84px minmax(0, 1fr) 120px 64px 88px 52px; gap: 14px; align-items: center; padding: 10px 0; font-size: 12px; color: var(--tx3); font-weight: 600"><span>Model</span><span>Type</span><span>Description</span><span>Used by</span><span></span><span></span><span>On</span></div>
+</sc-if>
+<sc-for list="{{f.pv.models}}" as="m" hint-placeholder-count="10">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: 220px 84px minmax(0, 1fr) 120px 64px 88px 52px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line)">
+<span style="min-width: 0; display: flex; flex-direction: column; gap: 2px; opacity: {{m.op}}"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.id}}</span></span>
+<span><span style="height: 24px; padding: 0 9px; border-radius: 999px; background: var(--s3); color: var(--tx2); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">{{m.type}}</span></span>
+<span style="font-size: 13px; line-height: 1.45; color: {{m.descTx}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{m.desc}}</span>
+<span style="font-size: 13px; color: var(--tx2)">{{m.used}}</span>
+<button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Edit</button>
+<button type="button" aria-label="Remove {{m.name}}" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--red-line); background: transparent; color: var(--red-tx); font-size: 14px; font-weight: 600">Remove</button>
+<button type="button" role="switch" aria-checked="{{m.onStr}}" aria-label="{{m.name}} on" aria-disabled="{{m.lockStr}}" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{m.swBg}}; position: relative; opacity: {{m.swOp}}"><span style="position: absolute; top: 4px; left: {{m.knob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button>
+</div>
+</sc-if>
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-top: {{m.top}}">
+<a href="#" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-decoration: none; color: var(--tx); opacity: {{m.op}}"><span style="font-size: 15px; font-weight: 600">{{m.name}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.id}}</span><span style="font-size: 12px; color: var(--tx2)">{{m.type}} · {{m.used}}</span><span style="font-size: 13px; line-height: 1.45; color: {{m.descTx}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{m.desc}}</span></a>
+<button type="button" role="switch" aria-checked="{{m.onStr}}" aria-label="{{m.name}} on" aria-disabled="{{m.lockStr}}" style="width: 52px; height: 32px; flex: none; margin-top: 6px; border-radius: 999px; border: none; background: {{m.swBg}}; position: relative; opacity: {{m.swOp}}"><span style="position: absolute; top: 4px; left: {{m.knob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button>
+</div>
+</sc-if>
+</sc-for>
+</section>
+<nav aria-label="{{f.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pg.items}}" as="pi" hint-placeholder-count="5"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+
+<sc-if value="{{f.pv.empty}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 40px 24px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No models yet</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 460px">Import them from {{f.pv.name}}’s own model list, or add one by hand. Members see {{f.pv.name}} in the catalog once it has a model that’s on.</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}; width: {{f.emptyBtnW}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Add one model</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">Add models from {{f.pv.name}}</button>
+</div>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.v.models}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 18px; font-weight: 600">Models</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Every model in the catalog, across all providers. The old list came without descriptions: write one or two lines on what each is good for; members read them when they pick a model.</div></div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.toolDir}}">
+<div style="position: relative; flex: 1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="as-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search models</label><input id="as-{{f.key}}" type="search" placeholder="Search models, providers or ids" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<button type="button" aria-label="Type" style="height: 48px; flex: none; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px"><span><span style="color: var(--tx3)">Type:</span> Any</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<div role="radiogroup" aria-label="Filter" style="display: flex; gap: 8px; overflow-x: auto"><sc-for list="{{f.filters}}" as="ch" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font-size: 13px; font-weight: 600">{{ch.label}}</button></sc-for></div>
+<section aria-label="Models with no description" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.nrows}}" as="r" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: {{f.nCols}}; gap: {{f.nGap}}; align-items: start; padding: 16px 0; border-top: {{r.top}}">
+<div style="display: flex; align-items: center; gap: 12px; min-width: 0">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box"><sc-if value="{{r.t.logo}}" hint-placeholder-val="{{ true }}"><img src="{{r.t.src}}" alt="" style="width: 20px; height: 20px; object-fit: contain"></sc-if><sc-if value="{{r.t.noLogo}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 13px; font-weight: 700; color: var(--tx2)">{{r.t.ini}}</span></sc-if></span>
+<span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">{{r.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.prov}} · <span style="font-family: 'Red Hat Mono', monospace">{{r.id}}</span></span><span style="font-size: 12px; color: var(--tx2)">{{r.type}} · {{r.used}}</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+<label for="nd-{{f.key}}-{{r.i}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Description for {{r.name}}</label>
+<textarea id="nd-{{f.key}}-{{r.i}}" rows="2" placeholder="What is it good for? One or two lines." style="width: 100%; min-height: 72px; box-sizing: border-box; resize: vertical; border-radius: 12px; border: 1px solid {{r.border}}; background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 14px; line-height: 1.45">{{r.value}}</textarea>
+<sc-if value="{{r.err}}" hint-placeholder-val="{{ false }}"><div role="alert" style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--red-tx)"><span>{{r.err}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">Trace ID {{r.trace}}</span></div></sc-if>
+</div>
+<div style="display: flex; justify-content: {{f.nSaveJustify}}">
+<sc-if value="{{r.saved}}" hint-placeholder-val="{{ false }}"><span role="status" style="height: 44px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--accent-tx)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Saved</span></sc-if>
+<sc-if value="{{r.canSave}}" hint-placeholder-val="{{ true }}"><button type="button" aria-disabled="{{r.disStr}}" style="height: 44px; min-width: 88px; padding: 0 16px; border-radius: 10px; border: {{r.btnBorder}}; background: {{r.btnBg}}; color: {{r.btnTx}}; font-size: 14px; font-weight: 600">{{r.btn}}</button></sc-if>
+</div>
+</div>
+</sc-for>
+</section>
+<nav aria-label="{{f.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pg.items}}" as="pi" hint-placeholder-count="5"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+</main>
+
+<sc-if value="{{f.dlg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dt-{{f.key}}" style="position: absolute; left: 50%; top: {{f.dlgTop}}; transform: translateX(-50%); width: {{f.dlgW}}; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.45); padding: {{f.dlgPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h3 id="dt-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{f.dlgTitle}}</h3><sc-if value="{{f.dlgDesc}}" hint-placeholder-val="{{ false }}"><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.dlgDesc}}</div></sc-if></div>
+<button type="button" aria-label="Close" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<sc-if value="{{f.d.confirm}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line)">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box"><sc-if value="{{f.c.t.logo}}" hint-placeholder-val="{{ true }}"><img src="{{f.c.t.src}}" alt="" style="width: 24px; height: 24px; object-fit: contain"></sc-if><sc-if value="{{f.c.t.noLogo}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 15px; font-weight: 700; color: var(--tx2)">{{f.c.t.ini}}</span></sc-if></span>
+<span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{f.c.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.c.line}}</span></span>
+</div>
+<div style="font-size: 15px; line-height: 1.55">{{f.c.body}}</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.c.note}}</div>
+<sc-if value="{{f.c.typed}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="cf-{{f.key}}" style="font-size: 14px; font-weight: 600">Type {{f.c.name}} to confirm</label><input id="cf-{{f.key}}" value="{{f.c.typedVal}}" placeholder="{{f.c.name}}" autocomplete="off" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.c.typedBorder}}; background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px"></div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.d.form}}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{f.formErr}}" hint-placeholder-val="{{ false }}"><div role="alert" style="padding: 12px 14px; border-radius: 12px; background: var(--red-bg); border: 1px solid var(--red-line); font-size: 14px; line-height: 1.5">{{f.formErr}}</div></sc-if>
+<div style="display: grid; grid-template-columns: {{f.fCols}}; gap: 18px 16px">
+<sc-for list="{{f.fields}}" as="fl" hint-placeholder-count="8">
+<div style="grid-column: {{fl.col}}; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><label for="fl-{{f.key}}-{{fl.i}}" style="font-size: 14px; font-weight: 600">{{fl.label}}</label><span style="font-size: 12px; color: var(--tx3); text-align: right">{{fl.aside}}</span></div>
+
+<sc-if value="{{fl.isInput}}" hint-placeholder-val="{{ true }}">
+<div style="position: relative"><input id="fl-{{f.key}}-{{fl.i}}" value="{{fl.value}}" placeholder="{{fl.ph}}" aria-invalid="{{fl.invalid}}" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{fl.border}}; background: var(--bg); color: var(--tx); padding: 0 {{fl.padR}} 0 14px; font-size: 15px; font-family: {{fl.font}}"><sc-if value="{{fl.suffix}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; right: 14px; top: 14px; font-size: 14px; color: var(--tx3)">{{fl.suffix}}</span></sc-if></div>
+</sc-if>
+
+<sc-if value="{{fl.isSelect}}" hint-placeholder-val="{{ false }}">
+<button type="button" id="fl-{{f.key}}-{{fl.i}}" aria-haspopup="listbox" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{fl.border}}; background: var(--bg); color: var(--tx); padding: 0 14px; font-size: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left"><span style="display: inline-flex; align-items: center; gap: 10px; min-width: 0"><sc-if value="{{fl.t}}" hint-placeholder-val="{{ false }}"><span style="width: 28px; height: 28px; flex: none; border-radius: 8px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><sc-if value="{{fl.t.logo}}" hint-placeholder-val="{{ false }}"><img src="{{fl.t.src}}" alt="" style="width: 16px; height: 16px; object-fit: contain"></sc-if><sc-if value="{{fl.t.noLogo}}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 11px; font-weight: 700; color: var(--tx2)">{{fl.t.ini}}</span></sc-if></span></sc-if><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{fl.value}}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M6 9l6 6 6-6"></path></svg></button>
+</sc-if>
+
+<sc-if value="{{fl.isArea}}" hint-placeholder-val="{{ false }}">
+<textarea id="fl-{{f.key}}-{{fl.i}}" rows="3" placeholder="{{fl.ph}}" aria-invalid="{{fl.invalid}}" style="width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical; border-radius: 12px; border: 1px solid {{fl.border}}; background: var(--bg); color: var(--tx); padding: 12px 14px; font-size: 15px; line-height: 1.5">{{fl.value}}</textarea>
+</sc-if>
+
+<sc-if value="{{fl.isSeg}}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" aria-label="{{fl.label}}" style="display: grid; grid-template-columns: {{fl.segCols}}; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line)"><sc-for list="{{fl.opts}}" as="o" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{o.on}}" style="height: 40px; padding: 0 10px; border: none; border-radius: 9px; background: {{o.bg}}; color: {{o.tx}}; font-size: 14px; font-weight: 600; white-space: nowrap">{{o.label}}</button></sc-for></div>
+</sc-if>
+
+<sc-if value="{{fl.isChips}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{fl.groups}}" as="g" hint-placeholder-count="2">
+<div role="group" aria-label="{{g.name}}" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="width: 56px; flex: none; font-size: 13px; color: var(--tx3)">{{g.name}}</span><sc-for list="{{g.opts}}" as="o" hint-placeholder-count="5"><button type="button" role="checkbox" aria-checked="{{o.on}}" style="height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{o.border}}; background: {{o.bg}}; color: {{o.tx}}; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><sc-if value="{{o.chk}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{o.label}}</button></sc-for></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{fl.isSwitch}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line)"><button type="button" role="switch" aria-checked="{{fl.onStr}}" aria-label="{{fl.label}}" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{fl.swBg}}; position: relative"><span style="position: absolute; top: 4px; left: {{fl.knob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button><span style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{fl.value}}</span></div>
+</sc-if>
+
+<sc-if value="{{fl.isLogo}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: {{f.fCols}}; gap: 12px">
+<sc-for list="{{fl.drops}}" as="d" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+<div style="font-size: 13px; color: var(--tx2)">{{d.head}}</div>
+<sc-if value="{{d.empty}}" hint-placeholder-val="{{ true }}">
+<button type="button" style="min-height: 120px; padding: 16px; border-radius: 12px; border: 1px dashed {{d.border}}; background: var(--bg); color: var(--tx); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center"><span style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line2); display: inline-flex; align-items: center; justify-content: center; color: var(--tx2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span><span style="font-size: 14px; font-weight: 600">{{d.title}}</span><span style="font-size: 12px; line-height: 1.45; color: var(--tx3)">{{d.sub}}</span></button>
+</sc-if>
+<sc-if value="{{d.up}}" hint-placeholder-val="{{ false }}">
+<div style="min-height: 120px; padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 10px; box-sizing: border-box">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px"><span style="font-family: 'Red Hat Mono', monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.file}}</span><span style="color: var(--tx3); font-size: 13px">{{d.pct}}</span></div>
+<div role="progressbar" aria-valuenow="{{d.pctN}}" aria-valuemin="0" aria-valuemax="100" aria-label="Uploading {{d.file}}" style="height: 6px; border-radius: 999px; background: var(--s3); overflow: hidden"><div style="height: 100%; width: {{d.pct}}; border-radius: 999px; background: #6FD8FF"></div></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 12px; color: var(--tx3)">Uploading…</span><button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Cancel</button></div>
+</div>
+</sc-if>
+<sc-if value="{{d.done}}" hint-placeholder-val="{{ false }}">
+<div style="min-height: 120px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 12px; box-sizing: border-box">
+<div style="display: flex; align-items: center; gap: 12px; min-width: 0"><span style="width: 56px; height: 56px; flex: none; border-radius: 14px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: var(--s1); box-sizing: border-box"><span aria-hidden="true" style="font-family: 'Red Hat Display', sans-serif; font-size: 18px; font-weight: 700; color: var(--tx2)">{{d.ini}}</span></span><span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Red Hat Mono', monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.file}}</span><span style="font-size: 12px; color: var(--tx3)">{{d.meta}}</span></span></div>
+<div style="display: flex; gap: 8px"><button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Replace</button><button type="button" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Remove</button></div>
+</div>
+</sc-if>
+<sc-if value="{{d.err}}" hint-placeholder-val="{{ false }}"><div role="alert" style="display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 1.45; color: var(--red-tx)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M6 6l12 12M18 6L6 18"></path></svg>{{d.err}}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{fl.hint}}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; line-height: 1.45; color: var(--tx3)">{{fl.hint}}</div></sc-if>
+<sc-if value="{{fl.err}}" hint-placeholder-val="{{ false }}"><div role="alert" style="display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 1.45; color: var(--red-tx)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M6 6l12 12M18 6L6 18"></path></svg><span>{{fl.err}}<sc-if value="{{fl.errLink}}" hint-placeholder-val="{{ false }}"> <a href="#">{{fl.errLink}}</a></sc-if></span></div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.import}}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{f.imp.fetching}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 15px"><span class="g-anim g-spin" style="width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid #2C2938; border-top-color: #6FD8FF; box-sizing: border-box"></span>Asking Cerebras for its model list…</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">We call <span style="font-family: 'Red Hat Mono', monospace; font-size: 13px">GET https://api.cerebras.ai/v1/models</span> with Glyphh’s own test key. Nothing is added until you pick.</div>
+<sc-for list="{{f.skel}}" as="k" hint-placeholder-count="4"><div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line)"><span style="width: 22px; height: 22px; border-radius: 6px; background: #25222F"></span><span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span style="height: 12px; width: {{k.w1}}; border-radius: 6px; background: #25222F"></span><span style="height: 10px; width: {{k.w2}}; border-radius: 5px; background: #1B1924"></span></span></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{f.imp.hasHead}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">{{f.imp.head}}</div><div style="font-size: 13px; line-height: 1.5; color: var(--tx3)">{{f.imp.sub}}</div></div>
+</sc-if>
+<sc-if value="{{f.imp.bar}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div role="progressbar" aria-valuenow="{{f.imp.pctN}}" aria-valuemin="0" aria-valuemax="100" aria-label="Adding models" style="height: 6px; border-radius: 999px; background: var(--s3); overflow: hidden"><div style="height: 100%; width: {{f.imp.pct}}; border-radius: 999px; background: {{f.imp.barBg}}"></div></div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--tx3)"><span>{{f.imp.barL}}</span><span style="font-family: 'Red Hat Mono', monospace">{{f.imp.barR}}</span></div>
+</div>
+</sc-if>
+<sc-if value="{{f.imp.fail}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--red-bg); border: 1px solid var(--red-line)">
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 15px; font-weight: 600">2 models weren’t added</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">The other 12 are in the catalog. Try the 2 again; if they still fail, send us the trace ID.</div></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; border: 1px solid #2C2938; background: #13121A; box-sizing: border-box">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 12px; color: #8E89A0">Trace ID</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.traceId}}</span></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid #403B50; background: #13121A; color: #F5F3FA; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{f.imp.hasRows}}" hint-placeholder-val="{{ true }}">
+<div style="border-radius: 12px; border: 1px solid var(--line); background: var(--s1); padding: 0 14px">
+<sc-if value="{{f.imp.pick}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: 14px; font-weight: 600"><span role="checkbox" aria-checked="true" aria-label="Select all 14" style="width: 22px; height: 22px; flex: none; border-radius: 6px; background: #7C4DFF; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>All 14 selected</div>
+</sc-if>
+<sc-for list="{{f.imp.rows}}" as="r" hint-placeholder-count="8">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-top: {{r.top}}; box-sizing: border-box">
+<span style="width: 22px; height: 22px; flex: none; display: inline-flex; align-items: center; justify-content: center">
+<sc-if value="{{r.cb}}" hint-placeholder-val="{{ true }}"><span role="checkbox" aria-checked="{{r.chk}}" aria-label="Add {{r.id}}" style="width: 22px; height: 22px; border-radius: 6px; border: {{r.cbBorder}}; background: {{r.cbBg}}; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><sc-if value="{{r.checked}}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span></sc-if>
+<sc-if value="{{r.done}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B49CFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Added"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+<sc-if value="{{r.now}}" hint-placeholder-val="{{ false }}"><span class="g-anim g-spin" aria-label="Adding" style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid #2C2938; border-top-color: #6FD8FF"></span></sc-if>
+<sc-if value="{{r.wait}}" hint-placeholder-val="{{ false }}"><span aria-label="Waiting" style="width: 6px; height: 6px; border-radius: 50%; background: #403B50"></span></sc-if>
+<sc-if value="{{r.fail}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="3" stroke-linecap="round" aria-label="Not added"><path d="M6 6l12 12M18 6L6 18"></path></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Red Hat Mono', monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{r.tx}}">{{r.id}}</span><span style="font-size: 12px; color: {{r.subTx}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span></span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{f.hasDpg}}" hint-placeholder-val="{{ false }}">
+<nav aria-label="{{f.dpg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.dpg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.dpg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.dpg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.dpg.items}}" as="pi" hint-placeholder-count="2"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.dpg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.dpg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+</sc-if>
+
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<sc-for list="{{f.dbtns}}" as="b" hint-placeholder-count="2"><button type="button" aria-disabled="{{b.dis}}" style="height: 48px; padding: 0 18px; border-radius: 12px; border: {{b.border}}; background: {{b.bg}}; color: {{b.tx}}; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px"><sc-if value="{{b.busy}}" hint-placeholder-val="{{ false }}"><span class="g-anim g-spin" style="width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #FFFFFF"></span></sc-if>{{b.t}}</button></sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3392px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="6">
+<div style="padding: 24px; border-radius: 16px; border: 1px solid #2C2938; background: #13121A; display: flex; flex-direction: column; gap: 8px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{n.t}}</div><div style="font-size: 15px; line-height: 1.55; color: #B9B4C8">{{n.b}}</div></div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":5198}}'>
+var B = 'assets/';
+var LOGO = { 'OpenAI': 'openai-dark.svg', 'Anthropic': 'anthropic-dark.svg', 'Google': 'gemini.svg',
+  'xAI': 'grok-dark.svg', 'Mistral': 'mistral.svg', 'Meta': 'meta.svg', 'Perplexity': 'perplexity.svg' };
+function initials(n) {
+  var w = n.split(' ');
+  if (w.length > 1) return (w[0].charAt(0) + w[1].charAt(0)).toUpperCase();
+  var caps = n.replace(/[^A-Z]/g, '');
+  if (caps.length >= 2) return caps.slice(0, 2);
+  return n.charAt(0).toUpperCase() + n.charAt(1);
+}
+function tile(n) { var id = LOGO[n]; return { logo: !!id, noLogo: !id, src: id ? B + id : '', ini: initials(n) }; }
+function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function people(n) { return n === 1 ? '1 person' : fmt(n) + ' people'; }
+
+var LINE = '1px solid var(--line)';
+var PRI = { bg: '#7C4DFF', tx: '#FFFFFF', border: 'none' };
+var SEC = { bg: 'transparent', tx: 'var(--tx)', border: '1px solid var(--line2)' };
+var DANGER = { bg: 'var(--red)', tx: '#FFFFFF', border: 'none' };
+var DANGER_OUT = { bg: 'transparent', tx: 'var(--red-tx)', border: '1px solid var(--red-line)' };
+function btn(t, kind, extra) { var o = { t: t, bg: kind.bg, tx: kind.tx, border: kind.border, dis: 'false', busy: false }; if (extra) for (var k in extra) o[k] = extra[k]; return o; }
+var CHIP = { on: ['Supported', '#7C4DFF', 'var(--chip-bg)', 'var(--chip-tx)'], off: ['Turned off', '#FF4D4D', 'var(--red-bg)', 'var(--red-tx)'] };
+
+// name, id, models, on, people, off
+var PROVIDERS = [
+  ['OpenAI', 'openai', 186, 180, 9412], ['Anthropic', 'anthropic', 24, 22, 7980], ['Google', 'google', 98, 91, 5204], ['OpenRouter', 'openrouter', 342, 330, 2118],
+  ['DeepSeek', 'deepseek', 14, 12, 1630], ['xAI', 'xai', 18, 16, 1402], ['Meta', 'meta', 64, 58, 1120], ['Perplexity', 'perplexity', 12, 12, 904],
+  ['Groq', 'groq', 38, 35, 866], ['Together AI', 'together', 212, 201, 742], ['Fireworks AI', 'fireworks', 168, 150, 610], ['Cohere', 'cohere', 22, 20, 455],
+  ['Mistral', 'mistral', 46, 41, 312], ['Alibaba Cloud', 'alibaba', 57, 52, 288], ['Hugging Face', 'huggingface', 120, 96, 240], ['Moonshot AI', 'moonshot', 9, 9, 198],
+  ['Voyage AI', 'voyage', 16, 16, 176], ['ElevenLabs', 'elevenlabs', 11, 11, 150], ['Replicate', 'replicate', 96, 0, 134, true], ['NVIDIA NIM', 'nvidia', 74, 70, 120],
+  ['DeepInfra', 'deepinfra', 88, 80, 96], ['Jina AI', 'jina', 10, 10, 81], ['Stability AI', 'stability', 15, 13, 74], ['AI21 Labs', 'ai21', 8, 6, 52], ['Zhipu AI', 'zhipu', 21, 19, 47]
+];
+function provRows(n, mistralOff) {
+  return PROVIDERS.slice(0, n).map(function (p, i) {
+    var off = p[5] || (mistralOff && p[0] === 'Mistral'), c = CHIP[off ? 'off' : 'on'];
+    var on = off ? 0 : p[3];
+    return { name: p[0], slug: p[1], t: tile(p[0]), models: fmt(p[2]), on: fmt(on), people: fmt(p[4]), status: c[0], dot: c[1], chipBg: c[2], chipTx: c[3],
+      op: off ? 0.6 : 1, top: i === 0 ? 'none' : LINE, phoneLine: p[2] + ' models · ' + on + ' on · ' + people(p[4]) };
+  });
+}
+
+// Mistral's models: name, id, type, description, people, on
+var MISTRAL = [
+  ['Mistral Large', 'mistral-large-latest', 'Chat', 'Mistral’s strongest model, for hard reasoning, long documents and code.', 188, 1],
+  ['Mistral Medium 3', 'mistral-medium-latest', 'Chat', 'Close to Large on most work, at a lower cost; good default for agents.', 96, 1],
+  ['Mistral Small 3.2', 'mistral-small-latest', 'Chat', 'Fast and cheap for everyday chat, extraction and tool calls.', 141, 1],
+  ['Codestral', 'codestral-latest', 'Chat', 'Writes and completes code in 80+ languages, including fill-in-the-middle.', 48, 1],
+  ['Ministral 8B', 'ministral-8b-latest', 'Chat', '', 12, 1],
+  ['Pixtral Large', 'pixtral-large-latest', 'Chat', '', 9, 1],
+  ['Mistral Embed', 'mistral-embed', 'Embedding', 'Turns text into vectors for search, clustering and memory.', 37, 1],
+  ['Mistral OCR', 'mistral-ocr-latest', 'Image', 'Reads scanned pages and PDFs into text and tables.', 21, 1],
+  ['Voxtral Small', 'voxtral-small-latest', 'Voice', '', 2, 0],
+  ['Codestral Embed', 'codestral-embed', 'Embedding', '', 4, 1]
+];
+function sw(on, locked) { return { onStr: on ? 'true' : 'false', swBg: on ? '#7C4DFF' : 'var(--s3)', knob: on ? '24px' : '4px', swOp: locked ? 0.4 : 1, lockStr: locked ? 'true' : 'false' }; }
+function mistralModels(provOff) {
+  return MISTRAL.map(function (m, i) {
+    var on = m[5] && !provOff, s = sw(on, provOff);
+    return { name: m[0], id: m[1], type: m[2], desc: m[3] || 'No description', descTx: m[3] ? 'var(--tx2)' : 'var(--pink)', used: 'Used by ' + people(m[4]),
+      onStr: s.onStr, swBg: s.swBg, knob: s.knob, swOp: s.swOp, lockStr: s.lockStr, op: on ? 1 : 0.6, top: i === 0 ? 'none' : LINE };
+  });
+}
+function typeChips(list, on) {
+  return list.map(function (l) { var s = l.indexOf(on) === 0; return { label: l, on: s ? 'true' : 'false', border: s ? '#7C4DFF' : 'var(--line2)', bg: s ? 'var(--chip-bg)' : 'transparent', tx: s ? 'var(--chip-tx)' : 'var(--tx2)' }; });
+}
+
+function pager(label, from, to, total, page, pages, mobile) {
+  var items;
+  if (mobile) items = [{ n: 'Page ' + page + ' of ' + fmt(pages), cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2, #B9B4C8)' }];
+  else {
+    var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+    items = seq.map(function (n) { var cur = n === page; return { n: typeof n === 'number' ? fmt(n) : n, cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2, #403B50)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2, #B9B4C8)' }; });
+  }
+  var first = page === 1, last = page === pages;
+  return { label: label, line: 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)', nextTx: last ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)' };
+}
+
+// ---------- form fields ----------
+var MONO = "'Red Hat Mono', monospace", TEXT = "'Red Hat Text', sans-serif";
+function fld(label, o) {
+  var f = { label: label, aside: '', value: '', ph: '', hint: '', err: '', errLink: '', col: 'auto', font: TEXT, suffix: '', padR: '14px', t: false,
+    isInput: false, isSelect: false, isArea: false, isSeg: false, isChips: false, isSwitch: false, isLogo: false, opts: [], groups: [], drops: [], segCols: '1fr 1fr',
+    onStr: 'false', swBg: 'var(--s3)', knob: '4px' };
+  for (var k in o) f[k] = o[k];
+  if (!f.isSelect && !f.isArea && !f.isSeg && !f.isChips && !f.isSwitch && !f.isLogo) f.isInput = true;
+  if (f.suffix) f.padR = '72px';
+  f.invalid = f.err ? 'true' : 'false';
+  f.border = f.err ? 'var(--red)' : 'var(--line2)';
+  if (f.on !== undefined) { var s = sw(f.on); f.onStr = s.onStr; f.swBg = s.swBg; f.knob = s.knob; }
+  return f;
+}
+function seg(opts, on) { return opts.map(function (l) { var s = l === on; return { label: l, on: s ? 'true' : 'false', bg: s ? '#7C4DFF' : 'transparent', tx: s ? '#FFFFFF' : 'var(--tx2)' }; }); }
+function chips(names, on) { return names.map(function (l) { var s = on.indexOf(l) >= 0; return { label: l, on: s ? 'true' : 'false', chk: s, border: s ? '#7C4DFF' : 'var(--line2)', bg: s ? 'var(--chip-bg)' : 'transparent', tx: s ? 'var(--chip-tx)' : 'var(--tx2)' }; }); }
+var MODS = ['Text', 'Image', 'Audio', 'Video', 'File'];
+function drop(head, kind, o) {
+  var d = { head: head, empty: kind === 'empty' || kind === 'bad', up: kind === 'up', done: kind === 'done', err: '', border: 'var(--line2)',
+    title: 'Drop the logo here, or choose a file', sub: 'PNG, square, 512 px. Full colour, as the company draws it.', file: '', pct: '0%', pctN: '0', meta: '', ini: '' };
+  for (var k in o) d[k] = o[k];
+  if (kind === 'bad') d.border = 'var(--red)';
+  return d;
+}
+var DARK_SUB = 'Only if the mark is black or very dark: an off-white copy, so it shows on dark grounds. Same size and shape.';
+
+function providerFields(mode) {
+  var v = mode === 'invalid';
+  var drops = v
+    ? [drop('Full colour', 'bad', { err: 'Add a logo. Every provider needs one; it shows wherever its models do.' }), drop('For dark grounds', 'empty', { title: 'Add a dark-ground copy', sub: DARK_SUB })]
+    : [drop('Full colour', 'done', { file: 'cerebras.png', meta: 'PNG · 512 × 512 · 18 KB', ini: 'Ce' }), drop('For dark grounds', 'up', { file: 'cerebras-dark.svg', pct: '64%', pctN: '64' })];
+  return [
+    fld('Name', { value: v ? 'Mistral' : 'Cerebras', err: v ? 'Mistral is already a provider.' : '', errLink: v ? 'Open Mistral' : '', hint: v ? '' : 'Its id: cerebras' }),
+    fld('Website', { value: 'https://cerebras.ai', ph: 'https://' }),
+    fld('Logo', { col: '1 / -1', isLogo: true, drops: drops, aside: 'Required' }),
+    fld('API type', { isSeg: true, opts: seg(['OpenAI-compatible', 'Native'], 'OpenAI-compatible'), hint: 'OpenAI-compatible: rrotor calls it with the OpenAI client and this base URL.' }),
+    fld('Base URL', { value: v ? 'api.cerebras' : 'https://api.cerebras.ai/v1', font: MONO, err: v ? 'Use a full address that starts with https://, like https://api.cerebras.ai/v1.' : '' }),
+    fld('How keys are checked', { isSelect: true, value: 'List its models (GET /models)', hint: 'A key that gets a 401 or 403 is marked wrong for its owner.' }),
+    fld('Key format', { value: 'Starts with csk-', aside: 'Optional', hint: 'Shown to members when they paste a key.' })
+  ];
+}
+function modelFields(mode) {
+  if (mode === 'edit') return [
+    fld('Provider', { isSelect: true, value: 'Mistral', t: tile('Mistral') }),
+    fld('Model id', { value: 'codestral-latest', font: MONO, hint: 'Exactly as Mistral’s API names it.' }),
+    fld('Display name', { value: 'Codestral' }),
+    fld('Type', { isSelect: true, value: 'Chat' }),
+    fld('Description', { col: '1 / -1', isArea: true, value: 'Writes and completes code in 80+ languages, including fill-in-the-middle.', aside: '76 of 280', hint: 'One or two lines on what it’s good for. Members read it when they pick a model.' }),
+    fld('Context window', { value: '256,000', suffix: 'tokens' }),
+    fld('Kinds of input and output', { isChips: true, groups: [{ name: 'In', opts: chips(MODS, ['Text']) }, { name: 'Out', opts: chips(MODS, ['Text']) }] }),
+    fld('On', { col: '1 / -1', isSwitch: true, on: true, value: 'Used by 48 people. Turning it off stops it for them until it’s on again.' })
+  ];
+  return [
+    fld('Provider', { isSelect: true, value: 'Cerebras', t: tile('Cerebras') }),
+    fld('Model id', { value: 'llama-3.3-70b', font: MONO, err: 'Cerebras already has llama-3.3-70b.', errLink: 'Edit that one' }),
+    fld('Display name', { value: 'Llama 3.3 70B' }),
+    fld('Type', { isSelect: true, value: 'Chat' }),
+    fld('Description', { col: '1 / -1', isArea: true, ph: 'What is it good for? One or two lines.', aside: '0 of 280', err: 'Write a line or two on what it’s good for. Members read it when they pick a model.' }),
+    fld('Context window', { value: '128k', suffix: 'tokens', err: 'Use a number of tokens, like 128000.' }),
+    fld('Kinds of input and output', { isChips: true, groups: [{ name: 'In', opts: chips(MODS, []) }, { name: 'Out', opts: chips(MODS, ['Text']) }], err: 'Pick at least one kind of input.' }),
+    fld('On', { col: '1 / -1', isSwitch: true, on: true, value: 'On: members can pick it as soon as it’s saved.' })
+  ];
+}
+
+// ---------- import ----------
+var CEREBRAS = [
+  ['llama-3.3-70b', 'Chat · 128,000 tokens'], ['llama3.1-8b', 'Chat · 128,000 tokens'], ['llama-4-scout-17b-16e-instruct', 'Chat · 128,000 tokens · text and image in'],
+  ['llama-4-maverick-17b-128e-instruct', 'Chat · 128,000 tokens · text and image in'], ['qwen-3-32b', 'Chat · 128,000 tokens'], ['qwen-3-235b-a22b-instruct-2507', 'Chat · 128,000 tokens'],
+  ['qwen-3-235b-a22b-thinking-2507', 'Chat · 128,000 tokens'], ['qwen-3-coder-480b', 'Chat · 128,000 tokens'], ['gpt-oss-120b', 'Chat · 128,000 tokens'],
+  ['deepseek-r1-distill-llama-70b', 'Chat · 64,000 tokens'], ['llama-guard-4-12b', 'Chat · 128,000 tokens'], ['mistral-small-3.2', 'Chat · 128,000 tokens'],
+  ['gemma-3-27b', 'Chat · 128,000 tokens'], ['llama-3.1-405b', 'Chat · 128,000 tokens']
+];
+function importRows(phase) {
+  var list = CEREBRAS.slice(0, 8);
+  if (phase === 'fail') list = [CEREBRAS[7], CEREBRAS[10], CEREBRAS[0], CEREBRAS[1], CEREBRAS[2], CEREBRAS[3], CEREBRAS[4], CEREBRAS[5]];
+  return list.map(function (c, i) {
+    var r = { id: c[0], sub: c[1], top: i === 0 ? 'none' : LINE, cb: false, chk: 'false', checked: false, cbBorder: 'none', cbBg: '#7C4DFF', done: false, now: false, wait: false, fail: false, tx: 'var(--tx)', subTx: 'var(--tx3)' };
+    if (phase === 'pick') { r.cb = true; r.chk = 'true'; r.checked = true; r.top = LINE; }
+    if (phase === 'progress') { if (i < 6) r.done = true; else if (i === 6) r.now = true; else r.wait = true; if (i === 6) r.sub = 'Adding…'; if (i > 6) { r.tx = 'var(--tx3)'; } }
+    if (phase === 'fail') {
+      if (i === 0) { r.fail = true; r.sub = 'Cerebras says this model is retired. Leave it out, or try again later.'; r.subTx = 'var(--red-tx)'; }
+      else if (i === 1) { r.fail = true; r.sub = 'Cerebras didn’t answer in time. Try again.'; r.subTx = 'var(--red-tx)'; }
+      else { r.done = true; r.sub = 'Added · ' + c[1]; }
+    }
+    return r;
+  });
+}
+
+// ---------- no description ----------
+var NODESC = [
+  ['OpenAI', 'GPT-4.1 nano', 'gpt-4.1-nano', 'Chat', 612, 'The smallest GPT-4.1: quick, cheap classification, routing and short answers.', 'saved'],
+  ['Anthropic', 'Claude Haiku 3.5', 'claude-3-5-haiku-latest', 'Chat', 488, 'Fast, light Claude for routing, triage and short replies', 'typing'],
+  ['DeepSeek', 'DeepSeek Reasoner', 'deepseek-reasoner', 'Chat', 301, 'Thinks step by step before answering; slow but strong on maths and logic.', 'error'],
+  ['Google', 'Text Embedding 004', 'text-embedding-004', 'Embedding', 140, '', ''],
+  ['Mistral', 'Ministral 8B', 'ministral-8b-latest', 'Chat', 12, '', ''],
+  ['Meta', 'Llama 4 Scout', 'llama-4-scout', 'Chat', 96, '', ''],
+  ['Cohere', 'Embed 4', 'embed-v4.0', 'Embedding', 58, '', ''],
+  ['Perplexity', 'Sonar Pro', 'sonar-pro', 'Chat', 44, '', '']
+];
+function nodescRows() {
+  return NODESC.map(function (r, i) {
+    var st = r[6], empty = !r[5];
+    return { i: String(i), t: tile(r[0]), prov: r[0], name: r[1], id: r[2], type: r[3], used: 'Used by ' + people(r[4]), value: r[5], top: i === 0 ? 'none' : LINE,
+      saved: st === 'saved', canSave: st !== 'saved', err: st === 'error' ? 'Didn’t save: the catalog didn’t answer. Your text is still here; try again.' : '', trace: '5be0-19d4-c7a2-6f31',
+      border: st === 'error' ? 'var(--red)' : (st === 'typing' ? '#7C4DFF' : 'var(--line2)'),
+      btn: st === 'error' ? 'Try again' : 'Save', disStr: empty ? 'true' : 'false',
+      btnBg: empty ? 'transparent' : '#7C4DFF', btnTx: empty ? 'var(--line2)' : '#FFFFFF', btnBorder: empty ? '1px solid var(--line2)' : 'none' };
+  });
+}
+
+// ---------- states ----------
+var MISTRAL_DL = [['Website', 'mistral.ai'], ['API', 'Native: Mistral’s own API'], ['Base URL', 'https://api.mistral.ai/v1', 1], ['How keys are checked', 'List its models (GET /v1/models). A 401 marks the key wrong for its owner.'], ['Key format', '32 letters and digits']];
+var CEREBRAS_DL = [['Website', 'cerebras.ai'], ['API', 'OpenAI-compatible'], ['Base URL', 'https://api.cerebras.ai/v1', 1], ['How keys are checked', 'List its models (GET /models). A 401 or 403 marks the key wrong for its owner.'], ['Key format', 'Starts with csk-']];
+var OFF_BODY = '312 people’s Mistral models are stopped: rrotor isn’t handed them and their calls are refused. Turn it on again and they come back as they were, with their keys, grants and schedules.';
+
+var STATES = [
+  { id: 'list', title: 'Providers', sub: 'Glyphh admin › Models › Providers. Each provider with its logo (or its initials where no artwork was uploaded), how many models it has, how many are on, how many people use it, and whether it is supported. Search, sort, 25 to a page. A turned-off provider (Replicate) is dimmed with a red chip.',
+    page: 'providers', rows: 25 },
+  { id: 'nomatch', title: 'Search: no match', sub: 'Nothing matches. Say so, offer to clear the search, and offer to add it: the search text becomes the new provider’s name.',
+    page: 'providers', query: 'Cerebras', noMatch: true },
+  { id: 'loading', title: 'Loading', sub: 'Skeleton rows the shape of the real ones, with one line saying what is loading.',
+    page: 'providers', loading: true },
+  { id: 'error', title: 'Didn’t load, with trace ID', sub: 'What happened (the catalog didn’t answer), that nothing changed, what to do, and the trace ID with a copy button.',
+    page: 'providers', err: true },
+  { id: 'provider', title: 'A provider: Mistral', sub: 'Logo, name, status; how Glyphh reaches it (website, API type, base URL, how keys are checked, key format); then its models, searchable, filtered by type, 10 to a page. Each model has an on/off switch and says who uses it. Models with no description say so in pink: they need someone to write one.',
+    page: 'provider' },
+  { id: 'offprov', title: 'Turn off a provider', sub: 'The same rule as the org limits: name the thing, say who it affects and that it comes back untouched. The red button names the provider.',
+    page: 'provider', dlg: 'offprov' },
+  { id: 'provoff', title: 'Provider turned off', sub: 'Red chip, a line on what that means, and Turn on again as the main action. Its models’ switches are greyed and locked: the provider’s switch wins. In the list, the row dims with the same chip.',
+    page: 'provider', provOff: true },
+  { id: 'rmprov', title: 'Remove a provider', sub: 'Removing is for good, so it says so, with the count, and asks you to type the provider’s name. The red button works only once the name matches. Turning it off is offered as the way to stop it for now.',
+    page: 'provider', dlg: 'rmprov' },
+  { id: 'offmodel', title: 'Turn off one model', sub: 'Flipping a model’s switch off asks first when anyone uses it. A model nobody uses turns off without asking.',
+    page: 'provider', dlg: 'offmodel' },
+  { id: 'rmmodel', title: 'Remove one model', sub: 'From a model’s row or its edit dialog. For good, with who it affects; type the model’s name. Until it matches, the red button stays disabled.',
+    page: 'provider', dlg: 'rmmodel' },
+  { id: 'addprov', title: 'Add a provider', sub: 'Name, website, logo, API type, base URL, how keys are checked, key format. The logo is required: full colour, PNG, square. A second copy for dark grounds only when the mark is black (as OpenAI’s, Anthropic’s and Grok’s are). Here the logo is in and the dark copy is uploading. No Cerebras artwork is on this board, so its tile shows initials.',
+    page: 'providers', dlg: 'addprov' },
+  { id: 'addprovbad', title: 'Add a provider: validation', sub: 'Each problem next to its field, in words: the name is taken (with a link to the one that exists), the URL isn’t a full address, no logo. Add provider stays available and says what is left.',
+    page: 'providers', dlg: 'addprovbad' },
+  { id: 'saved', title: 'Saved: a provider with no models', sub: 'The new provider opens empty, with Add models from its own list as the main action, or one by hand. Members don’t see it until one of its models is on.',
+    page: 'provider', prov: 'cerebras', toast: 'Cerebras added. Add its models next.' },
+  { id: 'fetch', title: 'Add models: asking the provider', sub: 'Glyphh asks the provider’s API for its model list. Skeleton rows while it waits.',
+    page: 'provider', prov: 'cerebras', dlg: 'fetch' },
+  { id: 'pick', title: 'Add models: pick from the list', sub: 'Every model the provider lists, with its id as the API names it and what we could read of its type and context window. All ticked to start; untick what you don’t want. Paged, 8 at a time.',
+    page: 'provider', prov: 'cerebras', dlg: 'pick' },
+  { id: 'adding', title: 'Add models: adding', sub: 'Progress, model by model: done, adding now, waiting. Closing the dialog doesn’t stop it.',
+    page: 'provider', prov: 'cerebras', dlg: 'progress' },
+  { id: 'partial', title: 'Add models: 12 added, 2 didn’t', sub: 'Partial failure: what got in, what didn’t and why, per model, with the trace ID. Try the 2 again, or finish with the 12.',
+    page: 'provider', prov: 'cerebras', dlg: 'fail' },
+  { id: 'addmodelbad', title: 'Add a model: validation', sub: 'By hand: provider, the model id as the API names it, a display name, a description (required: the old catalog has none for its 3,900 models), type, context window, kinds of input and output, on or off. Each problem next to its field.',
+    page: 'provider', prov: 'cerebras', dlg: 'addmodel' },
+  { id: 'editmodel', title: 'Edit a model', sub: 'The same form, filled. The switch says who uses it before you turn it off; turning it off from here asks the same question as in the list.',
+    page: 'provider', dlg: 'editmodel' },
+  { id: 'nodesc', title: 'Models needing descriptions', sub: 'Glyphh admin › Models › Models, filtered to No description (3,412). Each row is edited in place: write, Save, it says Saved and leaves the filter on the next load. A failed save keeps the text and shows the trace ID.',
+    page: 'models' }
+];
+
+var DLG = {
+  offprov: { title: 'Turn off Mistral?', w: 520, c: 'Mistral', btns: [btn('Keep it on', SEC), btn('Turn off Mistral', DANGER)] },
+  offmodel: { title: 'Turn off Codestral?', w: 520, c: 'Codestral', btns: [btn('Keep it on', SEC), btn('Turn off Codestral', DANGER)] },
+  rmprov: { title: 'Remove Mistral for good?', w: 560, c: 'rmMistral', btns: [btn('Cancel', SEC), btn('Remove Mistral', DANGER)] },
+  rmmodel: { title: 'Remove Codestral for good?', w: 560, c: 'rmCodestral', btns: [btn('Cancel', SEC), btn('Remove Codestral', DANGER, { dis: 'true', bg: 'transparent', tx: 'var(--line2)', border: '1px solid var(--line2)' })] },
+  addprov: { title: 'Add a provider', desc: 'It joins the catalog for every org. Add its models next.', w: 720, form: 'provider', btns: [btn('Cancel', SEC), btn('Add provider', PRI)] },
+  addprovbad: { title: 'Add a provider', desc: 'It joins the catalog for every org. Add its models next.', w: 720, form: 'provider', formErr: '3 things to fix before it can be added.', btns: [btn('Cancel', SEC), btn('Add provider', PRI)] },
+  addmodel: { title: 'Add a model', w: 720, form: 'model', formErr: '4 things to fix before it can be added.', btns: [btn('Cancel', SEC), btn('Add model', PRI)] },
+  editmodel: { title: 'Edit Codestral', desc: 'Changes show in every org’s catalog straight away.', w: 720, form: 'edit', btns: [btn('Remove Codestral', DANGER_OUT), btn('Cancel', SEC), btn('Save changes', PRI)] },
+  fetch: { title: 'Add models from Cerebras', w: 640, imp: 'fetching', btns: [btn('Cancel', SEC), btn('Add models', PRI, { dis: 'true', bg: 'transparent', tx: 'var(--line2)', border: '1px solid var(--line2)' })] },
+  pick: { title: 'Add models from Cerebras', w: 640, imp: 'pick', btns: [btn('Cancel', SEC), btn('Add 14 models', PRI)] },
+  progress: { title: 'Adding 14 models', w: 640, imp: 'progress', btns: [btn('Close', SEC), btn('Adding…', PRI, { busy: true, dis: 'true' })] },
+  fail: { title: '12 of 14 models added', w: 640, imp: 'fail', btns: [btn('Done', SEC), btn('Try the 2 again', PRI)] }
+};
+var CONFIRM = {
+  Mistral: { t: tile('Mistral'), name: 'Mistral', line: '46 models · 41 on · 312 people use it',
+    body: '312 people use models from Mistral. They stop working now and come back if you turn it on again.',
+    note: 'Their powers on Mistral are disabled with the reason; nothing is deleted. Keys, grants and schedules stay, and Mistral leaves the catalog until it’s on again.', typed: false, typedVal: '', typedBorder: 'var(--line2)' },
+  rmMistral: { t: tile('Mistral'), name: 'Mistral', line: '46 models · 41 on · 312 people use it', typed: true, typedVal: 'Mistral', typedBorder: '#7C4DFF',
+    body: '312 people use models from Mistral. Their powers on it stop working for good and can only be deleted.',
+    note: 'Mistral and its 46 models leave the catalog. This can’t be undone. To stop it for now instead, turn it off: it comes back when it’s on again.' },
+  rmCodestral: { t: tile('Mistral'), name: 'Codestral', line: 'Mistral · codestral-latest · Chat', typed: true, typedVal: '', typedBorder: 'var(--line2)',
+    body: '48 people use Codestral. Their powers on it stop working for good and can only be deleted.',
+    note: 'Codestral leaves Mistral’s models. This can’t be undone. To stop it for now instead, turn it off: it comes back when it’s on again.' },
+  Codestral: { t: tile('Mistral'), name: 'Codestral', line: 'Mistral · codestral-latest · Chat',
+    body: '48 people use Codestral. It stops working for them now and comes back if you turn it on again.',
+    note: 'Their powers on it are disabled with the reason; nothing is deleted. It leaves the catalog until it’s on again.', typed: false, typedVal: '', typedBorder: 'var(--line2)' }
+};
+var IMP = {
+  fetching: { fetching: true, hasHead: false, hasRows: false, pick: false, bar: false, fail: false },
+  pick: { hasHead: true, head: 'Cerebras lists 14 models. None are in the catalog yet.', sub: 'They come in without descriptions and wait under No description until someone writes them. Each starts on.', hasRows: true, pick: true },
+  progress: { hasHead: false, hasRows: true, bar: true, pct: '43%', pctN: '43', barL: 'Adding 7 of 14…', barR: '6 added', barBg: '#6FD8FF' },
+  fail: { hasHead: false, hasRows: true, fail: true, bar: true, pct: '100%', pctN: '100', barL: '12 added, 2 didn’t', barR: '14 of 14', barBg: '#7C4DFF' }
+};
+
+function skel() { return [['42%', '22%'], ['30%', '18%'], ['48%', '26%'], ['36%', '20%'], ['44%', '24%'], ['28%', '16%'], ['40%', '22%'], ['34%', '18%']].map(function (w, i) { return { w1: w[0], w2: w[1], top: i === 0 ? 'none' : LINE }; }); }
+
+function frame(st, desk) {
+  var mob = !desk;
+  var f = {
+    key: st.id + (desk ? 'd' : 'm'), label: desk ? 'Desktop' : 'Phone', aria: 'Glyphh admin, models and providers: ' + st.title,
+    desktop: desk, phone: mob, w: desk ? '1200px' : '390px', minH: desk ? '780px' : '844px', fixH: 'auto', radius: desk ? '16px' : '36px',
+    pad: desk ? '32px' : '20px', mainPad: desk ? '32px 48px 48px' : '20px 20px 32px', logoH: desk ? '28px' : '24px', h2: desk ? '32px' : '28px',
+    btnDir: desk ? 'row' : 'column-reverse', toolDir: desk ? 'row' : 'column', btnAlign: desk ? 'flex-start' : 'stretch', emptyBtnW: desk ? 'auto' : '100%',
+    addW: desk ? 'auto' : '100%', segW: desk ? '340px' : '100%', tileBox: desk ? '44px' : '40px',
+    subtabs: ['Orgs', 'Models', 'Marketplace', 'Plans'].map(function (t) { var on = t === 'Models'; return { name: t, on: on ? 'true' : 'false', line: on ? '#7C4DFF' : 'transparent', tx: on ? 'var(--tx)' : 'var(--tx3)' }; }),
+    showSeg: st.page !== 'provider',
+    seg: [['Providers · 125', st.page !== 'models'], ['Models · 3,904', st.page === 'models']].map(function (s) { return { label: s[0], on: s[1] ? 'true' : 'false', bg: s[1] ? '#7C4DFF' : 'transparent', tx: s[1] ? '#FFFFFF' : 'var(--tx2)' }; }),
+    v: { providers: st.page === 'providers', provider: st.page === 'provider', models: st.page === 'models' },
+    hasToast: !!st.toast, toast: st.toast || '',
+    query: st.query || '', qBorder: st.query ? '#7C4DFF' : 'var(--line2)', loading: !!st.loading, err: !!st.err, noMatch: !!st.noMatch,
+    hasRows: st.page === 'providers' && !st.loading && !st.err && !st.noMatch, rows: [], skel: skel(), traceId: st.err ? '8f2c-04ad-e91b-73d6' : '3c7a-9e10-b4f2-d58e',
+    pg: pager('Pages', 1, 25, 125, 1, 5, mob),
+    pvTile: desk ? '64px' : '56px', pvImg: desk ? '36px' : '30px', pvBtnW: desk ? 'auto' : '100%', dlCols: desk ? '200px minmax(0, 1fr)' : 'minmax(0, 1fr)',
+    pv: {}, filters: [], nrows: [], nCols: desk ? '280px minmax(0, 1fr) 112px' : 'minmax(0, 1fr)', nGap: desk ? '20px' : '12px', nSaveJustify: desk ? 'flex-end' : 'flex-start',
+    dlg: false, d: { confirm: false, form: false, import: false }, dlgTitle: '', dlgDesc: '', dlgW: '', dlgTop: desk ? '88px' : '80px', dlgPad: desk ? '24px' : '20px',
+    c: CONFIRM.Mistral, formErr: '', fields: [], fCols: desk ? '1fr 1fr' : 'minmax(0, 1fr)', imp: {}, hasDpg: false, dpg: pager('Model pages', 1, 8, 14, 1, 2, mob), dbtns: []
+  };
+
+  if (st.page === 'providers') {
+    var n = st.dlg ? 9 : 25;
+    f.rows = provRows(n, false);
+  }
+  if (st.page === 'provider') {
+    var cer = st.prov === 'cerebras', off = !!st.provOff, c = CHIP[off ? 'off' : 'on'];
+    var dl = (cer ? CEREBRAS_DL : MISTRAL_DL).map(function (d, i) {
+      return { k: d[0], v: d[1], font: d[2] ? MONO : TEXT, top: i === 0 ? 'none' : LINE, vTop: desk ? (i === 0 ? 'none' : LINE) : 'none',
+        kPad: desk ? '12px 0' : '12px 0 2px', vPad: desk ? '12px 0' : '0 0 12px' };
+    });
+    f.pv = {
+      name: cer ? 'Cerebras' : 'Mistral', t: tile(cer ? 'Cerebras' : 'Mistral'), op: off ? 0.6 : 1, off: off, offBody: OFF_BODY,
+      status: cer ? 'Supported · not in the catalog yet' : c[0], dot: cer ? '#8E89A0' : c[1], chipBg: cer ? 'var(--s3)' : c[2], chipTx: cer ? 'var(--tx2)' : c[3],
+      line: cer ? 'cerebras · added just now by you' : (off ? 'mistral · 46 models · turned off today by you' : 'mistral · 46 models · 41 on · 312 people use it'),
+      btns: off ? [btn('Edit provider', SEC), btn('Remove Mistral', DANGER_OUT), btn('Turn on again', PRI)] : (cer ? [btn('Edit provider', SEC), btn('Remove Cerebras', DANGER_OUT)] : [btn('Edit provider', SEC), btn('Remove Mistral', DANGER_OUT), btn('Turn off Mistral', DANGER_OUT)]),
+      dl: dl, hasModels: !cer, empty: cer,
+      modelsLine: cer ? 'None yet.' : (off ? '46 models · all stopped while Mistral is off' : '46 models · 41 on · 5 need a description'),
+      types: typeChips(['All · 46', 'Chat · 31', 'Embedding · 6', 'Image · 6', 'Voice · 3'], 'All'),
+      models: cer ? [] : mistralModels(off)
+    };
+    f.pg = pager('Model pages', 1, 10, 46, 1, 5, mob);
+  }
+  if (st.page === 'models') {
+    f.filters = typeChips(['All · 3,904', 'No description · 3,412', 'Turned off · 37'], 'No description');
+    f.nrows = nodescRows();
+    f.pg = pager('Model pages', 1, 8, 3412, 1, 427, mob);
+  }
+  if (st.dlg) {
+    var D = DLG[st.dlg];
+    f.dlg = true; f.dlgTitle = D.title; f.dlgDesc = D.desc || ''; f.dlgW = desk ? D.w + 'px' : '358px'; f.dbtns = D.btns;
+    if (mob) { f.dlgTop = '72px'; }
+    if (D.c) { f.d.confirm = true; f.c = CONFIRM[D.c]; }
+    if (D.form) {
+      f.d.form = true; f.formErr = D.formErr || '';
+      var fl = D.form === 'provider' ? providerFields(st.dlg === 'addprovbad' ? 'invalid' : 'ok') : modelFields(D.form === 'edit' ? 'edit' : 'invalid');
+      f.fields = fl.map(function (x, i) { x.i = String(i); if (mob) x.col = 'auto'; return x; });
+    }
+    if (D.imp) {
+      f.d.import = true;
+      var base = { fetching: false, hasHead: false, head: '', sub: '', hasRows: false, pick: false, bar: false, pct: '0%', pctN: '0', barL: '', barR: '', barBg: '#7C4DFF', fail: false, rows: [] };
+      var o = IMP[D.imp]; for (var k in o) base[k] = o[k];
+      base.rows = D.imp === 'fetching' ? [] : importRows(D.imp);
+      f.imp = base; f.hasDpg = D.imp !== 'fetching';
+      if (D.imp === 'fail') f.traceId = 'a41d-7c2e-905b-e3f8';
+      if (D.imp === 'fetching') f.skel = skel().slice(0, 4);
+    }
+    var tall = { rmprov: [780, 844], rmmodel: [780, 844], offprov: [780, 844], offmodel: [780, 844], addprov: [980, 1480], addprovbad: [1080, 1660], addmodel: [1140, 1500], editmodel: [1060, 1500], fetch: [780, 844], pick: [1020, 1080], progress: [940, 980], fail: [1100, 1160] }[st.dlg];
+    f.fixH = (desk ? tall[0] : tall[1]) + 'px'; f.minH = f.fixH;
+  }
+  return f;
+}
+
+class Component extends DCLogic {
+  renderVals() { var v = this.renderValsAll(); var keep = [12, 13, 14, 15, 16, 17]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
+    return {
+      states: STATES.map(function (st, i) { return { title: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
+      notes: [
+        { t: 'Who sees this', b: 'Only super admins (Glyphh staff). Their header has Glyphh admin, with sub-tabs Orgs, Models, Marketplace and Plans. Everyone else only reads the catalog, when they pick a model.' },
+        { t: 'Off for now, removed for good', b: 'Removing is for good: those powers can only be deleted, so the dialog asks for the name. Turning a provider or a model off works like an org limit set later: what people already have is marked disabled with the reason, rrotor isn’t handed it, and its calls are refused. Turning it on again brings it all back with nothing to redo. A provider’s switch wins over its models’ switches.' },
+        { t: 'Logos', b: 'Every new provider needs a logo: the company’s own full-colour mark, PNG, square. Black marks get a second, off-white copy for dark grounds. Providers imported from the old list without artwork show the LogoTile’s initials until someone uploads one.' },
+        { t: 'Descriptions', b: 'Required for a model added or edited by hand. Imported models arrive without one and wait under No description (3,412 today, from the old list), which is paged and edited in place, one Save per row.' },
+        { t: 'Types', b: 'Chat, Embedding, Image, Voice and Video, as filter chips with counts. Voice is the catalog’s audio type, named the way members say it.' },
+        { t: 'Lists and errors', b: 'Providers 25 to a page, a provider’s models 10, the import list 8, the descriptions list 8. Every search has its no-match state; every failure says what happened and what to do, with a trace ID.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

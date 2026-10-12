@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Glyphh cards in the chat</title>
+<title>Glyphh cards in the chat (1 of 2)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -25,7 +25,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">The plugin · cards in Claude and ChatGPT</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh in the chat</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh in the chat · 1 of 2</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1300px">The app's screens as cards inside the conversation, built from the same components and following the host's light or dark theme. Only after sign-in; signing in is always a browser page. The chat around each card is a neutral stand-in for the host, not its real design. Anything that needs the full app opens app.glyphh.ai or the machine's rrotor in a new tab.</p>
 </div>
 
@@ -242,7 +242,7 @@ button,input{font:inherit}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3152,"height":13500}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3152,"height":5541}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -357,7 +357,8 @@ class Component extends DCLogic {
     var self = this;
     fetch('assets/glyphh-icons-3.json').then(function (r) { return r.json(); }).then(function (j) { self.setState({ icons: j }); }).catch(function () {});
   }
-  renderVals() { return { frames: frames((this.state && this.state.icons) || {}) }; }
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]; v.frames = keep.map(function (i) { return v.frames[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() { return { frames: frames((this.state && this.state.icons) || {}) }; }
 }
 </script>
 </body>

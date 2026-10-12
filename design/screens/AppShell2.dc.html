@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>App shell: the left rail (2 of 2)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button{font:inherit}
+.t{--bg:#0B0A0F;--s1:#13121A;--dlg:#141318;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--red-tx:#FF4D4D;--scrim:rgba(0,0,0,.55);--shadow:0 24px 60px rgba(0,0,0,.5);--sk:#25222F}
+.t.light{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--red-tx:#C21D3C;--scrim:rgba(11,10,15,.28);--shadow:0 24px 60px rgba(11,10,15,.16);--sk:#E4E2EA}
+</style>
+</helmet>
+<div style="width: 3520px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">app.glyphh.ai · the shell every page sits in</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">The left rail · 2 of 2</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1600px">The menu moves from the top bar to a rail on the left that collapses to icons. You, your org and everything about your account sit at the bottom left. Org admins get an Org group and super admins a Glyphh admin group, each opening to its pages. On a phone the same rail is a drawer from the left. Icons are Lucide (approved by Chris, 2026-10-12), stroke 2, 20 px. The page area is a stand-in: every app board's content sits there unchanged.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
+<sc-for list="{{states}}" as="st" hint-placeholder-count="8">
+<div style="display: flex; flex-direction: column; gap: 18px; width: {{st.w}}">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2C2938; padding-top: 22px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">{{st.title}}</div>
+<div style="font-size: 16px; line-height: 1.5; color: #8E89A0; max-width: 1500px">{{st.sub}}</div>
+</div>
+<div style="display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{st.frames}}" as="f" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="{{f.cls}}" style="position: relative; width: {{f.w}}; height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; display: flex; box-sizing: border-box">
+
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Main" style="position: relative; width: {{f.rail.w}}; flex: none; height: 100%; box-sizing: border-box; background: var(--s1); border-right: 1px solid var(--line); display: flex; flex-direction: column">
+<div style="height: 64px; flex: none; padding: 0 {{f.rail.pad}}; display: flex; align-items: center; justify-content: {{f.rail.headJustify}}; gap: 8px">
+<sc-if value="{{f.rail.expanded}}" hint-placeholder-val="{{ true }}"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 24px; width: auto"></sc-if>
+<button type="button" aria-label="{{f.rail.toggleLabel}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.toggleIcon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></button>
+</div>
+<div style="flex: 1; min-height: 0; overflow: {{f.rail.overflow}}; padding: 4px {{f.rail.pad}}; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{f.rail.items}}" as="it" hint-placeholder-count="8">
+<sc-if value="{{it.isLabel}}" hint-placeholder-val="{{ false }}">
+<div style="height: {{it.labelH}}; display: flex; align-items: flex-end; padding: 0 12px 6px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">{{it.t}}</div>
+</sc-if>
+<sc-if value="{{it.isItem}}" hint-placeholder-val="{{ true }}">
+<div style="position: relative">
+<a href="#" aria-current="{{it.current}}" aria-label="{{it.t}}" style="height: 44px; box-sizing: border-box; padding: 0 {{it.padX}} 0 {{it.indent}}; border-radius: 10px; display: flex; align-items: center; justify-content: {{it.justify}}; gap: 12px; text-decoration: none; background: {{it.bg}}; color: {{it.tx}}; font-size: 15px; font-weight: {{it.fw}}">
+<span style="width: 20px; height: 20px; flex: none; display: inline-flex; color: {{it.icTx}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>
+<sc-if value="{{it.showLabel}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.t}}</span></sc-if>
+<sc-if value="{{it.hasCount}}" hint-placeholder-val="{{ false }}"><span style="min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; background: {{it.countBg}}; color: {{it.countTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; position: {{it.countPos}}; top: 4px; right: 4px">{{it.count}}</span></sc-if>
+<sc-if value="{{it.hasChevron}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx3); transform: rotate({{it.chevRot}})"><path d="m6 9 6 6 6-6"></path></svg></sc-if>
+</a>
+<sc-if value="{{it.hasTip}}" hint-placeholder-val="{{ false }}"><div role="tooltip" style="position: absolute; left: 60px; top: 6px; z-index: 3; height: 32px; padding: 0 12px; border-radius: 8px; background: var(--s2); border: 1px solid var(--line2); box-shadow: var(--shadow); color: var(--tx); font-size: 13px; white-space: nowrap; display: flex; align-items: center">{{it.t}}</div></sc-if>
+</div>
+</sc-if>
+</sc-for>
+</div>
+<div style="flex: none; border-top: 1px solid var(--line); padding: 10px {{f.rail.pad}}">
+<button type="button" aria-label="Your account" aria-expanded="{{f.rail.menuOpenStr}}" style="width: 100%; min-height: 56px; box-sizing: border-box; padding: 6px {{f.rail.userPad}}; border-radius: 12px; border: 1px solid {{f.rail.userBorder}}; background: {{f.rail.userBg}}; color: var(--tx); display: flex; align-items: center; justify-content: {{f.rail.headJustify}}; gap: 10px; cursor: pointer; text-align: left">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center">{{f.rail.ini}}</span>
+<sc-if value="{{f.rail.expanded}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.rail.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.rail.org}}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.chev}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></sc-if>
+</button>
+</div>
+<sc-if value="{{f.rail.menuOpen}}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Your account" style="position: absolute; left: {{f.rail.menuLeft}}; bottom: {{f.rail.menuBottom}}; z-index: 4; width: 284px; padding: 8px; box-sizing: border-box; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 4px"><span style="font-size: 14px; font-weight: 600">{{f.rail.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.rail.email}}</span></div>
+<div style="padding: 6px 10px 4px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">Org</div>
+<sc-for list="{{f.rail.orgs}}" as="o" hint-placeholder-count="3">
+<div role="menuitemradio" aria-checked="{{o.on}}" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; background: {{o.bg}}">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 8px; border: 1px solid var(--line2); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--tx2)">{{o.ini}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 14px">{{o.t}}</span><span style="font-size: 12px; color: var(--tx3)">{{o.sub}}</span></span>
+<sc-if value="{{o.on}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent-tx)"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+</div>
+</sc-for>
+<div style="height: 1px; background: var(--line); margin: 4px 0"></div>
+<sc-for list="{{f.rail.links}}" as="l" hint-placeholder-count="4">
+<div role="menuitem" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: {{l.tx}}; font-size: 14px"><span style="width: 18px; height: 18px; display: inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{l.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>{{l.t}}</div>
+</sc-for>
+<div style="padding: 6px 10px 8px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 12px; color: var(--tx3)">Theme</span>
+<div role="radiogroup" aria-label="Theme" style="display: flex; padding: 3px; border-radius: 10px; background: var(--s2); border: 1px solid var(--line)">
+<sc-for list="{{f.rail.themes}}" as="th" hint-placeholder-count="3"><span role="radio" aria-checked="{{th.on}}" style="flex: 1; height: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; background: {{th.bg}}; color: {{th.tx}}"><span style="width: 16px; height: 16px; display: inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{th.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>{{th.t}}</span></sc-for>
+</div></div>
+<div style="height: 1px; background: var(--line); margin: 4px 0"></div>
+<div role="menuitem" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: var(--red-tx); font-size: 14px; font-weight: 600"><span style="width: 18px; height: 18px; display: inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.logout}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>Sign out</div>
+</div>
+</sc-if>
+</nav></sc-if>
+<div style="flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column">
+<sc-if value="{{f.phone}}" hint-placeholder-val="{{ false }}">
+<div style="height: 60px; flex: none; padding: 0 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px">
+<button type="button" aria-label="Open the menu" aria-expanded="{{f.drawerStr}}" style="width: 44px; height: 44px; border-radius: 10px; border: none; background: transparent; color: var(--tx); display: inline-flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.menuIcon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></button>
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 22px; width: auto">
+</div>
+</sc-if>
+<div style="flex: 1; min-height: 0; padding: {{f.pagePad}}; display: flex; flex-direction: column; gap: 20px; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-family: 'Red Hat Mono', monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">{{f.crumb}}</span><h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h2}}; font-weight: 700; letter-spacing: -0.02em">{{f.pageTitle}}</h2></div>
+<sc-if value="{{f.desk}}" hint-placeholder-val="{{ true }}"><span style="height: 48px; padding: 0 18px; border-radius: 12px; background: #7C4DFF; color: #FFFFFF; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center">{{f.action}}</span></sc-if>
+</div>
+<div style="font-size: 14px; color: var(--tx3); border: 1px dashed var(--line2); border-radius: 12px; padding: 10px 14px">The page's own board goes here, unchanged.</div>
+<div style="display: grid; grid-template-columns: {{f.cols}}; gap: 16px">
+<sc-for list="{{f.cards}}" as="c" hint-placeholder-count="6"><div style="height: 150px; border-radius: 16px; border: 1px solid var(--line); background: var(--s1); padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px"><span style="width: 44px; height: 44px; border-radius: 12px; background: var(--sk)"></span><span style="width: {{c.w1}}; height: 12px; border-radius: 6px; background: var(--sk)"></span><span style="width: {{c.w2}}; height: 10px; border-radius: 5px; background: var(--sk)"></span></div></sc-for>
+</div>
+</div>
+</div>
+<sc-if value="{{f.drawer}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 5; background: var(--scrim)"></div>
+<div style="position: absolute; left: 0; top: 0; bottom: 0; z-index: 6; display: flex; box-shadow: var(--shadow)">
+<nav aria-label="Main" style="position: relative; width: {{f.rail.w}}; flex: none; height: 100%; box-sizing: border-box; background: var(--s1); border-right: 1px solid var(--line); display: flex; flex-direction: column">
+<div style="height: 64px; flex: none; padding: 0 {{f.rail.pad}}; display: flex; align-items: center; justify-content: {{f.rail.headJustify}}; gap: 8px">
+<sc-if value="{{f.rail.expanded}}" hint-placeholder-val="{{ true }}"><img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: 24px; width: auto"></sc-if>
+<button type="button" aria-label="{{f.rail.toggleLabel}}" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.toggleIcon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></button>
+</div>
+<div style="flex: 1; min-height: 0; overflow: {{f.rail.overflow}}; padding: 4px {{f.rail.pad}}; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{f.rail.items}}" as="it" hint-placeholder-count="8">
+<sc-if value="{{it.isLabel}}" hint-placeholder-val="{{ false }}">
+<div style="height: {{it.labelH}}; display: flex; align-items: flex-end; padding: 0 12px 6px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">{{it.t}}</div>
+</sc-if>
+<sc-if value="{{it.isItem}}" hint-placeholder-val="{{ true }}">
+<div style="position: relative">
+<a href="#" aria-current="{{it.current}}" aria-label="{{it.t}}" style="height: 44px; box-sizing: border-box; padding: 0 {{it.padX}} 0 {{it.indent}}; border-radius: 10px; display: flex; align-items: center; justify-content: {{it.justify}}; gap: 12px; text-decoration: none; background: {{it.bg}}; color: {{it.tx}}; font-size: 15px; font-weight: {{it.fw}}">
+<span style="width: 20px; height: 20px; flex: none; display: inline-flex; color: {{it.icTx}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{it.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>
+<sc-if value="{{it.showLabel}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.t}}</span></sc-if>
+<sc-if value="{{it.hasCount}}" hint-placeholder-val="{{ false }}"><span style="min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; background: {{it.countBg}}; color: {{it.countTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; position: {{it.countPos}}; top: 4px; right: 4px">{{it.count}}</span></sc-if>
+<sc-if value="{{it.hasChevron}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx3); transform: rotate({{it.chevRot}})"><path d="m6 9 6 6 6-6"></path></svg></sc-if>
+</a>
+<sc-if value="{{it.hasTip}}" hint-placeholder-val="{{ false }}"><div role="tooltip" style="position: absolute; left: 60px; top: 6px; z-index: 3; height: 32px; padding: 0 12px; border-radius: 8px; background: var(--s2); border: 1px solid var(--line2); box-shadow: var(--shadow); color: var(--tx); font-size: 13px; white-space: nowrap; display: flex; align-items: center">{{it.t}}</div></sc-if>
+</div>
+</sc-if>
+</sc-for>
+</div>
+<div style="flex: none; border-top: 1px solid var(--line); padding: 10px {{f.rail.pad}}">
+<button type="button" aria-label="Your account" aria-expanded="{{f.rail.menuOpenStr}}" style="width: 100%; min-height: 56px; box-sizing: border-box; padding: 6px {{f.rail.userPad}}; border-radius: 12px; border: 1px solid {{f.rail.userBorder}}; background: {{f.rail.userBg}}; color: var(--tx); display: flex; align-items: center; justify-content: {{f.rail.headJustify}}; gap: 10px; cursor: pointer; text-align: left">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center">{{f.rail.ini}}</span>
+<sc-if value="{{f.rail.expanded}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.rail.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.rail.org}}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.chev}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></sc-if>
+</button>
+</div>
+<sc-if value="{{f.rail.menuOpen}}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Your account" style="position: absolute; left: {{f.rail.menuLeft}}; bottom: {{f.rail.menuBottom}}; z-index: 4; width: 284px; padding: 8px; box-sizing: border-box; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line2); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 4px"><span style="font-size: 14px; font-weight: 600">{{f.rail.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.rail.email}}</span></div>
+<div style="padding: 6px 10px 4px; font-family: 'Red Hat Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--tx3)">Org</div>
+<sc-for list="{{f.rail.orgs}}" as="o" hint-placeholder-count="3">
+<div role="menuitemradio" aria-checked="{{o.on}}" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; background: {{o.bg}}">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 8px; border: 1px solid var(--line2); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--tx2)">{{o.ini}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 14px">{{o.t}}</span><span style="font-size: 12px; color: var(--tx3)">{{o.sub}}</span></span>
+<sc-if value="{{o.on}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent-tx)"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+</div>
+</sc-for>
+<div style="height: 1px; background: var(--line); margin: 4px 0"></div>
+<sc-for list="{{f.rail.links}}" as="l" hint-placeholder-count="4">
+<div role="menuitem" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: {{l.tx}}; font-size: 14px"><span style="width: 18px; height: 18px; display: inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{l.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>{{l.t}}</div>
+</sc-for>
+<div style="padding: 6px 10px 8px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 12px; color: var(--tx3)">Theme</span>
+<div role="radiogroup" aria-label="Theme" style="display: flex; padding: 3px; border-radius: 10px; background: var(--s2); border: 1px solid var(--line)">
+<sc-for list="{{f.rail.themes}}" as="th" hint-placeholder-count="3"><span role="radio" aria-checked="{{th.on}}" style="flex: 1; height: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; background: {{th.bg}}; color: {{th.tx}}"><span style="width: 16px; height: 16px; display: inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{th.icon}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>{{th.t}}</span></sc-for>
+</div></div>
+<div style="height: 1px; background: var(--line); margin: 4px 0"></div>
+<div role="menuitem" style="min-height: 44px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: var(--red-tx); font-size: 14px; font-weight: 600"><span style="width: 18px; height: 18px; display: inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><sc-for list="{{f.rail.logout}}" as="p"><path d="{{p.d}}"></path></sc-for></svg></span>Sign out</div>
+</div>
+</sc-if>
+</nav></div>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3392px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="3">
+<div style="padding: 24px; border-radius: 16px; border: 1px solid #2C2938; background: #13121A; display: flex; flex-direction: column; gap: 8px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{n.t}}</div><div style="font-size: 15px; line-height: 1.55; color: #B9B4C8">{{n.b}}</div></div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":3959}}'>
+var ICON = {"brain-circuit":["M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z","M9 13a4.5 4.5 0 0 0 3-4","M6.003 5.125A3 3 0 0 0 6.401 6.5","M3.477 10.896a4 4 0 0 1 .585-.396","M6 18a4 4 0 0 1-1.967-.516","M12 13h4","M12 18h6a2 2 0 0 1 2 2v1","M12 8h8","M16 8V5a2 2 0 0 1 2-2","M15.5 13a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0","M17.5 3a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0","M19.5 21a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0","M19.5 8a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0"],"building-2":["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z","M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2","M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2","M10 6h4","M10 10h4","M10 14h4","M10 18h4"],"building":["M6 2h12q2 0 2 2v16q0 2 -2 2h-12q-2 0 -2 -2v-16q0 -2 2 -2Z","M9 22v-4h6v4","M8 6h.01","M16 6h.01","M12 6h.01","M12 10h.01","M12 14h.01","M16 10h.01","M16 14h.01","M8 10h.01","M8 14h.01"],"chart-column":["M3 3v16a2 2 0 0 0 2 2h16","M18 17V9","M13 17V5","M8 17v-3"],"chevrons-up-down":["m7 15 5 5 5-5","m7 9 5-5 5 5"],"clipboard-check":["M9 2h6q1 0 1 1v2q0 1 -1 1h-6q-1 0 -1 -1v-2q0 -1 1 -1Z","M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2","m9 14 2 2 4-4"],"credit-card":["M4 5h16q2 0 2 2v10q0 2 -2 2h-16q-2 0 -2 -2v-10q0 -2 2 -2Z","M2 10L22 10"],"key-round":["M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z","M16 7.5a0.5 0.5 0 1 0 1 0a0.5 0.5 0 1 0 -1 0"],"layers":["M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z","M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12","M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"],"life-buoy":["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0","m4.93 4.93 4.24 4.24","m14.83 9.17 4.24-4.24","m14.83 14.83 4.24 4.24","m9.17 14.83-4.24 4.24","M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"],"log-out":["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4","M16L17L21L12L16L7","M21 12L9 12"],"menu":["M4 12L20 12","M4 6L20 6","M4 18L20 18"],"monitor":["M4 3h16q2 0 2 2v10q0 2 -2 2h-16q-2 0 -2 -2v-10q0 -2 2 -2Z","M8 21L16 21","M12 17L12 21"],"moon":["M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"],"panel-left-close":["M5 3h14q2 0 2 2v14q0 2 -2 2h-14q-2 0 -2 -2v-14q0 -2 2 -2Z","M9 3v18","m16 15-3-3 3-3"],"panel-left-open":["M5 3h14q2 0 2 2v14q0 2 -2 2h-14q-2 0 -2 -2v-14q0 -2 2 -2Z","M9 3v18","m14 9 3 3-3 3"],"plug":["M12 22v-5","M9 8V2","M15 8V2","M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"],"scroll-text":["M15 12h-5","M15 8h-5","M19 17V5a2 2 0 0 0-2-2H4","M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"],"server":["M4 2h16q2 0 2 2v4q0 2 -2 2h-16q-2 0 -2 -2v-4q0 -2 2 -2Z","M4 14h16q2 0 2 2v4q0 2 -2 2h-16q-2 0 -2 -2v-4q0 -2 2 -2Z","M6 6L6.01 6","M6 18L6.01 18"],"shield-check":["M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z","m9 12 2 2 4-4"],"sparkles":["M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z","M20 3v4","M22 5h-4","M4 17v2","M5 18H3"],"store":["m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7","M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8","M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4","M2 7h20","M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"],"sun":["M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0","M12 2v2","M12 20v2","m4.93 4.93 1.41 1.41","m17.66 17.66 1.41 1.41","M2 12h2","M20 12h2","m6.34 17.66-1.41 1.41","m19.07 4.93-1.41 1.41"],"user":["M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2","M8 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"],"users-round":["M18 21a8 8 0 0 0-16 0","M5 8a5 5 0 1 0 10 0a5 5 0 1 0 -10 0","M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"],"users":["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2","M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0","M22 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"],"x":["M18 6 6 18","m6 6 12 12"],"zap":["M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"]};
+
+function ic(name) { return (ICON[name] || []).map(function (d) { return { d: d }; }); }
+var MAIN = [['Machines', 'server'], ['Super powers', 'sparkles'], ['Powers', 'zap'], ['Marketplace', 'store'], ['Usage', 'chart-column']];
+var ORG = [['Members', 'users'], ['Teams', 'users-round'], ['Models', 'brain-circuit'], ['Connections', 'plug'], ['Review', 'clipboard-check', '12'], ['Usage', 'chart-column'], ['API keys', 'key-round'], ['Audit log', 'scroll-text'], ['Billing', 'credit-card']];
+var ADMIN = [['Orgs', 'building'], ['Models', 'brain-circuit'], ['Marketplace', 'store'], ['Plans', 'layers'], ['Audit log', 'scroll-text']];
+
+function item(t, icon, o) {
+  o = o || {};
+  var on = !!o.on, ex = o.expanded !== false;
+  return {
+    isItem: true, isLabel: false, t: t, icon: ic(icon), current: on ? 'page' : 'false',
+    bg: on ? 'var(--chip-bg)' : 'transparent', tx: on ? 'var(--tx)' : 'var(--tx2)', icTx: on ? 'var(--accent-tx)' : 'var(--tx3)', fw: on ? '600' : '500',
+    indent: ex ? (o.sub ? '44px' : '12px') : '12px', padX: ex ? '12px' : '12px', justify: ex ? 'flex-start' : 'center', showLabel: ex,
+    hasCount: !!o.count, count: o.count || '', countBg: '#F062D0', countTx: '#FFFFFF', countPos: ex ? 'static' : 'absolute',
+    hasChevron: ex && !!o.group, chevRot: o.open ? '180deg' : '0deg', hasTip: !!o.tip
+  };
+}
+function label(t, ex) { return { isItem: false, isLabel: true, t: ex ? t : '', labelH: ex ? '34px' : '14px' }; }
+
+function railFor(o) {
+  var ex = o.expanded !== false, items = [];
+  MAIN.forEach(function (m) { items.push(item(m[0], m[1], { on: o.on === m[0], expanded: ex, tip: o.tip === m[0] })); });
+  if (o.orgAdmin) {
+    items.push(label('Northwind', ex));
+    items.push(item('Org', 'building-2', { group: true, open: o.orgOpen, expanded: ex, on: !ex && o.orgOn, count: o.orgOpen || !ex ? '' : '12' }));
+    if (o.orgOpen && ex) ORG.forEach(function (m) { items.push(item(m[0], m[1], { sub: true, on: o.orgOn === m[0], expanded: ex, count: m[2] })); });
+  }
+  if (o.superAdmin) {
+    items.push(label('Glyphh', ex));
+    items.push(item('Glyphh admin', 'shield-check', { group: true, open: o.adminOpen, expanded: ex, on: !ex && o.adminOn }));
+    if (o.adminOpen && ex) ADMIN.forEach(function (m) { items.push(item(m[0], m[1], { sub: true, on: o.adminOn === m[0], expanded: ex })); });
+  }
+  var who = o.superAdmin ? ['Ines Duarte', 'ines@glyphh.ai', 'Glyphh · Super admin', 'ID'] : o.orgAdmin ? ['Sam Rivera', 'sam@northwind.com', 'Northwind · Org admin', 'SR'] : ['Bo Li', 'bo@northwind.com', 'Northwind · Member', 'BL'];
+  var light = !!o.light;
+  return {
+    expanded: ex, overflow: ex ? 'auto' : 'visible', w: ex ? '256px' : '72px', pad: ex ? '12px' : '14px', headJustify: ex ? 'space-between' : 'center',
+    toggleLabel: o.drawer ? 'Close the menu' : ex ? 'Collapse the menu' : 'Expand the menu', toggleIcon: ic(o.drawer ? 'x' : ex ? 'panel-left-close' : 'panel-left-open'),
+    items: items, name: who[0], email: who[1], org: who[2], ini: who[3], chev: ic('chevrons-up-down'), logout: ic('log-out'),
+    userPad: ex ? '8px' : '0', userBorder: o.menu ? 'var(--line2)' : 'transparent', userBg: o.menu ? 'var(--s2)' : 'transparent',
+    menuOpen: !!o.menu, menuOpenStr: o.menu ? 'true' : 'false', menuLeft: ex ? '12px' : '80px', menuBottom: ex ? '78px' : '12px',
+    orgs: [['Personal', 'Just you', 'P', false], ['Northwind', o.orgAdmin ? 'Org admin · 24 people' : 'Member · 24 people', 'N', !o.superAdmin], ['Acme', 'Member · 6 people', 'A', false]].concat(o.superAdmin ? [['Glyphh', 'Super admin', 'G', true]] : []).map(function (x) {
+      return { t: x[0], sub: x[1], ini: x[2], on: x[3], bg: x[3] ? 'var(--s2)' : 'transparent' };
+    }),
+    links: [['Account', 'user'], ['Usage', 'chart-column'], ['API keys', 'key-round'], ['Help and status', 'life-buoy']].map(function (x) { return { t: x[0], icon: ic(x[1]), tx: 'var(--tx)' }; }),
+    themes: [['Light', 'sun', light], ['Dark', 'moon', !light], ['System', 'monitor', false]].map(function (x) {
+      return { t: x[0], icon: ic(x[1]), on: x[2] ? 'true' : 'false', bg: x[2] ? 'var(--s1)' : 'transparent', tx: x[2] ? 'var(--tx)' : 'var(--tx3)' };
+    })
+  };
+}
+
+var CARDS = [['62%', '40%'], ['48%', '70%'], ['70%', '35%'], ['55%', '60%'], ['40%', '50%'], ['66%', '45%']].map(function (c) { return { w1: c[0], w2: c[1] }; });
+function frame(o) {
+  var phone = !!o.phone, light = !!o.light;
+  return {
+    label: (phone ? 'Phone' : 'Desktop') + ' · ' + (light ? 'light' : 'dark') + (o.tag ? ' · ' + o.tag : ''),
+    cls: light ? 't light' : 't', w: phone ? '390px' : '1200px', h: phone ? '844px' : '900px', radius: phone ? '36px' : '14px',
+    desk: !phone, phone: phone, drawer: !!o.drawer, drawerStr: o.drawer ? 'true' : 'false', menuIcon: ic('menu'),
+    rail: railFor(o), crumb: o.crumb || 'Your machines', pageTitle: o.title || 'Machines', action: o.action || 'Add a machine',
+    h2: phone ? '28px' : '32px', pagePad: phone ? '20px' : '32px 36px', cols: phone ? '1fr' : 'repeat(3, minmax(0, 1fr))', cards: phone ? CARDS.slice(0, 3) : CARDS
+  };
+}
+function pair(o) { return [frame(Object.assign({}, o)), frame(Object.assign({}, o, { light: true }))]; }
+
+var STATES = [
+  { title: 'A member, rail open', sub: 'Machines, Super powers, Powers, Marketplace and Usage. The current page is marked with the chip tint and its icon in the accent. You and your org sit at the bottom left; the button at the top collapses the rail. The rail is 256 px open.', frames: pair({ on: 'Machines' }) },
+  { title: 'The rail collapsed', sub: 'Icons only, 72 px. Each item keeps its name as its accessible label and shows it as a tooltip on hover or focus (here on Powers). The account button keeps your avatar. The choice is remembered per person.', frames: pair({ on: 'Machines', expanded: false, tip: 'Powers' }) },
+  { title: 'An org admin: the Org group', sub: 'Under the org’s name, Org opens to its pages: Members, Teams, Models, Connections, Review (with what waits for review), Usage, API keys, Audit log, Billing. A group stays open while one of its pages is showing; closed, its count shows on it.', frames: pair({ orgAdmin: true, orgOpen: true, orgOn: 'Members', crumb: 'Org · Northwind', title: 'Members', action: 'Invite people' }) },
+  { title: 'A super admin: Glyphh admin', sub: 'Glyphh staff get Glyphh admin (Orgs, Models, Marketplace, Plans, Audit log) under Glyphh. A super admin who is also an org admin sees both groups.', frames: pair({ superAdmin: true, orgAdmin: false, adminOpen: true, adminOn: 'Orgs', crumb: 'Glyphh admin', title: 'Orgs', action: 'Export' }) },
+  { title: 'Your account menu', sub: 'The bottom-left button opens it upward: who you are, your orgs to switch between (Personal and any you belong to), Account, Usage, API keys, Help and status, the theme (Light, Dark, System), and Sign out in red. The theme toggle lives here now, not in a header.', frames: pair({ orgAdmin: true, orgOpen: false, on: 'Machines', menu: true }) },
+  { title: 'The menu from the collapsed rail', sub: 'It opens to the right of the rail, bottom aligned, the same menu.', frames: pair({ orgAdmin: true, expanded: false, on: 'Machines', menu: true }) },
+  { title: 'On a phone: the rail as a drawer', sub: 'A menu button top left opens the open rail as a drawer over a scrim, with you at its bottom. It closes when you pick a page, tap outside or press Escape. No bottom tab bar.', w: '1704px', frames: [frame({ phone: true, on: 'Machines', tag: 'page' }), frame({ phone: true, drawer: true, orgAdmin: true, on: 'Machines', tag: 'drawer open' }), frame({ phone: true, light: true, on: 'Machines', tag: 'page' }), frame({ phone: true, light: true, drawer: true, orgAdmin: true, on: 'Machines', tag: 'drawer open' })] }
+];
+
+class Component extends DCLogic {
+  renderVals() { var v = this.renderValsAll(); var keep = [4, 5, 6]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); return v; }
+  renderValsAll() {
+    return {
+      states: STATES.map(function (s) { return { title: s.title, sub: s.sub, frames: s.frames, w: s.w || '2448px' }; }),
+      notes: [
+        { t: 'What moves', b: 'The top nav goes; so do the header’s account avatar and theme toggle. Every app page keeps its content and loses its top bar: the page title and its main action now head the page itself. Sign-in pages (Sign in, Allow, Approve a code, Join) have no rail: they stay as drawn.' },
+        { t: 'Icons', b: 'Lucide, approved 2026-10-12, stroke 2 at 20 px (16–18 px in menus): server, sparkles, zap, store, chart-column, building-2, users, users-round, brain-circuit, plug, clipboard-check, key-round, scroll-text, credit-card, shield-check, building, layers, panel-left-close and -open, menu, chevrons-up-down, user, life-buoy, sun, moon, monitor, log-out. Only these; a new one is asked for.' },
+        { t: 'Behaviour', b: 'Open or collapsed is remembered per person. Items are 44 px tall; the account button is 56 px. Keyboard: Tab through the rail, Enter opens a group, the account menu opens with Enter and closes with Escape. Counts are pink (waiting for you). Below 768 px wide the rail becomes the drawer.' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

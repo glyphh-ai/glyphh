@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Usage, light</title>
+<title>Usage, light (1 of 2)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -21,7 +21,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">app.glyphh.ai · Account › Usage · Org › Usage · a listing’s stats</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Usage: the audit log (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Usage: the audit log (light) · 1 of 2</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">{{intro}}</p>
 </div>
 
@@ -123,7 +123,7 @@ button,input{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":12400}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":4479}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
@@ -750,7 +750,8 @@ function frame(stt, d) {
 
 var PART = [15, 16, 17, 18, 19, 20, 21];
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       intro: 'What a member, an org admin and a publisher can see of what was used: runs, powers, model tokens and connection calls, counted by day. It opens on the org’s billing period (4 Oct – 3 Nov here), with earlier periods by their dates, Last 30 days and Custom. Credit is dollars: only connection calls use it, 2¢ for each started 30 seconds; runs cost nothing; model calls are on members’ own keys and show tokens, never dollars. Counts and times only: no prompts, arguments or results anywhere. Desktop 1200, phone 390.',
       states: STATES.filter(function (s, i) { return PART.indexOf(i + 1) >= 0; }).map(function (s, i) { return { title: (i + 1) + ' · ' + s.title.replace(/^\d+ · /, ''), sub: s.sub, frames: [frame(s, true), frame(s, false)] }; }),

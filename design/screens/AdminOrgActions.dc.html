@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Glyphh admin: orgs and plans</title>
+<title>Glyphh admin: orgs and plans (1 of 3)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -23,7 +23,7 @@ button,input,textarea{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">app.glyphh.ai · Glyphh admin › Orgs and › Plans · super admins only · dark</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Org actions and plans</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Org actions and plans · 1 of 3</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1500px">Only Glyphh's own staff (super admins, users of the parent org) see Glyphh admin in the top nav, with Orgs, Models, Marketplace and Plans under it. Orgs lists every org with its plan, seats, machines, credit balance, spend and status; opening one shows its overview, members, machines, powers, super powers and billing, and the actions only staff have: gift credit (dollars, with a note, in the org's ledger), change or comp its plan, and disable it. Plans holds each plan family and its versions: a change is a new version, sold to new orgs, while every org keeps the version it is on, at its price, until it changes plan or is moved with notice. It also holds the billing settings: what a connection call costs per started 30 seconds and the smallest and largest top-up, each change kept with who made it and from when. Credit is dollars. Desktop 1200 × 1120, phone 390 × 1460.</p>
 </div>
 
@@ -490,7 +490,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":15000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":5631}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
@@ -929,7 +929,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.filter(function (s) { return PART.indexOf(s.id) >= 0; }).map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [

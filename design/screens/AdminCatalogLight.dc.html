@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Glyphh admin: models and providers, light</title>
+<title>Glyphh admin: models and providers, light (1 of 4)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -23,7 +23,7 @@ button,input,textarea{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">Glyphh admin › Models · super admins only · light</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Models and providers (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Models and providers (light) · 1 of 4</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">The catalog everyone picks models from: about 3,900 models across 125 providers. It is Glyphh's reference data, the same for every org; anyone signed in reads it, only super admins change it. Two tables: providers (name, logo, how to reach it) and catalog models (the provider's model id, a name, a description, a type). It holds no keys, prices or limits. A super admin can turn a provider or a model off, or remove it. Off is for now, the org limits' rule: members' powers on it are disabled with the reason and come back, untouched, when it is on again. Removed is for good: those powers can only be deleted, so removing asks you to type the name. The old list came without descriptions, so writing them is a job of its own. Providers without artwork on this board (DeepSeek, Cohere, Cerebras, …) show the LogoTile's initials; in the build a provider shows its uploaded mark. Desktop 1200, phone 390.</p>
 </div>
 
@@ -432,7 +432,7 @@ button,input,textarea{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":21800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":7754}}'>
 var B = 'assets/';
 var LOGO = { 'OpenAI': 'openai.svg', 'Anthropic': 'anthropic.svg', 'Google': 'gemini.svg',
   'xAI': 'grok.svg', 'Mistral': 'mistral.svg', 'Meta': 'meta.svg', 'Perplexity': 'perplexity.svg' };
@@ -780,7 +780,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (st, i) { return { title: (i < 9 ? '0' : '') + (i + 1) + ' · ' + st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [

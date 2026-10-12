@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Org: members and teams, light</title>
+<title>Org: members and teams, light (1 of 3)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -19,7 +19,7 @@ a{color:#6A3DF0}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">app.glyphh.ai · Org › Members, Org › Teams · org admins only · light</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Org: members and teams (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Org: members and teams (light) · 1 of 3</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">What an org admin sees under Org, the extra item in the top nav. Members: everyone in Northwind and every open invite, with the seats they use, search, role and team filters, and a menu per person. Teams: groups that narrow which models and connections their members may add; a person can be in several teams and may add what any of them allows, and someone in no team has only the org's limits. Every change that removes or deletes says what happens before it happens. Desktop 1200 wide, phone 390 wide.</p>
 </div>
 
@@ -357,7 +357,7 @@ a{color:#6A3DF0}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":18800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":7070}}'>
 var B = 'assets/';
 var LOGO = { 'OpenAI': 'openai.svg', 'Anthropic': 'anthropic.svg', 'Gemini': 'gemini.svg', 'Mistral': 'mistral.svg' };
 var VIOLET = '#7C4DFF', CHIP_BG = 'rgba(124,77,255,.12)';
@@ -596,7 +596,8 @@ function frame(st, desk) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5, 6, 7]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       states: STATES.map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
       notes: [

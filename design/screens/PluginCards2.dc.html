@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glyphh cards in the chat (2 of 2)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B49CFF}a:hover{color:#F5F3FA}
+button,input{font:inherit}
+.t{--host:#1F1E24;--host-tx:#ECECF1;--host-tx2:#A9A8B3;--bubble:#2E2D35;--s1:#13121A;--s2:#1B1924;--s3:#25222F;--line:#2C2938;--line2:#403B50;--tile:rgba(245,243,250,.3);--tx:#F5F3FA;--tx2:#B9B4C8;--tx3:#8E89A0;--accent:#7C4DFF;--on-accent:#FFFFFF;--accent-tx:#B49CFF;--chip-bg:rgba(124,77,255,.16);--chip-tx:#B49CFF;--pink:#F062D0;--pink-bg:rgba(240,98,208,.1);--pink-line:rgba(240,98,208,.4);--red:#FF4D4D;--red-bg:rgba(255,77,77,.07);--red-line:rgba(255,77,77,.4);--ion:#6FD8FF;--shadow:0 1px 0 rgba(255,255,255,.03) inset;background:var(--host);color:var(--host-tx)}
+.t.light{--host:#FFFFFF;--host-tx:#1F1E24;--host-tx2:#5F5E68;--bubble:#F1F0F4;--s1:#FFFFFF;--s2:#F5F5F7;--s3:#E9E7EE;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#6A3DF0;--pink:#C2189C;--pink-bg:rgba(240,98,208,.08);--pink-line:rgba(194,24,156,.35);--red:#C21D3C;--red-bg:rgba(255,77,77,.06);--red-line:rgba(194,29,60,.35);--ion:#00679E;--shadow:0 1px 2px rgba(11,10,15,.05),0 8px 24px rgba(11,10,15,.06)}
+.t a{color:var(--accent-tx)}
+.g-spin{animation:g-spin .8s linear infinite}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.g-spin{animation:none}}
+</style>
+</helmet>
+<div style="width: 3152px; box-sizing: border-box; padding: 64px; background: #07060A; color: #F5F3FA; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 48px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #8E89A0">The plugin · cards in Claude and ChatGPT</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Glyphh in the chat · 2 of 2</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #B9B4C8; max-width: 1300px">The app's screens as cards inside the conversation, built from the same components and following the host's light or dark theme. Only after sign-in; signing in is always a browser page. The chat around each card is a neutral stand-in for the host, not its real design. Anything that needs the full app opens app.glyphh.ai or the machine's rrotor in a new tab.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="20">
+<sc-if value="{{f.isBreak}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; display: flex; align-items: baseline; gap: 16px; border-top: 1px solid #2C2938; padding-top: 24px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 32px; font-weight: 700">{{f.title}}</div>
+<div style="font-size: 16px; color: #8E89A0">{{f.sub}}</div>
+</div>
+</sc-if>
+<sc-if value="{{f.isFrame}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #8E89A0">{{f.label}}</div>
+<div class="t {{f.theme}}" style="width: {{f.w}}; border: 1px solid #2C2938; border-radius: {{f.radius}}; overflow: hidden; box-sizing: border-box; padding: {{f.pad}}; display: flex; flex-direction: column; gap: 16px; font-family: 'Red Hat Text', sans-serif">
+
+<sc-if value="{{f.ask}}" hint-placeholder-val="{{ true }}">
+<div style="align-self: flex-end; max-width: 80%; padding: 10px 14px; border-radius: 18px; background: var(--bubble); font-size: 15px; line-height: 1.45">{{f.ask}}</div>
+</sc-if>
+<div style="font-size: 15px; line-height: 1.55; color: var(--host-tx)">{{f.lead}}</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--host-tx2)">
+<svg viewBox="0 0 165 200" width="16" height="19" aria-hidden="true"><sc-for list="{{f.mark.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg>
+<span>Glyphh · {{f.tool}}</span>
+</div>
+
+<section aria-label="{{f.tool}}" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); box-shadow: var(--shadow); padding: {{f.cardPad}}; display: flex; flex-direction: column; gap: 14px; color: var(--tx)">
+
+<sc-if value="{{f.hasHead}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><h3 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">{{f.head}}</h3><div style="font-size: 13px; color: var(--tx3)">{{f.headSub}}</div></div>
+<sc-if value="{{f.live}}" hint-placeholder-val="{{ false }}"><span style="flex: none; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--chip-bg); color: var(--chip-tx); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #7C4DFF"></span>Live</span></sc-if>
+<a href="#" aria-label="Open in app.glyphh.ai" style="flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; color: var(--tx2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></a>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.machines}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{f.machines}}" as="m" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: var(--s2); opacity: {{m.opacity}}">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 9px; height: 9px; border-radius: 50%; background: {{m.dot}}; flex: none"></span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">{{m.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.meta}}</span></div>
+<a href="#" style="flex: none; height: 44px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; text-decoration: none; font-size: 14px; font-weight: 600; background: {{m.btnBg}}; color: {{m.btnTx}}; border: {{m.btnBorder}}; box-sizing: border-box">{{m.btn}}</a>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+<sc-for list="{{m.cats}}" as="c"><a href="#" title="Open {{c.name}} on {{m.name}}" style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{c.w}}" height="{{c.h}}" role="img" aria-label="{{c.name}}"><sc-for list="{{c.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></a></sc-for>
+<sc-if value="{{m.hasMore}}" hint-placeholder-val="{{ false }}"><a href="#" aria-label="See all {{m.total}} super powers on {{m.name}}" style="height: 36px; padding: 0 10px; border-radius: 10px; border: 1px dashed var(--tile); display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--tx); text-decoration: none; box-sizing: border-box">{{m.more}}</a></sc-if>
+<span style="font-size: 12px; color: var(--tx3); margin-left: 4px">{{m.powers}}</span>
+</div>
+</div>
+</sc-for>
+<nav aria-label="{{f.pgMachines.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgMachines.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgMachines.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgMachines.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgMachines.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgMachines.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgMachines.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: none; height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600; cursor: pointer">Deploy a machine</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.deploy}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: {{f.hostCols}}; gap: 8px" role="radiogroup" aria-label="Where it runs">
+<sc-for list="{{f.hosts}}" as="h"><button type="button" role="radio" aria-checked="{{h.on}}" style="height: 76px; border-radius: 12px; border: {{h.border}}; background: {{h.bg}}; color: var(--tx); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-sizing: border-box"><img src="{{h.src}}" alt="" style="width: 28px; height: 28px; object-fit: contain"><span style="font-size: 12px; font-weight: 600">{{h.name}}</span></button></sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="mn-{{f.key}}" style="font-size: 14px; font-weight: 600">Name it</label>
+<input id="mn-{{f.key}}" value="studio-cloud" style="height: 48px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s2); color: var(--tx); padding: 0 14px; font-size: 15px; box-sizing: border-box; width: 100%">
+<div style="font-size: 12px; color: var(--tx3)">It runs on your Fly.io account. You'll approve it once, in your browser.</div>
+</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 600; cursor: pointer">Deploy on Fly.io</button>
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600; cursor: pointer">Cancel</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.status}}" hint-placeholder-val="{{ false }}">
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0">
+<sc-for list="{{f.steps}}" as="s">
+<li style="display: flex; gap: 12px; align-items: flex-start">
+<div style="display: flex; flex-direction: column; align-items: center; width: 22px; flex: none">
+<sc-if value="{{s.done}}" hint-placeholder-val="{{ true }}"><span style="width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: inline-flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span></sc-if>
+<sc-if value="{{s.now}}" hint-placeholder-val="{{ false }}"><span class="g-spin" style="width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--chip-bg); border-top-color: #7C4DFF; box-sizing: border-box"></span></sc-if>
+<sc-if value="{{s.next}}" hint-placeholder-val="{{ false }}"><span style="width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line2); box-sizing: border-box"></span></sc-if>
+<sc-if value="{{s.line}}" hint-placeholder-val="{{ true }}"><span style="width: 2px; height: 22px; background: {{s.lineColor}}"></span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding-bottom: 12px"><span style="font-size: 15px; font-weight: 600; color: {{s.tx}}">{{s.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{s.note}}</span></div>
+</li>
+</sc-for>
+</ol>
+<div style="padding: 10px 12px; border-radius: 10px; background: var(--s2); font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">starting rrotor · pulling the image 64%</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" disabled style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: var(--s3); color: var(--tx3); font-size: 15px; font-weight: 600">Open when ready</button>
+<a href="#" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); color: var(--tx); font-size: 15px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box">Watch in app.glyphh.ai</a>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.usage}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="font-weight: 600">Credits</span><span style="font-family: 'Red Hat Mono', monospace; color: var(--tx2)">[USED] of [TOTAL]</span></div>
+<div role="progressbar" aria-label="Credits used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="height: 10px; border-radius: 999px; background: var(--s3); overflow: hidden"><div style="width: 62%; height: 100%; border-radius: 999px; background: var(--accent)"></div></div>
+<div style="font-size: 12px; color: var(--tx3)">Plan: [PLAN NAME] · renews [DATE]</div>
+</div>
+<div style="display: flex; align-items: flex-end; gap: {{f.barGap}}; height: 120px; border-bottom: 1px solid var(--line)" role="img" aria-label="Credits by day this month">
+<sc-for list="{{f.days}}" as="d"><span title="{{d.t}}" style="flex: 1; min-width: 0; height: {{d.h}}; border-radius: 3px 3px 0 0; background: {{d.c}}; border: {{d.b}}; box-sizing: border-box"></span></sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--tx3)"><span>1 Oct</span><span>11 Oct · today</span><span>31 Oct</span></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 600; color: var(--tx2)">Most used</div>
+<sc-for list="{{f.top}}" as="u">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 9px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{u.cat.w}}" height="{{u.cat.h}}" aria-hidden="true"><sc-for list="{{u.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></span>
+<span style="width: {{f.nameW}}; flex: none; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{u.name}}</span>
+<span style="flex: 1; height: 8px; border-radius: 999px; background: var(--s3); overflow: hidden"><span style="display: block; width: {{u.pct}}; height: 100%; background: var(--accent-tx)"></span></span>
+<span style="width: 36px; text-align: right; font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">{{u.pct}}</span>
+</div>
+</sc-for>
+</div>
+<a href="#" style="font-size: 14px">Plan and billing in app.glyphh.ai</a>
+</sc-if>
+
+<sc-if value="{{f.c.swarm}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{f.running}}" as="r">
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; background: var(--s2); text-decoration: none; color: var(--tx)">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{r.cat.w}}" height="{{r.cat.h}}" aria-hidden="true"><sc-for list="{{r.cat.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.task}}</span></span>
+<span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px"><span style="height: 22px; padding: 0 8px; border-radius: 999px; background: {{r.chipBg}}; color: {{r.chipTx}}; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{r.dot}}"></span>{{r.status}}</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 11px; color: var(--tx3)">{{r.time}}</span></span>
+</a>
+</sc-for>
+<nav aria-label="{{f.pgSwarm.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px">
+<span style="font-size: 13px; color: var(--tx3, #8E89A0)">{{f.pgSwarm.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pgSwarm.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgSwarm.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pgSwarm.items}}" as="pi"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pgSwarm.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2, #403B50); background: transparent; color: {{f.pgSwarm.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<div style="font-size: 13px; color: var(--tx3)">9 running on 2 machines · 132 idle</div>
+</sc-if>
+
+<sc-if value="{{f.c.question}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--pink-bg); border: 1px solid var(--pink-line)">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{f.who.w}}" height="{{f.who.h}}" role="img" aria-label="Scout, needs you"><sc-for list="{{f.who.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></span>
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 13px; font-weight: 600; color: var(--pink)">Scout · on studio-mac</div><div style="font-size: 16px; line-height: 1.45; font-weight: 600">Which launch date should the post use?</div></div>
+</div>
+<fieldset style="margin: 0; padding: 0; border: none; display: flex; flex-direction: column; gap: 8px">
+<legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Launch date</legend>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 2px solid #7C4DFF; background: var(--chip-bg); cursor: pointer; box-sizing: border-box"><input type="radio" name="q-{{f.key}}" checked style="accent-color: #7C4DFF; width: 18px; height: 18px">Tuesday 14 October</label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); cursor: pointer; box-sizing: border-box"><input type="radio" name="q-{{f.key}}" style="accent-color: #7C4DFF; width: 18px; height: 18px">Thursday 16 October</label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); cursor: pointer; box-sizing: border-box"><input type="radio" name="q-{{f.key}}" style="accent-color: #7C4DFF; width: 18px; height: 18px">Something else…</label>
+</fieldset>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 600; cursor: pointer">Send answer</button>
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600; cursor: pointer">Let Scout decide</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.permission}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--pink-bg); border: 1px solid var(--pink-line)">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box"><svg viewBox="0 0 165 200" width="{{f.who.w}}" height="{{f.who.h}}" role="img" aria-label="Scout, needs you"><sc-for list="{{f.who.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg></span>
+<div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 13px; font-weight: 600; color: var(--pink)">Scout · on studio-mac</div><div style="font-size: 16px; line-height: 1.45; font-weight: 600">Wants to post in #launch on Slack</div></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--s2); border: 1px solid var(--line)">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx3)"><img src="assets/slack.svg" alt="" style="width: 16px; height: 16px">#launch · as Glyphh</div>
+<div style="font-size: 14px; line-height: 1.55">We're live on Tuesday 14 October. Thank you to everyone who tested the beta. Notes in the thread.</div>
+</div>
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; color: var(--tx3)">tool · slack.post_message</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 600; cursor: pointer">Allow once</button>
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); font-size: 15px; font-weight: 600; cursor: pointer">Always allow in #launch</button>
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--red); font-size: 15px; font-weight: 600; cursor: pointer">Deny</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.empty}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 12px 8px">
+<svg viewBox="0 0 165 200" width="{{f.who.w}}" height="{{f.who.h}}" role="img" aria-label="Glyphh, looking around"><sc-for list="{{f.who.shapes}}" as="s"><path d="{{s.d}}" fill="{{s.fill}}" stroke="{{s.stroke}}" stroke-width="{{s.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></sc-for></svg>
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No machines yet</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 380px">A machine runs rrotor, the home for your super powers. Deploy one in a couple of minutes, on a host you already use.</div>
+<button type="button" style="flex: none; height: 48px; padding: 0 22px; border-radius: 12px; border: none; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 600; cursor: pointer">Deploy a machine</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.c.loading}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{f.skel}}" as="k">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: var(--s2)">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--s3)"></span><span style="width: 40%; height: 14px; border-radius: 6px; background: var(--s3)"></span><span style="margin-left: auto; width: 72px; height: 44px; border-radius: 12px; background: var(--s3)"></span></div>
+<div style="display: flex; gap: 6px"><span style="width: 36px; height: 36px; border-radius: 10px; background: var(--s3)"></span><span style="width: 36px; height: 36px; border-radius: 10px; background: var(--s3)"></span><span style="width: 36px; height: 36px; border-radius: 10px; background: var(--s3)"></span></div>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{f.c.error}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 12px; background: var(--red-bg); border: 1px solid var(--red-line)">
+<div style="display: flex; gap: 10px; align-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg><span style="font-size: 15px; font-weight: 600">Couldn't reach your machines</span></div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">They're probably fine; the connection to Glyphh dropped. Try again. If it keeps happening, send us the trace ID.</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 10px; background: var(--s1); border: 1px solid var(--line)">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 11px; color: var(--tx3)">Trace ID</span><span style="font-family: 'Red Hat Mono', monospace; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">5be7-0c19-a34f-d208</span></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+</div>
+</div>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="flex: none; height: 48px; padding: 0 20px; border-radius: 12px; border: none; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 600; cursor: pointer">Try again</button>
+</div>
+</sc-if>
+
+</section>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3152,"height":3801}}'>
+var INK = '#0b0a0f';
+var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+var BROW_LOW = 'M45 104 C60 96 100 90 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
+function circ(cx, cy, r) { return 'M' + (cx - r) + ' ' + cy + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0 Z'; }
+function sh(d, fill, stroke, sw) { return { d: d, fill: fill, stroke: stroke || 'none', sw: sw || 0 }; }
+function cat(face, color, mood, size, name) {
+  var c = '#ffffff', H = { 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' }, T = { 11: 'L112 148 L136 140 L128 152 L152 146 L126 168', 12: 'L112 150 C132 150 150 140 146 126 C143 138 132 158 124 169', 13: 'L112 150 C130 152 150 150 160 140 C150 160 134 166 124 169' };
+  var body = 'M40 62 ' + (H[face] || 'L135 13 L123 57') + ' C140 70 144 104 128 121 L112 133 ' + (T[face] || 'L112 150 C126 152 136 151 145 149 C137 158 130 164 124 169') + ' L128 179 L35 180 L44 131 C18 118 20 80 40 62 Z';
+  var ear = face === 7 ? 'M22 9 L62 42 L39 54 Z' : face === 10 ? 'M36 20 C26 32 32 50 39 54 L62 42 C56 30 48 18 36 20 Z' : 'M28 15 L62 42 L39 54 Z';
+  var s = [];
+  if (face === 15) s.push(sh('M46 128 C30 140 16 162 10 182 L44 181 Z', INK, c, 7));
+  s.push(sh(body, c, c, 16), sh(ear, c, c, 16));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', c, 20), sh(circ(93, 14, 9), c, c, 16));
+  s.push(sh(body, INK, INK, 1.5), sh(ear, INK, INK, 1.5), sh('M61 138 L99 150 L100 172 L51 171 Z', c));
+  if (face === 14) s.push(sh('M86 46 L92 18', 'none', INK, 5), sh(circ(93, 14, 7), INK));
+  if (face === 16) s.push(sh('M74 142 L88 142 L82 152 L94 152 L72 170 L78 157 L68 157 Z', INK));
+  s.push(sh(mood === 'sleepy' || mood === 'error' ? BROW_LOW : BROW, 'none', c, 8));
+  var eyes = { idle: [92, 94, 12, 96.2, 89.8, 3.6], curious: [68, 97, 12, 72.2, 92.8, 3.6], generating: [88, 94, 19, 94.65, 87.35, 5.7], thinking: [94, 80, 12, 98.2, 75.8, 3.6] };
+  if (mood === 'done') s.push(sh('M83 95 L90 102 L103 87', 'none', color, 7));
+  else if (mood === 'sleepy' || mood === 'error') s.push(sh(circ(92, 107, 9), color));
+  else { var k = eyes[mood] || eyes.idle; s.push(sh(circ(k[0], k[1], k[2]), color), sh(circ(k[3], k[4], k[5]), INK)); }
+  return { w: size, h: Math.round(size * 200 / 165), shapes: s, name: name || 'Glyphh' };
+}
+var STATUS = { generating: ['Working', '#7C4DFF', 'var(--chip-bg)', 'var(--chip-tx)'], thinking: ['Thinking', '#6FD8FF', 'rgba(111,216,255,.14)', 'var(--ion)'], curious: ['Needs you', '#F062D0', 'var(--pink-bg)', 'var(--pink)'], error: ['Stuck', '#FF4D4D', 'var(--red-bg)', 'var(--red)'] };
+var HOST_BRAND = { 'Fly.io': ['#A78BFA', '#7B3BE2'], 'AWS': ['#FF9900', '#232F3E'], 'Azure': ['#3B9CFF', '#0078D4'], 'Google Cloud': ['#4285F4', '#4285F4'], 'DigitalOcean': ['#3D9BFF', '#0080FF'], 'Hetzner': ['#FF4D6A', '#D50C2D'], 'Any VPS': ['#F5F3FA', '#0B0A0F'] };
+var LOGO = { 'OpenAI': ['assets/openai.svg', 'assets/openai-dark.svg'], 'Anthropic': ['assets/anthropic.svg', 'assets/anthropic-dark.svg'], 'Claude': ['assets/claude.svg', 'assets/claude.svg'], 'Gemini': ['assets/gemini.svg', 'assets/gemini.svg'], 'Grok': ['assets/grok.svg', 'assets/grok-dark.svg'], 'Mistral': ['assets/mistral.svg', 'assets/mistral.svg'], 'Meta': ['assets/meta.svg', 'assets/meta.svg'], 'Perplexity': ['assets/perplexity.svg', 'assets/perplexity.svg'], 'Gmail': ['assets/gmail.svg', 'assets/gmail.svg'], 'Slack': ['assets/slack.svg', 'assets/slack.svg'], 'GitHub': ['assets/github.svg', 'assets/github-dark.svg'], 'Neo4j': ['assets/neo4j.svg', 'assets/neo4j.svg'], 'Airtable': ['assets/airtable.svg', 'assets/airtable.svg'], 'pgvector': ['assets/pgvector.svg', 'assets/pgvector.svg'], 'Notion': ['assets/notion.svg', 'assets/notion.svg'], 'Cursor': ['assets/cursor.svg', 'assets/cursor-dark.svg'], 'MongoDB': ['assets/mongodb.svg', 'assets/mongodb.svg'], 'Snowflake': ['assets/snowflake.svg', 'assets/snowflake.svg'], 'Jira': ['assets/jira.svg', 'assets/jira.svg'], 'Salesforce': ['assets/salesforce.svg', 'assets/salesforce.svg'], 'Google Drive': ['assets/google-drive.svg', 'assets/google-drive.svg'], 'Fly.io': ['assets/fly-io.svg', 'assets/fly-io.svg'], 'AWS': ['assets/aws.svg', 'assets/aws-dark.svg'], 'Azure': ['assets/azure.svg', 'assets/azure.svg'], 'Google Cloud': ['assets/google-cloud.svg', 'assets/google-cloud.svg'], 'DigitalOcean': ['assets/digitalocean.svg', 'assets/digitalocean.svg'], 'Hetzner': ['assets/hetzner.svg', 'assets/hetzner.svg'], 'Any VPS': ['assets/any-vps.svg', 'assets/any-vps.svg'] };
+function logoSrc(n, light) { var l = LOGO[n]; return l ? l[light ? 0 : 1] : ''; }
+function pager(label, from, to, total, page, pages, mobile, cursor) {
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var items = [];
+  if (!cursor) {
+    if (mobile) items = [{ n: 'Page ' + page + ' of ' + pages, cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2, #B9B4C8)' }];
+    else {
+      var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+      items = seq.map(function (n) { var cur = n === page; return { n: String(n), cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2, #403B50)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2, #B9B4C8)' }; });
+    }
+  }
+  var first = page === 1, last = page === pages;
+  return { label: label, line: 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)', nextTx: last ? 'var(--line2, #403B50)' : 'var(--tx, #F5F3FA)' };
+}
+var CARDS = [
+  { id: 'machines', label: 'My machines', ask: 'Show my machines', lead: 'You have 3 machines; 2 are online.', tool: 'My machines', head: 'Your machines', headSub: '27 machines · 19 online' },
+  { id: 'deploy', label: 'Deploy: pick a host', ask: 'Deploy a new machine for me', lead: 'Pick where it should run. It goes on your own account.', tool: 'Deploy a machine', head: 'Deploy a machine', headSub: 'One click on a host you already use' },
+  { id: 'status', label: 'Deploy: live status', ask: '', lead: 'On it. I’ll tell you when studio-cloud is ready.', tool: 'Deploy a machine', head: 'Deploying studio-cloud', headSub: 'on Fly.io · started 40 s ago', live: true },
+  { id: 'usage', label: 'Usage and plan', ask: 'What have I used this month?', lead: 'You’ve used about 62% of this month’s credits. Inbox Zero uses the most.', tool: 'Usage', head: 'Usage this month', headSub: '1 – 11 October' },
+  { id: 'swarm', label: 'The swarm, live', ask: 'What’s running right now?', lead: '4 super powers are working; one is waiting on you.', tool: 'The swarm', head: 'Running now', headSub: 'across studio-mac and office-linux', live: true },
+  { id: 'question', label: 'Needs you: a question', ask: '', lead: 'Scout has a question before it posts.', tool: 'Needs you', head: '', headSub: '' },
+  { id: 'permission', label: 'Needs you: a permission', ask: '', lead: 'Scout needs your OK to post.', tool: 'Needs you', head: '', headSub: '' },
+  { id: 'empty', label: 'Empty: no machines', ask: 'Show my machines', lead: 'You don’t have a machine yet.', tool: 'My machines', head: '', headSub: '' },
+  { id: 'loading', label: 'Loading', ask: 'Show my machines', lead: 'Checking your machines…', tool: 'My machines', head: 'Your machines', headSub: 'Checking…' },
+  { id: 'error', label: 'Error, with trace ID', ask: 'Show my machines', lead: 'I couldn’t reach your machines just now.', tool: 'My machines', head: '', headSub: '' }
+];
+function machines(sz) {
+  function cats(list) { return list.map(function (d) { return cat(d[0], d[1], d[2], sz, d[3]); }); }
+  return [
+    { name: 'studio-mac', meta: 'macOS · Austin', dot: '#7C4DFF', opacity: 1, btn: 'Open', btnBg: 'var(--accent)', btnTx: 'var(--on-accent)', btnBorder: 'none',
+      cats: cats([[9, '#B49CFF', 'generating', 'Inbox Zero'], [14, '#6FD8FF', 'thinking', 'Quarterly Revenue Reconciliation'], [15, '#F062D0', 'curious', 'Scout'], [10, '#5B8CFF', 'idle', 'Ledger'], [11, '#2EE6D6', 'generating', 'Lead Router']]),
+      hasMore: true, more: '+131', total: 136, powers: '' },
+    { name: 'office-linux', meta: 'Ubuntu · Northwind office', dot: '#7C4DFF', opacity: 1, btn: 'Open', btnBg: 'var(--s1)', btnTx: 'var(--tx)', btnBorder: '1px solid var(--line2)',
+      cats: cats([[12, '#5B8CFF', 'idle', 'Nightly Build Watcher'], [16, '#FF6B9A', 'done', 'Reporter'], [7, '#B49CFF', 'idle', 'Ox']]), powers: '' },
+    { name: 'old-laptop', meta: 'Windows · last seen 3 days ago', dot: '#8E89A0', opacity: 0.7, btn: 'Offline', btnBg: 'transparent', btnTx: 'var(--tx3)', btnBorder: '1px solid var(--line)',
+      cats: cats([[4, '#8E89A0', 'sleepy', 'Archivist']]), powers: 'asleep' }
+  ];
+}
+function frames(ICON) {
+  var out = [];
+  function add(mobile, light) {
+    CARDS.forEach(function (cd, i) {
+      var c = {}; c[cd.id] = true;
+      var hosts = ['Fly.io', 'AWS', 'Azure', 'Google Cloud', 'DigitalOcean', 'Hetzner', 'Any VPS'].map(function (n, j) {
+        var on = j === 0, b = HOST_BRAND[n];
+        return { name: n, src: logoSrc(n, light), d: ICON[n] || '', fg: light ? b[1] : b[0], rule: n === 'Azure' ? 'evenodd' : 'nonzero', on: on ? 'true' : 'false', bg: on ? 'var(--chip-bg)' : 'var(--s2)', border: on ? '2px solid #7C4DFF' : '1px solid var(--line)' };
+      });
+      var DAYS = [42, 55, 38, 61, 70, 22, 15, 66, 80, 58, 74], days = [];
+      for (var dd = 0; dd < 31; dd++) { var past = dd < DAYS.length; days.push({ h: past ? DAYS[dd] + '%' : '6%', c: past ? (dd === DAYS.length - 1 ? '#7C4DFF' : 'var(--accent-tx)') : 'transparent', b: past ? 'none' : '1px dashed var(--line2)', t: (dd + 1) + ' Oct' }); }
+      var running = [
+        [9, '#B49CFF', 'generating', 'Inbox Zero', 'Sorting 41 new emails · studio-mac', '2m 14s'],
+        [11, '#2EE6D6', 'generating', 'Lead Router', 'Routing 3 leads from the website · studio-mac', '38s'],
+        [14, '#6FD8FF', 'thinking', 'Quarterly Revenue Reconciliation', 'Planning: matching payouts to the ledger · studio-mac', '6m 02s'],
+        [15, '#F062D0', 'curious', 'Scout', 'Waiting for your OK to post in #launch · studio-mac', '1m 10s'],
+        [16, '#FF6B9A', 'error', 'Reporter', 'Stuck: the sheet it writes to was deleted · office-linux', '12m']
+      ].map(function (d) { var st = STATUS[d[2]]; return { cat: cat(d[0], d[1], d[2], 24, d[3]), name: d[3], task: d[4], time: d[5], status: st[0], dot: st[1], chipBg: st[2], chipTx: st[3] }; });
+      var top = [[9, '#B49CFF', 'Inbox Zero', '34%'], [14, '#6FD8FF', 'Quarterly Revenue Reconciliation', '21%'], [11, '#2EE6D6', 'Lead Router', '12%'], [15, '#F062D0', 'Scout', '8%']]
+        .map(function (d) { return { cat: cat(d[0], d[1], 'idle', 20, d[2]), name: d[2], pct: d[3] }; });
+      var steps = [['Waiting', 'Fly.io accepted the order', 'done'], ['Registered', 'studio-cloud signed in to Glyphh', 'done'], ['Starting', 'rrotor is starting up', 'now'], ['Ready', 'Opens here when it’s up', 'next']]
+        .map(function (s, j, a) { return { name: s[0], note: s[1], done: s[2] === 'done', now: s[2] === 'now', next: s[2] === 'next', line: j < a.length - 1, lineColor: s[2] === 'done' ? '#7C4DFF' : 'var(--line2)', tx: s[2] === 'next' ? 'var(--tx3)' : 'var(--tx)' }; });
+      out.push({
+        isFrame: true, c: c, key: cd.id + (mobile ? 'm' : 'd') + (light ? 'l' : 'k'), theme: light ? 'light' : '',
+        label: (light ? 'Light host · ' : 'Dark host · ') + (i < 9 ? '0' : '') + (i + 1) + ' · ' + cd.label,
+        w: mobile ? '390px' : '720px', radius: mobile ? '28px' : '16px', pad: mobile ? '20px 14px' : '28px 32px', cardPad: mobile ? '14px' : '18px',
+        btnDir: mobile ? 'column' : 'row', barGap: mobile ? '2px' : '4px', hostCols: mobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', nameW: mobile ? '96px' : '200px',
+        ask: cd.ask, lead: cd.lead, tool: cd.tool, head: cd.head, headSub: cd.headSub, hasHead: !!cd.head, live: !!cd.live,
+        mark: cat(1, '#ffffff', 'idle', 16), who: cd.id === 'empty' ? cat(1, '#F062D0', 'curious', 64) : cat(15, '#F062D0', 'curious', 30, 'Scout'),
+        machines: machines(mobile ? 22 : 24), hosts: hosts, steps: steps, days: days, top: top, running: running, skel: [1, 2, 3],
+        slack: ICON['Slack'] || '', pgMachines: pager('Machine pages', 1, 3, 27, 1, 9, mobile), pgSwarm: pager('Running pages', 1, 5, 9, 1, 2, mobile)
+      });
+    });
+  }
+  out.push({ isBreak: true, title: 'Dark host · desktop', sub: 'cards at chat width, 720 px' });
+  add(false, false);
+  out.push({ isBreak: true, title: 'Light host · desktop', sub: 'the same cards when the host is in its light theme' });
+  add(false, true);
+  out.push({ isBreak: true, title: 'Dark host · mobile', sub: '390 px; pairs of buttons stack full width' });
+  add(true, false);
+  out.push({ isBreak: true, title: 'Light host · mobile', sub: '' });
+  add(true, true);
+  return out;
+}
+class Component extends DCLogic {
+  componentDidMount() {
+    var self = this;
+    fetch('assets/glyphh-icons-3.json').then(function (r) { return r.json(); }).then(function (j) { self.setState({ icons: j }); }).catch(function () {});
+  }
+  renderVals() { var v = this.renderValsAll(); var keep = [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]; v.frames = keep.map(function (i) { return v.frames[i]; }).filter(Boolean); return v; }
+  renderValsAll() { return { frames: frames((this.state && this.state.icons) || {}) }; }
+}
+</script>
+</body>
+</html>

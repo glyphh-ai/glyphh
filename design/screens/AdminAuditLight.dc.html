@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Audit log of admin actions, light</title>
+<title>Audit log of admin actions, light (1 of 3)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -21,7 +21,7 @@ button,input{font:inherit}
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">app.glyphh.ai · Org › Audit log · Glyphh admin › Audit log · org admins and super admins · light</div>
-<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Audit log of admin actions (light)</h1>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Audit log of admin actions (light) · 1 of 3</h1>
 <p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">{{intro}}</p>
 </div>
 
@@ -123,7 +123,7 @@ button,input{font:inherit}
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":17000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":7092}}'>
 var INK = '#0b0a0f';
 var BROW = 'M45 104 C43 89 70 66 96 64 C116 62 124 80 121 97 C118 116 100 126 86 122 C70 118 47 112 45 104 Z';
 var HEADS = { d: 'L135 13 L123 57', 7: 'L138 9 L123 57', 8: 'L110 26 L138 26 L123 57', 9: 'L99 10 L111 34 L135 13 L123 57', 10: 'C106 14 142 6 123 57' };
@@ -583,7 +583,8 @@ function frame(stt, d) {
 }
 
 class Component extends DCLogic {
-  renderVals() {
+  renderVals() { var v = this.renderValsAll(); var keep = [0, 1, 2, 3, 4, 5]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); if (v.notes) v.notes = []; return v; }
+  renderValsAll() {
     return {
       intro: 'Every change an org admin or Glyphh staff makes is recorded, and can’t be changed or deleted (Chris, 2026-10-11). Org admins read their org’s log under Org › Audit log; super admins read every staff action, and the reviewer’s, under Glyphh admin › Audit log, and any org’s log from the org. Each entry: when (to the second, with the time zone), who and their role, what in one plain sentence, the target, and where from. A row opens every field, before → after, the ids, the request’s trace ID and the city it came from. The table, filters, cursor paging, detail sheet and Export CSV are the usage audit log’s, so both logs look the same. Never content: a key shows only its prefix. Desktop 1200, phone 390.',
       states: STATES.map(function (s) { return { title: s.title, sub: s.sub, frames: [frame(s, true), frame(s, false)] }; }),

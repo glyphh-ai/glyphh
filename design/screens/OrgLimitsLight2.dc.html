@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Org: allowed models and connections, light (2 of 2)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400..800&amp;family=Red+Hat+Text:wght@400..700&amp;family=Red+Hat+Mono:wght@400..600&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font:inherit}
+.t{--bg:#F5F5F7;--s1:#FFFFFF;--dlg:#FFFFFF;--s2:#EEEDF2;--s3:#E4E2EA;--line:#E0DEE7;--line2:#C9C5D4;--tile:#C9C5D4;--tx:#0B0A0F;--tx2:#45414F;--tx3:#67637A;--accent-tx:#6A3DF0;--chip-bg:rgba(124,77,255,.12);--chip-tx:#6A3DF0;--pink:#C2189C;--pink-bg:rgba(240,98,208,.08);--pink-line:rgba(194,24,156,.35);--red:#C21D3C;--red-tx:#C21D3C;--red-bg:rgba(255,77,77,.07);--red-line:rgba(194,29,60,.35);--ion:#00679E;--ion-bg:rgba(0,103,158,.08);--scrim:rgba(11,10,15,.28)}
+.t a{color:var(--accent-tx)}
+.g-skel{animation:g-pulse 1.6s ease-in-out infinite}
+@keyframes g-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.g-anim,.g-skel{animation:none!important}}
+</style>
+</helmet>
+<div class="t" style="width: 3520px; box-sizing: border-box; padding: 64px; background: #E9E8EE; color: #0B0A0F; font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #67637A">Org › Models · Org › Connections · Org › Teams › Sales · org admin · light</div>
+<h1 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 64px; font-weight: 700; letter-spacing: -0.03em">Allowed models and connections (light) · 2 of 2</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #45414F; max-width: 1500px">An org admin's Models and Connections pages only say which models and services people may add. They hold no keys and no accounts: everyone still adds their own model with their own key, and connects their own account. Both limits start off, so anything in the catalog can be added. Turned on, only what is on the list can be added, org wide; a team can turn on its own limit and, under an org that limits, only narrow the org's list. Someone in several teams may add what any of their teams allows. A model or connection a limit leaves out stops working for whoever has it, and comes back on its own when it is allowed again. Desktop 1200, phone 390.</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 72px 96px; align-items: flex-start">
+<sc-for list="{{states}}" as="st" hint-placeholder-count="15">
+<div style="display: flex; flex-direction: column; gap: 18px; width: 1640px">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #E0DEE7; padding-top: 22px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 30px; font-weight: 700">{{st.title}}</div>
+<div style="font-size: 16px; line-height: 1.5; color: #67637A; max-width: 1400px">{{st.sub}}</div>
+</div>
+<div style="display: flex; gap: 48px; align-items: flex-start">
+<sc-for list="{{st.frames}}" as="f" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-family: 'Red Hat Mono', monospace; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #67637A">{{f.label}}</div>
+<div class="t" role="img" aria-label="{{f.aria}}" style="position: relative; width: {{f.w}}; min-height: {{f.h}}; background: var(--bg); color: var(--tx); border: 1px solid #E0DEE7; border-radius: {{f.radius}}; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box">
+
+<header style="height: 64px; flex: none; padding: 0 {{f.pad}}; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--s1)">
+<div style="display: flex; align-items: center; gap: 20px">
+<img src="assets/glyphh-logo-black.png" alt="Glyphh" style="height: {{f.logoH}}; width: auto; display: block">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<button type="button" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--tx); font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Northwind<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#45414F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<nav aria-label="Main" style="display: flex; gap: 4px; font-size: 14px"><sc-for list="{{f.nav}}" as="n" hint-placeholder-count="5"><a href="#" aria-current="{{n.cur}}" style="padding: 8px 12px; border-radius: 10px; text-decoration: none; color: {{n.tx}}; background: {{n.bg}}">{{n.name}}</a></sc-for></nav>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 14px">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><a href="#" style="font-size: 14px; color: var(--tx2); text-decoration: none">Help</a></sc-if>
+<button type="button" aria-label="Account menu" style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 700; font-size: 14px">{{f.avatar}}</button>
+</div>
+</header>
+
+<main style="flex: 1; padding: {{f.mainPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1040px; align-self: center">
+
+<sc-if value="{{f.hasBack}}" hint-placeholder-val="{{ false }}">
+<a href="#" style="align-self: flex-start; min-height: 44px; font-size: 14px; color: var(--tx2); text-decoration: none; display: inline-flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>{{f.back}}</a>
+</sc-if>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<sc-if value="{{f.eyebrow}}" hint-placeholder-val="{{ false }}"><div style="font-family: 'Red Hat Mono', monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tx3)">{{f.eyebrow}}</div></sc-if>
+<h2 style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: {{f.h1}}; font-weight: 700; letter-spacing: -0.03em">{{f.pageTitle}}</h2>
+<sc-if value="{{f.pageSub}}" hint-placeholder-val="{{ false }}"><div style="font-size: 14px; color: var(--tx3)">{{f.pageSub}}</div></sc-if>
+</div>
+<div role="tablist" aria-label="{{f.pageTitle}}" style="display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto">
+<sc-for list="{{f.tabs}}" as="tb" hint-placeholder-count="6"><button type="button" role="tab" aria-selected="{{tb.on}}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-bottom: 2px solid {{tb.line}}; background: transparent; color: {{tb.tx}}; font-size: 15px; font-weight: 600">{{tb.name}}</button></sc-for>
+</div>
+</div>
+
+<sc-if value="{{f.isAdmin}}" hint-placeholder-val="{{ true }}">
+
+<sc-if value="{{f.loading}}" hint-placeholder-val="{{ false }}">
+<div class="g-skel" aria-hidden="true" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; align-items: center; gap: 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 10px"><div style="width: 46%; height: 18px; border-radius: 6px; background: var(--s3)"></div><div style="width: 80%; height: 12px; border-radius: 6px; background: var(--s3)"></div></div>
+<div style="width: 52px; height: 32px; flex: none; border-radius: 999px; background: var(--s3)"></div>
+</div>
+<div role="status" style="font-size: 14px; color: var(--tx3)">{{f.loadingLine}}</div>
+<section class="g-skel" aria-hidden="true" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.skel}}" as="k" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: {{k.top}}">
+<div style="width: {{f.tileS}}; height: {{f.tileS}}; flex: none; border-radius: 12px; background: var(--s3)"></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 8px"><div style="width: {{k.w}}; height: 14px; border-radius: 6px; background: var(--s3)"></div><div style="width: 30%; height: 10px; border-radius: 6px; background: var(--s3)"></div></div>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><div style="width: 96px; height: 12px; border-radius: 6px; background: var(--s3)"></div><div style="width: 92px; height: 44px; border-radius: 10px; background: var(--s3)"></div></sc-if>
+</div>
+</sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{f.ready}}" hint-placeholder-val="{{ true }}">
+<section aria-label="{{f.sw.title}}" style="padding: 20px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-start; gap: 16px">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px"><div style="font-size: 17px; font-weight: 700">{{f.sw.title}}</div><sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 680px">{{f.sw.desc}}</div></sc-if></div>
+<span style="display: inline-flex; align-items: center; gap: 10px; flex: none; min-height: 44px"><span style="font-size: 14px; color: var(--tx2)">{{f.sw.state}}</span><button type="button" role="switch" aria-checked="{{f.sw.on}}" aria-label="{{f.sw.title}}" style="width: 52px; height: 32px; flex: none; border-radius: 999px; border: none; background: {{f.sw.bg}}; position: relative"><span style="position: absolute; top: 4px; left: {{f.sw.knob}}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF"></span></button></span>
+</div>
+<sc-if value="{{f.mobile}}" hint-placeholder-val="{{ false }}"><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.sw.desc}}</div></sc-if>
+<sc-if value="{{f.off}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line)">
+<sc-for list="{{f.offPoints}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; color: var(--tx2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-tx)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M5 12l5 5 9-10"></path></svg><span>{{p.t}}</span></div>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<sc-if value="{{f.hasCallout}}" hint-placeholder-val="{{ false }}">
+<div role="note" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 14px; background: {{f.callout.bg}}; border: 1px solid {{f.callout.line}}">
+<span style="width: 8px; height: 8px; flex: none; margin-top: 7px; border-radius: 50%; background: {{f.callout.dot}}"></span>
+<span style="flex: 1; font-size: 14px; line-height: 1.5; color: var(--tx2)"><b style="color: var(--tx)">{{f.callout.b}}</b> {{f.callout.t}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{f.hasList}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px"><div style="font-size: 18px; font-weight: 600">{{f.listTitle}}</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">{{f.listSub}}</div></div>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: {{f.addW}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{f.addLabel}}</button>
+</div>
+<div style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="ls-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{f.searchPh}}</label><input id="ls-{{f.key}}" type="search" value="{{f.query}}" placeholder="{{f.searchPh}}" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid {{f.qBorder}}; background: var(--s1); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+
+<sc-if value="{{f.error}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; border-radius: 14px; background: var(--red-bg); border: 1px solid var(--red-line)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C21D3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg>
+<div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">{{f.errTitle}}</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.errBody}} Trace ID <span style="font-family: 'Red Hat Mono', monospace; color: var(--tx)">{{f.traceId}}</span></div></div>
+<button type="button" aria-label="Copy trace ID" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 0 1 1-1h10"></path></svg></button>
+<button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #7C4DFF; color: #FFFFFF; font-weight: 600">Try again</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.noMatch}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 40px 24px; border-radius: 16px; border: 1px dashed var(--line2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px">
+<div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">No results for “{{f.query}}”</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2); max-width: 440px">{{f.noMatchHint}}</div>
+<div style="display: flex; gap: 10px; justify-content: center; flex-direction: {{f.btnDir}}; width: {{f.addW}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Clear search</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">{{f.addLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{f.hasRows}}" hint-placeholder-val="{{ true }}">
+<section aria-label="{{f.listTitle}}" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.rows}}" as="r" hint-placeholder-count="5">
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: {{r.top}}">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{r.src}}" alt="" style="width: 26px; height: 26px; object-fit: contain"></span>
+<span style="flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">{{r.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span></span>
+<span style="flex: none; width: 190px; font-size: 13px; color: var(--tx2)">{{r.used}}</span>
+<button type="button" aria-label="Remove {{r.name}}" style="flex: none; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Remove</button>
+</div>
+</sc-if>
+<sc-if value="{{f.mobile}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: {{r.top}}; min-height: 68px; box-sizing: border-box">
+<span style="width: 40px; height: 40px; flex: none; border-radius: 11px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{r.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span><span style="font-size: 12px; color: var(--tx2)">{{r.used}}</span></span>
+<button type="button" aria-label="Remove {{r.name}}" style="flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+</sc-if>
+</sc-for>
+</section>
+<nav aria-label="{{f.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px">
+<span style="font-size: 13px; color: var(--tx3)">{{f.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{f.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.pg.items}}" as="pi" hint-placeholder-count="4"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{f.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.footNote}}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; line-height: 1.5; color: var(--tx3)">{{f.footNote}}</div></sc-if>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{f.isMember}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px"><div style="font-size: 18px; font-weight: 600">Models</div><div style="font-size: 14px; line-height: 1.5; color: var(--tx3)">Your own models, on your own keys. Your super powers use them where you grant them.</div></div>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: {{f.addW}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a model</button>
+</div>
+<section aria-label="Your models" style="border-radius: 16px; background: var(--s1); border: 1px solid var(--line); padding: 4px 20px">
+<sc-for list="{{f.mrows}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: {{f.rowAlign}}; gap: 12px 14px; padding: 14px 0; border-top: {{r.top}}">
+<span style="width: {{f.tileS}}; height: {{f.tileS}}; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; opacity: {{r.op}}"><img src="{{r.src}}" alt="" style="width: 24px; height: 24px; object-fit: contain"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 15px; font-weight: 600; color: {{r.nameTx}}">{{r.name}}</span>
+<span style="font-size: 13px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span>
+<span style="align-self: flex-start; height: 24px; padding: 0 9px; border-radius: 999px; background: {{r.chipBg}}; color: {{r.chipTx}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{r.dot}}"></span>{{r.chip}}</span>
+<sc-if value="{{r.off}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.5; color: var(--tx2)">{{r.why}}</span></sc-if>
+</span>
+<span style="display: flex; gap: 8px; flex: {{f.actFlex}}; padding-left: {{f.actPad}}">
+<sc-if value="{{r.on}}" hint-placeholder-val="{{ true }}"><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 14px; font-weight: 600">Edit</button></sc-if>
+<sc-if value="{{r.off}}" hint-placeholder-val="{{ false }}"><button type="button" aria-label="Delete {{r.name}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--red-line); background: transparent; color: var(--red-tx); font-size: 14px; font-weight: 600">Delete</button></sc-if>
+</span>
+</div>
+</sc-for>
+</section>
+<div style="font-size: 13px; line-height: 1.5; color: var(--tx3)">You can add what any of your teams (Sales, Support) allows, inside Northwind’s list. <a href="#">What you can add</a></div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{f.dlg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(2px)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dt-{{f.key}}" style="position: absolute; left: 50%; top: {{f.dlgTop}}; transform: translateX(-50%); width: {{f.dlgW}}; border-radius: 16px; background: var(--dlg); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(11,10,15,.16); padding: {{f.dlgPad}}; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h3 id="dt-{{f.key}}" style="margin: 0; font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{f.dlgTitle}}</h3><sc-if value="{{f.dlgDesc}}" hint-placeholder-val="{{ false }}"><div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.dlgDesc}}</div></sc-if></div>
+<button type="button" aria-label="Close" style="width: 44px; height: 44px; flex: none; border-radius: 10px; border: none; background: transparent; color: var(--tx2); display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<sc-if value="{{f.d.confirm}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 15px; line-height: 1.55; color: var(--tx)">{{f.confirmBody}}</div>
+<div style="display: grid; grid-template-columns: {{f.effCols}}; gap: 8px">
+<sc-for list="{{f.effects}}" as="e" hint-placeholder-count="3">
+<div style="padding: 14px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); display: flex; flex-direction: {{f.effDir}}; gap: 6px 12px; align-items: {{f.effAlign}}"><span style="font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: {{e.tx}}; min-width: 36px">{{e.n}}</span><span style="font-size: 13px; line-height: 1.45; color: var(--tx2)">{{e.t}}</span></div>
+</sc-for>
+</div>
+<div style="font-size: 14px; line-height: 1.5; color: var(--tx2)">{{f.reassure}}</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: var(--red); color: #FFFFFF; font-size: 15px; font-weight: 600">{{f.dangerLabel}}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.remove}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line)"><span style="width: 48px; height: 48px; flex: none; border-radius: 12px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center"><img src="{{f.rm.src}}" alt="" style="width: 26px; height: 26px; object-fit: contain"></span><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">{{f.rm.name}}</span><span style="font-size: 13px; color: var(--tx3)">{{f.rm.sub}}</span></span></div>
+<div style="font-size: 15px; line-height: 1.55; color: var(--tx)">{{f.rm.body}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--tx3)">{{f.rm.teamsLine}}<sc-for list="{{f.rm.teams}}" as="tm" hint-placeholder-count="2"><span style="height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--tx2); display: inline-flex; align-items: center">{{tm.t}}</span></sc-for></div>
+<div style="display: flex; gap: 10px; justify-content: flex-end; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Keep it</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: var(--red); color: #FFFFFF; font-size: 15px; font-weight: 600">{{f.rm.btn}}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{f.d.add}}" hint-placeholder-val="{{ false }}">
+<div style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 15px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><label for="cq-{{f.key}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{f.add.ph}}</label><input id="cq-{{f.key}}" type="search" placeholder="{{f.add.ph}}" style="width: 100%; height: 48px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line2); background: var(--bg); color: var(--tx); padding: 0 14px 0 42px; font-size: 15px"></div>
+<div role="radiogroup" aria-label="{{f.add.chipsLabel}}" style="display: flex; gap: 8px; overflow-x: auto">
+<sc-for list="{{f.add.chips}}" as="ch" hint-placeholder-count="7"><button type="button" role="radio" aria-checked="{{ch.on}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{ch.border}}; background: {{ch.bg}}; color: {{ch.tx}}; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><sc-if value="{{ch.logo}}" hint-placeholder-val="{{ true }}"><img src="{{ch.src}}" alt="" style="width: 16px; height: 16px; object-fit: contain"></sc-if>{{ch.label}}</button></sc-for>
+</div>
+<sc-if value="{{f.add.list}}" hint-placeholder-val="{{ true }}">
+<div role="group" aria-label="{{f.add.resLabel}}" style="display: flex; flex-direction: column; border-radius: 12px; border: 1px solid var(--line); overflow: hidden">
+<sc-for list="{{f.add.rows}}" as="a" hint-placeholder-count="6">
+<button type="button" role="checkbox" aria-checked="{{a.on}}" aria-disabled="{{a.dis}}" style="min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 8px 14px; border: none; border-top: {{a.top}}; background: {{a.bg}}; color: var(--tx); text-align: left; opacity: {{a.op}}; box-sizing: border-box">
+<span style="width: 22px; height: 22px; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid {{a.boxLine}}; background: {{a.boxBg}}; display: inline-flex; align-items: center; justify-content: center"><sc-if value="{{a.check}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if></span>
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: transparent"><img src="{{a.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.sub}}</span></span>
+<sc-if value="{{f.desktop}}" hint-placeholder-val="{{ true }}"><span style="flex: 1.3 1 0; min-width: 0; font-size: 13px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.desc}}</span></sc-if>
+<sc-if value="{{a.note}}" hint-placeholder-val="{{ false }}"><span style="flex: none; font-size: 12px; color: var(--accent-tx)">{{a.note}}</span></sc-if>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{f.add.grid}}" hint-placeholder-val="{{ false }}">
+<div role="group" aria-label="{{f.add.resLabel}}" style="display: grid; grid-template-columns: {{f.add.cols}}; gap: 8px">
+<sc-for list="{{f.add.rows}}" as="a" hint-placeholder-count="12">
+<button type="button" role="checkbox" aria-checked="{{a.on}}" aria-disabled="{{a.dis}}" style="height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 12px; border: {{a.border}}; background: {{a.bg}}; color: var(--tx); text-align: left; opacity: {{a.op}}; box-sizing: border-box">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; border: 1px solid var(--tile); display: inline-flex; align-items: center; justify-content: center; background: transparent"><img src="{{a.src}}" alt="" style="width: 22px; height: 22px; object-fit: contain"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.name}}</span><span style="font-size: 12px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.sub}}</span></span>
+<span style="width: 22px; height: 22px; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid {{a.boxLine}}; background: {{a.boxBg}}; display: inline-flex; align-items: center; justify-content: center"><sc-if value="{{a.check}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if></span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<nav aria-label="{{f.add.pg.label}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<span style="font-size: 13px; color: var(--tx3)">{{f.add.pg.line}}</span>
+<span style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Previous page" disabled="{{f.add.pg.first}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{f.add.pg.prevTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<sc-for list="{{f.add.pg.items}}" as="pi" hint-placeholder-count="4"><button type="button" aria-current="{{pi.cur}}" style="min-width: 44px; height: 44px; padding: 0 8px; border-radius: 10px; border: {{pi.border}}; background: {{pi.bg}}; color: {{pi.tx}}; font-size: 14px; font-weight: 600">{{pi.n}}</button></sc-for>
+<button type="button" aria-label="Next page" disabled="{{f.add.pg.last}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line2); background: transparent; color: {{f.add.pg.nextTx}}; display: inline-flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</span>
+</nav>
+<sc-if value="{{f.add.note}}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; line-height: 1.5; color: var(--tx3)">{{f.add.note}}</div></sc-if>
+<div style="display: flex; align-items: {{f.add.footAlign}}; justify-content: space-between; gap: 12px; flex-direction: {{f.add.footDir}}; padding-top: 14px; border-top: 1px solid var(--line)">
+<span role="status" style="font-size: 15px; font-weight: 600">{{f.add.sel}}</span>
+<div style="display: flex; gap: 10px; flex-direction: {{f.btnDir}}">
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line2); background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Cancel</button>
+<button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: none; background: #7C4DFF; color: #FFFFFF; font-size: 15px; font-weight: 600">{{f.add.btn}}</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 3392px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="3">
+<div style="padding: 24px; border-radius: 16px; border: 1px solid #E0DEE7; background: #FFFFFF; display: flex; flex-direction: column; gap: 8px"><div style="font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 700">{{n.t}}</div><div style="font-size: 15px; line-height: 1.55; color: #45414F">{{n.b}}</div></div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3520,"height":4918}}'>
+var B = 'assets/';
+var LG = {
+  Anthropic: 'anthropic.svg', OpenAI: 'openai.svg', Google: 'gemini.svg', xAI: 'grok.svg',
+  Mistral: 'mistral.svg', Meta: 'meta.svg', Perplexity: 'perplexity.svg',
+  Gmail: 'gmail.svg', Slack: 'slack.svg', GitHub: 'github.svg', Notion: 'notion.svg',
+  'Google Drive': 'google-drive.svg', Salesforce: 'salesforce.svg', Airtable: 'airtable.svg', Jira: 'jira.svg',
+  MongoDB: 'mongodb.svg', Snowflake: 'snowflake.svg', Neo4j: 'neo4j.svg'
+};
+function src(n) { return B + LG[n]; }
+function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+// [model, provider, type, description, people]
+var MODELS = [
+  ['Claude Sonnet 4.5', 'Anthropic', 'Chat', 'Fast, careful all-rounder for writing and code', 6],
+  ['GPT-5', 'OpenAI', 'Chat', 'OpenAI’s flagship for reasoning and tools', 11],
+  ['Gemini 2.5 Pro', 'Google', 'Chat', 'Long documents, images and video', 4],
+  ['Claude Haiku 4.5', 'Anthropic', 'Chat', 'Quick and cheap for small jobs', 9],
+  ['GPT-5 mini', 'OpenAI', 'Chat', 'Smaller GPT-5 for routine work', 3],
+  ['Mistral Large', 'Mistral', 'Chat', 'Open-weight model, strong in European languages', 1],
+  ['text-embedding-3-large', 'OpenAI', 'Embedding', 'Turns text into vectors for search', 2],
+  ['Gemini 2.5 Flash', 'Google', 'Chat', 'Fast multimodal model', 0]
+];
+var CATALOG = [
+  ['Claude Opus 4.1', 'Anthropic', 'Chat', 'Anthropic’s most capable model', 'in use', 1],
+  ['Grok 4', 'xAI', 'Chat', 'xAI’s reasoning model, with live search', 'in use', 1],
+  ['Llama 4 Maverick', 'Meta', 'Chat', 'Open-weight, long context', '', 1],
+  ['Sonar Pro', 'Perplexity', 'Search', 'Answers with sources from the web', '', 1],
+  ['GPT-5', 'OpenAI', 'Chat', 'OpenAI’s flagship for reasoning and tools', 'allowed', 0],
+  ['Codestral', 'Mistral', 'Code', 'Mistral’s model for code', '', 0],
+  ['gpt-4o-mini-tts', 'OpenAI', 'Speech', 'Text to speech, many voices', 'in use', 1]
+];
+var SERVICES = [
+  ['Gmail', 'Email', 23], ['Slack', 'Chat', 31], ['Salesforce', 'CRM', 8], ['Notion', 'Docs', 14], ['GitHub', 'Code', 12],
+  ['Google Drive', 'Files', 19], ['Jira', 'Tickets', 7], ['Airtable', 'Data', 3]
+];
+
+function people(n, scope) { if (!n) return 'Not used yet'; return 'Used by ' + n + (n === 1 ? ' person' : ' people') + (scope ? ' in ' + scope : ''); }
+function pager(label, from, to, total, page, pages, mobile, cursor) {
+  var items = [];
+  if (!cursor) {
+    if (mobile) items = [{ n: 'Page ' + page + ' of ' + fmt(pages), cur: 'page', border: 'none', bg: 'transparent', tx: 'var(--tx2)' }];
+    else {
+      var seq = pages <= 5 ? Array.apply(null, Array(pages)).map(function (_, i) { return i + 1; }) : (page <= 3 ? [1, 2, 3, 4, '…', pages] : [1, '…', page - 1, page, page + 1, '…', pages]);
+      items = seq.map(function (n) { var cur = n === page; return { n: typeof n === 'number' ? fmt(n) : n, cur: cur ? 'page' : 'false', border: cur ? '1px solid #7C4DFF' : (n === '…' ? 'none' : '1px solid var(--line2)'), bg: cur ? '#7C4DFF' : 'transparent', tx: cur ? '#FFFFFF' : 'var(--tx2)' }; });
+    }
+  }
+  var first = page === 1, last = !cursor && page === pages;
+  return { label: label, line: cursor ? from : 'Showing ' + fmt(from) + '–' + fmt(to) + ' of ' + fmt(total), items: items, first: first, last: last,
+    prevTx: first ? '#8E89A0' : 'var(--tx)', nextTx: last ? '#8E89A0' : 'var(--tx)' };
+}
+function tabs(names, on) { return names.map(function (n) { var s = n === on; return { name: n, on: s ? 'true' : 'false', line: s ? '#7C4DFF' : 'transparent', tx: s ? 'var(--tx)' : 'var(--tx3)' }; }); }
+function sw(title, desc, on) { return { title: title, desc: desc, on: on ? 'true' : 'false', state: on ? 'On' : 'Off', bg: on ? '#7C4DFF' : 'var(--line2)', knob: on ? '24px' : '4px' }; }
+function chips(names, on, logos) {
+  return names.map(function (n) { var s = n === on, lg = logos && LG[n];
+    return { label: n, on: s ? 'true' : 'false', bg: s ? '#7C4DFF' : 'transparent', tx: s ? '#FFFFFF' : 'var(--tx2)', border: s ? '#7C4DFF' : 'var(--line2)', logo: !!lg, src: lg ? B + lg : '' }; });
+}
+function box(on, dis) { return { boxLine: on ? (dis ? 'var(--line2)' : '#7C4DFF') : 'var(--line2)', boxBg: on ? (dis ? 'var(--line2)' : '#7C4DFF') : 'transparent', check: on }; }
+
+var CALL = {
+  red: { bg: 'var(--red-bg)', line: 'var(--red-line)', dot: '#C21D3C' },
+  info: { bg: 'var(--s1)', line: 'var(--line)', dot: '#00679E' }
+};
+
+var STATES = [
+  { id: 'off', title: '1 · Models, not limited (the default)', sub: 'Org › Models with the limit off. Everyone in Northwind may add any model in the catalog, with their own key. The page says plainly that Glyphh holds no keys here, and which teams set a limit of their own.',
+    page: 'org', tab: 'Models', mode: 'off' },
+  { id: 'confirm', title: '2 · Turning the limit on', sub: 'Turning the switch on asks first, with what it does in numbers: the list starts empty, so every model people already use stops working until it is allowed. Nothing is deleted.',
+    page: 'org', tab: 'Models', mode: 'off', dlg: 'confirm' },
+  { id: 'limited', title: '3 · Models, limited', sub: 'The allowed list: provider logo, model, provider and type, and how many people use it. Searchable and paginated. A red note counts what people use that the list leaves out.',
+    page: 'org', tab: 'Models', mode: 'on' },
+  { id: 'add', title: '4 · Add models from the catalog', sub: 'Search about 3,900 models, filter by provider, tick several across pages, then Add. Models people already use are marked; models already on the list show ticked and can’t be changed here.',
+    page: 'org', tab: 'Models', mode: 'on', dlg: 'add' },
+  { id: 'remove', title: '5 · Remove a model', sub: 'Named, with who it affects and that teams lose it too. It comes back for everyone, with their keys, if it is allowed again.',
+    page: 'org', tab: 'Models', mode: 'on', dlg: 'remove' },
+  { id: 'conns', title: '6 · Connections, limited', sub: 'Org › Connections, the same pattern with services. Pipedream holds each person’s own account; this page only says which services can be connected.',
+    page: 'org', tab: 'Connections', mode: 'on', kind: 'conn' },
+  { id: 'connadd', title: '6 · Add connections from the catalog', sub: 'Pipedream’s catalog of about 3,500 services, served by cursor: Previous and Next only, no page count. Services already allowed show ticked.',
+    page: 'org', tab: 'Connections', mode: 'on', kind: 'conn', dlg: 'add' },
+  { id: 'team', title: '7 · At a team, when the org limits', sub: 'Org › Teams › Sales › Models. Sales turns on its own limit, and can only narrow Northwind’s list.',
+    page: 'team', tab: 'Models', mode: 'on', orgLimits: true },
+  { id: 'teamadd', title: '7 · A team adds from the org’s list', sub: 'Only Northwind’s allowed models show, not the whole catalog. To allow something else, an org admin adds it to Northwind’s list first.',
+    page: 'team', tab: 'Models', mode: 'on', orgLimits: true, dlg: 'add' },
+  { id: 'teamfree', title: '7 · At a team, when the org doesn’t limit', sub: 'Northwind’s Connections limit is off, so Sales can pick any service in the catalog for its own list.',
+    page: 'team', tab: 'Connections', mode: 'on', kind: 'conn', orgLimits: false },
+  { id: 'member', title: '8 · What a member sees', sub: 'Bo Li, in Sales and Support, on Powers › Models. Bo Li may add what any of those teams allows, inside Northwind’s list, so one team alone never blocks a model the other allows. A model the limits leave out is off, says who left it out and that it comes back on its own; it can only be deleted.',
+    page: 'member', tab: 'Models', small: true },
+  { id: 'empty', title: '9 · No results', sub: 'A search with nothing on the list. It offers the catalog, since the model may simply not be allowed yet.',
+    page: 'org', tab: 'Models', mode: 'on', q: 'llama' },
+  { id: 'loading', title: '9 · Loading', sub: 'Skeletons in the shape of the switch and the rows.',
+    page: 'org', tab: 'Models', mode: 'on', loading: true },
+  { id: 'error', title: '9 · Couldn’t load', sub: 'What happened, that the limit still applies, what to do, and the trace ID to send us.',
+    page: 'org', tab: 'Models', mode: 'on', error: true }
+];
+
+function frame(st, desk) {
+  var conn = st.kind === 'conn', team = st.page === 'team', member = st.page === 'member', mobile = !desk;
+  var what = conn ? 'connections' : 'models';
+  var scope = team ? 'Sales' : 'Northwind';
+  var f = {
+    label: desk ? 'Desktop' : 'Phone', aria: st.title + (desk ? ', desktop' : ', phone'), key: st.id + (desk ? 'd' : 'm'),
+    desktop: desk, mobile: mobile, w: desk ? '1200px' : '390px', h: desk ? (st.small ? '700px' : '980px') : '844px', radius: desk ? '16px' : '36px',
+    pad: desk ? '32px' : '20px', mainPad: desk ? '32px 48px 48px' : '20px', logoH: desk ? '28px' : '24px', h1: desk ? '32px' : '28px',
+    btnDir: desk ? 'row' : 'column-reverse', addW: desk ? 'auto' : '100%', tileS: desk ? '48px' : '40px', actFlex: desk ? 'none' : '1 0 100%', actPad: desk ? '0' : '54px', rowAlign: desk ? 'center' : 'flex-start',
+    avatar: member ? 'B' : 'S',
+    nav: (member ? ['Machines', 'Super powers', 'Powers', 'Marketplace'] : ['Machines', 'Super powers', 'Powers', 'Marketplace', 'Org']).map(function (n) {
+      var cur = member ? n === 'Powers' : n === 'Org'; return { name: n, cur: cur ? 'page' : 'false', tx: cur ? 'var(--tx)' : 'var(--tx2)', bg: cur ? 'var(--s2)' : 'transparent' }; }),
+    isAdmin: !member, isMember: member, hasBack: team, back: 'Teams', eyebrow: team ? 'Team' : '',
+    pageTitle: member ? 'Powers' : (team ? 'Sales' : 'Org'), pageSub: team ? '8 members · in Northwind' : (member ? '' : 'Northwind · you’re an org admin'),
+    tabs: member ? tabs(['Loops', 'Connections', 'Models', 'Folders', 'Skills'], 'Models') : (team ? tabs(['Members', 'Models', 'Connections'], st.tab) : tabs(['Members', 'Teams', 'Models', 'Connections', 'Review', 'Billing'], st.tab)),
+    loading: !!st.loading, ready: !st.loading, loadingLine: 'Loading Northwind’s allowed models…',
+    skel: [0, 1, 2, 3, 4].map(function (i) { return { top: i ? '1px solid var(--line)' : 'none', w: ['42%', '30%', '50%', '36%', '44%'][i] }; }),
+    off: st.mode === 'off', offPoints: [], hasCallout: false, callout: { b: '', t: '', bg: '', line: '', dot: '' },
+    hasList: st.mode === 'on', listTitle: '', listSub: '', addLabel: conn ? 'Add connections' : 'Add models', searchPh: '', query: st.q || '', qBorder: st.q ? '#7C4DFF' : 'var(--line2)',
+    error: !!st.error, errTitle: 'Couldn’t load Northwind’s allowed models', errBody: 'The limit still applies; only this page didn’t load. Try again; if it keeps happening, send us the trace ID.', traceId: '9c41-e07b-2d6a-58f3',
+    noMatch: !!st.q, noMatchHint: 'Nothing on Northwind’s list matches. If it’s a model people need, add it from the catalog.',
+    hasRows: st.mode === 'on' && !st.q && !st.error, rows: [], pg: pager('', 1, 1, 1, 1, 1, mobile), footNote: '',
+    mrows: [], dlg: !!st.dlg, d: { confirm: false, add: false, remove: false }, dlgW: desk ? (st.dlg === 'add' ? '760px' : '560px') : '358px', dlgTop: desk ? '88px' : '72px', dlgPad: desk ? '24px' : '20px',
+    dlgTitle: '', dlgDesc: '',
+    confirmBody: '', effects: [], effCols: desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)', effDir: desk ? 'column' : 'row', effAlign: desk ? 'flex-start' : 'center', reassure: '', dangerLabel: '',
+    rm: { src: '', name: '', sub: '', body: '', teamsLine: '', teams: [], btn: '' },
+    add: { ph: '', chipsLabel: '', chips: [], list: false, grid: false, rows: [], cols: '', resLabel: '', pg: pager('', 1, 1, 1, 1, 1, mobile), note: '', sel: '', btn: '', footDir: desk ? 'row' : 'column', footAlign: desk ? 'center' : 'stretch' }
+  };
+  if (st.dlg) f.d[st.dlg] = true;
+
+  // the switch
+  if (!member) {
+    if (team) f.sw = sw(conn ? 'Limit which services Sales can connect' : 'Limit which models Sales can add',
+      'On: Sales allows only what is on its list. Someone also in another team can add what that team allows too. Off: Sales allows anything Northwind allows.', true);
+    else if (conn) f.sw = sw('Limit which services people can connect', 'On: people in Northwind can connect only the services on this list, each with their own account. Teams can narrow it.', true);
+    else f.sw = sw('Limit which models people can add', st.mode === 'off'
+      ? 'Off: everyone in Northwind may add any model from the catalog (about 3,900 from 125 providers), each with their own key.'
+      : 'On: people in Northwind can add only the models on this list, each with their own key. Teams can narrow it.', st.mode === 'on');
+  }
+  if (st.mode === 'off') f.offPoints = [
+    { t: 'Glyphh holds no keys here. This page only says which models can be added; each person adds their own, with their own key.' },
+    { t: '42 people use 31 different models today. Nothing changes for them while this is off.' },
+    { t: 'Teams can still set their own limit. Sales limits models; Design and Support don’t.' }
+  ];
+
+  // the list
+  if (st.mode === 'on' && !member) {
+    if (team && !conn) {
+      f.hasCallout = true;
+      f.callout = { b: 'Sales can only narrow Northwind’s list.', t: 'Northwind allows 18 models, so Sales picks from those. Take one off Northwind’s list and Sales loses it too.', bg: CALL.info.bg, line: CALL.info.line, dot: CALL.info.dot };
+      f.listTitle = 'Sales’s models'; f.listSub = '5 of Northwind’s 18 models. Sales allows these; people in other teams too can also add what those teams allow.';
+      f.rows = MODELS.slice(0, 5).map(function (m, i) { return { name: m[0], sub: m[1] + ' · ' + m[2], used: people(Math.max(1, Math.round(m[4] / 2)), 'Sales'), src: src(m[1]), top: i ? '1px solid var(--line)' : 'none' }; });
+      f.pg = pager('Sales’s model pages', 1, 5, 5, 1, 1, mobile);
+      f.searchPh = 'Search Sales’s models';
+    } else if (team && conn) {
+      f.hasCallout = true;
+      f.callout = { b: 'Northwind doesn’t limit connections,', t: 'so Sales can pick any service in the catalog for its own list.', bg: CALL.info.bg, line: CALL.info.line, dot: CALL.info.dot };
+      f.listTitle = 'Sales’s services'; f.listSub = '4 services. Sales allows these, each connected with the person’s own account; people in other teams too can also connect what those teams allow.';
+      f.rows = [['Gmail', 'Email', 8], ['Slack', 'Chat', 8], ['Salesforce', 'CRM', 6], ['Google Drive', 'Files', 5]].map(function (s, i) { return { name: s[0], sub: s[1], used: people(s[2], 'Sales'), src: src(s[0]), top: i ? '1px solid var(--line)' : 'none' }; });
+      f.pg = pager('Sales’s service pages', 1, 4, 4, 1, 1, mobile);
+      f.searchPh = 'Search Sales’s services';
+    } else if (conn) {
+      f.hasCallout = true;
+      f.callout = { b: '2 services people already connected aren’t on this list:', t: 'Dropbox and HubSpot are off for 3 people until you allow them. Their accounts are kept.', bg: CALL.red.bg, line: CALL.red.line, dot: CALL.red.dot };
+      f.listTitle = 'Allowed services'; f.listSub = '9 services. Pipedream holds each person’s own account; Glyphh holds none.';
+      f.rows = SERVICES.slice(0, desk ? 6 : 5).map(function (s, i) { return { name: s[0], sub: s[1], used: people(s[2]), src: src(s[0]), top: i ? '1px solid var(--line)' : 'none' }; });
+      f.pg = desk ? pager('Allowed service pages', 1, 6, 9, 1, 2, mobile) : pager('Allowed service pages', 1, 5, 9, 1, 2, mobile);
+      f.searchPh = 'Search allowed services';
+    } else {
+      if (!st.loading && !st.error && !st.q) {
+        f.hasCallout = true;
+        f.callout = { b: '3 models people already use aren’t on this list:', t: 'they’re off for 5 people until you allow them. Nothing is deleted.', bg: CALL.red.bg, line: CALL.red.line, dot: CALL.red.dot };
+      }
+      f.listTitle = 'Allowed models'; f.listSub = '18 models from 6 providers. Everyone adds their own, with their own key.';
+      var n = desk ? 6 : 5;
+      f.rows = MODELS.slice(0, n).map(function (m, i) { return { name: m[0], sub: m[1] + ' · ' + m[2], used: people(m[4]), src: src(m[1]), top: i ? '1px solid var(--line)' : 'none' }; });
+      f.pg = pager('Allowed model pages', 1, n, 18, 1, desk ? 3 : 4, mobile);
+      f.searchPh = 'Search allowed models';
+      f.footNote = 'Teams can narrow this list: Sales allows 5 of these.';
+    }
+  }
+
+  // dialogs
+  if (st.dlg === 'confirm') {
+    f.dlgTitle = 'Limit which models people can add?';
+    f.confirmBody = 'Only models on this list can be added. 14 models people already use aren’t on it yet; they stop working until you allow them.';
+    f.effects = [
+      { n: '14', t: 'models in use stop working', tx: 'var(--red-tx)' },
+      { n: '23', t: 'people use them, in 9 super powers', tx: 'var(--tx)' },
+      { n: '0', t: 'models on the list so far: add them next', tx: 'var(--tx)' }
+    ];
+    f.reassure = 'Nothing is deleted. Each one comes back on its own, key and all, the moment you allow it or turn the limit off. Sales’s own list keeps only what you allow.';
+    f.dangerLabel = 'Turn on the limit';
+  }
+  if (st.dlg === 'remove') {
+    f.dlgTitle = 'Remove Claude Sonnet 4.5?';
+    f.rm = { src: src('Anthropic'), name: 'Claude Sonnet 4.5', sub: 'Anthropic · Chat · used by 6 people',
+      body: 'Claude Sonnet 4.5 is used by 6 people. It stops working for them now and comes back if you allow it again. Teams that allow it lose it too.',
+      teamsLine: 'Teams that allow it:', teams: [{ t: 'Sales' }, { t: 'Support' }], btn: 'Remove Claude Sonnet 4.5' };
+  }
+  if (st.dlg === 'add' && !conn && !team) {
+    f.dlgTitle = 'Add models'; f.dlgDesc = 'Pick from Glyphh’s catalog. People still add each one themselves, with their own key.';
+    f.add.ph = 'Search 3,900 models'; f.add.chipsLabel = 'Provider'; f.add.resLabel = 'Models';
+    f.add.chips = chips(desk ? ['All', 'Anthropic', 'OpenAI', 'Google', 'Mistral', 'xAI', '+119 more'] : ['All', 'Anthropic', 'OpenAI', 'Google', 'Mistral', '+120 more'], 'All', true);
+    f.add.list = true;
+    var rows = CATALOG.slice(0, desk ? 7 : 6);
+    f.add.rows = rows.map(function (c, i) { var allowed = c[4] === 'allowed', on = allowed || !!c[5]; var b = box(on, allowed);
+      return { name: c[0], sub: c[1] + ' · ' + c[2], desc: c[3], note: allowed ? 'On the list' : (c[4] === 'in use' ? 'In use, off now' : ''), src: src(c[1]),
+        on: on ? 'true' : 'false', dis: allowed ? 'true' : 'false', op: allowed ? 0.55 : 1, bg: on && !allowed ? 'var(--chip-bg)' : 'transparent', top: i ? '1px solid var(--line)' : 'none',
+        boxLine: b.boxLine, boxBg: b.boxBg, check: b.check }; });
+    f.add.pg = pager('Catalog pages', 1, desk ? 7 : 6, 3912, 1, desk ? 559 : 652, mobile);
+    f.add.sel = '12 selected'; f.add.btn = 'Add 12 models';
+  }
+  if (st.dlg === 'add' && team) {
+    f.dlgTitle = 'Add models for Sales'; f.dlgDesc = 'From Northwind’s list of 18. A model that isn’t on it has to be allowed by Northwind first.';
+    f.add.ph = 'Search Northwind’s models'; f.add.chipsLabel = 'Provider'; f.add.resLabel = 'Northwind’s models';
+    f.add.chips = chips(['All', 'Anthropic', 'OpenAI', 'Google', 'Mistral'], 'All', true);
+    f.add.list = true;
+    var tr = [MODELS[0], MODELS[1], MODELS[5], MODELS[6], MODELS[7], ['Claude Opus 4.1', 'Anthropic', 'Chat', 'Anthropic’s most capable model', 2]];
+    f.add.rows = tr.map(function (m, i) { var allowed = i < 2, on = allowed || i === 2 || i === 5; var b = box(on, allowed);
+      return { name: m[0], sub: m[1] + ' · ' + m[2], desc: m[3], note: allowed ? 'On Sales’s list' : '', src: src(m[1]), on: on ? 'true' : 'false', dis: allowed ? 'true' : 'false', op: allowed ? 0.55 : 1,
+        bg: on && !allowed ? 'var(--chip-bg)' : 'transparent', top: i ? '1px solid var(--line)' : 'none', boxLine: b.boxLine, boxBg: b.boxBg, check: b.check }; });
+    f.add.pg = pager('Northwind model pages', 1, 6, 18, 1, 3, mobile);
+    f.add.note = 'Only Northwind’s allowed models show here. An org admin adds others at Org › Models.';
+    f.add.sel = '2 selected'; f.add.btn = 'Add 2 models';
+  }
+  if (st.dlg === 'add' && conn) {
+    f.dlgTitle = 'Add connections'; f.dlgDesc = 'Pick services from Pipedream’s catalog. Each person still connects their own account.';
+    f.add.ph = 'Search 3,500 services'; f.add.chipsLabel = 'Category'; f.add.resLabel = 'Services';
+    f.add.chips = chips(desk ? ['Popular', 'Email', 'Chat', 'CRM', 'Docs', 'Code', 'Files', 'Data'] : ['Popular', 'Email', 'Chat', 'CRM', 'Docs'], 'Popular', false);
+    f.add.grid = true; f.add.cols = desk ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)';
+    var all = desk ? [['Gmail', 'Email', 'a'], ['Slack', 'Chat', 'a'], ['Salesforce', 'CRM', 'a'], ['Notion', 'Docs', 'a'], ['GitHub', 'Code', 'a'], ['Google Drive', 'Files', 'a'],
+      ['MongoDB', 'Database', 's'], ['Snowflake', 'Warehouse', 's'], ['Neo4j', 'Graph database', 's']]
+      : [['Gmail', 'Email', 'a'], ['Salesforce', 'CRM', 'a'], ['Airtable', 'Data', 'a'], ['MongoDB', 'Database', 's'], ['Snowflake', 'Warehouse', 's'], ['Neo4j', 'Graph database', 's']];
+    f.add.rows = all.map(function (s, i) { var allowed = s[2] === 'a', on = allowed || s[2] === 's'; var b = box(on, allowed);
+      return { name: s[0], sub: allowed ? s[1] + ' · on the list' : s[1], desc: '', note: '', src: src(s[0]), on: on ? 'true' : 'false', dis: allowed ? 'true' : 'false', op: allowed ? 0.55 : 1,
+        border: on && !allowed ? '2px solid #7C4DFF' : '1px solid var(--line)', bg: on && !allowed ? 'var(--chip-bg)' : 'transparent', top: 'none', boxLine: b.boxLine, boxBg: b.boxBg, check: b.check }; });
+    f.add.pg = pager('Catalog pages', desk ? 'Popular services, 9 at a time' : 'Popular services, 6 at a time', 0, 0, 1, 0, mobile, true);
+    f.add.sel = '3 selected'; f.add.btn = 'Add 3 services';
+  }
+
+  // the member's view
+  if (member) {
+    f.mrows = [
+      ['GPT-5', 'OpenAI', 'Key ending 3fa1 · Inbox Zero, Scout', 'on'],
+      ['Claude Sonnet 4.5', 'Anthropic', 'Key ending 90c2 · Deal Desk', 'on'],
+      ['Grok 4', 'xAI', 'Key ending 7d14 · Inbox Zero', 'Northwind', 'Northwind doesn’t allow it. It comes back on its own, key and all, if Northwind allows it again. You can delete it, not edit it.'],
+      ['Mistral Large', 'Mistral', 'Key ending 22be · not granted', 'your teams', 'None of your teams (Sales, Support) allows it. It comes back on its own, key and all, if one of them does. You can delete it, not edit it.']
+    ].map(function (m, i) { var off = m[3] !== 'on';
+      return { name: m[0], sub: m[1] + ' · ' + m[2], src: src(m[1]), top: i ? '1px solid var(--line)' : 'none', on: !off, off: off, op: off ? 0.5 : 1, nameTx: off ? 'var(--tx2)' : 'var(--tx)',
+        chip: off ? 'Not allowed by ' + m[3] : 'Ready', dot: off ? '#C21D3C' : '#7C4DFF', chipBg: off ? 'var(--red-bg)' : 'var(--chip-bg)', chipTx: off ? 'var(--red-tx)' : 'var(--chip-tx)',
+        why: off ? 'Off since Oct 9. ' + m[4] : '' }; });
+  }
+  return f;
+}
+
+class Component extends DCLogic {
+  renderVals() { var v = this.renderValsAll(); var keep = [8, 9, 10, 11, 12, 13]; v.states = keep.map(function (i) { return v.states[i]; }).filter(Boolean); return v; }
+  renderValsAll() {
+    return {
+      states: STATES.map(function (st) { return { title: st.title, sub: st.sub, frames: [frame(st, true), frame(st, false)] }; }),
+      notes: [
+        { t: 'Lists, not keys', b: 'Org › Models and Org › Connections only say what can be added: limit_models with allowed_models, limit_connections with allowed_connections. No key or account is ever entered here; people add their own. Both switches start off, and off means anything in the catalog.' },
+        { t: 'Org, then any of your teams', b: 'A person can be in many teams, or none, and may add what any of their teams allows (a team that doesn’t limit allows everything), always inside the org’s list when the org limits. A person in no team has only the org’s limits. Under an org that limits, a team picks only from the org’s list, and taking an entry off the org’s list takes it off every team’s list too.' },
+        { t: 'Off, never deleted', b: 'Whatever a limit leaves out stops working at once and says why (“Not allowed by Northwind”); it can only be deleted. Allowed again, or the limit turned off, it comes back by itself with its grants, permissions, slots, schedules, key and account. Every confirm says how many people it reaches.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
