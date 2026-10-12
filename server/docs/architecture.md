@@ -8,7 +8,7 @@ flowchart TB
     end
 
     subgraph Cloud["Glyphh cloud"]
-        Pages["Sign-in pages"]
+        Platform["Platform<br/>app.glyphh.ai"]
         Player["Player"]
         Server["Server: API + MCP"]
         DB[("Postgres")]
@@ -19,7 +19,7 @@ flowchart TB
         Server --- Live
         Server --- Relay
         Server --- ConnRelay
-        Server --- Pages
+        Platform -- "API" --> Server
         Player --- Relay
     end
 
@@ -38,8 +38,9 @@ flowchart TB
     SignIn["Google, GitHub"]
     Site["glyphh.ai"]
 
-    Claude -- "MCP" --> Server
+    Claude -- "MCP + cards" --> Server
     Claude --> Player
+    Browser --> Platform
     Browser --> Player
     RA <-. "rrotor to rrotor: SSH, end to end" .-> Relay
     Relay <-. "SSH, end to end" .-> RB
@@ -52,7 +53,7 @@ flowchart TB
     ConnRelay --> Pipedream
     Hosts -- "runs" --> RA
     Hosts -- "runs" --> RB
-    Pages --> SignIn
+    Server --> SignIn
     Server --> Stripe
 ```
 
@@ -94,7 +95,7 @@ A single-deployment, multi-tenant cloud SaaS, headless first: every capability i
 
 Glyphh is a model runtime, not a gateway. The one thing it governs is which models and connections an org's users may add, set by the org and narrowed by its teams. Spend, rate limits and every other rule belong to an AI gateway the customer puts in front of their models (a model's base URL can point at it). A model is a person's own: they add it with their own key (a provider, the provider's model id and an API key), and a super power is granted as many of theirs as it needs; when it runs, rrotor calls the provider directly with that key. Glyphh stores the model's setup and never routes, meters, limits or pays for a model call. The key is encrypted on the server and handed only to a member's own runtime.
 
-Adding a model happens in rrotor's UI, where the member edits a super power: its models opens the full catalog, the way connections opens Pipedream's, searchable by provider, name and type, each entry with its provider's logo, name, description and type. Picking one asks for the key on that same page; rrotor's UI sends it to the server's API through the SDK, and the server saves the model as the member's power, encrypted, and grants it to the super power being edited (Glyphh needs no grant). When that super power runs, rrotor asks the server for what it was granted and gets its models with their keys, over its own machine connection, and hands them to the loop and to the slots of its tasks. An agent never takes a key: a tool that needs one returns a launch ticket to that same page of the member's rrotor UI, and only hears back that it was saved and the key's last four characters.
+Adding a model happens on the platform or in a card in Claude: picking a model for a super power opens the full catalog, the way connections opens Pipedream's, searchable by provider, name and type, each entry with its provider's logo, name, description and type. Picking one asks for the key right there; the page or card posts it straight to the server's API, and the server saves the model as the member's power, encrypted, and grants it to the super power being edited (Glyphh needs no grant). When that super power runs, rrotor asks the server for what it was granted and gets its models with their keys, over its own machine connection, and hands them to the loop and to the slots of its tasks. An agent never takes a key: a tool that needs one answers with a card (or a link to the page) where the member types it, and only hears back that it was saved and the key's last four characters.
 
 ### Connections
 
@@ -221,18 +222,32 @@ A member's machines reach each other, so from machine A they can watch machine B
 
 Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
 
-### app.glyphh.ai: the web front door
+### Platform and rrotor: what is in the system, and the work itself
 
-Decided 2026-10-11. Glyphh ships no desktop app and no platform. Every rrotor serves Glyphh's own UI for super powers, and **app.glyphh.ai** is a very light web app for what a person reaches directly in a browser, before or beside their machines. It is a client of the API, like the plugin; nothing about super powers lives there. The server stays headless: no direct access for people, and Glyphh needs a loop (an AI host with the plugin, or a machine's main assistant).
+Decided 2026-10-11. Two UIs, split by isolation:
 
-- **Pages only a browser can show:** sign in, allow an AI host, approve a machine's code, join an org, the return pages (connected, approved, checkout done, a service connected), and errors with their trace id.
+| | **Platform** (app.glyphh.ai, and the same views as cards) | **rrotor's UI** (served by the app server on each rrotor) |
+|---|---|---|
+| Shows | What is in the system for you: powers, super powers and their grants, machines, catalogs, usage, billing, members | Super powers in action: the swarm, runs, logs, a super power's screens, voice |
+| Data | Metadata, read through the API | What super powers make; it lives on the machine and never leaves it |
+| Reached | A browser, or as cards in Claude and ChatGPT | Through the relay: a browser tab, or a live card in Claude |
+
+**Why Glyphh is the same on every loop and every platform.** Powers are agnostic: a member combines them with their own subscription (Claude Code, Codex) or their own models, in any way they want (a super power that turns YouTube content into videos), and a super power sent to anyone works the same way every time. That holds because Glyphh controls the machine and the execution of the parts that matter, the actual work: tasks run on rrotor. Swap the orchestrator (Claude, Codex, the Glyphh loop) and a super power works as it was built.
+
+**Doing is asking.** Creating and changing things (a skill, a task, a super power and its grants) is done by asking Glyphh in Claude, Codex or ChatGPT; the plugin's tools are the server's operations. The platform shows the result, takes quick fixes, and does what a chat cannot.
+
+**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It also holds the ui component library (`@glyphh-ai/ui`). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
+
+- **The sign-in screens** (sign in, allow an AI host, approve a machine's code, join an org) are platform pages. The server keeps the OAuth endpoints and the Google and GitHub callbacks, and sends the browser to the platform for each screen; the screen's buttons send it back to the server, which still binds every flow to that browser.
 - **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex).
-- **Connections:** the catalog, connect through Pipedream's own sign-in, which account each is, reconnect.
-- **Models:** the catalog with provider logos, add a model with its key (a key is only ever typed into a web page, never a chat), whether the key works.
+- **Connections:** the catalog, which account each is, reconnect, each tool's permission. **Connecting** sends the member to Pipedream's own sign-in, and three ways reach it, one link: a card's Connect button (the host opens it), the link in the answer, and the host's own prompt where it supports MCP's URL elicitation (Claude Code does; the Claude app does not yet, tested 2026-10-11). Glyphh's MCP server also serves the member's connected accounts as tools, through Pipedream, to any host, so a connection made once reaches Claude, Codex and every loop on rrotor.
+- **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
-- **Cards in Claude and ChatGPT** reuse the same components, only after sign-in: machines, deploy status, usage and plan, connections and models (each "add" opens the web page), the swarm, needs-you.
+- **Members and invites** (org admins).
 
-**Usage and billing pages** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
+**rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens. The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
+
+**Usage and billing** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 
 - **Usage:** the period's credits used and left, then the same calls grouped by user, by connector, by super power, by machine and by day, and the call log under it: time, user, super power, machine, connector, tool, duration, credits and status, filtered by any of them and exported as CSV. Each row opens to its full detail.
 - **Billing** (org admins): the plan, seats, included and extra machines, the period's dates, the credit allowance and packs with their ledger, upgrading, buying a pack, and Stripe's own pages for checkout, invoices and payment methods.
@@ -241,29 +256,29 @@ The API behind them is three operations, also MCP tools so an agent can answer "
 
 **What the old app arranged goes:** workspaces, tabs, layouts and the dock were the desktop app's way of arranging its windows. With no app, Claude or the browser is the frame; where the member works is a machine and its folders, which are already powers.
 
-### Sign-in pages
+### Sign-in screens
 
-The server's only pages, small and rendered by the server, with no data on them:
+Small platform pages with no data of their own; the server owns every flow behind them:
 
 1. **Sign in:** choose Google or GitHub; their page does the rest.
 2. **Allow:** "Claude wants to use your Glyphh": allow or deny, for an agent host's OAuth.
 3. **Approve a code:** "Is this code on your new machine or CLI?", for a machine's or a CLI's sign-in.
 4. **Join:** an invite lands here, then goes to sign in.
 
-Everything that changes an account, billing or super powers happens in rrotor's UI, or on Stripe's own pages. API keys stay for scripts, CI and CLIs that would rather send a key.
+API keys stay for scripts, CI and CLIs that would rather send a key.
 
 ### Interfaces
 
-Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for now, public later). Neither carries logic of its own: same accounts, permission checks and tenant rules as the server.
+Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for now, public later), and the platform in its own repo. None carries logic of its own: same accounts, permission checks and tenant rules as the server.
 
-- **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (rrotor's UI, the player and the plugin), Python second.
+- **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the platform, rrotor's UI, the player and the plugin), Python second.
 - **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, skills that teach the agent to use Glyphh's tools, and the native machine list that opens rrotor's UI.
 
 ### Access
 
-- **Sign-in:** Google and GitHub. Their screens are the sign-in; the server takes the callback and returns to Claude, the player or rrotor's UI, serving only its few sign-in pages. No magic links: mail scanners use them up, they break across devices, and they train people to click sign-in links in email. Microsoft can follow, the same way, when business users need it.
+- **Sign-in:** Google and GitHub. Their screens are the sign-in; the server takes the callback and returns to Claude, the platform, the player or rrotor's UI; the screens around it are platform pages. No magic links: mail scanners use them up, they break across devices, and they train people to click sign-in links in email. Microsoft can follow, the same way, when business users need it.
 - **People are found by the provider's own id** for them, never by email alone, so a changed email or a hidden GitHub email still finds the same person.
-- **Tokens:** after a Google or GitHub sign-in the server issues its own tokens to the player and to rrotor's UI; every token carries its org. A machine's UI is opened with a launch ticket, never a token in a URL.
+- **Tokens:** after a Google or GitHub sign-in the server issues its own tokens to the platform, the player and rrotor's UI; every token carries its org. A machine's UI is opened with a launch ticket, never a token in a URL.
 - **Machines** sign in with a code the member approves in the browser, and get a machine token of their own, sent in a header, never in a URL.
 - **Agent hosts** (the plugin in Claude Code, Cursor, ChatGPT) sign in with OAuth: the member approves each host, and can revoke one without the others.
 
