@@ -247,7 +247,7 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Models:** the catalog with provider logos, add a model with its key, whether the key works. A key is typed into a card or a page and posted straight from it to the API with a short-lived ticket; it never passes through a chat. Tested 2026-10-11 in Claude: the card's ticket rides in the tool result's `_meta`, which the model never sees, and the card posts from its own origin (`*.claudemcpcontent.com`).
 - **Billing** (org admins): the plan and changing it (preview, confirm, wait), the card on file (Stripe's own form), adding funds (one-off, $5 to $10,000), auto top-up, invoices (Stripe's portal).
 - **Members and invites** (org admins).
-- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans).
+- **Navigation** (decided 2026-10-11): the top nav is Machines, Super powers, Powers and Marketplace; **Org** for org admins (Members, Teams, Models, Connections, Review, Billing); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings).
 
 **rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens. The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
 
@@ -399,7 +399,7 @@ erDiagram
         int price_cents "per seat, per month"
         text stripe_price_id UK "null for Free and Enterprise"
         int max_seats "the most seats an org may have; null = no limit"
-        int monthly_credits "included each billing period"
+        int monthly_credits "included each billing period, per seat"
         int included_machines "null = no limit"
         int extra_machine_cents "per extra machine per month; null = no extras on this plan"
         text stripe_machine_price_id UK "the Stripe price extras are billed on"
@@ -697,6 +697,7 @@ erDiagram
         timestamptz auto_top_up_last_at "the last attempt: one attempt per 10 minutes, taken under the org's lock"
         timestamptz auto_top_up_failed_at "the card was refused: auto top-up is off until an org admin turns it on again"
         text auto_top_up_failure "why, as Stripe said it"
+        int auto_top_up_monthly_cap_cents "the most auto top-up may charge in a period; null = no cap (the default)"
         timestamptz current_period_start
         timestamptz current_period_end
         timestamptz created_at
@@ -733,6 +734,17 @@ erDiagram
         int request_bytes
         int response_bytes
         timestamptz started_at
+        timestamptz created_at
+    }
+
+    billing_settings {
+        uuid id PK
+        int credit_cents "what one credit costs: 2 = $0.02"
+        int seconds_per_credit "a connection call's seconds per credit: 30"
+        int top_up_min_cents "500"
+        int top_up_max_cents "1000000"
+        timestamptz effective_from "the row in force is the newest one already started"
+        uuid set_by FK "the super admin who set it"
         timestamptz created_at
     }
 
@@ -1039,13 +1051,15 @@ Seats are billed as the old server billed them (his rule, 2026-09-18):
 
 The plans carried over from the old server:
 
-| Plan | Price per seat | Seats | Machines included | Extra machines |
-|---|---|---|---|---|
-| Free | $0 | 1 | 2 | none |
-| Solo | $20 | 1 | to set | to set |
-| Basic | $40 | 25 | to set | to set |
-| Pro | $150 | 100 | to set | to set |
-| Enterprise | arranged | no limit | no limit | n/a |
+| Plan | Price per seat | Seats | Credits each month | Machines included | Extra machine |
+|---|---|---|---|---|---|
+| Free | $0 | 1 | 100 | 2 | none |
+| Solo | $20 | 1 | 2,000 | 3 | $5 a month |
+| Basic | $40 | up to 25 | 2,500 per seat | 10 | $5 a month |
+| Pro | $150 | up to 100 | 10,000 per seat | 50 | $5 a month |
+| Enterprise | arranged | no limit | arranged | no limit | n/a |
+
+These are a first pick (2026-10-11), to adjust. **Every number lives in the database and a super admin changes it on Glyphh admin → Plans:** a plan's price, seats, credits, machines and Stripe prices (each change is the plan's next version, above), and the billing settings (`billing_settings`: the price of a credit, the seconds a credit buys, the smallest and largest top-up), each kept with who set it and from when.
 
 An org that already has its included machines plus its extras cannot register another: signing in from one more machine is refused with the reason (on Free: "Free includes 2 machines. Upgrade, or remove one."), and nothing is half registered.
 
@@ -1189,13 +1203,15 @@ What Pipedream charges Glyphh (Connect, Startup plan): $99 a month billed annual
 - **The cap is the tier.** When an org's credits run out, its connection calls stop until the next period, with a clear message; there is never a surprise bill. An org can upgrade, or add funds.
 - **subscriptions** tie an org to its Stripe customer and subscription, its plan, its status and its current period, as the old server did, plus what the old server lacked: a downgrade waiting for the period's end (`pending_plan_id`), and the card on file for display (brand, last four, expiry), kept current from Stripe's webhooks. Stripe keeps the card itself and the invoices; the invoice list is read from Stripe.
 - **credit_ledger** is the whole story of an org's credits, append only: each period's allowance, each top-up and grant, and each use. The balance is the sum of what has not expired, so it is never stored twice. A usage entry points at the call it paid for; a top-up entry at its payment, at most one entry per payment, so a webhook and a reconcile arriving together can never add the same money twice.
-- **Grants and comped plans** (super admins): a grant adds credits with a note; a comped plan is a plan with no charge (`status` comped).
+- **Grants and comped plans** (super admins): a grant (a gift) adds credits with a note; a comped plan is a plan with no charge (`status` comped).
 
 #### Adding funds, as the old server did
 
 - **One-off top-ups, no packs:** an org admin adds any amount from $5 to $10,000, in US dollars, through Stripe Checkout (Stripe's own page, embedded). The card is saved for auto top-up as it pays. A `payments` row is made when the Checkout starts (pending); Stripe's webhook settles it (succeeded or failed), and only a succeeded payment adds credits to the ledger. A reconcile from Stripe backs the webhook up.
 - **Auto top-up:** on, a threshold and an amount. When a connection call leaves the balance under the threshold, the server charges the card on file (a PaymentIntent, off session) for the amount. The attempt is taken under the org's row lock with a 10-minute gap, so two servers can never charge twice for one dip. A refused card switches auto top-up off, records why, and tells the org admins; it never retries a refused card in a loop. A payment Stripe confirms later (processing, then succeeded) still lands, from its webhook.
-- **How dollars become credits:** still to set (the price of a credit). Until then the plan's allowance and the top-ups are both counted in the same unit the ledger keeps.
+- **How dollars become credits** (decided 2026-10-11): Glyphh bills in credits. **One credit is $0.02**, above Pipedream's $0.012, and a top-up becomes credits at the price in force that day (`billing_settings`), so a $5 top-up is 250 credits. Bought credits never expire; a plan's monthly credits end with the period.
+- **Auto top-up has an optional monthly cap** an org admin sets (`auto_top_up_monthly_cap_cents`), off by default.
+- **Runs cost nothing:** they run on the member's own machine. Only connection calls spend credits.
 
 #### Changing plans, as the old server did
 
@@ -1287,7 +1303,7 @@ The sign-in screens on the design: tokens, Red Hat, the ported cat, the trace id
 ### Phases
 
 1. **Sign in from Claude and Codex.** Done.
-2. **Orgs and billing:** members, invites and seats are done; billing (plans, Stripe, top-ups, auto top-up) waits on the decisions under Open.
+2. **Orgs and billing:** members, invites and seats are done; billing (plans, Stripe, top-ups, auto top-up, credits) is next: its decisions are made.
 3. **Machines:** machine sign-in (approve a code), one-click hosting (Fly first), machine tokens, Redis for live state, deploy status.
 4. **rrotor:** the image, the app server and Glyphh's UI, the main assistant on its three loops, rrotor's MCP surface, launch tickets, the player.
 5. **Powers and super powers:** the catalog, models on the member's keys, grants, slots, tool permissions, the editor and its configuration, voice.
@@ -1307,8 +1323,6 @@ Everything open: decisions still to make, things to draw, work found but not sta
     - **A super power's own screens** (its app) on the machine's origin, or on one of their own (`<power>.<machine-id>.glyphh.ai`) so an app a member installed can't read rrotor's session.
     - **How long a machine's session lasts,** and how it learns a member was removed or a token revoked.
 
-- **Billing: dollars or credits**, and the monthly spend cap (a limit on auto top-ups, or none). Billing (phase 2b) waits on both.
-- **Plans:** price per credit and monthly credits per plan, pack sizes and prices, included and extra machines for Solo, Basic and Pro, whether runs themselves spend credits, whether Free is held to one connected service. The billing boards leave these as `[BRACKETS]`.
 - **Tasks are powers:** rename tasks to powers everywhere (proposed, not confirmed).
 - **"Also use my Claude or ChatGPT connectors":** a switch per super power, letting its loop use the member's own connectors beside Glyphh's (proposed, not decided).
 - **Conversations:** where they live. Proposal: the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the relay.
@@ -1345,7 +1359,6 @@ Everything open: decisions still to make, things to draw, work found but not sta
 - **The design agent's requests** (`glyphh-ai/glyphh`, `design/DESIGN.md`, Requests): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar, PowerMap and FlowCanvas (the editors).
 - **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
 - **Light theme** for the admin boards, the publishing boards and rrotor's splash: the design agent draws them.
-- **Gifting funds:** credit grants exist; gifting in dollars or credits waits on "Billing: dollars or credits".
 - **Gaps from the admin and publishing boards** (2026-10-11; each drawn one way, to confirm):
     - **Members:** confirm dialogs for Change role and Disable aren't drawn; a disabled member is drawn as not using a seat (a seat is an active user); an invite's expiry is drawn as "[7] days".
     - **A member's "What you can add" view** (the union of their teams' lists inside the org's) is linked from Powers but not drawn.
