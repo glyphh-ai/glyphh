@@ -59,7 +59,7 @@ What is in the system for a person (powers, super powers and their grants, machi
   - **identity row:** avatar, voice (with a sample to hear), name;
   - description and instructions;
   - **sliders:** personality (serious to playful), directness (gentle to blunt), temperament (kind to spicy);
-  - effort, and its loop: Claude Code or Codex, on the member's subscription or on any model they configured (through the machine's gateway; Chris, 2026-10-12);
+  - effort, and its loop: Claude Code or Codex, on the member's subscription or on any model they configured (through the machine's gateway; Chris, 2026-10-12), or the Glyphh loop, Glyphh's own, on any configured model (no sign-in; Chris, 2026-10-12);
   - its **powers map:** folders (read or write), connections, models, skills, browsers, other super powers;
   - tool permissions (allow, ask, deny), and schedules.
 - **Runs:** history and the **live view**: steps, logs, the browser screen, **take control** to sign in to a website.
@@ -463,7 +463,7 @@ All done (2026-10-12): the Usage boards (dark and light) now let a plan's includ
 
 - **Every app board:** replace the top bar with the left rail from `AppShell` (the page area keeps its content; title and main action head the page). Sign-in boards keep no rail.
 - **A thread's messages come from the machine** (Decisions, "Where a thread's messages are"; `MachineDesktop`, `MachineDesktop3`, `MachineOpen`): draw a thread opening (the record at once, its messages loading), older messages loading as you scroll up, a thread whose machine is offline (its record, "its messages are on studio-mac, offline since 3:12 pm"), and Recents' search with one of the member's machines offline ("studio-mac is offline: its threads were searched by their goal only").
-- **Signing a machine's CLI in** (Decisions, "Signing a machine's CLI in"; `MachineOpen` and the machine's page, the Glyphh panel in Claude): on a machine, its two loops, Claude Code and Codex, each with its state: not signed in, signed in (the account, when the CLI says), signed out by its provider. Then each flow, every state, desktop (1200) and phone (390), dark and light:
+- **Signing a machine's CLI in** (Decisions, "Signing a machine's CLI in"; `MachineOpen` and the machine's page, the Glyphh panel in Claude): on a machine, its two CLI loops, Claude Code and Codex, each with its state (the Glyphh loop has no sign-in and shows only that it is ready): not signed in, signed in (the account, when the CLI says), signed out by its provider. Then each flow, every state, desktop (1200) and phone (390), dark and light:
   - **Claude Code:** start (Sign in), the link to open claude.ai, the code field (paste, Sign in), checking, signed in; the code didn't work (try again), the link ran out (start again), the machine went offline partway.
   - **Codex:** start, the one-time code shown large with Copy and the link to chatgpt.com/device, waiting, signed in; the code ran out (start again), the machine went offline partway.
   - **From a thread:** the needs you a signed-out CLI raises ("Claude Code isn't signed in on studio-mac", Sign in), and the thread carrying on once it is.
