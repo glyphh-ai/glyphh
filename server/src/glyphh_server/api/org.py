@@ -67,8 +67,7 @@ async def list_invites(caller: Caller, conn: Conn) -> list[InviteView]:
 @router.post("/invites", operation_id="createInvite", status_code=201)
 async def create_invite(body: NewInvite, request: Request, caller: Caller, conn: Conn) -> CreatedInvite:
     view, token = await invites.create_invite(conn, caller, body.email, body.role)
-    base = request.app.state.settings.public_url.rstrip("/")
-    return CreatedInvite(invite=view, link=f"{base}/auth/join?invite={token}")
+    return CreatedInvite(invite=view, link=f"{request.app.state.settings.platform}/join?invite={token}")
 
 
 @router.delete("/invites/{invite_id}", operation_id="revokeInvite", status_code=204)

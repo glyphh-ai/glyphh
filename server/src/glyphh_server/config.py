@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     version: str = "dev"
     log_level: str = "INFO"
     public_url: str = "http://localhost:8080"
+    platform_url: str = ""
     secret_key: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
@@ -18,6 +19,11 @@ class Settings(BaseSettings):
     stripe_price_solo: str | None = None
     stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None
+
+    @property
+    def platform(self) -> str:
+        """Where the platform's pages live (app.glyphh.ai); the server's own address when it serves them too."""
+        return (self.platform_url or self.public_url).rstrip("/")
 
 
 @lru_cache

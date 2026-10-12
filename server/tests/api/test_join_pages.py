@@ -1,4 +1,4 @@
-"""Joining an org from an invite link, the way a browser does it."""
+"""Joining an org from an invite, the way a browser does it: the platform's screen, then the server's steps."""
 
 from collections.abc import AsyncIterator
 from urllib.parse import parse_qs, urlsplit
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.app import create_app
 from glyphh_server.models import User
 from glyphh_server.ops import invites
+from tests.api.test_sign_in_pages import screen
 from tests.conftest import _client
 from tests.db.helpers import admin_of
 from tests.fake_providers import GOOGLE_ME, PROVIDER_SETTINGS, provider_transport
@@ -29,8 +30,8 @@ async def _invite(engine: AsyncEngine, email: str) -> str:
 
 
 async def _sign_in_from(browser: httpx.AsyncClient, token: str) -> httpx.Response:
-    page = await browser.get("/auth/join", params={"invite": token})
-    assert page.status_code == 200 and "Join Join Co" in page.text
+    shown = (await browser.get("/v1/auth/join", params={"invite": token})).json()
+    assert shown["org"].startswith("Join Co") and shown["role"] == "user" and shown["providers"] == ["google", "github"]
     started = await browser.get("/auth/google/start", params={"invite": token})
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
     return await browser.get("/auth/google/callback", params={"code": "c", "state": state})
@@ -38,8 +39,8 @@ async def _sign_in_from(browser: httpx.AsyncClient, token: str) -> httpx.Respons
 
 async def test_the_invited_person_signs_in_and_joins(browser: httpx.AsyncClient, engine: AsyncEngine) -> None:
     token = await _invite(engine, GOOGLE_ME["email"])
-    joined = await _sign_in_from(browser, token)
-    assert joined.status_code == 200 and "You've joined" in joined.text
+    joined = screen(await _sign_in_from(browser, token), "/joined")
+    assert joined["org"].startswith("Join Co")
     async with engine.connect() as conn:
         role = (await conn.execute(select(User.role).where(User.email == GOOGLE_ME["email"]))).scalar_one()
     assert role == "user"
@@ -47,11 +48,12 @@ async def test_the_invited_person_signs_in_and_joins(browser: httpx.AsyncClient,
 
 async def test_signing_in_as_someone_else_is_refused(browser: httpx.AsyncClient, engine: AsyncEngine) -> None:
     token = await _invite(engine, "someone-else@join.test")
-    refused = await _sign_in_from(browser, token)
-    assert refused.status_code == 403 and "someone-else@join.test" in refused.text
+    problem = screen(await _sign_in_from(browser, token), "/problem")
+    assert problem["code"] == "E_FORBIDDEN" and "someone-else@join.test" in problem["message"]
 
 
-async def test_a_dead_invite_link_gets_a_page_with_a_trace(browser: httpx.AsyncClient) -> None:
-    for path in ("/auth/join?invite=nope", "/auth/google/start?invite=nope"):
-        res = await browser.get(path)
-        assert res.status_code == 422 and "trace" in res.text and "expired" in res.text
+async def test_a_dead_invite_is_refused_on_the_screen_and_the_step(browser: httpx.AsyncClient) -> None:
+    shown = await browser.get("/v1/auth/join", params={"invite": "nope"})
+    assert shown.status_code == 422 and "expired" in shown.json()["error"]["message"]
+    problem = screen(await browser.get("/auth/google/start", params={"invite": "nope"}), "/problem")
+    assert problem["code"] == "E_INVALID" and "expired" in problem["message"]

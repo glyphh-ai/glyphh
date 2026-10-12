@@ -12,7 +12,7 @@ from glyphh_server.errors import Unauthorized
 from glyphh_server.ops.auth import codes, hosts, tokens
 from glyphh_server.ops.auth.codes import Pending
 
-SIGN_IN_PATH: str = "/auth/sign-in"
+SIGN_IN_PATH: str = "/sign-in"
 
 
 def _client_info(row: Any) -> OAuthClientInformationFull:
@@ -32,8 +32,8 @@ def _oauth_token(issued: tokens.IssuedTokens) -> OAuthToken:
 
 
 class GlyphhOAuth:
-    def __init__(self, engine: AsyncEngine, public_url: str, secret_key: str) -> None:
-        self.engine, self.public_url, self.secret_key = engine, public_url.rstrip("/"), secret_key
+    def __init__(self, engine: AsyncEngine, platform: str, secret_key: str) -> None:
+        self.engine, self.platform, self.secret_key = engine, platform, secret_key
 
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
         async with self.engine.connect() as conn:
@@ -60,7 +60,7 @@ class GlyphhOAuth:
             scopes=params.scopes or [],
             resource=params.resource,
         )
-        return codes.pending_link(self.secret_key, self.public_url + SIGN_IN_PATH, pending)
+        return codes.pending_link(self.secret_key, self.platform + SIGN_IN_PATH, pending)
 
     async def load_authorization_code(self, client: OAuthClientInformationFull, code: str) -> AuthorizationCode | None:
         async with self.engine.connect() as conn:

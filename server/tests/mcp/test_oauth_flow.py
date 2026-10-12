@@ -72,7 +72,7 @@ async def test_a_host_signs_a_member_in_end_to_end(client: httpx.AsyncClient, en
     assert host["token_endpoint_auth_method"] == "none" and not host.get("client_secret")
     verifier, challenge = _pkce()
     link = await _authorize(client, host["client_id"], challenge)
-    assert link.startswith("http://localhost:8080/auth/sign-in?request=")
+    assert link.startswith("http://platform.test/sign-in?request=")
     code = await _member_allows(engine, link, "flow@oauth.test")
 
     wrong = await _token(

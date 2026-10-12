@@ -25,11 +25,11 @@ def make_mcp(engine: AsyncEngine, settings: Settings) -> MCPServer:
         client_registration_options=ClientRegistrationOptions(enabled=True),
         revocation_options=RevocationOptions(enabled=True),
     )
-    provider = GlyphhOAuth(engine, base, settings.secret_key)
+    provider = GlyphhOAuth(engine, settings.platform, settings.secret_key)
     mcp = MCPServer("glyphh", version=settings.version, auth=auth, auth_server_provider=provider)
     health.register(mcp, engine, settings.version)
     me.register(mcp, engine)
-    org.register(mcp, engine, base)
+    org.register(mcp, engine, settings.platform)
     return mcp
 
 

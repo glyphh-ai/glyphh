@@ -13,7 +13,7 @@ from glyphh_server.ops.members import Member, MemberRole
 from glyphh_server.ops.org import OrgView
 
 
-def register(mcp: MCPServer, engine: AsyncEngine, public_url: str) -> None:
+def register(mcp: MCPServer, engine: AsyncEngine, platform: str) -> None:
     @mcp.tool(name="org", description="My org in Glyphh: its name, plan, and how many seats are taken.")
     @guarded("org")
     async def org_tool() -> OrgView:
@@ -35,7 +35,7 @@ def register(mcp: MCPServer, engine: AsyncEngine, public_url: str) -> None:
     async def invite_tool(email: str, role: MemberRole = "user") -> dict[str, object]:
         async with engine.begin() as conn:
             view, token = await invites.create_invite(conn, current_principal(), email, role)
-        return {"invite": view.model_dump(mode="json"), "link": f"{public_url.rstrip('/')}/auth/join?invite={token}"}
+        return {"invite": view.model_dump(mode="json"), "link": f"{platform}/join?invite={token}"}
 
     @mcp.tool(name="invites", description="My org's open invites (org admins only).")
     @guarded("invites")

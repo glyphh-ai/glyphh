@@ -3,8 +3,10 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.applications import Starlette
 
-from glyphh_server.api import errors, health, join_pages, me, org, sign_in_pages
+from glyphh_server.api import errors, health, me, org, sign_in_pages, sign_in_screens
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
@@ -37,11 +39,24 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.include_router(me.router)
     app.include_router(org.router)
     app.include_router(sign_in_pages.router)
-    app.include_router(join_pages.router)
+    app.include_router(sign_in_screens.router)
     app.router.routes.extend(mcp_app.routes)
+    _layers(app, mcp_app, cfg)
+    return app
+
+
+def _layers(app: FastAPI, mcp_app: Starlette, cfg: Settings) -> None:
     # The MCP app's own middleware (bearer authentication, then the token in context) comes with its routes;
-    # add_middleware puts each one outermost, so they go in reverse, and the trace layer goes last: outermost.
+    # add_middleware puts each one outermost, so they go in reverse; then the trace layer, then CORS outermost,
+    # so even a refusal or a crash answer carries its CORS headers.
     for layer in reversed(mcp_app.user_middleware):
         app.add_middleware(layer.cls, *layer.args, **layer.kwargs)
-    app.add_middleware(TraceMiddleware)
-    return app
+    app.add_middleware(TraceMiddleware, platform=cfg.platform)
+    # The platform calls the API from its own address; it sends tokens in a header, never cookies.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[cfg.platform],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["authorization", "content-type", "x-request-id"],
+        expose_headers=["x-request-id"],
+    )

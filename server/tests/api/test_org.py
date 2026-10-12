@@ -19,7 +19,7 @@ async def test_an_admin_runs_the_org_through_the_api(client: httpx.AsyncClient, 
     made = await client.post("/v1/org/invites", headers=auth, json={"email": "new@apiorg.test"})
     assert made.status_code == 201
     body = made.json()
-    assert body["invite"]["role"] == "user" and body["link"].startswith("http://localhost:8080/auth/join?invite=")
+    assert body["invite"]["role"] == "user" and body["link"].startswith("http://platform.test/join?invite=")
     listed = (await client.get("/v1/org/invites", headers=auth)).json()
     assert [i["email"] for i in listed] == ["new@apiorg.test"]
     assert (await client.delete(f"/v1/org/invites/{body['invite']['id']}", headers=auth)).status_code == 204
@@ -57,7 +57,7 @@ async def test_agents_reach_the_org_through_mcp(client: httpx.AsyncClient, engin
     assert (await call("org"))["structuredContent"]["name"] == "MCP Org Co"
     assert len((await call("members"))["structuredContent"]["result"]) == 1
     made = (await call("invite", {"email": "agent@mcporg.test"}))["structuredContent"]
-    assert made["link"].startswith("http://localhost:8080/auth/join?invite=")
+    assert made["link"].startswith("http://platform.test/join?invite=")
     open_ = (await call("invites"))["structuredContent"]["result"]
     assert [i["email"] for i in open_] == ["agent@mcporg.test"]
     done = await call("revoke_invite", {"invite_id": open_[0]["id"]})
