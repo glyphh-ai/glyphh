@@ -19,6 +19,7 @@ from glyphh._calls import (
     Call,
     answer,
 )
+from glyphh._editor_specs import CUSTOM_SPECS, SCHEDULE_SPECS, SUPER_POWER_SPECS
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._gen.models.invite_answer import InviteAnswer
@@ -27,7 +28,7 @@ from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
 from glyphh._org import AsyncOrg, Org
-from glyphh._powers import AsyncPowers, Powers
+from glyphh._powers import AsyncPowers, AsyncSpecApi, Powers, SpecApi
 from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
 
 
@@ -63,6 +64,9 @@ class Glyphh:
         self.needs_you = NeedsYou(self._run)
         self.billing = Billing(self._run)
         self.powers = Powers(self._run)
+        self.super_powers = SpecApi(self._run, SUPER_POWER_SPECS)
+        self.custom = SpecApi(self._run, CUSTOM_SPECS)
+        self.schedules = SpecApi(self._run, SCHEDULE_SPECS)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -134,6 +138,9 @@ class AsyncGlyphh:
         self.needs_you = AsyncNeedsYou(self._run)
         self.billing = AsyncBilling(self._run)
         self.powers = AsyncPowers(self._run)
+        self.super_powers = AsyncSpecApi(self._run, SUPER_POWER_SPECS)
+        self.custom = AsyncSpecApi(self._run, CUSTOM_SPECS)
+        self.schedules = AsyncSpecApi(self._run, SCHEDULE_SPECS)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

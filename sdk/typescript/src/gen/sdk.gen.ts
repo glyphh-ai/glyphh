@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddModelData, AddModelErrors, AddModelResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, ConnectData, ConnectErrors, ConnectResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, GetBillingData, GetBillingResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddModelData, AddModelErrors, AddModelResponses, AddScheduleData, AddScheduleErrors, AddScheduleResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeCustomPowerData, ChangeCustomPowerErrors, ChangeCustomPowerResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeScheduleData, ChangeScheduleErrors, ChangeScheduleResponses, ChangeSuperPowerData, ChangeSuperPowerErrors, ChangeSuperPowerResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, ConnectData, ConnectErrors, ConnectResponses, CreateCustomPowerData, CreateCustomPowerErrors, CreateCustomPowerResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateSuperPowerData, CreateSuperPowerErrors, CreateSuperPowerResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteCustomFileData, DeleteCustomFileErrors, DeleteCustomFileResponses, DeleteCustomPowerData, DeleteCustomPowerErrors, DeleteCustomPowerResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteSuperPowerData, DeleteSuperPowerErrors, DeleteSuperPowerResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, GetBillingData, GetBillingResponses, GetCustomPowerData, GetCustomPowerErrors, GetCustomPowerResponses, GetOrgData, GetOrgResponses, GetSuperPowerData, GetSuperPowerErrors, GetSuperPowerResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListCustomPowersData, ListCustomPowersErrors, ListCustomPowersResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListSuperPowersData, ListSuperPowersErrors, ListSuperPowersResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MyGlyphhData, MyGlyphhResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadCustomFileData, ReadCustomFileErrors, ReadCustomFileResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SaveTaskFlowData, SaveTaskFlowErrors, SaveTaskFlowResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetGrantData, SetGrantErrors, SetGrantResponses, SetLoopData, SetLoopErrors, SetLoopResponses, SetTaskSlotsData, SetTaskSlotsErrors, SetTaskSlotsResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, TaskSlotsData, TaskSlotsErrors, TaskSlotsResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses, WriteCustomFileData, WriteCustomFileErrors, WriteCustomFileResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -502,6 +502,106 @@ export const setTools = <ThrowOnError extends boolean = false>(options: Options<
 });
 
 /**
+ * List Custom
+ *
+ * My skills, plugins, tasks and apps, newest change first, with how many of each.
+ */
+export const listCustomPowers = <ThrowOnError extends boolean = false>(options?: Options<ListCustomPowersData, ThrowOnError>): RequestResult<ListCustomPowersResponses, ListCustomPowersErrors, ThrowOnError> => (options?.client ?? client).get<ListCustomPowersResponses, ListCustomPowersErrors, ThrowOnError>({ url: '/v1/powers/custom', ...options });
+
+/**
+ * Create Custom
+ *
+ * A new skill, plugin, task or app, with the files its kind starts from.
+ */
+export const createCustomPower = <ThrowOnError extends boolean = false>(options: Options<CreateCustomPowerData, ThrowOnError>): RequestResult<CreateCustomPowerResponses, CreateCustomPowerErrors, ThrowOnError> => (options.client ?? client).post<CreateCustomPowerResponses, CreateCustomPowerErrors, ThrowOnError>({
+    url: '/v1/powers/custom',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Custom
+ */
+export const deleteCustomPower = <ThrowOnError extends boolean = false>(options: Options<DeleteCustomPowerData, ThrowOnError>): RequestResult<DeleteCustomPowerResponses, DeleteCustomPowerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteCustomPowerResponses, DeleteCustomPowerErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}', ...options });
+
+/**
+ * Get Custom
+ */
+export const getCustomPower = <ThrowOnError extends boolean = false>(options: Options<GetCustomPowerData, ThrowOnError>): RequestResult<GetCustomPowerResponses, GetCustomPowerErrors, ThrowOnError> => (options.client ?? client).get<GetCustomPowerResponses, GetCustomPowerErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}', ...options });
+
+/**
+ * Change Custom
+ */
+export const changeCustomPower = <ThrowOnError extends boolean = false>(options: Options<ChangeCustomPowerData, ThrowOnError>): RequestResult<ChangeCustomPowerResponses, ChangeCustomPowerErrors, ThrowOnError> => (options.client ?? client).patch<ChangeCustomPowerResponses, ChangeCustomPowerErrors, ThrowOnError>({
+    url: '/v1/powers/custom/{power_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete File
+ */
+export const deleteCustomFile = <ThrowOnError extends boolean = false>(options: Options<DeleteCustomFileData, ThrowOnError>): RequestResult<DeleteCustomFileResponses, DeleteCustomFileErrors, ThrowOnError> => (options.client ?? client).delete<DeleteCustomFileResponses, DeleteCustomFileErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}/file', ...options });
+
+/**
+ * Read File
+ */
+export const readCustomFile = <ThrowOnError extends boolean = false>(options: Options<ReadCustomFileData, ThrowOnError>): RequestResult<ReadCustomFileResponses, ReadCustomFileErrors, ThrowOnError> => (options.client ?? client).get<ReadCustomFileResponses, ReadCustomFileErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}/file', ...options });
+
+/**
+ * Write File
+ *
+ * Write one file (text, up to 512 KB), making it if it isn't there.
+ */
+export const writeCustomFile = <ThrowOnError extends boolean = false>(options: Options<WriteCustomFileData, ThrowOnError>): RequestResult<WriteCustomFileResponses, WriteCustomFileErrors, ThrowOnError> => (options.client ?? client).put<WriteCustomFileResponses, WriteCustomFileErrors, ThrowOnError>({
+    url: '/v1/powers/custom/{power_id}/file',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Save Flow
+ *
+ * Save a task's flow; a step that needs attention stops the save and is named.
+ */
+export const saveTaskFlow = <ThrowOnError extends boolean = false>(options: Options<SaveTaskFlowData, ThrowOnError>): RequestResult<SaveTaskFlowResponses, SaveTaskFlowErrors, ThrowOnError> => (options.client ?? client).put<SaveTaskFlowResponses, SaveTaskFlowErrors, ThrowOnError>({
+    url: '/v1/powers/custom/{power_id}/flow',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Task Slots
+ */
+export const taskSlots = <ThrowOnError extends boolean = false>(options: Options<TaskSlotsData, ThrowOnError>): RequestResult<TaskSlotsResponses, TaskSlotsErrors, ThrowOnError> => (options.client ?? client).get<TaskSlotsResponses, TaskSlotsErrors, ThrowOnError>({ url: '/v1/powers/custom/{power_id}/slots', ...options });
+
+/**
+ * Set Task Slots
+ *
+ * Replace a task's slots, each filled with one of my models or left empty.
+ */
+export const setTaskSlots = <ThrowOnError extends boolean = false>(options: Options<SetTaskSlotsData, ThrowOnError>): RequestResult<SetTaskSlotsResponses, SetTaskSlotsErrors, ThrowOnError> => (options.client ?? client).put<SetTaskSlotsResponses, SetTaskSlotsErrors, ThrowOnError>({
+    url: '/v1/powers/custom/{power_id}/slots',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * List Folders
  */
 export const listFolders = <ThrowOnError extends boolean = false>(options?: Options<ListFoldersData, ThrowOnError>): RequestResult<ListFoldersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListFoldersResponses, unknown, ThrowOnError>({ url: '/v1/powers/folders', ...options });
@@ -569,6 +669,46 @@ export const replaceModelKey = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
+ * List Schedules
+ *
+ * My schedules, the soonest first; for one super power or task with `target`.
+ */
+export const listSchedules = <ThrowOnError extends boolean = false>(options?: Options<ListSchedulesData, ThrowOnError>): RequestResult<ListSchedulesResponses, ListSchedulesErrors, ThrowOnError> => (options?.client ?? client).get<ListSchedulesResponses, ListSchedulesErrors, ThrowOnError>({ url: '/v1/schedules', ...options });
+
+/**
+ * Add Schedule
+ */
+export const addSchedule = <ThrowOnError extends boolean = false>(options: Options<AddScheduleData, ThrowOnError>): RequestResult<AddScheduleResponses, AddScheduleErrors, ThrowOnError> => (options.client ?? client).post<AddScheduleResponses, AddScheduleErrors, ThrowOnError>({
+    url: '/v1/schedules',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Schedule
+ *
+ * Take it off the clock for good.
+ */
+export const deleteSchedule = <ThrowOnError extends boolean = false>(options: Options<DeleteScheduleData, ThrowOnError>): RequestResult<DeleteScheduleResponses, DeleteScheduleErrors, ThrowOnError> => (options.client ?? client).delete<DeleteScheduleResponses, DeleteScheduleErrors, ThrowOnError>({ url: '/v1/schedules/{schedule_id}', ...options });
+
+/**
+ * Change Schedule
+ *
+ * Change it, or switch it off (`enabled` false) without losing it.
+ */
+export const changeSchedule = <ThrowOnError extends boolean = false>(options: Options<ChangeScheduleData, ThrowOnError>): RequestResult<ChangeScheduleResponses, ChangeScheduleErrors, ThrowOnError> => (options.client ?? client).put<ChangeScheduleResponses, ChangeScheduleErrors, ThrowOnError>({
+    url: '/v1/schedules/{schedule_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Refresh
  */
 export const refreshSession = <ThrowOnError extends boolean = false>(options?: Options<RefreshSessionData, ThrowOnError>): RequestResult<RefreshSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshSessionResponses, unknown, ThrowOnError>({ url: '/v1/session/refresh', ...options });
@@ -602,6 +742,84 @@ export const switchOrg = <ThrowOnError extends boolean = false>(options: Options
  */
 export const startSession = <ThrowOnError extends boolean = false>(options: Options<StartSessionData, ThrowOnError>): RequestResult<StartSessionResponses, StartSessionErrors, ThrowOnError> => (options.client ?? client).post<StartSessionResponses, StartSessionErrors, ThrowOnError>({
     url: '/v1/session/token',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Super Powers
+ *
+ * Every super power I have, across my machines, newest activity first, with how many of each status.
+ */
+export const listSuperPowers = <ThrowOnError extends boolean = false>(options?: Options<ListSuperPowersData, ThrowOnError>): RequestResult<ListSuperPowersResponses, ListSuperPowersErrors, ThrowOnError> => (options?.client ?? client).get<ListSuperPowersResponses, ListSuperPowersErrors, ThrowOnError>({ url: '/v1/super-powers', ...options });
+
+/**
+ * Create Super Power
+ */
+export const createSuperPower = <ThrowOnError extends boolean = false>(options: Options<CreateSuperPowerData, ThrowOnError>): RequestResult<CreateSuperPowerResponses, CreateSuperPowerErrors, ThrowOnError> => (options.client ?? client).post<CreateSuperPowerResponses, CreateSuperPowerErrors, ThrowOnError>({
+    url: '/v1/super-powers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * My Glyphh
+ *
+ * My Glyphh, the main assistant: it has everything except what I take away.
+ */
+export const myGlyphh = <ThrowOnError extends boolean = false>(options?: Options<MyGlyphhData, ThrowOnError>): RequestResult<MyGlyphhResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MyGlyphhResponses, unknown, ThrowOnError>({ url: '/v1/super-powers/glyphh', ...options });
+
+/**
+ * Delete Super Power
+ */
+export const deleteSuperPower = <ThrowOnError extends boolean = false>(options: Options<DeleteSuperPowerData, ThrowOnError>): RequestResult<DeleteSuperPowerResponses, DeleteSuperPowerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteSuperPowerResponses, DeleteSuperPowerErrors, ThrowOnError>({ url: '/v1/super-powers/{sp_id}', ...options });
+
+/**
+ * Get Super Power
+ */
+export const getSuperPower = <ThrowOnError extends boolean = false>(options: Options<GetSuperPowerData, ThrowOnError>): RequestResult<GetSuperPowerResponses, GetSuperPowerErrors, ThrowOnError> => (options.client ?? client).get<GetSuperPowerResponses, GetSuperPowerErrors, ThrowOnError>({ url: '/v1/super-powers/{sp_id}', ...options });
+
+/**
+ * Change Super Power
+ *
+ * Change any of its configuration; machines pick it up the next time they sync.
+ */
+export const changeSuperPower = <ThrowOnError extends boolean = false>(options: Options<ChangeSuperPowerData, ThrowOnError>): RequestResult<ChangeSuperPowerResponses, ChangeSuperPowerErrors, ThrowOnError> => (options.client ?? client).patch<ChangeSuperPowerResponses, ChangeSuperPowerErrors, ThrowOnError>({
+    url: '/v1/super-powers/{sp_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set Grant
+ *
+ * Give it a power, a machine or a super power to call (granted), or take one away.
+ */
+export const setGrant = <ThrowOnError extends boolean = false>(options: Options<SetGrantData, ThrowOnError>): RequestResult<SetGrantResponses, SetGrantErrors, ThrowOnError> => (options.client ?? client).put<SetGrantResponses, SetGrantErrors, ThrowOnError>({
+    url: '/v1/super-powers/{sp_id}/grants',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set Loop
+ *
+ * Pick its loop: Claude Code or Codex, on my subscription or on one of my models.
+ */
+export const setLoop = <ThrowOnError extends boolean = false>(options: Options<SetLoopData, ThrowOnError>): RequestResult<SetLoopResponses, SetLoopErrors, ThrowOnError> => (options.client ?? client).put<SetLoopResponses, SetLoopErrors, ThrowOnError>({
+    url: '/v1/super-powers/{sp_id}/loop',
     ...options,
     headers: {
         'Content-Type': 'application/json',

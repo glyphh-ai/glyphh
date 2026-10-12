@@ -191,7 +191,7 @@ export type Billing = {
      * Billing Email
      */
     billing_email: string | null;
-    card: Card | null;
+    card: GlyphhServerOpsBillingSummaryCard | null;
     credit: Credit;
     /**
      * Extra Machines
@@ -235,28 +235,6 @@ export type CanAdd = {
      * Teams
      */
     teams: Array<string>;
-};
-
-/**
- * Card
- */
-export type Card = {
-    /**
-     * Brand
-     */
-    brand: string;
-    /**
-     * Exp Month
-     */
-    exp_month: number | null;
-    /**
-     * Exp Year
-     */
-    exp_year: number | null;
-    /**
-     * Last4
-     */
-    last4: string;
 };
 
 /**
@@ -491,6 +469,130 @@ export type CrewFace = {
 };
 
 /**
+ * CustomChange
+ */
+export type CustomChange = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+};
+
+/**
+ * CustomPage
+ */
+export type CustomPage = {
+    /**
+     * Counts
+     */
+    counts: {
+        [key: string]: number;
+    };
+    /**
+     * Powers
+     */
+    powers: Array<CustomRow>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * CustomPower
+ */
+export type CustomPower = {
+    /**
+     * Connections
+     */
+    connections: Array<Needed>;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Files
+     */
+    files: Array<File>;
+    /**
+     * Flow
+     */
+    flow: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Installed
+     */
+    installed: boolean;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Parts
+     */
+    parts: Array<Part>;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Used By
+     */
+    used_by: Array<User>;
+};
+
+/**
+ * CustomRow
+ */
+export type CustomRow = {
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Installed
+     */
+    installed: boolean;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Used By
+     */
+    used_by: Array<User>;
+};
+
+/**
  * DaySpend
  */
 export type DaySpend = {
@@ -541,6 +643,48 @@ export type Face = {
 };
 
 /**
+ * File
+ */
+export type File = {
+    /**
+     * Path
+     */
+    path: string;
+    /**
+     * Size
+     */
+    size: number;
+};
+
+/**
+ * FileText
+ */
+export type FileText = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Path
+     */
+    path: string;
+};
+
+/**
+ * Flow
+ */
+export type Flow = {
+    /**
+     * Edges
+     */
+    edges: Array<Link>;
+    /**
+     * Nodes
+     */
+    nodes: Array<Step>;
+};
+
+/**
  * Found
  */
 export type Found = {
@@ -562,6 +706,68 @@ export type FundsIn = {
      * Amount Cents
      */
     amount_cents: number;
+};
+
+/**
+ * GrantChange
+ *
+ * One thing to give or take away: exactly one of a power, a machine or another super power.
+ */
+export type GrantChange = {
+    /**
+     * Access
+     */
+    access?: 'read' | 'write' | null;
+    /**
+     * Granted
+     */
+    granted?: boolean;
+    /**
+     * Machine Id
+     */
+    machine_id?: string | null;
+    /**
+     * Power Id
+     */
+    power_id?: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id?: string | null;
+};
+
+/**
+ * GrantView
+ */
+export type GrantView = {
+    /**
+     * Access
+     */
+    access: string | null;
+    /**
+     * Denied
+     */
+    denied: boolean;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Target Id
+     */
+    target_id: string;
 };
 
 /**
@@ -871,6 +1077,60 @@ export type LedgerPage = {
 };
 
 /**
+ * Link
+ */
+export type Link = {
+    /**
+     * From
+     */
+    from: string;
+    /**
+     * Label
+     */
+    label?: 'yes' | 'no' | null;
+    /**
+     * To
+     */
+    to: string;
+};
+
+/**
+ * LoopChoice
+ */
+export type LoopChoice = {
+    /**
+     * Engine
+     */
+    engine: 'claude_code' | 'codex';
+    /**
+     * Model Id
+     */
+    model_id?: string | null;
+};
+
+/**
+ * LoopView
+ */
+export type LoopView = {
+    /**
+     * Engine
+     */
+    engine: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Model
+     */
+    model: string | null;
+    /**
+     * Model Id
+     */
+    model_id: string | null;
+};
+
+/**
  * MachineCard
  */
 export type MachineCard = {
@@ -1126,6 +1386,20 @@ export type ModelView = {
 };
 
 /**
+ * Needed
+ */
+export type Needed = {
+    /**
+     * Connected
+     */
+    connected: boolean;
+    /**
+     * Service
+     */
+    service: string;
+};
+
+/**
  * NewBrowser
  */
 export type NewBrowser = {
@@ -1141,6 +1415,24 @@ export type NewBrowser = {
      * Super Power Id
      */
     super_power_id: string;
+};
+
+/**
+ * NewCustom
+ */
+export type NewCustom = {
+    /**
+     * Description
+     */
+    description?: string;
+    /**
+     * Kind
+     */
+    kind: 'skill' | 'plugin' | 'task' | 'app';
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -1201,6 +1493,24 @@ export type NewModel = {
      * Provider
      */
     provider?: string | null;
+};
+
+/**
+ * NewSuperPower
+ */
+export type NewSuperPower = {
+    /**
+     * Description
+     */
+    description?: string;
+    /**
+     * Instructions
+     */
+    instructions: string;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -1342,6 +1652,22 @@ export type Page = {
      * Last Seq
      */
     last_seq: number;
+};
+
+/**
+ * Part
+ *
+ * A skill inside a plugin, or a tool of an app.
+ */
+export type Part = {
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -1652,6 +1978,100 @@ export type Say = {
 };
 
 /**
+ * ScheduleIn
+ *
+ * A schedule for exactly one of a super power or a task.
+ */
+export type ScheduleIn = {
+    /**
+     * Cron
+     */
+    cron: string;
+    /**
+     * Enabled
+     */
+    enabled?: boolean;
+    /**
+     * Input
+     */
+    input?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Power Id
+     */
+    power_id?: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id?: string | null;
+    /**
+     * Time Zone
+     */
+    time_zone?: string;
+};
+
+/**
+ * ScheduleView
+ */
+export type ScheduleView = {
+    /**
+     * Cron
+     */
+    cron: string;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Input
+     */
+    input: {
+        [key: string]: unknown;
+    };
+    /**
+     * Machine
+     */
+    machine: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Next Run At
+     */
+    next_run_at: string | null;
+    /**
+     * Power Id
+     */
+    power_id: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string | null;
+    /**
+     * Time Zone
+     */
+    time_zone: string;
+};
+
+/**
  * Searched
  */
 export type Searched = {
@@ -1779,6 +2199,255 @@ export type SignInScreen = {
      * Providers
      */
     providers: Array<string>;
+};
+
+/**
+ * SlotView
+ */
+export type SlotView = {
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Model Id
+     */
+    model_id?: string | null;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * Slots
+ */
+export type Slots = {
+    /**
+     * Slots
+     */
+    slots: Array<SlotView>;
+};
+
+/**
+ * Step
+ */
+export type Step = {
+    /**
+     * Checkpoint
+     */
+    checkpoint?: boolean;
+    /**
+     * Config
+     */
+    config?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: 'trigger' | 'agent' | 'model' | 'connection' | 'decide' | 'memory' | 'skill' | 'checkpoint' | 'output';
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * X
+     */
+    x?: number;
+    /**
+     * Y
+     */
+    y?: number;
+};
+
+/**
+ * SuperPowerChange
+ */
+export type SuperPowerChange = {
+    /**
+     * Avatar Color
+     */
+    avatar_color?: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant?: number | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Directness
+     */
+    directness?: number | null;
+    /**
+     * Effort
+     */
+    effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null;
+    /**
+     * Instructions
+     */
+    instructions?: string | null;
+    /**
+     * Listen Model Id
+     */
+    listen_model_id?: string | null;
+    /**
+     * Live
+     */
+    live?: boolean | null;
+    /**
+     * Map Layout
+     */
+    map_layout?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Personality
+     */
+    personality?: number | null;
+    /**
+     * Role
+     */
+    role?: 'orchestrator' | 'worker' | null;
+    /**
+     * Temperament
+     */
+    temperament?: number | null;
+    /**
+     * Voice Id
+     */
+    voice_id?: string | null;
+    /**
+     * Voice Model Id
+     */
+    voice_model_id?: string | null;
+    /**
+     * Voice Name
+     */
+    voice_name?: string | null;
+};
+
+/**
+ * SuperPowerPage
+ */
+export type SuperPowerPage = {
+    /**
+     * Counts
+     */
+    counts: {
+        [key: string]: number;
+    };
+    /**
+     * Super Powers
+     */
+    super_powers: Array<GlyphhServerOpsSuperPowersPageCard>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
+ * SuperPowerView
+ */
+export type SuperPowerView = {
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Directness
+     */
+    directness: number;
+    /**
+     * Effort
+     */
+    effort: string | null;
+    /**
+     * Glyphh
+     */
+    glyphh: boolean;
+    /**
+     * Grants
+     */
+    grants: Array<GrantView>;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Instructions
+     */
+    instructions: string;
+    /**
+     * Listen Model Id
+     */
+    listen_model_id: string | null;
+    /**
+     * Live
+     */
+    live: boolean;
+    loop: LoopView | null;
+    /**
+     * Machines
+     */
+    machines: Array<string>;
+    /**
+     * Map Layout
+     */
+    map_layout: {
+        [key: string]: unknown;
+    };
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Personality
+     */
+    personality: number;
+    /**
+     * Role
+     */
+    role: string;
+    /**
+     * Temperament
+     */
+    temperament: number;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Voice Id
+     */
+    voice_id: string | null;
+    /**
+     * Voice Model Id
+     */
+    voice_model_id: string | null;
+    /**
+     * Voice Name
+     */
+    voice_name: string | null;
 };
 
 /**
@@ -2110,6 +2779,66 @@ export type ValidationError = {
      * Error Type
      */
     type: string;
+};
+
+/**
+ * Card
+ */
+export type GlyphhServerOpsBillingSummaryCard = {
+    /**
+     * Brand
+     */
+    brand: string;
+    /**
+     * Exp Month
+     */
+    exp_month: number | null;
+    /**
+     * Exp Year
+     */
+    exp_year: number | null;
+    /**
+     * Last4
+     */
+    last4: string;
+};
+
+/**
+ * Card
+ */
+export type GlyphhServerOpsSuperPowersPageCard = {
+    /**
+     * Avatar Color
+     */
+    avatar_color: string | null;
+    /**
+     * Avatar Variant
+     */
+    avatar_variant: number;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Active At
+     */
+    last_active_at: string | null;
+    /**
+     * Machines
+     */
+    machines: Array<string>;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Status
+     */
+    status: string;
 };
 
 export type AllowScreenData = {
@@ -3623,6 +4352,353 @@ export type SetToolsResponses = {
 
 export type SetToolsResponse = SetToolsResponses[keyof SetToolsResponses];
 
+export type ListCustomPowersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Kind
+         */
+        kind?: 'skill' | 'plugin' | 'task' | 'app' | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/powers/custom';
+};
+
+export type ListCustomPowersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListCustomPowersError = ListCustomPowersErrors[keyof ListCustomPowersErrors];
+
+export type ListCustomPowersResponses = {
+    /**
+     * Successful Response
+     */
+    200: CustomPage;
+};
+
+export type ListCustomPowersResponse = ListCustomPowersResponses[keyof ListCustomPowersResponses];
+
+export type CreateCustomPowerData = {
+    body: NewCustom;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/custom';
+};
+
+export type CreateCustomPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateCustomPowerError = CreateCustomPowerErrors[keyof CreateCustomPowerErrors];
+
+export type CreateCustomPowerResponses = {
+    /**
+     * Successful Response
+     */
+    201: CustomPower;
+};
+
+export type CreateCustomPowerResponse = CreateCustomPowerResponses[keyof CreateCustomPowerResponses];
+
+export type DeleteCustomPowerData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}';
+};
+
+export type DeleteCustomPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteCustomPowerError = DeleteCustomPowerErrors[keyof DeleteCustomPowerErrors];
+
+export type DeleteCustomPowerResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteCustomPowerResponse = DeleteCustomPowerResponses[keyof DeleteCustomPowerResponses];
+
+export type GetCustomPowerData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}';
+};
+
+export type GetCustomPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetCustomPowerError = GetCustomPowerErrors[keyof GetCustomPowerErrors];
+
+export type GetCustomPowerResponses = {
+    /**
+     * Successful Response
+     */
+    200: CustomPower;
+};
+
+export type GetCustomPowerResponse = GetCustomPowerResponses[keyof GetCustomPowerResponses];
+
+export type ChangeCustomPowerData = {
+    body: CustomChange;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}';
+};
+
+export type ChangeCustomPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeCustomPowerError = ChangeCustomPowerErrors[keyof ChangeCustomPowerErrors];
+
+export type ChangeCustomPowerResponses = {
+    /**
+     * Successful Response
+     */
+    200: CustomPower;
+};
+
+export type ChangeCustomPowerResponse = ChangeCustomPowerResponses[keyof ChangeCustomPowerResponses];
+
+export type DeleteCustomFileData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    url: '/v1/powers/custom/{power_id}/file';
+};
+
+export type DeleteCustomFileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteCustomFileError = DeleteCustomFileErrors[keyof DeleteCustomFileErrors];
+
+export type DeleteCustomFileResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteCustomFileResponse = DeleteCustomFileResponses[keyof DeleteCustomFileResponses];
+
+export type ReadCustomFileData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    url: '/v1/powers/custom/{power_id}/file';
+};
+
+export type ReadCustomFileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReadCustomFileError = ReadCustomFileErrors[keyof ReadCustomFileErrors];
+
+export type ReadCustomFileResponses = {
+    /**
+     * Successful Response
+     */
+    200: FileText;
+};
+
+export type ReadCustomFileResponse = ReadCustomFileResponses[keyof ReadCustomFileResponses];
+
+export type WriteCustomFileData = {
+    body: FileText;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}/file';
+};
+
+export type WriteCustomFileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type WriteCustomFileError = WriteCustomFileErrors[keyof WriteCustomFileErrors];
+
+export type WriteCustomFileResponses = {
+    /**
+     * Successful Response
+     */
+    200: FileText;
+};
+
+export type WriteCustomFileResponse = WriteCustomFileResponses[keyof WriteCustomFileResponses];
+
+export type SaveTaskFlowData = {
+    body: Flow;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}/flow';
+};
+
+export type SaveTaskFlowErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveTaskFlowError = SaveTaskFlowErrors[keyof SaveTaskFlowErrors];
+
+export type SaveTaskFlowResponses = {
+    /**
+     * Successful Response
+     */
+    200: Flow;
+};
+
+export type SaveTaskFlowResponse = SaveTaskFlowResponses[keyof SaveTaskFlowResponses];
+
+export type TaskSlotsData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}/slots';
+};
+
+export type TaskSlotsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type TaskSlotsError = TaskSlotsErrors[keyof TaskSlotsErrors];
+
+export type TaskSlotsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Slots;
+};
+
+export type TaskSlotsResponse = TaskSlotsResponses[keyof TaskSlotsResponses];
+
+export type SetTaskSlotsData = {
+    body: Slots;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/custom/{power_id}/slots';
+};
+
+export type SetTaskSlotsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetTaskSlotsError = SetTaskSlotsErrors[keyof SetTaskSlotsErrors];
+
+export type SetTaskSlotsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Slots;
+};
+
+export type SetTaskSlotsResponse = SetTaskSlotsResponses[keyof SetTaskSlotsResponses];
+
 export type ListFoldersData = {
     body?: never;
     path?: never;
@@ -3829,6 +4905,123 @@ export type ReplaceModelKeyResponses = {
 
 export type ReplaceModelKeyResponse = ReplaceModelKeyResponses[keyof ReplaceModelKeyResponses];
 
+export type ListSchedulesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Target
+         */
+        target?: string | null;
+    };
+    url: '/v1/schedules';
+};
+
+export type ListSchedulesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSchedulesError = ListSchedulesErrors[keyof ListSchedulesErrors];
+
+export type ListSchedulesResponses = {
+    /**
+     * Response Listschedules
+     *
+     * Successful Response
+     */
+    200: Array<ScheduleView>;
+};
+
+export type ListSchedulesResponse = ListSchedulesResponses[keyof ListSchedulesResponses];
+
+export type AddScheduleData = {
+    body: ScheduleIn;
+    path?: never;
+    query?: never;
+    url: '/v1/schedules';
+};
+
+export type AddScheduleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddScheduleError = AddScheduleErrors[keyof AddScheduleErrors];
+
+export type AddScheduleResponses = {
+    /**
+     * Successful Response
+     */
+    201: ScheduleView;
+};
+
+export type AddScheduleResponse = AddScheduleResponses[keyof AddScheduleResponses];
+
+export type DeleteScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Schedule Id
+         */
+        schedule_id: string;
+    };
+    query?: never;
+    url: '/v1/schedules/{schedule_id}';
+};
+
+export type DeleteScheduleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteScheduleError = DeleteScheduleErrors[keyof DeleteScheduleErrors];
+
+export type DeleteScheduleResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteScheduleResponse = DeleteScheduleResponses[keyof DeleteScheduleResponses];
+
+export type ChangeScheduleData = {
+    body: ScheduleIn;
+    path: {
+        /**
+         * Schedule Id
+         */
+        schedule_id: string;
+    };
+    query?: never;
+    url: '/v1/schedules/{schedule_id}';
+};
+
+export type ChangeScheduleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeScheduleError = ChangeScheduleErrors[keyof ChangeScheduleErrors];
+
+export type ChangeScheduleResponses = {
+    /**
+     * Successful Response
+     */
+    200: ScheduleView;
+};
+
+export type ChangeScheduleResponse = ChangeScheduleResponses[keyof ChangeScheduleResponses];
+
 export type RefreshSessionData = {
     body?: never;
     path?: never;
@@ -3926,6 +5119,243 @@ export type StartSessionResponses = {
 };
 
 export type StartSessionResponse = StartSessionResponses[keyof StartSessionResponses];
+
+export type ListSuperPowersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Status
+         */
+        status?: 'all' | 'working' | 'needs_you' | 'idle';
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/super-powers';
+};
+
+export type ListSuperPowersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSuperPowersError = ListSuperPowersErrors[keyof ListSuperPowersErrors];
+
+export type ListSuperPowersResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerPage;
+};
+
+export type ListSuperPowersResponse = ListSuperPowersResponses[keyof ListSuperPowersResponses];
+
+export type CreateSuperPowerData = {
+    body: NewSuperPower;
+    path?: never;
+    query?: never;
+    url: '/v1/super-powers';
+};
+
+export type CreateSuperPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateSuperPowerError = CreateSuperPowerErrors[keyof CreateSuperPowerErrors];
+
+export type CreateSuperPowerResponses = {
+    /**
+     * Successful Response
+     */
+    201: SuperPowerView;
+};
+
+export type CreateSuperPowerResponse = CreateSuperPowerResponses[keyof CreateSuperPowerResponses];
+
+export type MyGlyphhData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/super-powers/glyphh';
+};
+
+export type MyGlyphhResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerView;
+};
+
+export type MyGlyphhResponse = MyGlyphhResponses[keyof MyGlyphhResponses];
+
+export type DeleteSuperPowerData = {
+    body?: never;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}';
+};
+
+export type DeleteSuperPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSuperPowerError = DeleteSuperPowerErrors[keyof DeleteSuperPowerErrors];
+
+export type DeleteSuperPowerResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteSuperPowerResponse = DeleteSuperPowerResponses[keyof DeleteSuperPowerResponses];
+
+export type GetSuperPowerData = {
+    body?: never;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}';
+};
+
+export type GetSuperPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSuperPowerError = GetSuperPowerErrors[keyof GetSuperPowerErrors];
+
+export type GetSuperPowerResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerView;
+};
+
+export type GetSuperPowerResponse = GetSuperPowerResponses[keyof GetSuperPowerResponses];
+
+export type ChangeSuperPowerData = {
+    body: SuperPowerChange;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}';
+};
+
+export type ChangeSuperPowerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeSuperPowerError = ChangeSuperPowerErrors[keyof ChangeSuperPowerErrors];
+
+export type ChangeSuperPowerResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerView;
+};
+
+export type ChangeSuperPowerResponse = ChangeSuperPowerResponses[keyof ChangeSuperPowerResponses];
+
+export type SetGrantData = {
+    body: GrantChange;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}/grants';
+};
+
+export type SetGrantErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetGrantError = SetGrantErrors[keyof SetGrantErrors];
+
+export type SetGrantResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerView;
+};
+
+export type SetGrantResponse = SetGrantResponses[keyof SetGrantResponses];
+
+export type SetLoopData = {
+    body: LoopChoice;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}/loop';
+};
+
+export type SetLoopErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetLoopError = SetLoopErrors[keyof SetLoopErrors];
+
+export type SetLoopResponses = {
+    /**
+     * Successful Response
+     */
+    200: SuperPowerView;
+};
+
+export type SetLoopResponse = SetLoopResponses[keyof SetLoopResponses];
 
 export type SearchThreadsData = {
     body?: never;

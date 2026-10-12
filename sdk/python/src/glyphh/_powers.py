@@ -70,16 +70,15 @@ SPECS: dict[str, Callable[..., Spec]] = {
 }
 
 
-class Powers:
-    """`Glyphh(...).powers`: providers, catalog_models, models, add_model, replace_key, check_key, delete_model,
-    folders, add_folder, remove_folder, browsers, add_browser, delete_browser, can_add, services, connections,
-    connect, reconnect, check_connection, disconnect, tools, set_tools."""
+class SpecApi:
+    """Calls named by a table of specs: each name builds the generated operation and its arguments."""
 
-    def __init__(self, run: Callable[..., Any]) -> None:
+    def __init__(self, run: Callable[..., Any], specs: dict[str, Callable[..., Spec]]) -> None:
         self._run = run
+        self._specs = specs
 
     def __getattr__(self, name: str) -> Callable[..., Any]:
-        spec = SPECS.get(name)
+        spec = self._specs.get(name) if name != "_specs" else None
         if spec is None:
             raise AttributeError(name)
 
@@ -90,14 +89,11 @@ class Powers:
         return call
 
 
-class AsyncPowers:
-    """`AsyncGlyphh(...).powers`: the same calls, awaited."""
+class AsyncSpecApi(SpecApi):
+    """The same calls, awaited."""
 
-    def __init__(self, run: Callable[..., Awaitable[Any]]) -> None:
-        self._run = run
-
-    def __getattr__(self, name: str) -> Callable[..., Awaitable[Any]]:
-        spec = SPECS.get(name)
+    def __getattr__(self, name: str) -> Callable[..., Any]:
+        spec = self._specs.get(name) if name != "_specs" else None
         if spec is None:
             raise AttributeError(name)
 
@@ -106,3 +102,17 @@ class AsyncPowers:
             return await self._run(operation, **params)
 
         return call
+
+
+class Powers(SpecApi):
+    """`Glyphh(...).powers`: providers, catalog_models, models, add_model, replace_key, check_key, delete_model,
+    folders, add_folder, remove_folder, browsers, add_browser, delete_browser, can_add, services, connections,
+    connect, reconnect, check_connection, disconnect, tools, set_tools."""
+
+    def __init__(self, run: Callable[..., Any]) -> None:
+        super().__init__(run, SPECS)
+
+
+class AsyncPowers(AsyncSpecApi):
+    def __init__(self, run: Callable[..., Awaitable[Any]]) -> None:
+        super().__init__(run, SPECS)

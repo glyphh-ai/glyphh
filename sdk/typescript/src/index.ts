@@ -5,6 +5,7 @@ import {
 } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange } from "./gen/types.gen.js";
 import { BillingApi } from "./billing.js";
+import { CustomPowersApi, SchedulesApi, SuperPowersApi } from "./editors.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
@@ -12,7 +13,7 @@ import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { BillingApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, PowersApi, ThreadsApi };
+export { BillingApi, CustomPowersApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -21,6 +22,10 @@ export type {
   CanAdd, CatalogPage, CatalogQuery, ConnectionView, ConnectLink, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
   ServicePage, ToolChange, ToolPage,
 } from "./powers.js";
+export type {
+  CustomChange, CustomPage, CustomPower, CustomQuery, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, ScheduleIn,
+  ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerQuery, SuperPowerView,
+} from "./editors.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -57,6 +62,12 @@ export class Glyphh {
   readonly billing: BillingApi;
   /** My powers: models, connections and their tools, folders, browsers. */
   readonly powers: PowersApi;
+  /** My super powers and their editor. */
+  readonly superPowers: SuperPowersApi;
+  /** My skills, plugins, tasks and apps. */
+  readonly custom: CustomPowersApi;
+  /** Super powers and tasks on the clock. */
+  readonly schedules: SchedulesApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -71,6 +82,9 @@ export class Glyphh {
     this.needsYou = new NeedsYouApi(this.#client);
     this.billing = new BillingApi(this.#client);
     this.powers = new PowersApi(this.#client);
+    this.superPowers = new SuperPowersApi(this.#client);
+    this.custom = new CustomPowersApi(this.#client);
+    this.schedules = new SchedulesApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */
