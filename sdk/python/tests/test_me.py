@@ -14,6 +14,7 @@ ME: dict = {
     "first_name": "Ada",
     "last_name": None,
     "image_url": None,
+    "signed_in_with": "google",
     "role": "org_admin",
     "org": {
         "id": "7f0c7b1e-0000-4000-8000-000000000002",
@@ -62,6 +63,7 @@ def test_me_sends_the_token_and_reads_the_member() -> None:
         first_name="Ada",
         last_name=None,
         image_url=None,
+        signed_in_with="google",
         role="org_admin",
         org=MeOrg(id=ME["org"]["id"], name="Acme", plan="Free", personal=False, role="org_admin", people=3),
     )
@@ -126,3 +128,21 @@ async def test_my_orgs_and_answering_an_invite_async() -> None:
     assert [o.name for o in await sdk.list_my_orgs()] == ["Acme"]
     assert await sdk.accept_invite("I1") == "Acme"
     assert await sdk.decline_invite("I2") is None
+
+
+def test_i_change_my_name_and_sign_out_everywhere() -> None:
+    seen: list = []
+    me = Glyphh(SERVER, token="t", transport=answering(200, {**ME, "first_name": "Grace"}, seen)).change_me(
+        first_name="Grace"
+    )
+    assert me.first_name == "Grace"
+    assert (seen[0].method, seen[0].url.path, seen[0].content) == ("PATCH", "/v1/me", b'{"first_name":"Grace"}')
+    out: list = []
+    assert Glyphh(SERVER, token="t", transport=answering(204, None, out)).sign_out_everywhere() is None
+    assert (out[0].method, out[0].url.path) == ("POST", "/v1/session/sign-out-everywhere")
+
+
+async def test_async_i_change_my_name_and_sign_out_everywhere() -> None:
+    me = await AsyncGlyphh(SERVER, token="t", transport=answering(200, ME)).change_me(last_name="")
+    assert me.signed_in_with == "google"
+    assert await AsyncGlyphh(SERVER, token="t", transport=answering(204)).sign_out_everywhere() is None

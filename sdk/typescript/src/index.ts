@@ -1,14 +1,15 @@
 import { type Client, createClient } from "./gen/client/index.js";
 import {
-  acceptInvite, changeMySettings, declineInvite, disconnectHost, health, listHosts, listMyOrgs, me, mySettings,
+  acceptInvite, changeMe, changeMySettings, declineInvite, disconnectHost, health, listHosts, listMyOrgs, me, mySettings,
+  signOutEverywhere,
 } from "./gen/sdk.gen.js";
-import type { Health, Host, Me, MeOrg, Settings, SettingsChange } from "./gen/types.gen.js";
+import type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange } from "./gen/types.gen.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
-export type { Health, Host, Me, MeOrg, Settings, SettingsChange };
+export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
 export { GlyphhError, MachinesApi, NeedsYouApi, OrgApi, ThreadsApi };
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
@@ -64,6 +65,16 @@ export class Glyphh {
   /** Who am I signed in as: my profile, and the org this token acts in (its plan, my role there). */
   async me(): Promise<Me> {
     return unwrap(await me({ client: this.#client }));
+  }
+
+  /** Change my first or last name (an empty one clears it); answers me as I am now. */
+  async changeMe(change: ProfileChange): Promise<Me> {
+    return unwrap(await changeMe({ client: this.#client, body: change }));
+  }
+
+  /** Sign me out everywhere: every token of mine stops at once, in every browser, org and connected host. */
+  async signOutEverywhere(): Promise<void> {
+    unwrap(await signOutEverywhere({ client: this.#client }));
   }
 
   /** Every org I belong to, my Personal org first. */

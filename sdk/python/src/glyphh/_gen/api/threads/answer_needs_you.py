@@ -73,7 +73,7 @@ def sync_detailed(
 ) -> Response[Answered | HTTPValidationError]:
     """Answer One
 
-     Allow or deny, once: answered anywhere, it is closed everywhere.
+     Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.
 
     Args:
         question_id (UUID):
@@ -107,7 +107,7 @@ def sync(
 ) -> Answered | HTTPValidationError | None:
     """Answer One
 
-     Allow or deny, once: answered anywhere, it is closed everywhere.
+     Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.
 
     Args:
         question_id (UUID):
@@ -136,7 +136,7 @@ async def asyncio_detailed(
 ) -> Response[Answered | HTTPValidationError]:
     """Answer One
 
-     Allow or deny, once: answered anywhere, it is closed everywhere.
+     Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.
 
     Args:
         question_id (UUID):
@@ -168,7 +168,7 @@ async def asyncio(
 ) -> Answered | HTTPValidationError | None:
     """Answer One
 
-     Allow or deny, once: answered anywhere, it is closed everywhere.
+     Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.
 
     Args:
         question_id (UUID):

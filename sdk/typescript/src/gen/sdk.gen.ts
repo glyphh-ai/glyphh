@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -98,9 +98,37 @@ export const listInstalledSuperPowers = <ThrowOnError extends boolean = false>(o
 export const listThreads = <ThrowOnError extends boolean = false>(options: Options<ListThreadsData, ThrowOnError>): RequestResult<ListThreadsResponses, ListThreadsErrors, ThrowOnError> => (options.client ?? client).get<ListThreadsResponses, ListThreadsErrors, ThrowOnError>({ url: '/v1/machines/{machine_id}/threads', ...options });
 
 /**
+ * Start
+ *
+ * Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.
+ */
+export const startThread = <ThrowOnError extends boolean = false>(options: Options<StartThreadData, ThrowOnError>): RequestResult<StartThreadResponses, StartThreadErrors, ThrowOnError> => (options.client ?? client).post<StartThreadResponses, StartThreadErrors, ThrowOnError>({
+    url: '/v1/machines/{machine_id}/threads',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get Me
  */
 export const me = <ThrowOnError extends boolean = false>(options?: Options<MeData, ThrowOnError>): RequestResult<MeResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeResponses, unknown, ThrowOnError>({ url: '/v1/me', ...options });
+
+/**
+ * Change Me
+ *
+ * Change my first or last name; an empty one clears it.
+ */
+export const changeMe = <ThrowOnError extends boolean = false>(options: Options<ChangeMeData, ThrowOnError>): RequestResult<ChangeMeResponses, ChangeMeErrors, ThrowOnError> => (options.client ?? client).patch<ChangeMeResponses, ChangeMeErrors, ThrowOnError>({
+    url: '/v1/me',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * List Hosts
@@ -154,7 +182,7 @@ export const listNeedsYou = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * Answer One
  *
- * Allow or deny, once: answered anywhere, it is closed everywhere.
+ * Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.
  */
 export const answerNeedsYou = <ThrowOnError extends boolean = false>(options: Options<AnswerNeedsYouData, ThrowOnError>): RequestResult<AnswerNeedsYouResponses, AnswerNeedsYouErrors, ThrowOnError> => (options.client ?? client).post<AnswerNeedsYouResponses, AnswerNeedsYouErrors, ThrowOnError>({
     url: '/v1/needs-you/{question_id}/answer',
@@ -237,6 +265,13 @@ export const refreshSession = <ThrowOnError extends boolean = false>(options?: O
 export const signOut = <ThrowOnError extends boolean = false>(options?: Options<SignOutData, ThrowOnError>): RequestResult<SignOutResponses, unknown, ThrowOnError> => (options?.client ?? client).post<SignOutResponses, unknown, ThrowOnError>({ url: '/v1/session/sign-out', ...options });
 
 /**
+ * Sign Out Everywhere
+ *
+ * Every token of mine stops at once: this browser and every other, every org, every connected host.
+ */
+export const signOutEverywhere = <ThrowOnError extends boolean = false>(options?: Options<SignOutEverywhereData, ThrowOnError>): RequestResult<SignOutEverywhereResponses, unknown, ThrowOnError> => (options?.client ?? client).post<SignOutEverywhereResponses, unknown, ThrowOnError>({ url: '/v1/session/sign-out-everywhere', ...options });
+
+/**
  * Switch
  */
 export const switchOrg = <ThrowOnError extends boolean = false>(options: Options<SwitchOrgData, ThrowOnError>): RequestResult<SwitchOrgResponses, SwitchOrgErrors, ThrowOnError> => (options.client ?? client).post<SwitchOrgResponses, SwitchOrgErrors, ThrowOnError>({
@@ -263,7 +298,7 @@ export const startSession = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Delete
  *
- * Delete an archived thread for good.
+ * Delete an archived thread for good, and its messages on its machine.
  */
 export const deleteThread = <ThrowOnError extends boolean = false>(options: Options<DeleteThreadData, ThrowOnError>): RequestResult<DeleteThreadResponses, DeleteThreadErrors, ThrowOnError> => (options.client ?? client).delete<DeleteThreadResponses, DeleteThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}', ...options });
 
@@ -287,3 +322,31 @@ export const changeThread = <ThrowOnError extends boolean = false>(options: Opti
         ...options.headers
     }
 });
+
+/**
+ * Watch
+ *
+ * A thread's events as its machine reports them, live: one Server-Sent Event each, numbered within the thread.
+ */
+export const watchThread = <ThrowOnError extends boolean = false>(options: Options<WatchThreadData, ThrowOnError>): RequestResult<WatchThreadResponses, WatchThreadErrors, ThrowOnError> => (options.client ?? client).get<WatchThreadResponses, WatchThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}/events', ...options });
+
+/**
+ * Say More
+ *
+ * Say more in a thread; its machine must be connected.
+ */
+export const sayToThread = <ThrowOnError extends boolean = false>(options: Options<SayToThreadData, ThrowOnError>): RequestResult<SayToThreadResponses, SayToThreadErrors, ThrowOnError> => (options.client ?? client).post<SayToThreadResponses, SayToThreadErrors, ThrowOnError>({
+    url: '/v1/threads/{thread_id}/say',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stop One
+ *
+ * Stop the work in a thread; its record stays.
+ */
+export const stopThread = <ThrowOnError extends boolean = false>(options: Options<StopThreadData, ThrowOnError>): RequestResult<StopThreadResponses, StopThreadErrors, ThrowOnError> => (options.client ?? client).post<StopThreadResponses, StopThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}/stop', ...options });

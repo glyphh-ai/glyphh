@@ -419,6 +419,10 @@ export type Me = {
      * Role
      */
     role: string;
+    /**
+     * Signed In With
+     */
+    signed_in_with: string | null;
 };
 
 /**
@@ -562,6 +566,20 @@ export type OrgView = {
 };
 
 /**
+ * ProfileChange
+ */
+export type ProfileChange = {
+    /**
+     * First Name
+     */
+    first_name?: string | null;
+    /**
+     * Last Name
+     */
+    last_name?: string | null;
+};
+
+/**
  * Question
  */
 export type Question = {
@@ -626,6 +644,16 @@ export type RenameOrg = {
      * Name
      */
     name: string;
+};
+
+/**
+ * Say
+ */
+export type Say = {
+    /**
+     * Text
+     */
+    text: string;
 };
 
 /**
@@ -801,6 +829,36 @@ export type ThreadRow = {
      */
     status: string;
     super_power: CrewFace | null;
+};
+
+/**
+ * ThreadStart
+ */
+export type ThreadStart = {
+    /**
+     * Crew
+     */
+    crew?: Array<string>;
+    /**
+     * Engine
+     */
+    engine?: 'claude_code' | 'codex';
+    /**
+     * Mode
+     */
+    mode?: 'driven' | 'autonomous';
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Prompt
+     */
+    prompt: string;
+    /**
+     * Super Power
+     */
+    super_power?: string | null;
 };
 
 /**
@@ -1149,6 +1207,36 @@ export type ListThreadsResponses = {
 
 export type ListThreadsResponse = ListThreadsResponses[keyof ListThreadsResponses];
 
+export type StartThreadData = {
+    body: ThreadStart;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/threads';
+};
+
+export type StartThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StartThreadError = StartThreadErrors[keyof StartThreadErrors];
+
+export type StartThreadResponses = {
+    /**
+     * Successful Response
+     */
+    201: ThreadRow;
+};
+
+export type StartThreadResponse = StartThreadResponses[keyof StartThreadResponses];
+
 export type MeData = {
     body?: never;
     path?: never;
@@ -1164,6 +1252,31 @@ export type MeResponses = {
 };
 
 export type MeResponse = MeResponses[keyof MeResponses];
+
+export type ChangeMeData = {
+    body: ProfileChange;
+    path?: never;
+    query?: never;
+    url: '/v1/me';
+};
+
+export type ChangeMeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeMeError = ChangeMeErrors[keyof ChangeMeErrors];
+
+export type ChangeMeResponses = {
+    /**
+     * Successful Response
+     */
+    200: Me;
+};
+
+export type ChangeMeResponse = ChangeMeResponses[keyof ChangeMeResponses];
 
 export type ListHostsData = {
     body?: never;
@@ -1560,6 +1673,22 @@ export type SignOutResponses = {
 
 export type SignOutResponse = SignOutResponses[keyof SignOutResponses];
 
+export type SignOutEverywhereData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/session/sign-out-everywhere';
+};
+
+export type SignOutEverywhereResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type SignOutEverywhereResponse = SignOutEverywhereResponses[keyof SignOutEverywhereResponses];
+
 export type SwitchOrgData = {
     body: OrgIn;
     path?: never;
@@ -1699,3 +1828,91 @@ export type ChangeThreadResponses = {
 };
 
 export type ChangeThreadResponse = ChangeThreadResponses[keyof ChangeThreadResponses];
+
+export type WatchThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}/events';
+};
+
+export type WatchThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type WatchThreadError = WatchThreadErrors[keyof WatchThreadErrors];
+
+export type WatchThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type SayToThreadData = {
+    body: Say;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}/say';
+};
+
+export type SayToThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SayToThreadError = SayToThreadErrors[keyof SayToThreadErrors];
+
+export type SayToThreadResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type SayToThreadResponse = SayToThreadResponses[keyof SayToThreadResponses];
+
+export type StopThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/v1/threads/{thread_id}/stop';
+};
+
+export type StopThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StopThreadError = StopThreadErrors[keyof StopThreadErrors];
+
+export type StopThreadResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type StopThreadResponse = StopThreadResponses[keyof StopThreadResponses];

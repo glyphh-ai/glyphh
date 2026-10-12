@@ -9,7 +9,8 @@ from glyphh import _models
 from glyphh._errors import refused
 from glyphh._gen.api.health import health
 from glyphh._gen.api.invites import accept_invite, decline_invite
-from glyphh._gen.api.me import change_my_settings, disconnect_host, list_hosts, list_my_orgs, me, my_settings
+from glyphh._gen.api.me import change_me, change_my_settings, disconnect_host, list_hosts, list_my_orgs, me, my_settings
+from glyphh._gen.api.session import sign_out_everywhere
 from glyphh._gen.models.health import Health
 from glyphh._gen.models.joined import Joined
 from glyphh._gen.models.me import Me
@@ -39,3 +40,5 @@ ACCEPT_INVITE = Call(accept_invite, lambda r: isinstance(r.parsed, Joined), lamb
 DECLINE_INVITE = Call(decline_invite, lambda r: int(r.status_code) == 204, lambda _: None)
 SETTINGS = Call(my_settings, lambda r: isinstance(r.parsed, Settings), _models.settings_of)
 CHANGE_SETTINGS = Call(change_my_settings, lambda r: isinstance(r.parsed, Settings), _models.settings_of)
+CHANGE_ME = Call(change_me, lambda r: isinstance(r.parsed, Me), _models.me_of)
+SIGN_OUT_EVERYWHERE = Call(sign_out_everywhere, lambda r: int(r.status_code) == 204, lambda _: None)

@@ -5,6 +5,7 @@ import httpx
 
 from glyphh._calls import (
     ACCEPT_INVITE,
+    CHANGE_ME,
     CHANGE_SETTINGS,
     DECLINE_INVITE,
     DISCONNECT_HOST,
@@ -13,12 +14,14 @@ from glyphh._calls import (
     LIST_MY_ORGS,
     ME,
     SETTINGS,
+    SIGN_OUT_EVERYWHERE,
     Call,
     answer,
 )
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._gen.models.invite_answer import InviteAnswer
+from glyphh._gen.models.profile_change import ProfileChange
 from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
@@ -29,6 +32,11 @@ from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
 def _change(theme: str | None, rail_collapsed: bool | None, page_sizes: dict[str, int] | None) -> SettingsChange:
     given = {"theme": theme, "rail_collapsed": rail_collapsed, "page_sizes": page_sizes}
     return SettingsChange.from_dict({k: v for k, v in given.items() if v is not None})
+
+
+def _profile(first_name: str | None, last_name: str | None) -> ProfileChange:
+    given = {"first_name": first_name, "last_name": last_name}
+    return ProfileChange.from_dict({k: v for k, v in given.items() if v is not None})
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
@@ -65,6 +73,14 @@ class Glyphh:
     def me(self) -> Me:
         """Who am I signed in as: my profile, my role, my org and its plan."""
         return self._run(ME)  # type: ignore[return-value]
+
+    def change_me(self, *, first_name: str | None = None, last_name: str | None = None) -> Me:
+        """Change my first or last name (an empty one clears it); answers me as I am now."""
+        return self._run(CHANGE_ME, body=_profile(first_name, last_name))  # type: ignore[return-value]
+
+    def sign_out_everywhere(self) -> None:
+        """Every token of mine stops at once, in every browser, org and connected host."""
+        self._run(SIGN_OUT_EVERYWHERE)
 
     def list_my_orgs(self) -> list[MeOrg]:
         """Every org I belong to, my Personal org first."""
@@ -126,6 +142,12 @@ class AsyncGlyphh:
     async def me(self) -> Me:
         """Who am I signed in as: my profile, my role, my org and its plan."""
         return await self._run(ME)  # type: ignore[return-value]
+
+    async def change_me(self, *, first_name: str | None = None, last_name: str | None = None) -> Me:
+        return await self._run(CHANGE_ME, body=_profile(first_name, last_name))  # type: ignore[return-value]
+
+    async def sign_out_everywhere(self) -> None:
+        await self._run(SIGN_OUT_EVERYWHERE)
 
     async def list_my_orgs(self) -> list[MeOrg]:
         """Every org I belong to, my Personal org first."""

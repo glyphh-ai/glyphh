@@ -25,6 +25,7 @@ class Me:
         last_name (None | str):
         org (MeOrg):
         role (str):
+        signed_in_with (None | str):
     """
 
     email: str
@@ -34,6 +35,7 @@ class Me:
     last_name: str | None
     org: MeOrg
     role: str
+    signed_in_with: str | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -54,6 +56,9 @@ class Me:
 
         role = self.role
 
+        signed_in_with: str | None
+        signed_in_with = self.signed_in_with
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -65,6 +70,7 @@ class Me:
                 "last_name": last_name,
                 "org": org,
                 "role": role,
+                "signed_in_with": signed_in_with,
             }
         )
 
@@ -104,6 +110,13 @@ class Me:
 
         role = d.pop("role")
 
+        def _parse_signed_in_with(data: object) -> str | None:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        signed_in_with = _parse_signed_in_with(d.pop("signed_in_with"))
+
         me = cls(
             email=email,
             first_name=first_name,
@@ -112,6 +125,7 @@ class Me:
             last_name=last_name,
             org=org,
             role=role,
+            signed_in_with=signed_in_with,
         )
 
         me.additional_properties = d

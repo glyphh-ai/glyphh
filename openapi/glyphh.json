@@ -627,6 +627,17 @@
           "role": {
             "title": "Role",
             "type": "string"
+          },
+          "signed_in_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed In With"
           }
         },
         "required": [
@@ -635,6 +646,7 @@
           "first_name",
           "last_name",
           "image_url",
+          "signed_in_with",
           "role",
           "org"
         ],
@@ -869,6 +881,36 @@
         "title": "OrgView",
         "type": "object"
       },
+      "ProfileChange": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          }
+        },
+        "title": "ProfileChange",
+        "type": "object"
+      },
       "Question": {
         "properties": {
           "asked_at": {
@@ -971,6 +1013,21 @@
           "name"
         ],
         "title": "RenameOrg",
+        "type": "object"
+      },
+      "Say": {
+        "properties": {
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Say",
         "type": "object"
       },
       "Settings": {
@@ -1308,6 +1365,73 @@
           "needs_you"
         ],
         "title": "ThreadRow",
+        "type": "object"
+      },
+      "ThreadStart": {
+        "properties": {
+          "crew": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Crew",
+            "type": "array"
+          },
+          "engine": {
+            "default": "claude_code",
+            "enum": [
+              "claude_code",
+              "codex"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "mode": {
+            "default": "driven",
+            "enum": [
+              "driven",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "prompt": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "super_power": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Super Power"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "ThreadStart",
         "type": "object"
       },
       "ValidationError": {
@@ -1896,6 +2020,58 @@
         "tags": [
           "threads"
         ]
+      },
+      "post": {
+        "description": "Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.",
+        "operationId": "startThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThreadStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "threads"
+        ]
       }
     },
     "/v1/me": {
@@ -1914,6 +2090,46 @@
           }
         },
         "summary": "Get Me",
+        "tags": [
+          "me"
+        ]
+      },
+      "patch": {
+        "description": "Change my first or last name; an empty one clears it.",
+        "operationId": "changeMe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Me",
         "tags": [
           "me"
         ]
@@ -2129,7 +2345,7 @@
     },
     "/v1/needs-you/{question_id}/answer": {
       "post": {
-        "description": "Allow or deny, once: answered anywhere, it is closed everywhere.",
+        "description": "Allow or deny, once: answered anywhere, it is closed everywhere, and the machine is told.",
         "operationId": "answerNeedsYou",
         "parameters": [
           {
@@ -2488,6 +2704,21 @@
         ]
       }
     },
+    "/v1/session/sign-out-everywhere": {
+      "post": {
+        "description": "Every token of mine stops at once: this browser and every other, every org, every connected host.",
+        "operationId": "signOutEverywhere",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sign Out Everywhere",
+        "tags": [
+          "session"
+        ]
+      }
+    },
     "/v1/session/switch": {
       "post": {
         "operationId": "switchOrg",
@@ -2572,7 +2803,7 @@
     },
     "/v1/threads/{thread_id}": {
       "delete": {
-        "description": "Delete an archived thread for good.",
+        "description": "Delete an archived thread for good, and its messages on its machine.",
         "operationId": "deleteThread",
         "parameters": [
           {
@@ -2696,6 +2927,127 @@
           }
         },
         "summary": "Change",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
+    "/v1/threads/{thread_id}/events": {
+      "get": {
+        "description": "A thread's events as its machine reports them, live: one Server-Sent Event each, numbered within the thread.",
+        "operationId": "watchThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
+    "/v1/threads/{thread_id}/say": {
+      "post": {
+        "description": "Say more in a thread; its machine must be connected.",
+        "operationId": "sayToThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Say"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Say More",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
+    "/v1/threads/{thread_id}/stop": {
+      "post": {
+        "description": "Stop the work in a thread; its record stays.",
+        "operationId": "stopThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop One",
         "tags": [
           "threads"
         ]

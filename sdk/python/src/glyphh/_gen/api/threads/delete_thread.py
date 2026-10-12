@@ -61,7 +61,7 @@ def sync_detailed(
 ) -> Response[Any | HTTPValidationError]:
     """Delete
 
-     Delete an archived thread for good.
+     Delete an archived thread for good, and its messages on its machine.
 
     Args:
         thread_id (UUID):
@@ -92,7 +92,7 @@ def sync(
 ) -> Any | HTTPValidationError | None:
     """Delete
 
-     Delete an archived thread for good.
+     Delete an archived thread for good, and its messages on its machine.
 
     Args:
         thread_id (UUID):
@@ -118,7 +118,7 @@ async def asyncio_detailed(
 ) -> Response[Any | HTTPValidationError]:
     """Delete
 
-     Delete an archived thread for good.
+     Delete an archived thread for good, and its messages on its machine.
 
     Args:
         thread_id (UUID):
@@ -147,7 +147,7 @@ async def asyncio(
 ) -> Any | HTTPValidationError | None:
     """Delete
 
-     Delete an archived thread for good.
+     Delete an archived thread for good, and its messages on its machine.
 
     Args:
         thread_id (UUID):

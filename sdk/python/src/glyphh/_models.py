@@ -45,6 +45,7 @@ class Me:
     first_name: str | None
     last_name: str | None
     image_url: str | None
+    signed_in_with: str | None
     role: str
     org: MeOrg
 
@@ -71,6 +72,7 @@ def me_of(m: _Me) -> Me:
         first_name=_opt(m.first_name),
         last_name=_opt(m.last_name),
         image_url=_opt(m.image_url),
+        signed_in_with=_opt(m.signed_in_with),
         role=m.role,
         org=org_of(m.org),
     )

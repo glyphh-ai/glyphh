@@ -5,7 +5,7 @@ const SERVER = process.env.GLYPHH_URL ?? "http://localhost:8080";
 
 const ME = {
   id: "7f0c7b1e-0000-4000-8000-000000000001", email: "ada@acme.test", first_name: "Ada", last_name: "Lovelace",
-  image_url: null, role: "org_admin", org: { id: "7f0c7b1e-0000-4000-8000-000000000002", name: "Acme", plan: "Free", personal: false, role: "org_admin" },
+  image_url: null, signed_in_with: "google", role: "org_admin", org: { id: "7f0c7b1e-0000-4000-8000-000000000002", name: "Acme", plan: "Free", personal: false, role: "org_admin" },
 };
 const HOST = { id: "7f0c7b1e-0000-4000-8000-000000000003", name: "Claude Code", connected_at: "2026-10-11T12:00:00Z" };
 
@@ -69,5 +69,16 @@ describe("me and hosts", () => {
     const declined: Request[] = [];
     await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(204, undefined, declined) }).declineInvite("I2");
     expect(new URL(declined[0]?.url ?? "").pathname).toBe("/v1/invites/decline");
+  });
+
+  it("changes my name and signs me out everywhere", async () => {
+    const seen: Request[] = [];
+    const changed = await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(200, { ...ME, first_name: "Grace" }, seen) })
+      .changeMe({ first_name: "Grace" });
+    expect(changed.first_name).toBe("Grace");
+    expect([seen[0]?.method, new URL(seen[0]?.url ?? "").pathname, await seen[0]?.text()]).toEqual(["PATCH", "/v1/me", '{"first_name":"Grace"}']);
+    const out: Request[] = [];
+    await new Glyphh({ baseUrl: SERVER, token: "t", fetch: answering(204, undefined, out) }).signOutEverywhere();
+    expect([out[0]?.method, new URL(out[0]?.url ?? "").pathname]).toEqual(["POST", "/v1/session/sign-out-everywhere"]);
   });
 });
