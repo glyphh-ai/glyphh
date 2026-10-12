@@ -270,6 +270,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Glyphh admin · Org actions and plans | `AdminOrgActions` | Gift credits, change or comp a plan, move orgs to a new version, disable and enable an org; plans and their versions | Admin |
 | Glyphh admin · Models | `AdminCatalog` | Providers and models: turn off and on, add a provider (logo, API), add and import models, models with no description | Admin |
 | Glyphh admin · Marketplace | `AdminMarket` | Glyphh's review queue with the reviewer's report, publish, request changes, reject, the thread; listings, featured and categories | Admin |
+| API keys | `ApiKeys` | A member's keys (account menu): make one (shown once), revoke; when the org doesn't allow member keys; Org → API keys: the switch (turning it off stops members' keys straight away) and every key in the org | Org |
 
 Board files are at `screens/<name>.dc.html`.
 

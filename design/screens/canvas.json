@@ -293,6 +293,14 @@
       "h": 12400,
       "title": "Usage audit log",
       "page": "usage-audit"
+    },
+    "ApiKeys.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 17200,
+      "title": "API keys, yours and the org's",
+      "page": "api-keys"
     }
   },
   "createdOnFiles": {
@@ -548,6 +556,14 @@
       "x": 0,
       "y": -300,
       "page": "usage-audit"
+    },
+    "t-api-keys": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "API keys",
+      "x": 0,
+      "y": -300,
+      "page": "api-keys"
     }
   },
   "order": [
@@ -587,7 +603,8 @@
     "AdminOrgActions.dc.html",
     "UsageFlow.dc.html",
     "UsageMore.dc.html",
-    "UsageAudit.dc.html"
+    "UsageAudit.dc.html",
+    "ApiKeys.dc.html"
   ],
   "pages": [
     {
@@ -725,6 +742,10 @@
     {
       "id": "usage-audit",
       "name": "Usage \u00b7 Audit log"
+    },
+    {
+      "id": "api-keys",
+      "name": "API keys"
     }
   ],
   "title": "Glyphh Design"
