@@ -327,6 +327,20 @@ Built in rrotor's engine, 2026-10-12 (`engine/src/link.ts`, `wire.ts`). The serv
     - **A bearer never on a command line:** Claude Code reads its servers from a file only its user can read; Codex reads each bearer from an environment variable.
     - **The machine's own token never reaches a CLI at all.**
 
+### Threads and messages: the record on the server, the messages on the machine
+
+Decided by Chris, 2026-10-12. A **thread** is one job being worked, by a crew Glyphh leads or by one super power on its own (the design's word). Its messages, steps and outputs are what super powers make, so they stay on the machine; the server keeps only the thread's record, so every view can list, find and open threads without the content.
+
+- **On the server** (`threads`, `thread_crew`, `needs_you`, and each session's `runs` row): who it belongs to, which machine, its goal, its crew, its status, pinned or archived, its schedule, the number and time of its last event, and every open "needs you". **No message content, ever.**
+- **On the machine:** every event of every session in the thread (protocol 1's events, numbered), in rrotor's own Postgres, with a search index over what was said. This is the thread's history and the runs' logs; nothing of it is copied to the server.
+- **Live:** the machine streams each event over its link. The server updates the record from it (the status, the last event, a "needs you" opened or answered) and passes the event on to whoever is watching that thread or machine (a platform page, a Claude panel), across server processes through Redis's publish and subscribe. It never writes the event down or logs its content.
+- **History:** opening a thread loads the record from the server, then the server asks the machine over its link for a page of events (`thread.read`: the newest, or those before a number) and passes the page back. The view then watches live from the last number it has; a gap (a dropped connection) is filled by reading from the machine again. Events are numbered, so nothing shows twice or out of order.
+- **When the machine is offline:** the thread's record still shows (Recents, its goal, its crew, its status, when), and its messages say they are on the machine, which is offline, with when it was last seen. They come back with the machine.
+- **Search:** a thread's goal is searched on the server. What was said is searched on the machine: the server asks every one of the member's online machines (`threads.search`) and merges what they answer; an offline machine's threads are found by their goal only, and the view says so.
+- **Needs you is kept on the server until it is answered** (`needs_you`): which thread, which super power, what it asks (a permission: the tool and a one-line detail), when. It is what the plugin's hook asks about ("Glyphh needs you"), what a push or an email is sent for, and what the Glyphh panel lists; answering it anywhere sends `session.answer` to the machine and closes it everywhere.
+- **Deleting a thread for good** (rrotor's Settings, archived threads) deletes its record on the server and tells the machine to delete its events. Archiving only hides it. A machine removed takes its threads' messages with it; their records say so until they are deleted.
+- **In transit, not end to end yet:** an event passes through the server's memory on its way to a view (over TLS on both legs), never stored. End-to-end encryption between the machine and the view, so the server cannot read even in passing, is open.
+
 ### Runtime hosting
 
 Glyphh does not host runtimes. Members run rrotor on their own compute: a server on any infrastructure, usually by one click, or their own laptop through Docker.
@@ -444,7 +458,7 @@ Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for n
 - **Schema:** one schema file until relaunch, then Alembic migrations.
 - **Background work:** Postgres, with no queue table of its own: the clock reads `schedules.next_run_at`, and each job is its own table's state (a Stripe event not yet processed, a machine to unmount), taken with `FOR UPDATE SKIP LOCKED` so two processes never take the same one.
 - **Files:** object storage (R2 or S3), with references in Postgres: power and super power bundles, run logs, provider logos.
-- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](#data-model)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. **Conversations** (decided 2026-10-11): the server keeps each conversation's record (title, super power, machine, run, status, times), rrotor keeps the messages, and rrotor's UI opens them through the relay.
+- **What lives where:** the server's Postgres holds accounts, powers, grants, machines, schedules, runs, usage and billing ([data model](#data-model)). A member's rrotor holds what their super powers make: their data, vectors and graphs, and their screens. Nothing a super power stores ever lives on the server. **Threads** (decided 2026-10-11 as conversations, settled 2026-10-12): the server keeps each thread's record, rrotor keeps its messages, and every view reads them from the machine through the server (Threads and messages, above).
 
 ### Operations
 
@@ -507,6 +521,13 @@ erDiagram
     schedules ||--o{ runs : "fires"
     super_powers ||--o{ runs : "runs"
     machines ||--o{ runs : "ran on"
+    machines ||--o{ threads : "holds the messages of"
+    threads ||--o{ runs : "is worked by"
+    threads ||--o{ thread_crew : "has"
+    super_powers ||--o{ thread_crew : "is in"
+    threads ||--o{ needs_you : "asks"
+    runs ||--o{ needs_you : "asked in"
+    schedules ||--o{ threads : "keeps going"
     runs ||--o{ usage_events : "spends"
     powers ||--o| models : "is a"
     providers ||--o{ catalog_models : "offers"
@@ -832,11 +853,50 @@ erDiagram
         text status "queued, running, succeeded, failed, canceled, missed"
         text error "the reason, when it did not succeed"
         jsonb result "what it returned, kept small"
-        text log_key "its full log, in object storage"
+        uuid thread_id FK "the thread this session ran in; its log is that thread's events, on the machine"
         timestamptz scheduled_for "the time the clock meant; null when not scheduled"
         timestamptz started_at
         timestamptz finished_at
         timestamptz created_at
+    }
+
+    threads {
+        uuid id PK "also the thread's id on the machine"
+        uuid org_id FK
+        uuid user_id FK "whose thread it is"
+        uuid machine_id FK "where its messages live"
+        uuid super_power_id FK "a super power on its own; null = a crew, which Glyphh leads"
+        uuid schedule_id FK "the schedule that keeps it going, if any"
+        text goal "what it is for: the first thing asked, or what the member named it"
+        text status "working, idle, needs_you, done, stuck: the newest the machine reported"
+        bigint last_seq "the number of the newest event the server passed on"
+        timestamptz last_event_at
+        timestamptz pinned_at "null = not pinned"
+        timestamptz archived_at "null = in Recents"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    thread_crew {
+        uuid thread_id PK, FK
+        uuid super_power_id PK, FK "a super power in the crew; a super power is in many threads at once"
+        timestamptz added_at
+    }
+
+    needs_you {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK "who is asked"
+        uuid thread_id FK
+        uuid run_id FK "the session that asked"
+        text ask_id "the CLI's own id for the question, sent back with the answer"
+        text kind "permission (more kinds as they are drawn)"
+        text tool "what it wants to use"
+        text detail "one line of what it wants to do, at most 200 characters"
+        timestamptz asked_at
+        text answer "allow, deny; null = still open"
+        uuid answered_by FK "who answered"
+        timestamptz answered_at
     }
 
     subscriptions {
@@ -1391,8 +1451,17 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 - **schedules:** what runs, on which of the member's machines, a five-field cron read in its own time zone, and the input each run is handed. Switched off with `enabled`, never deleted to pause.
 - **The clock is the server's.** When a schedule is due, the server sends the run to its machine over the machine's connection. A machine that is offline at that moment gets the run marked `missed`, with the reason: nothing piles up and fires later in a burst.
 - **A run is driven or autonomous** (`mode`): driven when the member is at it, so a tool set to `ask` asks them; autonomous when nobody is (a schedule, an agent), so `ask` is refused.
-- **runs** is the history: every run, whether the clock, the member or an agent started it, with its status, its error, a small result and its full log (in object storage). A schedule's history is its runs. A run's connection calls are its usage events, so a run shows what it cost.
+- **runs** is the history: every run, whether the clock, the member or an agent started it, with its status, its error and a small result. A run is one session of one super power in a thread (`thread_id`); its full log is the thread's events, on the machine (Threads and messages), never in the server's storage. A schedule's history is its runs. A run's connection calls are its usage events, so a run shows what it cost.
 - **Who sees what:** as for usage. A user sees their own runs, an org admin the org's.
+
+### Threads
+
+A thread's record, its crew and its open "needs you" are the server's; its messages are the machine's (the architecture, Threads and messages). The server learns everything in the record from the events it passes on, so a thread's record is only as new as the last event that reached it.
+
+- **threads:** one per thread, on one machine, for one member. A super power on its own (`super_power_id`) or a crew Glyphh leads (null, with `thread_crew`). Its id is the same on the machine.
+- **thread_crew:** who is in a crew, so Recents can filter by a super power and count its threads.
+- **needs_you:** one row per question, open until answered; the answer, who gave it and when are kept.
+- **runs:** each session of a super power in a thread is a run (`thread_id`), as it was: its status, its mode, what it cost.
 
 ### Machines
 
@@ -1546,7 +1615,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 #### Decisions
 
 - **The rest of rrotor's stack** (see The stack): the engine is TypeScript (decided); the image under s6 and bubblewrap with Landlock for the fence stand as proposed until Chris says otherwise.
-- **Where a session's messages are kept:** rrotor now streams every session back to the server (rrotor is headless). Conversations were decided as the server keeping the record and rrotor the messages; say whether the server now also keeps the messages, or only passes them on.
+- **End to end for threads:** events pass through the server's memory on their way to a view (Threads and messages). Encrypt them between the machine and the view, so the server cannot read them even in passing: how the view and the machine agree a key, and what the platform and a Claude panel can hold.
 - **The machine's own address:** with no UI on the machine, does anything still need `<machine-id>.glyphh.ai`? Outputs and a super power's own screens could stream through the server like everything else. If nothing needs it, the certificates question below goes away.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
 - **Updating machines:** who decides when a machine moves to a new rrotor (the server, a rollout, the member), and what happens to a run in flight.
@@ -1563,6 +1632,7 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 - **The server's side of the machine link** (protocol 1, above):
     - `/v1/machine/link` with machine tokens;
+    - threads (Threads and messages): a thread's id on `session.start`, and `thread.read`, `threads.search` and `thread.delete` added to the protocol, with the machine's side in rrotor;
     - starting, sending to, answering and stopping sessions;
     - passing each session's events on to the platform and Claude's panels;
     - keeping a "needs you" until it is answered.
