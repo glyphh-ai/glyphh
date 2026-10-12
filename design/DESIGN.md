@@ -26,7 +26,7 @@ The beta page today: the cat in its ring, the super powers orbiting into it, "Wh
 
 #### 2. app.glyphh.ai: the platform, and the same views as cards
 
-What is in the system for a person (powers, super powers and their grants, machines, catalogs, usage, billing, members), as pages, and the same views as cards in Claude and ChatGPT, built from one component library (`@glyphh-ai/ui`, in `glyphh-ai/platform`). The work itself runs on the member's machines and shows in rrotor's UI. Every page has its own address.
+What is in the system for a person (powers, super powers and their grants, machines, catalogs, usage, billing, members), as pages, and the same views as cards in Claude and ChatGPT, built from one component library (`@glyphh-ai/ui`, in `glyphh-ai/platform`). The work itself runs on the member's machines, which are headless, and shows here and in Claude's panels (below). Every page has its own address.
 
 **Pages only a browser can show** (something sends the person here):
 
@@ -48,9 +48,9 @@ What is in the system for a person (powers, super powers and their grants, machi
 
 **States for every page:** loading, success, expired link, refused, error with its trace id.
 
-#### 3. rrotor's UI (the old app, reworked)
+#### 3. rrotor's views (the old app, reworked), now the platform's
 
-The app every machine serves, in the browser and inside Claude. It gets a UI of its own, designed next; it is not built from `@glyphh-ai/ui`.
+**rrotor is headless** (Chris, 2026-10-12): the machine serves no UI. It streams every session to the server, and these views are **pages on app.glyphh.ai and live panels in Claude**, built from `@glyphh-ai/ui` and reading those streams. The boards in `design/rrotor/` stand; they become platform pages, and the splash becomes the platform's "opening a machine".
 
 - **Home:** the machine, its super powers, what is running now.
 - **Glyphh, the main assistant:** chat, with a **talk button** (voice), and the swarm's live status beside it.
@@ -196,9 +196,9 @@ Decided 2026-10-11. A published power or super power has explicit versions: its 
 
 Decided 2026-10-11. Beside the metered connection calls, every use of a power or super power is counted (never its content, never billed): model calls with their tokens in and out as the provider reports them, tool calls, skills, task steps, folders, browsers. Usage pages show models, connections and super powers side by side, by day, user, super power and power; an org admin sees each member's use, model token counts included (counts only, even on the member's own key); a publisher sees their listing's installs, installs used in the last 30 days, and runs.
 
-### One component library, shared by both apps
+### One component library, in the platform
 
-Decided by Chris, 2026-10-12: **`@glyphh-ai/ui` moves out of the platform repo into its own repo, `glyphh-ai/ui`**, never published (Chris, 2026-10-12: it is only for building our own apps). The platform and rrotor's UI both build it from a checkout beside them. It holds the tokens, fonts, base styles, the cats, logo and logo tiles, the approved icons, and every component both apps draw the same way (Button, Avatar and CatRing, LogoTile, Icon, Dialog, Menu, Pagination, SegmentedControl, Alert and TraceId, Skeleton, and the rest of the library). App-only screens stay in each app. `/design-sync` points at the new repo.
+**`@glyphh-ai/ui` lives in the platform repo (`glyphh-ai/platform`, `ui/`), never published** (Chris, 2026-10-12). It briefly had its own repo to share with rrotor's UI; rrotor is now headless, so the platform (pages and Claude's panels) is its only user and it moved back. It holds the tokens, fonts, base styles, the cats, logo and logo tiles, the approved icons, and every component (Button, Avatar and CatRing, LogoTile, Icon, Dialog, Menu, Pagination, SegmentedControl, Alert and TraceId, Skeleton, and the rest). `/design-sync` points at `glyphh-ai/platform`'s `ui/`.
 
 ### rrotor's UI is the business version
 
@@ -504,7 +504,7 @@ The Questions above (to Chris), and the server's Open list (`docs/architecture.m
 
 Pull `glyphh-ai/glyphh`, then see what changed in the design since you last built: `git log --oneline ea224cc..HEAD -- design/`. Decisions in this doc are the source of truth; read it again rather than a summary.
 
-**First: move `ui/` to its own repo, `glyphh-ai/ui`** (see "One component library, shared by both apps"): its tests there, never published; the platform builds it from the checkout beside it (done 2026-10-12), and rrotor's build takes its shared pieces from the same checkout.
+**The library stays in the platform** (`ui/`; see "One component library, in the platform"): it went to its own repo and came back the same day, when rrotor became headless.
 
 Rework what is built in `@glyphh-ai/ui`:
 
