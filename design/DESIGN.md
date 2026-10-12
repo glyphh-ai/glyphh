@@ -199,7 +199,8 @@ Decided 2026-10-11. Beside the metered connection calls, every use of a power or
 
 Decided by Chris, 2026-10-12: rrotor's UI is for business users. **No terminal anywhere in it**; what a super power is doing shows as **Activity** in plain words, and its work as **Outputs**. Developers get a terminal later, as their own way in.
 
-- **Crew:** the super powers working one thread together (Glyphh leads unless turned off). A super power can be in many crews and threads at once. A new thread starts empty: say what the crew should do, drag super powers onto it from the rail, or pick them with +.
+- **Crew:** the super powers working one thread together (Glyphh leads unless turned off). A super power can be in many crews and threads at once. The centre's view is called **Crew** (not swarm): Glyphh with only this thread's crew around it.
+- **A new thread** opens a getting-started screen in the centre (a machine can hold thousands of super powers, so there is no crew view yet): what should this crew do (with starters), the crew so far, Start. Add super powers with **+** on a rail row, by dragging a row onto the crew, or with the **picker** (the + by Super powers): search across the machine, Recently used, results in pages, checks to add.
 - **Recents** (top right, a history button): every thread on the machine, whoever is picked (Glyphh or any super power), grouped **Pinned** (only while something is pinned), **Today**, **Yesterday**, **Older**; each with its goal, its crew, its status and when. Search, and a filter by super power (a checklist with how many threads each is in). Each thread's menu: **Pin to top**, **Open in the drawer**, **Archive**. Archived threads leave the list; finding and deleting them is in rrotor's Settings (opened from the account at the bottom of the rail), still to draw.
 - **The rail** searches super powers and filters them: All, Working, Needs you, Idle.
 
