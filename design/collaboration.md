@@ -81,3 +81,11 @@ From the design agent, after sketching app.glyphh.ai's sign-in pages and machine
 - **Avatar: three more kinds** beside the cats: a person (initials or photo), an org (letter tile) and a `ring` option, the glowing ring with its comet, for heroes, sign-in pages and empty states. Ring states: still, turning, comet.
 - **AuthLayout** (or a Page variant): a brand panel beside the content on desktop (logo, Glyphh in its ring showing the page's mood, one line), collapsing to logo, small ring and content on a phone. For every page "only a browser can show".
 - **Menu: radio and check items**, for the org switcher in the account menu (Personal, Acme, ...), plus a danger item (Sign out).
+
+From the design agent, after billing, Powers (connections, tool permissions) and the plugin cards:
+
+- **Pagination:** "Showing 1–5 of 23", then Previous, page numbers (shortened with "…") and Next on wide screens, and Previous, "Page 1 of 5" and Next on phones. All buttons 44 px; the current page marked. A `cursor` mode with only Previous and Next, for lists served by cursor (Pipedream's app catalog). Every list that can grow uses it: connections, the catalog, a connection's tools, invoices, machines, super powers, the plugin's cards.
+- **SegmentedControl** (or a RadioGroup variant): three or more options in one bar, one chosen. For a tool's permission (Allow, Ask, Deny; Deny in the danger colour), a group's "Set all", and the theme (Light, Dark, System). Keyboard: arrows move the choice.
+- **Stripe's Payment Element, themed:** checkout inside the page that takes the tokens for its colours, font and radius, and follows light and dark. Embedded Checkout (server-old's choice) can only set a background and a button colour, so it can't match.
+- **ConnectFrame:** a dialog that holds Pipedream's sign-in page in a frame, falling back to "Open the sign-in" in its own window when a provider refuses frames, then "Checking with Pipedream…" and done or error with a trace id.
+- **Chart: bars by day:** one bar a day across the period, past days filled, today marked, days to come outlined; a title per bar on hover. The same component on the Billing page and in the usage card, at every width.

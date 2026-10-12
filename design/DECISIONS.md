@@ -59,3 +59,36 @@ The left half on desktop, collapsing to a small ring above the content on a phon
 - **See all** opens a dialog with search, status filters and pages.
 - **Clicking a super power** opens it on its machine in rrotor. The web app stays a front door; nothing is edited there.
 - **Every header has the light/dark toggle.** The account menu and the Account page offer Light, Dark or System.
+
+## Logos of other companies
+
+Always the real, full-colour artwork, never a one-colour silhouette. Black marks (OpenAI, GitHub, Grok, Cursor, Anthropic, the AWS wordmark) get an off-white copy for dark grounds. Claude shows the Claude mark; Codex shows OpenAI's.
+
+## Lists
+
+Everything that can grow is paginated, in the designs as in the build: "Showing 1–5 of 23", Previous, page numbers, Next; on a phone, Previous, "Page 1 of 5", Next.
+
+## Billing
+
+- **One Billing page,** server-old's flow and copy:
+  - Current plan, then Budget with auto top-up and spend by day, then Plans, then Invoices (View, PDF).
+  - Every action opens a dialog: Add funds, Auto top-up, Switch plan.
+- **Paying happens inside the page** and matches it: dark on dark, light on light, our fields and violet button. That needs Stripe's Payment Element (requested in `collaboration.md`).
+- **Open question:** server-old bills in dollars (funds, "Glyphh usage"); the server's docs bill in credits for connection calls only. The copy follows whichever is current.
+
+## Powers: connections and permissions
+
+- **Where it lives:** Powers sits in the top nav beside Machines, with tabs Loops, Connections, Models, Folders, Skills.
+- **A connection is always the member's own account.** Pipedream holds the sign-in, which happens on Pipedream's page in a dialog (or its own window when a provider refuses frames). There is no shared org account.
+- **Every tool is Allow, Ask or Deny,** grouped by risk: Read, Create and update, Delete. A tool with no setting asks. A super power can carry its own Allow or Deny for runs nobody watches, where Ask is refused.
+- **Phones get a compact row per connection:** logo, name, account, one status line, and a chevron (or Reconnect).
+
+## The plugin
+
+The app's screens as cards in the chat, following the host's theme:
+- My machines
+- Deploy (pick a host, then live status)
+- Usage
+- The swarm
+- Needs you (a question, or a permission)
+- Empty, loading and error states
