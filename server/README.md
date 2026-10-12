@@ -14,7 +14,7 @@ Until relaunch there are no migrations: the schema step only creates what's miss
 
 ## Layout
 
-- `models/`: the schema, one table per module (drawn in `docs/data-model.md`)
+- `models/`: the schema, one table per module (drawn in `docs/architecture.md`, Data model)
 - `db/`: the engine, the schema step and the seed
 - `ops/`: the service functions, one per capability
 - `api/` and `mcp/`: thin surfaces that call the same ops
@@ -34,4 +34,4 @@ Every push and pull request runs lint and the suite in Docker (`.github/workflow
     uv sync --group docs
     uv run mkdocs serve
 
-Then open http://127.0.0.1:8000. Pages live in `docs/`; diagrams are Mermaid blocks and reload on save.
+Then open http://127.0.0.1:8000/architecture/. The one doc is `docs/architecture.md` (architecture, data model, plan); diagrams are Mermaid blocks and reload on save.
