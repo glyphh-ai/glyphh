@@ -256,6 +256,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Task flow (dark / light) | `TaskCanvas`, `TaskCanvasLight` | A Task's Flow tab: the React Flow canvas made editable, the inspector, slots, schedule | 6 |
 | Custom powers (dark / light) | `CustomPowers`, `CustomPowersLight` | Skills, plugins, tasks and apps in one list; New power; each type's detail | 5 |
 | Marketplace (dark / light) | `Marketplace`, `MarketplaceLight` | Discover, search with pages, a power's and a super power's detail, Add | 7 |
+| rrotor · Splash | `RrotorSplash` | rrotor's UI, not the platform: the first screen on a machine, naming the machine before anything else; starting, opening, ready, on a laptop, waking, updating, a failed step, an expired link, someone else's machine, offline | rrotor |
 
 Board files are at `screens/<name>.dc.html`.
 

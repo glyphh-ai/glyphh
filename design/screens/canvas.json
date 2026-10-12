@@ -197,6 +197,14 @@
       "h": 6600,
       "title": "Marketplace, light",
       "page": "market-light"
+    },
+    "RrotorSplash.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3520,
+      "h": 6000,
+      "title": "rrotor: the splash",
+      "page": "rrotor-splash"
     }
   },
   "createdOnFiles": {
@@ -356,6 +364,14 @@
       "x": 0,
       "y": -300,
       "page": "market-light"
+    },
+    "t-rrotor-splash": {
+      "kind": "title1",
+      "maxW": 3520,
+      "text": "rrotor's UI: the splash",
+      "x": 0,
+      "y": -300,
+      "page": "rrotor-splash"
     }
   },
   "order": [
@@ -383,7 +399,8 @@
     "SuperPowerEditLight.dc.html",
     "TaskCanvasLight.dc.html",
     "CustomPowersLight.dc.html",
-    "MarketplaceLight.dc.html"
+    "MarketplaceLight.dc.html",
+    "RrotorSplash.dc.html"
   ],
   "pages": [
     {
@@ -473,6 +490,10 @@
     {
       "id": "market-light",
       "name": "Marketplace (light)"
+    },
+    {
+      "id": "rrotor-splash",
+      "name": "rrotor \u00b7 Splash"
     }
   ],
   "title": "Glyphh Design"
