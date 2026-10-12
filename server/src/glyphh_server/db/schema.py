@@ -11,6 +11,7 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.limits import apply_limits
 from glyphh_server.db.seed import seed_parent_org, seed_plans
 from glyphh_server.models import Base
+from glyphh_server.ops.auth.platform import seed_platform_client
 
 _LOCK: int = 0x67_6C_79_70  # one schema run at a time across processes booting together
 
@@ -23,6 +24,7 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await apply_limits(conn)
         await seed_plans(conn, settings)
         await seed_parent_org(conn)
+        await seed_platform_client(conn, settings.platform)
 
 
 async def main() -> None:

@@ -24,6 +24,7 @@ from glyphh_server.api.join_pages import finish_join
 from glyphh_server.errors import Forbidden, Invalid
 from glyphh_server.ops import invites
 from glyphh_server.ops.auth import codes, hosts, signed
+from glyphh_server.ops.auth.platform import PLATFORM_CLIENT_ID
 from glyphh_server.ops.auth.providers import provider
 from glyphh_server.ops.auth.signin import personal_org_of, sign_in
 
@@ -68,6 +69,11 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
     host = await hosts.find(conn, pending.client_id)
     if host is None:
         raise Invalid("This app is not registered with Glyphh. Start again from your app.")
+    if host.client_id == PLATFORM_CLIENT_ID:
+        # The platform is Glyphh's own: no Allow; it starts in the person's Personal org.
+        return RedirectResponse(
+            await codes.approve(conn, pending, user_id, await personal_org_of(conn, user_id)), status_code=303
+        )
     shown = {"h": host.name, "e": profile.email}
     consent = signed.sign(settings.secret_key, {"r": st["r"], "u": str(user_id), "n": st["n"], **shown}, TTL)
     return screen(settings, "/allow", consent=consent)

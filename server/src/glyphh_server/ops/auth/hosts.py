@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.errors import NotFound
 from glyphh_server.models import OAuthClient, Token
 
+# The platform is Glyphh itself, never a connected host (ops/auth/platform.py).
+PLATFORM: str = "glyphh-platform"
+
 
 class Host(BaseModel):
     id: uuid.UUID
@@ -31,7 +34,7 @@ async def connected(conn: AsyncConnection, user_id: uuid.UUID) -> list[Host]:
     rows = await conn.execute(
         select(OAuthClient.id, OAuthClient.name, func.min(Token.created_at).label("connected_at"))
         .join(Token, Token.oauth_client_id == OAuthClient.id)
-        .where(Token.user_id == user_id, Token.revoked_at.is_(None))
+        .where(Token.user_id == user_id, Token.revoked_at.is_(None), OAuthClient.client_id != PLATFORM)
         .group_by(OAuthClient.id, OAuthClient.name)
         .order_by(OAuthClient.name)
     )
