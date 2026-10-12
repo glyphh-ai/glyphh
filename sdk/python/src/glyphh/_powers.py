@@ -17,6 +17,7 @@ from glyphh._gen.api.powers import (
     list_browsers,
     list_catalog_models,
     list_folders,
+    list_loops,
     list_models,
     list_providers,
     remove_folder,
@@ -53,6 +54,7 @@ SPECS: dict[str, Callable[..., Spec]] = {
     ),
     "check_key": lambda power_id: (_call(check_model_key), _id(power_id)),
     "delete_model": lambda power_id: (_call(delete_model), _id(power_id)),
+    "loops": lambda: (_call(list_loops), {}),
     "folders": lambda: (_call(list_folders), {}),
     "add_folder": lambda machine_id, path: (
         _call(add_folder),
@@ -106,7 +108,7 @@ class AsyncSpecApi(SpecApi):
 
 class Powers(SpecApi):
     """`Glyphh(...).powers`: providers, catalog_models, models, add_model, replace_key, check_key, delete_model,
-    folders, add_folder, remove_folder, browsers, add_browser, delete_browser, can_add, services, connections,
+    loops, folders, add_folder, remove_folder, browsers, add_browser, delete_browser, can_add, services, connections,
     connect, reconnect, check_connection, disconnect, tools, set_tools."""
 
     def __init__(self, run: Callable[..., Any]) -> None:

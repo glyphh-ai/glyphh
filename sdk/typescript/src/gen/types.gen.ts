@@ -2427,11 +2427,47 @@ export type LoopChoice = {
     /**
      * Engine
      */
-    engine: 'claude_code' | 'codex';
+    engine: 'claude_code' | 'codex' | 'glyphh';
     /**
      * Model Id
+     *
+     * One of my models; none runs a CLI on my subscription. The Glyphh loop needs one.
      */
     model_id?: string | null;
+};
+
+/**
+ * LoopState
+ */
+export type LoopState = {
+    /**
+     * Account
+     */
+    account: string | null;
+    /**
+     * Engine
+     */
+    engine: 'claude_code' | 'codex' | 'glyphh';
+    /**
+     * Login Step
+     */
+    login_step: string | null;
+    /**
+     * Models
+     */
+    models: number | null;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Signed In
+     */
+    signed_in: boolean | null;
+    /**
+     * Version
+     */
+    version: string | null;
 };
 
 /**
@@ -2504,6 +2540,32 @@ export type MachineCard = {
      * Working
      */
     working: number;
+};
+
+/**
+ * MachineLoops
+ */
+export type MachineLoops = {
+    /**
+     * Last Seen At
+     */
+    last_seen_at: string | null;
+    /**
+     * Loops
+     */
+    loops: Array<LoopState>;
+    /**
+     * Machine
+     */
+    machine: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Online
+     */
+    online: boolean;
 };
 
 /**
@@ -11031,6 +11093,24 @@ export type RemoveFolderResponses = {
 };
 
 export type RemoveFolderResponse = RemoveFolderResponses[keyof RemoveFolderResponses];
+
+export type ListLoopsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/loops';
+};
+
+export type ListLoopsResponses = {
+    /**
+     * Response Listloops
+     *
+     * Successful Response
+     */
+    200: Array<MachineLoops>;
+};
+
+export type ListLoopsResponse = ListLoopsResponses[keyof ListLoopsResponses];
 
 export type ListModelsData = {
     body?: never;

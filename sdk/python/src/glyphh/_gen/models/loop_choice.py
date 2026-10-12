@@ -18,7 +18,7 @@ class LoopChoice:
     """
     Attributes:
         engine (LoopChoiceEngine):
-        model_id (None | Unset | UUID):
+        model_id (None | Unset | UUID): One of my models; none runs a CLI on my subscription. The Glyphh loop needs one.
     """
 
     engine: LoopChoiceEngine

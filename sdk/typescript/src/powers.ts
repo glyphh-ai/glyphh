@@ -1,18 +1,18 @@
 import type { Client } from "./gen/client/index.js";
 import {
   addBrowser, addFolder, addModel, checkConnection, checkModelKey, connect, deleteBrowser, deleteModel, disconnect,
-  listBrowsers, listCatalogModels, listConnections, listFolders, listModels, listProviders, listServices, listTools,
+  listBrowsers, listCatalogModels, listConnections, listFolders, listLoops, listModels, listProviders, listServices, listTools,
   reconnect, removeFolder, replaceModelKey, setTools, whatICanAdd,
 } from "./gen/sdk.gen.js";
 import type {
-  CanAdd, CatalogPage, ConnectionView, ConnectLink, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
-  ServicePage, ToolChange, ToolPage,
+  CanAdd, CatalogPage, ConnectionView, ConnectLink, LoopState, MachineLoops, ModelView, NewBrowser, NewFolder, NewModel,
+  Place, ProviderView, ServicePage, ToolChange, ToolPage,
 } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
 export type {
-  CanAdd, CatalogPage, ConnectionView, ConnectLink, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
-  ServicePage, ToolChange, ToolPage,
+  CanAdd, CatalogPage, ConnectionView, ConnectLink, LoopState, MachineLoops, ModelView, NewBrowser, NewFolder, NewModel,
+  Place, ProviderView, ServicePage, ToolChange, ToolPage,
 };
 
 export interface CatalogQuery { provider?: string; q?: string; page?: number; size?: number }
@@ -34,6 +34,12 @@ export class PowersApi {
   /** The catalog's models (one provider's, or all), searched, each saying whether I may add it. */
   async catalogModels(query: CatalogQuery = {}): Promise<CatalogPage> {
     return unwrap(await listCatalogModels({ client: this.#client, query }));
+  }
+
+  /** Each of my machines' loops: Claude Code and Codex as it says of them, and the Glyphh loop (ready wherever I
+   *  have a model that is on). */
+  async loops(): Promise<MachineLoops[]> {
+    return unwrap(await listLoops({ client: this.#client }));
   }
 
   async models(): Promise<ModelView[]> {

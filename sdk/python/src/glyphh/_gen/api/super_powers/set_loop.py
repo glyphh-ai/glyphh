@@ -73,7 +73,9 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | SuperPowerView]:
     """Set Loop
 
-     Pick its loop: Claude Code or Codex, on my subscription or on one of my models.
+     Pick its loop: Claude Code or Codex, on my subscription or on one of my models; or the Glyphh loop,
+    always on
+    one of my models.
 
     Args:
         sp_id (UUID):
@@ -107,7 +109,9 @@ def sync(
 ) -> HTTPValidationError | SuperPowerView | None:
     """Set Loop
 
-     Pick its loop: Claude Code or Codex, on my subscription or on one of my models.
+     Pick its loop: Claude Code or Codex, on my subscription or on one of my models; or the Glyphh loop,
+    always on
+    one of my models.
 
     Args:
         sp_id (UUID):
@@ -136,7 +140,9 @@ async def asyncio_detailed(
 ) -> Response[HTTPValidationError | SuperPowerView]:
     """Set Loop
 
-     Pick its loop: Claude Code or Codex, on my subscription or on one of my models.
+     Pick its loop: Claude Code or Codex, on my subscription or on one of my models; or the Glyphh loop,
+    always on
+    one of my models.
 
     Args:
         sp_id (UUID):
@@ -168,7 +174,9 @@ async def asyncio(
 ) -> HTTPValidationError | SuperPowerView | None:
     """Set Loop
 
-     Pick its loop: Claude Code or Codex, on my subscription or on one of my models.
+     Pick its loop: Claude Code or Codex, on my subscription or on one of my models; or the Glyphh loop,
+    always on
+    one of my models.
 
     Args:
         sp_id (UUID):

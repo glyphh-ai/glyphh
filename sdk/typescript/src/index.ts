@@ -26,7 +26,7 @@ export type {
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
 } from "./billing.js";
 export type {
-  CanAdd, CatalogPage, CatalogQuery, ConnectionView, ConnectLink, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
+  CanAdd, CatalogPage, CatalogQuery, ConnectionView, ConnectLink, LoopState, MachineLoops, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
   ServicePage, ToolChange, ToolPage,
 } from "./powers.js";
 export type {

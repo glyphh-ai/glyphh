@@ -4072,7 +4072,8 @@
           "engine": {
             "enum": [
               "claude_code",
-              "codex"
+              "codex",
+              "glyphh"
             ],
             "title": "Engine",
             "type": "string"
@@ -4087,6 +4088,7 @@
                 "type": "null"
               }
             ],
+            "description": "One of my models; none runs a CLI on my subscription. The Glyphh loop needs one.",
             "title": "Model Id"
           }
         },
@@ -4094,6 +4096,89 @@
           "engine"
         ],
         "title": "LoopChoice",
+        "type": "object"
+      },
+      "LoopState": {
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "engine": {
+            "enum": [
+              "claude_code",
+              "codex",
+              "glyphh"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "login_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Step"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Models"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "signed_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed In"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "engine",
+          "ready",
+          "signed_in",
+          "account",
+          "version",
+          "login_step",
+          "models"
+        ],
+        "title": "LoopState",
         "type": "object"
       },
       "LoopView": {
@@ -4213,6 +4298,51 @@
           "needs_you"
         ],
         "title": "MachineCard",
+        "type": "object"
+      },
+      "MachineLoops": {
+        "properties": {
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "loops": {
+            "items": {
+              "$ref": "#/components/schemas/LoopState"
+            },
+            "title": "Loops",
+            "type": "array"
+          },
+          "machine": {
+            "title": "Machine",
+            "type": "string"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "online": {
+            "title": "Online",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "machine_id",
+          "machine",
+          "online",
+          "last_seen_at",
+          "loops"
+        ],
+        "title": "MachineLoops",
         "type": "object"
       },
       "MachinePage": {
@@ -19016,6 +19146,32 @@
         ]
       }
     },
+    "/v1/powers/loops": {
+      "get": {
+        "description": "Each of my machines' loops: Claude Code and Codex as it says of them, and the Glyphh loop, ready wherever I\nhave a model.",
+        "operationId": "listLoops",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MachineLoops"
+                  },
+                  "title": "Response Listloops",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Loops",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
     "/v1/powers/models": {
       "get": {
         "operationId": "listModels",
@@ -19982,7 +20138,7 @@
     },
     "/v1/super-powers/{sp_id}/loop": {
       "put": {
-        "description": "Pick its loop: Claude Code or Codex, on my subscription or on one of my models.",
+        "description": "Pick its loop: Claude Code or Codex, on my subscription or on one of my models; or the Glyphh loop, always on\none of my models.",
         "operationId": "setLoop",
         "parameters": [
           {

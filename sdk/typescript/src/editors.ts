@@ -34,6 +34,8 @@ export class SuperPowersApi {
   async grant(id: string, body: GrantChange): Promise<SuperPowerView> {
     return unwrap(await setGrant({ client: this.#c, path: { sp_id: id }, body }));
   }
+  /** Its loop: claude_code or codex, on my subscription (no model_id) or one of my models; or glyphh, the Glyphh
+   *  loop, which always names one of my models. */
   async setLoop(id: string, body: LoopChoice): Promise<SuperPowerView> {
     return unwrap(await setLoop({ client: this.#c, path: { sp_id: id }, body }));
   }

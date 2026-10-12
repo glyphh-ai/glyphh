@@ -139,8 +139,11 @@ from .listing_stats import ListingStats
 from .listing_view import ListingView
 from .loop_choice import LoopChoice
 from .loop_choice_engine import LoopChoiceEngine
+from .loop_state import LoopState
+from .loop_state_engine import LoopStateEngine
 from .loop_view import LoopView
 from .machine_card import MachineCard
+from .machine_loops import MachineLoops
 from .machine_page import MachinePage
 from .machine_says import MachineSays
 from .machine_says_host import MachineSaysHost
@@ -479,8 +482,11 @@ __all__ = (
     "ListingView",
     "LoopChoice",
     "LoopChoiceEngine",
+    "LoopState",
+    "LoopStateEngine",
     "LoopView",
     "MachineCard",
+    "MachineLoops",
     "MachinePage",
     "MachineSays",
     "MachineSaysHost",

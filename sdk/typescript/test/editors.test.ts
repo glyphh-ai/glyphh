@@ -23,7 +23,7 @@ describe("super powers, custom powers and schedules", () => {
       call((g) => g.superPowers.create({ name: "Scout", instructions: "Find leads." })), call((g) => g.superPowers.glyphh()),
       call((g) => g.superPowers.get("s")), call((g) => g.superPowers.change("s", { personality: 5 })),
       call((g) => g.superPowers.delete("s")), call((g) => g.superPowers.grant("s", { machine_id: "m" })),
-      call((g) => g.superPowers.setLoop("s", { engine: "codex" })),
+      call((g) => g.superPowers.setLoop("s", { engine: "glyphh", model_id: "m" })),
       call((g) => g.custom.list({ kind: "skill" })), call((g) => g.custom.list()),
       call((g) => g.custom.create({ kind: "task", name: "B" })), call((g) => g.custom.get("p")),
       call((g) => g.custom.change("p", { description: "x" })), call((g) => g.custom.delete("p")),

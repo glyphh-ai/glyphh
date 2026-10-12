@@ -47,6 +47,7 @@ CALLS = [
     ("replace_key", (P, "sk-2"), {}, "PUT", f"/v1/powers/models/{P}/key", "", {"api_key": "sk-2"}, 200),
     ("check_key", (P,), {}, "POST", f"/v1/powers/models/{P}/check", "", None, 200),
     ("delete_model", (P,), {}, "DELETE", f"/v1/powers/models/{P}", "", None, 204),
+    ("loops", (), {}, "GET", "/v1/powers/loops", "", None, 200),
     ("folders", (), {}, "GET", "/v1/powers/folders", "", None, 200),
     ("add_folder", (M, "~/Content"), {}, "POST", "/v1/powers/folders", "", {"machine_id": M, "path": "~/Content"}, 201),
     ("remove_folder", (P,), {}, "DELETE", f"/v1/powers/folders/{P}", "", None, 204),
