@@ -20,11 +20,13 @@ class Answered:
         answer (AnsweredAnswer):
         answered_at (datetime.datetime):
         id (UUID):
+        sent (bool):
     """
 
     answer: AnsweredAnswer
     answered_at: datetime.datetime
     id: UUID
+    sent: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -34,6 +36,8 @@ class Answered:
 
         id = str(self.id)
 
+        sent = self.sent
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -41,6 +45,7 @@ class Answered:
                 "answer": answer,
                 "answered_at": answered_at,
                 "id": id,
+                "sent": sent,
             }
         )
 
@@ -55,10 +60,13 @@ class Answered:
 
         id = UUID(d.pop("id"))
 
+        sent = d.pop("sent")
+
         answered = cls(
             answer=answer,
             answered_at=answered_at,
             id=id,
+            sent=sent,
         )
 
         answered.additional_properties = d

@@ -62,6 +62,159 @@ export type Answered = {
      * Id
      */
     id: string;
+    /**
+     * Sent
+     */
+    sent: boolean;
+};
+
+/**
+ * AutoTopUp
+ */
+export type AutoTopUp = {
+    /**
+     * Below Cents
+     */
+    below_cents: number | null;
+    /**
+     * Failed At
+     */
+    failed_at: string | null;
+    /**
+     * Failure
+     */
+    failure: string | null;
+    /**
+     * Last At
+     */
+    last_at: string | null;
+    /**
+     * Monthly Cap Cents
+     */
+    monthly_cap_cents: number | null;
+    /**
+     * On
+     */
+    on: boolean;
+    /**
+     * To Cents
+     */
+    to_cents: number | null;
+};
+
+/**
+ * AutoTopUpChange
+ */
+export type AutoTopUpChange = {
+    /**
+     * Below Cents
+     */
+    below_cents: number;
+    /**
+     * Monthly Cap Cents
+     */
+    monthly_cap_cents?: number | null;
+    /**
+     * On
+     */
+    on: boolean;
+    /**
+     * To Cents
+     */
+    to_cents: number;
+};
+
+/**
+ * AutoTopUpCheck
+ */
+export type AutoTopUpCheck = {
+    /**
+     * Charged Cents
+     */
+    charged_cents: number | null;
+    /**
+     * Reason
+     */
+    reason: string;
+};
+
+/**
+ * Billing
+ */
+export type Billing = {
+    auto_top_up: AutoTopUp;
+    /**
+     * Billing Email
+     */
+    billing_email: string | null;
+    card: Card | null;
+    credit: Credit;
+    /**
+     * Extra Machines
+     */
+    extra_machines: number;
+    /**
+     * Machines In Use
+     */
+    machines_in_use: number;
+    pending_plan: PlanView | null;
+    /**
+     * Pending Plan At
+     */
+    pending_plan_at: string | null;
+    plan: PlanView;
+    /**
+     * Seats Billed
+     */
+    seats_billed: number;
+    /**
+     * Seats In Use
+     */
+    seats_in_use: number;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Stripe Publishable Key
+     */
+    stripe_publishable_key: string;
+};
+
+/**
+ * Card
+ */
+export type Card = {
+    /**
+     * Brand
+     */
+    brand: string;
+    /**
+     * Exp Month
+     */
+    exp_month: number | null;
+    /**
+     * Exp Year
+     */
+    exp_year: number | null;
+    /**
+     * Last4
+     */
+    last4: string;
+};
+
+/**
+ * CardSetup
+ */
+export type CardSetup = {
+    /**
+     * Client Secret
+     */
+    client_secret: string;
+    /**
+     * Stripe Publishable Key
+     */
+    stripe_publishable_key: string;
 };
 
 /**
@@ -89,6 +242,44 @@ export type CreatedInvite = {
      * The link to send the person: shown once, never stored
      */
     link: string;
+};
+
+/**
+ * Credit
+ */
+export type Credit = {
+    /**
+     * Balance Cents
+     */
+    balance_cents: number;
+    /**
+     * Bought Cents
+     */
+    bought_cents: number;
+    /**
+     * Included Cents
+     */
+    included_cents: number;
+    /**
+     * Next Expiry At
+     */
+    next_expiry_at: string | null;
+    /**
+     * Next Expiry Cents
+     */
+    next_expiry_cents: number | null;
+    /**
+     * Period End
+     */
+    period_end: string;
+    /**
+     * Period Start
+     */
+    period_start: string;
+    /**
+     * Used Cents
+     */
+    used_cents: number;
 };
 
 /**
@@ -127,6 +318,20 @@ export type CrewFace = {
 };
 
 /**
+ * DaySpend
+ */
+export type DaySpend = {
+    /**
+     * Cents
+     */
+    cents: number;
+    /**
+     * Day
+     */
+    day: string;
+};
+
+/**
  * Face
  *
  * A super power as a machine shows it: its face, its name, what it is doing there.
@@ -160,6 +365,16 @@ export type Face = {
      * Status
      */
     status: string;
+};
+
+/**
+ * FundsIn
+ */
+export type FundsIn = {
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
 };
 
 /**
@@ -265,6 +480,58 @@ export type InviteView = {
 };
 
 /**
+ * Invoice
+ */
+export type Invoice = {
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Number
+     */
+    number: string | null;
+    /**
+     * Pdf Url
+     */
+    pdf_url: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * View Url
+     */
+    view_url: string | null;
+};
+
+/**
+ * InvoicePage
+ */
+export type InvoicePage = {
+    /**
+     * Has More
+     */
+    has_more: boolean;
+    /**
+     * Invoices
+     */
+    invoices: Array<Invoice>;
+};
+
+/**
  * JoinScreen
  */
 export type JoinScreen = {
@@ -320,6 +587,54 @@ export type Launch = {
      * Url
      */
     url: string;
+};
+
+/**
+ * LedgerEntry
+ */
+export type LedgerEntry = {
+    /**
+     * Cents
+     */
+    cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Entry
+     */
+    entry: string;
+    /**
+     * Expires At
+     */
+    expires_at: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Note
+     */
+    note: string | null;
+    /**
+     * Who
+     */
+    who: string | null;
+};
+
+/**
+ * LedgerPage
+ */
+export type LedgerPage = {
+    /**
+     * Entries
+     */
+    entries: Array<LedgerEntry>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -518,6 +833,24 @@ export type NewInvite = {
 };
 
 /**
+ * NextInvoice
+ */
+export type NextInvoice = {
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * At
+     */
+    at: string | null;
+    /**
+     * Prorated Cents
+     */
+    prorated_cents: number;
+};
+
+/**
  * OpenIn
  */
 export type OpenIn = {
@@ -525,6 +858,23 @@ export type OpenIn = {
      * Super Power
      */
     super_power?: string | null;
+};
+
+/**
+ * OrgCredit
+ *
+ * What any member sees of their org's billing (the Account page): the plan, when it renews, the credit.
+ */
+export type OrgCredit = {
+    credit: Credit;
+    /**
+     * Plan
+     */
+    plan: string;
+    /**
+     * Renews At
+     */
+    renews_at: string | null;
 };
 
 /**
@@ -563,6 +913,150 @@ export type OrgView = {
      * Seats Taken
      */
     seats_taken: number;
+};
+
+/**
+ * PaymentStart
+ *
+ * What the page needs to show Stripe's Payment Element and confirm the payment there.
+ */
+export type PaymentStart = {
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Client Secret
+     */
+    client_secret: string;
+    /**
+     * Payment Id
+     */
+    payment_id: string;
+    /**
+     * Stripe Publishable Key
+     */
+    stripe_publishable_key: string;
+};
+
+/**
+ * PlanChange
+ */
+export type PlanChange = {
+    /**
+     * Applies At
+     */
+    applies_at?: string | null;
+    /**
+     * Client Secret
+     */
+    client_secret?: string | null;
+    /**
+     * State
+     */
+    state: 'pay' | 'applying' | 'scheduled';
+    /**
+     * Stripe Publishable Key
+     */
+    stripe_publishable_key?: string | null;
+};
+
+/**
+ * PlanIn
+ */
+export type PlanIn = {
+    /**
+     * Plan Id
+     */
+    plan_id: string;
+};
+
+/**
+ * PlanPreview
+ */
+export type PlanPreview = {
+    /**
+     * Applies At
+     */
+    applies_at: string | null;
+    current: PlanView;
+    /**
+     * Due Now Cents
+     */
+    due_now_cents: number;
+    /**
+     * Kind
+     */
+    kind: 'subscribe' | 'upgrade' | 'downgrade';
+    /**
+     * Next Invoice At
+     */
+    next_invoice_at: string | null;
+    /**
+     * Next Invoice Cents
+     */
+    next_invoice_cents: number;
+    /**
+     * Seats
+     */
+    seats: number;
+    target: PlanView;
+};
+
+/**
+ * PlanView
+ */
+export type PlanView = {
+    /**
+     * Extra Machine Cents
+     */
+    extra_machine_cents: number | null;
+    /**
+     * Family
+     */
+    family: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Included Machines
+     */
+    included_machines: number | null;
+    /**
+     * Max Seats
+     */
+    max_seats: number | null;
+    /**
+     * Monthly Credit Cents
+     */
+    monthly_credit_cents: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * On Sale
+     */
+    on_sale: boolean;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
+ * Portal
+ */
+export type Portal = {
+    /**
+     * Url
+     */
+    url: string;
 };
 
 /**
@@ -859,6 +1353,54 @@ export type ThreadStart = {
      * Super Power
      */
     super_power?: string | null;
+};
+
+/**
+ * TopUp
+ */
+export type TopUp = {
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string | null;
+    /**
+     * Failure
+     */
+    failure: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * TopUpPage
+ */
+export type TopUpPage = {
+    /**
+     * Top Ups
+     */
+    top_ups: Array<TopUp>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -1490,6 +2032,340 @@ export type RenameOrgResponses = {
 
 export type RenameOrgResponse = RenameOrgResponses[keyof RenameOrgResponses];
 
+export type GetBillingData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing';
+};
+
+export type GetBillingResponses = {
+    /**
+     * Successful Response
+     */
+    200: Billing;
+};
+
+export type GetBillingResponse = GetBillingResponses[keyof GetBillingResponses];
+
+export type SetAutoTopUpData = {
+    body: AutoTopUpChange;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/auto-top-up';
+};
+
+export type SetAutoTopUpErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetAutoTopUpError = SetAutoTopUpErrors[keyof SetAutoTopUpErrors];
+
+export type SetAutoTopUpResponses = {
+    /**
+     * Successful Response
+     */
+    200: AutoTopUp;
+};
+
+export type SetAutoTopUpResponse = SetAutoTopUpResponses[keyof SetAutoTopUpResponses];
+
+export type CheckAutoTopUpData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/auto-top-up/check';
+};
+
+export type CheckAutoTopUpResponses = {
+    /**
+     * Successful Response
+     */
+    200: AutoTopUpCheck;
+};
+
+export type CheckAutoTopUpResponse = CheckAutoTopUpResponses[keyof CheckAutoTopUpResponses];
+
+export type StartCardSetupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/card';
+};
+
+export type StartCardSetupResponses = {
+    /**
+     * Successful Response
+     */
+    200: CardSetup;
+};
+
+export type StartCardSetupResponse = StartCardSetupResponses[keyof StartCardSetupResponses];
+
+export type ListInvoicesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * After
+         */
+        after?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/v1/org/billing/invoices';
+};
+
+export type ListInvoicesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListInvoicesError = ListInvoicesErrors[keyof ListInvoicesErrors];
+
+export type ListInvoicesResponses = {
+    /**
+     * Successful Response
+     */
+    200: InvoicePage;
+};
+
+export type ListInvoicesResponse = ListInvoicesResponses[keyof ListInvoicesResponses];
+
+export type ListLedgerData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/org/billing/ledger';
+};
+
+export type ListLedgerErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListLedgerError = ListLedgerErrors[keyof ListLedgerErrors];
+
+export type ListLedgerResponses = {
+    /**
+     * Successful Response
+     */
+    200: LedgerPage;
+};
+
+export type ListLedgerResponse = ListLedgerResponses[keyof ListLedgerResponses];
+
+export type NextInvoiceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/next-invoice';
+};
+
+export type NextInvoiceResponses = {
+    /**
+     * Response Nextinvoice
+     *
+     * Successful Response
+     */
+    200: NextInvoice | null;
+};
+
+export type NextInvoiceResponse = NextInvoiceResponses[keyof NextInvoiceResponses];
+
+export type ChangePlanData = {
+    body: PlanIn;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/plan';
+};
+
+export type ChangePlanErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangePlanError = ChangePlanErrors[keyof ChangePlanErrors];
+
+export type ChangePlanResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlanChange;
+};
+
+export type ChangePlanResponse = ChangePlanResponses[keyof ChangePlanResponses];
+
+export type PreviewPlanChangeData = {
+    body: PlanIn;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/plan/preview';
+};
+
+export type PreviewPlanChangeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PreviewPlanChangeError = PreviewPlanChangeErrors[keyof PreviewPlanChangeErrors];
+
+export type PreviewPlanChangeResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlanPreview;
+};
+
+export type PreviewPlanChangeResponse = PreviewPlanChangeResponses[keyof PreviewPlanChangeResponses];
+
+export type OpenBillingPortalData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/portal';
+};
+
+export type OpenBillingPortalResponses = {
+    /**
+     * Successful Response
+     */
+    200: Portal;
+};
+
+export type OpenBillingPortalResponse = OpenBillingPortalResponses[keyof OpenBillingPortalResponses];
+
+export type SpendByDayData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/spend';
+};
+
+export type SpendByDayResponses = {
+    /**
+     * Response Spendbyday
+     *
+     * Successful Response
+     */
+    200: Array<DaySpend>;
+};
+
+export type SpendByDayResponse = SpendByDayResponses[keyof SpendByDayResponses];
+
+export type SyncBillingData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/sync';
+};
+
+export type SyncBillingResponses = {
+    /**
+     * Successful Response
+     */
+    200: Billing;
+};
+
+export type SyncBillingResponse = SyncBillingResponses[keyof SyncBillingResponses];
+
+export type ListTopUpsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/org/billing/top-ups';
+};
+
+export type ListTopUpsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListTopUpsError = ListTopUpsErrors[keyof ListTopUpsErrors];
+
+export type ListTopUpsResponses = {
+    /**
+     * Successful Response
+     */
+    200: TopUpPage;
+};
+
+export type ListTopUpsResponse = ListTopUpsResponses[keyof ListTopUpsResponses];
+
+export type AddFundsData = {
+    body: FundsIn;
+    path?: never;
+    query?: never;
+    url: '/v1/org/billing/top-ups';
+};
+
+export type AddFundsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddFundsError = AddFundsErrors[keyof AddFundsErrors];
+
+export type AddFundsResponses = {
+    /**
+     * Successful Response
+     */
+    201: PaymentStart;
+};
+
+export type AddFundsResponse = AddFundsResponses[keyof AddFundsResponses];
+
+export type OrgCreditData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org/credit';
+};
+
+export type OrgCreditResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrgCredit;
+};
+
+export type OrgCreditResponse = OrgCreditResponses[keyof OrgCreditResponses];
+
 export type ListInvitesData = {
     body?: never;
     path?: never;
@@ -1640,6 +2516,24 @@ export type UpdateMemberResponses = {
 };
 
 export type UpdateMemberResponse = UpdateMemberResponses[keyof UpdateMemberResponses];
+
+export type ListPlansData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/plans';
+};
+
+export type ListPlansResponses = {
+    /**
+     * Response Listplans
+     *
+     * Successful Response
+     */
+    200: Array<PlanView>;
+};
+
+export type ListPlansResponse = ListPlansResponses[keyof ListPlansResponses];
 
 export type RefreshSessionData = {
     body?: never;

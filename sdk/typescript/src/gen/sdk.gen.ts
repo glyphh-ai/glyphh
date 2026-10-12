@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetBillingData, GetBillingResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -211,6 +211,137 @@ export const renameOrg = <ThrowOnError extends boolean = false>(options: Options
 });
 
 /**
+ * Get Billing
+ *
+ * The Billing page in one read (org admins).
+ */
+export const getBilling = <ThrowOnError extends boolean = false>(options?: Options<GetBillingData, ThrowOnError>): RequestResult<GetBillingResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetBillingResponses, unknown, ThrowOnError>({ url: '/v1/org/billing', ...options });
+
+/**
+ * Set Auto Top Up
+ *
+ * Turn auto top-up on or off: the trigger, the target, and an optional monthly cap.
+ */
+export const setAutoTopUp = <ThrowOnError extends boolean = false>(options: Options<SetAutoTopUpData, ThrowOnError>): RequestResult<SetAutoTopUpResponses, SetAutoTopUpErrors, ThrowOnError> => (options.client ?? client).put<SetAutoTopUpResponses, SetAutoTopUpErrors, ThrowOnError>({
+    url: '/v1/org/billing/auto-top-up',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Check Auto Top Up
+ *
+ * Reload now if the balance is under the trigger.
+ */
+export const checkAutoTopUp = <ThrowOnError extends boolean = false>(options?: Options<CheckAutoTopUpData, ThrowOnError>): RequestResult<CheckAutoTopUpResponses, unknown, ThrowOnError> => (options?.client ?? client).post<CheckAutoTopUpResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/auto-top-up/check', ...options });
+
+/**
+ * Start Card Setup
+ *
+ * Save a new card in the page, through Stripe's Payment Element.
+ */
+export const startCardSetup = <ThrowOnError extends boolean = false>(options?: Options<StartCardSetupData, ThrowOnError>): RequestResult<StartCardSetupResponses, unknown, ThrowOnError> => (options?.client ?? client).post<StartCardSetupResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/card', ...options });
+
+/**
+ * List Invoices
+ *
+ * Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).
+ */
+export const listInvoices = <ThrowOnError extends boolean = false>(options?: Options<ListInvoicesData, ThrowOnError>): RequestResult<ListInvoicesResponses, ListInvoicesErrors, ThrowOnError> => (options?.client ?? client).get<ListInvoicesResponses, ListInvoicesErrors, ThrowOnError>({ url: '/v1/org/billing/invoices', ...options });
+
+/**
+ * List Ledger
+ */
+export const listLedger = <ThrowOnError extends boolean = false>(options?: Options<ListLedgerData, ThrowOnError>): RequestResult<ListLedgerResponses, ListLedgerErrors, ThrowOnError> => (options?.client ?? client).get<ListLedgerResponses, ListLedgerErrors, ThrowOnError>({ url: '/v1/org/billing/ledger', ...options });
+
+/**
+ * Next Invoice
+ */
+export const nextInvoice = <ThrowOnError extends boolean = false>(options?: Options<NextInvoiceData, ThrowOnError>): RequestResult<NextInvoiceResponses, unknown, ThrowOnError> => (options?.client ?? client).get<NextInvoiceResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/next-invoice', ...options });
+
+/**
+ * Change Plan
+ *
+ * Switch plan: pay in the page (from Free), applying (an upgrade, once Stripe confirms) or scheduled (a
+ * downgrade, at the period's end).
+ */
+export const changePlan = <ThrowOnError extends boolean = false>(options: Options<ChangePlanData, ThrowOnError>): RequestResult<ChangePlanResponses, ChangePlanErrors, ThrowOnError> => (options.client ?? client).post<ChangePlanResponses, ChangePlanErrors, ThrowOnError>({
+    url: '/v1/org/billing/plan',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Preview Plan
+ *
+ * What a switch would charge now and on the next invoice, before anything is charged.
+ */
+export const previewPlanChange = <ThrowOnError extends boolean = false>(options: Options<PreviewPlanChangeData, ThrowOnError>): RequestResult<PreviewPlanChangeResponses, PreviewPlanChangeErrors, ThrowOnError> => (options.client ?? client).post<PreviewPlanChangeResponses, PreviewPlanChangeErrors, ThrowOnError>({
+    url: '/v1/org/billing/plan/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Open Portal
+ *
+ * A link into Stripe's portal (payment methods, invoices, cancelling), back to Billing after.
+ */
+export const openBillingPortal = <ThrowOnError extends boolean = false>(options?: Options<OpenBillingPortalData, ThrowOnError>): RequestResult<OpenBillingPortalResponses, unknown, ThrowOnError> => (options?.client ?? client).post<OpenBillingPortalResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/portal', ...options });
+
+/**
+ * Spend By Day
+ *
+ * This period's spend, day by day.
+ */
+export const spendByDay = <ThrowOnError extends boolean = false>(options?: Options<SpendByDayData, ThrowOnError>): RequestResult<SpendByDayResponses, unknown, ThrowOnError> => (options?.client ?? client).get<SpendByDayResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/spend', ...options });
+
+/**
+ * Sync Billing
+ *
+ * Ask Stripe directly what its webhooks would have said, then read the page again.
+ */
+export const syncBilling = <ThrowOnError extends boolean = false>(options?: Options<SyncBillingData, ThrowOnError>): RequestResult<SyncBillingResponses, unknown, ThrowOnError> => (options?.client ?? client).post<SyncBillingResponses, unknown, ThrowOnError>({ url: '/v1/org/billing/sync', ...options });
+
+/**
+ * List Top Ups
+ *
+ * Each top-up, newest first, with when its credit expires.
+ */
+export const listTopUps = <ThrowOnError extends boolean = false>(options?: Options<ListTopUpsData, ThrowOnError>): RequestResult<ListTopUpsResponses, ListTopUpsErrors, ThrowOnError> => (options?.client ?? client).get<ListTopUpsResponses, ListTopUpsErrors, ThrowOnError>({ url: '/v1/org/billing/top-ups', ...options });
+
+/**
+ * Add Funds
+ *
+ * Start adding credit ($5 to $10,000): the page pays it in Stripe's Payment Element; credit lands when Stripe
+ * confirms.
+ */
+export const addFunds = <ThrowOnError extends boolean = false>(options: Options<AddFundsData, ThrowOnError>): RequestResult<AddFundsResponses, AddFundsErrors, ThrowOnError> => (options.client ?? client).post<AddFundsResponses, AddFundsErrors, ThrowOnError>({
+    url: '/v1/org/billing/top-ups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Org Credit
+ *
+ * My org's plan, when it renews, and its credit this period: any member may read it.
+ */
+export const orgCredit = <ThrowOnError extends boolean = false>(options?: Options<OrgCreditData, ThrowOnError>): RequestResult<OrgCreditResponses, unknown, ThrowOnError> => (options?.client ?? client).get<OrgCreditResponses, unknown, ThrowOnError>({ url: '/v1/org/credit', ...options });
+
+/**
  * List Invites
  */
 export const listInvites = <ThrowOnError extends boolean = false>(options?: Options<ListInvitesData, ThrowOnError>): RequestResult<ListInvitesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListInvitesResponses, unknown, ThrowOnError>({ url: '/v1/org/invites', ...options });
@@ -255,6 +386,13 @@ export const updateMember = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * List Plans
+ *
+ * The plans on sale now, each its current version.
+ */
+export const listPlans = <ThrowOnError extends boolean = false>(options?: Options<ListPlansData, ThrowOnError>): RequestResult<ListPlansResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListPlansResponses, unknown, ThrowOnError>({ url: '/v1/plans', ...options });
+
+/**
  * Refresh
  */
 export const refreshSession = <ThrowOnError extends boolean = false>(options?: Options<RefreshSessionData, ThrowOnError>): RequestResult<RefreshSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshSessionResponses, unknown, ThrowOnError>({ url: '/v1/session/refresh', ...options });
@@ -267,7 +405,7 @@ export const signOut = <ThrowOnError extends boolean = false>(options?: Options<
 /**
  * Sign Out Everywhere
  *
- * Every token of mine stops at once: this browser and every other, every org, every connected host.
+ * My platform session ends in every browser and org at once; connected AI hosts stay connected.
  */
 export const signOutEverywhere = <ThrowOnError extends boolean = false>(options?: Options<SignOutEverywhereData, ThrowOnError>): RequestResult<SignOutEverywhereResponses, unknown, ThrowOnError> => (options?.client ?? client).post<SignOutEverywhereResponses, unknown, ThrowOnError>({ url: '/v1/session/sign-out-everywhere', ...options });
 

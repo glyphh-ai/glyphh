@@ -43,7 +43,7 @@ DETAIL = {
     "machine": {"id": M, "name": "studio-mac", "online": False, "last_seen_at": None},
     "questions": [QUESTION],
 }
-ANSWERED = {"id": Q, "answer": "allow", "answered_at": "2026-10-12T12:01:00Z"}
+ANSWERED = {"id": Q, "answer": "allow", "answered_at": "2026-10-12T12:01:00Z", "sent": True}
 
 
 def answering(body: object, seen: list, status: int = 200) -> httpx.MockTransport:

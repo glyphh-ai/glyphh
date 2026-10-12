@@ -82,6 +82,7 @@ class Answered:
     id: str
     answer: str
     answered_at: datetime
+    sent: bool
 
 
 def _when(value: object) -> datetime | None:
@@ -146,4 +147,4 @@ def question_page_of(m: _QuestionPage) -> QuestionPage:
 
 
 def answered_of(m: _Answered) -> Answered:
-    return Answered(id=str(m.id), answer=str(m.answer.value), answered_at=m.answered_at)
+    return Answered(id=str(m.id), answer=str(m.answer.value), answered_at=m.answered_at, sent=m.sent)

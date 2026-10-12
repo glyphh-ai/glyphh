@@ -3,6 +3,7 @@ from uuid import UUID
 
 import httpx
 
+from glyphh._billing import AsyncBilling, Billing
 from glyphh._calls import (
     ACCEPT_INVITE,
     CHANGE_ME,
@@ -59,6 +60,7 @@ class Glyphh:
         self.machines = Machines(self._run)
         self.threads = Threads(self._run)
         self.needs_you = NeedsYou(self._run)
+        self.billing = Billing(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -79,7 +81,7 @@ class Glyphh:
         return self._run(CHANGE_ME, body=_profile(first_name, last_name))  # type: ignore[return-value]
 
     def sign_out_everywhere(self) -> None:
-        """Every token of mine stops at once, in every browser, org and connected host."""
+        """Sign me out of the platform everywhere: every browser and org; connected AI hosts stay connected."""
         self._run(SIGN_OUT_EVERYWHERE)
 
     def list_my_orgs(self) -> list[MeOrg]:
@@ -128,6 +130,7 @@ class AsyncGlyphh:
         self.machines = AsyncMachines(self._run)
         self.threads = AsyncThreads(self._run)
         self.needs_you = AsyncNeedsYou(self._run)
+        self.billing = AsyncBilling(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

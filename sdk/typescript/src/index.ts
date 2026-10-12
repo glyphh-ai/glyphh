@@ -4,13 +4,18 @@ import {
   signOutEverywhere,
 } from "./gen/sdk.gen.js";
 import type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange } from "./gen/types.gen.js";
+import { BillingApi } from "./billing.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { GlyphhError, MachinesApi, NeedsYouApi, OrgApi, ThreadsApi };
+export { BillingApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, ThreadsApi };
+export type {
+  AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
+  OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
+} from "./billing.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -43,6 +48,8 @@ export class Glyphh {
   readonly threads: ThreadsApi;
   /** The questions my super powers are waiting on. */
   readonly needsYou: NeedsYouApi;
+  /** My org's plans, credit and billing. */
+  readonly billing: BillingApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -55,6 +62,7 @@ export class Glyphh {
     this.machines = new MachinesApi(this.#client);
     this.threads = new ThreadsApi(this.#client);
     this.needsYou = new NeedsYouApi(this.#client);
+    this.billing = new BillingApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */
@@ -72,7 +80,7 @@ export class Glyphh {
     return unwrap(await changeMe({ client: this.#client, body: change }));
   }
 
-  /** Sign me out everywhere: every token of mine stops at once, in every browser, org and connected host. */
+  /** Sign me out of the platform everywhere: every browser and org; connected AI hosts stay connected. */
   async signOutEverywhere(): Promise<void> {
     unwrap(await signOutEverywhere({ client: this.#client }));
   }

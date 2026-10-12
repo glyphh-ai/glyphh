@@ -77,14 +77,322 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "answer",
-          "answered_at"
+          "answered_at",
+          "sent"
         ],
         "title": "Answered",
+        "type": "object"
+      },
+      "AutoTopUp": {
+        "properties": {
+          "below_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Below Cents"
+          },
+          "failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed At"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          },
+          "monthly_cap_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cap Cents"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          },
+          "to_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Cents"
+          }
+        },
+        "required": [
+          "on",
+          "below_cents",
+          "to_cents",
+          "monthly_cap_cents",
+          "last_at",
+          "failed_at",
+          "failure"
+        ],
+        "title": "AutoTopUp",
+        "type": "object"
+      },
+      "AutoTopUpChange": {
+        "properties": {
+          "below_cents": {
+            "title": "Below Cents",
+            "type": "integer"
+          },
+          "monthly_cap_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Cap Cents"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          },
+          "to_cents": {
+            "title": "To Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "on",
+          "below_cents",
+          "to_cents"
+        ],
+        "title": "AutoTopUpChange",
+        "type": "object"
+      },
+      "AutoTopUpCheck": {
+        "properties": {
+          "charged_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charged Cents"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "charged_cents",
+          "reason"
+        ],
+        "title": "AutoTopUpCheck",
+        "type": "object"
+      },
+      "Billing": {
+        "properties": {
+          "auto_top_up": {
+            "$ref": "#/components/schemas/AutoTopUp"
+          },
+          "billing_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Email"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Card"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credit": {
+            "$ref": "#/components/schemas/Credit"
+          },
+          "extra_machines": {
+            "title": "Extra Machines",
+            "type": "integer"
+          },
+          "machines_in_use": {
+            "title": "Machines In Use",
+            "type": "integer"
+          },
+          "pending_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_plan_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Plan At"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanView"
+          },
+          "seats_billed": {
+            "title": "Seats Billed",
+            "type": "integer"
+          },
+          "seats_in_use": {
+            "title": "Seats In Use",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stripe_publishable_key": {
+            "title": "Stripe Publishable Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "seats_in_use",
+          "seats_billed",
+          "machines_in_use",
+          "extra_machines",
+          "card",
+          "billing_email",
+          "pending_plan",
+          "pending_plan_at",
+          "auto_top_up",
+          "credit",
+          "stripe_publishable_key"
+        ],
+        "title": "Billing",
+        "type": "object"
+      },
+      "Card": {
+        "properties": {
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "exp_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Month"
+          },
+          "exp_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Year"
+          },
+          "last4": {
+            "title": "Last4",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand",
+          "last4",
+          "exp_month",
+          "exp_year"
+        ],
+        "title": "Card",
+        "type": "object"
+      },
+      "CardSetup": {
+        "properties": {
+          "client_secret": {
+            "title": "Client Secret",
+            "type": "string"
+          },
+          "stripe_publishable_key": {
+            "title": "Stripe Publishable Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_secret",
+          "stripe_publishable_key"
+        ],
+        "title": "CardSetup",
         "type": "object"
       },
       "CodeIn": {
@@ -121,6 +429,71 @@
           "link"
         ],
         "title": "CreatedInvite",
+        "type": "object"
+      },
+      "Credit": {
+        "properties": {
+          "balance_cents": {
+            "title": "Balance Cents",
+            "type": "integer"
+          },
+          "bought_cents": {
+            "title": "Bought Cents",
+            "type": "integer"
+          },
+          "included_cents": {
+            "title": "Included Cents",
+            "type": "integer"
+          },
+          "next_expiry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry At"
+          },
+          "next_expiry_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry Cents"
+          },
+          "period_end": {
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "used_cents": {
+            "title": "Used Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "included_cents",
+          "used_cents",
+          "bought_cents",
+          "balance_cents",
+          "next_expiry_cents",
+          "next_expiry_at"
+        ],
+        "title": "Credit",
         "type": "object"
       },
       "CrewCount": {
@@ -175,6 +548,25 @@
           "avatar_color"
         ],
         "title": "CrewFace",
+        "type": "object"
+      },
+      "DaySpend": {
+        "properties": {
+          "cents": {
+            "title": "Cents",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "cents"
+        ],
+        "title": "DaySpend",
         "type": "object"
       },
       "Face": {
@@ -235,6 +627,19 @@
           "last_active_at"
         ],
         "title": "Face",
+        "type": "object"
+      },
+      "FundsIn": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_cents"
+        ],
+        "title": "FundsIn",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -379,6 +784,104 @@
         "title": "InviteView",
         "type": "object"
       },
+      "Invoice": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "pdf_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Url"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "view_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Url"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "created_at",
+          "amount_cents",
+          "status",
+          "description",
+          "view_url",
+          "pdf_url"
+        ],
+        "title": "Invoice",
+        "type": "object"
+      },
+      "InvoicePage": {
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "invoices": {
+            "items": {
+              "$ref": "#/components/schemas/Invoice"
+            },
+            "title": "Invoices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "invoices",
+          "has_more"
+        ],
+        "title": "InvoicePage",
+        "type": "object"
+      },
       "JoinScreen": {
         "properties": {
           "email": {
@@ -474,6 +977,94 @@
           "expires_at"
         ],
         "title": "Launch",
+        "type": "object"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "cents": {
+            "title": "Cents",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "who": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Who"
+          }
+        },
+        "required": [
+          "id",
+          "entry",
+          "cents",
+          "note",
+          "who",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LedgerPage": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ],
+        "title": "LedgerPage",
         "type": "object"
       },
       "MachineCard": {
@@ -807,6 +1398,37 @@
         "title": "NewInvite",
         "type": "object"
       },
+      "NextInvoice": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "prorated_cents": {
+            "title": "Prorated Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_cents",
+          "at",
+          "prorated_cents"
+        ],
+        "title": "NextInvoice",
+        "type": "object"
+      },
       "OpenIn": {
         "properties": {
           "super_power": {
@@ -823,6 +1445,37 @@
           }
         },
         "title": "OpenIn",
+        "type": "object"
+      },
+      "OrgCredit": {
+        "description": "What any member sees of their org's billing (the Account page): the plan, when it renews, the credit.",
+        "properties": {
+          "credit": {
+            "$ref": "#/components/schemas/Credit"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "renews_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renews At"
+          }
+        },
+        "required": [
+          "plan",
+          "renews_at",
+          "credit"
+        ],
+        "title": "OrgCredit",
         "type": "object"
       },
       "OrgIn": {
@@ -879,6 +1532,262 @@
           "max_seats"
         ],
         "title": "OrgView",
+        "type": "object"
+      },
+      "PaymentStart": {
+        "description": "What the page needs to show Stripe's Payment Element and confirm the payment there.",
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "client_secret": {
+            "title": "Client Secret",
+            "type": "string"
+          },
+          "payment_id": {
+            "format": "uuid",
+            "title": "Payment Id",
+            "type": "string"
+          },
+          "stripe_publishable_key": {
+            "title": "Stripe Publishable Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_id",
+          "amount_cents",
+          "client_secret",
+          "stripe_publishable_key"
+        ],
+        "title": "PaymentStart",
+        "type": "object"
+      },
+      "PlanChange": {
+        "properties": {
+          "applies_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applies At"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          },
+          "state": {
+            "enum": [
+              "pay",
+              "applying",
+              "scheduled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "stripe_publishable_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stripe Publishable Key"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "PlanChange",
+        "type": "object"
+      },
+      "PlanIn": {
+        "properties": {
+          "plan_id": {
+            "format": "uuid",
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "title": "PlanIn",
+        "type": "object"
+      },
+      "PlanPreview": {
+        "properties": {
+          "applies_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applies At"
+          },
+          "current": {
+            "$ref": "#/components/schemas/PlanView"
+          },
+          "due_now_cents": {
+            "title": "Due Now Cents",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "subscribe",
+              "upgrade",
+              "downgrade"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "next_invoice_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Invoice At"
+          },
+          "next_invoice_cents": {
+            "title": "Next Invoice Cents",
+            "type": "integer"
+          },
+          "seats": {
+            "title": "Seats",
+            "type": "integer"
+          },
+          "target": {
+            "$ref": "#/components/schemas/PlanView"
+          }
+        },
+        "required": [
+          "kind",
+          "current",
+          "target",
+          "seats",
+          "due_now_cents",
+          "next_invoice_cents",
+          "next_invoice_at",
+          "applies_at"
+        ],
+        "title": "PlanPreview",
+        "type": "object"
+      },
+      "PlanView": {
+        "properties": {
+          "extra_machine_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Machine Cents"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "included_machines": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Machines"
+          },
+          "max_seats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seats"
+          },
+          "monthly_credit_cents": {
+            "title": "Monthly Credit Cents",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on_sale": {
+            "title": "On Sale",
+            "type": "boolean"
+          },
+          "price_cents": {
+            "title": "Price Cents",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "family",
+          "version",
+          "name",
+          "price_cents",
+          "max_seats",
+          "monthly_credit_cents",
+          "included_machines",
+          "extra_machine_cents",
+          "on_sale"
+        ],
+        "title": "PlanView",
+        "type": "object"
+      },
+      "Portal": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "Portal",
         "type": "object"
       },
       "ProfileChange": {
@@ -1432,6 +2341,87 @@
           "prompt"
         ],
         "title": "ThreadStart",
+        "type": "object"
+      },
+      "TopUp": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "amount_cents",
+          "status",
+          "failure",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "TopUp",
+        "type": "object"
+      },
+      "TopUpPage": {
+        "properties": {
+          "top_ups": {
+            "items": {
+              "$ref": "#/components/schemas/TopUp"
+            },
+            "title": "Top Ups",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "top_ups",
+          "total"
+        ],
+        "title": "TopUpPage",
         "type": "object"
       },
       "ValidationError": {
@@ -2457,6 +3447,534 @@
         ]
       }
     },
+    "/v1/org/billing": {
+      "get": {
+        "description": "The Billing page in one read (org admins).",
+        "operationId": "getBilling",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Billing"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Billing",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/auto-top-up": {
+      "put": {
+        "description": "Turn auto top-up on or off: the trigger, the target, and an optional monthly cap.",
+        "operationId": "setAutoTopUp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoTopUpChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoTopUp"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Auto Top Up",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/auto-top-up/check": {
+      "post": {
+        "description": "Reload now if the balance is under the trigger.",
+        "operationId": "checkAutoTopUp",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoTopUpCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Check Auto Top Up",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/card": {
+      "post": {
+        "description": "Save a new card in the page, through Stripe's Payment Element.",
+        "operationId": "startCardSetup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardSetup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start Card Setup",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/invoices": {
+      "get": {
+        "description": "Stripe's invoices, newest first, a page at a time by cursor (`after`: the last invoice's id).",
+        "operationId": "listInvoices",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invoices",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/ledger": {
+      "get": {
+        "operationId": "listLedger",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Ledger",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/next-invoice": {
+      "get": {
+        "operationId": "nextInvoice",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/NextInvoice"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Nextinvoice"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Next Invoice",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/plan": {
+      "post": {
+        "description": "Switch plan: pay in the page (from Free), applying (an upgrade, once Stripe confirms) or scheduled (a\ndowngrade, at the period's end).",
+        "operationId": "changePlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChange"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/plan/preview": {
+      "post": {
+        "description": "What a switch would charge now and on the next invoice, before anything is charged.",
+        "operationId": "previewPlanChange",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/portal": {
+      "post": {
+        "description": "A link into Stripe's portal (payment methods, invoices, cancelling), back to Billing after.",
+        "operationId": "openBillingPortal",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Portal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Open Portal",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/spend": {
+      "get": {
+        "description": "This period's spend, day by day.",
+        "operationId": "spendByDay",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DaySpend"
+                  },
+                  "title": "Response Spendbyday",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Spend By Day",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/sync": {
+      "post": {
+        "description": "Ask Stripe directly what its webhooks would have said, then read the page again.",
+        "operationId": "syncBilling",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Billing"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Billing",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/billing/top-ups": {
+      "get": {
+        "description": "Each top-up, newest first, with when its credit expires.",
+        "operationId": "listTopUps",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopUpPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Top Ups",
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "description": "Start adding credit ($5 to $10,000): the page pays it in Stripe's Payment Element; credit lands when Stripe\nconfirms.",
+        "operationId": "addFunds",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Funds",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/org/credit": {
+      "get": {
+        "description": "My org's plan, when it renews, and its credit this period: any member may read it.",
+        "operationId": "orgCredit",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCredit"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Org Credit",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/org/invites": {
       "get": {
         "operationId": "listInvites",
@@ -2669,6 +4187,32 @@
         ]
       }
     },
+    "/v1/plans": {
+      "get": {
+        "description": "The plans on sale now, each its current version.",
+        "operationId": "listPlans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanView"
+                  },
+                  "title": "Response Listplans",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Plans",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/session/refresh": {
       "post": {
         "operationId": "refreshSession",
@@ -2706,7 +4250,7 @@
     },
     "/v1/session/sign-out-everywhere": {
       "post": {
-        "description": "Every token of mine stops at once: this browser and every other, every org, every connected host.",
+        "description": "My platform session ends in every browser and org at once; connected AI hosts stay connected.",
         "operationId": "signOutEverywhere",
         "responses": {
           "204": {

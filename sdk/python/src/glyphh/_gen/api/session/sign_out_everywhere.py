@@ -43,7 +43,7 @@ def sync_detailed(
 ) -> Response[Any]:
     """Sign Out Everywhere
 
-     Every token of mine stops at once: this browser and every other, every org, every connected host.
+     My platform session ends in every browser and org at once; connected AI hosts stay connected.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -68,7 +68,7 @@ async def asyncio_detailed(
 ) -> Response[Any]:
     """Sign Out Everywhere
 
-     Every token of mine stops at once: this browser and every other, every org, every connected host.
+     My platform session ends in every browser and org at once; connected AI hosts stay connected.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
