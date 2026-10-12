@@ -292,11 +292,11 @@ Still requested (see Requests, below): LogoTile, a Button icon slot, a TextInput
 | Billing | Card, Badge, Button, Dialog, TextInput, Switch, Table, Alert, Spinner | Stripe Payment Element, bars-by-day chart, Pagination |
 | Plugin cards | Card, Avatar, StatusDot, Button, ProgressSteps, RadioGroup, Alert, Skeleton | LogoTile, bars-by-day chart, Pagination |
 | Powers | Tabs, Card, Badge, Dialog, TextInput, Button, Alert, Spinner, EmptyState | ConnectFrame, LogoTile, SegmentedControl, Pagination |
-| Super power editor | Avatar, Select, TextInput, TextArea, Slider, Button, Dialog, Tabs, Menu | a power-map canvas (not requested yet), Pagination |
-| Task flow | Tabs, Button, Select, TextInput, Switch, Dialog | the editable flow canvas (React Flow, `@xyflow/react`), Pagination |
+| Super power editor | Avatar, Select, TextInput, TextArea, Slider, Button, Dialog, Tabs, Menu | PowerMap, Pagination |
+| Task flow | Tabs, Button, Select, TextInput, Switch, Dialog | FlowCanvas, Pagination |
 | Custom powers, Marketplace | Tabs, Card, Badge, Button, Menu, Dialog, TextInput, TextArea, EmptyState | Pagination, LogoTile |
 
-The power map and the editable flow canvas are new. They need their own component requests before the design agent styles them.
+The power map and the editable flow canvas are new: PowerMap and FlowCanvas, under Requests.
 
 ## Working together
 
@@ -348,3 +348,9 @@ From the design agent, after billing, Powers (connections, tool permissions) and
 - **Stripe's Payment Element, themed:** checkout inside the page that takes the tokens for its colours, font and radius, and follows light and dark. Embedded Checkout (server-old's choice) can only set a background and a button colour, so it can't match.
 - **ConnectFrame:** a dialog that holds Pipedream's sign-in page in a frame, falling back to "Open the sign-in" in its own window when a provider refuses frames, then "Checking with Pipedream…" and done or error with a trace id.
 - **Chart: bars by day:** one bar a day across the period, past days filled, today marked, days to come outlined; a title per bar on hover. The same component on the Billing page and in the usage card, at every width.
+
+From the design agent, for the editors (`SuperPowerEdit`, `TaskCanvas` and their light boards):
+
+- **PowerMap:** the top of the super power editor. The super power's cat in its ring at the centre, and around it one card per power it holds (folders, connections, models, skills, tasks, plugins, browsers, other super powers), each a LogoTile or kind icon, its name and a coloured left edge for its kind, joined to the centre by a dashed line that flows while the super power runs (still when motion is off). Desktop: a dotted ground you can pan, cards you drag, ⌘-scroll to zoom, and four 44 px controls: Zoom in, Zoom out, Fit, Reset the layout. Phone: no canvas; the cat in its ring with the powers as chips under it. States: empty (only the cat, with "Add a power"), a power disabled by a limit (dimmed, with why), loading (skeleton). Saving keeps each card's position. Built on `@xyflow/react` with the same node and edge look as FlowCanvas.
+- **FlowCanvas:** a task's Flow tab, React Flow (`@xyflow/react`) made editable. Node kinds, each with its label, kind icon and kind colour from the tokens: Trigger, Agent (a slot), Model, Connection, Decide (yes and no exits), Memory, Skill, Checkpoint, Output. A node shows its title and a one-line detail (`gmail · find-email → emails`), an in handle on top and out handles below. Edges are curves in the accent; a Decide's "no" edge is muted and each exit is labelled. Desktop: pan, zoom, drag nodes, connect handles, a minimap bottom left, zoom and Fit controls bottom right, "+ Add step" and an inspector panel for the chosen node. Phone: the flow read top to bottom as a list, tap a step to edit it. States: chosen node, a broken step (danger edge and its error), an unfilled slot, empty ("Add the first step"), read-only while a run is live. Every edit is saved, never run, from the web.
+
