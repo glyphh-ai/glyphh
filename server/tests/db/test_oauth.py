@@ -72,3 +72,20 @@ async def test_removing_a_host_removes_its_codes_and_tokens(engine: AsyncEngine)
             await conn.execute(select(func.count()).select_from(Token).where(Token.access_hash == "a-host"))
         ).scalar()
     assert (codes, tokens) == (0, 0)
+
+
+async def test_the_platform_signs_in_from_every_address_it_is_opened_at(engine: AsyncEngine) -> None:
+    from glyphh_server.config import Settings
+    from glyphh_server.ops.auth.platform import PLATFORM_CLIENT_ID, seed_platform_client
+
+    both = Settings(
+        public_url="https://glyphh.ngrok.test/", platform_also=" http://localhost:5173/ , "
+    ).platform_origins
+    assert both == ["https://glyphh.ngrok.test", "http://localhost:5173"]
+    async with engine.begin() as conn:
+        await seed_platform_client(conn, both)
+        found = (
+            await conn.execute(select(OAuthClient.redirect_uris).where(OAuthClient.client_id == PLATFORM_CLIENT_ID))
+        ).scalar_one()
+        assert found == ["https://glyphh.ngrok.test/signed-in", "http://localhost:5173/signed-in"]
+        await seed_platform_client(conn, Settings().platform_origins)

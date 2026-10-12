@@ -19,9 +19,10 @@ PLATFORM_CLIENT_ID: str = "glyphh-platform"
 SIGNED_IN_PATH: str = "/signed-in"
 
 
-async def seed_platform_client(conn: AsyncConnection, platform: str) -> None:
-    """Register the platform once, at its own address; re-registered on every boot so the address follows settings."""
-    redirect = [f"{platform}{SIGNED_IN_PATH}"]
+async def seed_platform_client(conn: AsyncConnection, origins: list[str]) -> None:
+    """Register the platform once, at every address it is opened at; re-registered on every boot so the
+    addresses follow settings."""
+    redirect = [f"{origin}{SIGNED_IN_PATH}" for origin in origins]
     await conn.execute(
         insert(OAuthClient)
         .values(client_id=PLATFORM_CLIENT_ID, name="Glyphh", redirect_uris=redirect)

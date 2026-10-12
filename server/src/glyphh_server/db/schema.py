@@ -24,7 +24,7 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await apply_limits(conn)
         await seed_plans(conn, settings)
         await seed_parent_org(conn)
-        await seed_platform_client(conn, settings.platform)
+        await seed_platform_client(conn, settings.platform_origins)
 
 
 async def main() -> None:

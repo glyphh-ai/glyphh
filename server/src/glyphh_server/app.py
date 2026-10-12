@@ -68,7 +68,7 @@ def _layers(app: FastAPI, mcp_app: Starlette, cfg: Settings) -> None:
     # The platform calls the API from its own address; it sends tokens in a header, never cookies.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[cfg.platform],
+        allow_origins=cfg.platform_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["authorization", "content-type", "x-request-id"],

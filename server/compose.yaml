@@ -24,6 +24,8 @@ services:
         required: false
     environment:
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      # The platform's dev server, opened directly as well as through ngrok.
+      GLYPHH_PLATFORM_ALSO: http://localhost:5173
     ports:
       - "8080:8080"
     depends_on:
