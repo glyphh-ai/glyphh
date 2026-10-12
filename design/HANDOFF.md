@@ -35,6 +35,7 @@ A clean UI build: small, well-formed, reusable components, and screens made only
   - each component's look comes from the design agent.
 
   Never make up a colour, gradient, shadow, border, icon, illustration, animation or layout the boards don't show. If a screen needs a look that isn't drawn, ask, or add a request; don't improvise one.
+- **Ask Chris before adding any image, logo, icon or other asset.** That includes a new icon set, a third-party logo, a stock photo or illustration, a font, or any file in `public/`. Use only what's in `design/brand/` and what the boards already show, until he says yes.
 - **Repeated patterns become components the first time they repeat.** For example: the trace id block, the logo tile, the list row with a status chip, and the pager.
 
 ## How to read a board
