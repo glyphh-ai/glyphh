@@ -101,6 +101,7 @@ The same screens as app.glyphh.ai, built from the same components, as native-fee
 
 ### Logo
 
+- **On the sign-in pages** (the brand panel, top left): the logo is **52 px tall on desktop, 36 px on a phone** (Chris, 2026-10-12; it was 34 and 26, too small). Drawn on `SignInFlow`, `AllowFlow`, `CodeFlow`, `JoinFlow`, `LightAccount`.
 - **One logo, on every ground:** `brand/logo/glyphh-logo-black.png`, the ink mark in its white sticker border. No light, dark or white version, no recolouring.
 - The cat alone is the favicon and the small app icon.
 
@@ -285,7 +286,7 @@ Every board is in `screens/` as a `.dc.html` file, with the logos it uses in `sc
 | Custom powers (dark / light) | `CustomPowers`, `CustomPowersLight` | Skills, plugins, tasks and apps in one list; New power; each type's detail | 5 |
 | Marketplace (dark / light) | `Marketplace`, `MarketplaceLight` | Discover, search with pages, a power's and a super power's detail, Add | 7 |
 | rrotor · Splash (dark / light) | `RrotorSplash`, `RrotorSplashLight` | rrotor's UI, not the platform: the first screen on a machine, naming the machine before anything else; starting, opening, ready, on a laptop, waking, updating, a failed step, an expired link, someone else's machine, offline | rrotor |
-| rrotor · Desktop | `RrotorDesktop` | rrotor's UI, the screen the splash opens into: the rail (the machine, Glyphh the orchestrator, its super powers with live status, you), the stage (Swarm: the agents around Glyphh, who is talking to whom, the Now feed; Workbench: the layout manager's tiles of the picked super power's browser, terminal and files), the drawer (one thread: Glyphh's or a super power's, with talk). Dark, desktop; light and phone to come | rrotor |
+| rrotor · Desktop | `RrotorDesktop` | rrotor's UI, the screen the splash opens into (with Glyphh's orchestration thread, a super power's thread opened from it, the thread expanded over the stage, and voices: a round table with the speaker highlighted, turn order, live captions, your turn): the rail (the machine, Glyphh the orchestrator, its super powers with live status, you), the stage (Swarm: the agents around Glyphh, who is talking to whom, the Now feed; Workbench: the layout manager's tiles of the picked super power's browser, terminal and files), the drawer (one thread: Glyphh's or a super power's, with talk). Dark, desktop; light and phone to come | rrotor |
 | Org · Members and teams (dark / light) | `OrgTeams`, `OrgTeamsLight` | Members, invites and seats; teams (a person can be in many); a member's teams; remove from a team or the org | Org |
 | Org · Allowed models and connections (dark / light) | `OrgLimits`, `OrgLimitsLight` | The limit switches at the org and a team, the allowed lists, adding from the catalog, removing (it turns off for whoever uses it), a member's disabled power | Org |
 | Org · Review (dark / light) | `OrgReview`, `OrgReviewLight` | The org admin's review queue: approve for the org, approve and send to Glyphh, request changes, reject; Glyphh's feedback | Discover |
@@ -489,6 +490,8 @@ Rework what is built in `@glyphh-ai/ui`:
 - **Icon:** Lucide's paths for the names `AppShell` lists, plus the approved star, drag handle and up/down arrows; nothing else.
 - **Page:** no top bar; the page's title and main action head the page inside the rail layout.
 - **Check against `Components` / `Components2`:** cat eyes keep their bright colours in both themes; on light, logo and cat tiles are transparent with a thin outline; kinds use the accent text, told apart by glyph.
+
+- **AuthLayout:** the logo in the brand panel is 52 px tall on desktop and 36 px on a phone (it was 34 / 26). Add it as a token or a size prop, not a one-off.
 
 Build next, before any app page: the shell from `AppShell` / `AppShell2` (rail, items, groups, the account button and menu, the phone drawer).
 
