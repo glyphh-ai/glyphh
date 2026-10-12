@@ -320,10 +320,12 @@ The rule: the data model is drawn here first, then built. Database `glyphh`. Eve
 erDiagram
     plans ||--o{ orgs : "limits"
     orgs ||--o{ orgs : "parent of"
-    orgs ||--o{ users : "has"
+    orgs ||--o{ memberships : "has"
+    users ||--o{ memberships : "belongs through"
+    users ||--o| orgs : "has a Personal org"
     orgs ||--o{ teams : "has"
     teams ||--o{ team_members : "has"
-    users ||--o{ team_members : "is in"
+    memberships ||--o{ team_members : "is in"
     orgs ||--o{ allowed_models : "limits to"
     teams ||--o{ allowed_models : "limits further to"
     catalog_models ||--o{ allowed_models : "allowed as"
@@ -417,6 +419,7 @@ erDiagram
     orgs {
         uuid id PK
         uuid parent_id FK "null only for Glyphh, the parent org"
+        uuid personal_user_id FK, UK "set for a person's Personal org: theirs alone, never shared"
         uuid plan_id FK
         text name
         bool limit_models "true = only the org's allowed models"
@@ -430,7 +433,7 @@ erDiagram
 
     team_members {
         uuid team_id PK, FK
-        uuid user_id PK, FK "a person can be in many teams"
+        uuid user_id PK, FK "a person can be in many teams, each in an org they belong to"
         timestamptz created_at
     }
 
@@ -460,16 +463,21 @@ erDiagram
         timestamptz created_at
     }
 
+    memberships {
+        uuid user_id PK, FK
+        uuid org_id PK, FK
+        text role "super_admin (in Glyphh only) | org_admin | user"
+        timestamptz disabled_at "an org admin disabled the member in this org"
+        timestamptz created_at
+    }
+
     users {
         uuid id PK
-        uuid org_id FK
-        text role "super_admin | org_admin | user"
         text email UK
         text first_name
         text last_name
         text image_url
         text time_zone "every schedule reads its cron in it"
-        timestamptz disabled_at "an org admin disabled the member"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -485,7 +493,7 @@ erDiagram
         bool sandbox_strict "runs reach only the allowed hosts"
         text[] allowed_hosts "hosts every sandboxed run may reach"
         bool rail_collapsed "the platform's left rail shown as icons only"
-        jsonb page_sizes "rows per page each list was last shown at, by list: {\"usage-log\": 50}"
+        jsonb page_sizes "rows per page each list was last shown at, by the list's name"
         timestamptz updated_at
     }
 
@@ -817,6 +825,7 @@ erDiagram
         text token_hash UK "the invite link's token; only the hash is kept"
         timestamptz expires_at
         timestamptz accepted_at
+        timestamptz declined_at "the invited person said no"
         timestamptz revoked_at
         timestamptz created_at
     }
@@ -891,6 +900,7 @@ erDiagram
         uuid id PK
         uuid oauth_client_id FK
         uuid user_id FK "who approved it"
+        uuid org_id FK "the org it acts in, picked at Allow (Use with)"
         text code_hash UK "only the hash is kept"
         text redirect_uri
         text code_challenge "PKCE"
@@ -934,6 +944,7 @@ erDiagram
     tokens {
         uuid id PK
         uuid user_id FK
+        uuid org_id FK "the org it acts in; a member of it, or refused"
         uuid oauth_client_id FK "the agent host it was issued to; null = the player or rrotor's UI"
         text access_hash UK
         text refresh_hash UK
@@ -1099,6 +1110,17 @@ These are a first pick (2026-10-11), to adjust. **Every number lives in the data
 An org that already has its included machines plus its extras cannot register another: signing in from one more machine is refused with the reason (on Free: "Free includes 2 machines. Upgrade, or remove one."), and nothing is half registered.
 
 Left behind from the old server: the margin and the dollar pool, the rate limits, the SSO and governance flags, the price history, and the machine terms. Beyond which models and connections users may add, Glyphh governs nothing: spend and rate limits belong to an AI gateway the customer puts in front of their models.
+
+### Memberships: many orgs per person
+
+Decided 2026-10-11 (built 2026-10-12). A person belongs to orgs through **memberships**, one per org, each with its role and its own disabled mark:
+
+- **Everyone has a Personal org** (`orgs.personal_user_id`), made at their first sign-in on Free, where they are the org admin. It is theirs alone: nobody is invited to it, and it is never left.
+- **An invite adds a membership** to the invite's org; the person keeps their Personal org and any others. Leaving or being removed from an org deletes that membership only.
+- **A token acts in one org** (`tokens.org_id`): an agent host's is the org picked at Allow ("Use with": Personal or any org the person belongs to, with its machine count), the platform's is the org chosen in the account menu. Every request is scoped to that org, and a membership disabled or removed stops its tokens at once.
+- **Seats count memberships:** a seat is an active membership, so the database's seat check counts memberships and open invites in the org.
+- **Super admins** are members of Glyphh with the role super_admin.
+- **An invite can be declined** (`invites.declined_at`) by the signed-in person it was sent to.
 
 ### users
 
@@ -1359,7 +1381,6 @@ None open (2026-10-12).
 
 - **Opening a machine:** the screens for a launch ticket that worked, one that expired or was used, a machine that is offline or waking, the wrong account, and a session that ran out (back through app.glyphh.ai for a new ticket).
 
-- **Many orgs per person** (decided 2026-10-11): everyone has a Personal org plus any orgs they join; a memberships table (person × org × role); the host picks the org at Allow ("Use with"); tokens carry the chosen org; seats count memberships; an invite adds a membership instead of moving the person; a person can be in many teams in each org they belong to (2026-10-11).
 - **The rrotor definition:** what a super power's definition holds (its workflows, pipelines and screens), and how its screens are laid out inside Glyphh's UI. Decided: each super power's data in rrotor's Postgres is its own schema, reached by its own database role and nothing else (2026-10-11).
 - **Folder edits:** how edits made in a power's folder on a machine get back to the server. Not needed until rrotor is built.
 
