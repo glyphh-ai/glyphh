@@ -37,6 +37,50 @@ export type AllowScreen = {
 };
 
 /**
+ * AllowedItem
+ */
+export type AllowedItem = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Provider
+     */
+    provider: string | null;
+    /**
+     * Teams
+     */
+    teams: Array<string>;
+};
+
+/**
+ * AllowedKind
+ */
+export type AllowedKind = {
+    /**
+     * Items
+     */
+    items: Array<AllowedItem>;
+    /**
+     * Limited
+     */
+    limited: boolean;
+    /**
+     * Org Count
+     */
+    org_count: number;
+    /**
+     * Org Limits
+     */
+    org_limits: boolean;
+};
+
+/**
  * AnswerIn
  */
 export type AnswerIn = {
@@ -182,6 +226,18 @@ export type Billing = {
 };
 
 /**
+ * CanAdd
+ */
+export type CanAdd = {
+    connections: AllowedKind;
+    models: AllowedKind;
+    /**
+     * Teams
+     */
+    teams: Array<string>;
+};
+
+/**
  * Card
  */
 export type Card = {
@@ -218,6 +274,62 @@ export type CardSetup = {
 };
 
 /**
+ * CatalogEntry
+ */
+export type CatalogEntry = {
+    /**
+     * Blocked
+     */
+    blocked: string | null;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Logo Key
+     */
+    logo_key: string | null;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Provider Name
+     */
+    provider_name: string;
+    /**
+     * Type
+     */
+    type: string;
+};
+
+/**
+ * CatalogPage
+ */
+export type CatalogPage = {
+    /**
+     * Models
+     */
+    models: Array<CatalogEntry>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * CodeIn
  */
 export type CodeIn = {
@@ -229,6 +341,67 @@ export type CodeIn = {
      * Verifier
      */
     verifier: string;
+};
+
+/**
+ * ConnectLink
+ */
+export type ConnectLink = {
+    connection: ConnectionView;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Url
+     */
+    url: string;
+};
+
+/**
+ * ConnectionView
+ */
+export type ConnectionView = {
+    /**
+     * Account Label
+     */
+    account_label: string | null;
+    /**
+     * Allowed Tools
+     */
+    allowed_tools: number;
+    /**
+     * Connected At
+     */
+    connected_at: string | null;
+    /**
+     * Denied Tools
+     */
+    denied_tools: number;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Service
+     */
+    service: string;
+    /**
+     * State
+     */
+    state: 'connected' | 'needs_reconnect' | 'not_connected' | 'off';
+    /**
+     * Used By
+     */
+    used_by: Array<User>;
 };
 
 /**
@@ -368,6 +541,20 @@ export type Face = {
 };
 
 /**
+ * Found
+ */
+export type Found = {
+    /**
+     * Hits
+     */
+    hits: Array<Hit>;
+    /**
+     * Searched
+     */
+    searched: Array<Searched>;
+};
+
+/**
  * FundsIn
  */
 export type FundsIn = {
@@ -406,6 +593,36 @@ export type Health = {
 };
 
 /**
+ * Hit
+ */
+export type Hit = {
+    /**
+     * At
+     */
+    at: string;
+    /**
+     * Goal
+     */
+    goal: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Seq
+     */
+    seq: number | null;
+    /**
+     * Snippet
+     */
+    snippet: string | null;
+    /**
+     * Thread Id
+     */
+    thread_id: string;
+};
+
+/**
  * Host
  */
 export type Host = {
@@ -421,6 +638,12 @@ export type Host = {
      * Name
      */
     name: string;
+    /**
+     * Org
+     *
+     * the org it acts in now: its newest sign-in's
+     */
+    org: string | null;
 };
 
 /**
@@ -573,6 +796,16 @@ export type Joined = {
      * Org
      */
     org: string;
+};
+
+/**
+ * KeyIn
+ */
+export type KeyIn = {
+    /**
+     * Api Key
+     */
+    api_key: string;
 };
 
 /**
@@ -819,6 +1052,112 @@ export type MemberChange = {
 };
 
 /**
+ * ModelView
+ */
+export type ModelView = {
+    /**
+     * Base Url
+     */
+    base_url: string | null;
+    /**
+     * Catalog Model Id
+     */
+    catalog_model_id: string | null;
+    /**
+     * Disabled At
+     */
+    disabled_at: string | null;
+    /**
+     * Disabled Reason
+     */
+    disabled_reason: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Key Added At
+     */
+    key_added_at: string;
+    /**
+     * Key Checked At
+     */
+    key_checked_at: string | null;
+    /**
+     * Key Error
+     */
+    key_error: string | null;
+    /**
+     * Key Last4
+     */
+    key_last4: string;
+    /**
+     * Logo Key
+     */
+    logo_key: string | null;
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Provider Name
+     */
+    provider_name: string;
+    /**
+     * Status
+     */
+    status: 'ready' | 'unchecked' | 'key_refused' | 'off';
+    /**
+     * Type
+     */
+    type: string | null;
+    /**
+     * Used By
+     */
+    used_by: Array<User>;
+};
+
+/**
+ * NewBrowser
+ */
+export type NewBrowser = {
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string;
+};
+
+/**
+ * NewFolder
+ */
+export type NewFolder = {
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Path
+     */
+    path: string;
+};
+
+/**
  * NewInvite
  */
 export type NewInvite = {
@@ -830,6 +1169,38 @@ export type NewInvite = {
      * Role
      */
     role?: 'org_admin' | 'user';
+};
+
+/**
+ * NewModel
+ *
+ * From the catalog (`catalog_model_id`), or a model the catalog lacks (`provider` and its `model` id).
+ */
+export type NewModel = {
+    /**
+     * Api Key
+     */
+    api_key: string;
+    /**
+     * Base Url
+     */
+    base_url?: string | null;
+    /**
+     * Catalog Model Id
+     */
+    catalog_model_id?: string | null;
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Provider
+     */
+    provider?: string | null;
 };
 
 /**
@@ -868,6 +1239,22 @@ export type OpenIn = {
 export type OrgCredit = {
     credit: Credit;
     /**
+     * Machines Allowed
+     */
+    machines_allowed: number | null;
+    /**
+     * Machines In Use
+     */
+    machines_in_use: number;
+    /**
+     * Max Seats
+     */
+    max_seats: number | null;
+    /**
+     * Monthly Credit Cents
+     */
+    monthly_credit_cents: number;
+    /**
      * Plan
      */
     plan: string;
@@ -875,6 +1262,10 @@ export type OrgCredit = {
      * Renews At
      */
     renews_at: string | null;
+    /**
+     * Seats In Use
+     */
+    seats_in_use: number;
 };
 
 /**
@@ -916,6 +1307,44 @@ export type OrgView = {
 };
 
 /**
+ * Override
+ */
+export type Override = {
+    /**
+     * Permission
+     */
+    permission: 'allow' | 'deny';
+    /**
+     * Super Power
+     */
+    super_power: string;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string;
+};
+
+/**
+ * Page
+ */
+export type Page = {
+    /**
+     * Events
+     */
+    events: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * First
+     */
+    first: boolean;
+    /**
+     * Last Seq
+     */
+    last_seq: number;
+};
+
+/**
  * PaymentStart
  *
  * What the page needs to show Stripe's Payment Element and confirm the payment there.
@@ -937,6 +1366,48 @@ export type PaymentStart = {
      * Stripe Publishable Key
      */
     stripe_publishable_key: string;
+};
+
+/**
+ * Place
+ */
+export type Place = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Machine
+     */
+    machine: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Machine Last Seen At
+     */
+    machine_last_seen_at: string | null;
+    /**
+     * Machine Online
+     */
+    machine_online: boolean;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Path
+     */
+    path: string | null;
+    /**
+     * Profile
+     */
+    profile: string | null;
+    /**
+     * Used By
+     */
+    used_by: Array<User>;
 };
 
 /**
@@ -1074,6 +1545,36 @@ export type ProfileChange = {
 };
 
 /**
+ * ProviderView
+ */
+export type ProviderView = {
+    /**
+     * Blocked
+     */
+    blocked: string | null;
+    /**
+     * Logo Dark Key
+     */
+    logo_dark_key: string | null;
+    /**
+     * Logo Key
+     */
+    logo_key: string | null;
+    /**
+     * Models
+     */
+    models: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Slug
+     */
+    slug: string;
+};
+
+/**
  * Question
  */
 export type Question = {
@@ -1148,6 +1649,86 @@ export type Say = {
      * Text
      */
     text: string;
+};
+
+/**
+ * Searched
+ */
+export type Searched = {
+    /**
+     * By
+     */
+    by: 'said' | 'goal';
+    /**
+     * Machine Id
+     */
+    machine_id: string;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * Service
+ */
+export type Service = {
+    /**
+     * Blocked
+     */
+    blocked: string | null;
+    /**
+     * Categories
+     */
+    categories: Array<string>;
+    /**
+     * Connected
+     */
+    connected: number;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Logo Url
+     */
+    logo_url: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Slug
+     */
+    slug: string;
+};
+
+/**
+ * ServiceIn
+ */
+export type ServiceIn = {
+    /**
+     * Service
+     */
+    service: string;
+};
+
+/**
+ * ServicePage
+ */
+export type ServicePage = {
+    /**
+     * After
+     */
+    after: string | null;
+    /**
+     * Services
+     */
+    services: Array<Service>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -1356,6 +1937,86 @@ export type ThreadStart = {
 };
 
 /**
+ * Tool
+ */
+export type Tool = {
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Overrides
+     */
+    overrides: Array<Override>;
+    /**
+     * Permission
+     */
+    permission: 'allow' | 'ask' | 'deny';
+    /**
+     * Risk
+     */
+    risk: 'read' | 'write' | 'delete' | 'other';
+    /**
+     * Tool
+     */
+    tool: string;
+};
+
+/**
+ * ToolChange
+ *
+ * My own setting (no super power; "ask" clears it), or a super power's override ("ask" clears it).
+ */
+export type ToolChange = {
+    /**
+     * Permission
+     */
+    permission: 'allow' | 'ask' | 'deny';
+    /**
+     * Super Power Id
+     */
+    super_power_id?: string | null;
+    /**
+     * Tool
+     */
+    tool: string;
+};
+
+/**
+ * ToolChanges
+ */
+export type ToolChanges = {
+    /**
+     * Changes
+     */
+    changes: Array<ToolChange>;
+};
+
+/**
+ * ToolPage
+ */
+export type ToolPage = {
+    /**
+     * Counts
+     */
+    counts: {
+        [key: string]: number;
+    };
+    /**
+     * Tools
+     */
+    tools: Array<Tool>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * TopUp
  */
 export type TopUp = {
@@ -1401,6 +2062,26 @@ export type TopUpPage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * User
+ *
+ * A super power that uses a power, and how (a folder's read or write).
+ */
+export type User = {
+    /**
+     * Access
+     */
+    access: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -1520,6 +2201,118 @@ export type SignInScreenResponses = {
 };
 
 export type SignInScreenResponse = SignInScreenResponses[keyof SignInScreenResponses];
+
+export type ListCatalogModelsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Provider
+         */
+        provider?: string | null;
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/catalog/models';
+};
+
+export type ListCatalogModelsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListCatalogModelsError = ListCatalogModelsErrors[keyof ListCatalogModelsErrors];
+
+export type ListCatalogModelsResponses = {
+    /**
+     * Successful Response
+     */
+    200: CatalogPage;
+};
+
+export type ListCatalogModelsResponse = ListCatalogModelsResponses[keyof ListCatalogModelsResponses];
+
+export type ListProvidersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+    };
+    url: '/v1/catalog/providers';
+};
+
+export type ListProvidersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListProvidersError = ListProvidersErrors[keyof ListProvidersErrors];
+
+export type ListProvidersResponses = {
+    /**
+     * Response Listproviders
+     *
+     * Successful Response
+     */
+    200: Array<ProviderView>;
+};
+
+export type ListProvidersResponse = ListProvidersResponses[keyof ListProvidersResponses];
+
+export type ListServicesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * After
+         */
+        after?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/v1/catalog/services';
+};
+
+export type ListServicesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListServicesError = ListServicesErrors[keyof ListServicesErrors];
+
+export type ListServicesResponses = {
+    /**
+     * Successful Response
+     */
+    200: ServicePage;
+};
+
+export type ListServicesResponse = ListServicesResponses[keyof ListServicesResponses];
 
 export type HealthData = {
     body?: never;
@@ -2535,6 +3328,507 @@ export type ListPlansResponses = {
 
 export type ListPlansResponse = ListPlansResponses[keyof ListPlansResponses];
 
+export type ListBrowsersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/browsers';
+};
+
+export type ListBrowsersResponses = {
+    /**
+     * Response Listbrowsers
+     *
+     * Successful Response
+     */
+    200: Array<Place>;
+};
+
+export type ListBrowsersResponse = ListBrowsersResponses[keyof ListBrowsersResponses];
+
+export type AddBrowserData = {
+    body: NewBrowser;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/browsers';
+};
+
+export type AddBrowserErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddBrowserError = AddBrowserErrors[keyof AddBrowserErrors];
+
+export type AddBrowserResponses = {
+    /**
+     * Successful Response
+     */
+    201: Place;
+};
+
+export type AddBrowserResponse = AddBrowserResponses[keyof AddBrowserResponses];
+
+export type DeleteBrowserData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/browsers/{power_id}';
+};
+
+export type DeleteBrowserErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteBrowserError = DeleteBrowserErrors[keyof DeleteBrowserErrors];
+
+export type DeleteBrowserResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteBrowserResponse = DeleteBrowserResponses[keyof DeleteBrowserResponses];
+
+export type WhatICanAddData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/can-add';
+};
+
+export type WhatICanAddResponses = {
+    /**
+     * Successful Response
+     */
+    200: CanAdd;
+};
+
+export type WhatICanAddResponse = WhatICanAddResponses[keyof WhatICanAddResponses];
+
+export type ListConnectionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/connections';
+};
+
+export type ListConnectionsResponses = {
+    /**
+     * Response Listconnections
+     *
+     * Successful Response
+     */
+    200: Array<ConnectionView>;
+};
+
+export type ListConnectionsResponse = ListConnectionsResponses[keyof ListConnectionsResponses];
+
+export type ConnectData = {
+    body: ServiceIn;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/connections';
+};
+
+export type ConnectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConnectError = ConnectErrors[keyof ConnectErrors];
+
+export type ConnectResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConnectLink;
+};
+
+export type ConnectResponse = ConnectResponses[keyof ConnectResponses];
+
+export type DisconnectData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/connections/{power_id}';
+};
+
+export type DisconnectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DisconnectError = DisconnectErrors[keyof DisconnectErrors];
+
+export type DisconnectResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DisconnectResponse = DisconnectResponses[keyof DisconnectResponses];
+
+export type CheckConnectionData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/connections/{power_id}/check';
+};
+
+export type CheckConnectionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CheckConnectionError = CheckConnectionErrors[keyof CheckConnectionErrors];
+
+export type CheckConnectionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConnectionView;
+};
+
+export type CheckConnectionResponse = CheckConnectionResponses[keyof CheckConnectionResponses];
+
+export type ReconnectData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/connections/{power_id}/link';
+};
+
+export type ReconnectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReconnectError = ReconnectErrors[keyof ReconnectErrors];
+
+export type ReconnectResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConnectLink;
+};
+
+export type ReconnectResponse = ReconnectResponses[keyof ReconnectResponses];
+
+export type ListToolsData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+    };
+    url: '/v1/powers/connections/{power_id}/tools';
+};
+
+export type ListToolsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListToolsError = ListToolsErrors[keyof ListToolsErrors];
+
+export type ListToolsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolPage;
+};
+
+export type ListToolsResponse = ListToolsResponses[keyof ListToolsResponses];
+
+export type SetToolsData = {
+    body: ToolChanges;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/connections/{power_id}/tools';
+};
+
+export type SetToolsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetToolsError = SetToolsErrors[keyof SetToolsErrors];
+
+export type SetToolsResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type SetToolsResponse = SetToolsResponses[keyof SetToolsResponses];
+
+export type ListFoldersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/folders';
+};
+
+export type ListFoldersResponses = {
+    /**
+     * Response Listfolders
+     *
+     * Successful Response
+     */
+    200: Array<Place>;
+};
+
+export type ListFoldersResponse = ListFoldersResponses[keyof ListFoldersResponses];
+
+export type AddFolderData = {
+    body: NewFolder;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/folders';
+};
+
+export type AddFolderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddFolderError = AddFolderErrors[keyof AddFolderErrors];
+
+export type AddFolderResponses = {
+    /**
+     * Successful Response
+     */
+    201: Place;
+};
+
+export type AddFolderResponse = AddFolderResponses[keyof AddFolderResponses];
+
+export type RemoveFolderData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/folders/{power_id}';
+};
+
+export type RemoveFolderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveFolderError = RemoveFolderErrors[keyof RemoveFolderErrors];
+
+export type RemoveFolderResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RemoveFolderResponse = RemoveFolderResponses[keyof RemoveFolderResponses];
+
+export type ListModelsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/models';
+};
+
+export type ListModelsResponses = {
+    /**
+     * Response Listmodels
+     *
+     * Successful Response
+     */
+    200: Array<ModelView>;
+};
+
+export type ListModelsResponse = ListModelsResponses[keyof ListModelsResponses];
+
+export type AddModelData = {
+    body: NewModel;
+    path?: never;
+    query?: never;
+    url: '/v1/powers/models';
+};
+
+export type AddModelErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddModelError = AddModelErrors[keyof AddModelErrors];
+
+export type AddModelResponses = {
+    /**
+     * Successful Response
+     */
+    201: ModelView;
+};
+
+export type AddModelResponse = AddModelResponses[keyof AddModelResponses];
+
+export type DeleteModelData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/models/{power_id}';
+};
+
+export type DeleteModelErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteModelError = DeleteModelErrors[keyof DeleteModelErrors];
+
+export type DeleteModelResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteModelResponse = DeleteModelResponses[keyof DeleteModelResponses];
+
+export type CheckModelKeyData = {
+    body?: never;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/models/{power_id}/check';
+};
+
+export type CheckModelKeyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CheckModelKeyError = CheckModelKeyErrors[keyof CheckModelKeyErrors];
+
+export type CheckModelKeyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ModelView;
+};
+
+export type CheckModelKeyResponse = CheckModelKeyResponses[keyof CheckModelKeyResponses];
+
+export type ReplaceModelKeyData = {
+    body: KeyIn;
+    path: {
+        /**
+         * Power Id
+         */
+        power_id: string;
+    };
+    query?: never;
+    url: '/v1/powers/models/{power_id}/key';
+};
+
+export type ReplaceModelKeyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReplaceModelKeyError = ReplaceModelKeyErrors[keyof ReplaceModelKeyErrors];
+
+export type ReplaceModelKeyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ModelView;
+};
+
+export type ReplaceModelKeyResponse = ReplaceModelKeyResponses[keyof ReplaceModelKeyResponses];
+
 export type RefreshSessionData = {
     body?: never;
     path?: never;
@@ -2632,6 +3926,36 @@ export type StartSessionResponses = {
 };
 
 export type StartSessionResponse = StartSessionResponses[keyof StartSessionResponses];
+
+export type SearchThreadsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Q
+         */
+        q: string;
+    };
+    url: '/v1/threads/search';
+};
+
+export type SearchThreadsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SearchThreadsError = SearchThreadsErrors[keyof SearchThreadsErrors];
+
+export type SearchThreadsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Found;
+};
+
+export type SearchThreadsResponse = SearchThreadsResponses[keyof SearchThreadsResponses];
 
 export type DeleteThreadData = {
     body?: never;
@@ -2750,6 +4074,45 @@ export type WatchThreadResponses = {
      */
     200: unknown;
 };
+
+export type ReadThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: {
+        /**
+         * Before
+         */
+        before?: number | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/v1/threads/{thread_id}/messages';
+};
+
+export type ReadThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReadThreadError = ReadThreadErrors[keyof ReadThreadErrors];
+
+export type ReadThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: Page;
+};
+
+export type ReadThreadResponse = ReadThreadResponses[keyof ReadThreadResponses];
 
 export type SayToThreadData = {
     body: Say;

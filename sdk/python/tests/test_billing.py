@@ -58,7 +58,16 @@ BILLING = {
 }
 ANSWERS = {
     "plans": [PLAN_VIEW],
-    "credit": {"plan": "Basic", "renews_at": None, "credit": CREDIT},
+    "credit": {
+        "plan": "Basic",
+        "renews_at": None,
+        "seats_in_use": 1,
+        "max_seats": 25,
+        "machines_in_use": 0,
+        "machines_allowed": 10,
+        "monthly_credit_cents": 1000,
+        "credit": CREDIT,
+    },
     "get": BILLING,
     "sync": BILLING,
     "add_funds": {"payment_id": PLAN, "amount_cents": 4500, "client_secret": "s", "stripe_publishable_key": "pk"},

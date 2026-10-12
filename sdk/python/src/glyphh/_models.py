@@ -55,6 +55,7 @@ class Host:
     id: str
     name: str
     connected_at: datetime
+    org: str | None
 
 
 def _opt(value: object) -> str | None:
@@ -92,4 +93,4 @@ def settings_of(m: _Settings) -> Settings:
 
 
 def host_of(m: _Host) -> Host:
-    return Host(id=str(m.id), name=m.name, connected_at=m.connected_at)
+    return Host(id=str(m.id), name=m.name, connected_at=m.connected_at, org=_opt(m.org))

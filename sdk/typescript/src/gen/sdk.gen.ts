@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, GetBillingData, GetBillingResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, RefreshSessionData, RefreshSessionResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses } from './types.gen.js';
+import type { AcceptInviteData, AcceptInviteErrors, AcceptInviteResponses, AddBrowserData, AddBrowserErrors, AddBrowserResponses, AddFolderData, AddFolderErrors, AddFolderResponses, AddFundsData, AddFundsErrors, AddFundsResponses, AddModelData, AddModelErrors, AddModelResponses, AllowScreenData, AllowScreenErrors, AllowScreenResponses, AnswerNeedsYouData, AnswerNeedsYouErrors, AnswerNeedsYouResponses, ChangeMeData, ChangeMeErrors, ChangeMeResponses, ChangeMySettingsData, ChangeMySettingsErrors, ChangeMySettingsResponses, ChangePlanData, ChangePlanErrors, ChangePlanResponses, ChangeThreadData, ChangeThreadErrors, ChangeThreadResponses, CheckAutoTopUpData, CheckAutoTopUpResponses, CheckConnectionData, CheckConnectionErrors, CheckConnectionResponses, CheckModelKeyData, CheckModelKeyErrors, CheckModelKeyResponses, ConnectData, ConnectErrors, ConnectResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeclineInviteData, DeclineInviteErrors, DeclineInviteResponses, DeleteBrowserData, DeleteBrowserErrors, DeleteBrowserResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, DisconnectData, DisconnectErrors, DisconnectHostData, DisconnectHostErrors, DisconnectHostResponses, DisconnectResponses, GetBillingData, GetBillingResponses, GetOrgData, GetOrgResponses, GetThreadData, GetThreadErrors, GetThreadResponses, HealthData, HealthResponses, JoinScreenData, JoinScreenErrors, JoinScreenResponses, ListBrowsersData, ListBrowsersResponses, ListCatalogModelsData, ListCatalogModelsErrors, ListCatalogModelsResponses, ListConnectionsData, ListConnectionsResponses, ListFoldersData, ListFoldersResponses, ListHostsData, ListHostsResponses, ListInstalledSuperPowersData, ListInstalledSuperPowersErrors, ListInstalledSuperPowersResponses, ListInvitesData, ListInvitesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListLedgerData, ListLedgerErrors, ListLedgerResponses, ListMachinesData, ListMachinesErrors, ListMachinesResponses, ListMembersData, ListMembersResponses, ListModelsData, ListModelsResponses, ListMyOrgsData, ListMyOrgsResponses, ListNeedsYouData, ListNeedsYouErrors, ListNeedsYouResponses, ListPlansData, ListPlansResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListServicesData, ListServicesErrors, ListServicesResponses, ListThreadsData, ListThreadsErrors, ListThreadsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListTopUpsData, ListTopUpsErrors, ListTopUpsResponses, MeData, MeResponses, MySettingsData, MySettingsResponses, NextInvoiceData, NextInvoiceResponses, OpenBillingPortalData, OpenBillingPortalResponses, OpenMachineData, OpenMachineErrors, OpenMachineResponses, OrgCreditData, OrgCreditResponses, PreviewPlanChangeData, PreviewPlanChangeErrors, PreviewPlanChangeResponses, ReadThreadData, ReadThreadErrors, ReadThreadResponses, ReconnectData, ReconnectErrors, ReconnectResponses, RefreshSessionData, RefreshSessionResponses, RemoveFolderData, RemoveFolderErrors, RemoveFolderResponses, RemoveMemberData, RemoveMemberErrors, RemoveMemberResponses, RenameOrgData, RenameOrgErrors, RenameOrgResponses, ReplaceModelKeyData, ReplaceModelKeyErrors, ReplaceModelKeyResponses, RevokeInviteData, RevokeInviteErrors, RevokeInviteResponses, SayToThreadData, SayToThreadErrors, SayToThreadResponses, SearchThreadsData, SearchThreadsErrors, SearchThreadsResponses, SetAutoTopUpData, SetAutoTopUpErrors, SetAutoTopUpResponses, SetToolsData, SetToolsErrors, SetToolsResponses, SignInScreenData, SignInScreenErrors, SignInScreenResponses, SignOutData, SignOutEverywhereData, SignOutEverywhereResponses, SignOutResponses, SpendByDayData, SpendByDayResponses, StartCardSetupData, StartCardSetupResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartThreadData, StartThreadErrors, StartThreadResponses, StopThreadData, StopThreadErrors, StopThreadResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, SyncBillingData, SyncBillingResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, WatchThreadData, WatchThreadErrors, WatchThreadResponses, WhatICanAddData, WhatICanAddResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -32,6 +32,27 @@ export const joinScreen = <ThrowOnError extends boolean = false>(options: Option
  * Sign In Screen
  */
 export const signInScreen = <ThrowOnError extends boolean = false>(options: Options<SignInScreenData, ThrowOnError>): RequestResult<SignInScreenResponses, SignInScreenErrors, ThrowOnError> => (options.client ?? client).get<SignInScreenResponses, SignInScreenErrors, ThrowOnError>({ url: '/v1/auth/sign-in', ...options });
+
+/**
+ * List Catalog Models
+ *
+ * The catalog's models (one provider's, or all), searched, each saying whether I may add it.
+ */
+export const listCatalogModels = <ThrowOnError extends boolean = false>(options?: Options<ListCatalogModelsData, ThrowOnError>): RequestResult<ListCatalogModelsResponses, ListCatalogModelsErrors, ThrowOnError> => (options?.client ?? client).get<ListCatalogModelsResponses, ListCatalogModelsErrors, ThrowOnError>({ url: '/v1/catalog/models', ...options });
+
+/**
+ * List Providers
+ *
+ * The catalog's providers, each with how many models it offers and, when a limit leaves all out, why.
+ */
+export const listProviders = <ThrowOnError extends boolean = false>(options?: Options<ListProvidersData, ThrowOnError>): RequestResult<ListProvidersResponses, ListProvidersErrors, ThrowOnError> => (options?.client ?? client).get<ListProvidersResponses, ListProvidersErrors, ThrowOnError>({ url: '/v1/catalog/providers', ...options });
+
+/**
+ * List Services
+ *
+ * Services to connect (Pipedream's apps), by cursor: pass the page's `after` for the next.
+ */
+export const listServices = <ThrowOnError extends boolean = false>(options?: Options<ListServicesData, ThrowOnError>): RequestResult<ListServicesResponses, ListServicesErrors, ThrowOnError> => (options?.client ?? client).get<ListServicesResponses, ListServicesErrors, ThrowOnError>({ url: '/v1/catalog/services', ...options });
 
 /**
  * Get Health
@@ -393,6 +414,161 @@ export const updateMember = <ThrowOnError extends boolean = false>(options: Opti
 export const listPlans = <ThrowOnError extends boolean = false>(options?: Options<ListPlansData, ThrowOnError>): RequestResult<ListPlansResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListPlansResponses, unknown, ThrowOnError>({ url: '/v1/plans', ...options });
 
 /**
+ * List Browsers
+ */
+export const listBrowsers = <ThrowOnError extends boolean = false>(options?: Options<ListBrowsersData, ThrowOnError>): RequestResult<ListBrowsersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBrowsersResponses, unknown, ThrowOnError>({ url: '/v1/powers/browsers', ...options });
+
+/**
+ * Add Browser
+ */
+export const addBrowser = <ThrowOnError extends boolean = false>(options: Options<AddBrowserData, ThrowOnError>): RequestResult<AddBrowserResponses, AddBrowserErrors, ThrowOnError> => (options.client ?? client).post<AddBrowserResponses, AddBrowserErrors, ThrowOnError>({
+    url: '/v1/powers/browsers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Browser
+ */
+export const deleteBrowser = <ThrowOnError extends boolean = false>(options: Options<DeleteBrowserData, ThrowOnError>): RequestResult<DeleteBrowserResponses, DeleteBrowserErrors, ThrowOnError> => (options.client ?? client).delete<DeleteBrowserResponses, DeleteBrowserErrors, ThrowOnError>({ url: '/v1/powers/browsers/{power_id}', ...options });
+
+/**
+ * What I Can Add
+ *
+ * The models and connections my teams allow, inside my org's list, with the teams that allow each.
+ */
+export const whatICanAdd = <ThrowOnError extends boolean = false>(options?: Options<WhatICanAddData, ThrowOnError>): RequestResult<WhatICanAddResponses, unknown, ThrowOnError> => (options?.client ?? client).get<WhatICanAddResponses, unknown, ThrowOnError>({ url: '/v1/powers/can-add', ...options });
+
+/**
+ * List Connections
+ */
+export const listConnections = <ThrowOnError extends boolean = false>(options?: Options<ListConnectionsData, ThrowOnError>): RequestResult<ListConnectionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListConnectionsResponses, unknown, ThrowOnError>({ url: '/v1/powers/connections', ...options });
+
+/**
+ * Connect
+ *
+ * Start connecting my account at a service: open the link (Pipedream's own sign-in), then check.
+ */
+export const connect = <ThrowOnError extends boolean = false>(options: Options<ConnectData, ThrowOnError>): RequestResult<ConnectResponses, ConnectErrors, ThrowOnError> => (options.client ?? client).post<ConnectResponses, ConnectErrors, ThrowOnError>({
+    url: '/v1/powers/connections',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Disconnect
+ */
+export const disconnect = <ThrowOnError extends boolean = false>(options: Options<DisconnectData, ThrowOnError>): RequestResult<DisconnectResponses, DisconnectErrors, ThrowOnError> => (options.client ?? client).delete<DisconnectResponses, DisconnectErrors, ThrowOnError>({ url: '/v1/powers/connections/{power_id}', ...options });
+
+/**
+ * Check
+ *
+ * Ask Pipedream which account the connection is, after its sign-in.
+ */
+export const checkConnection = <ThrowOnError extends boolean = false>(options: Options<CheckConnectionData, ThrowOnError>): RequestResult<CheckConnectionResponses, CheckConnectionErrors, ThrowOnError> => (options.client ?? client).post<CheckConnectionResponses, CheckConnectionErrors, ThrowOnError>({ url: '/v1/powers/connections/{power_id}/check', ...options });
+
+/**
+ * Reconnect
+ *
+ * A new sign-in link for the same connection.
+ */
+export const reconnect = <ThrowOnError extends boolean = false>(options: Options<ReconnectData, ThrowOnError>): RequestResult<ReconnectResponses, ReconnectErrors, ThrowOnError> => (options.client ?? client).post<ReconnectResponses, ReconnectErrors, ThrowOnError>({ url: '/v1/powers/connections/{power_id}/link', ...options });
+
+/**
+ * List Tools
+ *
+ * The connection's tools, by risk, each with my permission and any super power's own.
+ */
+export const listTools = <ThrowOnError extends boolean = false>(options: Options<ListToolsData, ThrowOnError>): RequestResult<ListToolsResponses, ListToolsErrors, ThrowOnError> => (options.client ?? client).get<ListToolsResponses, ListToolsErrors, ThrowOnError>({ url: '/v1/powers/connections/{power_id}/tools', ...options });
+
+/**
+ * Set Tools
+ *
+ * Set tools to Allow, Ask or Deny (mine, or a super power's own for its unwatched runs).
+ */
+export const setTools = <ThrowOnError extends boolean = false>(options: Options<SetToolsData, ThrowOnError>): RequestResult<SetToolsResponses, SetToolsErrors, ThrowOnError> => (options.client ?? client).patch<SetToolsResponses, SetToolsErrors, ThrowOnError>({
+    url: '/v1/powers/connections/{power_id}/tools',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Folders
+ */
+export const listFolders = <ThrowOnError extends boolean = false>(options?: Options<ListFoldersData, ThrowOnError>): RequestResult<ListFoldersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListFoldersResponses, unknown, ThrowOnError>({ url: '/v1/powers/folders', ...options });
+
+/**
+ * Add Folder
+ */
+export const addFolder = <ThrowOnError extends boolean = false>(options: Options<AddFolderData, ThrowOnError>): RequestResult<AddFolderResponses, AddFolderErrors, ThrowOnError> => (options.client ?? client).post<AddFolderResponses, AddFolderErrors, ThrowOnError>({
+    url: '/v1/powers/folders',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove Folder
+ *
+ * Super powers lose it at once; the folder and its files stay on the machine.
+ */
+export const removeFolder = <ThrowOnError extends boolean = false>(options: Options<RemoveFolderData, ThrowOnError>): RequestResult<RemoveFolderResponses, RemoveFolderErrors, ThrowOnError> => (options.client ?? client).delete<RemoveFolderResponses, RemoveFolderErrors, ThrowOnError>({ url: '/v1/powers/folders/{power_id}', ...options });
+
+/**
+ * List Models
+ */
+export const listModels = <ThrowOnError extends boolean = false>(options?: Options<ListModelsData, ThrowOnError>): RequestResult<ListModelsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListModelsResponses, unknown, ThrowOnError>({ url: '/v1/powers/models', ...options });
+
+/**
+ * Add Model
+ *
+ * Add a model on my own key: the key is tried with the provider first, and a refused one saves nothing.
+ */
+export const addModel = <ThrowOnError extends boolean = false>(options: Options<AddModelData, ThrowOnError>): RequestResult<AddModelResponses, AddModelErrors, ThrowOnError> => (options.client ?? client).post<AddModelResponses, AddModelErrors, ThrowOnError>({
+    url: '/v1/powers/models',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Model
+ */
+export const deleteModel = <ThrowOnError extends boolean = false>(options: Options<DeleteModelData, ThrowOnError>): RequestResult<DeleteModelResponses, DeleteModelErrors, ThrowOnError> => (options.client ?? client).delete<DeleteModelResponses, DeleteModelErrors, ThrowOnError>({ url: '/v1/powers/models/{power_id}', ...options });
+
+/**
+ * Check Key
+ *
+ * Try the saved key with its provider again.
+ */
+export const checkModelKey = <ThrowOnError extends boolean = false>(options: Options<CheckModelKeyData, ThrowOnError>): RequestResult<CheckModelKeyResponses, CheckModelKeyErrors, ThrowOnError> => (options.client ?? client).post<CheckModelKeyResponses, CheckModelKeyErrors, ThrowOnError>({ url: '/v1/powers/models/{power_id}/check', ...options });
+
+/**
+ * Replace Key
+ */
+export const replaceModelKey = <ThrowOnError extends boolean = false>(options: Options<ReplaceModelKeyData, ThrowOnError>): RequestResult<ReplaceModelKeyResponses, ReplaceModelKeyErrors, ThrowOnError> => (options.client ?? client).put<ReplaceModelKeyResponses, ReplaceModelKeyErrors, ThrowOnError>({
+    url: '/v1/powers/models/{power_id}/key',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Refresh
  */
 export const refreshSession = <ThrowOnError extends boolean = false>(options?: Options<RefreshSessionData, ThrowOnError>): RequestResult<RefreshSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshSessionResponses, unknown, ThrowOnError>({ url: '/v1/session/refresh', ...options });
@@ -434,6 +610,13 @@ export const startSession = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * Search
+ *
+ * My threads found by their goal, and by what was said on every one of my machines that is online.
+ */
+export const searchThreads = <ThrowOnError extends boolean = false>(options: Options<SearchThreadsData, ThrowOnError>): RequestResult<SearchThreadsResponses, SearchThreadsErrors, ThrowOnError> => (options.client ?? client).get<SearchThreadsResponses, SearchThreadsErrors, ThrowOnError>({ url: '/v1/threads/search', ...options });
+
+/**
  * Delete
  *
  * Delete an archived thread for good, and its messages on its machine.
@@ -467,6 +650,13 @@ export const changeThread = <ThrowOnError extends boolean = false>(options: Opti
  * A thread's events as its machine reports them, live: one Server-Sent Event each, numbered within the thread.
  */
 export const watchThread = <ThrowOnError extends boolean = false>(options: Options<WatchThreadData, ThrowOnError>): RequestResult<WatchThreadResponses, WatchThreadErrors, ThrowOnError> => (options.client ?? client).get<WatchThreadResponses, WatchThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}/events', ...options });
+
+/**
+ * Messages
+ *
+ * A page of a thread's events from its machine, oldest first: the newest, or those before a number.
+ */
+export const readThread = <ThrowOnError extends boolean = false>(options: Options<ReadThreadData, ThrowOnError>): RequestResult<ReadThreadResponses, ReadThreadErrors, ThrowOnError> => (options.client ?? client).get<ReadThreadResponses, ReadThreadErrors, ThrowOnError>({ url: '/v1/threads/{thread_id}/messages', ...options });
 
 /**
  * Say More

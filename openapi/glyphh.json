@@ -45,6 +45,75 @@
         "title": "AllowScreen",
         "type": "object"
       },
+      "AllowedItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "teams"
+        ],
+        "title": "AllowedItem",
+        "type": "object"
+      },
+      "AllowedKind": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AllowedItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limited": {
+            "title": "Limited",
+            "type": "boolean"
+          },
+          "org_count": {
+            "title": "Org Count",
+            "type": "integer"
+          },
+          "org_limits": {
+            "title": "Org Limits",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "limited",
+          "org_limits",
+          "org_count",
+          "items"
+        ],
+        "title": "AllowedKind",
+        "type": "object"
+      },
       "AnswerIn": {
         "properties": {
           "allow": {
@@ -335,6 +404,30 @@
         "title": "Billing",
         "type": "object"
       },
+      "CanAdd": {
+        "properties": {
+          "connections": {
+            "$ref": "#/components/schemas/AllowedKind"
+          },
+          "models": {
+            "$ref": "#/components/schemas/AllowedKind"
+          },
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "teams",
+          "models",
+          "connections"
+        ],
+        "title": "CanAdd",
+        "type": "object"
+      },
       "Card": {
         "properties": {
           "brand": {
@@ -395,6 +488,102 @@
         "title": "CardSetup",
         "type": "object"
       },
+      "CatalogEntry": {
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "logo_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Key"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "provider_name",
+          "logo_key",
+          "model",
+          "name",
+          "description",
+          "type",
+          "blocked"
+        ],
+        "title": "CatalogEntry",
+        "type": "object"
+      },
+      "CatalogPage": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogEntry"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "models",
+          "total"
+        ],
+        "title": "CatalogPage",
+        "type": "object"
+      },
       "CodeIn": {
         "properties": {
           "code": {
@@ -411,6 +600,118 @@
           "verifier"
         ],
         "title": "CodeIn",
+        "type": "object"
+      },
+      "ConnectLink": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/ConnectionView"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection",
+          "url",
+          "expires_at"
+        ],
+        "title": "ConnectLink",
+        "type": "object"
+      },
+      "ConnectionView": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "allowed_tools": {
+            "title": "Allowed Tools",
+            "type": "integer"
+          },
+          "connected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          },
+          "denied_tools": {
+            "title": "Denied Tools",
+            "type": "integer"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "connected",
+              "needs_reconnect",
+              "not_connected",
+              "off"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "title": "Used By",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "service",
+          "account_label",
+          "connected_at",
+          "state",
+          "disabled_reason",
+          "allowed_tools",
+          "denied_tools",
+          "used_by"
+        ],
+        "title": "ConnectionView",
         "type": "object"
       },
       "CreatedInvite": {
@@ -629,6 +930,30 @@
         "title": "Face",
         "type": "object"
       },
+      "Found": {
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/Hit"
+            },
+            "title": "Hits",
+            "type": "array"
+          },
+          "searched": {
+            "items": {
+              "$ref": "#/components/schemas/Searched"
+            },
+            "title": "Searched",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hits",
+          "searched"
+        ],
+        "title": "Found",
+        "type": "object"
+      },
       "FundsIn": {
         "properties": {
           "amount_cents": {
@@ -682,6 +1007,61 @@
         "title": "Health",
         "type": "object"
       },
+      "Hit": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "goal": {
+            "title": "Goal",
+            "type": "string"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seq"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "machine_id",
+          "goal",
+          "seq",
+          "at",
+          "snippet"
+        ],
+        "title": "Hit",
+        "type": "object"
+      },
       "Host": {
         "properties": {
           "connected_at": {
@@ -697,12 +1077,25 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the org it acts in now: its newest sign-in's",
+            "title": "Org"
           }
         },
         "required": [
           "id",
           "name",
-          "connected_at"
+          "connected_at",
+          "org"
         ],
         "title": "Host",
         "type": "object"
@@ -958,6 +1351,21 @@
           "org"
         ],
         "title": "Joined",
+        "type": "object"
+      },
+      "KeyIn": {
+        "properties": {
+          "api_key": {
+            "maxLength": 4000,
+            "minLength": 8,
+            "title": "Api Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_key"
+        ],
+        "title": "KeyIn",
         "type": "object"
       },
       "Launch": {
@@ -1374,6 +1782,218 @@
         "title": "MemberChange",
         "type": "object"
       },
+      "ModelView": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "catalog_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Model Id"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_added_at": {
+            "format": "date-time",
+            "title": "Key Added At",
+            "type": "string"
+          },
+          "key_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Checked At"
+          },
+          "key_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Error"
+          },
+          "key_last4": {
+            "title": "Key Last4",
+            "type": "string"
+          },
+          "logo_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Key"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "unchecked",
+              "key_refused",
+              "off"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "title": "Used By",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "provider_name",
+          "logo_key",
+          "model",
+          "catalog_model_id",
+          "type",
+          "base_url",
+          "key_last4",
+          "key_added_at",
+          "key_checked_at",
+          "key_error",
+          "status",
+          "disabled_at",
+          "disabled_reason",
+          "used_by"
+        ],
+        "title": "ModelView",
+        "type": "object"
+      },
+      "NewBrowser": {
+        "properties": {
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "super_power_id": {
+            "format": "uuid",
+            "title": "Super Power Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "machine_id",
+          "super_power_id"
+        ],
+        "title": "NewBrowser",
+        "type": "object"
+      },
+      "NewFolder": {
+        "properties": {
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "^[~/]",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "machine_id",
+          "path"
+        ],
+        "title": "NewFolder",
+        "type": "object"
+      },
       "NewInvite": {
         "properties": {
           "email": {
@@ -1396,6 +2016,81 @@
           "email"
         ],
         "title": "NewInvite",
+        "type": "object"
+      },
+      "NewModel": {
+        "description": "From the catalog (`catalog_model_id`), or a model the catalog lacks (`provider` and its `model` id).",
+        "properties": {
+          "api_key": {
+            "maxLength": 4000,
+            "minLength": 8,
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "catalog_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Model Id"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "required": [
+          "api_key"
+        ],
+        "title": "NewModel",
         "type": "object"
       },
       "NextInvoice": {
@@ -1453,6 +2148,36 @@
           "credit": {
             "$ref": "#/components/schemas/Credit"
           },
+          "machines_allowed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machines Allowed"
+          },
+          "machines_in_use": {
+            "title": "Machines In Use",
+            "type": "integer"
+          },
+          "max_seats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seats"
+          },
+          "monthly_credit_cents": {
+            "title": "Monthly Credit Cents",
+            "type": "integer"
+          },
           "plan": {
             "title": "Plan",
             "type": "string"
@@ -1468,11 +2193,20 @@
               }
             ],
             "title": "Renews At"
+          },
+          "seats_in_use": {
+            "title": "Seats In Use",
+            "type": "integer"
           }
         },
         "required": [
           "plan",
           "renews_at",
+          "seats_in_use",
+          "max_seats",
+          "machines_in_use",
+          "machines_allowed",
+          "monthly_credit_cents",
           "credit"
         ],
         "title": "OrgCredit",
@@ -1534,6 +2268,61 @@
         "title": "OrgView",
         "type": "object"
       },
+      "Override": {
+        "properties": {
+          "permission": {
+            "enum": [
+              "allow",
+              "deny"
+            ],
+            "title": "Permission",
+            "type": "string"
+          },
+          "super_power": {
+            "title": "Super Power",
+            "type": "string"
+          },
+          "super_power_id": {
+            "format": "uuid",
+            "title": "Super Power Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "super_power_id",
+          "super_power",
+          "permission"
+        ],
+        "title": "Override",
+        "type": "object"
+      },
+      "Page": {
+        "properties": {
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "first": {
+            "title": "First",
+            "type": "boolean"
+          },
+          "last_seq": {
+            "title": "Last Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "first",
+          "last_seq"
+        ],
+        "title": "Page",
+        "type": "object"
+      },
       "PaymentStart": {
         "description": "What the page needs to show Stripe's Payment Element and confirm the payment there.",
         "properties": {
@@ -1562,6 +2351,86 @@
           "stripe_publishable_key"
         ],
         "title": "PaymentStart",
+        "type": "object"
+      },
+      "Place": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "machine": {
+            "title": "Machine",
+            "type": "string"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "machine_last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Last Seen At"
+          },
+          "machine_online": {
+            "title": "Machine Online",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "title": "Used By",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "path",
+          "profile",
+          "machine_id",
+          "machine",
+          "machine_online",
+          "machine_last_seen_at",
+          "used_by"
+        ],
+        "title": "Place",
         "type": "object"
       },
       "PlanChange": {
@@ -1820,6 +2689,65 @@
         "title": "ProfileChange",
         "type": "object"
       },
+      "ProviderView": {
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "logo_dark_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Dark Key"
+          },
+          "logo_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Key"
+          },
+          "models": {
+            "title": "Models",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "logo_key",
+          "logo_dark_key",
+          "models",
+          "blocked"
+        ],
+        "title": "ProviderView",
+        "type": "object"
+      },
       "Question": {
         "properties": {
           "asked_at": {
@@ -1937,6 +2865,148 @@
           "text"
         ],
         "title": "Say",
+        "type": "object"
+      },
+      "Searched": {
+        "properties": {
+          "by": {
+            "enum": [
+              "said",
+              "goal"
+            ],
+            "title": "By",
+            "type": "string"
+          },
+          "machine_id": {
+            "format": "uuid",
+            "title": "Machine Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "machine_id",
+          "name",
+          "by"
+        ],
+        "title": "Searched",
+        "type": "object"
+      },
+      "Service": {
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "logo_url",
+          "categories",
+          "blocked",
+          "connected"
+        ],
+        "title": "Service",
+        "type": "object"
+      },
+      "ServiceIn": {
+        "properties": {
+          "service": {
+            "pattern": "^[a-z0-9_]{1,100}$",
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service"
+        ],
+        "title": "ServiceIn",
+        "type": "object"
+      },
+      "ServicePage": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "services",
+          "total",
+          "after"
+        ],
+        "title": "ServicePage",
         "type": "object"
       },
       "Settings": {
@@ -2343,6 +3413,142 @@
         "title": "ThreadStart",
         "type": "object"
       },
+      "Tool": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/Override"
+            },
+            "title": "Overrides",
+            "type": "array"
+          },
+          "permission": {
+            "enum": [
+              "allow",
+              "ask",
+              "deny"
+            ],
+            "title": "Permission",
+            "type": "string"
+          },
+          "risk": {
+            "enum": [
+              "read",
+              "write",
+              "delete",
+              "other"
+            ],
+            "title": "Risk",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "name",
+          "description",
+          "risk",
+          "permission",
+          "overrides"
+        ],
+        "title": "Tool",
+        "type": "object"
+      },
+      "ToolChange": {
+        "description": "My own setting (no super power; \"ask\" clears it), or a super power's override (\"ask\" clears it).",
+        "properties": {
+          "permission": {
+            "enum": [
+              "allow",
+              "ask",
+              "deny"
+            ],
+            "title": "Permission",
+            "type": "string"
+          },
+          "super_power_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Super Power Id"
+          },
+          "tool": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,200}$",
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "permission"
+        ],
+        "title": "ToolChange",
+        "type": "object"
+      },
+      "ToolChanges": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ToolChange"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "ToolChanges",
+        "type": "object"
+      },
+      "ToolPage": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tools",
+          "total",
+          "counts"
+        ],
+        "title": "ToolPage",
+        "type": "object"
+      },
       "TopUp": {
         "properties": {
           "amount_cents": {
@@ -2422,6 +3628,38 @@
           "total"
         ],
         "title": "TopUpPage",
+        "type": "object"
+      },
+      "User": {
+        "description": "A super power that uses a power, and how (a folder's read or write).",
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "access"
+        ],
+        "title": "User",
         "type": "object"
       },
       "ValidationError": {
@@ -2595,6 +3833,212 @@
         "summary": "Sign In Screen",
         "tags": [
           "sign-in"
+        ]
+      }
+    },
+    "/v1/catalog/models": {
+      "get": {
+        "description": "The catalog's models (one provider's, or all), searched, each saying whether I may add it.",
+        "operationId": "listCatalogModels",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Catalog Models",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/catalog/providers": {
+      "get": {
+        "description": "The catalog's providers, each with how many models it offers and, when a limit leaves all out, why.",
+        "operationId": "listProviders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderView"
+                  },
+                  "title": "Response Listproviders",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Providers",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/catalog/services": {
+      "get": {
+        "description": "Services to connect (Pipedream's apps), by cursor: pass the page's `after` for the next.",
+        "operationId": "listServices",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Services",
+        "tags": [
+          "connections"
         ]
       }
     },
@@ -4213,6 +5657,739 @@
         ]
       }
     },
+    "/v1/powers/browsers": {
+      "get": {
+        "operationId": "listBrowsers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Place"
+                  },
+                  "title": "Response Listbrowsers",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Browsers",
+        "tags": [
+          "powers"
+        ]
+      },
+      "post": {
+        "operationId": "addBrowser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewBrowser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Browser",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/browsers/{power_id}": {
+      "delete": {
+        "operationId": "deleteBrowser",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Browser",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/can-add": {
+      "get": {
+        "description": "The models and connections my teams allow, inside my org's list, with the teams that allow each.",
+        "operationId": "whatICanAdd",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanAdd"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "What I Can Add",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/connections": {
+      "get": {
+        "operationId": "listConnections",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectionView"
+                  },
+                  "title": "Response Listconnections",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Connections",
+        "tags": [
+          "connections"
+        ]
+      },
+      "post": {
+        "description": "Start connecting my account at a service: open the link (Pipedream's own sign-in), then check.",
+        "operationId": "connect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Connect",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/v1/powers/connections/{power_id}": {
+      "delete": {
+        "operationId": "disconnect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disconnect",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/v1/powers/connections/{power_id}/check": {
+      "post": {
+        "description": "Ask Pipedream which account the connection is, after its sign-in.",
+        "operationId": "checkConnection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/v1/powers/connections/{power_id}/link": {
+      "post": {
+        "description": "A new sign-in link for the same connection.",
+        "operationId": "reconnect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconnect",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/v1/powers/connections/{power_id}/tools": {
+      "get": {
+        "description": "The connection's tools, by risk, each with my permission and any super power's own.",
+        "operationId": "listTools",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tools",
+        "tags": [
+          "connections"
+        ]
+      },
+      "patch": {
+        "description": "Set tools to Allow, Ask or Deny (mine, or a super power's own for its unwatched runs).",
+        "operationId": "setTools",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolChanges"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Tools",
+        "tags": [
+          "connections"
+        ]
+      }
+    },
+    "/v1/powers/folders": {
+      "get": {
+        "operationId": "listFolders",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Place"
+                  },
+                  "title": "Response Listfolders",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Folders",
+        "tags": [
+          "powers"
+        ]
+      },
+      "post": {
+        "operationId": "addFolder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFolder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Folder",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/folders/{power_id}": {
+      "delete": {
+        "description": "Super powers lose it at once; the folder and its files stay on the machine.",
+        "operationId": "removeFolder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Folder",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/models": {
+      "get": {
+        "operationId": "listModels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelView"
+                  },
+                  "title": "Response Listmodels",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Models",
+        "tags": [
+          "powers"
+        ]
+      },
+      "post": {
+        "description": "Add a model on my own key: the key is tried with the provider first, and a refused one saves nothing.",
+        "operationId": "addModel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Model",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/models/{power_id}": {
+      "delete": {
+        "operationId": "deleteModel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Model",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/models/{power_id}/check": {
+      "post": {
+        "description": "Try the saved key with its provider again.",
+        "operationId": "checkModelKey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Key",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
+    "/v1/powers/models/{power_id}/key": {
+      "put": {
+        "operationId": "replaceModelKey",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "power_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Power Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Key",
+        "tags": [
+          "powers"
+        ]
+      }
+    },
     "/v1/session/refresh": {
       "post": {
         "operationId": "refreshSession",
@@ -4342,6 +6519,51 @@
         "summary": "Start",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/v1/threads/search": {
+      "get": {
+        "description": "My threads found by their goal, and by what was said on every one of my machines that is online.",
+        "operationId": "searchThreads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Found"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "threads"
         ]
       }
     },
@@ -4508,6 +6730,79 @@
           }
         },
         "summary": "Watch",
+        "tags": [
+          "threads"
+        ]
+      }
+    },
+    "/v1/threads/{thread_id}/messages": {
+      "get": {
+        "description": "A page of a thread's events from its machine, oldest first: the newest, or those before a number.",
+        "operationId": "readThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messages",
         "tags": [
           "threads"
         ]

@@ -29,6 +29,7 @@ HOST: dict = {
     "id": "7f0c7b1e-0000-4000-8000-000000000003",
     "name": "Claude Code",
     "connected_at": "2026-10-11T12:00:00Z",
+    "org": "Northwind",
 }
 
 
@@ -80,7 +81,12 @@ def test_the_token_comes_from_glyphh_token(monkeypatch: pytest.MonkeyPatch) -> N
 def test_hosts_are_listed_and_disconnected() -> None:
     hosts = Glyphh(SERVER, token="t", transport=answering(200, [HOST])).list_hosts()
     assert hosts == [
-        Host(id=HOST["id"], name="Claude Code", connected_at=datetime.fromisoformat("2026-10-11T12:00:00+00:00"))
+        Host(
+            id=HOST["id"],
+            name="Claude Code",
+            connected_at=datetime.fromisoformat("2026-10-11T12:00:00+00:00"),
+            org="Northwind",
+        )
     ]
     seen: list = []
     assert Glyphh(SERVER, token="t", transport=answering(204, None, seen)).disconnect_host(HOST["id"]) is None

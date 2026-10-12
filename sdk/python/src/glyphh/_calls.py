@@ -42,3 +42,14 @@ SETTINGS = Call(my_settings, lambda r: isinstance(r.parsed, Settings), _models.s
 CHANGE_SETTINGS = Call(change_my_settings, lambda r: isinstance(r.parsed, Settings), _models.settings_of)
 CHANGE_ME = Call(change_me, lambda r: isinstance(r.parsed, Me), _models.me_of)
 SIGN_OUT_EVERYWHERE = Call(sign_out_everywhere, lambda r: int(r.status_code) == 204, lambda _: None)
+
+
+def _plain(parsed: Any) -> Any:
+    if isinstance(parsed, list):
+        return [_plain(p) for p in parsed]
+    return parsed.to_dict() if hasattr(parsed, "to_dict") else parsed
+
+
+def plain_call(operation: Any) -> Call:
+    """A call whose answer is the server's JSON as plain dicts (any 2xx is success)."""
+    return Call(operation, lambda r: 200 <= int(r.status_code) < 300, _plain)

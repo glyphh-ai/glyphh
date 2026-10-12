@@ -8,14 +8,19 @@ import { BillingApi } from "./billing.js";
 import { GlyphhError, unwrap } from "./errors.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
+import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { BillingApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, ThreadsApi };
+export { BillingApi, GlyphhError, MachinesApi, NeedsYouApi, OrgApi, PowersApi, ThreadsApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
 } from "./billing.js";
+export type {
+  CanAdd, CatalogPage, CatalogQuery, ConnectionView, ConnectLink, ModelView, NewBrowser, NewFolder, NewModel, Place, ProviderView,
+  ServicePage, ToolChange, ToolPage,
+} from "./powers.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -50,6 +55,8 @@ export class Glyphh {
   readonly needsYou: NeedsYouApi;
   /** My org's plans, credit and billing. */
   readonly billing: BillingApi;
+  /** My powers: models, connections and their tools, folders, browsers. */
+  readonly powers: PowersApi;
 
   constructor(options: GlyphhOptions = {}) {
     const token = options.token ?? process.env.GLYPHH_TOKEN;
@@ -63,6 +70,7 @@ export class Glyphh {
     this.threads = new ThreadsApi(this.#client);
     this.needsYou = new NeedsYouApi(this.#client);
     this.billing = new BillingApi(this.#client);
+    this.powers = new PowersApi(this.#client);
   }
 
   /** Is the server up, and can it reach its database? */

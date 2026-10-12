@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
-from glyphh._calls import Call
+from glyphh._calls import plain_call as _call
 from glyphh._gen.api.billing import (
     add_funds,
     change_plan,
@@ -29,17 +29,6 @@ from glyphh._gen.models.auto_top_up_change import AutoTopUpChange
 from glyphh._gen.models.funds_in import FundsIn
 from glyphh._gen.models.plan_in import PlanIn
 from glyphh._gen.types import UNSET
-
-
-def _plain(parsed: Any) -> Any:
-    if isinstance(parsed, list):
-        return [_plain(p) for p in parsed]
-    return parsed.to_dict() if hasattr(parsed, "to_dict") else parsed
-
-
-def _call(operation: Any) -> Call:
-    return Call(operation, lambda r: 200 <= int(r.status_code) < 300, _plain)
-
 
 PLANS, CREDIT, GET, SYNC = _call(list_plans), _call(org_credit), _call(get_billing), _call(sync_billing)
 ADD_FUNDS, TOP_UPS, SET_AUTO, CHECK_AUTO = (

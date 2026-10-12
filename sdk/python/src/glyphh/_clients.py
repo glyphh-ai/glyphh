@@ -27,6 +27,7 @@ from glyphh._gen.models.settings_change import SettingsChange
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
 from glyphh._org import AsyncOrg, Org
+from glyphh._powers import AsyncPowers, Powers
 from glyphh._threads import AsyncNeedsYou, AsyncThreads, NeedsYou, Threads
 
 
@@ -61,6 +62,7 @@ class Glyphh:
         self.threads = Threads(self._run)
         self.needs_you = NeedsYou(self._run)
         self.billing = Billing(self._run)
+        self.powers = Powers(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
         try:
@@ -131,6 +133,7 @@ class AsyncGlyphh:
         self.threads = AsyncThreads(self._run)
         self.needs_you = AsyncNeedsYou(self._run)
         self.billing = AsyncBilling(self._run)
+        self.powers = AsyncPowers(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:
         try:

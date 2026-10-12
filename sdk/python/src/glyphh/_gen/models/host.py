@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -18,11 +18,13 @@ class Host:
         connected_at (datetime.datetime):
         id (UUID):
         name (str):
+        org (None | str): the org it acts in now: its newest sign-in's
     """
 
     connected_at: datetime.datetime
     id: UUID
     name: str
+    org: str | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -32,6 +34,9 @@ class Host:
 
         name = self.name
 
+        org: str | None
+        org = self.org
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
@@ -39,6 +44,7 @@ class Host:
                 "connected_at": connected_at,
                 "id": id,
                 "name": name,
+                "org": org,
             }
         )
 
@@ -53,10 +59,18 @@ class Host:
 
         name = d.pop("name")
 
+        def _parse_org(data: object) -> str | None:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        org = _parse_org(d.pop("org"))
+
         host = cls(
             connected_at=connected_at,
             id=id,
             name=name,
+            org=org,
         )
 
         host.additional_properties = d
