@@ -127,13 +127,13 @@ The same three are the loops a super power can run on, so a CLI is used like a m
 
 ### Voice
 
-rrotor talks and listens, and every super power has a voice of its own, set on its edit screen beside its avatar and name: one of the member's own speech models and one of that model's voices, with a sample to hear first (as the old app's super power editor had it). The member turns voice on for their rrotor, picks the speech-to-text model Glyphh hears them with, and presses the talk button in rrotor's UI, wherever it is open: inside Claude, or in any browser.
+rrotor talks and listens, and every super power has a voice of its own, set on its edit screen beside its avatar and name: one of the member's own speech models and one of that model's voices, with a sample to hear first (as the old app's super power editor had it). The member turns voice on for their rrotor, picks the speech-to-text model Glyphh hears them with, and presses the talk button in Glyphh's view of the machine, wherever it is open: a panel in Claude, or the platform in any browser.
 
 - **The audio streams between the browser and rrotor,** over the same encrypted channel as the UI: what the member says is transcribed in rrotor by their speech-to-text model, the main assistant answers on its loop, and the answer is spoken back in Glyphh's voice.
 - **Hearing the swarm, literally:** the main assistant says what its super powers are doing as it happens (one finished, one failed, one needs an answer), and a super power that speaks for itself does so in its own voice, so the member can tell who is talking. The member can answer by voice.
 - **Never priced by Glyphh, never through Glyphh's servers in the clear:** the speech models are called directly on the member's keys, and the relay passes only what it cannot read.
 
-Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or in rrotor's UI. Ported from the old app's super power and power builders.
+Glyphh has the super power editor: the skills and tools to create a super power, grant and take back its powers, machines and super powers, and test-run it. Only Glyphh edits super powers; a super power under it cannot change its own grants or another's. Every editor step is a server operation, so it is an API call and an MCP tool too: a member edits a super power by talking to Glyphh, or on the platform. Ported from the old app's super power and power builders.
 
 ### Tasks, the heart of rrotor
 
@@ -168,14 +168,14 @@ Everything a super power needs to run, on the member's own machine:
 - **Postgres with pgvector:** a super power's own data and its vectors. The server's Postgres has no pgvector; vectors live only in rrotor.
 - **Neo4j:** a super power's graph.
 - **Redis and cron:** queues, caches and the machine's own clock.
-- **A Next.js server:** serves Glyphh's own UI (below) and each super power's screens.
+- **A virtual screen per browser:** headful Chromium on its own display for each browser profile, started when a run needs it (rrotor is headless, above).
 - **The loop:** the CLI or rrotor's own, with the super power's models and powers.
 
 It is the agent runtime: from it, a super power reaches about 3,900 models across about 125 providers directly, never through Glyphh's servers, and about 3,500 connections, which go through the server and are counted against the member's subscription.
 
 **One rrotor, the full one, everywhere.** Every machine runs the same image, with everything above. There is no Glyphh app on anyone's desktop: the member already has Claude, Cursor or a CLI there, and opens Glyphh's UI from it. A laptop can run rrotor too, as just another host, through Docker (Docker Desktop, OrbStack, or WSL on Windows), when a member wants super powers on its local folders or its own internet address; Glyphh ships nothing desktop-specific for it.
 
-A super power's data and screens live in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores.
+A super power's data lives in its member's rrotor, never on the server: the server holds the super power's definition and its grants, not what it stores. rrotor serves no UI of its own (rrotor is headless, below).
 
 How a super power's data is kept apart from another's in that Postgres, and how its screens are laid out inside Glyphh's UI: see [Open](#open).
 
@@ -188,6 +188,54 @@ Decided 2026-10-11:
 - **Everything reaches a machine only through its rrotor, and only by grants:** another machine, Claude, a browser, or a super power running unattended. A super power is fenced whether or not anyone is watching it.
 - **The old app's tools that touch files, shells, processes or a browser live in rrotor.**
 
+### rrotor is headless: a machine that executes and streams
+
+Decided by Chris, 2026-10-12, after the full-circle prototype (below):
+
+- **rrotor runs everything headless and serves no UI of its own.** On the machine:
+    - Claude Code and Codex, run unmodified in headless mode;
+    - the Glyphh loop, ported from the old worker (`@glyphh/sdk/loop`) and its harness;
+    - the runs, the browser and the data.
+
+    rrotor never trying to be *the* harness is the point: the harness is wherever the member already is.
+
+- **One machine runs everything,** installed wherever the member wants it: a laptop through Docker, Fly, or any host on the list in Runtime hosting. Glyphh, every super power, the CLIs, the browsers and the data all run on it. More machines are a choice (more room, other folders, another place), never a requirement, and they reach each other machine to machine.
+- **Every session streams back to the server.** rrotor sends each session's events over its outbound connection, and the server passes them on to whoever is watching:
+    - a chat turn or a step in plain words;
+    - a status change;
+    - a "needs you";
+    - a browser screen.
+- **rrotor's views are the platform's and Claude's:**
+    - **The platform:** rrotor's boards (the crew, a thread, the Workbench, Recents) become pages on app.glyphh.ai, built from `@glyphh-ai/ui`, reading those streams live.
+    - **Claude panels:** the same views as MCP Apps panels in Claude, from the same stream.
+    - **No app anywhere else:** there is no app on the machine and no desktop app.
+- **A screen per browser, not a desktop.** Each browser profile (a `browsers` power, one super power's) gets its own virtual screen with headful Chromium on it:
+    - The engine starts it when a run needs the browser and stops it after.
+    - Each screen streams on its own and takes control on its own, so a member can take one super power's browser while the others keep working.
+    - Grabbing the whole display, not the tab, also shows native dialogs (file pickers, downloads, basic-auth prompts), which are the moments a person has to step in.
+    - A full desktop can come later as a developer's or admin's view of the machine. It is not the business UI.
+- **Needs you reaches the member wherever they are.** When a super power needs an answer or a hand (a permission, a sign-in, Google asking whether it is a robot), rrotor sends a "needs you" event:
+    - **The server** keeps it until it is answered.
+    - **The plugin's hook** in Claude Code tells the member "Glyphh needs you".
+    - **The Glyphh panel** shows which super power and why; the member answers there or takes control of its screen.
+    - **Hosts without hooks:** the panel shows it when opened, and the server's push or email (Seeing and hearing the swarm) covers the rest.
+
+**Prototyped end to end, 2026-10-12.** The code is stowed on branches, not main: server `proto/stream`, rrotor `proto/stream`. The circle:
+
+1. A tool in Claude sent a job to the member's machine over its outbound WebSocket.
+2. rrotor's Chromium searched Google.
+3. A panel in Claude showed it live: steps and screen frames, relayed by the server under a ticket only the panel held.
+4. Take control sent the member's clicks and keys into the machine (CDP, then xdotool on the display).
+5. The results came back to Claude.
+
+A second tool opened the machine's whole desktop in the panel. What it taught:
+
+- **Claude's panel frame preflights every POST**, even plain text. The real panel routes answer preflights themselves, and keep tickets out of URLs (the prototype put one in a GET).
+- **Hosts keep a panel's HTML by its address**, so a panel's `ui://` address carries its version.
+- **Locally the platform's dev server** answers preflights itself and does not pass WebSockets: panels and machines reach the server directly, not through it.
+- **Google sometimes stops a fresh browser profile** ("/sorry/"). That is the member's to answer, through take control. A profile the member has signed into keeps its cookies on `/data`.
+- **Still to prove:** WebRTC end to end, so the server only passes the call setup and never sees a screen.
+
 ### The stack
 
 Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made of:
@@ -196,9 +244,9 @@ Proposed 2026-10-12, for Chris's yes. Every part of Glyphh, and what it is made 
 |---|---|---|
 | Server (API, MCP, relay) | `glyphh-ai/server` | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, Redis |
 | Platform (app.glyphh.ai, the cards) | `glyphh-ai/platform` | Vite + React, static, on Fly behind Caddy |
-| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; never published: the platform and rrotor's UI build it from a checkout beside them |
+| Component library (`@glyphh-ai/ui`) | `glyphh-ai/ui` | React, CSS modules on the tokens, zod; never published: the platform builds it from a checkout beside it |
 | SDKs, plugin, design | `glyphh-ai/glyphh` | TypeScript and Python clients generated from the OpenAPI spec |
-| rrotor (the machine) | `glyphh-ai/rrotor` | One Linux image: the engine and the UI in TypeScript, the services below |
+| rrotor (the machine) | `glyphh-ai/rrotor` | One Linux image, headless: the engine in TypeScript, the services below. Its views are the platform's and Claude's panels |
 
 **rrotor, one image.** `ghcr.io/glyphh-ai/rrotor`, built for amd64 and arm64 (Apple silicon laptops, Graviton, Hetzner's Arm), on Debian 13 (trixie) slim. Every host runs the same image:
 
@@ -212,21 +260,20 @@ Everything that must outlive an update lives on one volume, `/data`: the machine
 
 - **Process supervisor:** s6-overlay as PID 1, which starts the services in order, waits until each is ready, restarts what dies and stops everything cleanly. The splash's start-up steps are its readiness.
 - **The engine:** TypeScript on Node 24, one long-running process, which:
-    - holds the machine's outbound WebSocket to the server (`ws`);
-    - serves the UI's local API with live updates over Server-Sent Events (Fastify);
+    - holds the machine's outbound WebSocket to the server (`ws`), and streams every session's events back over it;
     - serves rrotor's MCP surface (`@modelcontextprotocol/sdk`);
     - runs the SSH server and its channels: watch, drive, files and shell (`ssh2`);
     - runs the loops and the runs, and drives the browser;
     - hosts the outputs and batches `power_events` to the server.
 
-  Its database code is Drizzle on Postgres, and its validation is zod (as the UI's).
-- **The UI:** Next.js (App Router, React 19) on `@glyphh-ai/ui` and `@glyphh-ai/sdk`, served on the machine. It talks only to the engine, never to the server; the engine holds the machine's connection and the session.
-- **The front door:** Caddy holds the machine's certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`. It takes the TLS streams the relay passes through by name and routes them: the UI, the engine's API and streams, the outputs, and each super power's own screens on their own origin.
+    Its database code is Drizzle on Postgres, and its validation is zod (as the UI's).
+
+- **No UI and no front door on the machine** (rrotor is headless, above). Whether outputs and a super power's own screens still need the machine's own address is open.
 - **The loops:**
     - Claude Code and Codex, installed at pinned versions and run unmodified in headless mode (`claude -p` with stream JSON, `--mcp-config` and `--strict-mcp-config`; `codex exec --json`). Their sign-ins stay in their own files on `/data`.
     - The Glyphh loop, the engine's own, on the member's models through the AI SDK (`ai` and its providers, with OpenAI-compatible for providers it has no package for). Whether it covers the catalog's 125 providers is to check.
 - **Data:** Postgres 17 with pgvector (each super power its own schema and role, as decided), Redis (Valkey) for queues and caches, and Neo4j Community. Neo4j is a JVM that wants about a gigabyte, so it is in the image but started only when a super power with a graph runs. Schedules need no cron: the server is the clock.
-- **The browser:** headful Chromium on a virtual screen (Xvfb), driven over CDP with Playwright. Watching and take control are as Browsers and RPA on rrotor says: WebRTC (GStreamer's `webrtcbin`), with screen frames over the SSH channel when WebRTC cannot connect.
+- **The browser:** headful Chromium, one virtual screen (Xvfb) per browser profile, driven over CDP with Playwright; take control goes into that screen (xdotool). Watching and take control are as Browsers and RPA on rrotor says: WebRTC (GStreamer's `webrtcbin`), with screen frames over the SSH channel when WebRTC cannot connect.
 - **Media:** ffmpeg, for what super powers make (reels, thumbnails, audio).
 
 **The fence: each run, sandboxed again.** Each super power runs as a Linux user of its own, and each run starts in bubblewrap:
@@ -242,7 +289,7 @@ Tested on Docker Desktop (kernel 6.12), 2026-10-12:
 
 **Updates:** on Fly, the server moves the machine to the new image through Fly's Machines API. Elsewhere, a small updater the first-boot script installs (a systemd timer: pull, then restart) does the same. Who says when to update is still open.
 
-**Tests:** Vitest at 100% for the engine and the UI, with the same code-shape limits (200-line files, 40-line functions). CI also boots the image and proves the fence: a run that reaches past its folders or its network is refused, and the refusal is reported.
+**Tests:** Vitest at 100% for the engine, with the same code-shape limits (200-line files, 40-line functions). CI also boots the image and proves the fence: a run that reaches past its folders or its network is refused, and the refusal is reported.
 
 ### Runtime hosting
 
@@ -256,11 +303,16 @@ Glyphh does not host runtimes. Members run rrotor on their own compute: a server
 
 ### Browsers and RPA on rrotor
 
-Every rrotor runs a virtual screen (a display with no monitor) and a real Chromium in it, so a super power can work websites on a headless server: Glyphh drives the browser through Chromium's own control protocol (click, type, read, go to a page) and screenshots when it needs to see. The old app's RPA tools move here, and the old browser workers already ran this way.
+Every rrotor runs a virtual screen (a display with no monitor) per browser profile and a real Chromium in each, so a super power can work websites on a headless server: Glyphh drives the browser through Chromium's own control protocol (click, type, read, go to a page) and screenshots when it needs to see. The old app's RPA tools move here, and the old browser workers already ran this way.
 
-- **Watching:** the screen streams to the member's app or the web over WebRTC, whose video is encrypted end to end by design: the server only passes the call setup over the relay, and a TURN relay used when no direct path exists cannot decrypt it. If WebRTC cannot connect, screen frames go over the SSH channel instead. The server never sees the screen.
+- **Watching:** the screen streams to the platform's page or a Claude panel over WebRTC, whose video is encrypted end to end by design: the server only passes the call setup over the relay, and a TURN relay used when no direct path exists cannot decrypt it. If WebRTC cannot connect, screen frames go over the SSH channel instead. The server never sees the screen.
 - **Signing into a website:** the member takes control. The bot pauses, the member's taps and keystrokes go straight into the remote browser over the encrypted channel, they type the password and do the 2FA themselves, and hand control back. While they hold it no screenshot goes to the model, so a password or a code never reaches the model or a chat. The run's log records when control changed hands.
-- **Sessions stay on the machine:** each browser profile (a `browsers` power) lives on one rrotor and is granted like a folder, so one super power's signed-in sites are never another's. Cookies never leave that machine.
+- **Sessions stay on the machine:** each browser profile (a `browsers` power) lives on one rrotor and is granted like a folder, so one super power's signed-in sites are never another's. Cookies never leave that machine. How a sign-in lasts (2026-10-12):
+    - **A profile is a folder on `/data`** (`/data/browsers/<profile>`, Chromium's own profile directory): its cookies, storage and saved sign-ins survive the browser stopping, rrotor restarting and every image update.
+    - **Each profile's Chromium starts with "continue where you left off",** so session-only cookies come back with it, as they do on a laptop.
+    - **A profile's browser stays up while its super power is in use,** and stops after an hour idle. An idle Chromium costs about 150–300 MB, so profiles are not all kept running.
+    - **A machine that sleeps or stops** (a laptop, a Fly machine that stops itself) stops its browsers; their profiles stay on disk, and the next run picks up with the same cookies. A machine destroyed takes its sessions with it, by design.
+    - **When a site signs the member out** (its own expiry, inactivity, a changed password), the super power meets a sign-in page and sends "needs you". The member signs in again through take control, and the profile keeps the new session.
 - **Later:** a password manager (1Password) can fill sign-ins without the model seeing them. Passkeys are tied to the member's own device and cannot be used remotely; such sites need a password and 2FA through take-over.
 
 ### Machine to machine: SSH over the relay
@@ -278,25 +330,25 @@ A member's machines reach each other, so from machine A they can watch machine B
 - **Who:** for now only the machine's owner, from their own machines, from Claude, or from a browser through the player. The server checks it before joining two connections.
 - **When B drops:** A is told at once, and can join again when B is back.
 
-**The relay is the gate; rrotor is the fence.** The relay cannot read the stream, and an escape attempt never crosses it anyway (`cd /` happens inside B's VM), so the folders are enforced in B's rrotor, where what was not granted is not mounted. The relay guards the door in front: before it joins two machines it checks who is asking, which machine, which super power and which channel (watch, drive, files, shell) against the grants, and refuses anything else before SSH starts; B's rrotor checks the same again when the channel opens. When a grant is revoked, a machine removed or a power disabled, the relay cuts the live sessions at once and the server tells rrotor to unmount. When something inside a run reaches past its fence, rrotor reports it to the server (`fence_events`), and rrotor's UI shows it. Neither depends on the other being honest.
+**The relay is the gate; rrotor is the fence.** The relay cannot read the stream, and an escape attempt never crosses it anyway (`cd /` happens inside B's VM), so the folders are enforced in B's rrotor, where what was not granted is not mounted. The relay guards the door in front: before it joins two machines it checks who is asking, which machine, which super power and which channel (watch, drive, files, shell) against the grants, and refuses anything else before SSH starts; B's rrotor checks the same again when the channel opens. When a grant is revoked, a machine removed or a power disabled, the relay cuts the live sessions at once and the server tells rrotor to unmount. When something inside a run reaches past its fence, rrotor reports it to the server (`fence_events`), and the platform and the panels show it. Neither depends on the other being honest.
 
 Ported from the old relay (`/ws/attach`), which kept the outbound sockets, the fixed list of methods and the folder grants, but let the server read every frame, put the user's sign-in token in the URL, and had no machine identity of its own.
 
 ### Platform and rrotor: what is in the system, and the work itself
 
-Decided 2026-10-11. Two UIs, split by isolation:
+Decided 2026-10-11; since 2026-10-12 both halves are the platform's (rrotor is headless, above). Two kinds of view:
 
-| | **Platform** (app.glyphh.ai, and the same views as cards) | **rrotor's UI** (served by the app server on each rrotor) |
+| | **What is in the system** | **The work itself** (rrotor's boards) |
 |---|---|---|
-| Shows | What is in the system for you: powers, super powers and their grants, machines, catalogs, usage, billing, members | Super powers in action: the swarm, runs, logs, a super power's screens, voice |
-| Data | Metadata, read through the API | What super powers make; it lives on the machine and never leaves it |
-| Reached | A browser, or as cards in Claude and ChatGPT | Through the relay: a browser tab, or a live card in Claude |
+| Shows | Powers, super powers and their grants, machines, catalogs, usage, billing, members | Super powers in action: the crew, threads, Activity, Outputs, a super power's browser screen, voice |
+| Data | Metadata, read through the API | Each machine's streams, live, passed on by the server |
+| Reached | Pages on app.glyphh.ai, and the same views as cards in Claude and ChatGPT | The same: pages on app.glyphh.ai, and live panels in Claude |
 
 **Why Glyphh is the same on every loop and every platform.** Powers are agnostic: a member combines them with their own subscription (Claude Code, Codex) or their own models, in any way they want (a super power that turns YouTube content into videos), and a super power sent to anyone works the same way every time. That holds because Glyphh controls the machine and the execution of the parts that matter, the actual work: tasks run on rrotor. Swap the orchestrator (Claude, Codex, the Glyphh loop) and a super power works as it was built.
 
 **Doing is asking.** Creating and changing things (a skill, a task, a super power and its grants) is done by asking Glyphh in Claude, Codex or ChatGPT; the plugin's tools are the server's operations. The platform shows the result, takes quick fixes, and does what a chat cannot.
 
-**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It is built on the component library (`@glyphh-ai/ui`, its own repo `glyphh-ai/ui`, shared with rrotor's UI). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
+**The platform** is its own repo (`glyphh-ai/platform`) and its own Fly app: a static Vite + React site, a client of the API like the plugin, with no server or database of its own, so a UI change never redeploys the API. It is built on the component library (`@glyphh-ai/ui`, its own repo `glyphh-ai/ui`). Every view is one component shown two ways: a page on app.glyphh.ai, and a card the MCP server serves to Claude and ChatGPT (MCP Apps), built from the same components. Clients without cards (Codex, CLIs) get the same answer as text with a link to the page.
 
 - **The sign-in screens** (sign in, allow an AI host, approve a machine's code, join an org) are platform pages. The server keeps the OAuth endpoints and the Google and GitHub callbacks, and sends the browser to the platform for each screen; the screen's buttons send it back to the server, which still binds every flow to that browser.
 - **My machines** (home), **deploy a machine** and its live status, **add Glyphh to your AI** (Claude, ChatGPT, Codex). Each machine's card shows its 8 most recently active super powers with their status, then See all (decided by Chris, 2026-10-12): a super power is **installed** on any number of machines, and every rrotor also has its Glyphh, which the card doesn't list.
@@ -306,10 +358,10 @@ Decided 2026-10-11. Two UIs, split by isolation:
 - **Members and invites** (org admins).
 - **Navigation** (decided 2026-10-11 and 2026-10-12): a **left rail**, not a top nav, collapsible to icons and remembered per person (`user_settings.rail_collapsed`), a drawer on a phone; it holds Machines, Super powers, Powers, Marketplace and Usage; **Org** for org admins (see below; in a Personal org, where there are no members or teams, Org holds only Billing, Usage and API keys: Chris, 2026-10-12); **Glyphh admin** for super admins (Orgs, Models, Marketplace, Plans: each plan's versions and the billing settings, Audit log). Org is Members, Teams, Models, Connections, Review, Usage, API keys, Audit log, Billing; the account menu has Usage and API keys (2026-10-12). You, your org and your account sit at the bottom of the rail: the account menu (your orgs to switch between, Account, Usage, API keys, Help and status, the theme, Sign out). Lists that can grow show rows per page (10, 25, 50, 100), remembered per person and list (`user_settings.page_sizes`).
 
-**rrotor's UI** stays on the machine: its app server serves Glyphh's live view and each super power's screens.
+**rrotor's views** are platform pages and Claude panels reading each machine's streams (rrotor is headless, above); the machine serves no UI.
 
-**Each machine has its own address** (decided 2026-10-11): `<machine-id>.glyphh.ai`, an opaque id, never the machine's name. rrotor's UI and every super power's screens and streams hang off it. `*.glyphh.ai` points at the relay, which reaches the machine over its outbound connection. Still to decide: Decided with it (2026-10-11): **TLS is passed through by name** (SNI) to rrotor, which holds its own certificate got through the server, so the relay forwards only ciphertext, as it does for SSH; **a super power's own screens get their own origin** (`<power>.<machine-id>.glyphh.ai`), so an app a member installed can never read rrotor's session; **a machine's session lasts about an hour** and is refreshed while in use, and the server tells the machine at once, over its connection, when a member is removed or a token revoked.
- The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens rrotor's UI in a tab.
+**Each machine has its own address** (decided 2026-10-11; since rrotor became headless, whether it is still needed is open: see Open): `<machine-id>.glyphh.ai`, an opaque id, never the machine's name. As first decided, rrotor's UI and every super power's screens and streams hung off it. `*.glyphh.ai` points at the relay, which reaches the machine over its outbound connection. Still to decide: Decided with it (2026-10-11): **TLS is passed through by name** (SNI) to rrotor, which holds its own certificate got through the server, so the relay forwards only ciphertext, as it does for SSH; **a super power's own screens get their own origin** (`<power>.<machine-id>.glyphh.ai`), so an app a member installed can never read rrotor's session; **a machine's session lasts about an hour** and is refreshed while in use, and the server tells the machine at once, over its connection, when a member is removed or a token revoked.
+ The platform and the cards reach it through the relay. A live card in Claude draws its own view from a stream off the machine rather than framing rrotor's page (a page framed inside a card came up blank, tested 2026-10-11), or opens the machine's page on the platform.
 
 **Usage and billing** read the server's usage events and credit ledger through the API, scoped as the data model says (a user their own, an org admin the org, a super admin every org):
 
@@ -335,14 +387,14 @@ API keys stay for scripts, CI and CLIs that would rather send a key.
 
 Two ways in, one per surface, both in the `glyphh-ai/glyphh` repo (private for now, public later), and the platform in its own repo. None carries logic of its own: same accounts, permission checks and tenant rules as the server.
 
-- **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the platform, rrotor's UI, the player and the plugin), Python second.
-- **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, skills that teach the agent to use Glyphh's tools, and the native machine list that opens rrotor's UI.
+- **SDK (on the API):** a typed client generated from the server's OpenAPI spec; handles sign-in and tokens, streaming over Server-Sent Events, retries and pagination. TypeScript first (the platform, rrotor's engine and the plugin), Python second.
+- **Plugin (on MCP):** one install for agent hosts (Claude Code and Claude Desktop, Cursor, ChatGPT apps): the `/mcp` connection signed in with OAuth, skills that teach the agent to use Glyphh's tools, and the native machine list that opens a machine's view (a panel, or its page on the platform).
 
 ### Access
 
-- **Sign-in:** Google and GitHub. Their screens are the sign-in; the server takes the callback and returns to Claude, the platform, the player or rrotor's UI; the screens around it are platform pages. No magic links: mail scanners use them up, they break across devices, and they train people to click sign-in links in email. Microsoft can follow, the same way, when business users need it.
+- **Sign-in:** Google and GitHub. Their screens are the sign-in; the server takes the callback and returns to Claude or the platform; the screens around it are platform pages. No magic links: mail scanners use them up, they break across devices, and they train people to click sign-in links in email. Microsoft can follow, the same way, when business users need it.
 - **People are found by the provider's own id** for them, never by email alone, so a changed email or a hidden GitHub email still finds the same person.
-- **Tokens:** after a Google or GitHub sign-in the server issues its own tokens to the platform, the player and rrotor's UI; every token carries its org. A machine's UI is opened with a launch ticket, never a token in a URL.
+- **Tokens:** after a Google or GitHub sign-in the server issues its own tokens to the platform; every token carries its org. A machine's view is opened with a launch ticket, never a token in a URL.
 - **Machines** sign in with a code the member approves in the browser, and get a machine token of their own, sent in a header, never in a URL.
 - **Agent hosts** (the plugin in Claude Code, Cursor, ChatGPT) sign in with OAuth: the member approves each host, and can revoke one without the others.
 
@@ -1310,7 +1362,7 @@ Anything that runs on its own can be put on a clock: a super power or a task.
 
 Signing in always happens from a machine, and signing in is how a machine is registered: rrotor asks the server for a code, the member approves it in the browser, and the server registers the machine and issues its tokens (`machine_sign_ins` holds the code while it waits, only as a hash). Ported from the old server's device sign-in.
 
-**One-click hosting** registers a new machine the same way, without the approve step: the member asks rrotor's UI or the plugin for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
+**One-click hosting** registers a new machine the same way, without the approve step: the member asks the platform or the plugin for a new host, the server mints a sign-in already approved (`source` one_click, the host named), and the host's button carries its code. On first boot the machine trades it for its own token and SSH key; the code works once and for minutes, then it is `used`. No code is minted when the plan has no machine left, so nothing is half set up.
 
 A machine is a registered rrotor, the same full image wherever it runs: a server on any host, or a laptop through Docker. It connects out to the server with its own token (only the hash is kept) and reports what it is: where it runs, its platform, and the rrotor version it runs (builds update themselves, so the server sees which version each machine is on). `last_seen_at` says when it was last online. A folder is always on one machine (`folders.machine_id`): the same path on two machines is two folders, and a folder grant says whether the super power may only read it or also write it (`grants.access`). At sign-in a machine also makes its own SSH key pair: the private key stays on the machine, the public key is registered here with its fingerprint (see the architecture, Machine to machine). A plan includes a number of machines (`included_machines`). An org can add more for a monthly price per extra machine, set per plan (`extra_machine_cents`, billed on the plan's Stripe price for extras); the subscription carries how many it bought (`extra_machines`). An org can register up to its included plus its extra machines; revoking one stops it connecting and frees its place.
 
@@ -1318,7 +1370,7 @@ A machine is a registered rrotor, the same full image wherever it runs: a server
 
 **Which server process holds a machine's connection is not in this database:** it is live state that is only true right now, so it lives in Redis (see the architecture, Data). `last_seen_at` here is updated when a machine connects and disconnects, not on every heartbeat.
 
-**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and rrotor's UI shows them ("this super power tried to leave its folders").
+**fence_events** are what rrotor reports when something inside a run reaches past its fence: a path that is not mounted, a host not on its network list, a channel it was not granted. The relay never reads the stream to find them; rrotor tells the server, and the platform and the panels show them ("this super power tried to leave its folders").
 
 A machine's shell over SSH is off until the member turns it on (`shell_enabled`).
 
@@ -1424,7 +1476,7 @@ Waiting until Chris brings them back: Allow after the answer, Join while signed 
 ### Drawn, not built
 
 - **Powers:** `powers` and one table per kind (`models`, `connections`, `folders`, `skills`, `tasks`, `plugins`, `loops`). Every power is one user's own, with a disabled mark for when a limit leaves it out.
-- **Catalog:** `providers` (with logos) and `catalog_models` (name, description, type), the list rrotor's UI picks models from.
+- **Catalog:** `providers` (with logos) and `catalog_models` (name, description, type), the list the platform and the panels pick models from.
 - **Super powers:** `super_powers` (one loop each; the member's Glyphh has everything), `grants` (folders, connections, models, skills, tasks, plugins, machines, other super powers), `slots` (a task's steps, each filled with a model), `tool_permissions` (allow, ask, deny per tool, with a super power's override for autonomous runs).
 - **Teams and limits:** `teams`, `allowed_models`, `allowed_connections`, and the two limit switches on orgs and teams.
 - **Schedules and runs:** `schedules` (the server's clock, sent to a machine) and `runs` (the history).
@@ -1452,10 +1504,12 @@ Everything open: decisions still to make, things to draw, work found but not sta
 
 #### Decisions
 
-- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine and UI in TypeScript, one Debian image under s6, Caddy at the front door, bubblewrap and Landlock for the fence. Waits on Chris's yes.
+- **rrotor's stack** (proposed 2026-10-12, see The stack): the engine in TypeScript (porting the old worker and the Glyphh loop), one Debian image under s6, bubblewrap and Landlock for the fence. rrotor is headless (decided); the rest waits on Chris's yes.
+- **Where a session's messages are kept:** rrotor now streams every session back to the server (rrotor is headless). Conversations were decided as the server keeping the record and rrotor the messages; say whether the server now also keeps the messages, or only passes them on.
+- **The machine's own address:** with no UI on the machine, does anything still need `<machine-id>.glyphh.ai`? Outputs and a super power's own screens could stream through the server like everything else. If nothing needs it, the certificates question below goes away.
 - **Each machine's certificates:** every machine holds its own certificate for `<machine-id>.glyphh.ai` and `*.<machine-id>.glyphh.ai`, which means a DNS-01 challenge the server answers for it. Let's Encrypt allows about 50 new certificates a week for `glyphh.ai`, fewer than the machines we expect. Choose one: a raised limit, another CA, or a separate registered domain for machines.
 - **Updating machines:** who decides when a machine moves to a new rrotor (the server, a rollout, the member), and what happens to a run in flight.
-- **The player:** the diagram and Access still name it. With each machine on its own address and TLS passed through to it, the platform and the cards may reach rrotor's UI without it. Keep it or drop it.
+- **The player:** the diagram and Access still name it. With rrotor headless and its views in the platform and Claude panels, nothing needs it. Drop it.
 
 #### To draw
 
@@ -1484,7 +1538,8 @@ Everything open: decisions still to make, things to draw, work found but not sta
 #### Design
 
 - **The design agent's requests** (`glyphh-ai/glyphh`, `design/DESIGN.md`, Requests): Pagination, SegmentedControl, a themed Stripe Payment Element, ConnectFrame, a bars-by-day chart, Menu radio items, DescriptionList, a person and an org avatar, PowerMap and FlowCanvas (the editors).
-- **The ui README** says rrotor's UI uses the library; rrotor gets a UI of its own.
+- **rrotor's design moves into the platform** (rrotor is headless, 2026-10-12): `design/rrotor/README.md` still says rrotor's UI is "served by the machine" and opened with a launch ticket. The boards stand; they become platform pages and Claude panels, and the splash becomes the platform's "opening a machine". The design agent updates the README.
+- **The "needs you" panel:** the Glyphh panel a hook sends the member to (which super power, why, answer or take control) is not drawn.
 - **Light theme** for the admin boards, the publishing boards and rrotor's splash: the design agent draws them.
 - **Gaps from the admin and publishing boards** (2026-10-11; each drawn one way, to confirm):
     - **Members:** confirm dialogs for Change role and Disable aren't drawn; a disabled member is drawn as not using a seat (a seat is an active user); an invite's expiry is drawn as "[7] days".
