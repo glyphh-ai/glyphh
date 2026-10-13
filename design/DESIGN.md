@@ -575,3 +575,51 @@ Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the 
 7. **Status words:** Online and Offline (an offline machine’s line ends “last seen 3 days ago”). The counts line is “N super powers · N working · N need you”, dropping parts that are zero; with nothing working it reads “N super powers · all quiet”; on an offline machine “· asleep”.
 8. **No … menu on the card.** Open, or Details on an offline machine, is the only action.
 
+
+## DO NOT ACT: headless first, the next direction (Chris, 2026-10-12)
+
+**Recorded, not decided for building.** Nothing below is built, drawn into the boards above, or allowed to change them until Chris says so. The server's architecture holds the same direction under "Headless first".
+
+### What Glyphh becomes
+
+- **Glyphh is a runtime for AI programs.** A program is a collection of functions (data, a semantic layer, a trust layer, models, loops, connections, a UI) with one purpose, deterministic. Not a bot, a swarm or a crew.
+- **Built from any harness** (Claude, Codex, Gemini, any other); the plugin teaches it how. A new program's tools reach the harness at once through Glyphh's one MCP server and its search tool, with no new connection.
+- **One entry point: MCP.** Every call returns a type: text, panel (HTML inline), link, needs input, needs auth, working, result (a link in R2 with a skill to fetch it after the owner approves a token).
+- **A program may ask its owner for approval, and may be public** at `<program>.glyphh.app`.
+- **It runs on rrotor**, the runtime: any model through the gateway, connections through the relay, a database and a knowledge graph, fenced, always on, on any host, streaming its machine live to wherever it was called.
+- **Headless: no platform app.** The server serves a few simple pages (Sign in, Allow, Pay); everything else is an MCP panel in the harness.
+- **The brand:** the `> glyphh` wordmark (the `>` tight to the name), minimal and terminal-like, ultra clean; drawn on the canvas pages "Brand · logo, no cat" and "Brand · > glyphh home". Hero: "Use AI to build programs that get real work done."
+
+### Every screen it needs
+
+**Simple pages the server serves** (a browser, or inline where the harness allows):
+
+1. **Home** (glyphh.ai): the hero, the live stream in a harness, how a program is built, run and called, the return types.
+2. **Sign in:** Google or GitHub; loading, signed in, refused (unverified email), error with trace id.
+3. **Allow:** "<harness> wants to use your Glyphh"; the org it acts in; allow, deny; connected (back to the harness), not connected.
+4. **Pay:** subscribe to a plan, add funds, change the card (Stripe's Payment Element in our look); processing, the bank's check, paid, refused, error.
+5. **Join:** an invite to an org; accept, decline, expired, joined.
+6. **Approve a code:** a machine or CLI signing in; enter the code, confirm what it is, approved, expired.
+7. **Approve a result:** a caller asks for a token to fetch a program's result; approve, deny, approved, expired.
+8. **A public program** (`<program>.glyphh.app`): what it does, how to call it, its own UI if it has one; offline, error.
+9. **Problem:** what happened, what to do, the trace id; expired link.
+
+**MCP panels** (inside the harness):
+
+10. **Programs:** my programs (search, status, last run, where each runs, public or private).
+11. **Building a program:** its functions as they are made, the checks, ready (its tools now in the harness).
+12. **A program running:** working, needs input, needs auth, result; the live machine stream with watch and take control.
+13. **Needs you:** approvals and questions from every program, answered in place.
+14. **Machines:** each machine, online or not, where it runs; add a machine (hosts, the install line, live status: waiting, registered, starting, ready).
+15. **A machine's CLIs:** Claude Code and Codex signed in or not, the Glyphh loop ready; signing one in.
+16. **Connections:** connected accounts, connect one, which tools each may use (allow, ask, deny).
+17. **Models and keys:** models on my own keys, add a key, check it.
+18. **Usage:** this period's credit and use, by program, connection and model.
+19. **Billing:** plan, balance, auto top-up; opens Pay.
+20. **Account:** profile, connected harnesses, sign out everywhere.
+21. **Org** (org admins): members, invites, roles, API keys, the audit log.
+22. **Glyphh admin** (staff): orgs, plans, the catalog, the audit log.
+
+**Shared parts:** the `> glyphh` wordmark, the waiting state, empty, loading, error with trace id, the typed return chips, the live stream frame with watch and take control.
+
+**Next, once Chris says act:** a design for each screen above on the canvas, one page per screen, in the `> glyphh` look; then a prototype built from the platform's history (every page existed before commit aedab38 in glyphh-ai/platform).
