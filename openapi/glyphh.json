@@ -4268,6 +4268,14 @@
             "title": "Platform",
             "type": "string"
           },
+          "shell_enabled": {
+            "title": "Shell Enabled",
+            "type": "boolean"
+          },
+          "ssh_fingerprint": {
+            "title": "Ssh Fingerprint",
+            "type": "string"
+          },
           "super_powers": {
             "items": {
               "$ref": "#/components/schemas/Face"
@@ -4292,12 +4300,27 @@
           "version",
           "online",
           "last_seen_at",
+          "shell_enabled",
+          "ssh_fingerprint",
           "super_powers",
           "installed",
           "working",
           "needs_you"
         ],
         "title": "MachineCard",
+        "type": "object"
+      },
+      "MachineChange": {
+        "properties": {
+          "shell_enabled": {
+            "title": "Shell Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "shell_enabled"
+        ],
+        "title": "MachineChange",
         "type": "object"
       },
       "MachineLoops": {
@@ -14974,6 +14997,95 @@
           }
         },
         "summary": "Minted",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}": {
+      "delete": {
+        "description": "Remove it for good: its token stops, a live connection is cut, its place on the plan is freed; its threads\nstay. It signs in again from scratch to come back.",
+        "operationId": "removeMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove",
+        "tags": [
+          "machines"
+        ]
+      },
+      "patch": {
+        "description": "Turn its shell over SSH on or off (off until I turn it on).",
+        "operationId": "changeMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MachineChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change",
         "tags": [
           "machines"
         ]

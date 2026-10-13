@@ -25,6 +25,8 @@ CARD = {
     "version": "1.0.0",
     "online": True,
     "last_seen_at": None,
+    "shell_enabled": False,
+    "ssh_fingerprint": "SHA256:x",
     "super_powers": [FACE],
     "installed": 1,
     "working": 1,
@@ -129,3 +131,27 @@ async def test_settings_are_read_and_changed(client: str) -> None:
     assert read == changed == Settings(theme="light", rail_collapsed=True, page_sizes={"members": 25})
     assert seen[1].method == "PATCH"
     assert json.loads(seen[1].content) in ({"theme": "light", "page_sizes": {"members": 25}}, {"rail_collapsed": True})
+
+
+def test_a_machines_shell_and_removing_it() -> None:
+    seen: list = []
+    card = Glyphh(SERVER, token="t", transport=answering(CARD, seen)).machines.set_shell(M, True)
+    assert card.shell_enabled is False and (seen[0].method, seen[0].url.path) == ("PATCH", f"/v1/machines/{M}")
+    assert json.loads(seen[0].content) == {"shell_enabled": True}
+    gone: list = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        gone.append(request)
+        return httpx.Response(204)
+
+    assert Glyphh(SERVER, token="t", transport=httpx.MockTransport(handle)).machines.remove(M) is None
+    assert (gone[0].method, gone[0].url.path) == ("DELETE", f"/v1/machines/{M}")
+
+
+async def test_a_machines_shell_and_removing_it_awaited() -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(204) if request.method == "DELETE" else httpx.Response(200, json=CARD)
+
+    g = AsyncGlyphh(SERVER, token="t", transport=httpx.MockTransport(handle))
+    assert (await g.machines.set_shell(M, False)).name == "studio-mac"
+    assert await g.machines.remove(M) is None

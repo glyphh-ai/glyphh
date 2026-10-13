@@ -6,10 +6,18 @@ from uuid import UUID
 
 from glyphh import _machine_models as models
 from glyphh._calls import Call
-from glyphh._gen.api.machines import list_installed_super_powers, list_machines, open_machine
+from glyphh._gen.api.machines import (
+    change_machine,
+    list_installed_super_powers,
+    list_machines,
+    open_machine,
+    remove_machine,
+)
 from glyphh._gen.models.installed_page import InstalledPage
 from glyphh._gen.models.launch import Launch
 from glyphh._gen.models.list_installed_super_powers_status_type_0 import ListInstalledSuperPowersStatusType0 as Status
+from glyphh._gen.models.machine_card import MachineCard
+from glyphh._gen.models.machine_change import MachineChange
 from glyphh._gen.models.machine_page import MachinePage
 from glyphh._gen.models.open_in import OpenIn
 from glyphh._gen.types import UNSET
@@ -17,6 +25,12 @@ from glyphh._gen.types import UNSET
 LIST = Call(list_machines, lambda r: isinstance(r.parsed, MachinePage), models.machine_page_of)
 INSTALLED = Call(list_installed_super_powers, lambda r: isinstance(r.parsed, InstalledPage), models.installed_of)
 OPEN = Call(open_machine, lambda r: isinstance(r.parsed, Launch), models.launch_of)
+SHELL = Call(change_machine, lambda r: isinstance(r.parsed, MachineCard), models.card_of)
+REMOVE = Call(remove_machine, lambda r: int(r.status_code) == 204, lambda _: None)
+
+
+def _shell(machine_id: str, on: bool) -> dict[str, Any]:
+    return {"machine_id": UUID(machine_id), "body": MachineChange(shell_enabled=on)}
 
 
 def _query(machine_id: str, q: str, status: str | None, page: int, size: int) -> dict[str, Any]:
@@ -53,6 +67,14 @@ class Machines:
         """The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it."""
         return self._run(OPEN, **_open(machine_id, super_power))
 
+    def set_shell(self, machine_id: str, on: bool) -> Any:
+        """Turn its shell over SSH on or off (off until I turn it on)."""
+        return self._run(SHELL, **_shell(machine_id, on))
+
+    def remove(self, machine_id: str) -> None:
+        """Remove it for good: it stops connecting at once and frees its place; its threads stay."""
+        self._run(REMOVE, machine_id=UUID(machine_id))
+
 
 class AsyncMachines:
     """`AsyncGlyphh(...).machines`: the same calls for asyncio code."""
@@ -70,3 +92,9 @@ class AsyncMachines:
 
     async def open(self, machine_id: str, super_power: str | None = None) -> Any:
         return await self._run(OPEN, **_open(machine_id, super_power))
+
+    async def set_shell(self, machine_id: str, on: bool) -> Any:
+        return await self._run(SHELL, **_shell(machine_id, on))
+
+    async def remove(self, machine_id: str) -> None:
+        await self._run(REMOVE, machine_id=UUID(machine_id))

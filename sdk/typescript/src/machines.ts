@@ -1,5 +1,5 @@
 import type { Client } from "./gen/client/index.js";
-import { listInstalledSuperPowers, listMachines, openMachine } from "./gen/sdk.gen.js";
+import { changeMachine, listInstalledSuperPowers, listMachines, openMachine, removeMachine } from "./gen/sdk.gen.js";
 import type { Face, InstalledPage, Launch, MachineCard, MachinePage } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
@@ -29,5 +29,15 @@ export class MachinesApi {
   /** The machine's page on the platform, and a one-minute, one-time ticket for a Claude panel showing it. */
   async open(machineId: string, superPower?: string): Promise<Launch> {
     return unwrap(await openMachine({ client: this.#client, path: { machine_id: machineId }, body: { super_power: superPower ?? null } }));
+  }
+
+  /** Turn its shell over SSH on or off (off until I turn it on). */
+  async setShell(machineId: string, on: boolean): Promise<MachineCard> {
+    return unwrap(await changeMachine({ client: this.#client, path: { machine_id: machineId }, body: { shell_enabled: on } }));
+  }
+
+  /** Remove it for good: it stops connecting at once and frees its place; its threads stay. */
+  async remove(machineId: string): Promise<void> {
+    unwrap(await removeMachine({ client: this.#client, path: { machine_id: machineId } }));
   }
 }

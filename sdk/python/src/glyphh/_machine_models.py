@@ -33,6 +33,8 @@ class MachineCard:
     version: str
     online: bool
     last_seen_at: datetime | None
+    shell_enabled: bool
+    ssh_fingerprint: str
     super_powers: list[Face]
     installed: int
     working: int
@@ -87,6 +89,8 @@ def card_of(m: _MachineCard) -> MachineCard:
         version=m.version,
         online=m.online,
         last_seen_at=_when(m.last_seen_at),
+        shell_enabled=m.shell_enabled,
+        ssh_fingerprint=m.ssh_fingerprint,
         super_powers=[face_of(f) for f in m.super_powers],
         installed=m.installed,
         working=m.working,

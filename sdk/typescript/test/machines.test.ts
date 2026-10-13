@@ -39,6 +39,13 @@ describe("machines", () => {
     await glyphh(launch, seen).machines.open("m-1", "s-1");
     expect(await Promise.all(seen.map((r) => r.json()))).toEqual([{ super_power: null }, { super_power: "s-1" }]);
   });
+
+  it("turns a machine's shell on and removes a machine", async () => {
+    const seen: Request[] = [];
+    await glyphh(PAGE.machines[0], seen).machines.setShell("m-1", true);
+    await glyphh(null, seen).machines.remove("m-1");
+    expect(seen.map((r) => [r.method, new URL(r.url).pathname])).toEqual([["PATCH", "/v1/machines/m-1"], ["DELETE", "/v1/machines/m-1"]]);
+  });
 });
 
 describe("settings", () => {

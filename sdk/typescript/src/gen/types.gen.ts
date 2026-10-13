@@ -2529,6 +2529,14 @@ export type MachineCard = {
      */
     platform: string;
     /**
+     * Shell Enabled
+     */
+    shell_enabled: boolean;
+    /**
+     * Ssh Fingerprint
+     */
+    ssh_fingerprint: string;
+    /**
      * Super Powers
      */
     super_powers: Array<Face>;
@@ -2540,6 +2548,16 @@ export type MachineCard = {
      * Working
      */
     working: number;
+};
+
+/**
+ * MachineChange
+ */
+export type MachineChange = {
+    /**
+     * Shell Enabled
+     */
+    shell_enabled: boolean;
 };
 
 /**
@@ -8546,6 +8564,66 @@ export type MintOneClickHostResponses = {
 };
 
 export type MintOneClickHostResponse = MintOneClickHostResponses[keyof MintOneClickHostResponses];
+
+export type RemoveMachineData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}';
+};
+
+export type RemoveMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveMachineError = RemoveMachineErrors[keyof RemoveMachineErrors];
+
+export type RemoveMachineResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RemoveMachineResponse = RemoveMachineResponses[keyof RemoveMachineResponses];
+
+export type ChangeMachineData = {
+    body: MachineChange;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}';
+};
+
+export type ChangeMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangeMachineError = ChangeMachineErrors[keyof ChangeMachineErrors];
+
+export type ChangeMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: MachineCard;
+};
+
+export type ChangeMachineResponse = ChangeMachineResponses[keyof ChangeMachineResponses];
 
 export type ListMachineClisData = {
     body?: never;

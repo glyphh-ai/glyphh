@@ -27,6 +27,8 @@ class MachineCard:
         needs_you (int):
         online (bool):
         platform (str):
+        shell_enabled (bool):
+        ssh_fingerprint (str):
         super_powers (list[Face]):
         version (str):
         working (int):
@@ -40,6 +42,8 @@ class MachineCard:
     needs_you: int
     online: bool
     platform: str
+    shell_enabled: bool
+    ssh_fingerprint: str
     super_powers: list[Face]
     version: str
     working: int
@@ -66,6 +70,10 @@ class MachineCard:
 
         platform = self.platform
 
+        shell_enabled = self.shell_enabled
+
+        ssh_fingerprint = self.ssh_fingerprint
+
         super_powers = []
         for super_powers_item_data in self.super_powers:
             super_powers_item = super_powers_item_data.to_dict()
@@ -87,6 +95,8 @@ class MachineCard:
                 "needs_you": needs_you,
                 "online": online,
                 "platform": platform,
+                "shell_enabled": shell_enabled,
+                "ssh_fingerprint": ssh_fingerprint,
                 "super_powers": super_powers,
                 "version": version,
                 "working": working,
@@ -129,6 +139,10 @@ class MachineCard:
 
         platform = d.pop("platform")
 
+        shell_enabled = d.pop("shell_enabled")
+
+        ssh_fingerprint = d.pop("ssh_fingerprint")
+
         super_powers = []
         _super_powers = d.pop("super_powers")
         for super_powers_item_data in _super_powers:
@@ -149,6 +163,8 @@ class MachineCard:
             needs_you=needs_you,
             online=online,
             platform=platform,
+            shell_enabled=shell_enabled,
+            ssh_fingerprint=ssh_fingerprint,
             super_powers=super_powers,
             version=version,
             working=working,

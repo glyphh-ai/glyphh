@@ -145,6 +145,7 @@ from .loop_state import LoopState
 from .loop_state_engine import LoopStateEngine
 from .loop_view import LoopView
 from .machine_card import MachineCard
+from .machine_change import MachineChange
 from .machine_loops import MachineLoops
 from .machine_page import MachinePage
 from .machine_says import MachineSays
@@ -504,6 +505,7 @@ __all__ = (
     "LoopStateEngine",
     "LoopView",
     "MachineCard",
+    "MachineChange",
     "MachineLoops",
     "MachinePage",
     "MachineSays",
