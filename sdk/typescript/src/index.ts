@@ -9,6 +9,7 @@ import { BillingApi } from "./billing.js";
 import { ListingsApi, MarketplaceApi } from "./discover.js";
 import { CustomPowersApi, SchedulesApi, SuperPowersApi } from "./editors.js";
 import { GlyphhError, unwrap } from "./errors.js";
+import { HostingApi } from "./hosting.js";
 import { MachinesApi } from "./machines.js";
 import { OrgApi } from "./org.js";
 import { ApiKeysApi, OrgAdminApi } from "./orgadmin.js";
@@ -20,7 +21,7 @@ import { PowersApi } from "./powers.js";
 import { NeedsYouApi, ThreadsApi } from "./threads.js";
 
 export type { Health, Host, Me, MeOrg, ProfileChange, Settings, SettingsChange };
-export { AdminApi, AdminCatalogApi, AdminMarketApi, ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi, UsageApi };
+export { AdminApi, AdminCatalogApi, AdminMarketApi, ApiKeysApi, BillingApi, CustomPowersApi, GlyphhError, HostingApi, ListingsApi, MachinesApi, MarketplaceApi, NeedsYouApi, OrgAdminApi, OrgApi, PowersApi, SchedulesApi, SuperPowersApi, ThreadsApi, UsageApi };
 export type {
   AutoTopUp, AutoTopUpChange, AutoTopUpCheck, Billing, CardSetup, Credit, DaySpend, InvoicePage, LedgerPage, NextInvoice,
   OrgCredit, PaymentStart, PlanChange, PlanPreview, PlanView, Portal, TopUpPage,
@@ -38,6 +39,7 @@ export type {
   ReviewDecision, VersionChange, Waiting,
 } from "./discover.js";
 export type * from "./admin.js";
+export type { HostAccountView, HostedState, HostedView } from "./hosting.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {
@@ -70,6 +72,8 @@ export class Glyphh {
   readonly org: OrgApi;
   /** My machines and the super powers on them. */
   readonly machines: MachinesApi;
+  /** One-click hosting on my own Fly account. */
+  readonly hosting: HostingApi;
   /** My machines' threads, by their record (their messages are on the machine). */
   readonly threads: ThreadsApi;
   /** The questions my super powers are waiting on. */
@@ -106,6 +110,7 @@ export class Glyphh {
     });
     this.org = new OrgApi(this.#client);
     this.machines = new MachinesApi(this.#client);
+    this.hosting = new HostingApi(this.#client);
     this.threads = new ThreadsApi(this.#client);
     this.needsYou = new NeedsYouApi(this.#client);
     this.billing = new BillingApi(this.#client);

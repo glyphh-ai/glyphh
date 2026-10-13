@@ -19,6 +19,20 @@ export type Access = {
 };
 
 /**
+ * AccountIn
+ */
+export type AccountIn = {
+    /**
+     * Account
+     */
+    account?: string;
+    /**
+     * Token
+     */
+    token: string;
+};
+
+/**
  * Added
  */
 export type Added = {
@@ -1318,6 +1332,24 @@ export type DaySpend = {
 };
 
 /**
+ * DeployIn
+ */
+export type DeployIn = {
+    /**
+     * Name
+     *
+     * The machine's name: letters, digits, ., _ and -.
+     */
+    name: string;
+    /**
+     * Region
+     *
+     * Fly's region, three letters (iad, ams, sjc, ...).
+     */
+    region?: string;
+};
+
+/**
  * Disable
  */
 export type Disable = {
@@ -1814,6 +1846,92 @@ export type Host = {
      * the org it acts in now: its newest sign-in's
      */
     org: string | null;
+};
+
+/**
+ * HostAccountView
+ */
+export type HostAccountView = {
+    /**
+     * Account
+     */
+    account: string;
+    /**
+     * Checked At
+     */
+    checked_at: string | null;
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Token Last4
+     */
+    token_last4: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * HostedView
+ */
+export type HostedView = {
+    /**
+     * App
+     */
+    app: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Host State
+     */
+    host_state: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Image
+     */
+    image: string;
+    /**
+     * Machine Id
+     */
+    machine_id: string | null;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Region
+     */
+    region: string;
+    /**
+     * State
+     */
+    state: 'waiting' | 'registered' | 'starting' | 'ready' | 'stopped' | 'expired';
+};
+
+/**
+ * ImageIn
+ */
+export type ImageIn = {
+    /**
+     * Image
+     */
+    image?: string | null;
 };
 
 /**
@@ -7863,6 +7981,259 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type ListHostedMachinesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/hosted-machines';
+};
+
+export type ListHostedMachinesResponses = {
+    /**
+     * Response Listhostedmachines
+     *
+     * Successful Response
+     */
+    200: Array<HostedView>;
+};
+
+export type ListHostedMachinesResponse = ListHostedMachinesResponses[keyof ListHostedMachinesResponses];
+
+export type DeployMachineData = {
+    body: DeployIn;
+    path?: never;
+    query?: never;
+    url: '/v1/hosted-machines';
+};
+
+export type DeployMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeployMachineError = DeployMachineErrors[keyof DeployMachineErrors];
+
+export type DeployMachineResponses = {
+    /**
+     * Successful Response
+     */
+    201: HostedView;
+};
+
+export type DeployMachineResponse = DeployMachineResponses[keyof DeployMachineResponses];
+
+export type DestroyHostedMachineData = {
+    body?: never;
+    path: {
+        /**
+         * Hosted Id
+         */
+        hosted_id: string;
+    };
+    query?: never;
+    url: '/v1/hosted-machines/{hosted_id}';
+};
+
+export type DestroyHostedMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DestroyHostedMachineError = DestroyHostedMachineErrors[keyof DestroyHostedMachineErrors];
+
+export type DestroyHostedMachineResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DestroyHostedMachineResponse = DestroyHostedMachineResponses[keyof DestroyHostedMachineResponses];
+
+export type GetHostedMachineData = {
+    body?: never;
+    path: {
+        /**
+         * Hosted Id
+         */
+        hosted_id: string;
+    };
+    query?: never;
+    url: '/v1/hosted-machines/{hosted_id}';
+};
+
+export type GetHostedMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetHostedMachineError = GetHostedMachineErrors[keyof GetHostedMachineErrors];
+
+export type GetHostedMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: HostedView;
+};
+
+export type GetHostedMachineResponse = GetHostedMachineResponses[keyof GetHostedMachineResponses];
+
+export type StartHostedMachineData = {
+    body?: never;
+    path: {
+        /**
+         * Hosted Id
+         */
+        hosted_id: string;
+    };
+    query?: never;
+    url: '/v1/hosted-machines/{hosted_id}/start';
+};
+
+export type StartHostedMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StartHostedMachineError = StartHostedMachineErrors[keyof StartHostedMachineErrors];
+
+export type StartHostedMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: HostedView;
+};
+
+export type StartHostedMachineResponse = StartHostedMachineResponses[keyof StartHostedMachineResponses];
+
+export type UpdateHostedMachineData = {
+    body: ImageIn;
+    path: {
+        /**
+         * Hosted Id
+         */
+        hosted_id: string;
+    };
+    query?: never;
+    url: '/v1/hosted-machines/{hosted_id}/update';
+};
+
+export type UpdateHostedMachineErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateHostedMachineError = UpdateHostedMachineErrors[keyof UpdateHostedMachineErrors];
+
+export type UpdateHostedMachineResponses = {
+    /**
+     * Successful Response
+     */
+    200: HostedView;
+};
+
+export type UpdateHostedMachineResponse = UpdateHostedMachineResponses[keyof UpdateHostedMachineResponses];
+
+export type RemoveHostAccountData = {
+    body?: never;
+    path: {
+        /**
+         * Host
+         */
+        host: 'fly';
+    };
+    query?: never;
+    url: '/v1/hosts/{host}/account';
+};
+
+export type RemoveHostAccountErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveHostAccountError = RemoveHostAccountErrors[keyof RemoveHostAccountErrors];
+
+export type RemoveHostAccountResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RemoveHostAccountResponse = RemoveHostAccountResponses[keyof RemoveHostAccountResponses];
+
+export type GetHostAccountData = {
+    body?: never;
+    path: {
+        /**
+         * Host
+         */
+        host: 'fly';
+    };
+    query?: never;
+    url: '/v1/hosts/{host}/account';
+};
+
+export type GetHostAccountErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetHostAccountError = GetHostAccountErrors[keyof GetHostAccountErrors];
+
+export type GetHostAccountResponses = {
+    /**
+     * Successful Response
+     */
+    200: HostAccountView;
+};
+
+export type GetHostAccountResponse = GetHostAccountResponses[keyof GetHostAccountResponses];
+
+export type SaveHostAccountData = {
+    body: AccountIn;
+    path: {
+        /**
+         * Host
+         */
+        host: 'fly';
+    };
+    query?: never;
+    url: '/v1/hosts/{host}/account';
+};
+
+export type SaveHostAccountErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveHostAccountError = SaveHostAccountErrors[keyof SaveHostAccountErrors];
+
+export type SaveHostAccountResponses = {
+    /**
+     * Successful Response
+     */
+    200: HostAccountView;
+};
+
+export type SaveHostAccountResponse = SaveHostAccountResponses[keyof SaveHostAccountResponses];
 
 export type AcceptInviteData = {
     body: InviteAnswer;

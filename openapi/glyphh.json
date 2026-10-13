@@ -19,6 +19,25 @@
         "title": "Access",
         "type": "object"
       },
+      "AccountIn": {
+        "properties": {
+          "account": {
+            "default": "personal",
+            "title": "Account",
+            "type": "string"
+          },
+          "token": {
+            "minLength": 8,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "AccountIn",
+        "type": "object"
+      },
       "Added": {
         "properties": {
           "id": {
@@ -2199,6 +2218,26 @@
         "title": "DaySpend",
         "type": "object"
       },
+      "DeployIn": {
+        "properties": {
+          "name": {
+            "description": "The machine's name: letters, digits, ., _ and -.",
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "default": "iad",
+            "description": "Fly's region, three letters (iad, ams, sjc, ...).",
+            "title": "Region",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "DeployIn",
+        "type": "object"
+      },
       "Disable": {
         "properties": {
           "reason": {
@@ -3021,6 +3060,147 @@
           "org"
         ],
         "title": "Host",
+        "type": "object"
+      },
+      "HostAccountView": {
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token_last4": {
+            "title": "Token Last4",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "host",
+          "account",
+          "token_last4",
+          "checked_at",
+          "updated_at"
+        ],
+        "title": "HostAccountView",
+        "type": "object"
+      },
+      "HostedView": {
+        "properties": {
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "host_state": {
+            "title": "Host State",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image": {
+            "title": "Image",
+            "type": "string"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "waiting",
+              "registered",
+              "starting",
+              "ready",
+              "stopped",
+              "expired"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "host",
+          "name",
+          "region",
+          "app",
+          "image",
+          "state",
+          "host_state",
+          "machine_id",
+          "created_at"
+        ],
+        "title": "HostedView",
+        "type": "object"
+      },
+      "ImageIn": {
+        "properties": {
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "title": "ImageIn",
         "type": "object"
       },
       "Impact": {
@@ -13889,6 +14069,380 @@
         "summary": "Get Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/hosted-machines": {
+      "get": {
+        "description": "My machines at a host, newest first, each with its state as the Deploy page shows it.",
+        "operationId": "listHostedMachines",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HostedView"
+                  },
+                  "title": "Response Listhostedmachines",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Listed",
+        "tags": [
+          "machines"
+        ]
+      },
+      "post": {
+        "description": "A new machine on my Fly account in one click: it signs itself in on first boot.",
+        "operationId": "deployMachine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deployed",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosted-machines/{hosted_id}": {
+      "delete": {
+        "description": "Destroy it at the host (its app, VM and volume) and remove its machine: cut off at once.",
+        "operationId": "destroyHostedMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hosted_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hosted Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Destroyed",
+        "tags": [
+          "machines"
+        ]
+      },
+      "get": {
+        "description": "One of my machines at a host, with what the host says of it now.",
+        "operationId": "getHostedMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hosted_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hosted Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosted-machines/{hosted_id}/start": {
+      "post": {
+        "description": "Wake a machine the host stopped.",
+        "operationId": "startHostedMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hosted_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hosted Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Woken",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosted-machines/{hosted_id}/update": {
+      "post": {
+        "description": "Move it to a new rrotor image (the server's own when none is named).",
+        "operationId": "updateHostedMachine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hosted_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hosted Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Moved",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosts/{host}/account": {
+      "delete": {
+        "description": "Forget my token at the host; my machines there keep running.",
+        "operationId": "removeHostAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "const": "fly",
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgotten",
+        "tags": [
+          "machines"
+        ]
+      },
+      "get": {
+        "description": "Which account at the host I deploy to: its org and the token's last four characters.",
+        "operationId": "getHostAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "const": "fly",
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostAccountView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Shown",
+        "tags": [
+          "machines"
+        ]
+      },
+      "put": {
+        "description": "My account at the host: a deploy token for my Fly org (and its slug), checked with Fly, kept encrypted.",
+        "operationId": "saveHostAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "const": "fly",
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostAccountView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save",
+        "tags": [
+          "machines"
         ]
       }
     },

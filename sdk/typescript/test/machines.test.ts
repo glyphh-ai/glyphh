@@ -57,3 +57,29 @@ describe("settings", () => {
     expect([seen[1]?.method, await seen[1]?.json()]).toEqual(["PATCH", { theme: "light" }]);
   });
 });
+
+describe("hosting", () => {
+  it("keeps my Fly account and deploys, reads, wakes, moves and destroys a machine there", async () => {
+    const seen: Request[] = [];
+    const hosted = { id: "h-1", host: "fly", name: "attic", region: "iad", app: "glyphh-attic-a1b2c3", image: "rrotor:latest", state: "waiting",
+      host_state: "created", machine_id: null, created_at: "2026-10-12T12:00:00Z" };
+    const g = (body: unknown) => glyphh(body, seen).hosting;
+    await g({ id: "a-1", host: "fly", account: "personal", token_last4: "abcd", checked_at: null, updated_at: "x" }).saveAccount("FlyV1 fm2_x");
+    await g({}).account();
+    await g(null).removeAccount();
+    expect(await g(hosted).deploy("attic")).toEqual(hosted);
+    await g([hosted]).list();
+    await g(hosted).get("h-1");
+    await g(hosted).start("h-1");
+    await g(hosted).update("h-1");
+    await g(hosted).update("h-1", "rrotor:1.2");
+    await g(null).destroy("h-1");
+    expect(seen.map((r) => `${r.method} ${new URL(r.url).pathname}`)).toEqual([
+      "PUT /v1/hosts/fly/account", "GET /v1/hosts/fly/account", "DELETE /v1/hosts/fly/account", "POST /v1/hosted-machines",
+      "GET /v1/hosted-machines", "GET /v1/hosted-machines/h-1", "POST /v1/hosted-machines/h-1/start",
+      "POST /v1/hosted-machines/h-1/update", "POST /v1/hosted-machines/h-1/update", "DELETE /v1/hosted-machines/h-1",
+    ]);
+    const bodies = await Promise.all([seen[0], seen[3], seen[7], seen[8]].map((r) => r?.json()));
+    expect(bodies).toEqual([{ token: "FlyV1 fm2_x", account: "personal" }, { name: "attic", region: "iad" }, { image: null }, { image: "rrotor:1.2" }]);
+  });
+});

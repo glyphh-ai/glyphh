@@ -25,6 +25,7 @@ from glyphh._editor_specs import CUSTOM_SPECS, SCHEDULE_SPECS, SUPER_POWER_SPECS
 from glyphh._errors import unreachable
 from glyphh._gen.client import Client
 from glyphh._gen.models.invite_answer import InviteAnswer
+from glyphh._hosting_specs import HOSTING_SPECS
 from glyphh._machines import AsyncMachines, Machines
 from glyphh._models import Health, Host, Me, MeOrg, Settings
 from glyphh._models import profile_change as _profile
@@ -37,11 +38,9 @@ from glyphh._usage_specs import USAGE_SPECS
 
 
 def _client(base_url: str | None, token: str | None, transport: object | None) -> Client:
-    url = base_url or os.environ.get("GLYPHH_URL")
-    if not url:
+    if not (url := base_url or os.environ.get("GLYPHH_URL")):
         raise ValueError("Glyphh needs a server: pass base_url or set GLYPHH_URL")
-    token = token or os.environ.get("GLYPHH_TOKEN")
-    headers = {"authorization": f"Bearer {token}"} if token else {}
+    headers = {"authorization": f"Bearer {token}"} if (token := token or os.environ.get("GLYPHH_TOKEN")) else {}
     return Client(base_url=url, headers=headers, httpx_args={"transport": transport} if transport else {})
 
 
@@ -66,6 +65,7 @@ class Glyphh:
         self.org_admin = SpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = SpecApi(self._run, API_KEY_SPECS)
         self.usage = SpecApi(self._run, USAGE_SPECS)
+        self.hosting = SpecApi(self._run, HOSTING_SPECS)
         self.admin = Admin(self._run)
 
     def _run(self, call: Call, **args: object) -> object:
@@ -146,6 +146,7 @@ class AsyncGlyphh:
         self.org_admin = AsyncSpecApi(self._run, ORG_ADMIN_SPECS)
         self.api_keys = AsyncSpecApi(self._run, API_KEY_SPECS)
         self.usage = AsyncSpecApi(self._run, USAGE_SPECS)
+        self.hosting = AsyncSpecApi(self._run, HOSTING_SPECS)
         self.admin = AsyncAdmin(self._run)
 
     async def _run(self, call: Call, **args: object) -> object:

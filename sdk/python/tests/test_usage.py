@@ -42,6 +42,23 @@ CALLS = [
     ("usage", "use", (S,), {}, "GET", f"/v1/usage/uses/{S}", "scope=me"),
     ("usage", "export_uses", (), {"status": "ok"}, "GET", "/v1/usage/uses.csv", "scope=me&status=ok"),
     ("usage", "listing_stats", (L,), {"days": 7}, "GET", f"/v1/listings/{L}/stats", "days=7"),
+    ("hosting", "save_account", ("FlyV1 fm2_x",), {"account": "my-org"}, "PUT", "/v1/hosts/fly/account", ""),
+    ("hosting", "account", (), {}, "GET", "/v1/hosts/fly/account", ""),
+    ("hosting", "remove_account", (), {}, "DELETE", "/v1/hosts/fly/account", ""),
+    ("hosting", "deploy", ("attic",), {"region": "ams"}, "POST", "/v1/hosted-machines", ""),
+    ("hosting", "list", (), {}, "GET", "/v1/hosted-machines", ""),
+    ("hosting", "get", (S,), {}, "GET", f"/v1/hosted-machines/{S}", ""),
+    ("hosting", "start", (S,), {}, "POST", f"/v1/hosted-machines/{S}/start", ""),
+    (
+        "hosting",
+        "update",
+        (S,),
+        {"image": "rrotor:1.2"},
+        "POST",
+        f"/v1/hosted-machines/{S}/update",
+        "",
+    ),
+    ("hosting", "destroy", (S,), {}, "DELETE", f"/v1/hosted-machines/{S}", ""),
 ]
 
 
