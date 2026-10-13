@@ -263,6 +263,12 @@ The app's screens as cards in the chat, following the host's theme:
 
 Everything in `brand/` is the source artwork.
 
+### The brand page (Chris, 2026-10-12, reviewing the Glyphh Design canvas)
+
+- **The type stands:** the brand's fonts (Red Hat Display, Text and Mono) are right as drawn.
+- **A crew's thread shows each super power's cat:** in a thread a crew works together, every message from a super power carries that super power's cat beside it, so the thread reads who said what at a glance.
+- **The left side carries the line "Combine every AI super power into one."**
+
 - `logo/`: the Glyphh logo and mascot, as on glyphh.ai (light and dark versions, the favicon).
 - `cats/`: the 16 super power faces, each the Glyphh cat with one or two parts changed (eyes, ears, tail, an antenna, a cape, a bolt). `01-glyphh` is Glyphh itself; `02-side-eye` is the face a new super power wears until one is picked.
 - `moods/`: Glyphh's moods. A mood changes the eye, so a cat shows what its super power is doing: idle, thinking, generating, done, listening, error, curious, sleepy, playful, dizzy.
