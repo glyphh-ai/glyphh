@@ -30,8 +30,8 @@ export type {
   ServicePage, ToolChange, ToolPage,
 } from "./powers.js";
 export type {
-  CustomChange, CustomPage, CustomPower, CustomQuery, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, ScheduleIn,
-  ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerQuery, SuperPowerView,
+  CustomChange, CustomPage, CustomPower, CustomQuery, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, RunList,
+  RunsQuery, RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerQuery, SuperPowerView,
 } from "./editors.js";
 export type {
   Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, MarketQuery, NewListing, Picture,

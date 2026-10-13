@@ -32,6 +32,8 @@ describe("super powers, custom powers and schedules", () => {
       call((g) => g.custom.slots("p")), call((g) => g.custom.setSlots("p", { slots: [{ name: "main" }] })),
       call((g) => g.schedules.list("p")), call((g) => g.schedules.list()), call((g) => g.schedules.add(schedule)),
       call((g) => g.schedules.change("x", schedule)), call((g) => g.schedules.delete("x")),
+      call((g) => g.schedules.runNow("x")), call((g) => g.schedules.runs({ status: "failed" })), call((g) => g.schedules.runs()),
+      call((g) => g.schedules.run("r")), call((g) => g.schedules.run("r", "org")), call((g) => g.schedules.cancelRun("r")),
     ])).toEqual([
       ["GET", "/v1/super-powers?status=working"], ["GET", "/v1/super-powers"], ["POST", "/v1/super-powers"],
       ["GET", "/v1/super-powers/glyphh"], ["GET", "/v1/super-powers/s"], ["PATCH", "/v1/super-powers/s"],
@@ -43,6 +45,8 @@ describe("super powers, custom powers and schedules", () => {
       ["GET", "/v1/powers/custom/p/slots"], ["PUT", "/v1/powers/custom/p/slots"],
       ["GET", "/v1/schedules?target=p"], ["GET", "/v1/schedules"], ["POST", "/v1/schedules"],
       ["PUT", "/v1/schedules/x"], ["DELETE", "/v1/schedules/x"],
+      ["POST", "/v1/schedules/x/run"], ["GET", "/v1/runs?status=failed"], ["GET", "/v1/runs"],
+      ["GET", "/v1/runs/r?scope=me"], ["GET", "/v1/runs/r?scope=org"], ["POST", "/v1/runs/r/cancel"],
     ]);
   });
 });

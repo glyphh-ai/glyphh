@@ -49,6 +49,19 @@ CALLS = [
     ("schedules", "add", (), SCHEDULE, "POST", "/v1/schedules", ""),
     ("schedules", "change", (S,), SCHEDULE, "PUT", f"/v1/schedules/{S}", ""),
     ("schedules", "delete", (S,), {}, "DELETE", f"/v1/schedules/{S}", ""),
+    ("schedules", "run_now", (S,), {}, "POST", f"/v1/schedules/{S}/run", ""),
+    ("schedules", "runs", (), {}, "GET", "/v1/runs", "page=1&size=25&scope=me"),
+    (
+        "schedules",
+        "runs",
+        (),
+        {"scope": "org", "super_power": S, "schedule": None, "status": "failed"},
+        "GET",
+        "/v1/runs",
+        f"page=1&size=25&scope=org&super_power={S}&status=failed",
+    ),
+    ("schedules", "run", (S,), {}, "GET", f"/v1/runs/{S}", "scope=me"),
+    ("schedules", "cancel_run", (S,), {}, "POST", f"/v1/runs/{S}/cancel", ""),
 ]
 
 

@@ -1,19 +1,20 @@
 import type { Client } from "./gen/client/index.js";
 import {
-  addSchedule, changeCustomPower, changeSchedule, changeSuperPower, createCustomPower, createSuperPower, deleteCustomFile,
-  deleteCustomPower, deleteSchedule, deleteSuperPower, getCustomPower, getSuperPower, listCustomPowers, listSchedules,
-  listSuperPowers, myGlyphh, readCustomFile, saveTaskFlow, setGrant, setLoop, setTaskSlots, taskSlots, writeCustomFile,
+  addSchedule, cancelRun, changeCustomPower, changeSchedule, changeSuperPower, createCustomPower, createSuperPower, deleteCustomFile,
+  deleteCustomPower, deleteSchedule, deleteSuperPower, getCustomPower, getRun, getSuperPower, listCustomPowers, listRuns,
+  listSchedules, listSuperPowers, myGlyphh, runScheduleNow, readCustomFile, saveTaskFlow, setGrant, setLoop, setTaskSlots, taskSlots, writeCustomFile,
 } from "./gen/sdk.gen.js";
 import type {
-  CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, ScheduleIn,
-  ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
+  CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, ListRunsData, LoopChoice, NewCustom, NewSuperPower,
+  RunList, RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
 } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
 export type {
-  CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, ScheduleIn,
-  ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
+  CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, RunList,
+  RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
 };
+export type RunsQuery = NonNullable<ListRunsData["query"]>;
 export interface SuperPowerQuery { q?: string; status?: "all" | "working" | "needs_you" | "idle"; machine?: string; page?: number; size?: number }
 export interface CustomQuery { kind?: "skill" | "plugin" | "task" | "app"; q?: string; page?: number; size?: number }
 
@@ -81,4 +82,12 @@ export class SchedulesApi {
     return unwrap(await changeSchedule({ client: this.#c, path: { schedule_id: id }, body }));
   }
   async delete(id: string): Promise<void> { unwrap(await deleteSchedule({ client: this.#c, path: { schedule_id: id } })); }
+  /** Run it now, on its machine (which must be connected), as the clock would. */
+  async runNow(id: string): Promise<RunView> { return unwrap(await runScheduleNow({ client: this.#c, path: { schedule_id: id } })); }
+  /** Runs, newest first (mine, or the org's with scope org): by the clock, by hand or by an agent, with what each cost. */
+  async runs(query: RunsQuery = {}): Promise<RunList> { return unwrap(await listRuns({ client: this.#c, query })); }
+  async run(id: string, scope: "me" | "org" = "me"): Promise<RunView> {
+    return unwrap(await getRun({ client: this.#c, path: { run_id: id }, query: { scope } }));
+  }
+  async cancelRun(id: string): Promise<RunView> { return unwrap(await cancelRun({ client: this.#c, path: { run_id: id } })); }
 }

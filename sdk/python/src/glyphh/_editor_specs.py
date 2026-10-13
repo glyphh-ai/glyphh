@@ -1,6 +1,6 @@
 """Super powers, custom powers and schedules, as calls: the Super powers page and the editor (configuration, loop,
-grants, my Glyphh), my skills, plugins, tasks and apps (their files, a task's flow and slots), and schedules.
-Answers are the server's JSON as plain dicts."""
+grants, my Glyphh), my skills, plugins, tasks and apps (their files, a task's flow and slots), and schedules with
+their runs (run one now, the history of runs, one run, canceling one). Answers are the server's JSON as plain dicts."""
 
 from collections.abc import Callable
 from typing import Any
@@ -20,6 +20,7 @@ from glyphh._gen.api.custom_powers import (
     task_slots,
     write_custom_file,
 )
+from glyphh._gen.api.runs import cancel_run, get_run, list_runs, run_schedule_now
 from glyphh._gen.api.schedules import add_schedule, change_schedule, delete_schedule, list_schedules
 from glyphh._gen.api.super_powers import (
     change_super_power,
@@ -45,6 +46,8 @@ from glyphh._gen.models import (
     Slots,
     SuperPowerChange,
 )
+from glyphh._gen.models.get_run_scope import GetRunScope
+from glyphh._gen.models.list_runs_scope import ListRunsScope
 from glyphh._gen.types import UNSET
 
 Spec = tuple[Any, dict[str, Any]]
@@ -124,4 +127,16 @@ SCHEDULE_SPECS: dict[str, Callable[..., Spec]] = {
         {"schedule_id": UUID(schedule_id), **_body(ScheduleIn, schedule)},
     ),
     "delete": lambda schedule_id: (_call(delete_schedule), {"schedule_id": UUID(schedule_id)}),
+    "run_now": lambda schedule_id: (_call(run_schedule_now), {"schedule_id": UUID(schedule_id)}),
+    "runs": lambda scope="me", page=1, size=25, **by: (
+        _call(list_runs),
+        {
+            "scope": ListRunsScope(scope),
+            "page": page,
+            "size": size,
+            **{k: (v if k == "status" else UUID(v)) for k, v in by.items() if v is not None},
+        },
+    ),
+    "run": lambda run_id, scope="me": (_call(get_run), {"run_id": UUID(run_id), "scope": GetRunScope(scope)}),
+    "cancel_run": lambda run_id: (_call(cancel_run), {"run_id": UUID(run_id)}),
 }

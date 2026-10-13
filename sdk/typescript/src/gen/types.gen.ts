@@ -4648,6 +4648,20 @@ export type RunDay = {
 };
 
 /**
+ * RunList
+ */
+export type RunList = {
+    /**
+     * Runs
+     */
+    runs: Array<RunView>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * RunPage
  */
 export type RunPage = {
@@ -4697,6 +4711,98 @@ export type RunUse = {
      * Uses
      */
     uses: number;
+};
+
+/**
+ * RunView
+ */
+export type RunView = {
+    /**
+     * Calls
+     */
+    calls: number;
+    /**
+     * Cost Cents
+     */
+    cost_cents: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Error
+     */
+    error: string | null;
+    /**
+     * Finished At
+     */
+    finished_at: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Machine
+     */
+    machine: string | null;
+    /**
+     * Machine Id
+     */
+    machine_id: string | null;
+    /**
+     * Mode
+     */
+    mode: string;
+    /**
+     * Power Id
+     */
+    power_id: string | null;
+    /**
+     * Result
+     */
+    result: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Schedule
+     */
+    schedule: string | null;
+    /**
+     * Schedule Id
+     */
+    schedule_id: string | null;
+    /**
+     * Scheduled For
+     */
+    scheduled_for: string | null;
+    /**
+     * Started At
+     */
+    started_at: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Super Power
+     */
+    super_power: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id: string | null;
+    /**
+     * Task
+     */
+    task: string | null;
+    /**
+     * Thread Id
+     */
+    thread_id: string | null;
+    /**
+     * Trigger
+     */
+    trigger: string;
 };
 
 /**
@@ -11485,6 +11591,125 @@ export type DecideReviewResponses = {
 
 export type DecideReviewResponse = DecideReviewResponses[keyof DecideReviewResponses];
 
+export type ListRunsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Size
+         */
+        size?: number;
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+        /**
+         * Super Power
+         */
+        super_power?: string | null;
+        /**
+         * Schedule
+         */
+        schedule?: string | null;
+        /**
+         * Machine
+         */
+        machine?: string | null;
+        /**
+         * Status
+         */
+        status?: string | null;
+    };
+    url: '/v1/runs';
+};
+
+export type ListRunsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListRunsError = ListRunsErrors[keyof ListRunsErrors];
+
+export type ListRunsResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunList;
+};
+
+export type ListRunsResponse = ListRunsResponses[keyof ListRunsResponses];
+
+export type GetRunData = {
+    body?: never;
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: string;
+    };
+    query?: {
+        /**
+         * Scope
+         */
+        scope?: 'me' | 'org';
+    };
+    url: '/v1/runs/{run_id}';
+};
+
+export type GetRunErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetRunError = GetRunErrors[keyof GetRunErrors];
+
+export type GetRunResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunView;
+};
+
+export type GetRunResponse = GetRunResponses[keyof GetRunResponses];
+
+export type CancelRunData = {
+    body?: never;
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/v1/runs/{run_id}/cancel';
+};
+
+export type CancelRunErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelRunError = CancelRunErrors[keyof CancelRunErrors];
+
+export type CancelRunResponses = {
+    /**
+     * Successful Response
+     */
+    200: RunView;
+};
+
+export type CancelRunResponse = CancelRunResponses[keyof CancelRunResponses];
+
 export type ListSchedulesData = {
     body?: never;
     path?: never;
@@ -11601,6 +11826,36 @@ export type ChangeScheduleResponses = {
 };
 
 export type ChangeScheduleResponse = ChangeScheduleResponses[keyof ChangeScheduleResponses];
+
+export type RunScheduleNowData = {
+    body?: never;
+    path: {
+        /**
+         * Schedule Id
+         */
+        schedule_id: string;
+    };
+    query?: never;
+    url: '/v1/schedules/{schedule_id}/run';
+};
+
+export type RunScheduleNowErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RunScheduleNowError = RunScheduleNowErrors[keyof RunScheduleNowErrors];
+
+export type RunScheduleNowResponses = {
+    /**
+     * Successful Response
+     */
+    201: RunView;
+};
+
+export type RunScheduleNowResponse = RunScheduleNowResponses[keyof RunScheduleNowResponses];
 
 export type RefreshSessionData = {
     body?: never;
