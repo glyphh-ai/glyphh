@@ -16,29 +16,42 @@ class RunUse:
     """
     Attributes:
         cost_cents (int):
-        ended_at (datetime.datetime):
+        ended_at (datetime.datetime | None):
+        error (None | str):
         errors (int):
         machine (None | str):
         machine_id (None | UUID):
         run_id (UUID):
         started_at (datetime.datetime):
+        status (None | str):
+        trigger (None | str):
         uses (int):
     """
 
     cost_cents: int
-    ended_at: datetime.datetime
+    ended_at: datetime.datetime | None
+    error: str | None
     errors: int
     machine: str | None
     machine_id: UUID | None
     run_id: UUID
     started_at: datetime.datetime
+    status: str | None
+    trigger: str | None
     uses: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         cost_cents = self.cost_cents
 
-        ended_at = self.ended_at.isoformat()
+        ended_at: str | None
+        if isinstance(self.ended_at, datetime.datetime):
+            ended_at = self.ended_at.isoformat()
+        else:
+            ended_at = self.ended_at
+
+        error: str | None
+        error = self.error
 
         errors = self.errors
 
@@ -55,6 +68,12 @@ class RunUse:
 
         started_at = self.started_at.isoformat()
 
+        status: str | None
+        status = self.status
+
+        trigger: str | None
+        trigger = self.trigger
+
         uses = self.uses
 
         field_dict: dict[str, Any] = {}
@@ -63,11 +82,14 @@ class RunUse:
             {
                 "cost_cents": cost_cents,
                 "ended_at": ended_at,
+                "error": error,
                 "errors": errors,
                 "machine": machine,
                 "machine_id": machine_id,
                 "run_id": run_id,
                 "started_at": started_at,
+                "status": status,
+                "trigger": trigger,
                 "uses": uses,
             }
         )
@@ -79,7 +101,27 @@ class RunUse:
         d = dict(src_dict)
         cost_cents = d.pop("cost_cents")
 
-        ended_at = datetime.datetime.fromisoformat(d.pop("ended_at"))
+        def _parse_ended_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                ended_at_type_0 = datetime.datetime.fromisoformat(data)
+
+                return ended_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        ended_at = _parse_ended_at(d.pop("ended_at"))
+
+        def _parse_error(data: object) -> str | None:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        error = _parse_error(d.pop("error"))
 
         errors = d.pop("errors")
 
@@ -109,16 +151,33 @@ class RunUse:
 
         started_at = datetime.datetime.fromisoformat(d.pop("started_at"))
 
+        def _parse_status(data: object) -> str | None:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        status = _parse_status(d.pop("status"))
+
+        def _parse_trigger(data: object) -> str | None:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        trigger = _parse_trigger(d.pop("trigger"))
+
         uses = d.pop("uses")
 
         run_use = cls(
             cost_cents=cost_cents,
             ended_at=ended_at,
+            error=error,
             errors=errors,
             machine=machine,
             machine_id=machine_id,
             run_id=run_id,
             started_at=started_at,
+            status=status,
+            trigger=trigger,
             uses=uses,
         )
 

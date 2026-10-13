@@ -4720,7 +4720,11 @@ export type RunUse = {
     /**
      * Ended At
      */
-    ended_at: string;
+    ended_at: string | null;
+    /**
+     * Error
+     */
+    error: string | null;
     /**
      * Errors
      */
@@ -4741,6 +4745,14 @@ export type RunUse = {
      * Started At
      */
     started_at: string;
+    /**
+     * Status
+     */
+    status: string | null;
+    /**
+     * Trigger
+     */
+    trigger: string | null;
     /**
      * Uses
      */

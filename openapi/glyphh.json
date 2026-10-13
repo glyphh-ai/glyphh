@@ -8096,9 +8096,27 @@
             "type": "integer"
           },
           "ended_at": {
-            "format": "date-time",
-            "title": "Ended At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
           },
           "errors": {
             "title": "Errors",
@@ -8137,6 +8155,28 @@
             "title": "Started At",
             "type": "string"
           },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          },
           "uses": {
             "title": "Uses",
             "type": "integer"
@@ -8144,6 +8184,9 @@
         },
         "required": [
           "run_id",
+          "status",
+          "trigger",
+          "error",
           "started_at",
           "ended_at",
           "machine_id",
