@@ -4,7 +4,7 @@
   "page": "hs-00",
   "name": "Screen 00 \u00b7 Shared parts",
   "w": 2054,
-  "h": 7300,
+  "h": 7500,
   "title": "Screen 00 \u00b7 Shared parts"
  },
  {
@@ -12,7 +12,7 @@
   "page": "hs-02",
   "name": "Screen 02 \u00b7 Sign in",
   "w": 2054,
-  "h": 5652,
+  "h": 5812,
   "title": "Screen 02 \u00b7 Sign in"
  },
  {
@@ -20,7 +20,7 @@
   "page": "hs-03",
   "name": "Screen 03 \u00b7 Allow",
   "w": 2054,
-  "h": 5924,
+  "h": 6092,
   "title": "Screen 03 \u00b7 Allow"
  },
  {
@@ -28,7 +28,7 @@
   "page": "hs-04",
   "name": "Screen 04 \u00b7 Pay",
   "w": 4108,
-  "h": 5320,
+  "h": 5456,
   "title": "Screen 04 \u00b7 Pay"
  },
  {
@@ -36,15 +36,15 @@
   "page": "hs-05",
   "name": "Screen 05 \u00b7 Join",
   "w": 2054,
-  "h": 6668,
+  "h": 6852,
   "title": "Screen 05 \u00b7 Join"
  },
  {
   "file": "Screen06ApproveCode.dc.html",
   "page": "hs-06",
   "name": "Screen 06 \u00b7 Approve a code",
-  "w": 2054,
-  "h": 7740,
+  "w": 4108,
+  "h": 4828,
   "title": "Screen 06 \u00b7 Approve a code"
  },
  {
@@ -52,7 +52,7 @@
   "page": "hs-07",
   "name": "Screen 07 \u00b7 Approve a result",
   "w": 2054,
-  "h": 5708,
+  "h": 5868,
   "title": "Screen 07 \u00b7 Approve a result"
  },
  {
@@ -60,7 +60,7 @@
   "page": "hs-08",
   "name": "Screen 08 \u00b7 A public program",
   "w": 4108,
-  "h": 5888,
+  "h": 6088,
   "title": "Screen 08 \u00b7 A public program"
  },
  {
@@ -68,7 +68,7 @@
   "page": "hs-09",
   "name": "Screen 09 \u00b7 Problem",
   "w": 2054,
-  "h": 5820,
+  "h": 5980,
   "title": "Screen 09 \u00b7 Problem"
  },
  {
@@ -76,7 +76,7 @@
   "page": "hs-10",
   "name": "Screen 10 \u00b7 Programs",
   "w": 2054,
-  "h": 7636,
+  "h": 7916,
   "title": "Screen 10 \u00b7 Programs"
  },
  {
@@ -84,7 +84,7 @@
   "page": "hs-11",
   "name": "Screen 11 \u00b7 Building a program",
   "w": 4108,
-  "h": 5388,
+  "h": 5548,
   "title": "Screen 11 \u00b7 Building a program"
  },
  {
@@ -92,7 +92,7 @@
   "page": "hs-12",
   "name": "Screen 12 \u00b7 A program running",
   "w": 4108,
-  "h": 5400,
+  "h": 5600,
   "title": "Screen 12 \u00b7 A program running"
  },
  {
@@ -100,7 +100,7 @@
   "page": "hs-12b",
   "name": "Screen 12b \u00b7 A program",
   "w": 4108,
-  "h": 7600,
+  "h": 7800,
   "title": "Screen 12b \u00b7 A program"
  },
  {
@@ -108,7 +108,7 @@
   "page": "hs-13",
   "name": "Screen 13 \u00b7 Needs you",
   "w": 2054,
-  "h": 7620,
+  "h": 7900,
   "title": "Screen 13 \u00b7 Needs you"
  },
  {
@@ -116,7 +116,7 @@
   "page": "hs-14",
   "name": "Screen 14 \u00b7 Machines",
   "w": 4108,
-  "h": 5420,
+  "h": 5620,
   "title": "Screen 14 \u00b7 Machines"
  },
  {
@@ -124,7 +124,7 @@
   "page": "hs-15",
   "name": "Screen 15 \u00b7 A machine\u2019s CLIs",
   "w": 2054,
-  "h": 6612,
+  "h": 6852,
   "title": "Screen 15 \u00b7 A machine\u2019s CLIs"
  },
  {
@@ -132,7 +132,7 @@
   "page": "hs-16",
   "name": "Screen 16 \u00b7 Connections",
   "w": 4108,
-  "h": 5584,
+  "h": 5784,
   "title": "Screen 16 \u00b7 Connections"
  },
  {
@@ -140,7 +140,7 @@
   "page": "hs-17",
   "name": "Screen 17 \u00b7 Models and keys",
   "w": 4108,
-  "h": 4688,
+  "h": 4848,
   "title": "Screen 17 \u00b7 Models and keys"
  },
  {
@@ -148,7 +148,7 @@
   "page": "hs-18",
   "name": "Screen 18 \u00b7 Usage",
   "w": 4108,
-  "h": 5620,
+  "h": 5820,
   "title": "Screen 18 \u00b7 Usage"
  },
  {
@@ -156,7 +156,7 @@
   "page": "hs-19",
   "name": "Screen 19 \u00b7 Billing",
   "w": 4108,
-  "h": 5724,
+  "h": 5924,
   "title": "Screen 19 \u00b7 Billing"
  },
  {
@@ -164,7 +164,7 @@
   "page": "hs-20",
   "name": "Screen 20 \u00b7 Account",
   "w": 2054,
-  "h": 7596,
+  "h": 7876,
   "title": "Screen 20 \u00b7 Account"
  },
  {
@@ -172,7 +172,7 @@
   "page": "hs-21",
   "name": "Screen 21 \u00b7 Org",
   "w": 4108,
-  "h": 5760,
+  "h": 5960,
   "title": "Screen 21 \u00b7 Org"
  },
  {
@@ -180,7 +180,7 @@
   "page": "hs-22",
   "name": "Screen 22 \u00b7 Glyphh admin",
   "w": 4108,
-  "h": 5500,
+  "h": 5700,
   "title": "Screen 22 \u00b7 Glyphh admin"
  }
 ]

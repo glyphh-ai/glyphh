@@ -2,13 +2,14 @@ from sp import *
 U = 'reels.glyphh.app'
 def wide(body, p, right=None):
     pad = '20px' if p else '48px'
-    rt0 = right if right is not None else f'<span class="m" style="font-size:12px;color:{MUT}">by [ORG NAME] · on</span>{logo(20)}'
+    rt0 = right if right is not None else f'<span class="m" style="font-size:12px;color:{MUT}">by [ORG NAME] · on</span>{logo(32)}'
     rt = f'<span style="display:inline-flex;align-items:center;gap:8px">{rt0}</span>' if right is None else rt0
-    nav = f'<nav style="height:{56 if p else 64}px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 {pad};border-bottom:1px solid {L1}"><span class="m" style="font-weight:600;font-size:18px">{gt()}reels</span>{rt if not p else ""}</nav>'
+    nav = f'<nav style="height:{64 if p else 80}px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 {pad};border-bottom:1px solid {L1}"><span class="m" style="font-weight:600;font-size:18px">{gt()}reels</span>{rt if not p else ""}</nav>'
     main = f'<main style="flex:1;display:flex;justify-content:center;padding:{"32px 20px" if p else "64px 48px"};min-height:0"><div style="width:100%;max-width:880px;display:flex;flex-direction:column;gap:{28 if p else 36}px">{body}</div></main>'
-    ft = f'<footer class="m" style="height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 {pad};border-top:1px solid {L1};font-size:12px;color:{DIM}"><span style="display:inline-flex;align-items:center;gap:8px">runs on {logo(20)}</span><span>terms · report</span></footer>' if not p else ''
+    ft = f'<footer class="m" style="height:64px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 {pad};border-top:1px solid {L1};font-size:12px;color:{DIM}"><span style="display:inline-flex;align-items:center;gap:8px">runs on {logo(32)}</span><span>terms · report</span></footer>' if not p else ''
     return f'<div class="t" style="flex:1;display:flex;flex-direction:column;color:{FG};min-height:0">{nav}{main}{ft}</div>'
 def wrow(idx,label,note_,body,dh=1000,ph=1100):
+    dh += 40; ph += 40
     return row(idx,label,note_,browser(U,wide(body(False),False),dh),phone(wide(body(True),True),ph,url=U),dh,ph)
 def intro(p):
     return stack(f'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">{status("online","#3FD08F")}<span class="chip">public</span><span class="chip">6 functions</span></div>', h('Turn a YouTube video into reels.', 34 if p else 52), ptxt('Give it a YouTube link. It finds the best moments, cuts them to 9:16, writes captions and hands back ready-to-post reels.', 16 if p else 18), gap=16)

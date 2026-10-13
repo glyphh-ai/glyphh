@@ -2,6 +2,7 @@
 from sp import *
 
 def prow(idx, label, note_, conv, turns, dh=900, ph=844):
+    dh += 40; ph += 40
     return row(idx, label, note_, harness(conv, turns(False), dh), harness_phone(conv, turns(True), ph), dh, ph)
 
 def pad(inner, p, v=None):

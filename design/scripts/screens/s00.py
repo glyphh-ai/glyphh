@@ -15,9 +15,9 @@ def tile(inner, label, w=None, bg=INK, hh=None):
 # 01 logo
 wmk = (f'<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px">'
        + tile(f'<img src="{LOGO}" alt="Glyphh" style="width:320px;height:auto;display:block">', 'the full logo · cat and glyphh in its white sticker border', hh=260)
-       + tile(logo(48), 'page head · 48 high', hh=260)
-       + tile(f'<div style="width:100%;height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid {L1}">{logo(30)}<span class="m" style="font-size:13px;color:{FG2}">docs</span></div>', 'nav · 30 high · hairline under', hh=260)
-       + tile(f'<span class="m" style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:{MUT}">{logo(18)}<span>· venues · studio-mac</span></span>', 'panel and stream head · 18 high', hh=260)
+       + tile(logo(72), 'page head · 72 high', hh=260)
+       + tile(f'<div style="width:100%;height:80px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid {L1}">{logo(48)}<span class="m" style="font-size:13px;color:{FG2}">docs</span></div>', 'nav · 48 high (40 on a phone) · hairline under', hh=260)
+       + tile(f'<span class="m" style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:{MUT}">{logo(32)}<span>· venues · studio-mac</span></span>', 'panel and stream head · 32 high', hh=260)
        + '</div>'
        + ptxt('One logo everywhere it lands: nav, page head, panel head. Always the uploaded sticker artwork, never redrawn or recoloured; on ink only.', 15, extra='max-width:900px'))
 
@@ -91,6 +91,6 @@ lv = (f'<div style="display:flex;flex-direction:column;gap:56px">'
 hdr = head('00', 'Shared parts', 'shared', 'used by every simple page and every MCP panel', 'The parts every screen is built from: the logo, the cat mascot, type, colour, buttons and fields, the chips for the types a call returns, the four states every panel has, and the frame that streams a program’s machine live with watch and take control.', ['logo','mascot','type','colour','buttons','fields','return types','waiting','empty','loading','error + trace id','live stream'])
 
 secs = [sec('01','Logo','the full Glyphh logo, the uploaded sticker',wmk), sec('01b','Mascot','the cat, its eye says the state',masc), sec('02','Type','Red Hat Display, Text, Mono',typ), sec('03','Colour','ink ground, one violet accent, status as marks',col), sec('04','Buttons and fields','square, mono, light fill primary, outlined secondary',bt), sec('05','Every call returns a type','the chip a panel and the stream show for each',chips), sec('06','States','every panel has them, drawn at the harness’s panel width and on a phone',states), sec('07','The live stream frame','a program’s machine, live wherever it was called',lv)]
-W = 2054; H = 7300
+W = 2054; H = 7500
 inner = f'<div class="t" style="width:{W}px;min-height:{H}px;box-sizing:border-box;padding:80px;background:{INK};color:{FG};display:flex;flex-direction:column;gap:64px">{hdr}{"".join(secs)}</div>'
 emit('Screen00Shared.dc.html', 'hs-00', 'Screen 00 · Shared parts', doc('Shared parts', inner, W, H), W, H, 'Screen 00 · Shared parts')

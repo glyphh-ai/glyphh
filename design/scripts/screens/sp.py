@@ -2,6 +2,7 @@
 from g import *
 
 def sp_row(idx, label, note, url, body, dh=820, ph=844, right=None, top=False):
+    dh += 32; ph += 24
     d = browser(url, page(body(False), False, right, top=top), dh)
     p = phone(page(body(True), True, right, foot=False, top=top), ph, url=url.split('/')[0] if False else url)
     return row(idx, label, note, d, p, dh, ph)

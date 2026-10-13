@@ -160,7 +160,7 @@ def page(body, p=False, right=None, foot=True, top=False):
     """A simple page the server serves: nav, centred column, footer."""
     pad = '20px' if p else '48px'
     rt = right if right is not None else f'<a href="#" class="m" style="font-size:13px;text-decoration:none">docs</a>'
-    nav = (f'<nav style="height:{56 if p else 64}px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 {pad};border-bottom:1px solid {L1}">{logo(26 if p else 30)}{rt}</nav>')
+    nav = (f'<nav style="height:{64 if p else 80}px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 {pad};border-bottom:1px solid {L1}">{logo(40 if p else 48)}{rt}</nav>')
     al = 'flex-start' if (top or p) else 'center'
     main = (f'<main style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:{al};padding:{"40px 20px" if p else "48px"};min-height:0">'
             f'<div style="width:100%;max-width:{440}px;display:flex;flex-direction:column;gap:24px">{body}</div></main>')
@@ -189,7 +189,7 @@ def panel(name, body, right='', live=False):
     if live:
         right = f'<span style="display:inline-flex;align-items:center;gap:8px"><span class="cur dot" style="background:#FF4D4D"></span>live · fenced</span>'
     return (f'<div style="border:1px solid #3A3648;border-radius:12px;overflow:hidden;background:{INK2};color:{FG}">'
-            f'<div class="m" style="min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-bottom:1px solid {L1};font-size:12px;color:{MUT}"><span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">{logo(18)}<span>· {name}</span></span><span style="display:inline-flex;gap:10px;align-items:center">{right}</span></div>'
+            f'<div class="m" style="min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-bottom:1px solid {L1};font-size:12px;color:{MUT}"><span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">{logo(32)}<span>· {name}</span></span><span style="display:inline-flex;gap:10px;align-items:center">{right}</span></div>'
             f'{body}</div>')
 
 
@@ -284,7 +284,7 @@ def stream(name, machine, mode='watch', p=False, hh=None, site=None, step=None):
         right = 'ended'
     head_r = (f'<span style="display:inline-flex;align-items:center;gap:8px"><span class="cur dot" style="background:#FF4D4D"></span>live · fenced</span>' if mode != 'ended' else f'<span>ended</span>')
     return (f'<div style="border:1px solid #3A3648;border-radius:12px;overflow:hidden;background:{INK2}">'
-            f'<div class="m" style="height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-bottom:1px solid {L1};font-size:12px;color:{MUT}"><span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden">{logo(18)}<span>· {lab}</span></span>{head_r}</div>'
+            f'<div class="m" style="height:52px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-bottom:1px solid {L1};font-size:12px;color:{MUT}"><span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden">{logo(32)}<span>· {lab}</span></span>{head_r}</div>'
             f'{screen_area(hh, mode, p, **kw)}</div>')
 
 
@@ -300,7 +300,7 @@ def row(idx, label, note, desk, ph, dh, phh):
 def head(num, name, kind, where, desc, states):
     st = ''.join(f'<span class="chip">{s}</span>' for s in states)
     return (f'<header style="display:flex;flex-direction:column;gap:18px;padding-bottom:40px;border-bottom:1px solid {L1}">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center">{logo(36)}<span class="m" style="font-size:13px;color:{MUT}">headless first · desktop 1440 · phone 390 · dark</span></div>'
+            f'<div style="display:flex;justify-content:space-between;align-items:center">{logo(72)}<span class="m" style="font-size:13px;color:{MUT}">headless first · desktop 1440 · phone 390 · dark</span></div>'
             f'<div class="m" style="margin-top:28px;font-size:14px;color:{VI2}">screen {num} · {kind}</div>'
             f'<h1 class="d" style="margin:0;font-size:64px;line-height:1.04;color:{FG}">{name}</h1>'
             f'<p class="t" style="margin:0;max-width:980px;font-size:18px;line-height:1.6;color:{FG2}">{desc}</p>'
@@ -308,7 +308,7 @@ def head(num, name, kind, where, desc, states):
             f'<div style="display:flex;gap:8px;flex-wrap:wrap">{st}</div></header>')
 
 
-HEAD_H = 420
+HEAD_H = 460
 PAD = 80
 GAP = 112
 
