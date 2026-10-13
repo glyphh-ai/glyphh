@@ -27,7 +27,7 @@ describe("listings and the marketplace", () => {
       call((g) => g.listings.comments("l")), call((g) => g.listings.comment("l", "hi")), call((g) => g.listings.queue()),
       call((g) => g.listings.decide("v", { decision: "approved" })),
       call((g) => g.marketplace.home("custom")), call((g) => g.marketplace.browse({ q: "rev" })), call((g) => g.marketplace.get("l")),
-      call((g) => g.marketplace.add("l")), call((g) => g.marketplace.update("p")),
+      call((g) => g.marketplace.add("l")), call((g) => g.marketplace.update("p")), call((g) => g.marketplace.updateSuperPower("s")),
     ])).toEqual([
       ["GET", "/v1/listings", null], ["POST", "/v1/listings", "application/json"], ["GET", "/v1/listings/l", null],
       ["PATCH", "/v1/listings/l", "application/json"], ["PATCH", "/v1/listings/l/version", "application/json"],
@@ -37,7 +37,7 @@ describe("listings and the marketplace", () => {
       ["GET", "/v1/listings/l/comments", null], ["POST", "/v1/listings/l/comments", "application/json"], ["GET", "/v1/reviews?step=org", null],
       ["POST", "/v1/reviews/v", "application/json"],
       ["GET", "/v1/marketplace/home?kind=custom", null], ["GET", "/v1/marketplace?q=rev", null], ["GET", "/v1/marketplace/l", null],
-      ["POST", "/v1/marketplace/l/add", null], ["POST", "/v1/powers/custom/p/update", null],
+      ["POST", "/v1/marketplace/l/add", null], ["POST", "/v1/powers/custom/p/update", null], ["POST", "/v1/super-powers/s/update", null],
     ]);
   });
 });

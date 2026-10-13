@@ -29,6 +29,7 @@ from glyphh._gen.api.marketplace import (
     marketplace_home,
     marketplace_listing,
     update_from_marketplace,
+    update_super_power_from_marketplace,
 )
 from glyphh._gen.models import (
     BrowseMarketplaceKindType0,
@@ -108,4 +109,5 @@ MARKETPLACE_SPECS: dict[str, Callable[..., Spec]] = {
     "get": lambda listing_id: (_call(marketplace_listing), _l(listing_id)),
     "add": lambda listing_id: (_call(add_from_marketplace), _l(listing_id)),
     "update": lambda power_id: (_call(update_from_marketplace), {"power_id": UUID(power_id)}),
+    "update_super_power": lambda sp_id: (_call(update_super_power_from_marketplace), {"sp_id": UUID(sp_id)}),
 }

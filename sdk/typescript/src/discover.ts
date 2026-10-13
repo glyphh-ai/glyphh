@@ -3,7 +3,7 @@ import {
   addFromMarketplace, addListingScreenshot, browseMarketplace, changeListing, changeListingVersion, commentOnListing,
   createListing, decideReview, getListing, listingComments, marketplaceHome, marketplaceListing, myListings,
   orderListingScreenshots, removeListingScreenshot, reviewQueue, setListingIcon, submitListing, unpublishListing,
-  updateFromMarketplace, withdrawListing,
+  updateFromMarketplace, updateSuperPowerFromMarketplace, withdrawListing,
 } from "./gen/sdk.gen.js";
 import type {
   Added, Comment, Home, InReview, ListingChange, ListingView, MarketDetail, MarketPage, NewListing, ReviewDecision, VersionChange,
@@ -72,4 +72,8 @@ export class MarketplaceApi {
   async get(id: string): Promise<MarketDetail> { return unwrap(await marketplaceListing({ client: this.#c, path: { listing_id: id } })); }
   async add(id: string): Promise<Added> { return unwrap(await addFromMarketplace({ client: this.#c, path: { listing_id: id } })); }
   async update(powerId: string): Promise<Added> { return unwrap(await updateFromMarketplace({ client: this.#c, path: { power_id: powerId } })); }
+  /** Move my super power added from here to its listing's newest version (its name, loop and grants stay mine). */
+  async updateSuperPower(id: string): Promise<Added> {
+    return unwrap(await updateSuperPowerFromMarketplace({ client: this.#c, path: { sp_id: id } }));
+  }
 }

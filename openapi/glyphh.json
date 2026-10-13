@@ -4992,6 +4992,29 @@
         "title": "MemberTeams",
         "type": "object"
       },
+      "Missing": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "need": {
+            "title": "Need",
+            "type": "string"
+          },
+          "power": {
+            "title": "Power",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "need",
+          "power"
+        ],
+        "title": "Missing",
+        "type": "object"
+      },
       "ModelChange": {
         "properties": {
           "active": {
@@ -5287,6 +5310,7 @@
         "type": "object"
       },
       "MyCopy": {
+        "description": "My copy of the listing: a power, or for a super power's listing a super power (its id in `power_id`).",
         "properties": {
           "newer": {
             "anyOf": [
@@ -7626,6 +7650,27 @@
           "total"
         ],
         "title": "QuestionPage",
+        "type": "object"
+      },
+      "Readiness": {
+        "properties": {
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/Missing"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ready",
+          "missing"
+        ],
+        "title": "Readiness",
         "type": "object"
       },
       "Refused": {
@@ -15409,7 +15454,7 @@
         ]
       },
       "post": {
-        "description": "Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.",
+        "description": "Start a thread on one of my machines: one super power on its own (refused, naming what is missing, until\neverything it needs is in place), or a crew Glyphh leads.",
         "operationId": "startThread",
         "parameters": [
           {
@@ -20447,7 +20492,7 @@
     },
     "/v1/schedules/{schedule_id}/run": {
       "post": {
-        "description": "Run it now, on its machine (which must be connected), as the clock would.",
+        "description": "Run it now, on its machine (which must be connected), as the clock would; refused, naming what is missing,\nuntil everything it needs is in place.",
         "operationId": "runScheduleNow",
         "parameters": [
           {
@@ -20914,7 +20959,7 @@
     },
     "/v1/super-powers/{sp_id}/grants": {
       "put": {
-        "description": "Give it a power, a machine or a super power to call (granted), or take one away.",
+        "description": "Give it a power, a machine or a super power to call (granted), or take one away. A custom power brings my\naccounts at the services it needs.",
         "operationId": "setGrant",
         "parameters": [
           {
@@ -21017,6 +21062,94 @@
         "summary": "Set Loop",
         "tags": [
           "super powers"
+        ]
+      }
+    },
+    "/v1/super-powers/{sp_id}/needs": {
+      "get": {
+        "description": "Whether it can run: what it needs that is still missing (a service to connect or give it, a slot to fill).",
+        "operationId": "superPowerNeeds",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sp_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sp Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Super Power Needs",
+        "tags": [
+          "super powers"
+        ]
+      }
+    },
+    "/v1/super-powers/{sp_id}/update": {
+      "post": {
+        "description": "Move my super power to its listing's newest version: its configuration and the custom powers that come with\nit; its name, loop and grants stay mine.",
+        "operationId": "updateSuperPowerFromMarketplace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sp_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sp Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Added"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Super Power",
+        "tags": [
+          "marketplace"
         ]
       }
     },

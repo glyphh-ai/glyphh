@@ -12,7 +12,8 @@ T = TypeVar("T", bound="MyCopy")
 
 @_attrs_define
 class MyCopy:
-    """
+    """My copy of the listing: a power, or for a super power's listing a super power (its id in `power_id`).
+
     Attributes:
         newer (None | str):
         power_id (UUID):

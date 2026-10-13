@@ -31,6 +31,7 @@ from glyphh._gen.api.super_powers import (
     my_glyphh,
     set_grant,
     set_loop,
+    super_power_needs,
 )
 from glyphh._gen.models import (
     CustomChange,
@@ -85,6 +86,7 @@ SUPER_POWER_SPECS: dict[str, Callable[..., Spec]] = {
     "change": lambda sp_id, **change: (_call(change_super_power), {**_sp(sp_id), **_body(SuperPowerChange, change)}),
     "delete": lambda sp_id: (_call(delete_super_power), _sp(sp_id)),
     "grant": lambda sp_id, **change: (_call(set_grant), {**_sp(sp_id), **_body(GrantChange, change)}),
+    "needs": lambda sp_id: (_call(super_power_needs), _sp(sp_id)),
     "set_loop": lambda sp_id, engine, model_id=None: (
         _call(set_loop),
         {**_sp(sp_id), **_body(LoopChoice, {"engine": engine, "model_id": model_id})},

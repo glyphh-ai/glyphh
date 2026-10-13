@@ -63,7 +63,9 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | RunView]:
     """Run Now
 
-     Run it now, on its machine (which must be connected), as the clock would.
+     Run it now, on its machine (which must be connected), as the clock would; refused, naming what is
+    missing,
+    until everything it needs is in place.
 
     Args:
         schedule_id (UUID):
@@ -94,7 +96,9 @@ def sync(
 ) -> HTTPValidationError | RunView | None:
     """Run Now
 
-     Run it now, on its machine (which must be connected), as the clock would.
+     Run it now, on its machine (which must be connected), as the clock would; refused, naming what is
+    missing,
+    until everything it needs is in place.
 
     Args:
         schedule_id (UUID):
@@ -120,7 +124,9 @@ async def asyncio_detailed(
 ) -> Response[HTTPValidationError | RunView]:
     """Run Now
 
-     Run it now, on its machine (which must be connected), as the clock would.
+     Run it now, on its machine (which must be connected), as the clock would; refused, naming what is
+    missing,
+    until everything it needs is in place.
 
     Args:
         schedule_id (UUID):
@@ -149,7 +155,9 @@ async def asyncio(
 ) -> HTTPValidationError | RunView | None:
     """Run Now
 
-     Run it now, on its machine (which must be connected), as the clock would.
+     Run it now, on its machine (which must be connected), as the clock would; refused, naming what is
+    missing,
+    until everything it needs is in place.
 
     Args:
         schedule_id (UUID):

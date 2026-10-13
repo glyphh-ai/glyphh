@@ -73,7 +73,9 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | SuperPowerView]:
     """Set Grant
 
-     Give it a power, a machine or a super power to call (granted), or take one away.
+     Give it a power, a machine or a super power to call (granted), or take one away. A custom power
+    brings my
+    accounts at the services it needs.
 
     Args:
         sp_id (UUID):
@@ -108,7 +110,9 @@ def sync(
 ) -> HTTPValidationError | SuperPowerView | None:
     """Set Grant
 
-     Give it a power, a machine or a super power to call (granted), or take one away.
+     Give it a power, a machine or a super power to call (granted), or take one away. A custom power
+    brings my
+    accounts at the services it needs.
 
     Args:
         sp_id (UUID):
@@ -138,7 +142,9 @@ async def asyncio_detailed(
 ) -> Response[HTTPValidationError | SuperPowerView]:
     """Set Grant
 
-     Give it a power, a machine or a super power to call (granted), or take one away.
+     Give it a power, a machine or a super power to call (granted), or take one away. A custom power
+    brings my
+    accounts at the services it needs.
 
     Args:
         sp_id (UUID):
@@ -171,7 +177,9 @@ async def asyncio(
 ) -> HTTPValidationError | SuperPowerView | None:
     """Set Grant
 
-     Give it a power, a machine or a super power to call (granted), or take one away.
+     Give it a power, a machine or a super power to call (granted), or take one away. A custom power
+    brings my
+    accounts at the services it needs.
 
     Args:
         sp_id (UUID):

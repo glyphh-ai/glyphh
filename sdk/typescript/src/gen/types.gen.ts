@@ -2957,6 +2957,24 @@ export type MemberTeams = {
 };
 
 /**
+ * Missing
+ */
+export type Missing = {
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Need
+     */
+    need: string;
+    /**
+     * Power
+     */
+    power: string;
+};
+
+/**
  * ModelChange
  */
 export type ModelChange = {
@@ -3094,6 +3112,8 @@ export type Moved = {
 
 /**
  * MyCopy
+ *
+ * My copy of the listing: a power, or for a super power's listing a super power (its id in `power_id`).
  */
 export type MyCopy = {
     /**
@@ -4417,6 +4437,20 @@ export type QuestionPage = {
      * Total
      */
     total: number;
+};
+
+/**
+ * Readiness
+ */
+export type Readiness = {
+    /**
+     * Missing
+     */
+    missing: Array<Missing>;
+    /**
+     * Ready
+     */
+    ready: boolean;
 };
 
 /**
@@ -12191,6 +12225,66 @@ export type SetLoopResponses = {
 };
 
 export type SetLoopResponse = SetLoopResponses[keyof SetLoopResponses];
+
+export type SuperPowerNeedsData = {
+    body?: never;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}/needs';
+};
+
+export type SuperPowerNeedsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SuperPowerNeedsError = SuperPowerNeedsErrors[keyof SuperPowerNeedsErrors];
+
+export type SuperPowerNeedsResponses = {
+    /**
+     * Successful Response
+     */
+    200: Readiness;
+};
+
+export type SuperPowerNeedsResponse = SuperPowerNeedsResponses[keyof SuperPowerNeedsResponses];
+
+export type UpdateSuperPowerFromMarketplaceData = {
+    body?: never;
+    path: {
+        /**
+         * Sp Id
+         */
+        sp_id: string;
+    };
+    query?: never;
+    url: '/v1/super-powers/{sp_id}/update';
+};
+
+export type UpdateSuperPowerFromMarketplaceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateSuperPowerFromMarketplaceError = UpdateSuperPowerFromMarketplaceErrors[keyof UpdateSuperPowerFromMarketplaceErrors];
+
+export type UpdateSuperPowerFromMarketplaceResponses = {
+    /**
+     * Successful Response
+     */
+    200: Added;
+};
+
+export type UpdateSuperPowerFromMarketplaceResponse = UpdateSuperPowerFromMarketplaceResponses[keyof UpdateSuperPowerFromMarketplaceResponses];
 
 export type SearchThreadsData = {
     body?: never;

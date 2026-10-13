@@ -32,6 +32,7 @@ CALLS = [
     ("super_powers", "grant", (S,), {"power_id": P, "access": "write"}, "PUT", f"/v1/super-powers/{S}/grants", ""),
     ("super_powers", "set_loop", (S, "codex"), {}, "PUT", f"/v1/super-powers/{S}/loop", ""),
     ("super_powers", "set_loop", (S, "glyphh", S), {}, "PUT", f"/v1/super-powers/{S}/loop", ""),
+    ("super_powers", "needs", (S,), {}, "GET", f"/v1/super-powers/{S}/needs", ""),
     ("custom", "list", (), {"kind": "skill"}, "GET", "/v1/powers/custom", "kind=skill&q=&page=1&size=25"),
     ("custom", "list", (), {}, "GET", "/v1/powers/custom", "q=&page=1&size=25"),
     ("custom", "create", ("task", "Briefing"), {}, "POST", "/v1/powers/custom", ""),

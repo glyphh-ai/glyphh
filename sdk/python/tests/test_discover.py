@@ -50,6 +50,7 @@ CALLS = [
     ("marketplace", "get", (L,), {}, "GET", f"/v1/marketplace/{L}", ""),
     ("marketplace", "add", (L,), {}, "POST", f"/v1/marketplace/{L}/add", ""),
     ("marketplace", "update", (L,), {}, "POST", f"/v1/powers/custom/{L}/update", ""),
+    ("marketplace", "update_super_power", (L,), {}, "POST", f"/v1/super-powers/{L}/update", ""),
 ]
 
 

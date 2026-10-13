@@ -2,17 +2,17 @@ import type { Client } from "./gen/client/index.js";
 import {
   addSchedule, cancelRun, changeCustomPower, changeSchedule, changeSuperPower, createCustomPower, createSuperPower, deleteCustomFile,
   deleteCustomPower, deleteSchedule, deleteSuperPower, getCustomPower, getRun, getSuperPower, listCustomPowers, listRuns,
-  listSchedules, listSuperPowers, myGlyphh, runScheduleNow, readCustomFile, saveTaskFlow, setGrant, setLoop, setTaskSlots, taskSlots, writeCustomFile,
+  listSchedules, listSuperPowers, myGlyphh, runScheduleNow, superPowerNeeds, readCustomFile, saveTaskFlow, setGrant, setLoop, setTaskSlots, taskSlots, writeCustomFile,
 } from "./gen/sdk.gen.js";
 import type {
   CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, ListRunsData, LoopChoice, NewCustom, NewSuperPower,
-  RunList, RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
+  Readiness, RunList, RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
 } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
 export type {
   CustomChange, CustomPage, CustomPower, FileText, Flow, GrantChange, LoopChoice, NewCustom, NewSuperPower, RunList,
-  RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
+  Readiness, RunView, ScheduleIn, ScheduleView, Slots, SuperPowerChange, SuperPowerPage, SuperPowerView,
 };
 export type RunsQuery = NonNullable<ListRunsData["query"]>;
 export interface SuperPowerQuery { q?: string; status?: "all" | "working" | "needs_you" | "idle"; machine?: string; page?: number; size?: number }
@@ -40,6 +40,8 @@ export class SuperPowersApi {
   async setLoop(id: string, body: LoopChoice): Promise<SuperPowerView> {
     return unwrap(await setLoop({ client: this.#c, path: { sp_id: id }, body }));
   }
+  /** Whether it can run: what it needs that is still missing (a service to connect or give it, a slot to fill). */
+  async needs(id: string): Promise<Readiness> { return unwrap(await superPowerNeeds({ client: this.#c, path: { sp_id: id } })); }
 }
 
 /** My skills, plugins, tasks and apps: their files, a task's flow and slots. */

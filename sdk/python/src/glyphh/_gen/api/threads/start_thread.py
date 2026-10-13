@@ -73,7 +73,9 @@ def sync_detailed(
 ) -> Response[HTTPValidationError | ThreadRow]:
     """Start
 
-     Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.
+     Start a thread on one of my machines: one super power on its own (refused, naming what is missing,
+    until
+    everything it needs is in place), or a crew Glyphh leads.
 
     Args:
         machine_id (UUID):
@@ -107,7 +109,9 @@ def sync(
 ) -> HTTPValidationError | ThreadRow | None:
     """Start
 
-     Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.
+     Start a thread on one of my machines: one super power on its own (refused, naming what is missing,
+    until
+    everything it needs is in place), or a crew Glyphh leads.
 
     Args:
         machine_id (UUID):
@@ -136,7 +140,9 @@ async def asyncio_detailed(
 ) -> Response[HTTPValidationError | ThreadRow]:
     """Start
 
-     Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.
+     Start a thread on one of my machines: one super power on its own (refused, naming what is missing,
+    until
+    everything it needs is in place), or a crew Glyphh leads.
 
     Args:
         machine_id (UUID):
@@ -168,7 +174,9 @@ async def asyncio(
 ) -> HTTPValidationError | ThreadRow | None:
     """Start
 
-     Start a thread on one of my machines: one super power on its own, or a crew Glyphh leads.
+     Start a thread on one of my machines: one super power on its own (refused, naming what is missing,
+    until
+    everything it needs is in place), or a crew Glyphh leads.
 
     Args:
         machine_id (UUID):
