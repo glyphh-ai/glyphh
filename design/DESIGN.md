@@ -588,6 +588,7 @@ Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the 
 - **A program may ask its owner for approval, and may be public** at `<program>.glyphh.app`.
 - **It runs on rrotor**, the runtime: any model through the gateway, connections through the relay, a database and a knowledge graph, fenced, always on, on any host, streaming its machine live to wherever it was called.
 - **Headless: no platform app.** The server serves a few simple pages (Sign in, Allow, Pay); everything else is an MCP panel in the harness.
+- **The cat stays** (Chris, 2026-10-12): the Glyphh cat is the logo, beside the `>glyphh` wordmark, and the mascot in the empty, waiting and error states, on every page; clean and simple, no rings or comets.
 - **The brand:** the `> glyphh` wordmark (the `>` tight to the name), minimal and terminal-like, ultra clean; drawn on the canvas pages "Brand · logo, no cat" and "Brand · > glyphh home". Hero: "Use AI to build programs that get real work done."
 
 ### Every screen it needs
