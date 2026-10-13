@@ -395,3 +395,110 @@ def index(files):
             d['order'].append(x['file'])
     json.dump(d, open(f'{ROOT}/project/canvas.json', 'w'), ensure_ascii=False, indent=1)
     print([p['id'] for p in d['pages']])
+
+
+# ===================== iPad rework: one artboard per state, fluid PAGEs =====================
+import html as _html, re as _re
+
+def browser(url, inner, hh=820):
+    """A fluid browser window: fills whatever width it is opened at."""
+    return (f'<div class="t" style="min-height:{hh}px;background:{INK};color:{FG};display:flex;flex-direction:column">'
+            f'<div class="m" style="height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid {L1};background:{INK2};font-size:12px;color:{MUT}">{dots()}'
+            f'<span style="margin-left:14px;width:100%;max-width:520px;min-width:0;height:24px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid {L1};overflow:hidden;white-space:nowrap">{ic("lock",12,MUT)}{url}</span></div>'
+            f'<div style="flex:1;display:flex;flex-direction:column">{inner}</div></div>')
+
+
+def harness(conv, turns, hh=900):
+    """A fluid harness window; the conversation column (and its panels) stays at the panel width, 760."""
+    t = ''.join(turns)
+    return (f'<div class="t" style="min-height:{hh}px;background:#1F1E1D;color:{FG};display:flex;flex-direction:column">'
+            f'<div style="height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid #2E2D2B">{dots("#3A3937")}<span style="margin-left:14px;font-size:13px;color:#A3A19B">Claude · {conv}</span></div>'
+            f'<div style="flex:1;display:flex;justify-content:center;padding:28px 24px 24px">'
+            f'<div style="width:100%;max-width:760px;min-width:0;display:flex;flex-direction:column;gap:20px">{t}<div style="margin-top:auto">{reply()}</div></div></div></div>')
+
+
+def row(idx, label, note, desk, ph, dh, phh):
+    return dict(idx=idx, label=label, note=note, desk=desk, ph=ph, dh=dh, phh=phh)
+
+
+def _plain(s):
+    return _html.unescape(_re.sub(r'<[^>]+>', '', s))
+
+
+def head(num, name, kind, where, desc, states):
+    return dict(num=num, name=name, kind=kind, where=_plain(where), desc=_plain(desc), states=states)
+
+
+def board(title, header, rows, extra_h=0):
+    return dict(title=title, head=header, rows=rows), 0, 0
+
+
+META2 = ROOT + '/../gen/meta2.json'
+ROWGAP = 120
+
+
+def _lab(label):
+    return label if (len(label) > 1 and label[1].isupper()) else label[:1].lower() + label[1:]
+
+
+def emit(fname, page_id, page_name, data, w=0, hh=0, title=''):
+    """Split a screen into one fluid desktop PAGE and one 390 phone artboard per state."""
+    os.makedirs(ROOT + '/project', exist_ok=True)
+    stem = fname[:-len('.dc.html')]
+    short = page_name.split(' · ', 1)[1] if ' · ' in page_name else page_name
+    boards, y = [], 0
+    for i, r in enumerate(data['rows'], 1):
+        t = f"{short} · {_lab(r['label'])}"
+        f = f'{stem}-{i:02d}.dc.html'
+        open(f'{ROOT}/project/{f}', 'w').write(doc(t, r['desk'], 1440, r['dh']))
+        boards.append(dict(file=f, x=0, y=y, w=1440, h=r['dh'], title=t, expand='fill'))
+        if r['ph']:
+            fp = f'{stem}-{i:02d}-phone.dc.html'
+            open(f'{ROOT}/project/{fp}', 'w').write(doc(t + ' · phone', r['ph'], 390, r['phh']))
+            boards.append(dict(file=fp, x=1520, y=y, w=390, h=r['phh'], title=t + ' · phone'))
+        y += max(r['dh'], r['phh'] or 0) + ROWGAP
+    hd = data['head']
+    notes = {f'{page_id}-t': dict(x=0, y=-300, text=page_name, kind='title1', maxW=1910, page=page_id),
+             f'{page_id}-n': dict(x=2000, y=0, w=520, page=page_id,
+                                  text=f"{hd['kind']}\n\n{hd['desc']}\n\n{hd['where']}\n\nStates, top to bottom: {', '.join(hd['states'])}.\nEach state: the page at any width (opens full screen on desktop and iPad), and the phone at 390.")}
+    m = json.load(open(META2)) if os.path.exists(META2) else {}
+    m[page_id] = dict(name=page_name, old=fname, boards=boards, notes=notes)
+    json.dump(m, open(META2, 'w'), indent=1, ensure_ascii=False)
+    print(page_id, len(boards), 'boards, rows end at', y)
+
+
+def index2(page_ids):
+    """Merge the split pages into the freshly read index; returns files to remove."""
+    d = json.load(open(FRESH))
+    m = json.load(open(META2))
+    removed = []
+    for pid in page_ids:
+        x = m[pid]
+        ids = [p['id'] for p in d['pages']]
+        if pid not in ids:
+            mine = [i for i, p in enumerate(d['pages']) if p['id'].startswith('hs-') and p['id'] < pid]
+            at = mine[-1] + 1 if mine else (ids.index('brand-terminal') + 1 if 'brand-terminal' in ids else len(d['pages']))
+            d['pages'].insert(at, {'id': pid, 'name': x['name']})
+        keep = {b['file'] for b in x['boards']}
+        for f, b in list(d['boards'].items()):
+            if b.get('page') == pid and f not in keep:
+                del d['boards'][f]; removed.append(f)
+        d['order'] = [f for f in d['order'] if f not in removed]
+        for b in x['boards']:
+            e = {k: b[k] for k in ('x', 'y', 'w', 'h', 'title')}
+            e['page'] = pid
+            if b.get('expand'): e['expand'] = b['expand']
+            d['boards'][b['file']] = e
+            if b['file'] not in d['order']: d['order'].append(b['file'])
+        d.setdefault('notes', {})
+        for k, v in x['notes'].items():
+            d['notes'][k] = v
+    json.dump(d, open(f'{ROOT}/project/canvas.json', 'w'), ensure_ascii=False, indent=1)
+    files = {'project/canvas.json': 'project/canvas.json'}
+    for pid in page_ids:
+        for b in m[pid]['boards']:
+            files[f"project/{b['file']}"] = f"project/{b['file']}"
+    for f in removed:
+        files[f'project/{f}'] = None
+    json.dump(files, open(ROOT + '/../gen/publish_files.json', 'w'), indent=0)
+    print('removed', removed, 'files', len(files))
