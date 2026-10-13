@@ -5958,7 +5958,7 @@ export type ThreadStart = {
     /**
      * Engine
      */
-    engine?: 'claude_code' | 'codex';
+    engine?: 'claude_code' | 'codex' | 'glyphh';
     /**
      * Mode
      */

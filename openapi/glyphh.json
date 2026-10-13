@@ -10397,7 +10397,8 @@
             "default": "claude_code",
             "enum": [
               "claude_code",
-              "codex"
+              "codex",
+              "glyphh"
             ],
             "title": "Engine",
             "type": "string"
