@@ -8615,6 +8615,110 @@
         "title": "ScheduleView",
         "type": "object"
       },
+      "ScreenCall": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "call": {
+            "format": "uuid",
+            "title": "Call",
+            "type": "string"
+          },
+          "ice": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ice",
+            "type": "array"
+          }
+        },
+        "required": [
+          "call",
+          "answer",
+          "ice"
+        ],
+        "title": "ScreenCall",
+        "type": "object"
+      },
+      "ScreenHold": {
+        "properties": {
+          "call": {
+            "format": "uuid",
+            "title": "Call",
+            "type": "string"
+          },
+          "hold": {
+            "title": "Hold",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "call",
+          "hold"
+        ],
+        "title": "ScreenHold",
+        "type": "object"
+      },
+      "ScreenOffer": {
+        "properties": {
+          "offer": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Offer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offer"
+        ],
+        "title": "ScreenOffer",
+        "type": "object"
+      },
+      "ScreenView": {
+        "properties": {
+          "controlled_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Controlled By"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "super_power": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Super Power"
+          },
+          "up": {
+            "title": "Up",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile",
+          "up"
+        ],
+        "title": "ScreenView",
+        "type": "object"
+      },
       "Searched": {
         "properties": {
           "by": {
@@ -15397,6 +15501,240 @@
           }
         },
         "summary": "Open One",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/screens/ice": {
+      "post": {
+        "description": "TURN servers and their credentials for 10 minutes, for the view's end of a call: asked before its offer, so\nthe offer carries every candidate.",
+        "operationId": "getScreenIce",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Getscreenice",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ice",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/screens/{profile}/calls": {
+      "post": {
+        "description": "Watches a profile's screen: the view's offer (every candidate gathered) answered by the machine's, with the\nTURN servers both use. The screen goes end to end; the server only passes this.",
+        "operationId": "callScreen",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profile",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenOffer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenCall"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Called",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/screens/{profile}/calls/{call}": {
+      "delete": {
+        "description": "Ends a call; one that held control hands it back after 30 seconds.",
+        "operationId": "hangUpScreen",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profile",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Profile",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hung Up",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/machines/{machine_id}/screens/{profile}/control": {
+      "post": {
+        "description": "Takes control of the screen from a call (`hold`), or hands it back; the super power's browser waits meanwhile.",
+        "operationId": "takeScreenControl",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "machine_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Machine Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profile",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenHold"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Controlled",
         "tags": [
           "machines"
         ]

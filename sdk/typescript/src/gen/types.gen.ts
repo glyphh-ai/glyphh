@@ -4974,6 +4974,72 @@ export type ScheduleView = {
 };
 
 /**
+ * ScreenCall
+ */
+export type ScreenCall = {
+    /**
+     * Answer
+     */
+    answer: string;
+    /**
+     * Call
+     */
+    call: string;
+    /**
+     * Ice
+     */
+    ice: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
+ * ScreenHold
+ */
+export type ScreenHold = {
+    /**
+     * Call
+     */
+    call: string;
+    /**
+     * Hold
+     */
+    hold: boolean;
+};
+
+/**
+ * ScreenOffer
+ */
+export type ScreenOffer = {
+    /**
+     * Offer
+     */
+    offer: string;
+};
+
+/**
+ * ScreenView
+ */
+export type ScreenView = {
+    /**
+     * Controlled By
+     */
+    controlled_by?: string | null;
+    /**
+     * Profile
+     */
+    profile: string;
+    /**
+     * Super Power
+     */
+    super_power?: string | null;
+    /**
+     * Up
+     */
+    up: boolean;
+};
+
+/**
  * Searched
  */
 export type Searched = {
@@ -8816,6 +8882,146 @@ export type OpenMachineResponses = {
 };
 
 export type OpenMachineResponse = OpenMachineResponses[keyof OpenMachineResponses];
+
+export type GetScreenIceData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/screens/ice';
+};
+
+export type GetScreenIceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetScreenIceError = GetScreenIceErrors[keyof GetScreenIceErrors];
+
+export type GetScreenIceResponses = {
+    /**
+     * Response Getscreenice
+     *
+     * Successful Response
+     */
+    200: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type GetScreenIceResponse = GetScreenIceResponses[keyof GetScreenIceResponses];
+
+export type CallScreenData = {
+    body: ScreenOffer;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Profile
+         */
+        profile: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/screens/{profile}/calls';
+};
+
+export type CallScreenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CallScreenError = CallScreenErrors[keyof CallScreenErrors];
+
+export type CallScreenResponses = {
+    /**
+     * Successful Response
+     */
+    200: ScreenCall;
+};
+
+export type CallScreenResponse = CallScreenResponses[keyof CallScreenResponses];
+
+export type HangUpScreenData = {
+    body?: never;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Profile
+         */
+        profile: string;
+        /**
+         * Call
+         */
+        call: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/screens/{profile}/calls/{call}';
+};
+
+export type HangUpScreenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HangUpScreenError = HangUpScreenErrors[keyof HangUpScreenErrors];
+
+export type HangUpScreenResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type HangUpScreenResponse = HangUpScreenResponses[keyof HangUpScreenResponses];
+
+export type TakeScreenControlData = {
+    body: ScreenHold;
+    path: {
+        /**
+         * Machine Id
+         */
+        machine_id: string;
+        /**
+         * Profile
+         */
+        profile: string;
+    };
+    query?: never;
+    url: '/v1/machines/{machine_id}/screens/{profile}/control';
+};
+
+export type TakeScreenControlErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type TakeScreenControlError = TakeScreenControlErrors[keyof TakeScreenControlErrors];
+
+export type TakeScreenControlResponses = {
+    /**
+     * Successful Response
+     */
+    200: ScreenView;
+};
+
+export type TakeScreenControlResponse = TakeScreenControlResponses[keyof TakeScreenControlResponses];
 
 export type ListInstalledSuperPowersData = {
     body?: never;
