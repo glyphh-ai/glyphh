@@ -583,6 +583,7 @@ Waiting on Chris: the `minus` and `scan` icons (zoom out, fit), and whether the 
 ### What Glyphh becomes
 
 - **Glyphh is a runtime for AI programs.** A program is a collection of functions (data, a semantic layer, a trust layer, models, loops, connections, a UI) with one purpose, deterministic. Not a bot, a swarm or a crew.
+- **A program is the previous design's super power** (Chris, 2026-10-12): it is made of its models, connections, functions (what were skills), tasks, folders, browsers and its loop.
 - **Built from any harness** (Claude, Codex, Gemini, any other); the plugin teaches it how. A new program's tools reach the harness at once through Glyphh's one MCP server and its search tool, with no new connection.
 - **One entry point: MCP.** Every call returns a type: text, panel (HTML inline), link, needs input, needs auth, working, result (a link in R2 with a skill to fetch it after the owner approves a token).
 - **A program may ask its owner for approval, and may be public** at `<program>.glyphh.app`.
