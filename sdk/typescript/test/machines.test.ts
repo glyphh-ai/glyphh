@@ -82,4 +82,21 @@ describe("hosting", () => {
     const bodies = await Promise.all([seen[0], seen[3], seen[7], seen[8]].map((r) => r?.json()));
     expect(bodies).toEqual([{ token: "FlyV1 fm2_x", account: "personal" }, { name: "attic", region: "iad" }, { image: null }, { image: "rrotor:1.2" }]);
   });
+
+  it("launches at the other hosts and reads the first-boot script and the templates", async () => {
+    const seen: Request[] = [];
+    const launched = { host: "vps", code: "c", expires_at: "x", url: null, user_data: null, command: "curl ..." };
+    expect(await glyphh(launched, seen).hosting.launch("vps")).toEqual(launched);
+    await glyphh(launched, seen).hosting.launch("aws", "attic");
+    const script = await new Glyphh({ baseUrl: SERVER, token: "t", fetch: async (input, init) => {
+      seen.push(new Request(input, init));
+      return new Response("#!/bin/sh\n", { status: 200, headers: { "content-type": "text/x-shellscript" } });
+    } }).hosting.firstBootScript();
+    expect(script).toBe("#!/bin/sh\n");
+    expect(await glyphh({ contentVersion: "1.0.0.0" }, seen).hosting.template("azure")).toEqual({ contentVersion: "1.0.0.0" });
+    expect(seen.map((r) => `${r.method} ${new URL(r.url).pathname}`)).toEqual([
+      "POST /v1/hosts/vps/launch", "POST /v1/hosts/aws/launch", "GET /v1/hosts/first-boot.sh", "GET /v1/hosts/azure/template.json",
+    ]);
+    expect(await Promise.all(seen.slice(0, 2).map((r) => r.json()))).toEqual([{ name: null }, { name: "attic" }]);
+  });
 });

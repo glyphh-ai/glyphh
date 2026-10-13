@@ -3110,6 +3110,66 @@
         "title": "HostAccountView",
         "type": "object"
       },
+      "HostLaunch": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "user_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Data"
+          }
+        },
+        "required": [
+          "host",
+          "code",
+          "expires_at",
+          "url",
+          "user_data",
+          "command"
+        ],
+        "title": "HostLaunch",
+        "type": "object"
+      },
       "HostedView": {
         "properties": {
           "app": {
@@ -3802,6 +3862,24 @@
           "expires_at"
         ],
         "title": "Launch",
+        "type": "object"
+      },
+      "LaunchIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The machine's name; the VM's own hostname when none.",
+            "title": "Name"
+          }
+        },
+        "title": "LaunchIn",
         "type": "object"
       },
       "Ledger": {
@@ -14315,6 +14393,28 @@
         ]
       }
     },
+    "/v1/hosts/first-boot.sh": {
+      "get": {
+        "description": "rrotor's first boot on any VM: Docker, the image as the whole machine with its /data volume, and the updater.\nThe one-click code comes in its environment (GLYPHH_SIGN_IN_CODE); none is in the script.",
+        "operationId": "firstBootScript",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Script",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
     "/v1/hosts/{host}/account": {
       "delete": {
         "description": "Forget my token at the host; my machines there keep running.",
@@ -14441,6 +14541,116 @@
           }
         },
         "summary": "Save",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosts/{host}/launch": {
+      "post": {
+        "description": "A new machine at a host whose own console makes the VM: the one-click code, and AWS's quick-create link, Deploy\nto Azure, the first boot to paste (GCP, DigitalOcean, Hetzner) or the one line for any VPS.",
+        "operationId": "launchHost",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "enum": [
+                "aws",
+                "azure",
+                "gcp",
+                "digitalocean",
+                "hetzner",
+                "vps"
+              ],
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaunchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostLaunch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Launched",
+        "tags": [
+          "machines"
+        ]
+      }
+    },
+    "/v1/hosts/{host}/template.json": {
+      "get": {
+        "description": "The template AWS's quick-create link or Deploy to Azure makes the VM from.",
+        "operationId": "hostTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "enum": [
+                "aws",
+                "azure"
+              ],
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Hosttemplate",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Template",
         "tags": [
           "machines"
         ]

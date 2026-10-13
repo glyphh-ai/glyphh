@@ -1,12 +1,13 @@
 import type { Client } from "./gen/client/index.js";
 import {
-  deployMachine, destroyHostedMachine, getHostAccount, getHostedMachine, listHostedMachines, removeHostAccount, saveHostAccount,
-  startHostedMachine, updateHostedMachine,
+  deployMachine, destroyHostedMachine, firstBootScript, getHostAccount, getHostedMachine, hostTemplate, launchHost, listHostedMachines,
+  removeHostAccount, saveHostAccount, startHostedMachine, updateHostedMachine,
 } from "./gen/sdk.gen.js";
-import type { HostAccountView, HostedView } from "./gen/types.gen.js";
+import type { HostAccountView, HostedView, HostLaunch } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
-export type { HostAccountView, HostedView };
+export type { HostAccountView, HostedView, HostLaunch };
+export type LaunchableHost = "aws" | "azure" | "gcp" | "digitalocean" | "hetzner" | "vps";
 export type HostedState = HostedView["state"];
 
 /** One-click hosting on my own Fly account: its deploy token, deploying a machine there, and keeping it. */
@@ -60,5 +61,21 @@ export class HostingApi {
   /** Destroy it at Fly (its app, VM and volume) and remove its machine. */
   async destroy(hostedId: string): Promise<void> {
     unwrap(await destroyHostedMachine({ client: this.#client, path: { hosted_id: hostedId } }));
+  }
+
+  /** A new machine at a host whose own console makes the VM: the one-click code, with AWS's quick-create link, Deploy
+   *  to Azure, the first boot to paste (GCP, DigitalOcean, Hetzner) or the one line for any VPS. */
+  async launch(host: LaunchableHost, name?: string): Promise<HostLaunch> {
+    return unwrap(await launchHost({ client: this.#client, path: { host }, body: { name: name ?? null } }));
+  }
+
+  /** rrotor's first-boot script for any VM (no secret in it: the code comes in its environment). */
+  async firstBootScript(): Promise<string> {
+    return unwrap(await firstBootScript({ client: this.#client, parseAs: "text" })) as string;
+  }
+
+  /** The template AWS's quick-create link or Deploy to Azure makes the VM from. */
+  async template(host: "aws" | "azure"): Promise<Record<string, unknown>> {
+    return unwrap(await hostTemplate({ client: this.#client, path: { host } })) as Record<string, unknown>;
   }
 }

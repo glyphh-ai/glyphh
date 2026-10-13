@@ -105,6 +105,9 @@ from .home import Home
 from .home_categories_item import HomeCategoriesItem
 from .host import Host
 from .host_account_view import HostAccountView
+from .host_launch import HostLaunch
+from .host_template_host import HostTemplateHost
+from .host_template_response_hosttemplate import HostTemplateResponseHosttemplate
 from .hosted_view import HostedView
 from .hosted_view_state import HostedViewState
 from .http_validation_error import HTTPValidationError
@@ -130,6 +133,8 @@ from .key_view import KeyView
 from .key_view_status import KeyViewStatus
 from .keys_page import KeysPage
 from .launch import Launch
+from .launch_host_host import LaunchHostHost
+from .launch_in import LaunchIn
 from .ledger import Ledger
 from .ledger_entry import LedgerEntry
 from .ledger_page import LedgerPage
@@ -478,6 +483,9 @@ __all__ = (
     "HomeCategoriesItem",
     "Host",
     "HostAccountView",
+    "HostLaunch",
+    "HostTemplateHost",
+    "HostTemplateResponseHosttemplate",
     "HostedView",
     "HostedViewState",
     "ImageIn",
@@ -502,6 +510,8 @@ __all__ = (
     "KeyViewStatus",
     "KeysPage",
     "Launch",
+    "LaunchHostHost",
+    "LaunchIn",
     "Ledger",
     "LedgerEntry",
     "LedgerPage",

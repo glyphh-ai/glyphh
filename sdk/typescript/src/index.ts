@@ -39,7 +39,7 @@ export type {
   ReviewDecision, VersionChange, Waiting,
 } from "./discover.js";
 export type * from "./admin.js";
-export type { HostAccountView, HostedState, HostedView } from "./hosting.js";
+export type { HostAccountView, HostedState, HostedView, HostLaunch, LaunchableHost } from "./hosting.js";
 export type { Face, InstalledPage, InstalledQuery, Launch, MachineCard, MachinePage, SuperPowerStatus } from "./machines.js";
 export type { CreatedInvite, InviteView, Member, MemberChange, MemberRole, OrgView } from "./org.js";
 export type {

@@ -59,6 +59,10 @@ CALLS = [
         "",
     ),
     ("hosting", "destroy", (S,), {}, "DELETE", f"/v1/hosted-machines/{S}", ""),
+    ("hosting", "launch", ("vps",), {}, "POST", "/v1/hosts/vps/launch", ""),
+    ("hosting", "launch", ("aws",), {"name": "attic"}, "POST", "/v1/hosts/aws/launch", ""),
+    ("hosting", "first_boot_script", (), {}, "GET", "/v1/hosts/first-boot.sh", ""),
+    ("hosting", "template", ("azure",), {}, "GET", "/v1/hosts/azure/template.json", ""),
 ]
 
 

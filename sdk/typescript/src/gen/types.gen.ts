@@ -1879,6 +1879,36 @@ export type HostAccountView = {
 };
 
 /**
+ * HostLaunch
+ */
+export type HostLaunch = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Command
+     */
+    command: string | null;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Host
+     */
+    host: string;
+    /**
+     * Url
+     */
+    url: string | null;
+    /**
+     * User Data
+     */
+    user_data: string | null;
+};
+
+/**
  * HostedView
  */
 export type HostedView = {
@@ -2298,6 +2328,18 @@ export type Launch = {
      * Url
      */
     url: string;
+};
+
+/**
+ * LaunchIn
+ */
+export type LaunchIn = {
+    /**
+     * Name
+     *
+     * The machine's name; the VM's own hostname when none.
+     */
+    name?: string | null;
 };
 
 /**
@@ -8145,6 +8187,22 @@ export type UpdateHostedMachineResponses = {
 
 export type UpdateHostedMachineResponse = UpdateHostedMachineResponses[keyof UpdateHostedMachineResponses];
 
+export type FirstBootScriptData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/hosts/first-boot.sh';
+};
+
+export type FirstBootScriptResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type FirstBootScriptResponse = FirstBootScriptResponses[keyof FirstBootScriptResponses];
+
 export type RemoveHostAccountData = {
     body?: never;
     path: {
@@ -8234,6 +8292,70 @@ export type SaveHostAccountResponses = {
 };
 
 export type SaveHostAccountResponse = SaveHostAccountResponses[keyof SaveHostAccountResponses];
+
+export type LaunchHostData = {
+    body: LaunchIn;
+    path: {
+        /**
+         * Host
+         */
+        host: 'aws' | 'azure' | 'gcp' | 'digitalocean' | 'hetzner' | 'vps';
+    };
+    query?: never;
+    url: '/v1/hosts/{host}/launch';
+};
+
+export type LaunchHostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type LaunchHostError = LaunchHostErrors[keyof LaunchHostErrors];
+
+export type LaunchHostResponses = {
+    /**
+     * Successful Response
+     */
+    201: HostLaunch;
+};
+
+export type LaunchHostResponse = LaunchHostResponses[keyof LaunchHostResponses];
+
+export type HostTemplateData = {
+    body?: never;
+    path: {
+        /**
+         * Host
+         */
+        host: 'aws' | 'azure';
+    };
+    query?: never;
+    url: '/v1/hosts/{host}/template.json';
+};
+
+export type HostTemplateErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HostTemplateError = HostTemplateErrors[keyof HostTemplateErrors];
+
+export type HostTemplateResponses = {
+    /**
+     * Response Hosttemplate
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type HostTemplateResponse = HostTemplateResponses[keyof HostTemplateResponses];
 
 export type AcceptInviteData = {
     body: InviteAnswer;
