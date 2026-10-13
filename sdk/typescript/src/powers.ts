@@ -2,18 +2,19 @@ import type { Client } from "./gen/client/index.js";
 import {
   addBrowser, addFolder, addModel, checkConnection, checkModelKey, connect, deleteBrowser, deleteModel, disconnect,
   listBrowsers, listCatalogModels, listConnections, listFolders, listLoops, listModels, listProviders, listServices, listTools,
-  reconnect, removeFolder, replaceModelKey, setTools, whatICanAdd,
+  reconnect, relayCall, relayTools, removeFolder, replaceModelKey, setTools, whatICanAdd,
 } from "./gen/sdk.gen.js";
 import type {
   CanAdd, CatalogPage, ConnectionView, ConnectLink, LoopState, MachineLoops, ModelView, NewBrowser, NewFolder, NewModel,
-  Place, ProviderView, ServicePage, ToolChange, ToolPage,
+  Place, ProviderView, RelayCall, Relayed, RelayTools, RelayToolsData, ServicePage, ToolChange, ToolPage,
 } from "./gen/types.gen.js";
 import { unwrap } from "./errors.js";
 
 export type {
   CanAdd, CatalogPage, ConnectionView, ConnectLink, LoopState, MachineLoops, ModelView, NewBrowser, NewFolder, NewModel,
-  Place, ProviderView, ServicePage, ToolChange, ToolPage,
+  Place, ProviderView, RelayCall, Relayed, RelayTools, ServicePage, ToolChange, ToolPage,
 };
+export type RelayQuery = NonNullable<RelayToolsData["query"]>;
 
 export interface CatalogQuery { provider?: string; q?: string; page?: number; size?: number }
 
@@ -125,5 +126,15 @@ export class PowersApi {
   /** What my teams let me add, inside my org's list. */
   async canAdd(): Promise<CanAdd> {
     return unwrap(await whatICanAdd({ client: this.#client }));
+  }
+
+  /** A connection's tools through the server's relay, each with the permission it runs under here. */
+  async relayTools(id: string, query: RelayQuery = {}): Promise<RelayTools> {
+    return unwrap(await relayTools({ client: this.#client, path: { connection_id: id }, query }));
+  }
+
+  /** Use one: checked, relayed to Pipedream, timed, counted and billed. */
+  async callTool(body: RelayCall): Promise<Relayed> {
+    return unwrap(await relayCall({ client: this.#client, body }));
   }
 }

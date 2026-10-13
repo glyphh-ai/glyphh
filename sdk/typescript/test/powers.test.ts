@@ -45,6 +45,9 @@ describe("powers", () => {
       call((g) => g.powers.addBrowser({ name: "Scout's", machine_id: "m-1", super_power_id: "s-1" })),
       call((g) => g.powers.deleteBrowser(P)),
       call((g) => g.powers.canAdd()),
+      call((g) => g.powers.relayTools(P, { mode: "autonomous" })),
+      call((g) => g.powers.callTool({ connection_id: P, tool: "gmail-send-email" })),
+      call((g) => g.powers.relayTools(P)),
     ])).toEqual([
       ["GET", "/v1/catalog/providers", "?q=open", null],
       ["GET", "/v1/catalog/models", "?provider=openai&q=gpt", null],
@@ -69,6 +72,9 @@ describe("powers", () => {
       ["POST", "/v1/powers/browsers", "", '{"name":"Scout\'s","machine_id":"m-1","super_power_id":"s-1"}'],
       ["DELETE", `/v1/powers/browsers/${P}`, "", ""],
       ["GET", "/v1/powers/can-add", "", null],
+      ["GET", `/v1/relay/connections/${P}/tools`, "?mode=autonomous", null],
+      ["POST", "/v1/relay/call", "", `{"connection_id":"${P}","tool":"gmail-send-email"}`],
+      ["GET", `/v1/relay/connections/${P}/tools`, "", null],
     ]);
   });
 

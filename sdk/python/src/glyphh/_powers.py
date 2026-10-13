@@ -109,7 +109,7 @@ class AsyncSpecApi(SpecApi):
 class Powers(SpecApi):
     """`Glyphh(...).powers`: providers, catalog_models, models, add_model, replace_key, check_key, delete_model,
     loops, folders, add_folder, remove_folder, browsers, add_browser, delete_browser, can_add, services, connections,
-    connect, reconnect, check_connection, disconnect, tools, set_tools."""
+    connect, reconnect, check_connection, disconnect, tools, set_tools, relay_tools, call_tool."""
 
     def __init__(self, run: Callable[..., Any]) -> None:
         super().__init__(run, SPECS)

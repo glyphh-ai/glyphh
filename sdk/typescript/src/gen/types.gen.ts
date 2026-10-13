@@ -4434,6 +4434,120 @@ export type Refused = {
 };
 
 /**
+ * RelayCall
+ */
+export type RelayCall = {
+    /**
+     * Connection Id
+     */
+    connection_id: string;
+    /**
+     * Input
+     */
+    input?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Mode
+     */
+    mode?: 'driven' | 'autonomous';
+    /**
+     * Run Id
+     */
+    run_id?: string | null;
+    /**
+     * Super Power Id
+     */
+    super_power_id?: string | null;
+    /**
+     * Tool
+     */
+    tool: string;
+};
+
+/**
+ * RelayTool
+ */
+export type RelayTool = {
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Input Schema
+     */
+    input_schema: {
+        [key: string]: unknown;
+    };
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Permission
+     */
+    permission: string;
+    /**
+     * Title
+     */
+    title: string | null;
+};
+
+/**
+ * RelayTools
+ */
+export type RelayTools = {
+    /**
+     * Connection Id
+     */
+    connection_id: string;
+    /**
+     * Service
+     */
+    service: string;
+    /**
+     * Tools
+     */
+    tools: Array<RelayTool>;
+};
+
+/**
+ * Relayed
+ */
+export type Relayed = {
+    /**
+     * Cost Cents
+     */
+    cost_cents: number;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number;
+    /**
+     * Error
+     */
+    error: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Result
+     */
+    result: {
+        [key: string]: unknown;
+    };
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Trace Id
+     */
+    trace_id: string | null;
+};
+
+/**
  * RenameOrg
  */
 export type RenameOrg = {
@@ -11244,6 +11358,70 @@ export type ReplaceModelKeyResponses = {
 };
 
 export type ReplaceModelKeyResponse = ReplaceModelKeyResponses[keyof ReplaceModelKeyResponses];
+
+export type RelayCallData = {
+    body: RelayCall;
+    path?: never;
+    query?: never;
+    url: '/v1/relay/call';
+};
+
+export type RelayCallErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RelayCallError = RelayCallErrors[keyof RelayCallErrors];
+
+export type RelayCallResponses = {
+    /**
+     * Successful Response
+     */
+    200: Relayed;
+};
+
+export type RelayCallResponse = RelayCallResponses[keyof RelayCallResponses];
+
+export type RelayToolsData = {
+    body?: never;
+    path: {
+        /**
+         * Connection Id
+         */
+        connection_id: string;
+    };
+    query?: {
+        /**
+         * Super Power Id
+         */
+        super_power_id?: string | null;
+        /**
+         * Mode
+         */
+        mode?: 'driven' | 'autonomous';
+    };
+    url: '/v1/relay/connections/{connection_id}/tools';
+};
+
+export type RelayToolsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RelayToolsError = RelayToolsErrors[keyof RelayToolsErrors];
+
+export type RelayToolsResponses = {
+    /**
+     * Successful Response
+     */
+    200: RelayTools;
+};
+
+export type RelayToolsResponse = RelayToolsResponses[keyof RelayToolsResponses];
 
 export type ReviewQueueData = {
     body?: never;
