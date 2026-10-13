@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Self, TypeVar, cast
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from attrs import define as _attrs_define
@@ -24,8 +24,8 @@ class ScreenView:
 
     profile: str
     up: bool
-    controlled_by: None | Unset | UUID = UNSET
-    super_power: None | Unset | UUID = UNSET
+    controlled_by: Unset | UUID | None = UNSET
+    super_power: Unset | UUID | None = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -33,7 +33,7 @@ class ScreenView:
 
         up = self.up
 
-        controlled_by: None | str | Unset
+        controlled_by: str | Unset | None
         if isinstance(self.controlled_by, Unset):
             controlled_by = UNSET
         elif isinstance(self.controlled_by, UUID):
@@ -41,7 +41,7 @@ class ScreenView:
         else:
             controlled_by = self.controlled_by
 
-        super_power: None | str | Unset
+        super_power: str | Unset | None
         if isinstance(self.super_power, Unset):
             super_power = UNSET
         elif isinstance(self.super_power, UUID):
@@ -65,13 +65,13 @@ class ScreenView:
         return field_dict
 
     @classmethod
-    def from_dict(cls, src_dict: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         profile = d.pop("profile")
 
         up = d.pop("up")
 
-        def _parse_controlled_by(data: object) -> None | Unset | UUID:
+        def _parse_controlled_by(data: object) -> Unset | UUID | None:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -88,7 +88,7 @@ class ScreenView:
 
         controlled_by = _parse_controlled_by(d.pop("controlled_by", UNSET))
 
-        def _parse_super_power(data: object) -> None | Unset | UUID:
+        def _parse_super_power(data: object) -> Unset | UUID | None:
             if data is None:
                 return data
             if isinstance(data, Unset):
