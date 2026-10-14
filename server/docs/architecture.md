@@ -11,7 +11,7 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 | `glyphh` | The account: sign in, license, account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan |
 | `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | The person's machine | Licensed; Free up to 2 workspaces |
 | `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
-| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on paid plans | Every plan: local. Paid: hosted, capped by hours and storage |
+| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on Pro and Team | Every plan: local. Pro and Team: hosted, capped by hours and storage |
 
 - **Pro and Team include every mod**, and every mod as it ships. One mod sold on its own can come later without a redesign.
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page and Stripe's.
@@ -151,7 +151,7 @@ A routine can chain all of it in one run: read a connector, run a program, do so
 
 | | Local runtime | Hosted runtime |
 |---|---|---|
-| Who | Every plan, Free included | Paid plans |
+| Who | Every plan, Free included | Pro and Team |
 | Where | The person's own computer (Docker, OrbStack, or Apple's `container` on a Mac), started by the mod | One Fly machine and its volume per person, which Glyphh provisions on upgrade; nobody sees or manages it |
 | Up | While the computer is on | Stopped when idle, woken per call (Fly starts a stopped machine in seconds) |
 | Called by | Claude on that computer, and Claude's Desktop scheduled tasks (local routines) | Claude anywhere and Claude's routines, through the Glyphh connector |
@@ -167,7 +167,7 @@ Both run the same image, the same programs and the same SDK; a program built loc
     - **Chromium**, on a virtual screen per profile, for the live panel and take control.
 
   The databases start when a program that declares them runs and stop after (Neo4j is a JVM that wants about a gigabyte).
-- **The hosted runtime** is one Fly machine per paid user, with a volume sized to the plan's storage; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
+- **The hosted runtime** is one Fly machine per Pro and Team user, with a volume sized to the plan's storage; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
 - **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
 - **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
 - **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
@@ -208,7 +208,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
 - **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back.
-- **Hosting:** provisions each paid user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and holds its storage to the plan.
+- **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and holds its storage to the plan.
 - **Limits are enforced here:** members, installs, workspaces, runtime hours and storage.
 
 ### API
@@ -374,7 +374,7 @@ The tables already built (plans, orgs, users, identities, invites, installs, tok
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_gb` its included storage. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage past what is included is billed per GB-month; the volume's size is the cap.
-- **One hosted runtime per paid user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
+- **One hosted runtime per Pro and Team user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
 - **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
@@ -401,9 +401,9 @@ Billed per seat, per month. Installs, workspaces, runtime hours and storage are 
 | Installs | 1 | ? | 5 | 10 |
 | Workspaces | 2 | ? | 10 | Unlimited |
 | Local runtime | Yes | Yes | Yes | Yes |
-| Hosted runtime | No | Yes | Yes | Yes |
-| Runtime hours a month | — | ? | ? | ? |
-| Storage included | — | ? | ? | ? |
+| Hosted runtime (cloud) | No | No | Yes | Yes |
+| Runtime hours a month | — | — | ? | ? |
+| Storage included | — | — | ? | ? |
 
 - **Hours top-ups:** bought one-off, kept until used; optional auto top-up within a monthly spend cap.
 - **Storage past what is included:** billed per GB-month on the monthly invoice; growing it is a click; it never shrinks.
