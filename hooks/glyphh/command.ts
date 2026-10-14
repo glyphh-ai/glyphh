@@ -46,9 +46,19 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
   }
   // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
+  // /glyphh login and logout stay inline in the chat (their reply row draws the
+  // sign-in); only the other sections open the side panel.
+  if (['signin', 'sign-in', 'login'].includes(arg)) {
+    if ((await gh.state.auth.get()).status !== 'in') await beginSignIn(gh)
+    return { text: await status(gh) }
+  }
+  if (['signout', 'sign-out', 'logout'].includes(arg)) {
+    await signOut(gh)
+    return { text: 'Signed out of Glyphh.' }
+  }
   const placed = await gh.openPanel()
   const signedOut = (await gh.state.auth.get()).status === 'out'
-  if (['signin', 'sign-in', 'login'].includes(arg) || (!arg && signedOut)) {
+  if (!arg && signedOut) {
     // Signed out, /glyphh goes straight to sign-in: the code and link land in the panel.
     if ((await gh.state.auth.get()).status !== 'in') await beginSignIn(gh)
   } else if (['signout', 'sign-out', 'logout'].includes(arg)) {
