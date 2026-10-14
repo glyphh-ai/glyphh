@@ -88,7 +88,7 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   expect(await ui.find({ type: 'Button', key: 'idp-remove-google' })).toBeUndefined() // the only one
   await ui.press({ key: 'idp-add-github' })
   expect(await ui.find({ type: 'Text', text: /Finish in the browser, then press Refresh/ })).toBeDefined()
-  expect(await ui.find({ type: 'Link', href: 'https://accounts.github.test/auth?link=1' })).toBeDefined()
+  expect((await ui.find({ type: 'Link' }))?.props.href).toBe('https://accounts.github.test/auth?link=1')
   await ui.input({ key: 'me-name', text: 'Christopher' })
   expect(w.server.s.name).toBe('Christopher')
   await ui.press({ key: 'sec-workspaces' })
