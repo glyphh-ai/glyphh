@@ -24,6 +24,7 @@ function newState() {
     invites: [] as Json[],
     installs: [{ id: 'i1', name: 'mac', surface: 'desktop' }, { id: 'i2', name: 'laptop', surface: 'cli' }] as Json[],
     role: 'admin',
+    providers: ['google'] as string[],
     name: 'Chris',
     orgName: 'Glyphh',
     licenseTamper: false,
@@ -35,6 +36,7 @@ type State = ReturnType<typeof newState>
 
 const meOf = (s: State) => ({
   user: { id: 'u1', name: s.name, email: 'chris@example.com', role: s.role },
+  providers: [...s.providers],
   org: { id: 'o1', name: s.orgName, seats: 2, billing_status: 'active' },
   plan: { name: 'Free', version: 1, limits: { max_members: 1, max_installs: 1, max_workspaces: s.maxWorkspaces }, features: { rpa: false } },
   used: { members: s.members.length, seats: 2, installs: s.installs.length, workspaces: s.workspaces.length },
@@ -58,7 +60,7 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
   const ok = (body: unknown = {}) => ({ status: 200, body })
   const open = ['/v1/device/code', '/v1/device/token', '/v1/plans']
   if (!open.includes(c.path) && c.bearer !== TOKEN) return refuse(401, 'E_UNAUTHORIZED', 'Bad token.')
-  const key = `${c.method} ${c.path.replace(/\/v1\/(installs|org\/members|org\/invites|workspaces)\/[^/]+$/, '/v1/$1/:id')}`
+  const key = `${c.method} ${c.path.replace(/\/v1\/(installs|org\/members|org\/invites|workspaces|me\/identities)\/[^/]+$/, '/v1/$1/:id')}`
   const id = decodeURIComponent(c.path.split('/').pop() ?? '')
   switch (key) {
     case 'POST /v1/device/code':
@@ -69,6 +71,14 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
     }
     case 'GET /v1/me': return ok(meOf(s))
     case 'PATCH /v1/me': s.name = String(c.body.name); return ok(meOf(s))
+    case 'POST /v1/me/identities': {
+      const p = String(c.body.provider)
+      if (s.providers.includes(p)) return refuse(409, 'E_CONFLICT', `${p} is already linked.`)
+      return ok({ url: `https://accounts.${p}.test/auth?link=1` })
+    }
+    case 'DELETE /v1/me/identities/:id':
+      if (s.providers.length <= 1) return refuse(409, 'E_CONFLICT', 'You need at least one way to sign in.')
+      s.providers = s.providers.filter(p => p !== id); return { status: 204, body: '' }
     case 'GET /v1/installs': return ok({ installs: s.installs })
     case 'DELETE /v1/installs/:id': s.installs = s.installs.filter(i => i.id !== id); return ok()
     case 'POST /v1/sign-out': return ok()
@@ -120,7 +130,7 @@ export function fakeServer() {
     const call: Call = { method: init.method ?? 'GET', path: u.pathname, body: init.body ? (JSON.parse(init.body) as Json) : {}, bearer }
     s.calls.push(call)
     const r = await route(s, call)
-    return { status: r.status, ok: r.status < 300, headers: {}, text: JSON.stringify(r.body) }
+    return { status: r.status, ok: r.status < 300, headers: {}, text: r.status === 204 ? "" : JSON.stringify(r.body) }
   }
 
   return { s, fetch, TOKEN }
