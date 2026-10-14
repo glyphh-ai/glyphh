@@ -68,7 +68,10 @@ function show(c) {
   $("say").textContent = "Your sign-in code:";
   $("say").className = "sub";
   $("code").textContent = c.user_code;
-  $("link").textContent = c.verification_uri_complete;
+  const a = document.createElement("a");
+  a.href = c.verification_uri_complete; a.target = "_blank"; a.rel = "noopener";
+  a.textContent = c.verification_uri_complete;
+  $("link").replaceChildren(a);
   $("pending").hidden = false;
   $("again").hidden = true;
   stop();
@@ -90,8 +93,13 @@ async function poll() {
 $("open").onclick = async () => {
   if (!card?.verification_uri_complete) return;
   $("wait").textContent = "Waiting for approval…";
-  try { await app.openLink({ url: card.verification_uri_complete }); }
-  catch { $("wait").textContent = "Open the link below in your browser."; }
+  let opened = false;
+  try {
+    const r = await app.callServerTool({ name: "glyphh_sign_in_open", arguments: { url: card.verification_uri_complete } });
+    opened = !!r?.structuredContent?.opened;
+  } catch {}
+  if (!opened) { try { const r = await app.openLink({ url: card.verification_uri_complete }); opened = !r?.isError; } catch {} }
+  $("wait").textContent = opened ? "Waiting for approval…" : "Click the link below to approve, then come back.";
 };
 
 $("restart").onclick = async () => {

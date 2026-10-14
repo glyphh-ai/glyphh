@@ -4,6 +4,7 @@ import type { GlyphhSection } from '../../types'
 import { initAccount, signOut } from './account'
 import { openSection } from './actions'
 import { openUrl } from './open'
+import { watchOpenRequests } from './openreq'
 import { resumePolling } from './device'
 import type { Host } from './host'
 import { beginSignIn } from './sections/signin'
@@ -20,6 +21,7 @@ export async function startGlyphh(gh: Host) {
   await migrateAndLoad(gh).catch(() => undefined)
   await initAccount(gh).catch(() => undefined)
   await resumePolling(gh)
+  watchOpenRequests(gh)
 }
 
 export async function status(gh: Host): Promise<string> {
@@ -35,6 +37,7 @@ export async function status(gh: Host): Promise<string> {
 
 export async function glyphhCommand(gh: Host, args: string): Promise<{ text: string }> {
   const arg = args.trim().toLowerCase()
+  watchOpenRequests(gh)
   // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
   const placed = await gh.openPanel()
