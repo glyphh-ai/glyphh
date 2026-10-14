@@ -11,7 +11,7 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 | `glyphh` | The account: sign in, license, account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan |
 | `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | The person's machine | Licensed; Free up to 2 workspaces |
 | `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
-| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, locked-down machines Glyphh hosts, called by Claude and by Claude's routines | rrotor, hosted | Every plan, by machines and hours: Free 1 machine, 1 hour a month |
+| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on paid plans | Every plan: local. Paid: hosted, capped by hours and storage |
 
 - **Pro and Team include every mod**, and every mod as it ships. One mod sold on its own can come later without a redesign.
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page and Stripe's.
@@ -132,7 +132,7 @@ def end(ctx: Ctx) -> None: ...                     # always runs: close up, keep
 - **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db.postgres`, `ctx.db.mongo`, `ctx.db.neo4j` (its own databases), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
 - **Folders exist only through the program** (Chris, 2026-10-14): a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; there is no folder access into rrotor from outside, and no program reaches another's.
 - **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
-- **Code lives in the person's own GitHub repo** (routines clone it anyway); deploying pins a version (commit and bundle) to their rrotor.
+- **Programs live in the runtime** (Chris, 2026-10-14): the code, every version, its files, databases, browser profiles, secrets and run logs are in the person's runtime, where they are built, tested and run. The server keeps only an index (each program's name, versions and runtime) so Claude and routines can call it by name, and the run records.
 
 **Build time: in Claude, with the mod.** The SDK is part of `glyphh-programs`: its tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and **create its routine** (prompt, triggers, connectors). Whatever is missing, Claude asks for: connect a Claude connector, add a secret, or **sign in to a site**, which opens the live panel on the run in rrotor: the person takes control and signs in; the sign-in stays in that profile on rrotor; Claude sees nothing while they hold it.
 
@@ -140,12 +140,24 @@ def end(ctx: Ctx) -> None: ...                     # always runs: close up, keep
 
 1. A routine fires on its schedule, its API trigger or a GitHub event, on Anthropic's machines, on the person's own Claude subscription.
 2. Claude calls the **Glyphh connector** (a remote MCP server on the Glyphh server, added once at claude.ai/customize/connectors): `call(program, function, inputs)`, then `continue(run_id, answer)` as needed.
-3. The server wakes the person's rrotor (Fly starts a stopped machine in seconds) and passes the call over rrotor's outbound link.
+3. The server wakes the person's hosted runtime and passes the call over its outbound link. (A local runtime is reached by Claude on that computer, so cloud routines call the hosted one; local scheduled tasks call the local one.)
 4. rrotor runs the step in its sandbox and answers the `Result`; Claude decides what is next: another connector, another program, an artifact.
 
 A routine can chain all of it in one run: read a connector, run a program, do something else, publish an artifact. Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the panel, a push, an email). Claude can also call programs directly, in any session.
 
 **The live panel** streams a run: the program's browser, its steps, its log, approvals, take control. It is an MCP App panel, from the mod while building and from the connector where Claude shows panels; frames come from rrotor through the server's relay (WebRTC end to end where it connects).
+
+**rrotor: one isolated runtime per person, local and hosted** (Chris, 2026-10-14). A person never sees machines: they have a runtime where their programs live and run.
+
+| | Local runtime | Hosted runtime |
+|---|---|---|
+| Who | Every plan, Free included | Paid plans |
+| Where | The person's own computer (Docker, OrbStack, or Apple's `container` on a Mac), started by the mod | One Fly machine and its volume per person, which Glyphh provisions on upgrade; nobody sees or manages it |
+| Up | While the computer is on | Stopped when idle, woken per call (Fly starts a stopped machine in seconds) |
+| Called by | Claude on that computer, and Claude's Desktop scheduled tasks (local routines) | Claude anywhere and Claude's routines, through the Glyphh connector |
+| Caps | The computer's own | Runtime hours a month and storage, per plan |
+
+Both run the same image, the same programs and the same SDK; a program built locally deploys to the hosted runtime unchanged.
 
 **rrotor, locked down.**
 
@@ -155,7 +167,7 @@ A routine can chain all of it in one run: read a connector, run a program, do so
     - **Chromium**, on a virtual screen per profile, for the live panel and take control.
 
   The databases start when a program that declares them runs and stop after (Neo4j is a JVM that wants about a gigabyte).
-- Each rrotor is its own Fly machine, **stopped when idle**, woken per call; a person has as many as their plan allows, each with its own `/data`, and a program is deployed to one of them.
+- **The hosted runtime** is one Fly machine per paid user, with a volume sized to the plan's storage; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
 - **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
 - **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
 - **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
@@ -196,8 +208,8 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
 - **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back.
-- **Hosting:** creates a person's rrotors on Fly (up to the plan's machines), wakes one per call, stops it when idle, counts the hours against the plan.
-- **Limits are enforced here:** members, installs, workspaces, machines and machine hours.
+- **Hosting:** provisions each paid user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and holds its storage to the plan.
+- **Limits are enforced here:** members, installs, workspaces, runtime hours and storage.
 
 ### API
 
@@ -219,7 +231,8 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 |---|---|
 | Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (manifest, commit, bundle), `POST /v1/programs/{id}/deploy` |
 | Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
-| rrotor | `GET`/`POST /v1/machines` (create, up to the plan's machines), `GET`/`DELETE /v1/machines/{id}`, `POST /v1/machines/{id}/start`, `/stop`; hours used; `/v1/machines/link` (each rrotor's outbound WebSocket) |
+| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); `/v1/runtime/link` (the runtime's outbound WebSocket, hosted or local) |
+| Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
 | Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration) |
 
 ### Panels
@@ -234,7 +247,7 @@ Each works before design draws it.
 | Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
 | Programs: list, versions, deploy, runs, needs you | `glyphh-programs` | Mod |
 | The live panel: a run in rrotor, its browser, steps, approvals, take control, sign in | `glyphh-programs` | MCP App |
-| Machines: list, create, on or off, hours used | `glyphh-programs` | Mod |
+| Runtime: local on or off; hosted state, hours and storage used, top up, grow storage | `glyphh-programs` | Mod |
 | Not in your plan | every mod | Mod |
 
 ### Anthropic's terms
@@ -250,7 +263,8 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 - **The live panel from the mod's own MCP server** in the Code tab, on a run in rrotor, with take control and a sign-in.
 - **The Glyphh connector in a routine:** a routine calling `call` and `continue` on a test program, end to end.
 - **Desktop scheduled tasks** (local routines) loading plugins and their local MCP servers, for `glyphh-rpa`.
-- **Waking rrotor per call** fast enough for a tool call (Fly start, link up, answer).
+- **Waking the hosted runtime per call** fast enough for a tool call (Fly start, link up, answer).
+- **The local runtime** starting from the mod on a Mac (Apple's `container`, or Docker/OrbStack).
 - **Dependencies through the marketplace**, and **a built mod loading** as its source does.
 - **Google sign-in in Chromium under automation** ("This browser or app may not be secure").
 
@@ -272,7 +286,7 @@ erDiagram
     USERS ||--o{ WORKSPACES : "owns"
     INSTALLS ||--o{ TOKENS : "holds"
     INSTALLS ||--o{ DEVICE_CODES : "approved by"
-    USERS ||--o{ RROTORS : "has"
+    USERS ||--o| RROTORS : "has, hosted"
     USERS ||--o{ PROGRAMS : "owns"
     PROGRAMS ||--|{ PROGRAM_VERSIONS : "has"
     PROGRAM_VERSIONS ||--o{ DEPLOYMENTS : "deployed as"
@@ -289,8 +303,8 @@ erDiagram
         int max_members
         int max_installs
         int max_workspaces
-        int max_machines
-        int machine_hours
+        int runtime_hours
+        int storage_gb
         bool all_mods
     }
     RROTORS {
@@ -359,7 +373,8 @@ The tables already built (plans, orgs, users, identities, invites, installs, tok
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
-- **A limit left empty is unlimited.** `max_machines` is how many rrotors a person may have; `machine_hours` the running time a person's machines share each month. When the hours run out, calls are refused with `E_LIMIT` until the month turns or the plan changes.
+- **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_gb` its included storage. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage past what is included is billed per GB-month; the volume's size is the cap.
+- **One hosted runtime per paid user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
 - **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
@@ -376,16 +391,20 @@ The tables already built (plans, orgs, users, identities, invites, installs, tok
 
 ## Plans
 
-Billed per seat, per month. Installs, workspaces, machines and machine hours are per user. **Programs follow the same structure:** every plan gets machines and hours (Chris, 2026-10-14).
+Billed per seat, per month. Installs, workspaces, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
 | Price per seat | $0 | ? | $8 | $16 |
-| Mods | `glyphh`, `glyphh-workspaces`, `glyphh-programs` | ? | Every mod | Every mod |
+| Mods | `glyphh`, `glyphh-workspaces`, `glyphh-programs` (local) | ? | Every mod | Every mod |
 | Members | 1 | 1 | 1 | Unlimited |
 | Installs | 1 | ? | 5 | 10 |
 | Workspaces | 2 | ? | 10 | Unlimited |
-| rrotor machines | 1 | 2 | ? | ? |
-| Machine hours a month | 1 | ? | ? | ? |
+| Local runtime | Yes | Yes | Yes | Yes |
+| Hosted runtime | No | Yes | Yes | Yes |
+| Runtime hours a month | — | ? | ? | ? |
+| Storage included | — | ? | ? | ? |
 
-To decide: where Solo sits against Pro, and the machines and hours for Solo, Pro and Team. rrotor costs Glyphh about $0.019 an hour running on 2 GB (Fly `shared-cpu-2x`), about $0.035 an hour on 4 GB for programs that use Neo4j or several databases at once, and about $1 a month per machine stopped (storage): Free's 1 hour costs about $1.02 a month; 40 hours on 2 machines about $2.75.
+- **Hours top-ups:** bought one-off, kept until used; optional auto top-up within a monthly spend cap.
+- **Storage past what is included:** billed per GB-month on the monthly invoice; growing it is a click; it never shrinks.
+- To decide: the numbers above, the top-up price and the storage price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
