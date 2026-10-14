@@ -24002,7 +24002,7 @@ function machineProbe(home = homedir()) {
 }
 
 // mcp/src/server.ts
-var CARD_URI = "ui://glyphh/sign-in/5";
+var CARD_URI = "ui://glyphh/sign-in/6";
 var MIME = "text/html;profile=mcp-app";
 var MCP = join2(dirname2(fileURLToPath(import.meta.url)), "..");
 var ROOT = process.env.CLAUDE_PLUGIN_ROOT || join2(MCP, "..");
@@ -24085,7 +24085,7 @@ function statusTool(server, flow) {
 }
 function makeServer(flow) {
   const server = new McpServer({ name: "glyphh", version: modVersion() });
-  for (const uri of [CARD_URI, "ui://glyphh/sign-in/1", "ui://glyphh/sign-in/2", "ui://glyphh/sign-in/3", "ui://glyphh/sign-in/4"]) {
+  for (const uri of [CARD_URI, "ui://glyphh/sign-in/1", "ui://glyphh/sign-in/2", "ui://glyphh/sign-in/3", "ui://glyphh/sign-in/4", "ui://glyphh/sign-in/5"]) {
     server.registerResource(`sign-in ${uri}`, uri, { title: "Glyphh sign-in", mimeType: MIME }, async () => ({
       contents: [{ uri, mimeType: MIME, text: cardHtml() }]
     }));

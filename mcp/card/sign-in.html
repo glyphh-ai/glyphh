@@ -28,11 +28,7 @@ button:focus-visible{outline:2px solid var(--color-ring-primary,Highlight);outli
   <p class="sub" id="say">Getting a sign-in code…</p>
   <div id="pending" hidden>
     <div class="code" id="code"></div>
-    <div class="row">
-      <button class="primary" id="open">Sign in</button>
-      <span class="sub" id="wait">Approve this code on the page that opens.</span>
-    </div>
-    <div class="link" id="link"></div>
+    <p class="sub" id="wait">Approve this code on the Glyphh page beside the chat. This card updates when you're signed in.</p>
   </div>
   <div class="row" id="again" hidden><button id="restart">Start again</button></div>
 </div>
@@ -68,10 +64,6 @@ function show(c) {
   $("say").textContent = "Your sign-in code:";
   $("say").className = "sub";
   $("code").textContent = c.user_code;
-  const a = document.createElement("a");
-  a.href = c.verification_uri_complete; a.target = "_blank"; a.rel = "noopener";
-  a.textContent = c.verification_uri_complete;
-  $("link").replaceChildren(a);
   $("pending").hidden = false;
   $("again").hidden = true;
   stop();
@@ -89,19 +81,6 @@ async function poll() {
   if (s.status === "expired") return ended("The code expired.", "bad");
   ended(s.message || "The sign-in failed.", "bad");
 }
-
-$("open").onclick = async () => {
-  if (!card?.verification_uri_complete) return;
-  // Claude opens the page in its browser pane when asked in the chat; the card
-  // cannot open it itself, so the button asks.
-  let asked = false;
-  try {
-    const r = await app.sendMessage({ role: "user", content: [{ type: "text",
-      text: `/glyphh open ${card.verification_uri_complete}` }] });
-    asked = !r?.isError;
-  } catch {}
-  $("wait").textContent = asked ? "Opening the sign-in page… approve it there." : "Click the link below to approve, then come back.";
-};
 
 $("restart").onclick = async () => {
   $("again").hidden = true;

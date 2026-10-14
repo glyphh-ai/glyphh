@@ -8,7 +8,7 @@ description: Sign this machine in to Glyphh. Use when the user asks to sign in, 
 Call the `glyphh_sign_in` tool (from this plugin's `glyphh` MCP server). It takes no arguments.
 
 - Signed in already: it answers "Signed in as <email>." Tell the user that and stop.
-- Otherwise it shows a sign-in card in the chat with a code and a **Sign in** button, and its answer carries `verification_uri_complete`. Tell the user, in one line, to press **Sign in** on the card. Pressing it sends `/glyphh open <address>`, which the mod runs to open the page in the browser pane; if that arrives as plain text instead, open its address in the browser pane (the Claude_Browser `preview_start` tool) and say to approve it there. The card waits for approval and says when the user is signed in. Do not poll; the card does.
+- Otherwise it shows a sign-in card in the chat with the code, and its answer carries `verification_uri_complete`. **Right away, open that address in the browser pane** (the Claude_Browser `preview_start` tool): the card shows the code, the page beside it signs the user in. Then tell the user, in one line, to approve the code on that page. The card waits and says when they are signed in. Do not poll; the card does.
 - Where no card shows, the tool's text holds the code and the link: give them to the user, and once they say they approved it, call `glyphh_sign_in` again to finish.
 - If it fails (for example the Glyphh server cannot be reached), say so plainly. `/glyphh signin` is the other way in.
 
