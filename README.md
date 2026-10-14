@@ -30,6 +30,8 @@ differently, because each can do different things (see [What we learned](#what-w
 | `/term` | Desktop: the Terminal pane |
 | `/browser [url]` | Desktop: the Browser pane, or a page opened in it |
 | `/editor <name>` | Desktop: a file in the Files pane, by path or file name (several matches are listed) |
+| `/glyphh [section]` | The Glyphh panel: Account, Org, Plan, Billing, Workspaces (signed out, each is Sign in). See [Glyphh account](#glyphh-account-glyphh) |
+| `/glyphh signin`, `/glyphh signout` | Sign in by device flow (the code and link are also printed), or sign this machine out |
 
 `off` after a pane command hides it (`/files off`). The long names answer too:
 `/terminal`, `/changes`, `/edit`. A name Claude Code already ships is refused,
@@ -68,8 +70,64 @@ desktop: { panes: ['files', 'changes', 'terminal'], collapseSidebar: true, folde
 open in the order listed; every other pane closes. `/dip` prints a line per
 pane: `Files ✓ · Changes ✓ · Terminal ✗ <why>`.
 
-Dragged sizes are saved (`$.store`) and come back next session; the built-in
-layouts' order and desktop settings come from the code.
+The layouts live in `~/.glyphh/workspaces/<slug>.json`, one file per workspace
+(below). On the first run (no `~/.glyphh/workspaces` folder yet) the built-in
+layouts above, with any sizes dragged before, are written there; from then on
+the files are the source of truth for `/dip`, `/stream` and the grid. Dragged
+sizes are written back to the workspace's file (and kept in `$.store` too,
+the fallback where `~/.glyphh` cannot be read). A folder emptied on purpose
+stays empty.
+
+## Glyphh account (`/glyphh`)
+
+`/glyphh` opens one panel with five sections; `/glyphh <section>` opens it on
+one. Signed out, every section shows **Sign in**. Where Claude Code refuses
+the name (a command or skill already has it), the command is `/glyphh-account`.
+
+| Section | What it does (API in `server/docs/architecture.md`) |
+|---|---|
+| Sign in | Device flow: shows the code and the link; on the desktop opens `verification_uri_complete` in Claude's browser pane, in a terminal prints it; polls `/v1/device/token` at `interval`, 5 s slower on `slow_down`, until the token, `expired_token` or `access_denied`. Copy link, Cancel |
+| Account | Name (Enter renames), email, sign-in providers, installs (revoke one; revoking this one signs out), Sign out |
+| Org | Name (admin renames), members with roles (admin removes, never the admin), invites: send (the link is shown to copy), revoke, pending |
+| Plan | The plan, its limits and what is used (`/v1/me`), the license this machine holds (valid, until, RPA on/off), every plan (`/v1/plans`) |
+| Billing (admin) | Checkout (not subscribed) or switch plan (subscribed), seats, Card and invoices (Stripe's portal); Stripe's pages open in the browser pane, or as a link in a terminal |
+| Workspaces | List (with "local only" for names the server never had, and Register), create (the name goes to `POST /v1/workspaces` first: refused past the limit, nothing made), and for the one picked: rename, model, folder, permission mode, effort, delete |
+
+Every action ends in one line under the tabs: what it did, or why not. A
+refusal reads `{"error": {code, message, trace_id}}`; `E_LIMIT` reads as
+*Limit reached: workspaces. 2 of 2 used. The Pro plan lifts it.* A 401 from
+any call means this install was revoked: the machine signs out.
+
+**Signing in, end to end:** `/glyphh signin` (or **Sign in** in the panel) →
+`POST /v1/device/code {name, surface, mod_version}` → the panel shows the code,
+and the desktop opens the sign-in page in the browser pane (a terminal prints
+the link) → the person continues with Google or GitHub and approves → the
+mod's poll gets `{access_token, install_id}` → `~/.glyphh/install.json`
+(0600) → `/v1/me` and the license are fetched and the panel shows the account.
+
+**Server:** `GLYPHH_SERVER_URL`, default `http://localhost:8080`. Every call
+but the device flow's and the plans list carries `Authorization: Bearer
+<install token>`.
+
+### `~/.glyphh`
+
+| File | What |
+|---|---|
+| `install.json` | `{install_id, token}`, mode 0600: written by `sh` under `umask 077` to a temporary file and moved into place, the token on stdin, never on a command line or in a log |
+| `license.json` | The server's signed license answer and the key it was checked with. Refreshed from `GET /v1/license` at session start and sign-in; its Ed25519 signature is checked against `GET /v1/license/key` before it is kept (a bad one never is), and again offline at each start. An expired license is not valid. RPA is gated on `features.rpa` |
+| `workspaces/<slug>.json` | One workspace: `name`, `model`, `folder`, `permission_mode`, `effort`, `cols`, `rows`, `col_widths`, `row_heights`, `desktop_panes`, `collapse_sidebar`, `cells` (`panel`, `col`, `row`, `row_span`, `tab` for a browser cell, `path`), `tabs` (`url`, `name`, `no_redirect`, `rpa: {commands, sequences}`) |
+
+The workspaces' order is kept in the mod's store. Only names go to the server.
+
+The license may come in any of three shapes: a compact JWS (`{token}`, EdDSA),
+`{payload, signature}` (the signature over the payload's bytes), or
+`{license, signature}` (over the canonical JSON: keys sorted, no spaces,
+non-ASCII as `\u` escapes, as Python's `json.dumps(..., sort_keys=True,
+separators=(",", ":"))`). The key: `{key}` or `{public_key}` as raw 32 bytes in
+base64 or base64url, PEM (SPKI), or a JWK (`kty: OKP`, `crv: Ed25519`, `x`).
+The hooks environment's `crypto.subtle` has `digest` alone (no `importKey`,
+no `verify`), so Ed25519 is checked in `hooks/glyphh/ed25519.ts` on BigInt and
+SHA-512 (RFC 8032's test vector and Node's own signatures check out).
 
 ## Run it
 
@@ -189,8 +247,20 @@ What we hit building it:
 | `helper/viewer.mjs` + `viewer.html` | The layout page: local server behind a token, WebRTC signalling, JPEG fallback, the grid page, `page_read`'s text |
 | `helper/bridge.html` | Runs hidden in the helper's Chrome: cell frames → canvas → WebRTC video |
 | `helper/windows.mjs` | A layout as real Chrome windows tiled on screen (an experiment; not wired to `/dip`) |
-| `types/index.d.ts` | The layout types and the mod's `$.state` contract |
+| `hooks/layouts.ts` | The built-in layouts (migrated to `~/.glyphh/workspaces` on first run) |
+| `hooks/glyphh/index.tsx` | Glyphh's hooks: `/glyphh`, its panel, the session start (`~/.glyphh`), dragged sizes on to the files. The one file holding `$` and the account atoms; hands the rest a `Host` |
+| `hooks/glyphh/host.ts` | The `Host` interface the account code works on (the engine's scan follows `$` only within the file that received it) |
+| `hooks/glyphh/api.ts` | The API client: base URL, bearer, refusals, `E_LIMIT` |
+| `hooks/glyphh/device.ts` · `account.ts` | Device-flow sign-in and polling · install.json, `/v1/me`, sign out, revoked installs |
+| `hooks/glyphh/license.ts` · `ed25519.ts` | The license: fetch, check, keep, gate · Ed25519 on BigInt |
+| `hooks/glyphh/home.ts` | `~/.glyphh` paths and JSON files, the 0600 writer |
+| `hooks/glyphh/wsmodel.ts` · `wsfiles.ts` | A workspace file ⇄ a layout · the files read, written, migrated, mirrored into the layouts |
+| `hooks/glyphh/actions.ts` · `wsactions.ts` | What the Account, Org, Plan, Billing and Workspaces sections do |
+| `hooks/glyphh/panel.tsx` · `sections/*.tsx` · `ui.tsx` · `shape.ts` | The panel and its sections; elements and links; reading the server's answers |
+| `hooks/glyphh/command.ts` · `open.ts` · `state.ts` | `/glyphh`; opening pages in the browser pane; the panel's note |
+| `types/index.d.ts` | The layout and workspace-file types and the mod's `$.state` contract |
 | `tests/layouts.test.ts` | 11 tests: drawing, switching, dragging, the IDE editor's save, `/dip`, the terminal check |
+| `tests/glyphh-*.test.ts` | 27 tests on a fake server (`fake-server.ts`) and a fake host (`fake-host.ts`), no network: the client, storage, the license, device-flow polling, limit errors, each section's actions, workspace files and migration, and the panel through the engine on both surfaces |
 
 The Chrome profile (sign-ins) lives at
 `~/Library/Application Support/glyphh-workspaces/chrome`, apart from your own
@@ -258,6 +328,23 @@ Split View › New Session on the Right opens only a *draft*, which has no
 browser until someone sends it a message, and a session's browser can be
 driven only by that session's own Claude or mods. Tried 2026-10-13.
 
+**`$` stays in its file.** The engine reads a module's source before it runs
+it, and follows `$` only into functions declared in the file whose hook
+received it: passing `$` to an imported function, or reading state through an
+atom declared in another file or handed in as an argument, is refused at load.
+`on` may be passed across files. So a mod split into modules keeps every `$`
+call and atom in one file and hands the rest an interface of closures
+(`hooks/glyphh/host.ts`). Only one `session.start` hook per plugin may have no
+matcher; a second one is split into `{ isInteractive: true }` and `{ isInteractive: false }`.
+
+**A `Link` must be `https:` (or `http://localhost`).** Any other address
+refuses the whole tree, not just the link; the panels draw other addresses as
+text.
+
+**No text field on mobile, no theme fonts.** The desktop and terminal tables
+have `Input` and `Select`; mobile has neither. Colors can follow the theme
+(theme keys such as `error`, `success`, `claude`); fonts cannot be set.
+
 **Auto mode checks the mod's calls.** Opening a web page from the mod
 (`preview_start`) was refused by the auto-mode check; an allow rule for the
 tool fixes it (see Run it). Moving the folder asks the person to approve it.
@@ -277,9 +364,8 @@ plays video. The Glyphh desktop app's panel host (`panel-host.ts`,
   (xterm.js + node-pty) or headless (`claude -p --input-format stream-json
   --output-format stream-json`, which is how the Claude desktop app runs it).
   The CLI bridge removed from yo/app on 2026-09-28 is in its git history.
-- **Licensing**: device flow (code + link, poll, a signed license token checked
-  with `crypto.subtle`). A local check only keeps honest people honest; what
-  must be paid for lives on the server.
+- **Licensing**: built (`/glyphh`, above). A local check only keeps honest
+  people honest; what must be paid for lives on the server.
 - **Claude builds the layouts**: tools the mod registers (`layout_list`,
   `layout_save`, `layout_open`, `cell_set`, `page_read`), no MCP server needed.
 - **Distribution**: the plugin marketplace for the mod; PyPI for a launcher
