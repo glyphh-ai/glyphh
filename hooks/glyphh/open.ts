@@ -17,7 +17,7 @@ export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Prom
   if (!ok && surface === 'desktop') {
     // As the grid's layoutToPane does: when auto mode refuses the mod's own
     // call, Claude is asked to open it (a turn, slower, but it gets there).
-    ok = await gh.ask(`Open this in the browser pane: ${url}`).then(() => true, () => false)
+    ok = await gh.ask(`Open this in the browser pane, in the tab already on ${new URL(url).host} if one is open (navigate that tab, as the grid's showInPane reuses a tab on the same site; no new tab): ${url}`).then(() => true, () => false)
   }
   const dir = await gh.env.home().catch(() => '')
   if (dir) await gh.fs.write(`${dir}/.glyphh/open-log.txt`, `${new Date().toISOString()} surface=${surface} opened=${ok}${ok ? '' : ` error=${lastOpenError}`}\n`).catch(() => undefined)
