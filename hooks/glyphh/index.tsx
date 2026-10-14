@@ -10,7 +10,10 @@ import { DEFAULTS } from '../layouts'
 import { glyphhCommand, startGlyphh } from './command'
 import type { Host } from './host'
 import { openUrl } from './open'
+import { InlineSignIn } from './inline'
 import { Panel } from './panel'
+import { beginSignIn } from './sections/signin'
+import { userOf } from './shape'
 import type { Ui } from './ui'
 import { saveSizes } from './wsfiles'
 
@@ -79,6 +82,16 @@ async function start($: EngineInterface) {
   await $.command
     .register({ name: 'glyphh', description, argumentHint: '[section | signin | signout]' })
     .catch(() => $.command.register({ name: 'glyphh-account', description }))
+  // Claude's way in to the same sign-in: a tool of this mod's own, as the grid
+  // registers page_read; its result draws the inline sign-in.
+  await $.tool.register({
+    name: 'glyphh_login',
+    description:
+      'Sign this machine in to Glyphh. Shows the sign-in inline in the chat (the code) and opens the login page in the ' +
+      'browser pane. Use when the user asks to sign in or log in to Glyphh. Says who is signed in already.',
+    inputSchema: { type: 'object', properties: {} },
+    isDeferred: false,
+  })
 }
 
 export function registerGlyphh(on: On) {
@@ -114,6 +127,30 @@ export function registerGlyphh(on: On) {
       if (url) await openUrl(host($), url).catch(() => false)
     }
     return r
+  })
+  // glyphh_login: start the sign-in (the login page opens in the browser pane,
+  // inside the person's request, which auto mode accepts) and answer its state.
+  on('tool.call', { tool: 'mcp__glyphh__glyphh_login' }, async $ => {
+    const gh = host($)
+    if ((await read($, auth)).status !== 'in') await beginSignIn(gh)
+    const a = await read($, auth)
+    const m = await read($, me)
+    if (a.status === 'in') return { result: { state: 'signed_in', email: m ? userOf(m).email : undefined } }
+    if (a.status === 'pending') return { result: { state: 'pending', user_code: a.user_code, url: a.verification_uri_complete } }
+    return { result: { state: 'signed_out', error: a.error } }
+  })
+  // The inline sign-in, in place of the tool's result row and of
+  // /glyphh login's reply row.
+  on('ui.render', { component: 'ToolResult' }, async ($, e, next) => {
+    if (e.props.tool !== 'mcp__glyphh__glyphh_login' || e.surface === 'mobile') return next(e)
+    const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
+    return InlineSignIn(ui, await read($, auth), await read($, me))
+  })
+  on('ui.render', { component: 'CommandOutput' }, async ($, e, next) => {
+    const login = ['login', 'signin', 'sign-in'].includes(e.props.args.trim().toLowerCase())
+    if (e.props.command !== 'glyphh' || !login || e.surface === 'mobile') return next(e)
+    const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
+    return InlineSignIn(ui, await read($, auth), await read($, me))
   })
   on('command.run', { command: 'glyphh' }, ($, e) => glyphhCommand(host($), e.args))
   on('command.run', { command: 'glyphh-account' }, ($, e) => glyphhCommand(host($), e.args))
