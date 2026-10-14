@@ -11,8 +11,8 @@ The first mods:
 | Mod | What it is | Plans |
 |---|---|---|
 | `glyphh` | The account: sign in, license, account, org, plan and billing panels, and the browser machine every other mod uses | Every plan; the others depend on it |
-| `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | Every plan; Free up to 2 workspaces |
-| `glyphh-rpa` | A browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live in a panel and stopped for your approval where it matters | Pro and Team |
+| `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it. RPA in its tabs | Every plan; Free up to 2 workspaces and no RPA |
+| `glyphh-rpa` | RPA inline, in the conversation: a browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live in a panel and stopped for your approval where it matters | Pro and Team |
 
 - **Pro and Team include every mod**, and every mod as it ships, so the subscription grows in value. One mod sold on its own as an add-on can come later without a redesign.
 - **Everything is in Claude.** Every screen is a panel Claude shows. There is no Glyphh app and no Glyphh web UI; the only pages are the device sign-in's and Stripe's own.
@@ -88,7 +88,7 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 - **Panels** (mod panels): account, org, plan, billing.
 - **The browser machine:** `glyphh` ships a local MCP server (the plugin's own, started by Claude), which owns Chrome:
     - Chrome driven over a private pipe (`--remote-debugging-pipe`), never a debugging port, one Chrome per **named profile** (`~/.glyphh/profiles/<name>/`): an isolated browser holding only the sign-ins made in it, kept on disk so a site signed in once stays signed in. A profile is open in one Chrome at a time, and the browser machine is its one owner.
-    - Render, watch, take control, drive and record are its own local API; the other mods build on it.
+    - It is the **RPA engine** both mods share ([RPA](#rpa-one-engine-two-ways-in)): its MCP tools, its live panel and the skill that teaches Claude the flow.
     - Its MCP App panels show a tab live (frames, or WebRTC where the frame allows it) with take control: the person's clicks, keys and paste go into the tab while Claude waits, and Claude sees no picture while they hold it, so a password or a code never reaches the model.
     - Only this machine's Claude reaches it; other agents could pair with it later.
 
@@ -105,11 +105,11 @@ Built from `~/development/glyphh/workspaces` (its README holds what a mod can an
 - **The limit:** the mod registers each workspace's name with the server when it creates one; past the plan's limit it is refused.
 - **Panel** (mod panel): list, create, edit (model, folder, permission mode, effort, grid, tabs), delete.
 
-### `glyphh-rpa`
+### RPA: one engine, two ways in
 
 **A browser for Claude, apart from yours** (Chris, 2026-10-14). Claude never works in the person's own browser: it works in a named profile that holds only the sign-ins the person made in it, so a mistake reaches those accounts and nothing else (not their own email, bank or saved passwords). The person records a task once or lets Claude work it out, watches Claude do it live in a panel in Claude, and approves the steps that matter. A mini bot in Claude.
 
-**Everything is an MCP tool**, so Claude does it for the person. `glyphh-rpa` ships its own local MCP server, built on the browser machine; its tools and its live panel are what Claude uses, and a skill teaches Claude the flow. The person asks in plain words:
+**Everything is an MCP tool**, so Claude does it for the person. The engine is the browser machine's local MCP server, in `glyphh`; its tools, its live panel and a skill that teaches Claude the flow are on when the license includes RPA (`glyphh-rpa`: Pro and Team), whichever mod the person uses it from. The person asks in plain words:
 
 > Use Glyphh to post our weekly update to LinkedIn. Ask me to approve before it posts. Work it out, then let's test it.
 
@@ -141,6 +141,15 @@ and Claude:
 - **Commands and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), with an approval rule on each step.
 - **Panels:** the live panel (MCP App: watch, record, approve, take control); a site's sequences (mod panel: run, edit, delete).
 
+**Two ways in, one RPA** (Chris, 2026-10-14). Both mods use the same engine, the same profiles, sites, sequences and run log: a task recorded in one runs in the other.
+
+| | `glyphh-rpa`: inline | `glyphh-workspaces`: in a workspace |
+|---|---|---|
+| Where it shows | The live panel, in the conversation | A tab in the workspace's grid (`/stream` on desktop, the terminal's grid in the CLI) |
+| The browser | The site's profile, opened by the panel | The tab's profile; a site matching the tab's URL gives its tools |
+| Recording and approvals | In the panel | In the tab's cell bar on the workspace page, and in the live panel when one is open |
+| For | Doing a task without leaving the chat | Working alongside the tabs a person keeps open (Gmail, Slack, a CRM) |
+
 ### On the machine: `~/.glyphh`
 
 Nothing here goes to the cloud.
@@ -151,8 +160,8 @@ Nothing here goes to the cloud.
 | `license.json` | `glyphh` | The signed license: plan, limits, mods, expiry |
 | `profiles/<name>/` | `glyphh` | A named profile: an isolated Chrome profile with only the sign-ins made in it |
 | `workspaces/<slug>.json` | `glyphh-workspaces` | A workspace: session, grid with its saved sizes, cells, tabs |
-| `rpa/<slug>.json` | `glyphh-rpa` | A site: what it matches, its profile, its commands and sequences with their approval rules |
-| `rpa/log/` | `glyphh-rpa` | What ran: each step, who did it, what was approved |
+| `rpa/<slug>.json` | `glyphh` (RPA) | A site: what it matches, its profile, its commands and sequences with their approval rules |
+| `rpa/log/` | `glyphh` (RPA) | What ran: each step, who did it, what was approved |
 
 ### The server
 
@@ -346,6 +355,7 @@ erDiagram
 ```
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price (Stripe prices cannot change either). An org stays on the version it subscribed to (`orgs.plan_version_id`), so an update never touches an org; new orgs get the newest version, and an org moves only when its admin changes plan or we migrate it on purpose.
+- **RPA is on** wherever the license includes `glyphh-rpa`, in either mod.
 - **Which mods a version includes:** `all_mods` true includes every active mod, new ones as they ship (Pro, Team); false, only the free ones (Free). A mod once free stays free, so no org ever loses a mod it had.
 - **A limit left empty is unlimited.**
 - **One org per user:** `users.org_id`, not a memberships table. `role` is `admin` or `member`; the org's first user is its admin (`orgs.admin_user_id`).
@@ -377,5 +387,6 @@ Billed per seat, per month. Installs and workspaces are per user.
 | Members | 1 | 1 | Unlimited |
 | Installs | 1 | 5 | 10 |
 | Workspaces | 2 | 10 | Unlimited |
+| RPA, inline and in workspaces | No | Yes | Yes |
 
 Team's installs are capped so one seat can't be shared across a team's machines.
