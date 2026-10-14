@@ -135,9 +135,9 @@ export function registerGlyphh(on: On) {
     if ((await read($, auth)).status !== 'in') await beginSignIn(gh)
     const a = await read($, auth)
     const m = await read($, me)
-    if (a.status === 'in') return { result: { state: 'signed_in', email: m ? userOf(m).email : undefined } }
-    if (a.status === 'pending') return { result: { state: 'pending', user_code: a.user_code, url: a.verification_uri_complete } }
-    return { result: { state: 'signed_out', error: a.error } }
+    if (a.status === 'in') return { result: JSON.stringify({ state: 'signed_in', email: m ? userOf(m).email : undefined }) }
+    if (a.status === 'pending') return { result: JSON.stringify({ state: 'pending', user_code: a.user_code, url: a.verification_uri_complete }) }
+    return { result: JSON.stringify({ state: 'signed_out', error: a.error }) }
   })
   // The inline sign-in, in place of the tool's result row and of
   // /glyphh login's reply row.
