@@ -214,7 +214,9 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **License:** short-lived, signed, per install: plan, limits, mods.
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
-- **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back.
+- **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back. A local runtime's token stops working when its install is revoked.
+- **Approvals, shown in Claude** (Chris, 2026-10-14): a step that needs approval is a row in `approvals` (the record, kept until answered) and a signal on **Redis** pub/sub to the server process holding the person's connection. The `glyphh` mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows a band above the prompt with Approve and Decline, a toast and a native notification, with no Claude turn; the first answer wins, the band clears in every open Claude, and an email goes out when no Claude is open (`notified_at`).
+- **Redis runs on the server's own Fly machine**, beside the server (Chris, 2026-10-14); in development it is a service in `compose.yaml`. It holds only what is live (pub/sub); Postgres holds everything kept.
 - **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and bills its storage up to the person's cap.
 - **Limits are enforced here:** members, installs, workspaces, runtime hours and storage.
 
@@ -242,6 +244,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (commit SHA, manifest), `POST /v1/programs/{id}/deploy` (a version) |
 | Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
 | Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); `/v1/runtime/link` (the runtime's outbound WebSocket, hosted or local) |
+| Approvals | `GET /v1/approvals` (waiting), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`), `POST /v1/approvals/{id}` {`approve` \| `decline`} (first answer wins; sends `continue` to the runtime) |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
 | Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration); the Allow page ("Allow Claude to use your Glyphh?", after Google or GitHub sign-in), the only server page besides the device page |
 
