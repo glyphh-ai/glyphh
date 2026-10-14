@@ -24,6 +24,8 @@ export async function settle() {
   for (let i = 0; i < 2000; i++) await Promise.resolve()
 }
 
+export const MACHINE_UUID = '0A1B2C3D-0000-4000-8000-00000000F00D'
+const IOREG = `+-o J316sAP  <class IOPlatformExpertDevice>\n    "IOPlatformUUID" = "${MACHINE_UUID}"\n`
 const done = (stdout = '') => ({ exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
 
 /** Files in a map; the shell writer (umask 077) marks its file 0600. */
@@ -33,7 +35,8 @@ function fakeFiles() {
   const argvs: string[][] = []
   const run = async (argv: readonly string[], init?: { stdin?: string }) => {
     argvs.push([...argv])
-    if (argv[0] === '/bin/sh') {
+    if (argv[0] === '/usr/sbin/ioreg') return done(IOREG)
+    if (argv[0] === '/bin/sh' && argv.length > 5) {
       files.set(argv[5]!, init?.stdin ?? '')
       modes.set(argv[5]!, '600')
     } else if (argv[0] === '/bin/rm') files.delete(argv[2]!)

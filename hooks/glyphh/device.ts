@@ -7,6 +7,7 @@ import { ApiError, api, describe } from './api'
 import { signedIn } from './account'
 import { openUrl, surfaceNow } from './open'
 import type { Host } from './host'
+import { machineId, type MachineProbe } from './machine'
 
 let timer: Timer | undefined
 
@@ -24,6 +25,16 @@ async function machineName(gh: Host): Promise<string> {
   return r?.exitCode === 0 && r.stdout.trim() ? r.stdout.trim() : 'Claude'
 }
 
+/** The machine id's sources, through the Host. */
+export async function machineProbe(gh: Host): Promise<MachineProbe> {
+  return {
+    home: await gh.env.home().catch(() => undefined),
+    run: argv => gh.process.run(argv),
+    read: path => gh.fs.read(path),
+    write: (path, text) => gh.fs.write(path, text),
+  }
+}
+
 function schedule(gh: Host, seconds: number) {
   timer?.cancel()
   timer = gh.clock.after(Math.max(1, seconds) * 1000, () => void poll(gh))
@@ -37,7 +48,12 @@ export function stopPolling() {
 /** Starts a sign-in: the code is shown, the link opened on the desktop. */
 export async function startSignIn(gh: Host, hint?: RenderSurface): Promise<AuthState> {
   const surface = await surfaceNow(gh, hint)
-  const body = { name: await machineName(gh), surface: surface === 'desktop' ? 'desktop' : 'cli', mod_version: await modVersion(gh) }
+  const body = {
+    name: await machineName(gh),
+    surface: surface === 'desktop' ? 'desktop' : 'cli',
+    mod_version: await modVersion(gh),
+    machine_id: await machineId(await machineProbe(gh)),
+  }
   const r = await api(gh, 'POST', '/v1/device/code', body, { auth: false })
   const interval = Number(r.interval ?? 5)
   const state: AuthState = {
