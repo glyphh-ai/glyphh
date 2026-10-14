@@ -113,10 +113,11 @@ A browser for Claude apart from the person's own, on their machine; no rrotor. C
 ```python
 from glyphh import Ctx, Result
 
-def load(ctx: Ctx) -> None: ...                    # once per run: open the profile, read config
-def start(ctx: Ctx, inputs: dict) -> Result: ...   # the main job
+
+def load(ctx: Ctx) -> None: ...  # once per run: open the profile, read config
+def start(ctx: Ctx, inputs: dict) -> Result: ...  # the main job
 def fetch_leads(ctx: Ctx, since: str) -> Result: ...  # custom functions, each callable on its own
-def end(ctx: Ctx) -> None: ...                     # always runs: close up, keep results
+def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 ```
 
 - **Every call returns a `Result`:** a status and data. The status tells the caller what is next:
@@ -220,7 +221,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Area | Calls |
 |---|---|
 | Device flow | `POST /v1/device/code`, `POST /v1/device/token`, `GET /v1/device?code=` |
-| Account | `GET`/`PATCH /v1/me`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
+| Account | `GET`/`PATCH /v1/me`, `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
 | Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods`, `GET /v1/plans`, `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |

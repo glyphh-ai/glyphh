@@ -16,7 +16,7 @@ Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed
 |---|---|
 | `GLYPHH_ENV` | `dev` (default), `test` or `prod` |
 | `GLYPHH_PUBLIC_URL` | The server's own address: the device flow's link and the provider callbacks (`/auth/{google,github}/callback`) |
-| `GLYPHH_SECRET_KEY` | 32+ characters; signs the steps of the device sign-in page |
+| `GLYPHH_SECRET_KEY` | 32+ characters; signs the steps of the device sign-in page and of linking a provider |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | Sign-in providers; a provider without both is not offered |
 | `GLYPHH_LICENSE_KEY` | Base64 of a raw 32-byte Ed25519 private key that signs licenses. Required in prod; without it in dev and test a key is made at start (licenses then don't survive a restart) |
 | `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | Billing; without them billing answers `E_UNAVAILABLE` |
@@ -34,7 +34,7 @@ Make a license key with:
 - `models/`: the schema, one table per module (drawn in `docs/architecture.md`, Data model)
 - `db/`: the engine, the schema step, the seed, the drift check and tenancy (row-level security keyed on the org)
 - `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe
-- `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page
+- `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages
 - `obs/`: JSON logs, each line with its trace id; every refusal is `{"error": {"code", "message", "trace_id"}}`
 
 ## Test it

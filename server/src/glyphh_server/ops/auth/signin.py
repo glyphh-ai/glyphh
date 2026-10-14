@@ -39,8 +39,8 @@ async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
             email=profile.email,
         )
     email = profile.email.strip().lower()
-    await _lock(conn, f"email:{email}")
-    await _lock(conn, f"{profile.provider}:{profile.subject}")
+    await lock(conn, f"email:{email}")
+    await lock(conn, f"{profile.provider}:{profile.subject}")
     user_id, how = await _by_identity(conn, profile), "returning"
     if user_id is None:
         user_id, how = await _by_email(conn, email), "linked"
@@ -53,7 +53,7 @@ async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
     return user_id
 
 
-async def _lock(conn: AsyncConnection, key: str) -> None:
+async def lock(conn: AsyncConnection, key: str) -> None:
     await conn.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))"), {"k": key})
 
 

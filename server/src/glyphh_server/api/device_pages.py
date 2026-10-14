@@ -11,6 +11,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from starlette.responses import RedirectResponse, Response
 
+from glyphh_server.api import link_pages
 from glyphh_server.api.auth import Conn
 from glyphh_server.api.browser_session import (
     START_AGAIN,
@@ -28,13 +29,13 @@ from glyphh_server.ops import device_approval
 from glyphh_server.ops.auth import signed
 from glyphh_server.ops.auth.providers import available, provider
 from glyphh_server.ops.auth.signin import sign_in
+from glyphh_server.ops.identities import NAMES
 
 router = APIRouter()
 ASK_CODE: str = (
     '<form method="get" action="/v1/device"><label>Code <input name="code" autocomplete="off"></label>'
     ' <button type="submit">Continue</button></form>'
 )
-NAMES: dict[str, str] = {"google": "Google", "github": "GitHub"}
 
 
 @router.get("/v1/device", operation_id="deviceSignInPage", tags=["device flow"], response_class=HTMLResponse)
@@ -54,12 +55,18 @@ async def device_page(request: Request, conn: Conn, code: str | None = None) -> 
 
 
 @router.get("/auth/{name}/start", include_in_schema=False)
-async def start(name: str, request: Request, conn: Conn, code: str) -> Response:
+async def start(name: str, request: Request, conn: Conn, code: str | None = None, link: str | None = None) -> Response:
+    """Off to the provider, for a device sign-in (`code`) or to link the provider to an account (`link`)."""
     settings = cfg(request)
     chosen = provider(name, settings)
-    found = await device_approval.waiting(conn, code)
+    if link:
+        purpose = link_pages.purpose(settings, name, link)
+    elif code:
+        purpose = {"c": (await device_approval.waiting(conn, code)).user_code, "p": name}
+    else:
+        raise Invalid(START_AGAIN)
     nonce = new_browser()
-    state = signed.sign(settings.secret_key, {"c": found.user_code, "p": name, "n": nonce}, TTL)
+    state = signed.sign(settings.secret_key, {**purpose, "n": nonce}, TTL)
     away = RedirectResponse(chosen.authorize_url(settings, callback_url(settings, name), state), status_code=302)
     return bind_browser(away, settings, nonce)
 
@@ -73,6 +80,8 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
         raise Invalid(START_AGAIN)
     if not code:
         raise Forbidden("Signing in was cancelled. Start again in Claude when you're ready.", reason="cancelled")
+    if link_pages.is_link(st):
+        return await link_pages.finish(request, conn, chosen, st, code)
     found = await device_approval.waiting(conn, st["c"])
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, name))
     user_id = await sign_in(conn, profile)
