@@ -70,7 +70,14 @@ function host($: EngineInterface): Host {
     },
     copy: async (text, surface) => (await $.ui.copy({ text, surface })).isCopied,
     openPanel: async () => (await $.ui.open({ id: 'glyphh', title: 'Glyphh' })).isPlaced,
-    ask: async text => void (await $.prompt.submit({ text })),
+    // As the grid's layoutToPane: `void $.prompt.submit(...)`, not awaited; the
+    // prompt starts its own turn once the session is idle.
+    ask: async text => {
+      void $.prompt.submit({ text }).catch(async (err: unknown) => {
+        const home = await $.env.get('HOME').catch(() => undefined)
+        if (home) await $.fs.write(`${home}/.glyphh/ask-log.txt`, `${new Date().toISOString()} ${String(err).slice(0, 300)}\n`).catch(() => undefined)
+      })
+    },
     pluginRoot: $.plugin.root,
     state: hostState($),
   }
