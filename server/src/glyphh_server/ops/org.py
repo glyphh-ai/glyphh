@@ -10,7 +10,7 @@ from glyphh_server.models import Org
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.guards import require_admin
-from glyphh_server.ops.plans import PlanView, org_version, view
+from glyphh_server.ops.plans import PlanView, org_plan
 
 
 class OrgView(BaseModel):
@@ -32,7 +32,7 @@ async def org_view(conn: AsyncConnection, org_id: uuid.UUID) -> OrgView:
     ).one()
     return OrgView(
         **row._mapping,
-        plan=view(await org_version(conn, org_id)),
+        plan=await org_plan(conn, org_id),
         seats_taken=await limits.seats_taken(conn, org_id),
         members=await limits.members(conn, org_id),
     )

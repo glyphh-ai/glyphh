@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.drift import refuse_drift
 from glyphh_server.db.engine import make_engine
-from glyphh_server.db.seed import seed_plans
+from glyphh_server.db.seed import seed_mods, seed_plans
 from glyphh_server.db.tenancy import apply_tenancy
 from glyphh_server.models import Base
 
@@ -21,6 +21,7 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(refuse_drift)
         await apply_tenancy(conn)
+        await seed_mods(conn)
         await seed_plans(conn, settings)
 
 

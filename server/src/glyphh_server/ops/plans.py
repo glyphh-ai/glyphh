@@ -1,4 +1,5 @@
-"""Plans as callers see them: each plan's newest version, and the version an org is pinned to."""
+"""Plans as callers see them: each plan's newest version, and the version an org is pinned to, with the mods each
+includes: every active mod when all_mods, otherwise the active free ones."""
 
 import uuid
 
@@ -8,7 +9,7 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Invalid
-from glyphh_server.models import Org, Plan, PlanVersion
+from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 
 class Limits(BaseModel):
@@ -17,16 +18,12 @@ class Limits(BaseModel):
     workspaces: int | None = Field(description="null = unlimited; per user")
 
 
-class Features(BaseModel):
-    rpa: bool
-
-
 class PlanView(BaseModel):
     name: str
     version: int
     seat_price_cents: int
     limits: Limits
-    features: Features
+    mods: list[str] = Field(description="The slugs of the mods this version includes, sorted")
 
 
 COLUMNS = (
@@ -38,18 +35,33 @@ COLUMNS = (
     PlanVersion.max_members,
     PlanVersion.max_installs,
     PlanVersion.max_workspaces,
-    PlanVersion.rpa,
+    PlanVersion.all_mods,
 )
 
 
-def view(row: Row) -> PlanView:
+async def active_mods(conn: AsyncConnection) -> list[Row]:
+    """Every active mod's slug and whether it is free, in the catalog's order."""
+    return list(await conn.execute(select(Mod.slug, Mod.free).where(Mod.active).order_by(Mod.sort, Mod.slug)))
+
+
+def included(row: Row, mods: list[Row]) -> list[str]:
+    """The slugs a version includes, sorted."""
+    return sorted(m.slug for m in mods if row.all_mods or m.free)
+
+
+def view(row: Row, mods: list[Row]) -> PlanView:
     return PlanView(
         name=row.name,
         version=row.version,
         seat_price_cents=row.seat_price_cents,
         limits=Limits(members=row.max_members, installs=row.max_installs, workspaces=row.max_workspaces),
-        features=Features(rpa=row.rpa),
+        mods=included(row, mods),
     )
+
+
+async def org_plan(conn: AsyncConnection, org_id: uuid.UUID) -> PlanView:
+    """The org's pinned version as callers see it."""
+    return view(await org_version(conn, org_id), await active_mods(conn))
 
 
 def _newest():  # type: ignore[no-untyped-def]
@@ -73,7 +85,8 @@ async def newest_versions(conn: AsyncConnection) -> list[Row]:
 
 
 async def list_plans(conn: AsyncConnection) -> list[PlanView]:
-    return [view(r) for r in await newest_versions(conn)]
+    mods = await active_mods(conn)
+    return [view(r, mods) for r in await newest_versions(conn)]
 
 
 async def newest_version(conn: AsyncConnection, name: str) -> Row:

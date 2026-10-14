@@ -5,6 +5,7 @@ from glyphh_server.models.device_code import DeviceCode
 from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import SURFACES, Install
 from glyphh_server.models.invite import Invite
+from glyphh_server.models.mod import Mod
 from glyphh_server.models.org import BILLING_STATUSES, Org
 from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.token import Token
@@ -21,6 +22,7 @@ __all__ = [
     "Identity",
     "Install",
     "Invite",
+    "Mod",
     "Org",
     "Plan",
     "PlanVersion",

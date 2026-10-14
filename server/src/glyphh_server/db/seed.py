@@ -1,5 +1,6 @@
-"""The plans every Glyphh database starts with, each with its first version. A Stripe price set for a plan that its
-newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do versions)."""
+"""The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
+plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
+versions)."""
 
 from dataclasses import dataclass
 
@@ -8,7 +9,40 @@ from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
-from glyphh_server.models import Plan, PlanVersion
+from glyphh_server.models import Mod, Plan, PlanVersion
+
+
+@dataclass(frozen=True, slots=True)
+class ModSeed:
+    slug: str
+    name: str
+    description: str
+    free: bool
+
+
+MODS: tuple[ModSeed, ...] = (
+    ModSeed(
+        "glyphh",
+        "Glyphh",
+        "The account: sign in, license, account, org, plan and billing panels, and the browser machine every other "
+        "mod uses",
+        True,
+    ),
+    ModSeed(
+        "glyphh-workspaces",
+        "Glyphh Workspaces",
+        "Workspaces: a layout grid of live web tabs plus the Claude session it runs; switching workspaces switches "
+        "all of it",
+        True,
+    ),
+    ModSeed(
+        "glyphh-rpa",
+        "Glyphh RPA",
+        "A website as tools: commands and sequences on a site, a live tab in a panel in Claude, take control, record "
+        "a task once and run it",
+        False,
+    ),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,7 +52,7 @@ class PlanSeed:
     max_members: int | None
     max_installs: int | None
     max_workspaces: int | None
-    rpa: bool
+    all_mods: bool
 
 
 FREE: str = "Free"
@@ -32,6 +66,12 @@ PLANS: tuple[PlanSeed, ...] = (
 def stripe_prices(settings: Settings) -> dict[str, str | None]:
     """Which Stripe price each paid plan sells on: per environment, so read from settings."""
     return {FREE: None, "Pro": settings.stripe_price_pro, "Team": settings.stripe_price_team}
+
+
+async def seed_mods(conn: AsyncConnection) -> None:
+    for sort, seed in enumerate(MODS):
+        values = {"slug": seed.slug, "name": seed.name, "description": seed.description, "free": seed.free}
+        await conn.execute(upsert(Mod).values(**values, sort=sort).on_conflict_do_nothing(index_elements=[Mod.slug]))
 
 
 async def seed_plans(conn: AsyncConnection, settings: Settings) -> None:
@@ -67,6 +107,6 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             max_members=seed.max_members,
             max_installs=seed.max_installs,
             max_workspaces=seed.max_workspaces,
-            rpa=seed.rpa,
+            all_mods=seed.all_mods,
         )
     )

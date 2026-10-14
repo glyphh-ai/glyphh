@@ -20,7 +20,8 @@ class Plan(Base):
 
 class PlanVersion(Base):
     """A plan's price and limits at one moment. Never changed: a new price or limit is a new version with its own
-    Stripe price. A null limit is unlimited."""
+    Stripe price. A null limit is unlimited. all_mods includes every active mod, new ones as they ship; otherwise only
+    the free ones."""
 
     __tablename__ = "plan_versions"
     __table_args__ = (
@@ -40,5 +41,5 @@ class PlanVersion(Base):
     max_members: Mapped[int | None]
     max_installs: Mapped[int | None]
     max_workspaces: Mapped[int | None]
-    rpa: Mapped[bool]
+    all_mods: Mapped[bool]
     created_at: Mapped[datetime] = created_at()

@@ -9,10 +9,11 @@ from tests.fakes import FakeStripe
 
 async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> None:
     plans = (await client.get("/v1/plans")).json()
-    assert [(p["name"], p["seat_price_cents"], p["features"]["rpa"]) for p in plans] == [
-        ("Free", 0, False),
-        ("Pro", 800, True),
-        ("Team", 1600, True),
+    every = ["glyphh", "glyphh-rpa", "glyphh-workspaces"]
+    assert [(p["name"], p["seat_price_cents"], p["mods"]) for p in plans] == [
+        ("Free", 0, ["glyphh", "glyphh-workspaces"]),
+        ("Pro", 800, every),
+        ("Team", 1600, every),
     ]
     assert [p["limits"] for p in plans] == [
         {"members": 1, "installs": 1, "workspaces": 2},

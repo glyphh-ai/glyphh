@@ -1,6 +1,6 @@
 # server
 
-The Glyphh server: the one small cloud part behind the Glyphh mod for Claude. It keeps accounts, one org per user, invites, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), workspace names (for the plan's limit) and a signed license. What a person makes stays on their machine. `docs/architecture.md` is the contract: the API, the data model and the plans.
+The Glyphh server: the one small cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), workspace names (for the plan's limit) and a signed license naming the mods the plan includes. What a person makes stays on their machine. `docs/architecture.md` is the contract: the API, the data model and the plans.
 
 ## Run it
 
@@ -8,7 +8,7 @@ The Glyphh server: the one small cloud part behind the Glyphh mod for Claude. It
 
 The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`).
 
-Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the plans (Free, Pro, Team), each with its first version. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
+Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`glyphh` and `glyphh-workspaces` free, `glyphh-rpa` not) and the plans (Free, Pro, Team), each with its first version. Free includes the free mods; Pro and Team (`all_mods`) include every active mod. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed):
 

@@ -48,7 +48,7 @@ async def test_a_plan_seeded_without_a_price_gets_one_as_a_new_version(engine: A
                 max_members=1,
                 max_installs=1,
                 max_workspaces=1,
-                rpa=False,
+                all_mods=False,
             )
         )
     from glyphh_server.db import seed

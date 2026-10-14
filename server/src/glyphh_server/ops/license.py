@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.plans import Features, Limits, org_version, view
+from glyphh_server.ops.plans import Limits, org_plan
 
 LICENSE_TTL: timedelta = timedelta(hours=24)
 
@@ -28,7 +28,7 @@ class LicensePayload(BaseModel):
     org_id: uuid.UUID
     plan: str
     limits: Limits
-    features: Features
+    mods: list[str]
     expires_at: datetime
 
 
@@ -56,14 +56,14 @@ def canonical(payload: dict[str, Any]) -> bytes:
 
 
 async def license_for(conn: AsyncConnection, who: Principal, key: Ed25519PrivateKey) -> License:
-    plan = view(await org_version(conn, who.org_id))
+    plan = await org_plan(conn, who.org_id)
     payload = LicensePayload(
         install_id=who.install_id,
         user_id=who.user_id,
         org_id=who.org_id,
         plan=plan.name,
         limits=plan.limits,
-        features=plan.features,
+        mods=plan.mods,
         expires_at=datetime.now(UTC).replace(microsecond=0) + LICENSE_TTL,
     )
     signature = key.sign(canonical(payload.model_dump(mode="json")))

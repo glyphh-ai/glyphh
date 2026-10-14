@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.models import Identity, Org, User
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.plans import PlanView, org_version, view
+from glyphh_server.ops.plans import PlanView, org_plan
 
 
 class MeOrg(BaseModel):
@@ -58,7 +58,7 @@ async def me(conn: AsyncConnection, who: Principal) -> Me:
         role=person.role,
         providers=list(providers.scalars()),
         org=MeOrg(**org._mapping),
-        plan=view(await org_version(conn, who.org_id)),
+        plan=await org_plan(conn, who.org_id),
         used=used,
     )
 

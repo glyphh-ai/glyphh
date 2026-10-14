@@ -4,14 +4,14 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 
-from glyphh_server.api import billing, device, device_pages, errors, health, license, me, org, plans, workspaces
+from glyphh_server.api import billing, device, device_pages, errors, health, license, me, mods, org, plans, workspaces
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops.license import load_key
 
-ROUTERS = (health, device, device_pages, me, license, workspaces, org, plans, billing)
+ROUTERS = (health, device, device_pages, me, license, workspaces, org, mods, plans, billing)
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
