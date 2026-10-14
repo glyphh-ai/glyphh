@@ -48,13 +48,6 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
   const placed = await gh.openPanel()
   const signedOut = (await gh.state.auth.get()).status === 'out'
-  if (['signin', 'sign-in', 'login'].includes(arg) && (await gh.state.auth.get()).status !== 'in') {
-    // The same as asking Claude: the sign-in card inline in the chat and the
-    // login page in the browser pane. Only Claude can show the card, so the
-    // command asks it, the way the grid asks Claude to open pages.
-    await gh.ask('Sign in to Glyphh.')
-    return { text: 'Opening the Glyphh sign-in…' }
-  }
   if (['signin', 'sign-in', 'login'].includes(arg) || (!arg && signedOut)) {
     // Signed out, /glyphh goes straight to sign-in: the code and link land in the panel.
     if ((await gh.state.auth.get()).status !== 'in') await beginSignIn(gh)
