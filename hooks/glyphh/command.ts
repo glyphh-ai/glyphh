@@ -33,7 +33,9 @@ export async function status(gh: Host): Promise<string> {
 export async function glyphhCommand(gh: Host, args: string): Promise<{ text: string }> {
   const arg = args.trim().toLowerCase()
   const placed = await gh.openPanel()
-  if (['signin', 'sign-in', 'login'].includes(arg)) {
+  const signedOut = (await gh.state.auth.get()).status === 'out'
+  if (['signin', 'sign-in', 'login'].includes(arg) || (!arg && signedOut)) {
+    // Signed out, /glyphh goes straight to sign-in: the code and link land in the panel.
     if ((await gh.state.auth.get()).status !== 'in') await beginSignIn(gh)
   } else if (['signout', 'sign-out', 'logout'].includes(arg)) {
     await signOut(gh)

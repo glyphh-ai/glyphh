@@ -72,8 +72,9 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   const w = world(on, 'terminal')
   const run = async (args: string) =>
     (await $.command.run({ command: 'glyphh', args } as unknown as CommandRunInput)) as { text: string }
-  expect((await run('')).text).toBe('Glyphh: signed out. Sign in: /glyphh signin')
   expect((await run('nonsense')).text).toStartWith('Usage: /glyphh')
+  // Signed out, plain /glyphh goes straight to sign-in: the code and link in the panel and the reply.
+  expect((await run('')).text).toBe('Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…')
   expect((await run('signin')).text).toBe('Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…')
 
   // Approved elsewhere: install.json appears; a new session start reads it.
