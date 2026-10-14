@@ -3,6 +3,7 @@
 import type { GlyphhSection } from '../../types'
 import { initAccount, signOut } from './account'
 import { openSection } from './actions'
+import { openUrl } from './open'
 import { resumePolling } from './device'
 import type { Host } from './host'
 import { beginSignIn } from './sections/signin'
@@ -44,6 +45,16 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
   } else {
     await openSection(gh, (arg || (await gh.state.section.get())) as GlyphhSection)
   }
+  await reopen(gh)
   const text = await status(gh)
   return { text: placed ? text : `${text}\n(The panel could not be placed here.)` }
+}
+
+/** A sign-in still waiting: open its page again in the browser pane. */
+async function reopen(gh: Host) {
+  const a = await gh.state.auth.get()
+  if (a.status !== 'pending') return
+  if (await openUrl(gh, a.verification_uri_complete)) {
+    await gh.state.auth.set(s => (s.status === 'pending' ? { ...s, opened: true } : s))
+  }
 }
