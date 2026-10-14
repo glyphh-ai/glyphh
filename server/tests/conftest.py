@@ -13,6 +13,7 @@ from glyphh_server.app import create_app
 from glyphh_server.config import Settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.schema import apply_schema
+from tests.fakes import FakeStripe, fake_http
 
 DATABASE_URL: str = os.environ.get(
     "GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test"
@@ -20,16 +21,25 @@ DATABASE_URL: str = os.environ.get(
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
 SECRET_KEY: str = "test-secret-key-that-signs-sign-in-links-0123456789"
 PUBLIC_URL: str = "http://localhost:8080"
-PLATFORM_URL: str = "http://platform.test"
+WEBHOOK_SECRET: str = "whsec_test_not_a_real_secret"
 SETTINGS: Settings = Settings(
+    env="test",
     database_url=DATABASE_URL,
     version="test",
     public_url=PUBLIC_URL,
-    platform_url=PLATFORM_URL,
     secret_key=SECRET_KEY,
-    stripe_price_solo="price_test_solo",
-    stripe_price_basic="price_test_basic",
+    stripe_secret_key="sk_test_not_a_real_key",
+    stripe_webhook_secret=WEBHOOK_SECRET,
     stripe_price_pro="price_test_pro",
+    stripe_price_team="price_test_team",
+)
+PROVIDER_SETTINGS: Settings = SETTINGS.model_copy(
+    update={
+        "google_client_id": "g-client",
+        "google_client_secret": "g-secret",
+        "github_client_id": "gh-client",
+        "github_client_secret": "gh-secret",
+    }
 )
 
 
@@ -63,8 +73,13 @@ async def _client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 
 
 @pytest.fixture
-async def client(engine: AsyncEngine) -> AsyncIterator[httpx.AsyncClient]:
-    async for c in _client(create_app(SETTINGS)):
+def stripe() -> FakeStripe:
+    return FakeStripe()
+
+
+@pytest.fixture
+async def client(engine: AsyncEngine, stripe: FakeStripe) -> AsyncIterator[httpx.AsyncClient]:
+    async for c in _client(create_app(PROVIDER_SETTINGS, http=fake_http(stripe))):
         yield c
 
 

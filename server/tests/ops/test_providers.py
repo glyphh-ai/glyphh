@@ -5,14 +5,20 @@ import pytest
 
 from glyphh_server.errors import NotFound, Unavailable
 from glyphh_server.ops.auth.providers import available, github, google, provider
-from tests.conftest import SETTINGS
-from tests.fake_providers import GITHUB_USER, PROVIDER_SETTINGS, provider_transport
+from tests.conftest import PROVIDER_SETTINGS, SETTINGS
+from tests.fakes import GITHUB_USER, provider_answers
 
 CB: str = "http://localhost:8080/auth/x/callback"
 
 
 def _http(over: dict | None = None) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=provider_transport(over))
+    answers = provider_answers(over)
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        found = answers[(request.method, request.url.path)]
+        return found if isinstance(found, httpx.Response) else httpx.Response(200, json=found)
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handle))
 
 
 def test_authorize_urls_carry_the_client_callback_and_state() -> None:
@@ -37,24 +43,16 @@ def test_only_configured_providers_are_offered() -> None:
 
 async def test_google_profile() -> None:
     p = await google.profile(_http(), PROVIDER_SETTINGS, "code", CB)
-    assert (p.subject, p.email, p.email_verified, p.first_name, p.last_name) == (
-        "g-pages-1",
-        "pages@google.test",
-        True,
-        "Paige",
-        "Turner",
-    )
+    assert (p.subject, p.email, p.email_verified, p.name) == ("g-pages-1", "pages@google.test", True, "Paige Turner")
+    over = {("GET", "/v1/userinfo"): {"sub": "g2", "email": "n@g.test", "given_name": "Nina"}}
+    assert (await google.profile(_http(over), PROVIDER_SETTINGS, "code", CB)).name == "Nina"
+    bare = {("GET", "/v1/userinfo"): {"sub": "g3", "email": "b@g.test"}}
+    assert (await google.profile(_http(bare), PROVIDER_SETTINGS, "code", CB)).name is None
 
 
 async def test_github_profile_takes_the_primary_verified_email() -> None:
     p = await github.profile(_http(), PROVIDER_SETTINGS, "code", CB)
-    assert (p.subject, p.email, p.email_verified, p.first_name, p.last_name) == (
-        "4242",
-        "octo@gh.test",
-        True,
-        "Octo",
-        "Cat",
-    )
+    assert (p.subject, p.email, p.email_verified, p.name) == ("4242", "octo@gh.test", True, "Octo Cat")
 
 
 async def test_github_without_a_verified_primary_email_is_unverified_and_falls_back_to_the_login() -> None:
@@ -63,7 +61,7 @@ async def test_github_without_a_verified_primary_email_is_unverified_and_falls_b
         ("GET", "/user/emails"): [{"email": "x@gh.test", "primary": True, "verified": False}],
     }
     p = await github.profile(_http(over), PROVIDER_SETTINGS, "code", CB)
-    assert (p.email, p.email_verified, p.first_name, p.last_name) == ("public@gh.test", False, "octo", None)
+    assert (p.email, p.email_verified, p.name) == ("public@gh.test", False, "octo")
     bare = {("GET", "/user"): {**GITHUB_USER, "email": None}, ("GET", "/user/emails"): []}
     assert (await github.profile(_http(bare), PROVIDER_SETTINGS, "code", CB)).email == "unknown@github"
 

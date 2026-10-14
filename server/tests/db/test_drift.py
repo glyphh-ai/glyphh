@@ -12,8 +12,8 @@ class Rollback(Exception):
 async def test_a_database_behind_the_code_is_found_and_refused(engine: AsyncEngine) -> None:
     with pytest.raises(Rollback):
         async with engine.begin() as conn:
-            await conn.execute(text("ALTER TABLE users DROP COLUMN image_url"))
-            assert await conn.run_sync(missing_columns) == {"users": ["image_url"]}
+            await conn.execute(text("ALTER TABLE users DROP COLUMN name"))
+            assert await conn.run_sync(missing_columns) == {"users": ["name"]}
             with pytest.raises(RuntimeError, match="docker compose down -v"):
                 await conn.run_sync(refuse_drift)
             raise Rollback

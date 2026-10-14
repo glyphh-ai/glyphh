@@ -129,6 +129,14 @@ async def test_every_request_is_logged_once_with_its_status_and_time(
     assert json.dumps(lines[0].fields)  # type: ignore[attr-defined]
 
 
+async def test_a_refusal_on_a_page_is_a_page(probe: httpx.AsyncClient) -> None:
+    res = await probe.get("/v1/device", params={"code": "NOPE-NOPE"})
+    assert res.status_code == 422 and res.headers["content-type"].startswith("text/html")
+    assert "expired" in res.text and res.headers["x-request-id"] in res.text
+    bad = await probe.post("/v1/device/token", json={})
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "E_INVALID"
+
+
 async def test_a_bad_trace_id_from_a_caller_is_replaced(probe: httpx.AsyncClient) -> None:
     res = await probe.get("/v1/health", headers={"x-request-id": "bad id!"})
     assert res.headers["x-request-id"] != "bad id!" and len(res.headers["x-request-id"]) == 32
