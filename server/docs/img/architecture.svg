@@ -1,43 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="560" viewBox="0 0 680 560" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="580" viewBox="0 0 680 580" font-family="-apple-system, Helvetica, Arial, sans-serif">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-<rect width="680" height="560" fill="#ffffff"/>
-<g fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="4 4"><rect x="30" y="20" width="620" height="230" rx="16"/><rect x="220" y="290" width="430" height="110" rx="16"/><rect x="220" y="430" width="430" height="110" rx="16"/></g>
+<rect width="680" height="580" fill="#ffffff"/>
+<g fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="4 4"><rect x="30" y="20" width="620" height="240" rx="16"/><rect x="220" y="300" width="430" height="110" rx="16"/><rect x="220" y="440" width="430" height="125" rx="16"/></g>
 <rect x="45" y="50" width="590" height="100" rx="12" fill="#F7F6FE" stroke="#AFA9EC" stroke-width="0.8"/>
-<g font-size="14" font-weight="600" fill="#2C2C2A"><text x="50" y="42">The person's machine</text><text x="236" y="312">Glyphh cloud</text><text x="236" y="452">Glyphh hosting (Fly)</text></g>
+<g font-size="14" font-weight="600" fill="#2C2C2A"><text x="50" y="42">The person's machine</text><text x="500" y="322">Glyphh cloud</text><text x="236" y="462">Glyphh hosting (Fly)</text><text x="540" y="462" font-size="12" font-weight="400" fill="#5F5E5A">Pro and Team</text></g>
 <text x="60" y="70" font-size="12" fill="#534AB7">Claude, desktop or CLI: mods from the marketplace</text>
 <g stroke-width="0.8">
 <rect x="55" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="200" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="345" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="490" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="55" y="180" width="245" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="440" y="180" width="185" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="30" y="322" width="170" height="60" rx="8" fill="#FAECE7" stroke="#993C1D"/>
-<rect x="240" y="322" width="240" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
-<rect x="500" y="322" width="130" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
-<rect x="240" y="462" width="240" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="55" y="185" width="185" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="270" y="185" width="190" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="480" y="185" width="145" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="30" y="332" width="170" height="60" rx="8" fill="#FAECE7" stroke="#993C1D"/>
+<rect x="240" y="332" width="240" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="500" y="332" width="130" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="240" y="478" width="390" height="70" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
 </g>
 <g text-anchor="middle" font-size="13" font-weight="600">
 <text x="122" y="103" fill="#3C3489">glyphh</text><text x="267" y="103" fill="#3C3489">workspaces</text><text x="412" y="103" fill="#3C3489">rpa</text><text x="557" y="103" fill="#3C3489">programs</text>
-<text x="177" y="202" fill="#3C3489">Browser machine</text><text x="532" y="202" fill="#3C3489">~/.glyphh</text>
-<text x="115" y="346" fill="#712B13">Claude routines</text>
-<text x="360" y="346" fill="#085041">Server</text><text x="565" y="346" fill="#085041">Postgres</text>
-<text x="360" y="486" fill="#085041">rrotor machines</text>
+<text x="147" y="208" fill="#3C3489">Browser machine</text><text x="365" y="208" fill="#085041">rrotor, local</text><text x="552" y="208" fill="#3C3489">~/.glyphh</text>
+<text x="115" y="356" fill="#712B13">Claude routines</text>
+<text x="360" y="356" fill="#085041">Server</text><text x="565" y="356" fill="#085041">Postgres</text>
+<text x="435" y="500" fill="#085041">rrotor, hosted: one isolated runtime per person</text>
 </g>
 <g text-anchor="middle" font-size="11.5">
 <text x="122" y="123" fill="#534AB7">Account, license</text><text x="267" y="123" fill="#534AB7">Layouts, tabs</text><text x="412" y="123" fill="#534AB7">Local browser tasks</text><text x="557" y="123" fill="#534AB7">Build, test, deploy</text>
-<text x="177" y="221" fill="#534AB7">Local MCP, Chrome profiles</text><text x="532" y="221" fill="#534AB7">Workspaces, sites, sign-ins</text>
-<text x="115" y="366" fill="#993C1D">Anthropic: schedule, API</text>
-<text x="360" y="366" fill="#0F6E56">Accounts, programs, connector, relay</text><text x="565" y="366" fill="#0F6E56">Records only</text>
-<text x="360" y="506" fill="#0F6E56">Runs Python programs, Chromium</text>
+<text x="147" y="227" fill="#534AB7">Local MCP, Chrome profiles</text><text x="365" y="227" fill="#0F6E56">Every plan; same image</text><text x="552" y="227" fill="#534AB7">Workspaces, sites</text>
+<text x="115" y="376" fill="#993C1D">Anthropic: schedule, API</text>
+<text x="360" y="376" fill="#0F6E56">Accounts, programs, connector, relay</text><text x="565" y="376" fill="#0F6E56">Records only</text>
+<text x="435" y="519" fill="#0F6E56">Headless: Python, Node, Postgres+pgvector, Mongo, Neo4j, Chromium</text>
+<text x="435" y="536" fill="#0F6E56">Programs live here; capped hours, storage billed per GB</text>
 </g>
 <g stroke="#5F5E5A" stroke-width="1.5" fill="none">
-<line x1="267" y1="152" x2="267" y2="177" marker-end="url(#a)"/>
-<line x1="532" y1="152" x2="532" y2="177" marker-end="url(#a)"/>
-<line x1="370" y1="152" x2="370" y2="319" marker-start="url(#a)" marker-end="url(#a)"/>
-<line x1="202" y1="352" x2="237" y2="352" marker-end="url(#a)"/>
-<line x1="482" y1="352" x2="497" y2="352" marker-end="url(#a)"/>
-<line x1="440" y1="459" x2="440" y2="385" marker-end="url(#a)"/>
+<line x1="147" y1="152" x2="147" y2="182" marker-end="url(#a)"/>
+<line x1="365" y1="152" x2="365" y2="182" marker-end="url(#a)"/>
+<line x1="552" y1="152" x2="552" y2="182" marker-end="url(#a)"/>
+<line x1="255" y1="152" x2="255" y2="329" marker-start="url(#a)" marker-end="url(#a)"/>
+<line x1="202" y1="362" x2="237" y2="362" marker-end="url(#a)"/>
+<line x1="482" y1="362" x2="497" y2="362" marker-end="url(#a)"/>
+<line x1="460" y1="475" x2="460" y2="395" marker-end="url(#a)"/>
 </g>
-<g font-size="11.5" fill="#5F5E5A"><text x="378" y="270">Sign-in, license, build, live panel</text><text x="40" y="402">calls the Glyphh connector</text><text x="448" y="425">outbound link</text></g>
+<g font-size="11.5" fill="#5F5E5A"><text x="263" y="285">Sign-in, license, build, live panel</text><text x="40" y="412">calls the Glyphh connector</text><text x="468" y="432">outbound link</text></g>
 </svg>
