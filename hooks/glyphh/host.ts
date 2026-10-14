@@ -27,6 +27,8 @@ export type Host = {
   copy(text: string, surface?: RenderSurface): Promise<boolean>
   /** Opens the Glyphh panel; false where no surface could place it. */
   openPanel(): Promise<boolean>
+  /** Asks Claude, as a prompt in the chat (a turn), as the grid's layoutToPane does. */
+  ask(text: string): Promise<void>
   pluginRoot: string
   state: {
     auth: Value<AuthState>

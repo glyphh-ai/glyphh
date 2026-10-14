@@ -67,6 +67,7 @@ function host($: EngineInterface): Host {
     },
     copy: async (text, surface) => (await $.ui.copy({ text, surface })).isCopied,
     openPanel: async () => (await $.ui.open({ id: 'glyphh', title: 'Glyphh' })).isPlaced,
+    ask: async text => void (await $.prompt.submit({ text })),
     pluginRoot: $.plugin.root,
     state: hostState($),
   }

@@ -118,6 +118,7 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}
     surface: async () => opts.surface ?? 'desktop',
     copy: async text => (copied.push(text), true),
     openPanel: async () => true,
+    ask: async () => undefined,
     pluginRoot: '/mod',
     state: freshState(),
   }

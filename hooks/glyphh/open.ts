@@ -13,7 +13,12 @@ export async function surfaceNow(gh: Host, hint?: RenderSurface): Promise<Render
  *  (a terminal, the tool refused, no pane): the caller shows the link. */
 export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Promise<boolean> {
   const surface = await surfaceNow(gh, hint)
-  const ok = surface === 'desktop' && (await openInPane(gh, url))
+  let ok = surface === 'desktop' && (await openInPane(gh, url))
+  if (!ok && surface === 'desktop') {
+    // As the grid's layoutToPane does: when auto mode refuses the mod's own
+    // call, Claude is asked to open it (a turn, slower, but it gets there).
+    ok = await gh.ask(`Open this in the browser pane: ${url}`).then(() => true, () => false)
+  }
   const dir = await gh.env.home().catch(() => '')
   if (dir) await gh.fs.write(`${dir}/.glyphh/open-log.txt`, `${new Date().toISOString()} surface=${surface} opened=${ok}${ok ? '' : ` error=${lastOpenError}`}\n`).catch(() => undefined)
   return ok
