@@ -4,7 +4,7 @@
 // Glyphh sign-in page, and only a request under a minute old.
 import { glyphhPath, readJson, removeFile } from './home'
 import type { Host } from './host'
-import { openUrl, surfaceNow } from './open'
+import { lastOpenError, openUrl, surfaceNow } from './open'
 
 const SIGN_IN_PAGE = /^https?:\/\/[^\s?#]+\/v1\/device\?code=[A-Z0-9-]+$/
 let watching = false
@@ -19,7 +19,7 @@ async function tick(gh: Host) {
       const surface = await surfaceNow(gh)
       const opened = await openUrl(gh, req.url)
       const log = await glyphhPath(gh, 'open-log.txt')
-      if (log) await gh.fs.write(log, `${new Date().toISOString()} surface=${surface} opened=${opened}\n`).catch(() => undefined)
+      if (log) await gh.fs.write(log, `${new Date().toISOString()} surface=${surface} opened=${opened}${opened ? '' : ` error=${lastOpenError}`}\n`).catch(() => undefined)
     }
   }
   gh.clock.after(1000, () => void tick(gh))

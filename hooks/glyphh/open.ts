@@ -13,15 +13,23 @@ export async function surfaceNow(gh: Host, hint?: RenderSurface): Promise<Render
  *  (a terminal, the tool refused, no pane): the caller shows the link. */
 export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Promise<boolean> {
   if ((await surfaceNow(gh, hint)) !== 'desktop') return false
-  try {
-    const r = await gh.mcp.call('Claude_Browser', 'preview_start', { url })
-    if (r.isError) return false
-  } catch {
-    return false
-  }
+  // The pane first (it may be closed), then the page in it; one retry, since
+  // a pane that was closed can refuse the first call.
   await showBrowserPane(gh)
-  return true
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await gh.mcp.call('Claude_Browser', 'preview_start', { url })
+      if (!r.isError) return true
+      lastOpenError = r.content.map(b => ('text' in b ? String(b.text) : '')).join(' ').slice(0, 300)
+    } catch (err) {
+      lastOpenError = String(err).slice(0, 300)
+    }
+  }
+  return false
 }
+
+/** Why the last open failed, for the log. */
+export let lastOpenError = ''
 
 /** The tab opens in the browser pane, which may be hidden: no tool shows it, so,
  *  as the grid does (togglePane), the app's View menu does ("Show Browser"),
