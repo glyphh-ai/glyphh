@@ -16,7 +16,3 @@ def guid() -> Mapped[uuid.UUID]:
 
 def created_at() -> Mapped[datetime]:
     return mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-def updated_at() -> Mapped[datetime]:
-    return mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

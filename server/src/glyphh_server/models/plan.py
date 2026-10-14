@@ -1,27 +1,44 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from glyphh_server.models.base import Base, created_at, guid, updated_at
+from glyphh_server.models.base import Base, created_at, guid
 
 
 class Plan(Base):
-    """What an org pays and how many users it may have. Retired with active=false, never deleted."""
+    """A plan an org can be on: Free, Pro, Team. Retired with active=false, never deleted."""
 
     __tablename__ = "plans"
-    __table_args__ = (
-        CheckConstraint("price_cents >= 0", name="plans_price"),
-        CheckConstraint("max_seats > 0", name="plans_seats"),
-    )
 
     id: Mapped[uuid.UUID] = guid()
     name: Mapped[str] = mapped_column(Text, unique=True)
-    price_cents: Mapped[int]
-    stripe_price_id: Mapped[str | None] = mapped_column(Text, unique=True)
-    max_seats: Mapped[int | None]
     active: Mapped[bool] = mapped_column(server_default="true")
     sort: Mapped[int] = mapped_column(server_default="0")
+
+
+class PlanVersion(Base):
+    """A plan's price and limits at one moment. Never changed: a new price or limit is a new version with its own
+    Stripe price. A null limit is unlimited."""
+
+    __tablename__ = "plan_versions"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "version", name="plan_versions_version"),
+        CheckConstraint("seat_price_cents >= 0", name="plan_versions_price"),
+        CheckConstraint(
+            "coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0 AND coalesce(max_workspaces, 1) > 0",
+            name="plan_versions_limits",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = guid()
+    plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"), index=True)
+    version: Mapped[int]
+    stripe_price_id: Mapped[str | None] = mapped_column(Text, unique=True)
+    seat_price_cents: Mapped[int]
+    max_members: Mapped[int | None]
+    max_installs: Mapped[int | None]
+    max_workspaces: Mapped[int | None]
+    rpa: Mapped[bool]
     created_at: Mapped[datetime] = created_at()
-    updated_at: Mapped[datetime] = updated_at()

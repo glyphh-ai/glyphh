@@ -24,8 +24,6 @@ services:
         required: false
     environment:
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
-      # The platform's dev server, opened directly as well as through ngrok.
-      GLYPHH_PLATFORM_ALSO: http://localhost:5173
     ports:
       - "8080:8080"
     depends_on:
@@ -38,6 +36,7 @@ services:
       context: .
       target: test
     environment:
+      GLYPHH_ENV: test
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh_test
       GLYPHH_SECRET_KEY: test-secret-key-that-signs-sign-in-links-0123456789
     depends_on:

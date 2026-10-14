@@ -1,51 +1,72 @@
-"""The rows every Glyphh database starts with: the plans, and Glyphh, the parent org."""
+"""The plans every Glyphh database starts with, each with its first version. A Stripe price set for a plan that its
+newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do versions)."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
-from sqlalchemy import select, text
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func, insert, select
+from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
-from glyphh_server.models import Plan
-
-PARENT_ORG: str = "Glyphh"
-PARENT_PLAN: str = "Enterprise"
+from glyphh_server.models import Plan, PlanVersion
 
 
 @dataclass(frozen=True, slots=True)
 class PlanSeed:
     name: str
-    price_cents: int
-    max_seats: int | None
+    seat_price_cents: int
+    max_members: int | None
+    max_installs: int | None
+    max_workspaces: int | None
+    rpa: bool
 
 
+FREE: str = "Free"
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed("Free", 0, 1),
-    PlanSeed("Solo", 2_000, 1),
-    PlanSeed("Basic", 4_000, 25),
-    PlanSeed("Pro", 15_000, 100),
-    PlanSeed("Enterprise", 0, None),
+    PlanSeed(FREE, 0, 1, 1, 2, False),
+    PlanSeed("Pro", 800, 1, 5, 10, True),
+    PlanSeed("Team", 1_600, None, 10, None, True),
 )
 
 
 def stripe_prices(settings: Settings) -> dict[str, str | None]:
     """Which Stripe price each paid plan sells on: per environment, so read from settings."""
-    return {"Solo": settings.stripe_price_solo, "Basic": settings.stripe_price_basic, "Pro": settings.stripe_price_pro}
+    return {FREE: None, "Pro": settings.stripe_price_pro, "Team": settings.stripe_price_team}
 
 
 async def seed_plans(conn: AsyncConnection, settings: Settings) -> None:
     prices = stripe_prices(settings)
-    rows = [{**asdict(p), "stripe_price_id": prices.get(p.name), "sort": i} for i, p in enumerate(PLANS)]
-    await conn.execute(insert(Plan).values(rows).on_conflict_do_nothing(index_elements=[Plan.name]))
+    for sort, seed in enumerate(PLANS):
+        await conn.execute(
+            upsert(Plan).values(name=seed.name, sort=sort).on_conflict_do_nothing(index_elements=[Plan.name])
+        )
+        await _seed_version(conn, seed, prices[seed.name])
 
 
-async def seed_parent_org(conn: AsyncConnection) -> None:
-    plan_id = (await conn.execute(select(Plan.id).where(Plan.name == PARENT_PLAN))).scalar_one()
+async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None) -> None:
+    plan_id = (await conn.execute(select(Plan.id).where(Plan.name == seed.name))).scalar_one()
+    newest = (
+        await conn.execute(
+            select(PlanVersion.version, PlanVersion.stripe_price_id)
+            .where(PlanVersion.plan_id == plan_id)
+            .order_by(PlanVersion.version.desc())
+            .limit(1)
+        )
+    ).first()
+    if newest is not None and (price is None or newest.stripe_price_id == price):
+        return
+    sold = select(func.count()).where(PlanVersion.stripe_price_id == price)
+    if price is not None and (await conn.execute(sold)).scalar_one():
+        return
     await conn.execute(
-        text(
-            "INSERT INTO orgs (name, plan_id) VALUES (:name, :plan_id)"
-            " ON CONFLICT ((true)) WHERE parent_id IS NULL DO NOTHING"
-        ),
-        {"name": PARENT_ORG, "plan_id": plan_id},
+        insert(PlanVersion).values(
+            plan_id=plan_id,
+            version=1 if newest is None else newest.version + 1,
+            stripe_price_id=price,
+            seat_price_cents=seed.seat_price_cents,
+            max_members=seed.max_members,
+            max_installs=seed.max_installs,
+            max_workspaces=seed.max_workspaces,
+            rpa=seed.rpa,
+        )
     )
