@@ -1,34 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="490" viewBox="0 0 680 490" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="600" viewBox="0 0 680 600" font-family="-apple-system, Helvetica, Arial, sans-serif">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-<rect width="680" height="490" fill="#ffffff"/>
-<g fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="4 4"><rect x="40" y="30" width="600" height="150" rx="16"/><rect x="40" y="240" width="600" height="130" rx="16"/></g>
-<g font-size="14" font-weight="600" fill="#2C2C2A"><text x="60" y="56">The person's machine</text><text x="420" y="264">Glyphh cloud</text></g>
+<rect width="680" height="600" fill="#ffffff"/>
+<g fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="4 4"><rect x="30" y="20" width="620" height="270" rx="16"/><rect x="30" y="345" width="620" height="125" rx="16"/></g>
+<rect x="45" y="50" width="590" height="104" rx="12" fill="#F7F6FE" stroke="#AFA9EC" stroke-width="0.8"/>
+<g font-size="14" font-weight="600" fill="#2C2C2A"><text x="50" y="42">The person's machine</text><text x="50" y="367">Glyphh cloud</text></g>
+<text x="60" y="70" font-size="12" fill="#534AB7">Claude, desktop or CLI: mods from the marketplace</text>
 <g stroke-width="0.8">
-<rect x="60" y="76" width="170" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="255" y="76" width="170" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="450" y="76" width="170" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="60" y="285" width="340" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
-<rect x="430" y="285" width="190" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
-<rect x="100" y="410" width="160" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A"/>
-<rect x="300" y="410" width="160" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A"/>
+<rect x="60" y="82" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="250" y="82" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="440" y="82" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="60" y="200" width="260" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="440" y="200" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="60" y="385" width="340" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="430" y="385" width="190" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="60" y="520" width="160" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A"/>
+<rect x="240" y="520" width="160" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A"/>
+<rect x="430" y="514" width="190" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A"/>
 </g>
 <g text-anchor="middle" font-size="14" font-weight="600">
-<text x="145" y="103" fill="#3C3489">Glyphh mod</text><text x="340" y="103" fill="#3C3489">Helper Chrome</text><text x="535" y="103" fill="#3C3489">~/.glyphh</text>
-<text x="230" y="312" fill="#085041">API server</text><text x="525" y="312" fill="#085041">Postgres</text>
-<text x="180" y="437" fill="#2C2C2A">Stripe</text><text x="380" y="437" fill="#2C2C2A">Google, GitHub</text>
+<text x="150" y="106" fill="#3C3489">glyphh</text><text x="340" y="106" fill="#3C3489">glyphh-workspaces</text><text x="530" y="106" fill="#3C3489">glyphh-rpa</text>
+<text x="190" y="224" fill="#3C3489">Browser machine</text><text x="530" y="224" fill="#3C3489">~/.glyphh</text>
+<text x="230" y="410" fill="#085041">API server</text><text x="525" y="410" fill="#085041">Postgres</text>
+<text x="140" y="547" fill="#2C2C2A">Stripe</text><text x="320" y="547" fill="#2C2C2A">Google, GitHub</text><text x="525" y="538" fill="#2C2C2A">glyphh-ai/releases</text>
 </g>
 <g text-anchor="middle" font-size="12">
-<text x="145" y="124" fill="#534AB7">Desktop + CLI, panels</text><text x="340" y="124" fill="#534AB7">Tabs, sign-ins, RPA</text><text x="535" y="124" fill="#534AB7">Layouts, RPA, profile</text>
-<text x="230" y="333" fill="#0F6E56">Accounts, org, invites, seats, installs</text><text x="525" y="333" fill="#0F6E56">Users, org, plans</text>
+<text x="150" y="126" fill="#534AB7">Account, sign-in, panels</text><text x="340" y="126" fill="#534AB7">Layouts, tabs, /dip</text><text x="530" y="126" fill="#534AB7">Sites, record, run</text>
+<text x="190" y="244" fill="#534AB7">Local MCP, Chrome, live panels</text><text x="530" y="244" fill="#534AB7">Each mod's files, sign-ins</text>
+<text x="230" y="430" fill="#0F6E56">Accounts, org, seats, installs, license</text><text x="525" y="430" fill="#0F6E56">Users, org, plans, mods</text>
+<text x="525" y="556" fill="#5F5E5A">The marketplace</text>
 </g>
 <g stroke="#5F5E5A" stroke-width="1.5" fill="none">
-<line x1="232" y1="108" x2="252" y2="108" marker-end="url(#a)"/>
-<line x1="427" y1="108" x2="447" y2="108" marker-end="url(#a)"/>
-<path d="M200 142 L200 162 L535 162 L535 143" marker-end="url(#a)"/>
-<line x1="110" y1="143" x2="110" y2="281" marker-start="url(#a)" marker-end="url(#a)"/>
-<line x1="402" y1="317" x2="427" y2="317" marker-end="url(#a)"/>
-<line x1="180" y1="351" x2="180" y2="408" marker-end="url(#a)"/>
-<line x1="380" y1="351" x2="380" y2="408" marker-end="url(#a)"/>
+<line x1="190" y1="156" x2="190" y2="197" marker-end="url(#a)"/>
+<line x1="530" y1="156" x2="530" y2="197" marker-end="url(#a)"/>
+<line x1="380" y1="157" x2="380" y2="382" marker-start="url(#a)" marker-end="url(#a)"/>
+<line x1="402" y1="415" x2="427" y2="415" marker-end="url(#a)"/>
+<line x1="140" y1="447" x2="140" y2="517" marker-end="url(#a)"/>
+<line x1="320" y1="447" x2="320" y2="517" marker-end="url(#a)"/>
 </g>
-<text x="122" y="214" font-size="12" fill="#5F5E5A">Device flow, license, limits</text>
+<text x="388" y="322" font-size="12" fill="#5F5E5A">Device flow, license, limits</text>
 </svg>
