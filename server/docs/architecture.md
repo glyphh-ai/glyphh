@@ -135,7 +135,9 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 - **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db.postgres`, `ctx.db.mongo`, `ctx.db.neo4j` (its own databases), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
 - **Folders exist only through the program** (Chris, 2026-10-14): a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; there is no folder access into rrotor from outside, and no program reaches another's.
 - **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
-- **Programs live in the runtime** (Chris, 2026-10-14): the code, every version, its files, databases, browser profiles, secrets and run logs are in the person's runtime, where they are built, tested and run. The server keeps only an index (each program's name, versions and runtime) so Claude and routines can call it by name, and the run records.
+- **Programs live in the runtime and in git** (Chris, 2026-10-14): each program is a repo in the person's own GitHub account. The runtime holds the checked-out code, its files, databases, browser profiles, secrets and run logs, where it is built, tested and run; a version is a commit. The server keeps only an index (each program's name, repo, versions as commit SHAs, where each is deployed) so Claude and routines can call it by name, and the run records. Glyphh's cloud never keeps a copy of the code.
+- **Git is required for hosted programs:** the person links GitHub (linking is built) and installs the Glyphh GitHub App on their account; deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
+- **Secrets are never committed:** they stay in the rrotor's vault; the programs mod's ignore rules and a pre-commit check keep them out.
 
 **Build time: in Claude, with the mod.** The SDK is part of `glyphh-programs`: its tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and **create its routine** (prompt, triggers, connectors). Whatever is missing, Claude asks for: connect a Claude connector, add a secret, or **sign in to a site**, which opens the live panel on the run in rrotor: the person takes control and signs in; the sign-in stays in that profile on rrotor; Claude sees nothing while they hold it.
 
@@ -192,7 +194,7 @@ The same layout in the local and the hosted rrotor; workspaces and RPA sites are
 
 | Path | What |
 |---|---|
-| `programs/<name>/<version>/` | A deployed version: the bundle and its manifest |
+| `programs/<name>/<commit>/` | A deployed version: the checkout of that commit, its manifest and installed dependencies |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
 | `profiles/<name>/` | Named Chromium profiles: each holds only the sign-ins made in it |
 | `workspaces/<slug>.json` | Workspaces (local rrotor): session, grid, cells, tabs |
@@ -234,11 +236,13 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 
 | Area | Calls |
 |---|---|
-| Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (manifest, commit, bundle), `POST /v1/programs/{id}/deploy` |
+| Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (commit SHA, manifest), `POST /v1/programs/{id}/deploy` (a version) |
+| GitHub | `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
+| Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional program), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a program's events |
 | Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
-| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); `/v1/runtime/link` (the runtime's outbound WebSocket, hosted or local) |
+| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it), `POST /v1/runtime/local` (a local rrotor's runtime token, for this install); `/v1/runtime/link` (the runtime's outbound WebSocket, hosted or local) |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
-| Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration) |
+| Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration); the Allow page ("Allow Claude to use your Glyphh?", after Google or GitHub sign-in), the only server page besides the device page |
 
 ### Panels
 
@@ -292,7 +296,13 @@ erDiagram
     USERS ||--o{ WORKSPACES : "owns"
     INSTALLS ||--o{ TOKENS : "holds"
     INSTALLS ||--o{ DEVICE_CODES : "approved by"
-    USERS ||--o| RROTORS : "has, hosted"
+    USERS ||--o{ RROTORS : "has: one hosted, one local per install"
+    INSTALLS ||--o| RROTORS : "local runtime"
+    USERS ||--o| GITHUB_INSTALLATIONS : "installed the App"
+    USERS ||--o{ ROUTINE_TRIGGERS : "gave"
+    PROGRAMS ||--o{ PROGRAM_EVENTS : "raised"
+    ROUTINE_TRIGGERS ||--o{ PROGRAM_EVENTS : "fired by"
+    PROGRAMS |o--o{ ROUTINE_TRIGGERS : "for"
     USERS ||--o{ PROGRAMS : "owns"
     PROGRAMS ||--|{ PROGRAM_VERSIONS : "has"
     PROGRAM_VERSIONS ||--o{ DEPLOYMENTS : "deployed as"
@@ -403,7 +413,9 @@ erDiagram
     }
     RROTORS {
         uuid id PK
-        uuid user_id FK, UK
+        uuid user_id FK
+        text mode "hosted or local"
+        uuid install_id FK "local: unique"
         text fly_machine_id
         text region
         text image_version
@@ -423,9 +435,8 @@ erDiagram
         uuid id PK
         uuid program_id FK
         int version "unique per program"
-        text commit_sha
+        text commit_sha "the version's identity"
         json manifest
-        text bundle_ref
         timestamp created_at
     }
     DEPLOYMENTS {
@@ -452,7 +463,35 @@ erDiagram
         text prompt
         text answer
         timestamp asked_at
+        timestamp notified_at
         timestamp answered_at
+    }
+    GITHUB_INSTALLATIONS {
+        uuid id PK
+        uuid user_id FK, UK
+        bigint installation_id UK
+        text account_login
+        timestamp created_at
+        timestamp removed_at
+    }
+    ROUTINE_TRIGGERS {
+        uuid id PK
+        uuid user_id FK
+        uuid program_id FK
+        text name
+        text fire_url
+        text token_enc
+        text status "ok or broken"
+        timestamp last_fired_at
+        timestamp created_at
+    }
+    PROGRAM_EVENTS {
+        uuid id PK
+        uuid program_id FK
+        uuid routine_trigger_id FK
+        text kind
+        text session_url
+        timestamp at
     }
     CONNECTOR_GRANTS {
         uuid id PK
@@ -468,12 +507,14 @@ Every table and column is drawn, as the database has them; the tables from rroto
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
-- **One hosted runtime per Pro and Team user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
+- **Runtimes** (`rrotors`): one hosted per Pro and Team user (`mode: hosted`), and one local per install that started one (`mode: local`, keyed by its install); each its own token.
 - **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
-- **Programs:** the record only: name, repo, versions (commit, manifest, bundle reference), where each is deployed. The code, secrets and data are in the rrotor.
+- **Programs:** the record only: name, repo, versions (commit SHA, manifest), where each is deployed. The code is in the person's repo and their runtimes; secrets and data are in the rrotor.
+- **GitHub installations:** the person's Glyphh GitHub App installation, from which the Cloud mints a short-lived token per deploy; no long-lived GitHub key is kept.
+- **Routine triggers:** the routines the person let Glyphh start (fire URL and token, encrypted), marked broken on a 401. **Program events:** what a program raised and the routine session it started.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
-- **Approvals:** a step waiting for the person, until answered anywhere.
+- **Approvals:** a step waiting for the person, until answered anywhere; `notified_at` when the person was emailed about it.
 - **Connector grants:** each Claude (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, revocable one by one.
 
 ### In rrotor
