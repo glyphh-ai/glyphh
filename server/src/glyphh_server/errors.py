@@ -42,7 +42,8 @@ class Conflict(GlyphhError):
 
 
 class LimitReached(GlyphhError):
-    """The org's plan does not allow more: seats, machines, credits. Upgrade, or free one up."""
+    """The plan allows no more: members, seats, installs or workspaces. The detail names the limit, what is used,
+    the most allowed, and the plan that would lift it."""
 
     code = "E_LIMIT"
     status = 403
@@ -51,6 +52,28 @@ class LimitReached(GlyphhError):
 class Unavailable(GlyphhError):
     code = "E_UNAVAILABLE"
     status = 503
+
+
+class DeviceFlowError(GlyphhError):
+    """A device-token poll's answer before there is a token (RFC 8628, section 3.5): its code is the RFC's own."""
+
+    status = 400
+
+
+class AuthorizationPending(DeviceFlowError):
+    code = "authorization_pending"
+
+
+class SlowDown(DeviceFlowError):
+    code = "slow_down"
+
+
+class ExpiredToken(DeviceFlowError):
+    code = "expired_token"
+
+
+class AccessDenied(DeviceFlowError):
+    code = "access_denied"
 
 
 INTERNAL_MESSAGE: str = "Something went wrong on our side. Quote the trace id to support."

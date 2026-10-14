@@ -1,16 +1,21 @@
-"""Who is calling the API: the member behind the bearer token, or a refusal. Anything wrong with the
-header or the token is one answer, E_UNAUTHORIZED, so nothing is learned by probing it."""
+"""Who is calling the API: the install behind the bearer token, or a refusal. Anything wrong with the header or the
+token is one answer, E_UNAUTHORIZED, so nothing is learned by probing it. A good token's request then sees only its
+own org's rows (db/tenancy.py)."""
 
 from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from glyphh_server.db import tenancy
 from glyphh_server.errors import Unauthorized
 from glyphh_server.obs import context
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.tokens import principal_for
+
+bearer = HTTPBearer(auto_error=False, description="The install's token, from the device flow")
 
 
 async def connection(request: Request) -> AsyncIterator[AsyncConnection]:
@@ -23,13 +28,13 @@ async def connection(request: Request) -> AsyncIterator[AsyncConnection]:
 Conn = Annotated[AsyncConnection, Depends(connection)]
 
 
-async def principal(request: Request, conn: Conn) -> Principal:
-    scheme, _, token = request.headers.get("authorization", "").partition(" ")
-    if scheme.lower() != "bearer" or not token:
-        raise Unauthorized("Sign in to Glyphh: send your access token as a Bearer token.")
-    who = await principal_for(conn, token)
+async def principal(conn: Conn, creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]) -> Principal:
+    if creds is None:
+        raise Unauthorized("Sign in to Glyphh: send your install's token as a Bearer token.")
+    who = await principal_for(conn, creds.credentials)
     context.user_id.set(str(who.user_id))
     context.org_id.set(str(who.org_id))
+    await tenancy.enter(conn, who.org_id)
     return who
 
 

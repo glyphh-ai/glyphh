@@ -1,10 +1,8 @@
-"""What every sign-in step shares: the settings, the provider callback address, the short-lived cookie that
-ties each step to the browser that started it, and the way to a platform screen."""
-
-from urllib.parse import urlencode
+"""What every step of the device sign-in page shares: the provider callback address, and the short-lived cookie
+that ties each step to the browser that started it, so nobody can push their sign-in into someone else's browser."""
 
 from starlette.requests import Request
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import Response
 
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
@@ -12,7 +10,7 @@ from glyphh_server.ops.auth.secrets import make_secret
 
 COOKIE: str = "glyphh_signin"
 TTL: int = 600
-START_AGAIN: str = "This sign-in has expired or moved to another browser. Start again from your app."
+START_AGAIN: str = "This sign-in has expired or moved to another browser. Start again in Claude."
 
 
 def cfg(request: Request) -> Settings:
@@ -20,7 +18,7 @@ def cfg(request: Request) -> Settings:
 
 
 def callback_url(settings: Settings, provider: str) -> str:
-    return f"{settings.public_url.rstrip('/')}/auth/{provider}/callback"
+    return f"{settings.base_url}/auth/{provider}/callback"
 
 
 def browser(request: Request) -> str:
@@ -48,6 +46,6 @@ def bind_browser(response: Response, settings: Settings, value: str) -> Response
     return response
 
 
-def screen(settings: Settings, path: str, **query: str) -> RedirectResponse:
-    """Send the browser to one of the platform's sign-in screens."""
-    return RedirectResponse(f"{settings.platform}{path}?{urlencode(query)}", status_code=303)
+def forget_browser(response: Response) -> Response:
+    response.delete_cookie(COOKIE, path="/auth")
+    return response

@@ -1,13 +1,13 @@
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel
 
 
 class Principal(BaseModel):
-    """Who is calling: every operation runs as one, and the org decides which rows it sees."""
+    """Who is calling: the install behind the token, its user, and the one org they are in."""
 
     user_id: uuid.UUID
     org_id: uuid.UUID
-    role: str
-    oauth_client_id: uuid.UUID | None = None
-    host_client_id: str | None = None
+    role: Literal["admin", "member"]
+    install_id: uuid.UUID

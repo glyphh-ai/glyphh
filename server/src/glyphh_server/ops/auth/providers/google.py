@@ -51,7 +51,5 @@ async def profile(http: httpx.AsyncClient, cfg: Settings, code: str, redirect_ur
         subject=str(me["sub"]),
         email=me["email"],
         email_verified=bool(me.get("email_verified")),
-        first_name=me.get("given_name"),
-        last_name=me.get("family_name"),
-        image_url=me.get("picture"),
+        name=me.get("name") or " ".join(n for n in (me.get("given_name"), me.get("family_name")) if n) or None,
     )

@@ -1,109 +1,65 @@
-"""The server's own tokens: a short access token and a longer refresh token, both kept only as hashes.
-A refresh rotates: the old pair is revoked and a new pair issued, so a stolen refresh token works once."""
+"""An install's bearer token: opaque, random, kept only as a hash. It stops working when it expires, when it is
+revoked, or when its install is revoked."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from pydantic import BaseModel
-from sqlalchemy import insert, select, update
+from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Unauthorized
-from glyphh_server.models import Membership, OAuthClient, Token
+from glyphh_server.models import Install, Token, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 
-ACCESS_TTL: timedelta = timedelta(hours=1)
-REFRESH_TTL: timedelta = timedelta(days=30)
+TOKEN_TTL: timedelta = timedelta(days=365)
+SEEN_EVERY: timedelta = timedelta(minutes=1)
 
 
-class IssuedTokens(BaseModel):
-    access_token: str
-    refresh_token: str
-    expires_in: int
-    token_type: str = "Bearer"
-
-
-async def issue(
-    conn: AsyncConnection, user_id: uuid.UUID, org_id: uuid.UUID, oauth_client_id: uuid.UUID | None = None
-) -> IssuedTokens:
-    """A new pair acting in one org, which the person must belong to."""
-    access, refresh, now = make_secret(), make_secret(), datetime.now(UTC)
+async def issue(conn: AsyncConnection, install_id: uuid.UUID) -> str:
+    token = make_secret()
     await conn.execute(
         insert(Token).values(
-            user_id=user_id,
-            org_id=org_id,
-            oauth_client_id=oauth_client_id,
-            access_hash=hash_secret(access),
-            refresh_hash=hash_secret(refresh),
-            access_expires_at=now + ACCESS_TTL,
-            refresh_expires_at=now + REFRESH_TTL,
+            install_id=install_id, token_hash=hash_secret(token), expires_at=datetime.now(UTC) + TOKEN_TTL
         )
     )
-    return IssuedTokens(access_token=access, refresh_token=refresh, expires_in=int(ACCESS_TTL.total_seconds()))
+    return token
 
 
-async def principal_for(conn: AsyncConnection, access_token: str) -> Principal:
-    """Who an access token belongs to, in its org. Anything wrong with it (unknown, expired, revoked, or the
-    membership disabled or gone) is one answer."""
+async def principal_for(conn: AsyncConnection, token: str) -> Principal:
+    """Who a token belongs to. Anything wrong with it (unknown, expired, revoked, its install revoked) is one
+    answer. A good one marks its install seen."""
     row = (
         await conn.execute(
-            select(Token.user_id, Token.oauth_client_id, OAuthClient.client_id, Token.org_id, Membership.role)
-            .join(Membership, (Membership.user_id == Token.user_id) & (Membership.org_id == Token.org_id))
-            .outerjoin(OAuthClient, OAuthClient.id == Token.oauth_client_id)
-            .where(Token.access_hash == hash_secret(access_token))
-            .where(Token.revoked_at.is_(None))
-            .where(Token.access_expires_at > datetime.now(UTC))
-            .where(Membership.disabled_at.is_(None))
-        )
-    ).first()
-    if row is None:
-        raise Unauthorized("Sign in again: this token is not valid.")
-    return Principal(
-        user_id=row.user_id,
-        org_id=row.org_id,
-        role=row.role,
-        oauth_client_id=row.oauth_client_id,
-        host_client_id=row.client_id,
-    )
-
-
-async def rotate(conn: AsyncConnection, refresh_token: str) -> IssuedTokens:
-    """Trade a refresh token for a new pair; the old pair stops working at once."""
-    row = (
-        await conn.execute(
-            update(Token)
-            .where(Token.refresh_hash == hash_secret(refresh_token))
-            .where(Token.revoked_at.is_(None))
-            .where(Token.refresh_expires_at > datetime.now(UTC))
-            .values(revoked_at=datetime.now(UTC))
-            .returning(Token.user_id, Token.org_id, Token.oauth_client_id)
-        )
-    ).first()
-    if row is None:
-        raise Unauthorized("Sign in again: this refresh token is not valid.")
-    return await issue(conn, row.user_id, row.org_id, row.oauth_client_id)
-
-
-async def revoke(conn: AsyncConnection, token: str) -> None:
-    """Revoke the pair a token (access or refresh) belongs to. An unknown token is already as good as revoked."""
-    digest = hash_secret(token)
-    await conn.execute(
-        update(Token)
-        .where((Token.access_hash == digest) | (Token.refresh_hash == digest))
-        .where(Token.revoked_at.is_(None))
-        .values(revoked_at=datetime.now(UTC))
-    )
-
-
-async def find_refresh(conn: AsyncConnection, refresh_token: str) -> Token | None:
-    row = (
-        await conn.execute(
-            select(Token).where(
-                Token.refresh_hash == hash_secret(refresh_token),
+            select(Token.install_id, User.id, User.org_id, User.role)
+            .join(Install, Install.id == Token.install_id)
+            .join(User, User.id == Install.user_id)
+            .where(
+                Token.token_hash == hash_secret(token),
                 Token.revoked_at.is_(None),
-                Token.refresh_expires_at > datetime.now(UTC),
+                Token.expires_at > func.now(),
+                Install.revoked_at.is_(None),
             )
         )
     ).first()
-    return None if row is None else Token(**row._mapping)
+    if row is None:
+        raise Unauthorized("Sign in to Glyphh again: this token is not valid.")
+    await conn.execute(
+        update(Install)
+        .where(
+            Install.id == row.install_id,
+            or_(Install.last_seen_at.is_(None), Install.last_seen_at < func.now() - SEEN_EVERY),
+        )
+        .values(last_seen_at=func.now())
+    )
+    return Principal(user_id=row.id, org_id=row.org_id, role=row.role, install_id=row.install_id)
+
+
+async def revoke_install(conn: AsyncConnection, install_id: uuid.UUID) -> None:
+    """Sign that machine out: the install and every token it holds."""
+    await conn.execute(
+        update(Install).where(Install.id == install_id, Install.revoked_at.is_(None)).values(revoked_at=func.now())
+    )
+    await conn.execute(
+        update(Token).where(Token.install_id == install_id, Token.revoked_at.is_(None)).values(revoked_at=func.now())
+    )

@@ -1,0 +1,50 @@
+"""Stripe's events, keeping orgs true: a finished checkout, and every change to a subscription. The subscription
+is read fresh from Stripe, so events arriving late or out of order can't leave an org behind."""
+
+import logging
+import uuid
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncConnection
+
+from glyphh_server.models import Org
+from glyphh_server.obs.logs import fields
+from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.billing.sync import sync_subscription
+
+log = logging.getLogger("glyphh.billing")
+
+SUBSCRIPTION_EVENTS: frozenset[str] = frozenset(
+    {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}
+)
+
+
+async def handle_event(conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any]) -> None:
+    kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
+    if kind == "checkout.session.completed" and obj.get("mode") == "subscription":
+        org_id = await _org(conn, obj.get("client_reference_id"), obj.get("customer"))
+        sub_id = obj.get("subscription")
+    elif kind in SUBSCRIPTION_EVENTS:
+        org_id = await _org(conn, obj.get("metadata", {}).get("org_id"), obj.get("customer"))
+        sub_id = obj.get("id")
+    else:
+        log.info("stripe event ignored", extra=fields(type=kind))
+        return
+    if org_id is None or not sub_id:
+        log.warning("stripe event for no org", extra=fields(type=kind, customer=obj.get("customer")))
+        return
+    await sync_subscription(conn, org_id, await stripe.subscription(sub_id))
+
+
+async def _org(conn: AsyncConnection, given: str | None, customer: str | None) -> uuid.UUID | None:
+    """The org Stripe means: by the customer Glyphh made for it, else by the org id it was given."""
+    by_customer = select(Org.id).where(Org.stripe_customer_id == customer)
+    found = None if customer is None else (await conn.execute(by_customer)).scalar_one_or_none()
+    if found is None and given:
+        try:
+            wanted = uuid.UUID(given)
+        except ValueError:
+            return None
+        found = (await conn.execute(select(Org.id).where(Org.id == wanted))).scalar_one_or_none()
+    return found

@@ -52,13 +52,10 @@ async def profile(http: httpx.AsyncClient, cfg: Settings, code: str, redirect_ur
     auth = {"authorization": f"Bearer {token['access_token']}", "accept": "application/vnd.github+json"}
     user = await json_call(http, NAME, "GET", f"{API}/user", headers=auth)
     primary = _primary(await json_call(http, NAME, "GET", f"{API}/user/emails", headers=auth))
-    first, _, last = (user.get("name") or "").partition(" ")
     return ProviderProfile(
         provider="github",
         subject=str(user["id"]),
         email=primary["email"] if primary else (user.get("email") or "unknown@github"),
         email_verified=primary is not None,
-        first_name=first or user.get("login"),
-        last_name=last or None,
-        image_url=user.get("avatar_url"),
+        name=user.get("name") or user.get("login"),
     )

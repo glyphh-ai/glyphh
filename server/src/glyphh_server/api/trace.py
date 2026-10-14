@@ -21,8 +21,8 @@ TRACE_HEADER: str = "x-request-id"
 
 
 class TraceMiddleware:
-    def __init__(self, app: ASGIApp, platform: str) -> None:
-        self.app, self.platform = app, platform
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -44,7 +44,7 @@ class TraceMiddleware:
             except Exception:
                 log.exception("crashed", extra=fields(method=scope["method"], path=scope["path"]))
                 if not state["started"]:
-                    response = refusal(scope["path"], self.platform, "E_INTERNAL", INTERNAL_MESSAGE, 500)
+                    response = refusal(scope["path"], "E_INTERNAL", INTERNAL_MESSAGE, 500)
                     await response(scope, receive, send_traced)
                 else:
                     # The head is already sent: end the body where it stopped, so the connection closes cleanly.

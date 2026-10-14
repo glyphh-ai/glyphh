@@ -1,62 +1,48 @@
-"""The member's org: its name, its plan and how many of its seats are taken."""
+"""The caller's org: its name, its plan version, its seats and what Stripe says of its billing."""
 
 import uuid
 
-from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from pydantic import BaseModel
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import Invite, Membership, Org, Plan
+from glyphh_server.models import Org
+from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.guards import require_admin
+from glyphh_server.ops.plans import PlanView, org_version, view
 
 
 class OrgView(BaseModel):
     id: uuid.UUID
     name: str
-    plan: str
+    admin_user_id: uuid.UUID | None
+    plan: PlanView
+    seats: int
     seats_taken: int
-    max_seats: int | None = Field(description="null = no limit")
+    members: int
+    billing_status: str
 
 
-async def _seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
-    members = (
-        select(func.count())
-        .select_from(Membership)
-        .where(Membership.org_id == org_id, Membership.disabled_at.is_(None))
-    )
-    invites = (
-        select(func.count())
-        .select_from(Invite)
-        .where(
-            Invite.org_id == org_id,
-            Invite.accepted_at.is_(None),
-            Invite.declined_at.is_(None),
-            Invite.revoked_at.is_(None),
-            Invite.expires_at > func.now(),
-        )
-    )
-    return int((await conn.execute(select(members.scalar_subquery() + invites.scalar_subquery()))).scalar_one())
-
-
-async def get_org(conn: AsyncConnection, who: Principal) -> OrgView:
+async def org_view(conn: AsyncConnection, org_id: uuid.UUID) -> OrgView:
     row = (
         await conn.execute(
-            select(Org.id, Org.name, Plan.name.label("plan"), Plan.max_seats)
-            .join(Plan, Plan.id == Org.plan_id)
-            .where(Org.id == who.org_id)
+            select(Org.id, Org.name, Org.admin_user_id, Org.seats, Org.billing_status).where(Org.id == org_id)
         )
     ).one()
     return OrgView(
-        id=row.id,
-        name=row.name,
-        plan=row.plan,
-        max_seats=row.max_seats,
-        seats_taken=await _seats_taken(conn, who.org_id),
+        **row._mapping,
+        plan=view(await org_version(conn, org_id)),
+        seats_taken=await limits.seats_taken(conn, org_id),
+        members=await limits.members(conn, org_id),
     )
+
+
+async def get_org(conn: AsyncConnection, who: Principal) -> OrgView:
+    return await org_view(conn, who.org_id)
 
 
 async def rename_org(conn: AsyncConnection, who: Principal, name: str) -> OrgView:
     require_admin(who)
     await conn.execute(update(Org).where(Org.id == who.org_id).values(name=name.strip()))
-    return await get_org(conn, who)
+    return await org_view(conn, who.org_id)

@@ -1,4 +1,4 @@
-"""The health operation: the one service function the SDK, the API and MCP all call."""
+"""Whether the server and its database answer."""
 
 from typing import Literal
 
