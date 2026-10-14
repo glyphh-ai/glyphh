@@ -97,7 +97,7 @@ $("open").onclick = async () => {
   let asked = false;
   try {
     const r = await app.sendMessage({ role: "user", content: [{ type: "text",
-      text: `Open my Glyphh sign-in page in the browser pane: ${card.verification_uri_complete}` }] });
+      text: `/glyphh open ${card.verification_uri_complete}` }] });
     asked = !r?.isError;
   } catch {}
   $("wait").textContent = asked ? "Opening the sign-in page… approve it there." : "Click the link below to approve, then come back.";

@@ -38,6 +38,12 @@ export async function status(gh: Host): Promise<string> {
 export async function glyphhCommand(gh: Host, args: string): Promise<{ text: string }> {
   const arg = args.trim().toLowerCase()
   watchOpenRequests(gh)
+  const open = args.trim().match(/^open\s+(https?:\/\/\S+\/v1\/device\?code=[A-Z0-9-]+)$/i)
+  if (open) {
+    // The sign-in card's button: the sign-in page, in the browser pane.
+    const url = open[1]!
+    return { text: (await openUrl(gh, url)) ? `Opened ${url} in the browser pane. Approve it there.` : `Open ${url} to approve.` }
+  }
   // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
   const placed = await gh.openPanel()
