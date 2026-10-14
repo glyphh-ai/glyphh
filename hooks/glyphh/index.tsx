@@ -67,7 +67,8 @@ function host($: EngineInterface): Host {
     },
     copy: async (text, surface) => (await $.ui.copy({ text, surface })).isCopied,
     openPanel: async () => (await $.ui.open({ id: 'glyphh', title: 'Glyphh' })).isPlaced,
-    ask: async text => void (await $.prompt.submit({ text })),
+    // Fire and forget, as the grid's layoutToPane does: the prompt runs after this hook.
+    ask: async text => void $.prompt.submit({ text }).catch(() => undefined),
     pluginRoot: $.plugin.root,
     state: hostState($),
   }
