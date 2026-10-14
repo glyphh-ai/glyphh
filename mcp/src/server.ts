@@ -17,7 +17,7 @@ import { machineId } from '../../hooks/glyphh/machine'
 import { installPath, machineProbe, readInstall, writeInstall } from './install'
 
 // A new address whenever the card changes: hosts keep a card's HTML by its address.
-export const CARD_URI = 'ui://glyphh/sign-in/3'
+export const CARD_URI = 'ui://glyphh/sign-in/4'
 const MIME = 'text/html;profile=mcp-app'
 const MCP = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ROOT = process.env.CLAUDE_PLUGIN_ROOT || join(MCP, '..')
@@ -119,7 +119,7 @@ export function makeServer(flow: SignIn): McpServer {
   const server = new McpServer({ name: 'glyphh', version: modVersion() })
   // Hosts keep a tool's card address from when they connected, so the older
   // addresses serve the current card too.
-  for (const uri of [CARD_URI, 'ui://glyphh/sign-in/1', 'ui://glyphh/sign-in/2']) {
+  for (const uri of [CARD_URI, 'ui://glyphh/sign-in/1', 'ui://glyphh/sign-in/2', 'ui://glyphh/sign-in/3']) {
     server.registerResource(`sign-in ${uri}`, uri, { title: 'Glyphh sign-in', mimeType: MIME }, async () => ({
       contents: [{ uri, mimeType: MIME, text: cardHtml() }],
     }))

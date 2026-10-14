@@ -92,14 +92,15 @@ async function poll() {
 
 $("open").onclick = async () => {
   if (!card?.verification_uri_complete) return;
-  $("wait").textContent = "Waiting for approval…";
-  let opened = false;
+  // Claude opens the page in its browser pane when asked in the chat; the card
+  // cannot open it itself, so the button asks.
+  let asked = false;
   try {
-    const r = await app.callServerTool({ name: "glyphh_sign_in_open", arguments: { url: card.verification_uri_complete } });
-    opened = !!r?.structuredContent?.opened;
+    const r = await app.sendMessage({ role: "user", content: [{ type: "text",
+      text: `Open my Glyphh sign-in page in the browser pane: ${card.verification_uri_complete}` }] });
+    asked = !r?.isError;
   } catch {}
-  if (!opened) { try { const r = await app.openLink({ url: card.verification_uri_complete }); opened = !r?.isError; } catch {} }
-  $("wait").textContent = opened ? "Waiting for approval…" : "Click the link below to approve, then come back.";
+  $("wait").textContent = asked ? "Opening the sign-in page… approve it there." : "Click the link below to approve, then come back.";
 };
 
 $("restart").onclick = async () => {
