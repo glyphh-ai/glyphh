@@ -72,11 +72,13 @@ function host($: EngineInterface): Host {
     openPanel: async () => (await $.ui.open({ id: 'glyphh', title: 'Glyphh' })).isPlaced,
     // As the grid's layoutToPane: `void $.prompt.submit(...)`, not awaited; the
     // prompt starts its own turn once the session is idle.
+    // Sent just after the hook that asks has finished: from inside a command.run
+    // hook prompt.submit is refused (it would wait on the turn that hook holds).
     ask: async text => {
-      void $.prompt.submit({ text }).catch(async (err: unknown) => {
+      $.clock.after(100, () => void $.prompt.submit({ text }).catch(async (err: unknown) => {
         const home = await $.env.get('HOME').catch(() => undefined)
         if (home) await $.fs.write(`${home}/.glyphh/ask-log.txt`, `${new Date().toISOString()} ${String(err).slice(0, 300)}\n`).catch(() => undefined)
-      })
+      }))
     },
     pluginRoot: $.plugin.root,
     state: hostState($),
