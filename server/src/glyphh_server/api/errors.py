@@ -28,9 +28,13 @@ _HTTP_CODES: dict[int, str] = {
 }
 
 PAGES: tuple[str, ...] = ("/auth/", "/v1/device", "/billing/")
+# Pages on an address whose other methods are the API's.
+GET_PAGES: tuple[str, ...] = ("/v1/github/install", "/v1/github/callback")
 
 
-def is_page(path: str) -> bool:
+def is_page(method: str, path: str) -> bool:
+    if method == "GET" and path in GET_PAGES:
+        return True
     return path.startswith(PAGES) and path not in ("/v1/device/code", "/v1/device/token")
 
 
@@ -38,9 +42,9 @@ def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "trace_id": current_trace_id(), **detail}}
 
 
-def refusal(path: str, code: str, message: str, status: int, **detail: Any) -> Response:
+def refusal(method: str, path: str, code: str, message: str, status: int, **detail: Any) -> Response:
     """A person on a page gets a page; a program gets JSON."""
-    if is_page(path):
+    if is_page(method, path):
         return page("That didn't work", message, f"Code {code}, trace {current_trace_id()}.", status=status)
     return JSONResponse(error_body(code, message, **detail), status_code=status)
 
@@ -52,14 +56,14 @@ async def _glyphh_error(request: Request, err: Exception) -> Response:
         "refused",
         extra=fields(code=err.code, status=err.status, reason=err.message),
     )
-    return refusal(request.url.path, err.code, err.message, err.status, **err.detail)
+    return refusal(request.method, request.url.path, err.code, err.message, err.status, **err.detail)
 
 
 async def _invalid(request: Request, err: Exception) -> Response:
     assert isinstance(err, RequestValidationError)
     problems = jsonable_encoder(err.errors())
     log.info("refused", extra=fields(code="E_INVALID", status=422, problems=problems))
-    return refusal(request.url.path, "E_INVALID", "The request is not valid.", 422, problems=problems)
+    return refusal(request.method, request.url.path, "E_INVALID", "The request is not valid.", 422, problems=problems)
 
 
 async def _http(request: Request, err: Exception) -> Response:

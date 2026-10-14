@@ -24,12 +24,26 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
+    # The Glyphh GitHub App: its id, its private key (PEM) and its slug (its install page is under the slug).
+    github_app_id: str = ""
+    github_app_private_key: str = ""
+    github_app_slug: str = ""
+    # Encrypts routine trigger tokens at rest (AES-256-GCM): base64 of 32 random bytes.
+    secrets_key: str = ""
     # Where an invite's link points; the token rides its query. Defaults to {public_url}/join.
     invite_url: str = ""
 
     @property
     def base_url(self) -> str:
         return self.public_url.rstrip("/")
+
+    @property
+    def github_app_configured(self) -> bool:
+        return bool(self.github_app_id and self.github_app_private_key and self.github_app_slug)
+
+    @property
+    def github_app_install_url(self) -> str:
+        return f"https://github.com/apps/{self.github_app_slug}/installations/new"
 
     @property
     def invite_base(self) -> str:

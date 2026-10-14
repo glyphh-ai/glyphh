@@ -1,5 +1,6 @@
-"""The record of programs: a hosted runtime per user, programs and their versions, deployments, runs and approvals,
-and connector grants, each seen only by its own org."""
+"""The record of programs: runtimes (one hosted per user, one local per install), programs and their versions (a
+commit each), deployments, runs and approvals, GitHub installations, routine triggers and program events, and
+connector grants, each seen only by its own org."""
 
 import uuid
 
@@ -13,36 +14,67 @@ from glyphh_server.models import (
     Approval,
     ConnectorGrant,
     Deployment,
+    GitHubInstallation,
     Program,
+    ProgramEvent,
     ProgramVersion,
+    RoutineTrigger,
     Rrotor,
     Run,
 )
-from tests.db.helpers import Person, person
+from tests.db.helpers import Person, another_install, person
 
-TABLES = (Rrotor, Program, ProgramVersion, Deployment, Run, Approval, ConnectorGrant)
+TABLES = (
+    Rrotor,
+    Program,
+    ProgramVersion,
+    Deployment,
+    Run,
+    Approval,
+    ConnectorGrant,
+    GitHubInstallation,
+    RoutineTrigger,
+    ProgramEvent,
+)
+SHA: str = "0123456789abcdef0123456789abcdef01234567"
 
 
 async def _new(conn: AsyncConnection, table: type, **values: object) -> uuid.UUID:
     return (await conn.execute(insert(table).values(**values).returning(table.id))).scalar_one()
 
 
-def _rrotor(who: Person) -> dict[str, object]:
-    return {"user_id": who.user_id, "region": "iad", "image_version": "1", "state": "stopped", "token_hash": who.email}
+def _hosted(who: Person) -> dict[str, object]:
+    return {
+        "user_id": who.user_id,
+        "mode": "hosted",
+        "region": "iad",
+        "image_version": "1",
+        "state": "stopped",
+        "token_hash": who.email,
+    }
+
+
+def _local(who: Person, install_id: uuid.UUID) -> dict[str, object]:
+    values = {"user_id": who.user_id, "mode": "local", "install_id": install_id, "state": "stopped"}
+    return values | {"token_hash": f"{install_id}-{uuid.uuid4()}"}
 
 
 async def _programs_of(engine: AsyncEngine, who: Person) -> None:
     async with engine.begin() as conn:
-        rrotor_id = await _new(conn, Rrotor, **_rrotor(who))
-        program_id = await _new(conn, Program, user_id=who.user_id, org_id=who.org_id, name="leads")
-        version_id = await _new(
-            conn, ProgramVersion, program_id=program_id, version=1, manifest={"functions": []}, bundle_ref="b/1"
-        )
+        rrotor_id = await _new(conn, Rrotor, **_hosted(who))
+        program_id = await _new(conn, Program, user_id=who.user_id, org_id=who.org_id, name="leads", repo="o/leads")
+        values = {"program_id": program_id, "version": 1, "commit_sha": SHA, "manifest": {"functions": []}}
+        version_id = await _new(conn, ProgramVersion, **values)
         await conn.execute(insert(Deployment).values(rrotor_id=rrotor_id, program_version_id=version_id))
         values = {"program_version_id": version_id, "rrotor_id": rrotor_id, "function": "start", "status": "done"}
         run_id = await _new(conn, Run, **values, caller="routine")
         await _new(conn, Approval, run_id=run_id, step="post", prompt="Post it?")
         await _new(conn, ConnectorGrant, user_id=who.user_id, client="claude.ai", token_hash=f"g-{who.email}")
+        gh = {"user_id": who.user_id, "installation_id": uuid.uuid4().int % 10**12, "account_login": "octo"}
+        await _new(conn, GitHubInstallation, **gh)
+        trigger = {"user_id": who.user_id, "program_id": program_id, "name": "Sales", "fire_url": "u", "token_enc": "e"}
+        trigger_id = await _new(conn, RoutineTrigger, **trigger)
+        await _new(conn, ProgramEvent, program_id=program_id, routine_trigger_id=trigger_id, kind="done")
 
 
 async def test_a_tenant_sees_only_its_own_programs_and_runs(engine: AsyncEngine) -> None:
@@ -55,16 +87,51 @@ async def test_a_tenant_sees_only_its_own_programs_and_runs(engine: AsyncEngine)
             assert (await conn.execute(select(func.count()).select_from(table))).scalar_one() == 1, table
         assert (await conn.execute(select(Deployment.active))).scalar_one() is True
         assert (await conn.execute(select(Run.ended_at, Run.seconds))).one() == (None, None)
+        assert (await conn.execute(select(Approval.notified_at))).scalar_one() is None
+        assert (await conn.execute(select(RoutineTrigger.status))).scalar_one() == "ok"
 
 
-async def test_one_hosted_runtime_per_user_and_only_known_callers(engine: AsyncEngine) -> None:
+async def _refused(engine: AsyncEngine, constraint: str, table: type, **values: object) -> None:
+    with pytest.raises(IntegrityError, match=constraint):
+        async with engine.begin() as conn:
+            await conn.execute(insert(table).values(**values))
+
+
+async def test_one_hosted_runtime_per_user_and_one_local_per_install(engine: AsyncEngine) -> None:
     ada = await person(engine, "Team")
     await _programs_of(engine, ada)
-    with pytest.raises(IntegrityError, match="rrotors_user_id_key"):
-        async with engine.begin() as conn:
-            await conn.execute(insert(Rrotor).values(**_rrotor(ada) | {"token_hash": "another"}))
-    with pytest.raises(IntegrityError, match="runs_caller"):
-        async with engine.begin() as conn:
-            run = (await conn.execute(select(Run).join(Rrotor).where(Rrotor.user_id == ada.user_id))).one()
-            values = {"program_version_id": run.program_version_id, "rrotor_id": run.rrotor_id}
-            await conn.execute(insert(Run).values(**values, function="start", status="done", caller="cron"))
+    await _refused(engine, "rrotors_one_hosted", Rrotor, **_hosted(ada) | {"token_hash": "another"})
+    await _refused(engine, "rrotors_local_install", Rrotor, **_hosted(ada) | {"install_id": ada.install_id})
+    await _refused(engine, "rrotors_local_install", Rrotor, **_local(ada, ada.install_id) | {"install_id": None})
+    await _refused(engine, "rrotors_mode", Rrotor, **_hosted(ada) | {"mode": "cloud", "token_hash": "cloud"})
+    linux, _ = await another_install(engine, ada.user_id)
+    async with engine.begin() as conn:
+        await conn.execute(insert(Rrotor).values(**_local(ada, ada.install_id)))
+        await conn.execute(insert(Rrotor).values(**_local(ada, linux)))
+    await _refused(engine, "rrotors_install_id_key", Rrotor, **_local(ada, ada.install_id))
+
+
+async def test_a_commit_is_one_version_and_only_known_values_are_kept(engine: AsyncEngine) -> None:
+    ada = await person(engine, "Team")
+    await _programs_of(engine, ada)
+    async with engine.connect() as conn:
+        version = (await conn.execute(select(ProgramVersion).join(Program).where(Program.user_id == ada.user_id))).one()
+        run = (await conn.execute(select(Run).where(Run.program_version_id == version.id))).one()
+        trigger = (await conn.execute(select(RoutineTrigger).where(RoutineTrigger.user_id == ada.user_id))).one()
+    same = {"program_id": version.program_id, "version": 2, "commit_sha": SHA, "manifest": {}}
+    await _refused(engine, "program_versions_commit", ProgramVersion, **same)
+    values = {"program_version_id": run.program_version_id, "rrotor_id": run.rrotor_id}
+    await _refused(engine, "runs_caller", Run, **values, function="start", status="done", caller="cron")
+    await _refused(
+        engine,
+        "routine_triggers_status",
+        RoutineTrigger,
+        user_id=ada.user_id,
+        name="x",
+        fire_url="u",
+        token_enc="e",
+        status="lost",
+    )
+    gh = {"user_id": ada.user_id, "installation_id": 1, "account_login": "octo"}
+    await _refused(engine, "github_installations_user_id_key", GitHubInstallation, **gh)
+    assert trigger.program_id == version.program_id

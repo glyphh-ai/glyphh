@@ -8,7 +8,7 @@ from glyphh_server.models.base import Base, created_at
 
 
 class Workspace(Base):
-    """A workspace's name, for the plan's limit. Everything else about it stays in ~/.glyphh."""
+    """A workspace's name, for the plan's limit. Everything else about it stays in the local rrotor."""
 
     __tablename__ = "workspaces"
 

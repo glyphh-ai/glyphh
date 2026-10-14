@@ -1,6 +1,6 @@
 # server
 
-The Glyphh server: the one cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`, `glyphh-programs`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), one per machine, workspace names (for the plan's limit), a signed license naming the mods the plan includes, and the tables for programs (hosted runtimes, programs and their versions, deployments, runs, approvals, connector grants; their API is still to build). What a person makes stays on their machine or in their runtime. `docs/architecture.md` is the contract: the API, the data model and the plans.
+The Glyphh server: the one cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`, `glyphh-programs`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), one per machine, workspace names (for the plan's limit), a signed license naming the mods the plan includes, and the record of programs: runtimes (one hosted per user, one local per install, each with its own token), programs and their versions (a commit each, in the person's own repo), deployments, runs, approvals, connector grants, the Glyphh GitHub App's installations (repo-scoped tokens minted per deploy), routine triggers (fired on a program's events, their tokens encrypted) and program events. The programs, runs and connector API is still to build. What a person makes stays on their machine or in their runtime. `docs/architecture.md` is the contract: the API, the data model and the plans.
 
 ## Run it
 
@@ -21,9 +21,11 @@ Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed
 | `GLYPHH_LICENSE_KEY` | Base64 of a raw 32-byte Ed25519 private key that signs licenses. Required in prod; without it in dev and test a key is made at start (licenses then don't survive a restart) |
 | `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | Billing; without them billing answers `E_UNAVAILABLE` |
 | `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | The Stripe prices the plans sell on. A price a plan's newest version doesn't sell on becomes a new plan version at the next boot |
+| `GLYPHH_GITHUB_APP_ID`, `GLYPHH_GITHUB_APP_PRIVATE_KEY`, `GLYPHH_GITHUB_APP_SLUG` | The Glyphh GitHub App: its id, its private key (PEM; line breaks may be written as `\n`) and its slug (the install page is `https://github.com/apps/<slug>/installations/new`). Set the App's Setup URL to `{public_url}/v1/github/callback`. Without all three, installing the App answers `E_UNAVAILABLE` |
+| `GLYPHH_SECRETS_KEY` | Base64 of 32 random bytes; encrypts routine trigger tokens at rest (AES-256-GCM). Without it routine triggers answer `E_UNAVAILABLE`; changing it makes the stored tokens unreadable |
 | `GLYPHH_INVITE_URL` | Where an invite's link points (its token rides `?invite=`); defaults to `{public_url}/join` |
 
-Make a license key with:
+Make a license key, or a secrets key, with:
 
     python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 
@@ -34,14 +36,14 @@ Make a license key with:
 - `models/`: the schema, one table per module (drawn in `docs/architecture.md`, Data model)
 - `db/`: the engine, the schema step, the seed, the drift check and tenancy (row-level security keyed on the org)
 - `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe
-- `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages
+- `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages, `api/github_pages.py` installing the GitHub App in the browser
 - `obs/`: JSON logs, each line with its trace id; every refusal is `{"error": {"code", "message", "trace_id"}}`
 
 ## Test it
 
     docker compose --profile test run --rm --build test
 
-The suite runs against a real Postgres (its own `glyphh_test` database, made fresh each run) and fails under 100% line and branch coverage. Google, GitHub and Stripe are faked at the HTTP layer; no test reaches them. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
+The suite runs against a real Postgres (its own `glyphh_test` database, made fresh each run) and fails under 100% line and branch coverage. Google, GitHub (sign-in and the GitHub App), Stripe and Anthropic's routines are faked at the HTTP layer; no test reaches them, and the keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
 
 To try billing against Stripe's test mode locally, forward its events with `stripe listen --forward-to localhost:8080/v1/stripe/webhook` and set the webhook secret it prints.
 
