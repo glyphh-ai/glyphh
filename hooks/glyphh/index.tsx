@@ -87,8 +87,9 @@ async function start($: EngineInterface) {
   await $.tool.register({
     name: 'glyphh_login',
     description:
-      'Sign this machine in to Glyphh. Shows the sign-in inline in the chat (the code) and opens the login page in the ' +
-      'browser pane. Use when the user asks to sign in or log in to Glyphh. Says who is signed in already.',
+      'Sign this machine in to Glyphh: shows the sign-in inline in the chat (the code). Use when the user asks to sign in ' +
+      'or log in to Glyphh. When it answers state "pending", open its url in the browser pane right away (Claude_Browser ' +
+      'preview_start) and tell the user in one line to approve the code there. Says who is signed in already.',
     inputSchema: { type: 'object', properties: {} },
     isDeferred: false,
   })
