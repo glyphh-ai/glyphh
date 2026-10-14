@@ -60,6 +60,11 @@ async def revoke_install(conn: AsyncConnection, install_id: uuid.UUID) -> None:
     await conn.execute(
         update(Install).where(Install.id == install_id, Install.revoked_at.is_(None)).values(revoked_at=func.now())
     )
+    await revoke_tokens(conn, install_id)
+
+
+async def revoke_tokens(conn: AsyncConnection, install_id: uuid.UUID) -> None:
+    """Every token the install holds stops working; the install stays."""
     await conn.execute(
         update(Token).where(Token.install_id == install_id, Token.revoked_at.is_(None)).values(revoked_at=func.now())
     )

@@ -201,7 +201,7 @@ Nothing here goes to the cloud.
 
 The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, in Docker. Database first, then API; 100% test coverage; errors with stable codes and a trace id; small files.
 
-- **Sign in by device flow (RFC 8628)**; each approval is an **install**.
+- **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install, so the plan's installs count machines, not sign-ins.
 - **Org:** the first user is its admin and pays; one org per user; members by invite.
 - **Plans and seats:** per seat, through Stripe.
 - **Mods:** the catalog; a plan version includes every mod or the free ones.
@@ -220,7 +220,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 
 | Area | Calls |
 |---|---|
-| Device flow | `POST /v1/device/code`, `POST /v1/device/token`, `GET /v1/device?code=` |
+| Device flow | `POST /v1/device/code` (with the mod's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` |
 | Account | `GET`/`PATCH /v1/me`, `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
 | Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
@@ -376,6 +376,7 @@ The tables already built (plans, orgs, users, identities, invites, installs, tok
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
 - **One hosted runtime per Pro and Team user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
+- **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
 - **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.

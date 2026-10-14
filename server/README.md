@@ -1,6 +1,6 @@
 # server
 
-The Glyphh server: the one small cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), workspace names (for the plan's limit) and a signed license naming the mods the plan includes. What a person makes stays on their machine. `docs/architecture.md` is the contract: the API, the data model and the plans.
+The Glyphh server: the one small cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), one per machine, workspace names (for the plan's limit) and a signed license naming the mods the plan includes. What a person makes stays on their machine. `docs/architecture.md` is the contract: the API, the data model and the plans.
 
 ## Run it
 

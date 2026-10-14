@@ -71,6 +71,7 @@ async def seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
 
 
 async def installs(conn: AsyncConnection, user_id: uuid.UUID) -> int:
+    """Active installs: the person's machines, since a machine has at most one."""
     return await _count(conn, Install.user_id == user_id, Install.revoked_at.is_(None))
 
 

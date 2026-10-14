@@ -1,6 +1,6 @@
 """Signing an install in by device flow (RFC 8628). The mod asks for a code; the person opens the link, signs in
-and approves; the mod, polling, gets the install's token, once. Each approval is an install, refused past the
-plan's max_installs."""
+and approves; the mod, polling, gets the install's token, once. The install is the machine: approving on a machine
+the person already has reuses its install; a new machine is refused past the plan's max_installs."""
 
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -32,6 +32,11 @@ class DeviceStart(BaseModel):
     expires_in: int
 
 
+def new_machine_id() -> str:
+    """For an older mod that sends no machine id: one made up, so its sign-in still works."""
+    return secrets.token_urlsafe(24)
+
+
 def new_user_code() -> str:
     letters = "".join(secrets.choice(ALPHABET) for _ in range(8))
     return f"{letters[:4]}-{letters[4:]}"
@@ -43,7 +48,7 @@ def normalize(code: str) -> str:
 
 
 async def start(
-    conn: AsyncConnection, settings: Settings, name: str, surface: Surface, mod_version: str
+    conn: AsyncConnection, settings: Settings, machine_id: str, name: str, surface: Surface, mod_version: str
 ) -> DeviceStart:
     await conn.execute(delete(DeviceCode).where(DeviceCode.expires_at < datetime.now(UTC) - CODE_TTL))
     device_code, user_code = make_secret(), new_user_code()
@@ -51,6 +56,7 @@ async def start(
         insert(DeviceCode).values(
             device_code_hash=hash_secret(device_code),
             user_code=user_code,
+            machine_id=machine_id,
             name=name,
             surface=surface,
             mod_version=mod_version,

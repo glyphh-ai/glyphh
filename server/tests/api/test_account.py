@@ -46,6 +46,7 @@ async def test_installs_are_listed_and_one_revoked_signs_that_machine_out(
         ("Linux box", "desktop", False),
     ]
     assert listed[0]["last_seen_at"] is not None and listed[1]["last_seen_at"] is None
+    assert len(listed[0]["machine_id"]) == 32 and listed[0]["machine_id"] != listed[1]["machine_id"]
     assert (await client.delete(f"/v1/installs/{other_id}", headers=ada.headers)).status_code == 204
     assert (await client.get("/v1/me", headers=other)).status_code == 401
     again = await client.delete(f"/v1/installs/{other_id}", headers=ada.headers)

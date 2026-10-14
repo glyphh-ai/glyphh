@@ -26,7 +26,13 @@ def an_email() -> str:
 
 
 async def _install(conn: AsyncConnection, user_id: uuid.UUID, name: str = "Mac") -> tuple[uuid.UUID, str]:
-    values = {"user_id": user_id, "name": name, "surface": "desktop", "mod_version": "1.0.0"}
+    values = {
+        "user_id": user_id,
+        "machine_id": uuid.uuid4().hex,
+        "name": name,
+        "surface": "desktop",
+        "mod_version": "1.0.0",
+    }
     install_id = (await conn.execute(insert(Install).values(values).returning(Install.id))).scalar_one()
     return install_id, await tokens.issue(conn, install_id)
 

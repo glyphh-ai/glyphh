@@ -3,7 +3,7 @@
 from glyphh_server.models.base import Base
 from glyphh_server.models.device_code import DeviceCode
 from glyphh_server.models.identity import PROVIDERS, Identity
-from glyphh_server.models.install import SURFACES, Install
+from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
 from glyphh_server.models.mod import Mod
 from glyphh_server.models.org import BILLING_STATUSES, Org
@@ -14,6 +14,7 @@ from glyphh_server.models.workspace import Workspace
 
 __all__ = [
     "BILLING_STATUSES",
+    "MACHINE_ID",
     "PROVIDERS",
     "ROLES",
     "SURFACES",

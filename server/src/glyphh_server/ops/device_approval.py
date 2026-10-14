@@ -1,5 +1,6 @@
-"""The person's side of the device flow: the sign-in waiting for them by its code, then approve (making the
-install, refused past the plan's max_installs) or deny."""
+"""The person's side of the device flow: the sign-in waiting for them by its code, then approve or deny. Approving
+on a machine the person already has reuses its install (its old tokens revoked, no limit to check); a new machine
+is a new install, refused past the plan's max_installs."""
 
 import uuid
 
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.errors import Invalid
 from glyphh_server.models import DeviceCode, Install, User
 from glyphh_server.ops import limits
+from glyphh_server.ops.auth.tokens import revoke_tokens
 from glyphh_server.ops.device import normalize
 from glyphh_server.ops.plans import org_version
 
@@ -48,21 +50,47 @@ async def approve(conn: AsyncConnection, user_code: str, user_id: uuid.UUID) -> 
         raise Invalid(GONE, reason="code")
     found = DeviceCode(**code._mapping)
     await limits.lock_user(conn, user_id)
-    org_id = (await conn.execute(select(User.org_id).where(User.id == user_id))).scalar_one()
-    await limits.check(conn, "installs", await limits.installs(conn, user_id), await org_version(conn, org_id))
-    install_id = (
-        await conn.execute(
-            insert(Install)
-            .values(user_id=user_id, name=found.name, surface=found.surface, mod_version=found.mod_version)
-            .returning(Install.id)
-        )
-    ).scalar_one()
+    install_id = await _reuse(conn, user_id, found) or await _new_install(conn, user_id, found)
     await conn.execute(
         update(DeviceCode)
         .where(DeviceCode.device_code_hash == found.device_code_hash)
         .values(install_id=install_id, approved_at=func.now())
     )
     return WaitingSignIn(user_code=found.user_code, name=found.name, surface=found.surface)
+
+
+async def _reuse(conn: AsyncConnection, user_id: uuid.UUID, found: DeviceCode) -> uuid.UUID | None:
+    """The person's install on this machine, if they have one: its old tokens revoked, refreshed from the code."""
+    install_id = (
+        await conn.execute(
+            select(Install.id).where(
+                Install.user_id == user_id, Install.machine_id == found.machine_id, Install.revoked_at.is_(None)
+            )
+        )
+    ).scalar_one_or_none()
+    if install_id is None:
+        return None
+    await revoke_tokens(conn, install_id)
+    await conn.execute(
+        update(Install)
+        .where(Install.id == install_id)
+        .values(name=found.name, surface=found.surface, mod_version=found.mod_version, last_seen_at=func.now())
+    )
+    return install_id
+
+
+async def _new_install(conn: AsyncConnection, user_id: uuid.UUID, found: DeviceCode) -> uuid.UUID:
+    """A machine the person has not signed in on: a new install, if the plan has room for one more."""
+    org_id = (await conn.execute(select(User.org_id).where(User.id == user_id))).scalar_one()
+    await limits.check(conn, "installs", await limits.installs(conn, user_id), await org_version(conn, org_id))
+    values = {
+        "user_id": user_id,
+        "machine_id": found.machine_id,
+        "name": found.name,
+        "surface": found.surface,
+        "mod_version": found.mod_version,
+    }
+    return (await conn.execute(insert(Install).values(values).returning(Install.id))).scalar_one()
 
 
 async def deny(conn: AsyncConnection, user_code: str) -> None:

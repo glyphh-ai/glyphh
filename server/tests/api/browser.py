@@ -1,6 +1,7 @@
 """A person signing in through the device flow the way a browser and the mod do it."""
 
 import re
+import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -29,8 +30,12 @@ async def open_browser(stripe: FakeStripe, settings: Settings = PROVIDER_SETTING
         yield Browser(c, email)
 
 
-async def new_code(http: httpx.AsyncClient, name: str = "Ada's Mac", surface: str = "desktop") -> dict[str, Any]:
-    res = await http.post("/v1/device/code", json={"name": name, "surface": surface, "mod_version": "0.1.0"})
+async def new_code(
+    http: httpx.AsyncClient, name: str = "Ada's Mac", surface: str = "desktop", machine_id: str | None = None
+) -> dict[str, Any]:
+    """A sign-in started from a machine: a new one each time unless its id is given."""
+    body = {"machine_id": machine_id or uuid.uuid4().hex, "name": name, "surface": surface, "mod_version": "0.1.0"}
+    res = await http.post("/v1/device/code", json=body)
     assert res.status_code == 200, res.text
     return res.json()
 
@@ -47,9 +52,9 @@ async def to_approve(http: httpx.AsyncClient, user_code: str, provider: str = "g
     return back, found[1]
 
 
-async def sign_in(http: httpx.AsyncClient, provider: str = "google") -> dict[str, str]:
+async def sign_in(http: httpx.AsyncClient, provider: str = "google", machine_id: str | None = None) -> dict[str, str]:
     """The whole flow, approved: the install's Authorization header."""
-    code = await new_code(http)
+    code = await new_code(http, machine_id=machine_id)
     _, consent = await to_approve(http, code["user_code"], provider)
     done = await http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
     assert "Go back to Claude" in done.text, done.text

@@ -10,8 +10,8 @@ from glyphh_server.models.install import SURFACES
 
 class DeviceCode(Base):
     """A device-flow sign-in in progress (RFC 8628): the code the mod polls with (only its hash is kept), the code
-    the person sees, and what the install will be called. Approval makes the install; the mod's next poll takes its
-    token and the row is gone."""
+    the person sees, the machine it is for, and what the install will be called. Approval makes the install (or
+    reuses the machine's); the mod's next poll takes its token and the row is gone."""
 
     __tablename__ = "device_codes"
     __table_args__ = (
@@ -22,6 +22,7 @@ class DeviceCode(Base):
     device_code_hash: Mapped[str] = mapped_column(Text, primary_key=True)
     user_code: Mapped[str] = mapped_column(Text, unique=True)
     install_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("installs.id", ondelete="CASCADE"))
+    machine_id: Mapped[str] = mapped_column(Text)
     name: Mapped[str] = mapped_column(Text)
     surface: Mapped[str] = mapped_column(Text)
     mod_version: Mapped[str] = mapped_column(Text)

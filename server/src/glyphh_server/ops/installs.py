@@ -1,4 +1,4 @@
-"""A person's installs: one per device-flow approval. Revoking one signs that machine out."""
+"""A person's installs: one per machine they signed in on. Revoking one signs that machine out and frees its slot."""
 
 import uuid
 from datetime import datetime
@@ -15,6 +15,7 @@ from glyphh_server.ops.auth.tokens import revoke_install
 
 class InstallView(BaseModel):
     id: uuid.UUID
+    machine_id: str
     name: str
     surface: str
     mod_version: str
@@ -25,7 +26,15 @@ class InstallView(BaseModel):
 
 async def list_installs(conn: AsyncConnection, who: Principal) -> list[InstallView]:
     rows = await conn.execute(
-        select(Install.id, Install.name, Install.surface, Install.mod_version, Install.last_seen_at, Install.created_at)
+        select(
+            Install.id,
+            Install.machine_id,
+            Install.name,
+            Install.surface,
+            Install.mod_version,
+            Install.last_seen_at,
+            Install.created_at,
+        )
         .where(Install.user_id == who.user_id, Install.revoked_at.is_(None))
         .order_by(Install.created_at)
     )
