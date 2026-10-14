@@ -12,7 +12,14 @@ export async function surfaceNow(gh: Host, hint?: RenderSurface): Promise<Render
 /** Opens `url` in the browser pane on the desktop; false where it could not
  *  (a terminal, the tool refused, no pane): the caller shows the link. */
 export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Promise<boolean> {
-  if ((await surfaceNow(gh, hint)) !== 'desktop') return false
+  const surface = await surfaceNow(gh, hint)
+  const ok = surface === 'desktop' && (await openInPane(gh, url))
+  const dir = await gh.env.home().catch(() => '')
+  if (dir) await gh.fs.write(`${dir}/.glyphh/open-log.txt`, `${new Date().toISOString()} surface=${surface} opened=${ok}${ok ? '' : ` error=${lastOpenError}`}\n`).catch(() => undefined)
+  return ok
+}
+
+async function openInPane(gh: Host, url: string): Promise<boolean> {
   // The pane first (it may be closed), then the page in it; one retry, since
   // a pane that was closed can refuse the first call.
   await showBrowserPane(gh)
