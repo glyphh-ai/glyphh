@@ -15,8 +15,27 @@ export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Prom
   if ((await surfaceNow(gh, hint)) !== 'desktop') return false
   try {
     const r = await gh.mcp.call('Claude_Browser', 'preview_start', { url })
-    return !r.isError
+    if (r.isError) return false
   } catch {
     return false
+  }
+  await showBrowserPane(gh)
+  return true
+}
+
+/** The tab opens in the browser pane, which may be hidden: no tool shows it, so,
+ *  as the grid does (togglePane), the app's View menu does ("Show Browser"),
+ *  clicked through System Events. Best effort: a refusal leaves the tab there. */
+async function showBrowserPane(gh: Host) {
+  const menu = (script: string) =>
+    gh.process.run([
+      'osascript', '-e',
+      `tell application "System Events" to tell process "Claude" to ${script} of menu 1 of menu bar item "View" of menu bar 1`,
+    ])
+  try {
+    const items = await menu('get name of every menu item')
+    if (items.exitCode === 0 && items.stdout.includes('Show Browser')) await menu('click menu item "Show Browser"')
+  } catch {
+    // no Accessibility permission, or another language's menu
   }
 }

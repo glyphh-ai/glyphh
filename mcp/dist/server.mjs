@@ -24085,9 +24085,11 @@ function statusTool(server, flow) {
 }
 function makeServer(flow) {
   const server = new McpServer({ name: "glyphh", version: modVersion() });
-  server.registerResource("sign-in", CARD_URI, { title: "Glyphh sign-in", mimeType: MIME }, async () => ({
-    contents: [{ uri: CARD_URI, mimeType: MIME, text: cardHtml() }]
-  }));
+  for (const uri of [CARD_URI, "ui://glyphh/sign-in/1", "ui://glyphh/sign-in/2"]) {
+    server.registerResource(`sign-in ${uri}`, uri, { title: "Glyphh sign-in", mimeType: MIME }, async () => ({
+      contents: [{ uri, mimeType: MIME, text: cardHtml() }]
+    }));
+  }
   signInTool(server, flow);
   statusTool(server, flow);
   openTool(server);

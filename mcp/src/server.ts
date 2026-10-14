@@ -117,9 +117,13 @@ function statusTool(server: McpServer, flow: SignIn) {
 
 export function makeServer(flow: SignIn): McpServer {
   const server = new McpServer({ name: 'glyphh', version: modVersion() })
-  server.registerResource('sign-in', CARD_URI, { title: 'Glyphh sign-in', mimeType: MIME }, async () => ({
-    contents: [{ uri: CARD_URI, mimeType: MIME, text: cardHtml() }],
-  }))
+  // Hosts keep a tool's card address from when they connected, so the older
+  // addresses serve the current card too.
+  for (const uri of [CARD_URI, 'ui://glyphh/sign-in/1', 'ui://glyphh/sign-in/2']) {
+    server.registerResource(`sign-in ${uri}`, uri, { title: 'Glyphh sign-in', mimeType: MIME }, async () => ({
+      contents: [{ uri, mimeType: MIME, text: cardHtml() }],
+    }))
+  }
   signInTool(server, flow)
   statusTool(server, flow)
   openTool(server)
