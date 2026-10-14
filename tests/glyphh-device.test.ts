@@ -70,5 +70,5 @@ test('device flow: an install past the plan limit is refused with the limit', as
   await startSignIn(w.gh)
   await w.advance(5_000)
   await settle()
-  expect(await w.gh.state.auth.get()).toEqual({ status: 'out', error: 'Limit reached: installs. 1 of 1 used. The Pro plan lifts it. (trace t)' })
+  expect(await w.gh.state.auth.get()).toEqual({ status: 'out', error: 'Limit reached. (1 of 1 installs used) (trace t)' })
 })

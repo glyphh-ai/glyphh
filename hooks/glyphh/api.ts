@@ -86,13 +86,10 @@ export function describe(err: unknown): string {
   const trace = err.traceId ? ` (trace ${err.traceId})` : ''
   if (err.code !== 'E_LIMIT') return `${err.message || err.code}${trace}`
   const d = err.detail
-  const limit = num(d.limit) ?? 'limit'
   const used = num(d.used)
-  const max = num(d.max ?? d.allowed ?? d.limit_value ?? d.cap)
-  const plan = num(d.plan ?? d.upgrade ?? d.lifted_by ?? d.next_plan)
-  const usage = used !== undefined ? ` ${used}${max !== undefined ? ` of ${max}` : ''} used.` : ''
-  const lift = plan ? ` The ${plan} plan lifts it.` : ''
-  return `Limit reached: ${limit}.${usage}${lift}${err.message ? ` ${err.message}` : ''}${trace}`
+  const max = num(d.max)
+  const usage = used !== undefined && max !== undefined ? ` (${used} of ${max} ${num(d.limit) ?? ''} used)` : ''
+  return `${err.message || 'Limit reached.'}${usage}${trace}`
 }
 
 /** A list from an answer that is the list itself or holds it under a key. */

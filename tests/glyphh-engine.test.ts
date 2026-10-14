@@ -89,7 +89,7 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   await ui.input({ key: 'ws-new', text: 'Research' })
   expect(w.server.s.workspaces).toContain('Research')
   await ui.input({ key: 'ws-new', text: 'Third' })
-  expect(await ui.find({ type: 'Text', text: /Limit reached: workspaces\. 2 of 2 used\. The Pro plan lifts it\./ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /\(2 of 2 workspaces used\)/ })).toBeDefined()
 })
 
 test('a divider dragged in the grid is saved to the workspace file', async ($, on) => {

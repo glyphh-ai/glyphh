@@ -50,7 +50,7 @@ test('create: the server first; past the limit nothing is made and the limit is 
 
   await W.createWorkspace(w.gh, 'Third')
   expect(await w.gh.state.note.get()).toEqual({
-    text: 'Limit reached: workspaces. 2 of 2 used. The Pro plan lifts it. Upgrade to add more. (trace tr-1)',
+    text: 'Upgrade to add more. (2 of 2 workspaces used) (trace tr-1)',
     isError: true,
   })
   expect(w.files.has(`${DIR}/third.json`)).toBe(false)

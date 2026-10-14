@@ -4,7 +4,8 @@
 // Accepted shapes (the server's choice, any one):
 //   { token: "<header>.<payload>.<sig>" }                 compact JWS, EdDSA
 //   { payload: "<the JSON text signed>", signature }      signature over payload's bytes
-//   { license: {...}, signature }                         signature over the canonical JSON
+//   { payload: {...}, signature }  (the server's)        signature over the canonical JSON
+//   { license: {...}, signature }                         the same
 //                                                         (keys sorted, no spaces, \u escapes)
 // The key: { key | public_key }, raw 32 bytes in base64 or base64url, or PEM
 // (SPKI), or a JWK { kty: "OKP", crv: "Ed25519", x } (alone or in `keys`).
@@ -30,7 +31,7 @@ export function canonical(v: unknown): string {
     const keys = Object.keys(v).sort()
     return `{${keys.map(k => `${canonical(k)}:${canonical((v as Json)[k])}`).join(',')}}`
   }
-  if (typeof v === 'string') return JSON.stringify(v).replace(/[\u007f-￿]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+  if (typeof v === 'string') return JSON.stringify(v).replace(/[\u0080-\uffff]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
   return JSON.stringify(v)
 }
 
@@ -52,6 +53,9 @@ export function signedParts(body: Json): { message: Uint8Array; signature: Uint8
   }
   const signature = fromBase64(String(body.signature ?? ''))
   if (typeof body.payload === 'string') return { message: enc.encode(body.payload), signature, claims: JSON.parse(body.payload) as Json }
+  if (body.payload && typeof body.payload === 'object') {
+    return { message: enc.encode(canonical(body.payload)), signature, claims: body.payload as Json }
+  }
   if (body.license && typeof body.license === 'object') {
     return { message: enc.encode(canonical(body.license)), signature, claims: body.license as Json }
   }

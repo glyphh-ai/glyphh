@@ -34,7 +34,7 @@ test('client: refusals read as {error: {code, message, trace_id}}; E_LIMIT names
   const err = await api(w.gh, 'POST', '/v1/workspaces', { name: 'c' }).catch(e => e)
   expect(err).toBeInstanceOf(ApiError)
   expect((err as ApiError).code).toBe('E_LIMIT')
-  expect(describe(err)).toBe('Limit reached: workspaces. 2 of 2 used. The Pro plan lifts it. Upgrade to add more. (trace tr-1)')
+  expect(describe(err)).toBe('Upgrade to add more. (2 of 2 workspaces used) (trace tr-1)')
   const missing = await api(w.gh, 'DELETE', '/v1/workspaces/zzz').catch(e => e)
   expect(describe(missing)).toBe('No such workspace. (trace tr-1)')
 })
@@ -99,4 +99,20 @@ test('license: expired is not valid; JWS and canonical-JSON forms check too', as
   const sig = b64(await sign(new TextEncoder().encode(canonical(claims))))
   expect(await check({ license: claims, signature: sig }, { public_key: b64(publicKey) }, 0)).toMatchObject({ ok: true, plan: 'Team' })
   expect(canonical({ b: 1, a: 'é' })).toBe('{"a":"\\u00e9","b":1}')
+})
+
+test("license: the server's own answer, signed by glyphh_server.ops.license, checks", async () => {
+  const payload = {
+    install_id: '11111111-1111-1111-1111-111111111111',
+    user_id: '22222222-2222-2222-2222-222222222222',
+    org_id: '33333333-3333-3333-3333-333333333333',
+    plan: 'Café Pro',
+    limits: { max_members: 1, max_installs: 5, max_workspaces: null },
+    features: { rpa: true },
+    expires_at: '2099-01-01T00:00:00Z',
+  }
+  const signature = 'EaESoEENcc6rUSXiev5tW8Jqk+k9E4SBUMBqcLz7lq3O8AdtjSGPsS313eh2Nj0Di18ubWpoptxKAbG5GSGKCA=='
+  const key = { alg: 'Ed25519', public_key: '6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=' }
+  expect(await check({ payload, signature }, key, 0)).toMatchObject({ ok: true, plan: 'Café Pro', features: { rpa: true } })
+  expect((await check({ payload: { ...payload, plan: 'Team' }, signature }, key, 0)).ok).toBe(false)
 })
