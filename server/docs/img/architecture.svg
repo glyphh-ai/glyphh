@@ -10,9 +10,8 @@
 <rect x="200" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="345" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="490" y="80" width="135" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="55" y="185" width="185" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
-<rect x="270" y="185" width="190" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
-<rect x="480" y="185" width="145" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+<rect x="55" y="185" width="345" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<rect x="430" y="185" width="195" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
 <rect x="30" y="332" width="170" height="60" rx="8" fill="#FAECE7" stroke="#993C1D"/>
 <rect x="240" y="332" width="240" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
 <rect x="500" y="332" width="130" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
@@ -20,27 +19,26 @@
 </g>
 <g text-anchor="middle" font-size="13" font-weight="600">
 <text x="122" y="103" fill="#3C3489">glyphh</text><text x="267" y="103" fill="#3C3489">workspaces</text><text x="412" y="103" fill="#3C3489">rpa</text><text x="557" y="103" fill="#3C3489">programs</text>
-<text x="147" y="208" fill="#3C3489">Browser machine</text><text x="365" y="208" fill="#085041">rrotor, local</text><text x="552" y="208" fill="#3C3489">~/.glyphh</text>
+<text x="227" y="208" fill="#085041">rrotor, local: every plan</text><text x="527" y="208" fill="#3C3489">~/.glyphh</text>
 <text x="115" y="356" fill="#712B13">Claude routines</text>
 <text x="360" y="356" fill="#085041">Server</text><text x="565" y="356" fill="#085041">Postgres</text>
 <text x="435" y="500" fill="#085041">rrotor, hosted: one isolated runtime per person</text>
 </g>
 <g text-anchor="middle" font-size="11.5">
 <text x="122" y="123" fill="#534AB7">Account, license</text><text x="267" y="123" fill="#534AB7">Layouts, tabs</text><text x="412" y="123" fill="#534AB7">Local browser tasks</text><text x="557" y="123" fill="#534AB7">Build, test, deploy</text>
-<text x="147" y="227" fill="#534AB7">Local MCP, Chrome profiles</text><text x="365" y="227" fill="#0F6E56">Every plan; same image</text><text x="552" y="227" fill="#534AB7">Workspaces, sites</text>
+<text x="227" y="227" fill="#0F6E56">Browser, profiles, workspaces, sites, programs</text><text x="527" y="227" fill="#534AB7">Install, license</text>
 <text x="115" y="376" fill="#993C1D">Anthropic: schedule, API</text>
 <text x="360" y="376" fill="#0F6E56">Accounts, programs, connector, relay</text><text x="565" y="376" fill="#0F6E56">Records only</text>
 <text x="435" y="519" fill="#0F6E56">Headless: Python, Node, Postgres+pgvector, Mongo, Neo4j, Chromium</text>
 <text x="435" y="536" fill="#0F6E56">Programs live here; capped hours, storage billed per GB</text>
 </g>
 <g stroke="#5F5E5A" stroke-width="1.5" fill="none">
-<line x1="147" y1="152" x2="147" y2="182" marker-end="url(#a)"/>
-<line x1="365" y1="152" x2="365" y2="182" marker-end="url(#a)"/>
-<line x1="552" y1="152" x2="552" y2="182" marker-end="url(#a)"/>
-<line x1="255" y1="152" x2="255" y2="329" marker-start="url(#a)" marker-end="url(#a)"/>
+<line x1="227" y1="152" x2="227" y2="182" marker-end="url(#a)"/>
+<line x1="527" y1="152" x2="527" y2="182" marker-end="url(#a)"/>
+<line x1="415" y1="152" x2="415" y2="329" marker-start="url(#a)" marker-end="url(#a)"/>
 <line x1="202" y1="362" x2="237" y2="362" marker-end="url(#a)"/>
 <line x1="482" y1="362" x2="497" y2="362" marker-end="url(#a)"/>
 <line x1="460" y1="475" x2="460" y2="395" marker-end="url(#a)"/>
 </g>
-<g font-size="11.5" fill="#5F5E5A"><text x="263" y="285">Sign-in, license, build, live panel</text><text x="40" y="412">calls the Glyphh connector</text><text x="468" y="432">outbound link</text></g>
+<g font-size="11.5" fill="#5F5E5A"><text x="423" y="285">Sign-in, license, build, live panel</text><text x="40" y="412">calls the Glyphh connector</text><text x="468" y="432">outbound link</text></g>
 </svg>

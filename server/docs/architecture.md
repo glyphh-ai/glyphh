@@ -32,11 +32,12 @@ flowchart TB
             RPA["glyphh-rpa"]
             PR["glyphh-programs"]
         end
-        BM["Browser machine<br/>local MCP, Chrome"]
-        Local[("~/.glyphh")]
-        WS --> BM
-        RPA --> BM
-        BM --> Local
+        LocalRotor["rrotor, local<br/>browser, profiles, workspaces,<br/>sites, programs"]
+        Local[("~/.glyphh<br/>install, license")]
+        WS --> LocalRotor
+        RPA --> LocalRotor
+        PR --> LocalRotor
+        Base --> Local
     end
 
     subgraph Anthropic["Anthropic"]
@@ -83,7 +84,7 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 - **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub. One sign-in serves every mod on that machine.
 - **License:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
 - **Panels:** account, org, plan, billing.
-- **The browser machine:** a local MCP server `glyphh` ships for the local mods (workspaces, RPA): Chrome over a private pipe, one Chrome per **named profile** (`~/.glyphh/profiles/<name>/`), each holding only the sign-ins made in it.
+- **Starts the local rrotor** (Docker, OrbStack or Apple's `container`): the one place on the machine that holds the browser and its named profiles, workspaces, RPA sites and programs (Chris, 2026-10-14). The other mods work through it.
 
 ### `glyphh-workspaces`
 
@@ -91,15 +92,16 @@ Built from `~/development/glyphh/workspaces`.
 
 - **Workspaces:** switch with `/dip`. A workspace sets the session's model, folder, permission mode and effort, and opens its grid of tabs.
 - **Tabs:** a URL, its profile, and **no redirect** (a site is never handed to its native app: Slack, Teams, Zoom, Discord, Notion).
+- **Workspace files live in the local rrotor** (`/data/workspaces/<slug>.json`); its Chromium renders the tabs.
 - **Live pages:** on desktop the layout as one page in Claude's browser pane (`/stream`, WebRTC, JPEG fallback); in the CLI drawn in the terminal (kitty graphics: Ghostty, kitty).
 - **The limit:** each workspace's name is registered with the server; past the plan's limit it is refused.
 - **With RPA licensed,** a tab on a site that has sequences gets their tools, run in the tab.
 
 ### `glyphh-rpa`: local only
 
-A browser for Claude apart from the person's own, on their machine; no rrotor. Claude never works in the person's own browser: it works in a named profile holding only the sign-ins made in it.
+A browser for Claude apart from the person's own, on their machine: it runs in the local rrotor, never the hosted one. Claude never works in the person's own browser: it works in a named profile holding only the sign-ins made in it.
 
-- **Everything is an MCP tool** (the browser machine's), and a skill teaches Claude the flow. The person says "Use Glyphh to post our weekly update to LinkedIn; ask me before it posts; work it out, then let's test it", and Claude opens the live panel, picks or makes a profile, asks the person to sign in (they take control; Claude sees nothing while they do), asks what to call the task, records the person or works it out, saves it as a sequence and test-runs it, stopping at every `ask` step.
+- **Everything is an MCP tool** (the local rrotor's), and a skill teaches Claude the flow. The person says "Use Glyphh to post our weekly update to LinkedIn; ask me before it posts; work it out, then let's test it", and Claude opens the live panel, picks or makes a profile, asks the person to sign in (they take control; Claude sees nothing while they do), asks what to call the task, records the person or works it out, saves it as a sequence and test-runs it, stopping at every `ask` step.
 - **Tools:** `profile_list`, `profile_create`, `panel_open`, `ask_user` (`login`, `approve`, `choose`, `text`), `page_read`, `page_act`, `record_start`, `record_stop`, `site_save`, `sequence_save`, `run`, `sites_list`, `log_read`.
 - **Sites and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), each step `auto` or `ask`; saved sequences become tools (`<site>_<sequence>`).
 - **Runs on a schedule** through Claude's Desktop scheduled tasks (local routines), which run on the person's machine, if they load plugins (to prove).
@@ -176,23 +178,25 @@ Both run the same image, the same programs and the same SDK; a program built loc
 
 ### On the machine: `~/.glyphh`
 
-Nothing here goes to the cloud.
+Only what the mods need to start and sign in; nothing here goes to the cloud.
 
 | Path | Mod | What |
 |---|---|---|
 | `install.json` | `glyphh` | This install's id and token, mode 0600 |
 | `license.json` | `glyphh` | The signed license: plan, limits, mods, expiry |
-| `profiles/<name>/` | `glyphh` | A named Chrome profile for the local mods |
-| `workspaces/<slug>.json` | `glyphh-workspaces` | A workspace: session, grid, cells, tabs |
-| `rpa/<slug>.json`, `rpa/log/` | `glyphh-rpa` | Sites, sequences and their approval rules; what ran |
 
 ### In rrotor: `/data`
+
+The same layout in the local and the hosted rrotor; workspaces and RPA sites are only in the local one.
+
 
 | Path | What |
 |---|---|
 | `programs/<name>/<version>/` | A deployed version: the bundle and its manifest |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
-| `profiles/<name>/` | Named Chromium profiles: the sign-ins made through the live panel |
+| `profiles/<name>/` | Named Chromium profiles: each holds only the sign-ins made in it |
+| `workspaces/<slug>.json` | Workspaces (local rrotor): session, grid, cells, tabs |
+| `rpa/<slug>.json`, `rpa/log/` | RPA sites and sequences with their approval rules, and what ran (local rrotor) |
 | `programs/<name>/files/` | The program's own folder, the only folder it sees |
 | `db/` | Postgres (pgvector), MongoDB and Neo4j data: each program its own database |
 | `runs/<run_id>/` | A run's log, checkpoints and outputs |
@@ -467,14 +471,14 @@ Every table and column is drawn, as the database has them; the tables from rroto
 - **One hosted runtime per Pro and Team user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
 - **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
-- **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
+- **Programs:** the record only: name, repo, versions (commit, manifest, bundle reference), where each is deployed. The code, secrets and data are in the rrotor.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
 - **Approvals:** a step waiting for the person, until answered anywhere.
 - **Connector grants:** each Claude (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, revocable one by one.
 
-### On the machine
+### In rrotor
 
-![What lives in ~/.glyphh](img/data-model-local.png)
+![What lives in rrotor's /data](img/data-model-local.png)
 
 - **A workspace is one file**: its session, its grid with saved sizes, its cells and tabs (URL, profile, no redirect).
 - **A site is one file** (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
