@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Workspaces bridge</title>
+</head>
+<body>
+<script>
+"use strict"
+// The bridge runs inside the helper's headless Chrome, never on screen. For
+// each cell the layout page asks for, it draws the cell's frames on a canvas
+// and sends the canvas as WebRTC video: Chrome encodes it, DTLS-SRTP carries
+// it, and no ICE server is named, so it never leaves the machine.
+
+const T = new URLSearchParams(location.search).get("t") || ""
+const post = (path, body) => fetch(path, {
+  method: "POST", headers: { "X-Token": T, "Content-Type": "application/json" }, body: JSON.stringify(body),
+})
+const cells = new Map() // cell → { pc, stop }
+
+/** A canvas fed by the cell's JPEG stream, and its video track. */
+function source(cell, w, h) {
+  // The canvas is the cell's size and stays so between resizes: a canvas that
+  // follows each frame's size changes the video's resolution, and the picture
+  // jumps.
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(16, Math.round(w) || 640)
+  canvas.height = Math.max(16, Math.round(h) || 400)
+  const ctx = canvas.getContext("2d")
+  const stream = canvas.captureStream(30)
+  const abort = new AbortController()
+  let lastBitmap
+
+  // A static page sends no new frames; the encoder still needs some to answer
+  // a keyframe request, so the last picture is drawn again every second.
+  const paint = bitmap => ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  const keepAlive = setInterval(() => { if (lastBitmap) paint(lastBitmap) }, 1000)
+
+  void (async () => {
+    const res = await fetch(`/stream?cell=${encodeURIComponent(cell)}&t=${T}`, { signal: abort.signal })
+    const reader = res.body.getReader()
+    let buf = new Uint8Array(0)
+    const SEP = [13, 10, 13, 10]
+    const find = (a, pat, from) => {
+      outer: for (let i = from; i <= a.length - pat.length; i++) {
+        for (let j = 0; j < pat.length; j++) if (a[i + j] !== pat[j]) continue outer
+        return i
+      }
+      return -1
+    }
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) return
+      const next = new Uint8Array(buf.length + value.length)
+      next.set(buf)
+      next.set(value, buf.length)
+      buf = next
+      for (;;) {
+        const head = find(buf, SEP, 0)
+        if (head < 0) break
+        const header = new TextDecoder().decode(buf.subarray(0, head))
+        const length = Number(/Content-Length:\s*(\d+)/i.exec(header)?.[1] ?? -1)
+        if (length < 0 || buf.length < head + 4 + length + 2) break
+        const jpeg = buf.slice(head + 4, head + 4 + length)
+        buf = buf.slice(head + 4 + length + 2)
+        try {
+          const bitmap = await createImageBitmap(new Blob([jpeg], { type: "image/jpeg" }))
+          paint(bitmap)
+          lastBitmap?.close?.()
+          lastBitmap = bitmap
+        } catch {}
+      }
+    }
+  })().catch(() => {})
+
+  return {
+    stream,
+    track: stream.getVideoTracks()[0],
+    resize(nw, nh) {
+      nw = Math.max(16, Math.round(nw)); nh = Math.max(16, Math.round(nh))
+      if (nw === canvas.width && nh === canvas.height) return
+      canvas.width = nw
+      canvas.height = nh
+      if (lastBitmap) paint(lastBitmap)
+    },
+    stop() {
+      clearInterval(keepAlive)
+      abort.abort()
+      for (const t of stream.getTracks()) t.stop()
+    },
+  }
+}
+
+function close(cell) {
+  const c = cells.get(cell)
+  if (!c) return
+  cells.delete(cell)
+  c.stop()
+  c.pc.close()
+}
+
+const gathered = pc => new Promise(resolve => {
+  if (pc.iceGatheringState === "complete") return resolve()
+  pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") resolve() })
+  setTimeout(resolve, 2000)
+})
+
+async function answer(cell, sdp, w, h) {
+  close(cell)
+  const pc = new RTCPeerConnection({ iceServers: [] })
+  const src = source(cell, w, h)
+  cells.set(cell, { pc, stop: src.stop, resize: src.resize })
+  const sender = pc.addTrack(src.track, src.stream)
+  await pc.setRemoteDescription({ type: "offer", sdp })
+  await pc.setLocalDescription(await pc.createAnswer())
+  try {
+    const params = sender.getParameters()
+    params.encodings = [{ ...(params.encodings?.[0] || {}), maxBitrate: 8_000_000, maxFramerate: 30 }]
+    params.degradationPreference = "maintain-resolution"
+    await sender.setParameters(params)
+  } catch {}
+  await gathered(pc)
+  await post("/api/rtc", { cell, kind: "answer", sdp: pc.localDescription.sdp })
+}
+
+const es = new EventSource(`/events?role=bridge&t=${T}`)
+es.onmessage = ev => {
+  const m = JSON.parse(ev.data)
+  if (m.t === "offer") answer(m.cell, m.sdp, m.w, m.h).catch(err => post("/api/rtc", { cell: m.cell, kind: "error", error: String(err) }))
+  else if (m.t === "resize") cells.get(m.cell)?.resize(m.w, m.h)
+  else if (m.t === "close") close(m.cell)
+}
+</script>
+</body>
+</html>
