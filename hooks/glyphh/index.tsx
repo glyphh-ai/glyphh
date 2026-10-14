@@ -9,6 +9,7 @@ import type { AuthState, GlyphhNote, GlyphhSection, Json, Layout, LicenseInfo } 
 import { DEFAULTS } from '../layouts'
 import { glyphhCommand, startGlyphh } from './command'
 import type { Host } from './host'
+import { openUrl } from './open'
 import { Panel } from './panel'
 import type { Ui } from './ui'
 import { saveSizes } from './wsfiles'
@@ -101,6 +102,18 @@ export function registerGlyphh(on: On) {
     return done
   })
 
+  // Asking Claude to sign in (the card's tool, from this mod's server or a
+  // Glyphh connector) opens the approval page in the browser pane right then:
+  // inside the person's own request, which auto mode accepts, unlike an open
+  // from a timer later.
+  on('tool.call', async ($, e, next) => {
+    const r = await next(e)
+    if (typeof e.tool === 'string' && e.tool.endsWith('__glyphh_sign_in')) {
+      const url = JSON.stringify(r).match(/https?:\/\/[^"\s\\]+\/v1\/device\?code=[A-Z0-9-]+/)?.[0]
+      if (url) await openUrl(host($), url).catch(() => false)
+    }
+    return r
+  })
   on('command.run', { command: 'glyphh' }, ($, e) => glyphhCommand(host($), e.args))
   on('command.run', { command: 'glyphh-account' }, ($, e) => glyphhCommand(host($), e.args))
 
