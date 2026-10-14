@@ -32,6 +32,68 @@ export type Layout = {
   }
 }
 
+/** A workspace's file, `~/.glyphh/workspaces/<slug>.json`: its session, its
+ *  grid with the saved sizes, the desktop panes it opens, its cells and tabs. */
+export type WorkspaceFile = {
+  name: string
+  model: string | null
+  folder: string | null
+  permission_mode: string | null
+  effort: string | null
+  cols: number
+  rows: number
+  col_widths: number[]
+  row_heights: number[]
+  desktop_panes: ('files' | 'editor' | 'changes' | 'terminal' | 'browser')[]
+  collapse_sidebar: boolean
+  cells: WorkspaceCell[]
+  tabs: WorkspaceTab[]
+}
+
+/** A cell of a workspace file; a browser cell shows `tabs[tab]`. */
+export type WorkspaceCell = {
+  panel: Cell['panel']
+  col: number
+  row: number
+  row_span?: number
+  tab?: number
+  path?: string
+}
+
+/** A tab: a URL with its name, no redirect, and its RPA (commands, sequences). */
+export type WorkspaceTab = {
+  url: string
+  name: string
+  no_redirect: boolean
+  rpa: { commands: unknown[]; sequences: unknown[] }
+}
+
+/** The sign-in state the panels draw. The device code stays in session memory. */
+export type AuthState =
+  | { status: 'out'; error?: string }
+  | {
+      status: 'pending'
+      device_code: string
+      user_code: string
+      verification_uri: string
+      verification_uri_complete: string
+      interval: number
+      expires_at: number
+      opened: boolean
+    }
+  | { status: 'in'; install_id: string }
+
+export type GlyphhSection = 'account' | 'org' | 'plan' | 'billing' | 'workspaces'
+
+/** The panel's last word: what an action did or why not, and a page to open. */
+export type GlyphhNote = { text: string; isError: boolean; link?: string }
+
+/** A JSON object the server answered, kept as it came. */
+export type Json = { [key: string]: unknown }
+
+/** The checked license: what it says, and whether it checked out. */
+export type LicenseInfo = { ok: boolean; error?: string; plan?: string; features: Record<string, boolean>; limits: Record<string, number | null>; expires_at?: string }
+
 /** What a browser cell's page last reported. */
 export type PageInfo = { url: string; title: string }
 
@@ -61,6 +123,16 @@ declare module 'claude-code' {
       termLog: string[]
       /** Browser-pane tab per cell id: kept across the mod's reloads. */
       paneTabs: Record<string, string>
+      /** Glyphh account panels: sign-in, the open section, what the server said. */
+      auth: AuthState
+      section: GlyphhSection
+      me: Json | null
+      lists: Record<string, Json[]>
+      note: GlyphhNote | null
+      /** The workspace the Workspaces section edits. */
+      selected: string | null
+      inviteLink: string | null
+      license: LicenseInfo | null
     }
   }
 }
