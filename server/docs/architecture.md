@@ -129,8 +129,9 @@ def end(ctx: Ctx) -> None: ...                     # always runs: close up, keep
 | `needs_signin` | A site signed the program out | Opens the live panel for the person; unattended, stops and says so |
 | `failed` | Which step and why | Retries, tries another way, or reports |
 
-- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
-- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
+- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db.postgres`, `ctx.db.mongo`, `ctx.db.neo4j` (its own databases), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
+- **Folders exist only through the program** (Chris, 2026-10-14): a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; there is no folder access into rrotor from outside, and no program reaches another's.
+- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
 - **Code lives in the person's own GitHub repo** (routines clone it anyway); deploying pins a version (commit and bundle) to their rrotor.
 
 **Build time: in Claude, with the mod.** The SDK is part of `glyphh-programs`: its tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and **create its routine** (prompt, triggers, connectors). Whatever is missing, Claude asks for: connect a Claude connector, add a secret, or **sign in to a site**, which opens the live panel on the run in rrotor: the person takes control and signs in; the sign-in stays in that profile on rrotor; Claude sees nothing while they hold it.
@@ -148,7 +149,13 @@ A routine can chain all of it in one run: read a connector, run a program, do so
 
 **rrotor, locked down.**
 
-- One Linux image (`ghcr.io/glyphh-ai/rrotor`): Python, Chromium on a virtual screen per profile, the runner. Each rrotor is its own Fly machine, **stopped when idle**, woken per call; a person has as many as their plan allows, each with its own `/data`, and a program is deployed to one of them.
+- One Linux image (`ghcr.io/glyphh-ai/rrotor`), **headless**: no UI, no desktop, nothing to log into. It carries what programs build on (Chris, 2026-10-14):
+    - **Python** (the runner and programs) and **Node**;
+    - **Postgres with pgvector**, **MongoDB** and **Neo4j**: each program its own database and role, so one program never reads another's data;
+    - **Chromium**, on a virtual screen per profile, for the live panel and take control.
+
+  The databases start when a program that declares them runs and stop after (Neo4j is a JVM that wants about a gigabyte).
+- Each rrotor is its own Fly machine, **stopped when idle**, woken per call; a person has as many as their plan allows, each with its own `/data`, and a program is deployed to one of them.
 - **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
 - **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
 - **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
@@ -173,6 +180,8 @@ Nothing here goes to the cloud.
 | `programs/<name>/<version>/` | A deployed version: the bundle and its manifest |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
 | `profiles/<name>/` | Named Chromium profiles: the sign-ins made through the live panel |
+| `programs/<name>/files/` | The program's own folder, the only folder it sees |
+| `db/` | Postgres (pgvector), MongoDB and Neo4j data: each program its own database |
 | `runs/<run_id>/` | A run's log, checkpoints and outputs |
 
 ### The server
@@ -379,4 +388,4 @@ Billed per seat, per month. Installs, workspaces, machines and machine hours are
 | rrotor machines | 1 | 2 | ? | ? |
 | Machine hours a month | 1 | ? | ? | ? |
 
-To decide: where Solo sits against Pro, and the machines and hours for Solo, Pro and Team. rrotor costs Glyphh about $0.019 an hour running (Fly `shared-cpu-2x`, 2 GB) and about $1 a month per machine stopped (storage): Free's 1 hour costs about $1.02 a month; 40 hours on 2 machines about $2.75.
+To decide: where Solo sits against Pro, and the machines and hours for Solo, Pro and Team. rrotor costs Glyphh about $0.019 an hour running on 2 GB (Fly `shared-cpu-2x`), about $0.035 an hour on 4 GB for programs that use Neo4j or several databases at once, and about $1 a month per machine stopped (storage): Free's 1 hour costs about $1.02 a month; 40 hours on 2 machines about $2.75.
