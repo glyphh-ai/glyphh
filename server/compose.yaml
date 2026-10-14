@@ -15,6 +15,16 @@ services:
       timeout: 3s
       retries: 30
 
+  # Live signals only (pub/sub): nothing kept lives here, so nothing is saved to disk.
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   server:
     build:
       context: .
@@ -24,10 +34,13 @@ services:
         required: false
     environment:
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      GLYPHH_REDIS_URL: redis://redis:6379/0
     ports:
       - "8080:8080"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   test:
@@ -39,8 +52,11 @@ services:
       GLYPHH_ENV: test
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh_test
       GLYPHH_SECRET_KEY: test-secret-key-that-signs-sign-in-links-0123456789
+      GLYPHH_REDIS_URL: redis://redis:6379/1
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

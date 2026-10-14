@@ -6,7 +6,9 @@ The Glyphh server: the one cloud part behind Glyphh's mods for Claude (`glyphh`,
 
     docker compose up --build
 
-The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`).
+The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`). Compose runs Postgres, Redis and the server.
+
+Redis carries only live signals (pub/sub): an approval reaches whichever server process holds the person's `/v1/approvals/stream`. Nothing kept lives there; Postgres holds the record, so Redis saves nothing to disk. In production Redis runs on the server's own Fly machine, beside the server.
 
 Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`glyphh`, `glyphh-workspaces` and `glyphh-programs` free, `glyphh-rpa` not) and the plans (Free, Pro, Team), each with its first version. Free includes the free mods; Pro and Team (`all_mods`) include every active mod. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
 
@@ -15,6 +17,8 @@ Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed
 | Setting | What |
 |---|---|
 | `GLYPHH_ENV` | `dev` (default), `test` or `prod` |
+| `GLYPHH_DATABASE_URL` | Postgres (`postgresql+asyncpg://…`) |
+| `GLYPHH_REDIS_URL` | Redis, for live signals only (`redis://…`); in production on the server's own Fly machine |
 | `GLYPHH_PUBLIC_URL` | The server's own address: the device flow's link and the provider callbacks (`/auth/{google,github}/callback`) |
 | `GLYPHH_SECRET_KEY` | 32+ characters; signs the steps of the device sign-in page and of linking a provider |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | Sign-in providers; a provider without both is not offered |
@@ -34,7 +38,7 @@ Make a license key, or a secrets key, with:
 `src/glyphh_server/`, built database first, then the service functions, then thin routes:
 
 - `models/`: the schema, one table per module (drawn in `docs/architecture.md`, Data model)
-- `db/`: the engine, the schema step, the seed, the drift check and tenancy (row-level security keyed on the org)
+- `db/`: the engine, the schema step, the seed, the drift check, tenancy (row-level security keyed on the org) and `signals.py`, the Redis client for live signals
 - `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe
 - `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages, `api/github_pages.py` installing the GitHub App in the browser
 - `obs/`: JSON logs, each line with its trace id; every refusal is `{"error": {"code", "message", "trace_id"}}`
@@ -43,7 +47,7 @@ Make a license key, or a secrets key, with:
 
     docker compose --profile test run --rm --build test
 
-The suite runs against a real Postgres (its own `glyphh_test` database, made fresh each run) and fails under 100% line and branch coverage. Google, GitHub (sign-in and the GitHub App), Stripe and Anthropic's routines are faked at the HTTP layer; no test reaches them, and the keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
+The suite runs against a real Postgres (its own `glyphh_test` database, made fresh each run) and a real Redis and fails under 100% line and branch coverage. Google, GitHub (sign-in and the GitHub App), Stripe and Anthropic's routines are faked at the HTTP layer; no test reaches them, and the keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
 
 To try billing against Stripe's test mode locally, forward its events with `stripe listen --forward-to localhost:8080/v1/stripe/webhook` and set the webhook secret it prints.
 

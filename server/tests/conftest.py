@@ -9,6 +9,7 @@ from asgi_lifespan import LifespanManager
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
+from redis.asyncio import Redis
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -16,12 +17,16 @@ from glyphh_server.app import create_app
 from glyphh_server.config import Settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.schema import apply_schema
+from glyphh_server.db.signals import make_redis
 from tests.fakes import FakeGitHubApp, FakeStripe, fake_http
 
 DATABASE_URL: str = os.environ.get(
     "GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test"
 )
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
+# A real Redis: the test profile's own database on the compose service; pub/sub channels are per person.
+REDIS_URL: str = os.environ.get("GLYPHH_REDIS_URL", "redis://localhost:6379/1")
+UNREACHABLE_REDIS: str = "redis://127.0.0.1:1/0"
 SECRET_KEY: str = "test-secret-key-that-signs-sign-in-links-0123456789"
 PUBLIC_URL: str = "http://localhost:8080"
 WEBHOOK_SECRET: str = "whsec_test_not_a_real_secret"
@@ -35,6 +40,7 @@ GITHUB_APP_PEM: str = GITHUB_APP_KEY.private_bytes(
 SETTINGS: Settings = Settings(
     env="test",
     database_url=DATABASE_URL,
+    redis_url=REDIS_URL,
     version="test",
     public_url=PUBLIC_URL,
     secret_key=SECRET_KEY,
@@ -79,6 +85,13 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     await eng.dispose()
 
 
+@pytest.fixture
+async def redis() -> AsyncIterator[Redis]:
+    client = make_redis(REDIS_URL)
+    yield client
+    await client.aclose()
+
+
 async def _client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
@@ -106,5 +119,9 @@ async def client(
 
 @pytest.fixture
 async def client_without_database() -> AsyncIterator[httpx.AsyncClient]:
-    async for c in _client(create_app(Settings(database_url=UNREACHABLE_URL, version="test", secret_key=SECRET_KEY))):
+    async for c in _client(
+        create_app(
+            Settings(database_url=UNREACHABLE_URL, redis_url=UNREACHABLE_REDIS, version="test", secret_key=SECRET_KEY)
+        )
+    ):
         yield c

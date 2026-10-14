@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
+    # Live signals only (pub/sub): in production Redis runs on the server's own Fly machine, beside the server.
+    redis_url: str = "redis://localhost:6379/0"
     version: str = "dev"
     log_level: str = "INFO"
     public_url: str = "http://localhost:8080"

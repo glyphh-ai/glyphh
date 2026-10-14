@@ -7,4 +7,5 @@ router = APIRouter(prefix="/v1", tags=["health"])
 
 @router.get("/health", operation_id="health")
 async def get_health(request: Request) -> Health:
-    return await health(request.app.state.engine, request.app.state.settings.version)
+    state = request.app.state
+    return await health(state.engine, state.redis, state.settings.version)

@@ -28,7 +28,11 @@ async def connection(request: Request) -> AsyncIterator[AsyncConnection]:
 Conn = Annotated[AsyncConnection, Depends(connection)]
 
 
-async def principal(conn: Conn, creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]) -> Principal:
+Bearer = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
+
+
+async def authenticate(conn: AsyncConnection, creds: HTTPAuthorizationCredentials | None) -> Principal:
+    """The caller behind the token; from here to the end of the transaction, conn sees only the caller's org."""
     if creds is None:
         raise Unauthorized("Sign in to Glyphh: send your install's token as a Bearer token.")
     who = await principal_for(conn, creds.credentials)
@@ -36,6 +40,10 @@ async def principal(conn: Conn, creds: Annotated[HTTPAuthorizationCredentials | 
     context.org_id.set(str(who.org_id))
     await tenancy.enter(conn, who.org_id)
     return who
+
+
+async def principal(conn: Conn, creds: Bearer) -> Principal:
+    return await authenticate(conn, creds)
 
 
 Caller = Annotated[Principal, Depends(principal)]
