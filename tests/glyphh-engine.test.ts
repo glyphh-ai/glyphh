@@ -16,7 +16,7 @@ function world(on: On, surface: 'terminal' | 'desktop') {
   mock.store(on)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
-  on('tool.register', (_$, e) => ({ value: { tool: `mcp__workspaces__${e.name}` } }))
+  on('tool.register', (_$, e) => ({ value: { tool: `mcp__glyphh__${e.name}` } }))
   on('ui.toast', () => ({ value: undefined }))
   mock.clock(on, { now: Date.parse('2026-10-13T12:00:00Z') })
   on('http.fetch', async (_$, e) => ({ value: await server.fetch(e.url, e.init) }))
@@ -43,7 +43,7 @@ function world(on: On, surface: 'terminal' | 'desktop') {
 }
 
 const pane = (surface: (typeof SURFACES)[number]) => ({
-  plugin: 'workspaces',
+  plugin: 'glyphh',
   surface,
   component: 'Pane' as const,
   requestId: 'glyphh',

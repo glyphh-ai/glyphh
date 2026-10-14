@@ -1,7 +1,9 @@
 {
-  "name": "workspaces",
+  "name": "glyphh",
   "version": "0.1.0",
-  "author": { "name": "Glyphh" },
-  "description": "Layouts of live browsers and files in a pane: drag the grid, switch layouts",
+  "author": {
+    "name": "Glyphh"
+  },
+  "description": "Glyphh for Claude: your account, workspaces of live tabs, and the sign-in card",
   "types": "./types/index.d.ts"
 }

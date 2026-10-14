@@ -4,7 +4,7 @@ import { expect, test } from 'claude-code/testing'
 const SURFACES = ['terminal', 'desktop'] as const
 
 const pane = (surface: (typeof SURFACES)[number]) => ({
-  plugin: 'workspaces',
+  plugin: 'glyphh',
   surface,
   component: 'Pane' as const,
   requestId: 'workspaces',

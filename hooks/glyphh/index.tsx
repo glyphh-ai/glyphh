@@ -13,17 +13,17 @@ import { Panel } from './panel'
 import type { Ui } from './ui'
 import { saveSizes } from './wsfiles'
 
-const auth = atom({ plugin: 'workspaces', key: 'auth' } as const, { status: 'out' } as AuthState)
-const section = atom({ plugin: 'workspaces', key: 'section' } as const, 'account' as GlyphhSection)
-const me = atom({ plugin: 'workspaces', key: 'me' } as const, null as Json | null)
-const lists = atom({ plugin: 'workspaces', key: 'lists' } as const, {} as Record<string, Json[]>)
-const note = atom({ plugin: 'workspaces', key: 'note' } as const, null as GlyphhNote | null)
-const selected = atom({ plugin: 'workspaces', key: 'selected' } as const, null as string | null)
-const inviteLink = atom({ plugin: 'workspaces', key: 'inviteLink' } as const, null as string | null)
-const license = atom({ plugin: 'workspaces', key: 'license' } as const, null as LicenseInfo | null)
-const layouts = atom({ plugin: 'workspaces', key: 'layouts' } as const, DEFAULTS as Layout[])
-const active = atom({ plugin: 'workspaces', key: 'active' } as const, DEFAULTS[0]!.name)
-const previous = atom({ plugin: 'workspaces', key: 'previous' } as const, null as string | null)
+const auth = atom({ plugin: 'glyphh', key: 'auth' } as const, { status: 'out' } as AuthState)
+const section = atom({ plugin: 'glyphh', key: 'section' } as const, 'account' as GlyphhSection)
+const me = atom({ plugin: 'glyphh', key: 'me' } as const, null as Json | null)
+const lists = atom({ plugin: 'glyphh', key: 'lists' } as const, {} as Record<string, Json[]>)
+const note = atom({ plugin: 'glyphh', key: 'note' } as const, null as GlyphhNote | null)
+const selected = atom({ plugin: 'glyphh', key: 'selected' } as const, null as string | null)
+const inviteLink = atom({ plugin: 'glyphh', key: 'inviteLink' } as const, null as string | null)
+const license = atom({ plugin: 'glyphh', key: 'license' } as const, null as LicenseInfo | null)
+const layouts = atom({ plugin: 'glyphh', key: 'layouts' } as const, DEFAULTS as Layout[])
+const active = atom({ plugin: 'glyphh', key: 'active' } as const, DEFAULTS[0]!.name)
+const previous = atom({ plugin: 'glyphh', key: 'previous' } as const, null as string | null)
 
 function hostState($: EngineInterface): Host['state'] {
   return {

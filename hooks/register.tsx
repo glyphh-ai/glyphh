@@ -10,16 +10,16 @@ import { DEFAULTS } from './layouts'
 const PANE = 'workspaces'
 const STORE_KEY = 'layouts'
 
-const layouts = atom({ plugin: 'workspaces', key: 'layouts' } as const, DEFAULTS)
-const active = atom({ plugin: 'workspaces', key: 'active' } as const, DEFAULTS[0]!.name)
-const previous = atom({ plugin: 'workspaces', key: 'previous' } as const, null as string | null)
-const pages = atom({ plugin: 'workspaces', key: 'pages' } as const, {} as Record<string, PageInfo>)
-const scroll = atom({ plugin: 'workspaces', key: 'scroll' } as const, {} as Record<string, number>)
-const helper = atom({ plugin: 'workspaces', key: 'helper' } as const, { status: 'off' } as HelperState)
-const openFile = atom({ plugin: 'workspaces', key: 'openFile' } as const, null as string | null)
-const expanded = atom({ plugin: 'workspaces', key: 'expanded' } as const, [] as string[])
-const dirty = atom({ plugin: 'workspaces', key: 'dirty' } as const, {} as Record<string, boolean>)
-const termLog = atom({ plugin: 'workspaces', key: 'termLog' } as const, [
+const layouts = atom({ plugin: 'glyphh', key: 'layouts' } as const, DEFAULTS)
+const active = atom({ plugin: 'glyphh', key: 'active' } as const, DEFAULTS[0]!.name)
+const previous = atom({ plugin: 'glyphh', key: 'previous' } as const, null as string | null)
+const pages = atom({ plugin: 'glyphh', key: 'pages' } as const, {} as Record<string, PageInfo>)
+const scroll = atom({ plugin: 'glyphh', key: 'scroll' } as const, {} as Record<string, number>)
+const helper = atom({ plugin: 'glyphh', key: 'helper' } as const, { status: 'off' } as HelperState)
+const openFile = atom({ plugin: 'glyphh', key: 'openFile' } as const, null as string | null)
+const expanded = atom({ plugin: 'glyphh', key: 'expanded' } as const, [] as string[])
+const dirty = atom({ plugin: 'glyphh', key: 'dirty' } as const, {} as Record<string, boolean>)
+const termLog = atom({ plugin: 'glyphh', key: 'termLog' } as const, [
   '~/development/glyphh/workspaces $ claude plugin test .',
   '(pass) terminal: draws the active layout',
   '(pass) terminal: dragging a divider moves the column split',
@@ -225,7 +225,7 @@ async function openInGhostty($: EngineInterface) {
 
 const PANE_SERVER = 'Claude_Browser'
 let lastSurface: string | undefined
-const paneTabs = atom({ plugin: 'workspaces', key: 'paneTabs' } as const, {} as Record<string, string>)
+const paneTabs = atom({ plugin: 'glyphh', key: 'paneTabs' } as const, {} as Record<string, string>)
 
 async function paneCall($: EngineInterface, tool: string, args: Record<string, unknown>): Promise<string> {
   const r = await $.mcp.call(PANE_SERVER, tool, args)
@@ -686,7 +686,7 @@ export const register: Register = on => {
     }
   })
 
-  on('tool.call', { tool: 'mcp__workspaces__page_read' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__glyphh__page_read' }, async ($, e) => {
     if (!viewer) return { result: { error: 'The layout page is not running: start it with /stream' } }
     const input = (e.input ?? {}) as { cell?: unknown }
     const cell = typeof input.cell === 'string' ? input.cell : ''

@@ -123,7 +123,7 @@ but the device flow's and the plans list carries `Authorization: Bearer
 Ask Claude *"sign in to Glyphh"*: the `glyphh-sign-in` skill has it call
 `glyphh_sign_in`, from the MCP server the mod ships (`.mcp.json` at the
 plugin root: `node ${CLAUDE_PLUGIN_ROOT}/mcp/dist/server.mjs`, stdio; Claude
-Code starts it with the plugin as `plugin:workspaces:glyphh`). Signed in
+Code starts it with the plugin as `plugin:glyphh:glyphh`). Signed in
 already, it answers who. Otherwise it starts the device flow and returns the
 card, `ui://glyphh/sign-in/1` (`text/html;profile=mcp-app`, the ext-apps
 bridge inlined, no network of its own, the host's theme variables): the code,

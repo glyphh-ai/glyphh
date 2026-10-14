@@ -105,7 +105,7 @@ export type HelperState =
 
 declare module 'claude-code' {
   interface PluginState {
-    workspaces: {
+    glyphh: {
       layouts: Layout[]
       active: string
       /** The layout before the last switch: where `/dip back` goes. */
