@@ -19,6 +19,7 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
         ("glyphh", "Glyphh", True, ["Free", "Pro", "Team"]),
         ("glyphh-workspaces", "Glyphh Workspaces", True, ["Free", "Pro", "Team"]),
         ("glyphh-rpa", "Glyphh RPA", False, ["Pro", "Team"]),
+        ("glyphh-programs", "Glyphh Programs", True, ["Free", "Pro", "Team"]),
     ]
     assert all(m["description"] for m in mods)
 
@@ -40,12 +41,14 @@ async def test_a_new_mod_reaches_the_paid_plans_and_a_retired_one_leaves_every_p
         await conn.execute(update(Mod).where(Mod.slug == "glyphh-workspaces").values(active=False))
     try:
         lic = (await client.get("/v1/license", headers=pro.headers)).json()["payload"]
-        assert lic["mods"] == ["glyphh", "glyphh-next", "glyphh-rpa"]
-        assert (await client.get("/v1/me", headers=free.headers)).json()["plan"]["mods"] == ["glyphh"]
+        assert lic["mods"] == ["glyphh", "glyphh-next", "glyphh-programs", "glyphh-rpa"]
+        free_mods = (await client.get("/v1/me", headers=free.headers)).json()["plan"]["mods"]
+        assert free_mods == ["glyphh", "glyphh-programs"]
         listed = {m["slug"]: m["plans"] for m in (await client.get("/v1/mods")).json()}
         assert listed == {
             "glyphh": ["Free", "Pro", "Team"],
             "glyphh-rpa": ["Pro", "Team"],
+            "glyphh-programs": ["Free", "Pro", "Team"],
             "glyphh-next": ["Pro", "Team"],
         }
     finally:

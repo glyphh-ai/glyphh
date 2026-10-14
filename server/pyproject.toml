@@ -1,7 +1,7 @@
 [project]
 name = "glyphh-server"
 version = "0.1.0"
-description = "The Glyphh server: accounts, orgs, invites, per-seat plans, installs and the license for the Glyphh mod"
+description = "The Glyphh server: accounts, orgs, invites, per-seat plans, installs, the license and the record of programs for Glyphh's mods"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",

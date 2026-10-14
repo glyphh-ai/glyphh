@@ -23,7 +23,7 @@ async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.As
         "version": 1,
         "seat_price_cents": 1600,
         "limits": {"members": None, "installs": 10, "workspaces": None},
-        "mods": ["glyphh", "glyphh-rpa", "glyphh-workspaces"],
+        "mods": ["glyphh", "glyphh-programs", "glyphh-rpa", "glyphh-workspaces"],
     }
     assert me["used"] == {"members": 2, "seats": 3, "installs": 1, "workspaces": 1}
 

@@ -42,6 +42,13 @@ MODS: tuple[ModSeed, ...] = (
         "a task once and run it",
         False,
     ),
+    ModSeed(
+        "glyphh-programs",
+        "Glyphh Programs",
+        "Programs: deterministic Python jobs, built with Claude, run by rrotor, called by Claude and by Claude's "
+        "routines",
+        True,
+    ),
 )
 
 
@@ -52,14 +59,17 @@ class PlanSeed:
     max_members: int | None
     max_installs: int | None
     max_workspaces: int | None
+    runtime_hours: int | None
+    storage_cents_per_gb: int | None
     all_mods: bool
 
 
 FREE: str = "Free"
+# Free has no hosted runtime (0 hours, no storage). Pro's and Team's hours are still to decide: null until then.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 2, False),
-    PlanSeed("Pro", 800, 1, 5, 10, True),
-    PlanSeed("Team", 1_600, None, 10, None, True),
+    PlanSeed(FREE, 0, 1, 1, 2, 0, None, False),
+    PlanSeed("Pro", 800, 1, 5, 10, None, 50, True),
+    PlanSeed("Team", 1_600, None, 10, None, None, 50, True),
 )
 
 
@@ -107,6 +117,8 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             max_members=seed.max_members,
             max_installs=seed.max_installs,
             max_workspaces=seed.max_workspaces,
+            runtime_hours=seed.runtime_hours,
+            storage_cents_per_gb=seed.storage_cents_per_gb,
             all_mods=seed.all_mods,
         )
     )

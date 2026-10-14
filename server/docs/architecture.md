@@ -281,6 +281,7 @@ erDiagram
     PLAN_VERSIONS ||--o{ ORGS : "pinned by"
     MODS }o..o{ PLAN_VERSIONS : "free, or all_mods"
     ORGS ||--|{ USERS : "members"
+    ORGS |o--o| USERS : "admin"
     ORGS ||--o{ INVITES : "sends"
     USERS ||--|{ IDENTITIES : "signs in with"
     USERS ||--o{ INSTALLS : "has"
@@ -295,10 +296,16 @@ erDiagram
     PROGRAM_VERSIONS ||--o{ RUNS : "ran"
     RUNS ||--o{ APPROVALS : "waits on"
     USERS ||--o{ CONNECTOR_GRANTS : "allows"
+    PLANS {
+        uuid id PK
+        text name UK
+        bool active
+        int sort
+    }
     PLAN_VERSIONS {
         uuid id PK
         uuid plan_id FK
-        int version
+        int version "unique per plan"
         text stripe_price_id UK
         int seat_price_cents
         int max_members
@@ -307,15 +314,97 @@ erDiagram
         int runtime_hours
         int storage_cents_per_gb
         bool all_mods
+        timestamp created_at
+    }
+    MODS {
+        text slug PK
+        text name
+        text description
+        bool free
+        bool active
+        int sort
+    }
+    ORGS {
+        uuid id PK
+        text name
+        uuid plan_version_id FK
+        uuid admin_user_id FK
+        text stripe_customer_id UK
+        text stripe_subscription_id UK
+        int seats
+        text billing_status
+        timestamp created_at
+    }
+    USERS {
+        uuid id PK
+        uuid org_id FK
+        text email UK "in any case"
+        text name
+        text role
+        timestamp created_at
+    }
+    IDENTITIES {
+        text provider PK
+        text provider_user_id PK
+        uuid user_id FK
+        timestamp created_at
+    }
+    INVITES {
+        uuid id PK
+        uuid org_id FK
+        text email "one open per org"
+        text token_hash UK
+        timestamp expires_at
+        timestamp accepted_at
+        timestamp created_at
+    }
+    INSTALLS {
+        uuid id PK
+        uuid user_id FK
+        text machine_id "unique per user, not revoked"
+        text name
+        text surface
+        text mod_version
+        timestamp last_seen_at
+        timestamp revoked_at
+        timestamp created_at
+    }
+    TOKENS {
+        uuid id PK
+        uuid install_id FK
+        text token_hash UK
+        timestamp expires_at
+        timestamp revoked_at
+        timestamp created_at
+    }
+    DEVICE_CODES {
+        text device_code_hash PK
+        text user_code UK
+        uuid install_id FK
+        text machine_id
+        text name
+        text surface
+        text mod_version
+        int interval
+        timestamp polled_at
+        timestamp expires_at
+        timestamp approved_at
+        timestamp denied_at
+        timestamp created_at
+    }
+    WORKSPACES {
+        uuid user_id PK, FK
+        text name PK
+        timestamp created_at
     }
     RROTORS {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK, UK
         text fly_machine_id
         text region
         text image_version
         text state
-        text token_hash
+        text token_hash UK
         timestamp last_seen_at
     }
     PROGRAMS {
@@ -329,15 +418,15 @@ erDiagram
     PROGRAM_VERSIONS {
         uuid id PK
         uuid program_id FK
-        int version
+        int version "unique per program"
         text commit_sha
         json manifest
         text bundle_ref
         timestamp created_at
     }
     DEPLOYMENTS {
-        uuid rrotor_id FK
-        uuid program_version_id FK
+        uuid rrotor_id PK, FK
+        uuid program_version_id PK, FK
         timestamp deployed_at
         bool active
     }
@@ -365,12 +454,12 @@ erDiagram
         uuid id PK
         uuid user_id FK
         text client
-        text token_hash
+        text token_hash UK
         timestamp revoked_at
     }
 ```
 
-The tables already built (plans, orgs, users, identities, invites, installs, tokens, device codes, workspaces, mods) are drawn in full in the image; the new ones are for programs.
+Every table and column is drawn, as the database has them; the tables from rrotors on are for programs. Timestamps carry the time zone; ids are made by the database.
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.

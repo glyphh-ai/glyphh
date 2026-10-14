@@ -1,6 +1,6 @@
 # server
 
-The Glyphh server: the one small cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), one per machine, workspace names (for the plan's limit) and a signed license naming the mods the plan includes. What a person makes stays on their machine. `docs/architecture.md` is the contract: the API, the data model and the plans.
+The Glyphh server: the one cloud part behind Glyphh's mods for Claude (`glyphh`, `glyphh-workspaces`, `glyphh-rpa`, `glyphh-programs`), sold as one subscription. It keeps accounts, one org per user, invites, the mods catalog, versioned per-seat plans billed through Stripe, installs signed in by device flow (RFC 8628), one per machine, workspace names (for the plan's limit), a signed license naming the mods the plan includes, and the tables for programs (hosted runtimes, programs and their versions, deployments, runs, approvals, connector grants; their API is still to build). What a person makes stays on their machine or in their runtime. `docs/architecture.md` is the contract: the API, the data model and the plans.
 
 ## Run it
 
@@ -8,7 +8,7 @@ The Glyphh server: the one small cloud part behind Glyphh's mods for Claude (`gl
 
 The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`).
 
-Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`glyphh` and `glyphh-workspaces` free, `glyphh-rpa` not) and the plans (Free, Pro, Team), each with its first version. Free includes the free mods; Pro and Team (`all_mods`) include every active mod. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
+Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`glyphh`, `glyphh-workspaces` and `glyphh-programs` free, `glyphh-rpa` not) and the plans (Free, Pro, Team), each with its first version. Free includes the free mods; Pro and Team (`all_mods`) include every active mod. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed):
 

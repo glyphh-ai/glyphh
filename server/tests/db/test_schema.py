@@ -53,7 +53,7 @@ async def test_a_plan_seeded_without_a_price_gets_one_as_a_new_version(engine: A
         )
     from glyphh_server.db import seed
 
-    trial = seed.PlanSeed("Trial", 0, 1, 1, 1, False)
+    trial = seed.PlanSeed("Trial", 0, 1, 1, 1, 0, None, False)
     async with engine.begin() as conn:
         await seed._seed_version(conn, trial, "price_test_trial")
     assert await _versions(engine, "Trial") == [(1, None), (2, "price_test_trial")]
@@ -74,3 +74,14 @@ async def test_the_schema_step_runs_as_a_module(engine: AsyncEngine) -> None:
 
     await asyncio.to_thread(run)
     assert len(await _versions(engine, "Free")) == 1
+
+
+async def test_the_plans_carry_their_hosted_runtime_hours_and_storage_rate(engine: AsyncEngine) -> None:
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            select(Plan.name, PlanVersion.runtime_hours, PlanVersion.storage_cents_per_gb)
+            .join(Plan)
+            .where(PlanVersion.version == 1)
+            .order_by(Plan.sort)
+        )
+        assert [tuple(r) for r in rows] == [("Free", 0, None), ("Pro", None, 50), ("Team", None, 50)]

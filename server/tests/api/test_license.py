@@ -35,7 +35,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     assert (p["plan"], p["limits"], p["mods"]) == (
         "Pro",
         {"members": 1, "installs": 5, "workspaces": 10},
-        ["glyphh", "glyphh-rpa", "glyphh-workspaces"],
+        ["glyphh", "glyphh-programs", "glyphh-rpa", "glyphh-workspaces"],
     )
     assert "features" not in p
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
@@ -50,7 +50,7 @@ async def test_free_has_only_the_free_mods_and_the_license_needs_a_token(
 ) -> None:
     ada = await person(engine)
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert mods == ["glyphh", "glyphh-workspaces"]
+    assert mods == ["glyphh", "glyphh-programs", "glyphh-workspaces"]
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401
 

@@ -1,8 +1,9 @@
 """Tenant isolation: row-level security keyed on the org.
 
 A request made with an install's token runs as the role `glyphh_tenant` with its org in `glyphh.org_id`, and the
-policies below show it only that org's rows: the org, its users and invites, and their identities, installs, tokens
-and workspaces. Sign-in, Stripe's webhook and the few operations that cross orgs on purpose (joining another org,
+policies below show it only that org's rows: the org, its users, invites and programs, and their identities,
+installs, tokens, workspaces, runtimes and connector grants, and the programs' versions, deployments, runs and
+approvals. Sign-in, Stripe's webhook and the few operations that cross orgs on purpose (joining another org,
 being removed from one) run as the connecting role, which the policies don't bind. Applied on every boot."""
 
 from sqlalchemy import text
@@ -19,6 +20,13 @@ POLICIES: dict[str, str] = {
     "installs": "user_id IN (SELECT id FROM users)",
     "workspaces": "user_id IN (SELECT id FROM users)",
     "tokens": "install_id IN (SELECT id FROM installs)",
+    "rrotors": "user_id IN (SELECT id FROM users)",
+    "connector_grants": "user_id IN (SELECT id FROM users)",
+    "programs": f"org_id = {ORG}",
+    "program_versions": "program_id IN (SELECT id FROM programs)",
+    "deployments": "program_version_id IN (SELECT id FROM program_versions)",
+    "runs": "program_version_id IN (SELECT id FROM program_versions)",
+    "approvals": "run_id IN (SELECT id FROM runs)",
 }
 
 MAKE_ROLE: str = f"""
