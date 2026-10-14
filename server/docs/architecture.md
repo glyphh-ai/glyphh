@@ -167,7 +167,7 @@ Both run the same image, the same programs and the same SDK; a program built loc
     - **Chromium**, on a virtual screen per profile, for the live panel and take control.
 
   The databases start when a program that declares them runs and stop after (Neo4j is a JVM that wants about a gigabyte).
-- **The hosted runtime** is one Fly machine per Pro and Team user, with a volume sized to the plan's storage; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
+- **The hosted runtime** is one Fly machine per Pro and Team user, with a volume sized to the person's storage cap; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
 - **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
 - **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
 - **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
@@ -208,7 +208,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
 - **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back.
-- **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and holds its storage to the plan.
+- **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and bills its storage up to the person's cap.
 - **Limits are enforced here:** members, installs, workspaces, runtime hours and storage.
 
 ### API
@@ -304,7 +304,7 @@ erDiagram
         int max_installs
         int max_workspaces
         int runtime_hours
-        int storage_gb
+        int storage_cents_per_gb
         bool all_mods
     }
     RROTORS {
@@ -373,7 +373,7 @@ The tables already built (plans, orgs, users, identities, invites, installs, tok
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
-- **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_gb` its included storage. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage past what is included is billed per GB-month; the volume's size is the cap.
+- **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
 - **One hosted runtime per Pro and Team user** (`rrotors`); a local runtime is not in the cloud's tables beyond its install.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
 - **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
@@ -403,8 +403,8 @@ Billed per seat, per month. Installs, workspaces, runtime hours and storage are 
 | Local runtime | Yes | Yes | Yes | Yes |
 | Hosted runtime (cloud) | No | No | Yes | Yes |
 | Runtime hours a month | — | — | ? | ? |
-| Storage included | — | — | ? | ? |
+| Storage | — | — | $0.50 per GB-month, capped | $0.50 per GB-month, capped |
 
 - **Hours top-ups:** bought one-off, kept until used; optional auto top-up within a monthly spend cap.
-- **Storage past what is included:** billed per GB-month on the monthly invoice; growing it is a click; it never shrinks.
-- To decide: the numbers above, the top-up price and the storage price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
+- **Storage is never included** (Chris, 2026-10-14): every GB is billed, at **$0.50 per GB-month** on what the runtime holds (its volume's size), prorated by the day on the monthly invoice. The person sets a cap (1 GB to start, up to 100 GB); the volume's size is the cap, so the bill can't pass it. Growing it is a click; it never shrinks.
+- To decide: the hours per plan and the top-up price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
