@@ -74,7 +74,10 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
     (await $.command.run({ command: 'glyphh', args } as unknown as CommandRunInput)) as { text: string }
   expect((await run('nonsense')).text).toStartWith('Usage: /glyphh')
   // Signed out, plain /glyphh goes straight to sign-in: the code and link in the panel and the reply.
-  expect((await run('')).text).toBe('Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…')
+  expect((await run('')).text).toBe(
+    'Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…\n' +
+      'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.',
+  )
   expect((await run('signin')).text).toBe('Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…')
 
   // Approved elsewhere: install.json appears; a new session start reads it.
@@ -97,6 +100,15 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   expect(w.server.s.workspaces).toContain('Research')
   await ui.input({ key: 'ws-new', text: 'Third' })
   expect(await ui.find({ type: 'Text', text: /\(2 of 2 workspaces used\)/ })).toBeDefined()
+})
+
+test('/glyphh after the sign-in card signed in (install.json written mid-session) says who is signed in', async ($, on) => {
+  const w = world(on, 'desktop')
+  await $.session.start({ cwd: '/proj', surface: 'desktop', isInteractive: true })
+  w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
+  const r = (await $.command.run({ command: 'glyphh', args: '' } as unknown as CommandRunInput)) as { text: string }
+  expect(r.text).toStartWith('Glyphh: signed in as chris@example.com')
+  expect(w.server.s.calls.some(c => c.path === '/v1/device/code')).toBe(false)
 })
 
 test('a divider dragged in the grid is saved to the workspace file', async ($, on) => {

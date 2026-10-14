@@ -11,6 +11,8 @@ import { planName, str, userOf } from './shape'
 import { SECTIONS } from './state'
 import { migrateAndLoad } from './wsfiles'
 
+export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.'
+
 export const USAGE = '/glyphh [signin | signout | account | org | plan | billing | workspaces]'
 
 /** At session start: workspace files (migrated on first run), the sign-in. */
@@ -26,13 +28,15 @@ export async function status(gh: Host): Promise<string> {
     const where = a.opened ? ' (open in the browser pane)' : ''
     return `Enter code ${a.user_code} at ${a.verification_uri_complete}${where}. Waiting for approval…`
   }
-  if (a.status === 'out') return `Glyphh: signed out${a.error ? ` (${a.error})` : ''}. Sign in: /glyphh signin`
+  if (a.status === 'out') return `Glyphh: signed out${a.error ? ` (${a.error})` : ''}. Sign in: /glyphh signin\n${ASK_CLAUDE}`
   const m = await gh.state.me.get()
   return m ? `Glyphh: signed in as ${str(userOf(m).email)} · ${planName(m)}` : 'Glyphh: signed in.'
 }
 
 export async function glyphhCommand(gh: Host, args: string): Promise<{ text: string }> {
   const arg = args.trim().toLowerCase()
+  // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
+  if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
   const placed = await gh.openPanel()
   const signedOut = (await gh.state.auth.get()).status === 'out'
   if (['signin', 'sign-in', 'login'].includes(arg) || (!arg && signedOut)) {
@@ -46,7 +50,8 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
     await openSection(gh, (arg || (await gh.state.section.get())) as GlyphhSection)
   }
   await reopen(gh)
-  const text = await status(gh)
+  const said = await status(gh)
+  const text = signedOut && !said.includes(ASK_CLAUDE) ? `${said}\n${ASK_CLAUDE}` : said
   return { text: placed ? text : `${text}\n(The panel could not be placed here.)` }
 }
 

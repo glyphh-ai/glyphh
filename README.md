@@ -32,6 +32,7 @@ differently, because each can do different things (see [What we learned](#what-w
 | `/editor <name>` | Desktop: a file in the Files pane, by path or file name (several matches are listed) |
 | `/glyphh [section]` | The Glyphh panel: Account, Org, Plan, Billing, Workspaces (signed out, each is Sign in). See [Glyphh account](#glyphh-account-glyphh) |
 | `/glyphh signin`, `/glyphh signout` | Sign in by device flow (the code and link are also printed), or sign this machine out |
+| *"sign in to Glyphh"* (ask Claude) | The sign-in card in the chat, from the mod's MCP server. See [The sign-in card](#the-sign-in-card-mcp-app) |
 
 `off` after a pane command hides it (`/files off`). The long names answer too:
 `/terminal`, `/changes`, `/edit`. A name Claude Code already ships is refused,
@@ -99,20 +100,51 @@ refusal reads `{"error": {code, message, trace_id}}`; `E_LIMIT` reads as
 any call means this install was revoked: the machine signs out.
 
 **Signing in, end to end:** `/glyphh signin` (or **Sign in** in the panel) →
-`POST /v1/device/code {name, surface, mod_version}` → the panel shows the code,
+`POST /v1/device/code {name, surface, mod_version, machine_id}` → the panel shows the code,
 and the desktop opens the sign-in page in the browser pane (a terminal prints
 the link) → the person continues with Google or GitHub and approves → the
 mod's poll gets `{access_token, install_id}` → `~/.glyphh/install.json`
 (0600) → `/v1/me` and the license are fetched and the panel shows the account.
 
+**Machine id:** every device-code request carries `machine_id`, so the server
+keys installs by machine and a machine signing in again reuses its install.
+It is sha256(`"glyphh:" + value`) in hex; the value never leaves the machine.
+The value (`hooks/glyphh/machine.ts`, shared with the MCP server): macOS's
+IOPlatformUUID (`ioreg`), Linux's `/etc/machine-id`, Windows' MachineGuid (or
+`wmic csproduct get uuid`); else the default route's interface's MAC; else a
+random id kept once in `~/.glyphh/machine.json`. Worked out once per process.
+
 **Server:** `GLYPHH_SERVER_URL`, default `http://localhost:8080`. Every call
 but the device flow's and the plans list carries `Authorization: Bearer
 <install token>`.
+
+### The sign-in card (MCP App)
+
+Ask Claude *"sign in to Glyphh"*: the `glyphh-sign-in` skill has it call
+`glyphh_sign_in`, from the MCP server the mod ships (`.mcp.json` at the
+plugin root: `node ${CLAUDE_PLUGIN_ROOT}/mcp/dist/server.mjs`, stdio; Claude
+Code starts it with the plugin as `plugin:workspaces:glyphh`). Signed in
+already, it answers who. Otherwise it starts the device flow and returns the
+card, `ui://glyphh/sign-in/1` (`text/html;profile=mcp-app`, the ext-apps
+bridge inlined, no network of its own, the host's theme variables): the code,
+large, and **Sign in**, which asks the host to open the page. The card polls
+`glyphh_sign_in_status` (app-only) every 3 s; the server asks
+`/v1/device/token` no faster than `interval` (+5 s on `slow_down`), writes
+`~/.glyphh/install.json` as the mod does (0600, renamed into place) and the
+card says *Signed in as …*, or that the code expired or was declined, with
+**Start again**. Without cards the tool's text has the code and link; asking
+again finishes a sign-in once approved. `/glyphh` picks up an install.json
+written meanwhile. Change the card: edit `mcp/card/sign-in.html` and bump the
+`ui://` address (hosts cache a card by it). Change the server: edit
+`mcp/src`, then `mcp/build.sh` (installs the build tools outside the plugin,
+type-checks, bundles everything into `dist/server.mjs`, which is committed:
+the plugin needs only `node`, 20 or later).
 
 ### `~/.glyphh`
 
 | File | What |
 |---|---|
+| `machine.json` | `{id}`: a random machine id, made only where no hardware id or MAC can be read |
 | `install.json` | `{install_id, token}`, mode 0600: written by `sh` under `umask 077` to a temporary file and moved into place, the token on stdin, never on a command line or in a log |
 | `license.json` | The server's signed license answer and the key it was checked with. Refreshed from `GET /v1/license` at session start and sign-in; its Ed25519 signature is checked against `GET /v1/license/key` before it is kept (a bad one never is), and again offline at each start. An expired license is not valid. RPA is gated on `features.rpa` |
 | `workspaces/<slug>.json` | One workspace: `name`, `model`, `folder`, `permission_mode`, `effort`, `cols`, `rows`, `col_widths`, `row_heights`, `desktop_panes`, `collapse_sidebar`, `cells` (`panel`, `col`, `row`, `row_span`, `tab` for a browser cell, `path`), `tabs` (`url`, `name`, `no_redirect`, `rpa: {commands, sequences}`) |
@@ -258,8 +290,16 @@ What we hit building it:
 | `hooks/glyphh/actions.ts` · `wsactions.ts` | What the Account, Org, Plan, Billing and Workspaces sections do |
 | `hooks/glyphh/panel.tsx` · `sections/*.tsx` · `ui.tsx` · `shape.ts` | The panel and its sections; elements and links; reading the server's answers |
 | `hooks/glyphh/command.ts` · `open.ts` · `state.ts` | `/glyphh`; opening pages in the browser pane; the panel's note |
+| `hooks/glyphh/machine.ts` | The machine id: its sources, fallbacks and hash (also bundled into the MCP server) |
+| `.mcp.json` · `mcp/src/server.ts` | The MCP server's declaration · the server: the tools and the card resource |
+| `mcp/src/flow.ts` · `install.ts` | The card's device flow, no Node in it · install.json and the machine probe over Node |
+| `mcp/card/sign-in.html` · `mcp-app.js` | The card · `@modelcontextprotocol/ext-apps` 2.0.3's bridge, vendored |
+| `mcp/build.sh` · `dist/server.mjs` | The build · its output, committed |
+| `skills/glyphh-sign-in/SKILL.md` | Tells Claude to call `glyphh_sign_in` when asked to sign in |
 | `types/index.d.ts` | The layout and workspace-file types and the mod's `$.state` contract |
 | `tests/layouts.test.ts` | 11 tests: drawing, switching, dragging, the IDE editor's save, `/dip`, the terminal check |
+| `tests/glyphh-mcp.test.ts` · `glyphh-machine.test.ts` | The card's flow on the fake server · the machine id's sources, fallbacks and hash |
+| `mcp/test/install.test.mjs` | `node --test mcp/test`: install.json's mode and atomic write, the machine probe on this machine |
 | `tests/glyphh-*.test.ts` | 27 tests on a fake server (`fake-server.ts`) and a fake host (`fake-host.ts`), no network: the client, storage, the license, device-flow polling, limit errors, each section's actions, workspace files and migration, and the panel through the engine on both surfaces |
 
 The Chrome profile (sign-ins) lives at
@@ -271,6 +311,7 @@ Chrome. A second session running at once gets a throwaway profile.
 ```bash
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test ~/development/glyphh/workspaces
 claude plugin validate ~/development/glyphh/workspaces
+node --test mcp/test
 ```
 
 ## What we learned

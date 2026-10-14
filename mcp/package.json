@@ -1,0 +1,13 @@
+{
+  "name": "glyphh-mod-mcp",
+  "private": true,
+  "type": "module",
+  "description": "The mod's MCP server (sign-in card). Built by build.sh into dist/server.mjs; nothing to install to run it.",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "zod": "3.25.76"
+  }
+}

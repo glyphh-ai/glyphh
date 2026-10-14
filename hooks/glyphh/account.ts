@@ -40,13 +40,15 @@ export async function signOut(gh: Host) {
   await say(gh, 'Signed out.')
 }
 
-/** At session start: signed in when install.json holds a token. */
-export async function initAccount(gh: Host) {
+/** At session start: signed in when install.json holds a token. `wait`
+ *  awaits the account too (/glyphh, after a sign-in from the card). */
+export async function initAccount(gh: Host, wait = false) {
   const install = await readInstall(gh)
   if (!install) return
   await gh.state.auth.set((): AuthState => ({ status: 'in', install_id: install.install_id }))
   await loadLicense(gh).catch(() => undefined)
-  void refresh(gh)
+  if (wait) await refresh(gh)
+  else void refresh(gh)
 }
 
 /** The account and license again; a revoked install signs this machine out. */
