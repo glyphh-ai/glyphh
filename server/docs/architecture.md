@@ -12,7 +12,7 @@ The first mods:
 |---|---|---|
 | `glyphh` | The account: sign in, license, account, org, plan and billing panels, and the browser machine every other mod uses | Every plan; the others depend on it |
 | `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | Every plan; Free up to 2 workspaces |
-| `glyphh-rpa` | A website as tools: commands and sequences on a site, a live tab in a panel in Claude, take control, record a task once and run it | Pro and Team |
+| `glyphh-rpa` | A browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live in a panel and stopped for your approval where it matters | Pro and Team |
 
 - **Pro and Team include every mod**, and every mod as it ships, so the subscription grows in value. One mod sold on its own as an add-on can come later without a redesign.
 - **Everything is in Claude.** Every screen is a panel Claude shows. There is no Glyphh app and no Glyphh web UI; the only pages are the device sign-in's and Stripe's own.
@@ -87,8 +87,8 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 - **License:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
 - **Panels** (mod panels): account, org, plan, billing.
 - **The browser machine:** `glyphh` ships a local MCP server (the plugin's own, started by Claude), which owns Chrome:
-    - Chrome driven over a private pipe (`--remote-debugging-pipe`), never a debugging port; one profile on disk, so a site signed in once stays signed in. One owner, since Chrome opens a profile once.
-    - Render, watch, take control, drive and record are its MCP tools; the other mods call them (`$.mcp.call`), and Claude calls those the mods allow.
+    - Chrome driven over a private pipe (`--remote-debugging-pipe`), never a debugging port, one Chrome per **named profile** (`~/.glyphh/profiles/<name>/`): an isolated browser holding only the sign-ins made in it, kept on disk so a site signed in once stays signed in. A profile is open in one Chrome at a time, and the browser machine is its one owner.
+    - Render, watch, take control, drive and record are its own local API; the other mods build on it.
     - Its MCP App panels show a tab live (frames, or WebRTC where the frame allows it) with take control: the person's clicks, keys and paste go into the tab while Claude waits, and Claude sees no picture while they hold it, so a password or a code never reaches the model.
     - Only this machine's Claude reaches it; other agents could pair with it later.
 
@@ -107,9 +107,39 @@ Built from `~/development/glyphh/workspaces` (its README holds what a mod can an
 
 ### `glyphh-rpa`
 
-- **Sites:** a site is a URL it matches, with its commands (click, type, read, go to, a script, in `glyphh-ai/app`'s format, `src/shared/rpa.ts`) and sequences of them. Each command and sequence becomes a tool Claude can call; they run in the browser machine's tab for that site, so a workspace's tab on that site gets them too.
-- **Record:** the person does a task once in a live tab and each step (click, type, go to, with its selector) is captured as a sequence; they name it, fix or drop steps, test-run it and save it, and it becomes a tool.
-- **Panels:** the record panel (MCP App: the tab live, take control, Record and Stop, the steps as they are captured); a site's commands and sequences (mod panel: run, edit, delete).
+**A browser for Claude, apart from yours** (Chris, 2026-10-14). Claude never works in the person's own browser: it works in a named profile that holds only the sign-ins the person made in it, so a mistake reaches those accounts and nothing else (not their own email, bank or saved passwords). The person records a task once or lets Claude work it out, watches Claude do it live in a panel in Claude, and approves the steps that matter. A mini bot in Claude.
+
+**Everything is an MCP tool**, so Claude does it for the person. `glyphh-rpa` ships its own local MCP server, built on the browser machine; its tools and its live panel are what Claude uses, and a skill teaches Claude the flow. The person asks in plain words:
+
+> Use Glyphh to post our weekly update to LinkedIn. Ask me to approve before it posts. Work it out, then let's test it.
+
+and Claude:
+
+1. **Opens a Glyphh panel** (`panel_open`): the profile's browser, live, in Claude.
+2. **Picks or makes a profile** (`profile_list`, `profile_create`), asking the person what to call it ("Work", "Shopping").
+3. **Asks the person to sign in** (`ask_user`, kind `login`): the panel hands them control; they type their own password and 2FA; Claude sees no picture while they hold it, so a credential never reaches the model. The sign-in stays in that profile.
+4. **Asks what to call the task** (`ask_user`, kind `text`), and which steps need approval.
+5. **Works it out:** records the person doing it once (`record_start`, `record_stop`), or explores the site itself (`page_read`, `page_act`), proposing steps the person sees in the panel.
+6. **Saves it** (`site_save`, `sequence_save`): a sequence of steps, each with its approval rule, which becomes a tool.
+7. **Tests it** (`run`): the panel shows every step live; a step set to `ask` stops with "Claude wants to click Post" and waits for **Approve**, **Decline** or **Take control**.
+
+| MCP tool | Does |
+|---|---|
+| `profile_list` · `profile_create {name}` · `profile_delete {name}` | The named profiles |
+| `panel_open {profile, url?}` | The live panel (MCP App): the profile's tab, steps, approvals, take control |
+| `ask_user {profile, kind, prompt}` | Asks the person in the panel and waits: `login` (they take control and sign in), `approve`, `choose`, `text` |
+| `page_read {profile}` | The page's text, as untrusted content |
+| `page_act {profile, action}` | One step: click, type, go to, read, a script; under the approval rules |
+| `record_start {profile}` · `record_stop` | Captures the person's steps (with selectors) as a draft sequence |
+| `site_save {name, match, profile}` | A site: the URLs it matches and the profile it runs in |
+| `sequence_save {site, name, steps}` | A sequence; each step `auto` or `ask` |
+| `run {site, sequence, inputs?}` | Runs it live in the panel, stopping at every `ask` |
+| `sites_list` · `log_read {site?}` | Saved sites and sequences; what ran, who did each step (Claude or the person) and what was approved |
+
+- **Approval rules:** reading runs (`auto`); sending, posting, buying, deleting and anything set to `ask` waits for the person. When nobody is watching (a run on a clock, or started by another agent), `ask` means refused.
+- **Saved sequences are tools** too (`<site>_<sequence>`), so Claude runs them by name later: "post the weekly update".
+- **Commands and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), with an approval rule on each step.
+- **Panels:** the live panel (MCP App: watch, record, approve, take control); a site's sequences (mod panel: run, edit, delete).
 
 ### On the machine: `~/.glyphh`
 
@@ -119,9 +149,10 @@ Nothing here goes to the cloud.
 |---|---|---|
 | `install.json` | `glyphh` | This install's id and token, mode 0600 |
 | `license.json` | `glyphh` | The signed license: plan, limits, mods, expiry |
-| `chrome/` | `glyphh` | The browser machine's Chrome profile: every site's sign-in |
+| `profiles/<name>/` | `glyphh` | A named profile: an isolated Chrome profile with only the sign-ins made in it |
 | `workspaces/<slug>.json` | `glyphh-workspaces` | A workspace: session, grid with its saved sizes, cells, tabs |
-| `rpa/<slug>.json` | `glyphh-rpa` | A site: what it matches, its commands and sequences |
+| `rpa/<slug>.json` | `glyphh-rpa` | A site: what it matches, its profile, its commands and sequences with their approval rules |
+| `rpa/log/` | `glyphh-rpa` | What ran: each step, who did it, what was approved |
 
 ### The server
 
@@ -198,7 +229,7 @@ Each works before design draws it.
 | Billing (admin): seats, checkout, Stripe's portal | `glyphh` | Mod |
 | A live tab with take control | `glyphh` | MCP App |
 | Workspaces: list, create, edit, delete | `glyphh-workspaces` | Mod |
-| Record: the tab live, take control, Record and Stop, the steps, test-run, save | `glyphh-rpa` | MCP App |
+| The live panel: the profile's tab, the steps, Approve / Decline / Take control, Record and Stop, sign in | `glyphh-rpa` | MCP App |
 | A site's commands and sequences: run, edit, delete | `glyphh-rpa` | Mod |
 | Not in your plan: which plans include this mod | every mod | Mod |
 
@@ -331,7 +362,8 @@ erDiagram
 - **A cell** sits at a column and row with its spans, and is a `browser` (showing one of the workspace's tabs), `file`, `editor`, `terminal` or `diff`.
 - **A tab** is a URL with its name and no redirect.
 - **A site is one file**, `rpa/<slug>.json`: what URLs it matches, its commands, and sequences of steps that call them (`recorded` when made with Record). A tab on a matching URL gets the site's tools.
-- **Every site signs in through the one Chrome profile** (`chrome/`).
+- **A site runs in one named profile** (`profiles/<name>/`), signed in only where the person signed in; a workspace tab names its profile too.
+- **Each step of a sequence has an approval rule:** `auto` or `ask`.
 - **`license.json`** is refreshed from the server through the install's token and carries the plan's limits and mods.
 
 ## Plans
