@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import logging
 import uuid
 from collections.abc import AsyncIterator
 
@@ -17,9 +16,10 @@ from glyphh_server.app import create_app
 from glyphh_server.models import Approval
 from glyphh_server.ops.approvals import ApprovalView, ask_approval, channel
 from tests.api.sse import sse
-from tests.approvals import a_run, listeners
+from tests.approvals import a_run, listeners, runtime_of
 from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.db.helpers import member, person
+from tests.link import holding
 
 
 async def _ask(engine: AsyncEngine, redis: Redis, run_id: uuid.UUID, step: str = "post") -> ApprovalView:
@@ -37,9 +37,9 @@ async def test_the_waiting_ones_are_listed_newest_first_and_only_ones_own(
     for other in (grace, eve):
         await _ask(engine, redis, await a_run(engine, other))
     answered = await _ask(engine, redis, run_id, "pay")
-    assert (
-        await client.post(f"/v1/approvals/{answered.id}", json={"answer": "decline"}, headers=ada.headers)
-    ).is_success
+    async with holding(redis, await runtime_of(engine, run_id)):
+        res = await client.post(f"/v1/approvals/{answered.id}", json={"answer": "decline"}, headers=ada.headers)
+    assert res.is_success
     listed = await client.get("/v1/approvals", headers=ada.headers)
     assert listed.status_code == 200
     assert listed.json() == [second.model_dump(mode="json"), first.model_dump(mode="json")]
@@ -48,21 +48,24 @@ async def test_the_waiting_ones_are_listed_newest_first_and_only_ones_own(
 
 
 async def test_the_first_answer_wins_and_is_handed_to_the_runtime_and_every_claude(
-    engine: AsyncEngine, redis: Redis, client: httpx.AsyncClient, caplog: pytest.LogCaptureFixture
+    engine: AsyncEngine, redis: Redis, client: httpx.AsyncClient
 ) -> None:
     ada = await person(engine)
     run_id = await a_run(engine, ada)
     asked = await _ask(engine, redis, run_id)
-    async with redis.pubsub() as pubsub:
+    async with redis.pubsub() as pubsub, holding(redis, await runtime_of(engine, run_id)) as sent:
         await pubsub.subscribe(channel(ada.user_id))
-        with caplog.at_level(logging.WARNING, logger="glyphh.approvals"):
-            res = await client.post(f"/v1/approvals/{asked.id}", json={"answer": "approve"}, headers=ada.headers)
+        res = await client.post(f"/v1/approvals/{asked.id}", json={"answer": "approve"}, headers=ada.headers)
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5)
         message = message or await pubsub.get_message(ignore_subscribe_messages=True, timeout=5)
+        handed = await sent()
     assert res.status_code == 200 and res.json() == {"id": str(asked.id), "answer": "approve"}
     assert message is not None and json.loads(message["data"]) == {"event": "answered", "data": res.json()}
-    handed = [r for r in caplog.records if r.name == "glyphh.approvals"]
-    assert [r.fields for r in handed] == [{"run_id": run_id, "approved": True}]  # type: ignore[attr-defined]
+    assert {k: handed[k] for k in ("type", "run_id", "answer")} == {
+        "type": "continue",
+        "run_id": str(run_id),
+        "answer": {"approved": True},
+    }
     async with engine.connect() as conn:
         row = (await conn.execute(select(Approval).where(Approval.id == asked.id))).one()
     assert row.answer == "approve" and row.answered_at is not None
@@ -75,13 +78,25 @@ async def test_two_claudes_answering_at_once_get_one_answer(
     engine: AsyncEngine, redis: Redis, client: httpx.AsyncClient
 ) -> None:
     ada = await person(engine)
-    asked = await _ask(engine, redis, await a_run(engine, ada))
+    run_id = await a_run(engine, ada)
+    asked = await _ask(engine, redis, run_id)
     url = f"/v1/approvals/{asked.id}"
-    both = await asyncio.gather(
-        client.post(url, json={"answer": "approve"}, headers=ada.headers),
-        client.post(url, json={"answer": "decline"}, headers=ada.headers),
-    )
+    async with holding(redis, await runtime_of(engine, run_id)):
+        both = await asyncio.gather(
+            client.post(url, json={"answer": "approve"}, headers=ada.headers),
+            client.post(url, json={"answer": "decline"}, headers=ada.headers),
+        )
     assert sorted(r.status_code for r in both) == [200, 409]
+
+
+async def test_an_answer_while_the_runtime_is_away_is_refused_and_the_step_keeps_waiting(
+    engine: AsyncEngine, redis: Redis, client: httpx.AsyncClient
+) -> None:
+    ada = await person(engine)
+    asked = await _ask(engine, redis, await a_run(engine, ada))
+    res = await client.post(f"/v1/approvals/{asked.id}", json={"answer": "approve"}, headers=ada.headers)
+    assert res.status_code == 503 and res.json()["error"]["reason"] == "runtime_offline"
+    assert [a["id"] for a in (await client.get("/v1/approvals", headers=ada.headers)).json()] == [str(asked.id)]
 
 
 async def test_only_ones_own_approval_is_answered_and_only_with_approve_or_decline(
@@ -116,7 +131,8 @@ async def test_the_stream_replays_the_waiting_then_sends_each_ask_and_answer_liv
         assert await stream.event() == f"event: approval\ndata: {waiting.model_dump_json()}\n\n"
         live = await _ask(engine, redis, run_id, "send")
         assert await stream.event() == f"event: approval\ndata: {live.model_dump_json()}\n\n"
-        await client.post(f"/v1/approvals/{live.id}", json={"answer": "decline"}, headers=ada.headers)
+        async with holding(redis, await runtime_of(engine, run_id)):
+            await client.post(f"/v1/approvals/{live.id}", json={"answer": "decline"}, headers=ada.headers)
         answered = json.dumps({"id": str(live.id), "answer": "decline"}, separators=(",", ":"))
         assert await stream.event() == f"event: answered\ndata: {answered}\n\n"
         assert await listeners(redis, channel(ada.user_id), 1) == 1

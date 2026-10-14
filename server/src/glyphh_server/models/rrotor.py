@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text, text
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, guid
@@ -12,7 +12,8 @@ MODES: tuple[str, ...] = ("hosted", "local")
 class Rrotor(Base):
     """A person's runtime: one hosted (a Fly machine and its volume, Pro and Team) and one local per install that
     started one, keyed by that install. Its token (only the hash is kept) signs its outbound link. Region, image
-    version and Fly machine are the hosted one's; a local one has none until it links."""
+    version and Fly machine are the hosted one's; a local one has none until it links. seq is the last result or event
+    sequence number applied from its link, so a replay is applied once."""
 
     __tablename__ = "rrotors"
     __table_args__ = (
@@ -31,3 +32,4 @@ class Rrotor(Base):
     state: Mapped[str] = mapped_column(Text)
     token_hash: Mapped[str] = mapped_column(Text, unique=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    seq: Mapped[int] = mapped_column(BigInteger, server_default="0")

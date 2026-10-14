@@ -46,5 +46,7 @@ async def stream_approvals(request: Request, creds: Bearer) -> StreamingResponse
 async def answer_approval(
     approval_id: uuid.UUID, body: AnswerBody, caller: Caller, conn: Conn, request: Request
 ) -> Answered:
-    """Approve or decline. The first answer wins; a second is E_CONFLICT."""
-    return await approvals.answer_approval(conn, request.app.state.redis, caller, approval_id, body.answer)
+    """Approve or decline. The first answer wins; a second is E_CONFLICT. The answer goes to the run's runtime at
+    once; a runtime that is not connected is E_UNAVAILABLE, and the approval stays waiting."""
+    state = request.app.state
+    return await approvals.answer_approval(conn, state.redis, state.hub, caller, approval_id, body.answer)

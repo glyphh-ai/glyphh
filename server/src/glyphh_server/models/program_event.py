@@ -8,13 +8,14 @@ from glyphh_server.models.base import Base, guid
 
 
 class ProgramEvent(Base):
-    """What a program raised, the routine trigger it fired, and the Claude session that fire started."""
+    """What a program raised, the routine trigger it fired, and the Claude session that fire started; an event that
+    fired no routine has neither."""
 
     __tablename__ = "program_events"
 
     id: Mapped[uuid.UUID] = guid()
     program_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("programs.id", ondelete="CASCADE"), index=True)
-    routine_trigger_id: Mapped[uuid.UUID] = mapped_column(
+    routine_trigger_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("routine_triggers.id", ondelete="CASCADE"), index=True
     )
     kind: Mapped[str] = mapped_column(Text)

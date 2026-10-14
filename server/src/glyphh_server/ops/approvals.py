@@ -5,7 +5,6 @@ Each person has one channel, and every event on it is one of two: `approval` {id
 when a step starts waiting, and `answered` {id, answer} when it is answered anywhere, so the band clears in every
 open Claude. Both are published as the transaction's last step."""
 
-import logging
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -18,10 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.db.signals import publish
 from glyphh_server.errors import Conflict, NotFound, Unavailable
 from glyphh_server.models import Approval, Program, ProgramVersion, Run
-from glyphh_server.obs.logs import fields
 from glyphh_server.ops.auth.principal import Principal
-
-log = logging.getLogger("glyphh.approvals")
+from glyphh_server.ops.link.calls import send_continue
+from glyphh_server.ops.link.hub import Hub
 
 Answer = Literal["approve", "decline"]
 
@@ -92,10 +90,11 @@ async def ask_approval(conn: AsyncConnection, redis: Redis, run_id: uuid.UUID, s
 
 
 async def answer_approval(
-    conn: AsyncConnection, redis: Redis, who: Principal, approval_id: uuid.UUID, answer: Answer
+    conn: AsyncConnection, redis: Redis, hub: Hub, who: Principal, approval_id: uuid.UUID, answer: Answer
 ) -> Answered:
     """The first answer wins: the row is locked, a second answer finds it answered. The run is handed back to its
-    runtime, and every open Claude of the person's hears it was answered."""
+    runtime, and every open Claude of the person's hears it was answered. A runtime that is not connected refuses it
+    (E_UNAVAILABLE) and nothing is kept, so the person can answer again once it is back."""
     mine = _owned().where(Approval.id == approval_id, Program.user_id == who.user_id)
     locked = mine.with_only_columns(Approval.run_id, Approval.answer).with_for_update(of=Approval)
     row = (await conn.execute(locked)).first()
@@ -105,18 +104,15 @@ async def answer_approval(
         raise Conflict("This approval was already answered.", approval_id=str(approval_id), answer=row.answer)
     done = update(Approval).where(Approval.id == approval_id).values(answer=answer, answered_at=func.now())
     await conn.execute(done)
-    await continue_run(row.run_id, approved=answer == "approve")
+    await continue_run(conn, hub, row.run_id, approved=answer == "approve")
     answered = Answered(id=approval_id, answer=answer)
     await publish(redis, channel(who.user_id), "answered", answered.model_dump(mode="json"))
     return answered
 
 
-async def continue_run(run_id: uuid.UUID, approved: bool) -> None:
-    """The hand-off to the runtime: `continue {run_id, approved}` goes down the runtime's link from here.
-
-    Not built yet: the link (/v1/runtime/link, the runtime's outbound WebSocket) is still to build, and this is the
-    one place it plugs into. Until then the answer is kept and nothing is sent; the line below says so."""
-    log.warning("continue not sent: the runtime link is not built", extra=fields(run_id=run_id, approved=approved))
+async def continue_run(conn: AsyncConnection, hub: Hub, run_id: uuid.UUID, approved: bool) -> None:
+    """The hand-off to the runtime: `continue {run_id, answer: {approved}}` goes down the runtime's link."""
+    await send_continue(conn, hub, run_id, {"approved": approved})
 
 
 async def email_approval(conn: AsyncConnection, approval_id: uuid.UUID) -> None:

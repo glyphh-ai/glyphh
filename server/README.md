@@ -8,7 +8,7 @@ The Glyphh server: the one cloud part behind Glyphh's mods for Claude (`glyphh`,
 
 The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`). Compose runs Postgres, Redis and the server.
 
-Redis carries only live signals (pub/sub): an approval reaches whichever server process holds the person's `/v1/approvals/stream`. Nothing kept lives there; Postgres holds the record, so Redis saves nothing to disk. In production Redis runs on the server's own Fly machine, beside the server.
+Redis carries only live signals (pub/sub): an approval reaches whichever server process holds the person's `/v1/approvals/stream`, and a call reaches whichever holds the runtime's `/v1/runtime/link`. Nothing kept lives there; Postgres holds the record, so Redis saves nothing to disk. In production Redis runs on the server's own Fly machine, beside the server.
 
 Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`glyphh`, `glyphh-workspaces` and `glyphh-programs` free, `glyphh-rpa` not) and the plans (Free, Pro, Team), each with its first version. Free includes the free mods; Pro and Team (`all_mods`) include every active mod. Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
 

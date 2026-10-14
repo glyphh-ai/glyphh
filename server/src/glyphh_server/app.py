@@ -29,6 +29,7 @@ from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops import github_app, vault
 from glyphh_server.ops.license import load_key
+from glyphh_server.ops.link.hub import Hub
 
 ROUTERS = (
     health,
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.http = http or httpx.AsyncClient(timeout=10)
         yield
+        await app.state.hub.close_all()
         await app.state.http.aclose()
         await redis.aclose()
         await engine.dispose()
@@ -69,6 +71,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.state.settings = cfg
     app.state.engine = engine
     app.state.redis = redis
+    app.state.hub = Hub(redis)
     app.state.license_key = load_key(cfg)
     app.state.secrets_key = vault.load_key(cfg)
     app.state.github_key = github_app.load_key(cfg)
