@@ -1,24 +1,23 @@
 # Glyphh
 
-The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product), the [architecture](#architecture), the [data model](#data-model) and the [plans](#plans). It replaces the programs, rrotor and machines architecture; that version is in git history (`25c1288`).
+The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product), the [architecture](#architecture), the [data model](#data-model) and the [plans](#plans). It replaces the programs, rrotor and machines architecture of 2026-10-12; that version is in git history (`25c1288`).
 
 ## Product
 
-**Glyphh makes mods for Claude, as a business** (Chris, 2026-10-14). A mod is a Claude Code plugin that adds commands, tools and panels to Claude. Each mod is its own product, installed on its own from one Glyphh marketplace; one Glyphh account and one subscription turn them on.
+**Glyphh makes mods for Claude, as a business** (Chris, 2026-10-14). A mod is a Claude Code plugin that adds commands, tools and panels to Claude. Each mod is its own product, installed from one Glyphh marketplace; one Glyphh account and one subscription turn them on.
 
-The first mods:
+| Mod | What it is | Runs | Plans |
+|---|---|---|---|
+| `glyphh` | The account: sign in, license, account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan |
+| `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | The person's machine | Licensed; Free up to 2 workspaces |
+| `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
+| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, locked-down machines Glyphh hosts, called by Claude and by Claude's routines | rrotor, hosted | Every plan, by machines and hours: Free 1 machine, 1 hour a month |
 
-| Mod | What it is | Plans |
-|---|---|---|
-| `glyphh` | The account: sign in, license, account, org, plan and billing panels, and the browser machine every other mod uses | Every plan; the others depend on it |
-| `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it. RPA in its tabs | Every plan; Free up to 2 workspaces and no RPA |
-| `glyphh-rpa` | RPA inline, in the conversation: a browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live in a panel and stopped for your approval where it matters | Pro and Team |
-
-- **Pro and Team include every mod**, and every mod as it ships, so the subscription grows in value. One mod sold on its own as an add-on can come later without a redesign.
-- **Everything is in Claude.** Every screen is a panel Claude shows. There is no Glyphh app and no Glyphh web UI; the only pages are the device sign-in's and Stripe's own.
-- **Desktop first, then the CLI.** The same mods run in both. In the CLI they look and feel CLI native.
-- **They look like Claude.** Fonts and colors follow the person's Claude theme.
-- **Functional first.** Every screen works before design draws it; design then builds the screens.
+- **Pro and Team include every mod**, and every mod as it ships. One mod sold on its own can come later without a redesign.
+- **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page and Stripe's.
+- **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
+- **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
+- **Functional first.** Every screen works before design draws it.
 
 ## Architecture
 
@@ -28,127 +27,132 @@ The first mods:
 flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
-            Base["glyphh<br/>account, panels"]
+            Base["glyphh"]
             WS["glyphh-workspaces"]
             RPA["glyphh-rpa"]
+            PR["glyphh-programs"]
         end
-        BM["Browser machine<br/>glyphh's local MCP server"]
-        Chrome["Chrome<br/>tabs, sign-ins"]
+        BM["Browser machine<br/>local MCP, Chrome"]
         Local[("~/.glyphh")]
-        Base --> BM
         WS --> BM
         RPA --> BM
-        BM --> Chrome
-        Base --> Local
-        WS --> Local
-        RPA --> Local
+        BM --> Local
+    end
+
+    subgraph Anthropic["Anthropic"]
+        Routine["Claude routines<br/>schedule, API, GitHub"]
     end
 
     subgraph Cloud["Glyphh cloud"]
-        API["API server<br/>accounts, org, seats, installs, license"]
+        API["Server<br/>accounts, license, programs,<br/>MCP connector, relay"]
         DB[("Postgres")]
         API --- DB
     end
 
-    Market["glyphh-ai/releases<br/>the marketplace"]
-    Stripe["Stripe"]
-    SignIn["Google, GitHub"]
+    subgraph Fly["Glyphh hosting (Fly)"]
+        Rotor["rrotor machines<br/>runs programs, Chromium"]
+    end
 
     Base <-- "device flow, license" --> API
-    Market -- "/plugin install" --> Claude
-    API --> Stripe
-    API --> SignIn
+    PR <-- "build, test, deploy, live panel" --> API
+    Routine -- "Glyphh connector (MCP)" --> API
+    Rotor -- "outbound link" --> API
 ```
 
-Three parts: the mods on the machine, one small server, and the marketplace they are installed from. **What a person makes stays on their machine; the cloud holds only who they are, their org and what they pay for.**
+**What a person makes stays theirs:** workspaces and RPA on their own machine; programs, their data and their sign-ins in their own rrotor. The server holds who they are, what they pay for, and the record of their programs and runs, never their content.
 
 ### Mods and how they are installed
 
-- **A mod is a Claude Code plugin** whose hooks are a code module (`hooks/hooks.json` naming `register.tsx`, with `.claude-plugin/plugin.json`). It hooks Claude's events (session start, commands, tool calls, drawing) and reaches everything else through the engine (`$`): files, HTTP, processes, panels, MCP servers.
-- **Installed from the marketplace**, in a terminal: `/plugin install glyphh-workspaces --marketplace glyphh-ai/releases`. Installed at the user scope, a mod loads in every session, the desktop app's Code tab too. Every mod depends on `glyphh` (`plugin.json` `dependencies`).
-- **Source and releases are apart.** `glyphh-ai/glyphh` (private) holds the source, one folder per mod (`mods/glyphh`, `mods/glyphh-workspaces`, `mods/glyphh-rpa`), with their tests. `glyphh-ai/releases` (public) is the marketplace: `.claude-plugin/marketplace.json` listing every mod, and each mod as one built, minified module. Nobody installing a mod gets the source, the tests or the history.
-- **Each mod checks the license** when a session starts: a mod the license does not include draws only a panel that says which plans include it.
-- **Under development** a mod runs from its folder: `claude --plugin-dir <folder>`, or on the desktop linked into the session's mods folder with hot reloading.
+- **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). Mods are on by default since Claude Code 2.1.287. A mod can ship its own MCP server, skills and commands.
+- **Installed from the marketplace**, in a terminal: `/plugin install glyphh-programs --marketplace glyphh-ai/releases`. Installed at the user scope it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
+- **Source and releases are apart.** `glyphh-ai/glyphh` (private): the source, one folder per mod, with tests. `glyphh-ai/releases` (public): the marketplace file and each mod as one built, minified module.
+- **Each mod checks the license** at start; a mod the license does not include shows only which plans include it.
 
 ### Two kinds of panel
 
 | | Mod panels | MCP App panels |
 |---|---|---|
-| What | Drawn from Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts, which an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address) and Claude shows in a frame |
-| Can | Forms, lists, actions, at once on desktop and CLI | Live pictures, video, take control, anything a page can do; the host passes its theme as CSS variables (`--color-*`, `--font-*`) |
-| Cannot | Pictures (desktop), scripts, video | Draw in the CLI's own terminal |
-| Used for | Account, org, plan, billing, workspaces, a site's commands | A live tab, take control, record |
+| What | Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts that an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), shown in a frame |
+| Can | Forms, lists, actions, on desktop and CLI | Live pictures, take control, anything a page can do; the host passes its theme as CSS variables |
+| Used for | Account, org, plan, billing, workspaces, programs, sequences | **The live panel:** a run streamed live, sign-ins, approvals |
 
-Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App panel in Claude showed a machine's screen live and took control of it. What it taught still holds: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version, since hosts keep its HTML by address.
+Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App panel in Claude showed a machine's screen live and took control of it. Its lessons hold: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
 
-### `glyphh`: the account and the browser machine
+### `glyphh`: the account
 
-- **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub; the mod, polling, gets the install's token. One sign-in serves every mod.
+- **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub. One sign-in serves every mod on that machine.
 - **License:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
-- **Panels** (mod panels): account, org, plan, billing.
-- **The browser machine:** `glyphh` ships a local MCP server (the plugin's own, started by Claude), which owns Chrome:
-    - Chrome driven over a private pipe (`--remote-debugging-pipe`), never a debugging port, one Chrome per **named profile** (`~/.glyphh/profiles/<name>/`): an isolated browser holding only the sign-ins made in it, kept on disk so a site signed in once stays signed in. A profile is open in one Chrome at a time, and the browser machine is its one owner.
-    - It is the **RPA engine** both mods share ([RPA](#rpa-one-engine-two-ways-in)): its MCP tools, its live panel and the skill that teaches Claude the flow.
-    - Its MCP App panels show a tab live (frames, or WebRTC where the frame allows it) with take control: the person's clicks, keys and paste go into the tab while Claude waits, and Claude sees no picture while they hold it, so a password or a code never reaches the model.
-    - Only this machine's Claude reaches it; other agents could pair with it later.
+- **Panels:** account, org, plan, billing.
+- **The browser machine:** a local MCP server `glyphh` ships for the local mods (workspaces, RPA): Chrome over a private pipe, one Chrome per **named profile** (`~/.glyphh/profiles/<name>/`), each holding only the sign-ins made in it.
 
 ### `glyphh-workspaces`
 
-Built from `~/development/glyphh/workspaces` (its README holds what a mod can and cannot do).
+Built from `~/development/glyphh/workspaces`.
 
-- **Workspaces:** switch with `/dip`, by number or name. A workspace sets the session's model, folder, permission mode and effort, and opens its grid.
-- **Tabs:** each browser cell is a tab with a URL. **No redirect** keeps a tab in its cell when the site tries to hand itself to its native app (Slack, Teams, Zoom, Discord, Notion), as `glyphh-ai/app`'s `forceWeb` did.
-- **Live pages:** the browser machine renders every tab.
-    - **Desktop:** the layout as one page in Claude's browser pane (`/stream`), each tab as WebRTC video (JPEG when WebRTC fails); clicks, keys and scrolls go back.
-    - **CLI:** frames drawn in the terminal with the kitty graphics protocol (Ghostty, kitty), the grid in characters, dividers dragged with the mouse.
-- **Saved as it is left:** dragged sizes are written back to the workspace's file.
-- **The limit:** the mod registers each workspace's name with the server when it creates one; past the plan's limit it is refused.
-- **Panel** (mod panel): list, create, edit (model, folder, permission mode, effort, grid, tabs), delete.
+- **Workspaces:** switch with `/dip`. A workspace sets the session's model, folder, permission mode and effort, and opens its grid of tabs.
+- **Tabs:** a URL, its profile, and **no redirect** (a site is never handed to its native app: Slack, Teams, Zoom, Discord, Notion).
+- **Live pages:** on desktop the layout as one page in Claude's browser pane (`/stream`, WebRTC, JPEG fallback); in the CLI drawn in the terminal (kitty graphics: Ghostty, kitty).
+- **The limit:** each workspace's name is registered with the server; past the plan's limit it is refused.
+- **With RPA licensed,** a tab on a site that has sequences gets their tools, run in the tab.
 
-### RPA: one engine, two ways in
+### `glyphh-rpa`: local only
 
-**A browser for Claude, apart from yours** (Chris, 2026-10-14). Claude never works in the person's own browser: it works in a named profile that holds only the sign-ins the person made in it, so a mistake reaches those accounts and nothing else (not their own email, bank or saved passwords). The person records a task once or lets Claude work it out, watches Claude do it live in a panel in Claude, and approves the steps that matter. A mini bot in Claude.
+A browser for Claude apart from the person's own, on their machine; no rrotor. Claude never works in the person's own browser: it works in a named profile holding only the sign-ins made in it.
 
-**Everything is an MCP tool**, so Claude does it for the person. The engine is the browser machine's local MCP server, in `glyphh`; its tools, its live panel and a skill that teaches Claude the flow are on when the license includes RPA (`glyphh-rpa`: Pro and Team), whichever mod the person uses it from. The person asks in plain words:
+- **Everything is an MCP tool** (the browser machine's), and a skill teaches Claude the flow. The person says "Use Glyphh to post our weekly update to LinkedIn; ask me before it posts; work it out, then let's test it", and Claude opens the live panel, picks or makes a profile, asks the person to sign in (they take control; Claude sees nothing while they do), asks what to call the task, records the person or works it out, saves it as a sequence and test-runs it, stopping at every `ask` step.
+- **Tools:** `profile_list`, `profile_create`, `panel_open`, `ask_user` (`login`, `approve`, `choose`, `text`), `page_read`, `page_act`, `record_start`, `record_stop`, `site_save`, `sequence_save`, `run`, `sites_list`, `log_read`.
+- **Sites and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), each step `auto` or `ask`; saved sequences become tools (`<site>_<sequence>`).
+- **Runs on a schedule** through Claude's Desktop scheduled tasks (local routines), which run on the person's machine, if they load plugins (to prove).
 
-> Use Glyphh to post our weekly update to LinkedIn. Ask me to approve before it posts. Work it out, then let's test it.
+### `glyphh-programs`: programs and rrotor
 
-and Claude:
+**A program is a deterministic Python job; rrotor runs it; Claude calls it.** rrotor is the 2026-10-12 machine without what made it hard: no model, no agent loop, no gateway, no scheduler, no CLI sign-ins, no UI of its own. It runs exact programs, safely, and streams them live.
 
-1. **Opens a Glyphh panel** (`panel_open`): the profile's browser, live, in Claude.
-2. **Picks or makes a profile** (`profile_list`, `profile_create`), asking the person what to call it ("Work", "Shopping").
-3. **Asks the person to sign in** (`ask_user`, kind `login`): the panel hands them control; they type their own password and 2FA; Claude sees no picture while they hold it, so a credential never reaches the model. The sign-in stays in that profile.
-4. **Asks what to call the task** (`ask_user`, kind `text`), and which steps need approval.
-5. **Works it out:** records the person doing it once (`record_start`, `record_stop`), or explores the site itself (`page_read`, `page_act`), proposing steps the person sees in the panel.
-6. **Saves it** (`site_save`, `sequence_save`): a sequence of steps, each with its approval rule, which becomes a tool.
-7. **Tests it** (`run`): the panel shows every step live; a step set to `ask` stops with "Claude wants to click Post" and waits for **Approve**, **Decline** or **Take control**.
+**A program** is a Python package with a manifest:
 
-| MCP tool | Does |
-|---|---|
-| `profile_list` · `profile_create {name}` · `profile_delete {name}` | The named profiles |
-| `panel_open {profile, url?}` | The live panel (MCP App): the profile's tab, steps, approvals, take control |
-| `ask_user {profile, kind, prompt}` | Asks the person in the panel and waits: `login` (they take control and sign in), `approve`, `choose`, `text` |
-| `page_read {profile}` | The page's text, as untrusted content |
-| `page_act {profile, action}` | One step: click, type, go to, read, a script; under the approval rules |
-| `record_start {profile}` · `record_stop` | Captures the person's steps (with selectors) as a draft sequence |
-| `site_save {name, match, profile}` | A site: the URLs it matches and the profile it runs in |
-| `sequence_save {site, name, steps}` | A sequence; each step `auto` or `ask` |
-| `run {site, sequence, inputs?}` | Runs it live in the panel, stopping at every `ask` |
-| `sites_list` · `log_read {site?}` | Saved sites and sequences; what ran, who did each step (Claude or the person) and what was approved |
+```python
+from glyphh import Ctx, Result
 
-- **Approval rules:** reading runs (`auto`); sending, posting, buying, deleting and anything set to `ask` waits for the person. When nobody is watching (a run on a clock, or started by another agent), `ask` means refused.
-- **Saved sequences are tools** too (`<site>_<sequence>`), so Claude runs them by name later: "post the weekly update".
-- **Commands and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), with an approval rule on each step.
-- **Panels:** the live panel (MCP App: watch, record, approve, take control); a site's sequences (mod panel: run, edit, delete).
+def load(ctx: Ctx) -> None: ...                    # once per run: open the profile, read config
+def start(ctx: Ctx, inputs: dict) -> Result: ...   # the main job
+def fetch_leads(ctx: Ctx, since: str) -> Result: ...  # custom functions, each callable on its own
+def end(ctx: Ctx) -> None: ...                     # always runs: close up, keep results
+```
 
-**Two ways in, one RPA** (Chris, 2026-10-14). Both mods use the same engine, the same profiles, sites, sequences and run log: a task recorded in one runs in the other.
+- **Every call returns a `Result`:** a status and data. The status tells the caller what is next:
 
-| | `glyphh-rpa`: inline | `glyphh-workspaces`: in a workspace |
+| `status` | Means | Claude does |
 |---|---|---|
-| Where it shows | The live panel, in the conversation | A tab in the workspace's grid (`/stream` on desktop, the terminal's grid in the CLI) |
-| The browser | The site's profile, opened by the panel | The tab's profile; a site matching the tab's URL gives its tools |
-| Recording and approvals | In the panel | In the tab's cell bar on the workspace page, and in the live panel when one is open |
-| For | Doing a task without leaving the chat | Working alongside the tabs a person keeps open (Gmail, Slack, a CRM) |
+| `done` | Here is the result: data, a file, a link | Uses it, or finishes |
+| `needs_input` | A value is missing, or a choice: "pick A, B or C" | Answers, then `continue` |
+| `needs_approval` | About to act: "click Post" | Asks the person; unattended, leaves it waiting for them |
+| `needs_signin` | A site signed the program out | Opens the live panel for the person; unattended, stops and says so |
+| `failed` | Which step and why | Retries, tries another way, or reports |
+
+- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
+- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
+- **Code lives in the person's own GitHub repo** (routines clone it anyway); deploying pins a version (commit and bundle) to their rrotor.
+
+**Build time: in Claude, with the mod.** The SDK is part of `glyphh-programs`: its tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and **create its routine** (prompt, triggers, connectors). Whatever is missing, Claude asks for: connect a Claude connector, add a secret, or **sign in to a site**, which opens the live panel on the run in rrotor: the person takes control and signs in; the sign-in stays in that profile on rrotor; Claude sees nothing while they hold it.
+
+**Run time: Claude's routines are the runner.**
+
+1. A routine fires on its schedule, its API trigger or a GitHub event, on Anthropic's machines, on the person's own Claude subscription.
+2. Claude calls the **Glyphh connector** (a remote MCP server on the Glyphh server, added once at claude.ai/customize/connectors): `call(program, function, inputs)`, then `continue(run_id, answer)` as needed.
+3. The server wakes the person's rrotor (Fly starts a stopped machine in seconds) and passes the call over rrotor's outbound link.
+4. rrotor runs the step in its sandbox and answers the `Result`; Claude decides what is next: another connector, another program, an artifact.
+
+A routine can chain all of it in one run: read a connector, run a program, do something else, publish an artifact. Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the panel, a push, an email). Claude can also call programs directly, in any session.
+
+**The live panel** streams a run: the program's browser, its steps, its log, approvals, take control. It is an MCP App panel, from the mod while building and from the connector where Claude shows panels; frames come from rrotor through the server's relay (WebRTC end to end where it connects).
+
+**rrotor, locked down.**
+
+- One Linux image (`ghcr.io/glyphh-ai/rrotor`): Python, Chromium on a virtual screen per profile, the runner. Each rrotor is its own Fly machine, **stopped when idle**, woken per call; a person has as many as their plan allows, each with its own `/data`, and a program is deployed to one of them.
+- **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
+- **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
+- **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
+- **No Claude login, no model, no keys of Claude's** anywhere in it.
 
 ### On the machine: `~/.glyphh`
 
@@ -158,72 +162,56 @@ Nothing here goes to the cloud.
 |---|---|---|
 | `install.json` | `glyphh` | This install's id and token, mode 0600 |
 | `license.json` | `glyphh` | The signed license: plan, limits, mods, expiry |
-| `profiles/<name>/` | `glyphh` | A named profile: an isolated Chrome profile with only the sign-ins made in it |
-| `workspaces/<slug>.json` | `glyphh-workspaces` | A workspace: session, grid with its saved sizes, cells, tabs |
-| `rpa/<slug>.json` | `glyphh` (RPA) | A site: what it matches, its profile, its commands and sequences with their approval rules |
-| `rpa/log/` | `glyphh` (RPA) | What ran: each step, who did it, what was approved |
+| `profiles/<name>/` | `glyphh` | A named Chrome profile for the local mods |
+| `workspaces/<slug>.json` | `glyphh-workspaces` | A workspace: session, grid, cells, tabs |
+| `rpa/<slug>.json`, `rpa/log/` | `glyphh-rpa` | Sites, sequences and their approval rules; what ran |
+
+### In rrotor: `/data`
+
+| Path | What |
+|---|---|
+| `programs/<name>/<version>/` | A deployed version: the bundle and its manifest |
+| `secrets/` | Each program's secrets, encrypted with rrotor's key |
+| `profiles/<name>/` | Named Chromium profiles: the sign-ins made through the live panel |
+| `runs/<run_id>/` | A run's log, checkpoints and outputs |
 
 ### The server
 
-The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, in Docker. Built database first, then API; 100% test coverage; errors with stable codes and a trace id; small files.
+The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, in Docker. Database first, then API; 100% test coverage; errors with stable codes and a trace id; small files.
 
-- **Sign in, by device flow (RFC 8628).** Each approval is an **install**: one machine, signed in once for every mod.
-- **Org.** The first user creates the org, is its admin and handles all billing. A user belongs to exactly one org. The admin invites members by email; an invite is accepted by signing in.
-- **Plans and seats.** Each seat is a member. The admin subscribes through Stripe and adds or removes seats; Stripe's webhooks keep the org's subscription and seat count true.
-- **Mods.** The server keeps the catalog of mods. A plan version includes every mod (Pro, Team) or only the free ones (Free).
-- **License.** The server signs a short-lived license for each install (plan, limits, the mods it includes, expiry) that the mods check with its public key.
-- **Limits are enforced by the server**, at the moment they would be crossed:
-    - **members:** an invite is refused when the org is at its plan's limit or out of seats;
-    - **installs:** a device approval is refused when the user is at their limit;
-    - **workspaces:** creating one past the limit is refused. Only the name and the user go to the server, nothing of what is in it.
-- **What a mod gates locally** (a mod not in the license) can be edited out by someone determined; what is worth paying for is enforced here.
+- **Sign in by device flow (RFC 8628)**; each approval is an **install**.
+- **Org:** the first user is its admin and pays; one org per user; members by invite.
+- **Plans and seats:** per seat, through Stripe.
+- **Mods:** the catalog; a plan version includes every mod or the free ones.
+- **License:** short-lived, signed, per install: plan, limits, mods.
+- **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
+- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
+- **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back.
+- **Hosting:** creates a person's rrotors on Fly (up to the plan's machines), wakes one per call, stops it when idle, counts the hours against the plan.
+- **Limits are enforced here:** members, installs, workspaces, machines and machine hours.
 
 ### API
 
-JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the device flow's, the plans and mods lists and Stripe's webhook carries the install's token (`Authorization: Bearer`). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit reached is `E_LIMIT`, with `limit`, `used`, `max` and the `plan` that would lift it.
+JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the device flow's, the plans and mods lists and Stripe's webhook carries a token (`Authorization: Bearer`). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `limit`, `used`, `max` and the `plan` that lifts it.
 
-**Device flow** (RFC 8628):
+**Built:**
 
-| Call | Does |
+| Area | Calls |
 |---|---|
-| `POST /v1/device/code` `{name, surface, mod_version}` | Starts a sign-in: `device_code`, `user_code`, `verification_uri`, `verification_uri_complete`, `interval`, `expires_in` |
-| `POST /v1/device/token` `{device_code}` | Polled: `authorization_pending`, `slow_down`, `expired_token`, `access_denied`, or the install's `access_token` and `install_id` |
-| `GET /v1/device?code=` | The page the link opens: Continue with Google or GitHub, then this install is approved and the page says to go back to Claude |
+| Device flow | `POST /v1/device/code`, `POST /v1/device/token`, `GET /v1/device?code=` |
+| Account | `GET`/`PATCH /v1/me`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
+| Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
+| Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
+| Mods, plans, billing | `GET /v1/mods`, `GET /v1/plans`, `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
 
-Signing in the first time makes the person's org (Free, them its admin), unless an invite for their email is waiting, in which case they join that org. The install is refused past the plan's `max_installs`.
+**To build, for programs:**
 
-**Account:**
-
-| Call | Does |
+| Area | Calls |
 |---|---|
-| `GET /v1/me` | The user, their org and role, the plan version, its limits and mods, and what is used (members, seats, installs, workspaces) |
-| `PATCH /v1/me` `{name}` | Rename |
-| `GET /v1/installs` · `DELETE /v1/installs/{id}` | List installs; revoke one (signs that machine out) |
-| `POST /v1/sign-out` | Revoke this install |
-| `GET /v1/license` | This install's license, signed (Ed25519): plan, limits, `mods`, `expires_at` (24 hours) |
-| `GET /v1/license/key` | The public key the mods check it with |
-| `GET /v1/workspaces` · `POST /v1/workspaces` `{name}` · `PATCH /v1/workspaces/{name}` `{name}` · `DELETE /v1/workspaces/{name}` | The user's workspace names; creating one past `max_workspaces` is refused |
-
-**Org** (writes are the admin's):
-
-| Call | Does |
-|---|---|
-| `GET /v1/org` · `PATCH /v1/org` `{name}` | The org |
-| `GET /v1/org/members` · `DELETE /v1/org/members/{user_id}` | Members; remove one (never the admin) |
-| `GET /v1/org/invites` · `POST /v1/org/invites` `{email}` · `DELETE /v1/org/invites/{id}` | Invites; one is refused past the plan's members or the seats bought. An invite answers with its link to share |
-| `POST /v1/invites/accept` `{token}` | An existing user joins: only when their own org has no one else and nothing paid, which is then removed |
-
-**Mods, plans and billing** (writes are the admin's):
-
-| Call | Does |
-|---|---|
-| `GET /v1/mods` | The catalog: each mod's slug, name, description, whether it is free, and the plans that include it |
-| `GET /v1/plans` | Each plan's newest version: price per seat, limits, its mods |
-| `POST /v1/billing/checkout` `{plan, seats}` | Stripe Checkout's address, to open in the browser pane |
-| `POST /v1/billing/plan` `{plan}` | Change plan: the newest version of it, prorated |
-| `POST /v1/billing/seats` `{seats}` | Change the seats; never below the members and open invites |
-| `POST /v1/billing/portal` | Stripe's portal address: card, invoices, cancel |
-| `POST /v1/stripe/webhook` | Stripe's events keep `orgs` true: plan version, seats, status |
+| Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (manifest, commit, bundle), `POST /v1/programs/{id}/deploy` |
+| Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
+| rrotor | `GET`/`POST /v1/machines` (create, up to the plan's machines), `GET`/`DELETE /v1/machines/{id}`, `POST /v1/machines/{id}/start`, `/stop`; hours used; `/v1/machines/link` (each rrotor's outbound WebSocket) |
+| Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration) |
 
 ### Panels
 
@@ -231,24 +219,31 @@ Each works before design draws it.
 
 | Panel | Mod | Kind |
 |---|---|---|
-| Sign in: the code, the link, waiting, signed in | `glyphh` | Mod |
-| Account: name, email, providers, installs (revoke), sign out | `glyphh` | Mod |
-| Org: name, members (remove), invites (send, revoke) | `glyphh` | Mod |
-| Plan: plan, limits, usage, mods included, change plan | `glyphh` | Mod |
-| Billing (admin): seats, checkout, Stripe's portal | `glyphh` | Mod |
-| A live tab with take control | `glyphh` | MCP App |
+| Sign in, account, org, plan, billing | `glyphh` | Mod |
 | Workspaces: list, create, edit, delete | `glyphh-workspaces` | Mod |
-| The live panel: the profile's tab, the steps, Approve / Decline / Take control, Record and Stop, sign in | `glyphh-rpa` | MCP App |
-| A site's commands and sequences: run, edit, delete | `glyphh-rpa` | Mod |
-| Not in your plan: which plans include this mod | every mod | Mod |
+| The local live panel: a profile's tab, steps, approvals, take control, record | `glyphh-rpa` | MCP App |
+| Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
+| Programs: list, versions, deploy, runs, needs you | `glyphh-programs` | Mod |
+| The live panel: a run in rrotor, its browser, steps, approvals, take control, sign in | `glyphh-programs` | MCP App |
+| Machines: list, create, on or off, hours used | `glyphh-programs` | Mod |
+| Not in your plan | every mod | Mod |
+
+### Anthropic's terms
+
+From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
+
+- Third-party developers may not offer Claude.ai login in their apps, route requests through someone's subscription, or "collect, store, or intermediate Claude.ai credentials or session tokens"; nor pay for or resell Claude usage on their users' behalf.
+- **Glyphh never touches a Claude login:** Claude runs on the person's own subscription in Anthropic's own products (Claude Code, routines, scheduled tasks) and calls Glyphh's tools. rrotor has no Claude in it.
+- A routine's API token, if a person gives one to Glyphh to start their routine, starts that routine only; it is not a Claude login.
 
 ### To prove first
 
-- **MCP App panels from a plugin's local MCP server in the Code tab:** proved from the server's remote MCP; to prove from `glyphh`'s own local server, with one live tab and take control.
-- **Dependencies through the marketplace:** that installing `glyphh-workspaces` brings `glyphh` with it.
-- **A built mod loads:** that one minified module per mod loads and validates as its source does.
-- **Google sign-in in the browser machine's Chrome:** Google may refuse a sign-in in a Chrome under automation ("This browser or app may not be secure"). Gmail and Calendar tabs depend on it.
-- **Sign-in pages from a panel:** whether Google allows its sign-in page in Claude's browser pane.
+- **The live panel from the mod's own MCP server** in the Code tab, on a run in rrotor, with take control and a sign-in.
+- **The Glyphh connector in a routine:** a routine calling `call` and `continue` on a test program, end to end.
+- **Desktop scheduled tasks** (local routines) loading plugins and their local MCP servers, for `glyphh-rpa`.
+- **Waking rrotor per call** fast enough for a tool call (Fly start, link up, answer).
+- **Dependencies through the marketplace**, and **a built mod loading** as its source does.
+- **Google sign-in in Chromium under automation** ("This browser or app may not be secure").
 
 ## Data model
 
@@ -260,6 +255,7 @@ Each works before design draws it.
 erDiagram
     PLANS ||--|{ PLAN_VERSIONS : "has versions"
     PLAN_VERSIONS ||--o{ ORGS : "pinned by"
+    MODS }o..o{ PLAN_VERSIONS : "free, or all_mods"
     ORGS ||--|{ USERS : "members"
     ORGS ||--o{ INVITES : "sends"
     USERS ||--|{ IDENTITIES : "signs in with"
@@ -267,13 +263,14 @@ erDiagram
     USERS ||--o{ WORKSPACES : "owns"
     INSTALLS ||--o{ TOKENS : "holds"
     INSTALLS ||--o{ DEVICE_CODES : "approved by"
-    MODS }o..o{ PLAN_VERSIONS : "free, or all_mods"
-    PLANS {
-        uuid id PK
-        text name
-        bool active
-        int sort
-    }
+    USERS ||--o{ RROTORS : "has"
+    USERS ||--o{ PROGRAMS : "owns"
+    PROGRAMS ||--|{ PROGRAM_VERSIONS : "has"
+    PROGRAM_VERSIONS ||--o{ DEPLOYMENTS : "deployed as"
+    RROTORS ||--o{ DEPLOYMENTS : "runs"
+    PROGRAM_VERSIONS ||--o{ RUNS : "ran"
+    RUNS ||--o{ APPROVALS : "waits on"
+    USERS ||--o{ CONNECTOR_GRANTS : "allows"
     PLAN_VERSIONS {
         uuid id PK
         uuid plan_id FK
@@ -283,110 +280,103 @@ erDiagram
         int max_members
         int max_installs
         int max_workspaces
+        int max_machines
+        int machine_hours
         bool all_mods
-        timestamp created_at
     }
-    MODS {
-        text slug PK
-        text name
-        text description
-        bool free
-        bool active
-        int sort
-    }
-    ORGS {
+    RROTORS {
         uuid id PK
-        text name
-        uuid plan_version_id FK
-        uuid admin_user_id FK
-        text stripe_customer_id
-        text stripe_subscription_id
-        int seats
-        text billing_status
-    }
-    USERS {
-        uuid id PK
-        uuid org_id FK
-        text email
-        text name
-        text role
-    }
-    IDENTITIES {
-        text provider PK
-        text provider_user_id PK
         uuid user_id FK
-    }
-    INVITES {
-        uuid id PK
-        uuid org_id FK
-        text email
+        text fly_machine_id
+        text region
+        text image_version
+        text state
         text token_hash
-        timestamp expires_at
-        timestamp accepted_at
+        timestamp last_seen_at
     }
-    INSTALLS {
+    PROGRAMS {
         uuid id PK
         uuid user_id FK
+        uuid org_id FK
         text name
-        text surface
-        text mod_version
-        timestamp last_seen_at
-        timestamp revoked_at
-    }
-    WORKSPACES {
-        uuid user_id FK
-        text name
+        text repo
         timestamp created_at
     }
-    DEVICE_CODES {
-        text device_code_hash PK
-        text user_code UK
-        uuid install_id FK
-        timestamp expires_at
-        timestamp approved_at
-    }
-    TOKENS {
+    PROGRAM_VERSIONS {
         uuid id PK
-        uuid install_id FK
-        text token_hash UK
-        timestamp expires_at
+        uuid program_id FK
+        int version
+        text commit_sha
+        json manifest
+        text bundle_ref
+        timestamp created_at
+    }
+    DEPLOYMENTS {
+        uuid rrotor_id FK
+        uuid program_version_id FK
+        timestamp deployed_at
+        bool active
+    }
+    RUNS {
+        uuid id PK
+        uuid program_version_id FK
+        uuid rrotor_id FK
+        text function
+        text caller
+        text status
+        timestamp started_at
+        timestamp ended_at
+        int seconds
+    }
+    APPROVALS {
+        uuid id PK
+        uuid run_id FK
+        text step
+        text prompt
+        text answer
+        timestamp asked_at
+        timestamp answered_at
+    }
+    CONNECTOR_GRANTS {
+        uuid id PK
+        uuid user_id FK
+        text client
+        text token_hash
         timestamp revoked_at
     }
 ```
 
-- **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price (Stripe prices cannot change either). An org stays on the version it subscribed to (`orgs.plan_version_id`), so an update never touches an org; new orgs get the newest version, and an org moves only when its admin changes plan or we migrate it on purpose.
-- **RPA is on** wherever the license includes `glyphh-rpa`, in either mod.
-- **Which mods a version includes:** `all_mods` true includes every active mod, new ones as they ship (Pro, Team); false, only the free ones (Free). A mod once free stays free, so no org ever loses a mod it had.
-- **A limit left empty is unlimited.**
-- **One org per user:** `users.org_id`, not a memberships table. `role` is `admin` or `member`; the org's first user is its admin (`orgs.admin_user_id`).
-- **People are found by the provider's own id** (`identities`), never by email alone.
-- **Installs:** one per device-flow approval, one per machine for every mod, with its surface (`desktop` or `cli`). Revoking one signs that machine out. Its tokens are stored hashed.
-- **Workspaces:** names only, for the limit. Everything else about a workspace is in `~/.glyphh`.
-- **Tenant isolation:** row-level security keyed on the org.
+The tables already built (plans, orgs, users, identities, invites, installs, tokens, device codes, workspaces, mods) are drawn in full in the image; the new ones are for programs.
+
+- **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
+- **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
+- **A limit left empty is unlimited.** `max_machines` is how many rrotors a person may have; `machine_hours` the running time a person's machines share each month. When the hours run out, calls are refused with `E_LIMIT` until the month turns or the plan changes.
+- **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
+- **Programs:** the record only: name, repo, versions (commit, manifest, bundle), where each is deployed. The bundle is in object storage; secrets and data are in rrotor.
+- **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
+- **Approvals:** a step waiting for the person, until answered anywhere.
+- **Connector grants:** each Claude (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, revocable one by one.
 
 ### On the machine
 
 ![What lives in ~/.glyphh](img/data-model-local.png)
 
-- **A workspace is one file**, `workspaces/<slug>.json`: its session (model, folder, permission mode, effort), its grid (columns, rows and their saved sizes), the desktop panes it opens, its cells and its tabs.
-- **A cell** sits at a column and row with its spans, and is a `browser` (showing one of the workspace's tabs), `file`, `editor`, `terminal` or `diff`.
-- **A tab** is a URL with its name and no redirect.
-- **A site is one file**, `rpa/<slug>.json`: what URLs it matches, its commands, and sequences of steps that call them (`recorded` when made with Record). A tab on a matching URL gets the site's tools.
-- **A site runs in one named profile** (`profiles/<name>/`), signed in only where the person signed in; a workspace tab names its profile too.
-- **Each step of a sequence has an approval rule:** `auto` or `ask`.
-- **`license.json`** is refreshed from the server through the install's token and carries the plan's limits and mods.
+- **A workspace is one file**: its session, its grid with saved sizes, its cells and tabs (URL, profile, no redirect).
+- **A site is one file** (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
+- **Named profiles** (`profiles/<name>/`) hold only the sign-ins made in them.
 
 ## Plans
 
-Billed per seat, per month. Installs and workspaces are per user.
+Billed per seat, per month. Installs, workspaces, machines and machine hours are per user. **Programs follow the same structure:** every plan gets machines and hours (Chris, 2026-10-14).
 
-| | Free | Pro | Team |
-|---|---|---|---|
-| Price per seat | $0 | $8 | $16 |
-| Mods | `glyphh`, `glyphh-workspaces` | Every mod | Every mod |
-| Members | 1 | 1 | Unlimited |
-| Installs | 1 | 5 | 10 |
-| Workspaces | 2 | 10 | Unlimited |
-| RPA, inline and in workspaces | No | Yes | Yes |
+| | Free | Solo | Pro | Team |
+|---|---|---|---|---|
+| Price per seat | $0 | ? | $8 | $16 |
+| Mods | `glyphh`, `glyphh-workspaces`, `glyphh-programs` | ? | Every mod | Every mod |
+| Members | 1 | 1 | 1 | Unlimited |
+| Installs | 1 | ? | 5 | 10 |
+| Workspaces | 2 | ? | 10 | Unlimited |
+| rrotor machines | 1 | 2 | ? | ? |
+| Machine hours a month | 1 | ? | ? | ? |
 
-Team's installs are capped so one seat can't be shared across a team's machines.
+To decide: where Solo sits against Pro, and the machines and hours for Solo, Pro and Team. rrotor costs Glyphh about $0.019 an hour running (Fly `shared-cpu-2x`, 2 GB) and about $1 a month per machine stopped (storage): Free's 1 hour costs about $1.02 a month; 40 hours on 2 machines about $2.75.
