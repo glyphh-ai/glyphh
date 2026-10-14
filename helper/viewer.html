@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspaces</title>
+<style>
+  :root {
+    --bg: #111214; --panel: #17181b; --line: #2a2c31; --text: #e7e7ea; --dim: #8b8d94;
+    --accent: #a78bfa; --gutter: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+  #top { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); height: 36px; }
+  #top button { background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 10px; font: inherit; cursor: pointer; }
+  #top button.on { color: var(--text); border-color: var(--accent); background: #a78bfa1f; }
+  #top .hint { margin-left: auto; color: var(--dim); font-size: 12px; }
+  #grid { position: absolute; inset: 36px 0 0 0; display: grid; }
+  .gutter { background: transparent; position: relative; z-index: 2; }
+  .gutter::after { content: ""; position: absolute; background: var(--line); }
+  .gutter.v { cursor: col-resize; } .gutter.v::after { inset: 0 2px; }
+  .gutter.h { cursor: row-resize; } .gutter.h::after { inset: 2px 0; }
+  .gutter:hover::after, .gutter.drag::after { background: var(--accent); }
+  .cell { position: relative; z-index: 3; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    background: var(--panel); overflow: hidden; }
+  .bar { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--line); flex: none; }
+  .bar button { background: none; border: none; color: var(--dim); cursor: pointer; font: inherit; padding: 2px 5px; border-radius: 4px; }
+  .bar button:hover { color: var(--text); background: #ffffff10; }
+  .bar input { flex: 1; min-width: 0; background: #0c0d0f; color: var(--text); border: 1px solid var(--line);
+    border-radius: 5px; padding: 3px 7px; font: 12px ui-monospace, Menlo, monospace; }
+  .bar .title { color: var(--dim); font-size: 12px; max-width: 30%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .view { position: relative; flex: 1; min-height: 0; background: #fff; }
+  .view img, .view video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; -webkit-user-drag: none; }
+  .view video { display: none; background: #fff; }
+  .view.rtc video { display: block; } .view.rtc img { display: none; }
+  .bar .via { font: 10px ui-monospace, Menlo, monospace; color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  .bar .via.rtc { color: var(--accent); border-color: var(--accent); }
+  .view .input { position: absolute; inset: 0; outline: none; cursor: default; }
+  .view .input:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+  .native { flex: 1; display: grid; place-items: center; color: var(--dim); text-align: center; padding: 12px; }
+  .native b { color: var(--text); }
+</style>
+</head>
+<body>
+<div id="top"></div>
+<div id="grid"></div>
+<script>
+"use strict"
+const T = new URLSearchParams(location.search).get("t") || ""
+const api = (path, body) => fetch(path, {
+  method: body === undefined ? "GET" : "POST",
+  headers: { "X-Token": T, "Content-Type": "application/json" },
+  body: body === undefined ? undefined : JSON.stringify(body),
+}).then(r => r.json())
+
+let state = { layouts: [], active: "" }
+const pageInfo = {} // cell → { url, title }
+const shown = new Set() // browser cells of the layout on screen
+const rtc = new Map() // cell → RTCPeerConnection
+const answers = new Map() // cell → resolve(answer SDP)
+const cellId = (l, c) => `${l.name}:${c.col},${c.row}`
+
+// ── Ops to the helper: batched once a frame; hover moves fold to the latest ─
+let queue = []
+let flushing = false
+function op(cmd) {
+  const last = queue[queue.length - 1]
+  if (cmd.op === "mouse" && cmd.action === "move" && last && last.op === "mouse" && last.action === "move" && last.cell === cmd.cell) queue[queue.length - 1] = cmd
+  else queue.push(cmd)
+  if (!flushing) {
+    flushing = true
+    requestAnimationFrame(async () => {
+      const batch = queue
+      queue = []
+      flushing = false
+      if (batch.length) await api("/api/ops", batch).catch(() => {})
+    })
+  }
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function drawTabs() {
+  const top = document.getElementById("top")
+  top.replaceChildren()
+  state.layouts.forEach((l, i) => {
+    const b = document.createElement("button")
+    b.textContent = `${i + 1} ${l.name}`
+    b.className = l.name === state.active ? "on" : ""
+    b.onclick = () => switchTo(l.name)
+    top.append(b)
+  })
+  const hint = document.createElement("span")
+  hint.className = "hint"
+  hint.textContent = "click a page to type into it · drag the lines to resize · alt+1…9 switch"
+  top.append(hint)
+}
+
+async function switchTo(name) {
+  if (name === state.active) return
+  for (const cell of shown) op({ op: "hide", cell })
+  state.active = name
+  await api("/api/active", { name })
+  draw()
+}
+
+document.addEventListener("keydown", e => {
+  if (e.altKey && /^[1-9]$/.test(e.key)) {
+    const l = state.layouts[Number(e.key) - 1]
+    if (l) { e.preventDefault(); switchTo(l.name) }
+  }
+})
+
+// ── The grid ────────────────────────────────────────────────────────────────
+const tracks = fr => fr.map(f => `${Math.max(0.05, f)}fr`).join(" var(--gutter) ")
+
+function draw() {
+  drawTabs()
+  const l = state.layouts.find(x => x.name === state.active) || state.layouts[0]
+  const grid = document.getElementById("grid")
+  // Close the old cells' streams first: a removed <img> keeps its stream open,
+  // and the browser allows six connections to one server.
+  for (const img of grid.querySelectorAll("img")) img.src = "data:,"
+  for (const [cell, pc] of rtc) { pc.close(); api("/api/rtc", { cell, kind: "close" }).catch(() => {}) }
+  rtc.clear()
+  grid.replaceChildren()
+  shown.clear()
+  if (!l) return
+  grid.style.gridTemplateColumns = tracks(l.colWidths)
+  grid.style.gridTemplateRows = tracks(l.rowHeights)
+
+  for (let c = 0; c < l.cols - 1; c++) grid.append(gutter(l, "col", c))
+  for (let r = 0; r < l.rows - 1; r++) grid.append(gutter(l, "row", r))
+  for (const cell of l.cells) {
+    const el = cell.panel === "browser" ? browserCell(l, cell) : nativeCell(cell)
+    const span = Math.max(1, cell.rowSpan || 1)
+    el.style.gridColumn = `${cell.col * 2 + 1}`
+    el.style.gridRow = `${cell.row * 2 + 1} / span ${span * 2 - 1}`
+    grid.append(el)
+  }
+}
+
+function gutter(l, axis, index) {
+  const g = document.createElement("div")
+  g.className = `gutter ${axis === "col" ? "v" : "h"}`
+  if (axis === "col") { g.style.gridColumn = `${index * 2 + 2}`; g.style.gridRow = "1 / -1" }
+  else { g.style.gridRow = `${index * 2 + 2}`; g.style.gridColumn = "1 / -1" }
+  g.onpointerdown = e => {
+    e.preventDefault()
+    g.setPointerCapture(e.pointerId)
+    g.classList.add("drag")
+    const key = axis === "col" ? "colWidths" : "rowHeights"
+    const start = [...l[key]]
+    const sum = start.reduce((a, b) => a + b, 0)
+    const grid = document.getElementById("grid").getBoundingClientRect()
+    const size = axis === "col" ? grid.width : grid.height
+    const from = axis === "col" ? e.clientX : e.clientY
+    g.onpointermove = m => {
+      const shift = (((axis === "col" ? m.clientX : m.clientY) - from) / size) * sum
+      const a = start[index], b = start[index + 1], min = 0.08 * sum
+      const moved = Math.max(min - a, Math.min(b - min, shift))
+      l[key] = [...start]
+      l[key][index] = a + moved
+      l[key][index + 1] = b - moved
+      const gridEl = document.getElementById("grid")
+      if (axis === "col") gridEl.style.gridTemplateColumns = tracks(l.colWidths)
+      else gridEl.style.gridTemplateRows = tracks(l.rowHeights)
+    }
+    g.onpointerup = () => {
+      g.onpointermove = g.onpointerup = null
+      g.classList.remove("drag")
+      api("/api/shape", { name: l.name, colWidths: l.colWidths, rowHeights: l.rowHeights }).catch(() => {})
+    }
+  }
+  return g
+}
+
+function nativeCell(cell) {
+  const el = document.createElement("div")
+  el.className = "cell"
+  const names = { files: "/files", tree: "/files", file: "/files", editor: "/editor", diff: "/diff", terminal: "/term", claude: "the chat" }
+  el.innerHTML = `<div class="native"><div><b>${cell.panel}</b><br>uses the app's own pane: ${names[cell.panel] || ""}</div></div>`
+  return el
+}
+
+// ── A live browser cell ─────────────────────────────────────────────────────
+const KEYMAP = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "return",
+  Backspace: "backspace", Delete: "delete", Tab: "tab", Escape: "escape", PageUp: "pageup", PageDown: "pagedown",
+  Home: "home", End: "end" }
+
+function browserCell(l, cell) {
+  const id = cellId(l, cell)
+  shown.add(id)
+  const el = document.createElement("div")
+  el.className = "cell"
+  const bar = document.createElement("div")
+  bar.className = "bar"
+  const back = Object.assign(document.createElement("button"), { textContent: "◀", title: "Back", onclick: () => op({ op: "back", cell: id }) })
+  const reload = Object.assign(document.createElement("button"), { textContent: "⟳", title: "Reload", onclick: () => op({ op: "reload", cell: id }) })
+  const input = Object.assign(document.createElement("input"), { value: pageInfo[id]?.url || cell.url, spellcheck: false })
+  input.onkeydown = e => { if (e.key === "Enter") { op({ op: "navigate", cell: id, url: input.value }); view.querySelector(".input").focus() } }
+  const title = Object.assign(document.createElement("span"), { className: "title", textContent: pageInfo[id]?.title || "" })
+  const via = Object.assign(document.createElement("span"), { className: "via", textContent: "jpeg", title: "How this cell's picture arrives" })
+  bar.append(back, reload, input, title, via)
+
+  const view = document.createElement("div")
+  view.className = "view"
+  const img = document.createElement("img")
+  img.alt = ""
+  img.src = `/stream?cell=${encodeURIComponent(id)}&t=${T}`
+  const video = Object.assign(document.createElement("video"), { autoplay: true, muted: true, playsInline: true })
+  const layer = document.createElement("div")
+  layer.className = "input"
+  layer.tabIndex = 0
+  view.append(img, video, layer)
+  el.append(bar, view)
+  el._id = id; el._input = input; el._title = title
+
+  const at = e => {
+    const r = layer.getBoundingClientRect()
+    return { x: Math.round(e.clientX - r.left), y: Math.round(e.clientY - r.top) }
+  }
+  const mods = e => (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0)
+  const button = e => ["left", "middle", "right"][e.button] || "left"
+  layer.onpointerdown = e => { layer.focus(); layer.setPointerCapture(e.pointerId); op({ op: "mouse", cell: id, action: "down", button: button(e), clicks: e.detail || 1, mods: mods(e), ...at(e) }) }
+  layer.onpointerup = e => op({ op: "mouse", cell: id, action: "up", button: button(e), clicks: e.detail || 1, mods: mods(e), ...at(e) })
+  layer.onpointermove = e => op({ op: "mouse", cell: id, action: "move", button: e.buttons & 1 ? "left" : "none", mods: mods(e), ...at(e) })
+  layer.oncontextmenu = e => e.preventDefault()
+  layer.onwheel = e => { e.preventDefault(); op({ op: "wheel", cell: id, dx: e.deltaX, dy: e.deltaY, ...at(e) }) }
+  layer.onkeydown = e => {
+    if (e.altKey && /^[1-9]$/.test(e.key)) return // layout switching
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") return // the paste event sends it
+    e.preventDefault()
+    const named = KEYMAP[e.key]
+    if (named) op({ op: "key", cell: id, key: named, shift: e.shiftKey, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey })
+    else if (e.key.length === 1) op({ op: "key", cell: id, key: e.key, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey })
+  }
+  layer.onpaste = e => { e.preventDefault(); op({ op: "text", cell: id, text: e.clipboardData.getData("text") }) }
+
+  // Open (or bring back) the page at this cell's size; follow every resize.
+  // Open (or bring back) the page at this cell's size; follow a real resize
+  // only (a few pixels of layout jitter changes nothing), once it settles.
+  let timer, sized = ""
+  new ResizeObserver(() => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      const r = view.getBoundingClientRect()
+      if (r.width < 20 || r.height < 20 || !shown.has(id)) return
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      const w = Math.round(r.width * dpr / 2) * 2
+      const h = Math.round(r.height * dpr / 2) * 2
+      if (`${w}x${h}` === sized && rtc.has(id)) return
+      sized = `${w}x${h}`
+      op({ op: "open", cell: id, url: cell.url, w, h, scale: dpr })
+      if (!rtc.has(id)) startRtc(id, view, img, video, via, w, h)
+      else api("/api/rtc", { cell: id, kind: "resize", w, h }).catch(() => {})
+    }, 250)
+  }).observe(view)
+  return el
+}
+
+// ── WebRTC: the cell's video from the bridge; the JPEG stream until it plays ─
+const gathered = pc => new Promise(resolve => {
+  if (pc.iceGatheringState === "complete") return resolve()
+  pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") resolve() })
+  setTimeout(resolve, 2000)
+})
+
+async function startRtc(id, view, img, video, via, w, h) {
+  const pc = new RTCPeerConnection({ iceServers: [] })
+  rtc.set(id, pc)
+  pc.addTransceiver("video", { direction: "recvonly" })
+  pc.ontrack = e => { video.srcObject = e.streams[0] || new MediaStream([e.track]) }
+  video.onplaying = () => {
+    if (rtc.get(id) !== pc) return
+    view.classList.add("rtc")
+    via.textContent = "webrtc"
+    via.classList.add("rtc")
+    img.src = "data:," // the JPEG stream is no longer needed: free its connection
+  }
+  pc.onconnectionstatechange = () => {
+    if (["failed", "closed"].includes(pc.connectionState) && rtc.get(id) === pc) fallBack()
+  }
+  const fallBack = () => {
+    view.classList.remove("rtc")
+    via.textContent = "jpeg"
+    via.classList.remove("rtc")
+    if (img.src.startsWith("data:")) img.src = `/stream?cell=${encodeURIComponent(id)}&t=${T}`
+  }
+  try {
+    await pc.setLocalDescription(await pc.createOffer())
+    await gathered(pc)
+    const answer = new Promise((resolve, reject) => {
+      answers.set(id, resolve)
+      setTimeout(() => reject(new Error("no answer")), 8000)
+    })
+    await api("/api/rtc", { cell: id, kind: "offer", sdp: pc.localDescription.sdp, w, h })
+    await pc.setRemoteDescription({ type: "answer", sdp: await answer })
+    setTimeout(() => { if (rtc.get(id) === pc && !view.classList.contains("rtc")) fallBack() }, 6000)
+  } catch {
+    fallBack()
+  }
+}
+
+// ── Page updates from the helper ────────────────────────────────────────────
+const es = new EventSource(`/events?t=${T}`)
+es.onmessage = ev => {
+  const m = JSON.parse(ev.data)
+  if (m.t === "state") return load()
+  if (m.t === "answer") { answers.get(m.cell)?.(m.sdp); answers.delete(m.cell); return }
+  if (m.t === "rtc-error") return
+  pageInfo[m.cell] = { ...(pageInfo[m.cell] || {}), ...(m.t === "nav" ? { url: m.url } : { title: m.title }) }
+  for (const el of document.querySelectorAll(".cell")) {
+    if (el._id !== m.cell) continue
+    if (m.t === "nav" && document.activeElement !== el._input) el._input.value = m.url
+    if (m.t === "title") el._title.textContent = m.title
+  }
+}
+
+async function load() {
+  // Streams never finish: started before the page's own load, they would hold
+  // it open for good.
+  if (document.readyState !== "complete") await new Promise(r => addEventListener("load", r, { once: true }))
+  state = await api("/api/state")
+  for (const p of state.pages || []) pageInfo[p.cell] = { url: p.url, title: p.title }
+  draw()
+}
+load()
+</script>
+</body>
+</html>
