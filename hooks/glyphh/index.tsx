@@ -3,7 +3,7 @@
 // handing the rest of hooks/glyphh a Host. Hooks: /glyphh, its panel, the
 // session start (~/.glyphh), and dragged sizes on to the workspace files.
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, On } from 'claude-code'
+import type { EngineInterface, On, RenderSurface } from 'claude-code'
 
 import type { AuthState, GlyphhNote, GlyphhSection, Json, Layout, LicenseInfo } from '../../types'
 import { DEFAULTS } from '../layouts'
@@ -55,7 +55,15 @@ function host($: EngineInterface): Host {
     clock: { now: () => $.clock.now(), after: (ms, fn) => $.clock.after(ms, fn) },
     store: { get: key => $.store.get(key), set: (key, value) => $.store.set(key, value as never) },
     mcp: { call: (server, tool, args) => $.mcp.call(server, tool, args) },
-    surface: () => $.session.surface(),
+    // Which surfaces this session draws on (session.surface is deprecated): the
+    // desktop app's first; with none attached yet, no terminal program in the
+    // environment means the desktop app, as the grid's isDesktop does.
+    surface: async () => {
+      const all = await $.session.surfaces().catch(() => [] as RenderSurface[])
+      if (all.includes('desktop')) return 'desktop'
+      if (all.length) return all[0] ?? null
+      return (await $.env.get('TERM_PROGRAM').catch(() => 'x')) ? null : 'desktop'
+    },
     copy: async (text, surface) => (await $.ui.copy({ text, surface })).isCopied,
     openPanel: async () => (await $.ui.open({ id: 'glyphh', title: 'Glyphh' })).isPlaced,
     pluginRoot: $.plugin.root,

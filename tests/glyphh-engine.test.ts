@@ -12,7 +12,7 @@ function world(on: On, surface: 'terminal' | 'desktop') {
   const server = fakeServer()
   const files = new Map<string, string>()
   const opened: string[] = []
-  mock.env(on, { HOME })
+  mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty' } : { HOME })
   mock.store(on)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
