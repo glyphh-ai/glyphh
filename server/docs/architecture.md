@@ -20,9 +20,18 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 
 These come first where anything below says otherwise.
 
-1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`) and `drips` (limits `custom_drips`, `fullscreen`); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
+1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`), `drips` (limits `custom_drips`, `fullscreen`) and `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
 2. **The server is headless.** A person manages their Glyphh account from Claude, or any MCP client, through the **Glyphh connector**: a remote MCP server at `/mcp` (Streamable HTTP), signed in with OAuth. Its tools are the account: who am I, the plan and each mod's limits, the plans, upgrade, billing, seats, installs, members and invites, and the connector's own grants. Where the client shows MCP App panels, the connector serves one, the account panel (`ui://glyphh/account/1`); every other client gets the same tools as text and structured content. The server's only pages are the device page and the connector's sign-in and Allow page, both generic (styled together later).
 3. **Programs, runs, the runtime and hours are not in scope now.** Their tables stay as drawn; their API and connector tools wait.
+4. **The mods that use rrotor** (Chris, 2026-10-15, later the same day; rrotor's `docs/architecture.md`, Decisions and sections 9 to 11, has the detail):
+    - The product is mods sold by subscription: **Workspaces** and **Drips** (no rrotor), and **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
+    - **Gateway is a mod, never hosted by Glyphh:** it runs in the person's rrotor; models and keys are added in its UI and stay in rrotor, encrypted; it serves OpenAI- and Anthropic-compatible endpoints to programs and mods. It never routes a Claude subscription nor offers a Claude login ([Anthropic's terms](#anthropics-terms)). Designed only.
+    - **Ada is a mod** on rrotor: an Ada model is a program (`spec.json` and a small program file, deployed by commit, no network, its precedent store in a per-program data folder outside git). Designed only.
+    - **A small base image and a part per mod** (Programs: Chromium and profiles; Gateway: its runtime; Ada: numpy and the kernel); Postgres with pgvector, MongoDB and Neo4j are parts, not the base. Parts are versioned, come from the mod's release, are verified, and are licensed by the plan's per-mod limits.
+    - **rrotor has no sign-in of its own:** the mod, signed in, asks `POST /v1/runtime/local` for the runtime token and hands it to rrotor; signing the install out cuts rrotor off. A hosted rrotor's token is made by the server at provisioning (designed).
+    - **Claude reaches rrotor** locally through the mods (their tools call rrotor's local API on 127.0.0.1 with a local token only the mod holds), remotely through the Glyphh connector, the server and the runtime link. rrotor serves no MCP to Claude; no plugin carries an MCP server.
+    - **Local runtimes:** Apple's `container` where present, else OrbStack, else Docker. Hosting on Fly is designed only.
+    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `workspaces`, `drips`, `programs` (and later `gateway`, `ada`).
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
 - **Functional first.** Every screen works before design draws it.
@@ -665,6 +674,8 @@ Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). In
 | `workspaces`: `stream` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
 | `drips`: `custom_drips` | 3 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
 | `drips`: `fullscreen` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
+| `programs`: `programs` | 3 (TBD) | ? | 25 (TBD) | Unlimited (TBD) |
+| `programs`: `runs_per_day` | 50 (TBD) | ? | 1000 (TBD) | Unlimited (TBD) |
 | Local runtime | Yes | Yes | Yes | Yes |
 | Hosted runtime (cloud) | No | No | Yes | Yes |
 | Runtime hours a month | — | — | ? | ? |
