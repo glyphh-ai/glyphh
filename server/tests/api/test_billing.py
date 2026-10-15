@@ -18,14 +18,17 @@ async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> Non
     assert [p["mods"] for p in plans] == [
         {
             "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
+            "programs": {"limits": {"programs": 3, "runs_per_day": 50}},
             "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
         },
         {
             "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
         },
         {
             "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "programs": {"limits": {"programs": None, "runs_per_day": None}},
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
         },
     ]

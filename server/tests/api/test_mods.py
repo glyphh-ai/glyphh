@@ -18,6 +18,7 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
         ("workspaces", "Workspaces", ["Free", "Pro", "Team"]),
         ("drips", "Drips", ["Free", "Pro", "Team"]),
+        ("programs", "Programs", ["Free", "Pro", "Team"]),
     ]
     assert all(m["description"] for m in mods)
 
@@ -40,9 +41,10 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
     try:
         await apply_schema(engine, SETTINGS)
         lic = (await client.get("/v1/license", headers=pro.headers)).json()["payload"]
-        assert list(lic["mods"]) == ["workspaces"]
-        assert list((await client.get("/v1/me", headers=pro.headers)).json()["plan"]["mods"]) == ["workspaces"]
-        assert [m["slug"] for m in (await client.get("/v1/mods")).json()] == ["workspaces"]
+        assert list(lic["mods"]) == ["programs", "workspaces"]
+        mods = (await client.get("/v1/me", headers=pro.headers)).json()["plan"]["mods"]
+        assert list(mods) == ["programs", "workspaces"]
+        assert [m["slug"] for m in (await client.get("/v1/mods")).json()] == ["workspaces", "programs"]
         async with engine.connect() as conn:
             assert (await conn.execute(select(Mod.active).where(Mod.slug == "glyphh-old"))).scalar_one() is False
     finally:

@@ -37,6 +37,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
         {"members": 1, "installs": 5},
         {
             "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
         },
     )
@@ -56,6 +57,7 @@ async def test_free_carries_free_limits_and_the_license_needs_a_token(
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
     assert mods == {
         "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
+        "programs": {"limits": {"programs": 3, "runs_per_day": 50}},
         "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
     }
     for path in ("/v1/license", "/v1/license/key"):

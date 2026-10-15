@@ -31,6 +31,7 @@ async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.As
         "limits": {"members": None, "installs": 10},
         "mods": {
             "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "programs": {"limits": {"programs": None, "runs_per_day": None}},
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
         },
     }
