@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspaces</title>
+<style>
+  /* Colours: the Claude desktop app's, sampled from its Browser pane (dark).
+     Every rule below uses these tokens; none names a colour itself. The
+     workspace editor (workspaces.css) maps the Glyphh app's tokens onto them. */
+  :root {
+    color-scheme: dark;
+    --c-outer: #151515;     /* window, behind the panes */
+    --c-bg: #191918;        /* pane and page */
+    --c-field: #252424;     /* raised fields, inputs */
+    --c-line: #30302f;      /* borders */
+    --c-line-2: #3b3a3a;    /* stronger borders */
+    --c-text: #edede9;
+    --c-text-2: #bbbaaf;    /* secondary, muted */
+    --c-btn: #fafafa;       /* primary button */
+    --c-btn-text: #191918;  /* text on the primary button */
+    --c-btn-2: #4a4a49;     /* secondary button */
+    --c-accent: #d97757;    /* Claude's orange: focus and selection, sparingly */
+    --c-danger: #e5675c;
+    --c-canvas: #ffffff;    /* behind a page that has not drawn yet */
+    --c-hover: color-mix(in srgb, var(--c-text) 8%, transparent);
+    --c-ripple: color-mix(in srgb, var(--c-accent) 45%, transparent);
+    --c-overlay: color-mix(in srgb, var(--c-outer) 70%, transparent);
+    --c-shadow: color-mix(in srgb, var(--c-outer) 80%, transparent);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+  /* Light: PROVISIONAL values, until samples from Claude's light pane replace them. */
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --c-outer: #f0eee6;
+      --c-bg: #faf9f5;
+      --c-field: #ffffff;
+      --c-line: #e5e3da;
+      --c-line-2: #d6d3c8;
+      --c-text: #141413;
+      --c-text-2: #6b6a63;
+      --c-btn: #141413;
+      --c-btn-text: #faf9f5;
+      --c-btn-2: #e8e6dc;
+      --c-danger: #c4463b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--c-outer); color: var(--c-text);
+    font: 13px/1.4 var(--font); overflow: hidden; }
+  button, input { font: inherit; }
+  /* A card's header and its browser bar: the Glyphh app's web panel
+     (.ws-rail-slot-header and .ws-app-chrome at v1.6.2), in Claude's colours. */
+  .slot-head { height: 38px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--c-line); display: flex;
+    align-items: center; gap: 8px; flex-shrink: 0; background: var(--c-bg); }
+  .slot-head .icon { width: 14px; height: 14px; color: var(--c-text-2); flex-shrink: 0; }
+  .slot-head .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 13px; font-weight: 500; color: var(--c-text); }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+    flex-shrink: 0; border: none; border-radius: 6px; background: none; color: var(--c-text-2); cursor: pointer; padding: 0;
+    transition: background 0.1s, color 0.1s; }
+  .icon-btn svg { width: 16px; height: 16px; display: block; }
+  .icon-btn:hover { background: var(--c-hover); color: var(--c-text); }
+  .icon-btn.active { color: var(--c-text); }
+  .icon-btn[disabled] { opacity: 0.35; cursor: default; }
+  .icon-btn[disabled]:hover { background: none; color: var(--c-text-2); }
+  .app-chrome { flex-shrink: 0; display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 6px;
+    background: var(--c-bg); border-bottom: 1px solid var(--c-line); }
+  .urlbar { flex: 1 1 auto; min-width: 0; height: 24px; padding: 0 10px; border: 1px solid var(--c-line); border-radius: 7px;
+    background: var(--c-field); color: var(--c-text); font-size: 12px; outline: none; }
+  .urlbar:focus { border-color: var(--c-accent); }
+
+  .view { position: relative; flex: 1; min-height: 0; background: var(--c-canvas); }
+  /* A popup the page opened, shown over its card until closed. */
+  .popup { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; background: var(--c-bg);
+    border: 1px solid var(--c-line-2); }
+  .view canvas { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
+  /* A click answers at once, before the page's own picture does. */
+  .ripple { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+    background: var(--c-ripple); pointer-events: none; animation: ripple 0.35s ease-out forwards; }
+  @keyframes ripple { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+  .view .input { position: absolute; inset: 0; outline: none; cursor: default; }
+  .view .input:focus { box-shadow: inset 0 0 0 1px var(--c-accent); }
+  .native { flex: 1; display: grid; place-items: center; color: var(--c-text-2); text-align: center; padding: 12px; font-size: 12px; }
+  .native b { color: var(--c-text); font-weight: 500; font-size: 13px; }
+  /* The licence: a quiet line at the top right during the trial, a locked screen after it. */
+  #licence { position: absolute; top: 14px; right: 16px; z-index: 31; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--c-text-2); }
+  #licence:empty { display: none; }
+  .btn { border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: 500; }
+  .btn.primary { background: var(--c-btn); color: var(--c-btn-text); }
+  .btn.secondary { background: var(--c-btn-2); color: var(--c-text); }
+  #licence .btn { padding: 3px 10px; }
+  .btn:focus-visible { outline: 1px solid var(--c-accent); outline-offset: 1px; }
+  #locked { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--c-bg); padding: 24px; }
+  #locked .locked-box { max-width: 520px; display: flex; flex-direction: column; gap: 10px; }
+  #locked h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--c-text); }
+  #locked p { margin: 0; color: var(--c-text-2); line-height: 1.5; }
+  #locked .ended { color: var(--c-text); margin-top: 6px; }
+  #locked .row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  #locked .btn { font-size: 13px; padding: 6px 14px; }
+  #locked .small { font-size: 12px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="echo"></div>
+<div id="licence"></div>
+<div id="ws" class="ws-view hidden"></div>
+<div id="locked" class="hidden"></div>
+<script>
+"use strict"
+// The session's token, put here by the server; the one-time key leaves the address.
+const T = "__WORKSPACES_TOKEN__"
+const START_VIEW = new URLSearchParams(location.search).get("view")
+// WORKSPACES_DEBUG=1 (the helper's): input → picture measured (WORKSPACES_DEBUG below).
+const DEBUG = __WORKSPACES_DEBUG__
+let seqN = 0
+const stamp = () => (DEBUG ? { seq: ++seqN, t: Date.now() } : {})
+history.replaceState(null, "", "/")
+
+const api = (path, body) => fetch(path, {
+  method: body === undefined ? "GET" : "POST",
+  headers: { "X-Token": T, "Content-Type": "application/json" },
+  body: body === undefined ? undefined : JSON.stringify(body),
+}).then(r => r.json())
+
+const pageInfo = {} // page → { url, title }
+const canvases = new Map() // page → the canvas its frames are drawn on
+
+// ── Ops to the helper ───────────────────────────────────────────────────────
+// Presses, releases, keys and wheel turns go at once; hover moves wait for the
+// next frame and fold to the latest. Posts go one after another, so a release
+// never overtakes its press.
+let queue = []
+let moving = false
+let sending = Promise.resolve()
+function send() {
+  const batch = queue
+  queue = []
+  if (!batch.length) return
+  for (const c of batch) if (c.seq) c.posted = Date.now()
+  sending = sending.then(() => api("/api/ops", batch)).catch(() => {})
+}
+function op(cmd) {
+  const last = queue[queue.length - 1]
+  const isMove = cmd.op === "mouse" && cmd.action === "move"
+  if (isMove && last && last.op === "mouse" && last.action === "move" && last.cell === cmd.cell) queue[queue.length - 1] = cmd
+  else queue.push(cmd)
+  if (!isMove) return send()
+  if (!moving) {
+    moving = true
+    requestAnimationFrame(() => {
+      moving = false
+      send()
+    })
+  }
+}
+
+// ── The licence ─────────────────────────────────────────────────────────────
+// The mod tells the page the licence's state in words (GET /api/licence-state,
+// then the "licence" event); Unlock, Cancel and Copy licence key go back to
+// it (POST /api/licence), and the buying and checking stay in the mod.
+let licence = null
+const licenceAsk = action => api("/api/licence", { action }).catch(() => {})
+const button = (label, cls, onclick) => Object.assign(document.createElement("button"), { type: "button", className: `btn ${cls}`, textContent: label, onclick })
+const text = (tag, cls, content) => Object.assign(document.createElement(tag), { className: cls, textContent: content })
+
+/** The licence line at the top right: the trial's days and Unlock, or the wait and Cancel. */
+function drawLicenceLine() {
+  const box = document.getElementById("licence")
+  box.replaceChildren()
+  if (!licence || licence.kind !== "trial") return
+  if (licence.isWaiting) box.append(text("span", "", licence.note || "Finish checkout in your browser…"), button("Cancel", "secondary", () => licenceAsk("cancel")))
+  else box.append(text("span", "", licence.trial), button(`Unlock — ${licence.price}`, "primary", () => licenceAsk("buy")))
+}
+
+/** After the trial without a licence: what Workspaces does, and Unlock. */
+function drawLocked() {
+  const locked = document.getElementById("locked")
+  const isLocked = licence?.kind === "expired"
+  locked.classList.toggle("hidden", !isLocked)
+  if (!isLocked) return locked.replaceChildren()
+  window.WORKSPACES_EDITOR?.hide()
+  const card = Object.assign(document.createElement("div"), { className: "locked-box" })
+  card.append(text("h1", "", licence.product), ...licence.about.map(line => text("p", "", line)))
+  card.append(text("p", "ended", `The ${licence.trialDays}-day trial has ended. Unlock ${licence.product} for ${licence.price}, once.`))
+  const row = Object.assign(document.createElement("div"), { className: "row" })
+  row.append(licence.isWaiting ? button("Cancel", "secondary", () => licenceAsk("cancel")) : button(`Unlock — ${licence.price}`, "primary", () => licenceAsk("buy")))
+  card.append(row)
+  if (licence.note) card.append(text("p", "small", licence.note))
+  card.append(text("p", "small", `Bought it on another machine? ${licence.command} key <licence>`))
+  locked.replaceChildren(card)
+}
+
+function setLicence(status) {
+  licence = status
+  window.WORKSPACES.licence = status
+  drawLicenceLine()
+  drawLocked()
+  window.WORKSPACES_EDITOR?.refresh()
+  window.WORKSPACES_ECHO?.layout()
+}
+
+// ── Icons: 16px, 1.5px strokes, round ends, in the text's colour ────────────
+const svg = body => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
+const ICONS = {
+  page: svg('<circle cx="8" cy="8" r="6"/><path d="M2 8h12"/><path d="M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14c-1.8-1.7-2.6-3.7-2.6-6S6.2 3.7 8 2z"/>'),
+  back: svg('<path d="M10 3.5 5.5 8l4.5 4.5"/>'),
+  forward: svg('<path d="M6 3.5 10.5 8 6 12.5"/>'),
+  reload: svg('<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v3h-3"/>'),
+  address: svg('<rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="M2 6.5h12"/>'),
+  maximize: svg('<path d="M10 2.5h3.5V6"/><path d="M6 13.5H2.5V10"/><path d="M13.5 2.5 9.5 6.5"/><path d="M2.5 13.5l4-4"/>'),
+  restore: svg('<path d="M3 9.5h3.5V13"/><path d="M13 6.5H9.5V3"/><path d="M9.5 6.5l4-4"/><path d="M2.5 13.5l4-4"/>'),
+  close: svg('<path d="M4 4l8 8"/><path d="M12 4l-8 8"/>'),
+  files: svg('<path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>'),
+  changes: svg('<path d="M8 2.5v11"/><path d="M5 5 2.5 7.5 5 10"/><path d="M11 6l2.5 2.5L11 11"/>'),
+  terminal: svg('<path d="M3 4.5 6.5 8 3 11.5"/><path d="M8.5 12H13"/>'),
+}
+
+function iconButton(icon, title, onclick) {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "icon-btn", title, onclick })
+  b.innerHTML = ICONS[icon]
+  return b
+}
+
+/** A cell's header, as the Glyphh app's web panel had it: its icon, its
+ *  title, then its buttons. */
+function slotHead(icon, title, ...buttons) {
+  const head = Object.assign(document.createElement("div"), { className: "slot-head" })
+  const mark = document.createElement("span")
+  mark.className = "icon"
+  mark.innerHTML = ICONS[icon]
+  head.append(mark, Object.assign(document.createElement("span"), { className: "title", textContent: title }), ...buttons)
+  return head
+}
+
+// ── A live page ─────────────────────────────────────────────────────────────
+const KEYMAP = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "return",
+  Backspace: "backspace", Delete: "delete", Tab: "tab", Escape: "escape", PageUp: "pageup", PageDown: "pagedown",
+  Home: "home", End: "end" }
+
+/** A live page's picture and its input: frames drawn on a canvas, clicks,
+ *  wheel turns and keys sent to the page `id`. */
+function liveView(id) {
+  const view = document.createElement("div")
+  view.className = "view"
+  const canvas = document.createElement("canvas")
+  canvases.set(id, canvas)
+  if (latest.has(id)) paint(id, latest.get(id))
+  const layer = document.createElement("div")
+  layer.className = "input"
+  layer.tabIndex = 0
+  view.append(canvas, layer)
+
+  const at = e => {
+    const r = layer.getBoundingClientRect()
+    return { x: Math.round(e.clientX - r.left), y: Math.round(e.clientY - r.top) }
+  }
+  const mods = e => (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0)
+  const button = e => ["left", "middle", "right"][e.button] || "left"
+  const ripple = e => {
+    const dot = Object.assign(document.createElement("div"), { className: "ripple" })
+    const p = at(e)
+    dot.style.left = `${p.x}px`
+    dot.style.top = `${p.y}px`
+    view.append(dot)
+    dot.addEventListener("animationend", () => dot.remove())
+  }
+  layer.onpointerdown = e => {
+    layer.focus()
+    try { layer.setPointerCapture(e.pointerId) } catch {}
+    ripple(e)
+    op({ op: "mouse", cell: id, action: "down", button: button(e), clicks: e.detail || 1, mods: mods(e), ...at(e), ...stamp() })
+  }
+  layer.onpointerup = e => op({ op: "mouse", cell: id, action: "up", button: button(e), clicks: e.detail || 1, mods: mods(e), ...at(e) })
+  layer.onpointermove = e => op({ op: "mouse", cell: id, action: "move", button: e.buttons & 1 ? "left" : "none", mods: mods(e), ...at(e) })
+  layer.oncontextmenu = e => e.preventDefault()
+  layer.onwheel = e => { e.preventDefault(); op({ op: "wheel", cell: id, dx: e.deltaX, dy: e.deltaY, ...at(e), ...stamp() }) }
+  layer.onkeydown = e => {
+    if (e.altKey && /^[1-9]$/.test(e.key)) return // workspace switching
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") return // the paste event sends it
+    e.preventDefault()
+    const named = KEYMAP[e.key]
+    if (named) op({ op: "key", cell: id, key: named, shift: e.shiftKey, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey })
+    else if (e.key.length === 1) op({ op: "key", cell: id, key: e.key, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey })
+  }
+  layer.onpaste = e => { e.preventDefault(); op({ op: "text", cell: id, text: e.clipboardData.getData("text") }) }
+  return view
+}
+
+/** The card showing the live page `id`. */
+const cardOf = id => [...document.querySelectorAll("#cards .card")].find(c => c._id === id)
+
+/** A popup the card's page opened, over the card, with a close button. */
+function showPopup(pageId, popupId, url) {
+  const el = cardOf(pageId)
+  if (!el) return
+  el.querySelector(".popup")?.remove()
+  const box = Object.assign(document.createElement("div"), { className: "popup" })
+  box._id = popupId
+  const close = iconButton("close", "Close this popup", () => { op({ op: "close", cell: popupId }); box.remove() })
+  box.append(slotHead("page", url || "Popup", close), liveView(popupId))
+  el.append(box)
+}
+
+// ── Pictures: every cell's frames on one stream ─────────────────────────────
+// GET /frames carries each cell's JPEGs as parts naming the cell. Each frame
+// is decoded off the main thread (createImageBitmap) and drawn on its cell's
+// canvas; a cell still decoding keeps only the newest frame waiting.
+const latest = new Map() // cell → its newest decoded frame
+const decoding = new Map() // cell → the frame waiting for the decode in flight (or null)
+
+function paint(cell, bitmap) {
+  const canvas = canvases.get(cell)
+  if (!canvas) return
+  if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) Object.assign(canvas, { width: bitmap.width, height: bitmap.height })
+  canvas.getContext("2d").drawImage(bitmap, 0, 0)
+}
+
+const draws = [] // WORKSPACES_DEBUG: each frame drawn, with when Chrome took it
+function decode(cell, jpeg, captured) {
+  if (decoding.has(cell)) return void decoding.set(cell, { jpeg, captured })
+  decoding.set(cell, null)
+  createImageBitmap(new Blob([jpeg], { type: "image/jpeg" }))
+    .then(bitmap => {
+      latest.get(cell)?.close()
+      latest.set(cell, bitmap)
+      paint(cell, bitmap)
+      if (DEBUG) draws.push({ cell, captured, drawn: Date.now() })
+    })
+    .catch(() => {})
+    .finally(() => {
+      const next = decoding.get(cell)
+      decoding.delete(cell)
+      if (next) decode(cell, next.jpeg, next.captured)
+    })
+}
+
+const SEP = new Uint8Array([13, 10, 13, 10])
+function indexOf(buf, from) {
+  outer: for (let i = from; i <= buf.length - 4; i++) {
+    for (let j = 0; j < 4; j++) if (buf[i + j] !== SEP[j]) continue outer
+    return i
+  }
+  return -1
+}
+
+async function readFrames() {
+  for (;;) {
+    try {
+      const res = await fetch(`/frames?t=${T}`)
+      const reader = res.body.getReader()
+      let buf = new Uint8Array(0)
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        const next = new Uint8Array(buf.length + value.length)
+        next.set(buf)
+        next.set(value, buf.length)
+        buf = next
+        for (;;) {
+          const head = indexOf(buf, 0)
+          if (head < 0) break
+          const header = new TextDecoder().decode(buf.subarray(0, head))
+          const length = Number(/Content-Length:\s*(\d+)/i.exec(header)?.[1] ?? -1)
+          if (length < 0 || buf.length < head + 4 + length + 2) break
+          const cell = decodeURIComponent(/X-Cell:\s*(\S+)/i.exec(header)?.[1] ?? "")
+          decode(cell, buf.slice(head + 4, head + 4 + length), Number(/X-Captured:\s*([\d.]+)/i.exec(header)?.[1] ?? 0))
+          buf = buf.slice(head + 4 + length + 2)
+        }
+      }
+    } catch {}
+    await new Promise(r => setTimeout(r, 1000)) // the helper went away: try again
+  }
+}
+
+// ── Page updates from the helper ────────────────────────────────────────────
+const es = new EventSource(`/events?t=${T}`)
+es.onmessage = ev => {
+  const m = JSON.parse(ev.data)
+  if (m.t === "state") return window.WORKSPACES_ECHO?.refreshState()
+  if (m.t === "show") return licence?.kind === "expired" ? undefined : showEditor(m.view)
+  if (m.t === "licence") return setLicence(m.status)
+  if (m.t === "library") {
+    window.WORKSPACES_ECHO?.refreshLibrary()
+    return editorReady.then(() => window.WORKSPACES_EDITOR.refresh())
+  }
+  if (m.t === "popup") return showPopup(m.cell, m.popup, m.url)
+  if (m.t === "popup-closed") return [...document.querySelectorAll(".popup")].find(p => p._id === m.popup)?.remove()
+  pageInfo[m.cell] = { ...(pageInfo[m.cell] || {}), ...(m.t === "nav" ? { url: m.url } : { title: m.title }) }
+  const pop = [...document.querySelectorAll(".popup")].find(p => p._id === m.cell)
+  if (pop) pop.querySelector(".title").textContent = m.t === "nav" ? m.url : m.title || pop.querySelector(".title").textContent
+  const el = cardOf(m.cell)
+  if (!el) return
+  if (m.t === "nav" && document.activeElement !== el._input) el._input.value = m.url
+  if (m.t === "title" && m.title) el._title.textContent = m.title
+}
+
+// ── The wall and the editor, loaded beside the page with the token ─────────
+window.WORKSPACES = {
+  token: T,
+  licence: null,
+  licenceAsk: action => licenceAsk(action),
+  api, op, liveView, slotHead, iconButton, ICONS, pageInfo, canvases,
+  showEditor,
+  hideEditor,
+  editorOpen: () => window.WORKSPACES_EDITOR?.isOpen() === true,
+  confirm: async options => (await editorReady, window.WORKSPACES_EDITOR.confirm(options)),
+  openLayout: name => { hideEditor(); window.WORKSPACES_ECHO.openWorkspace(name) },
+}
+// Each module says when it is ready (window.WORKSPACES.ready): a module's
+// load event comes before its top-level awaits are done.
+const arrived = {}
+const loadModule = (name, src) => new Promise(resolve => {
+  arrived[name] = resolve
+  document.head.append(Object.assign(document.createElement("script"), { type: "module", src }))
+})
+window.WORKSPACES.ready = (name, api) => {
+  window[name] = api
+  arrived[name]?.()
+}
+for (const css of ["echo.css", "workspaces.css"]) document.head.append(Object.assign(document.createElement("link"), { rel: "stylesheet", href: `/ws/${css}?t=${T}` }))
+const echoReady = loadModule("WORKSPACES_ECHO", `/ws/echo.js?t=${T}`)
+const editorReady = loadModule("WORKSPACES_EDITOR", `/ws/workspaces.js?t=${T}`)
+
+async function showEditor(view) {
+  await editorReady
+  await window.WORKSPACES_EDITOR.show(view)
+  window.WORKSPACES_ECHO?.layout()
+}
+function hideEditor() {
+  if (!window.WORKSPACES_EDITOR?.isOpen()) return
+  window.WORKSPACES_EDITOR.hide()
+  window.WORKSPACES_ECHO?.layout()
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && window.WORKSPACES_EDITOR?.isOpen() && !document.querySelector(".confirm-overlay, .cell-panel-picker")) hideEditor()
+})
+
+// Streams never finish: started before the page's own load, they would hold
+// it open for good.
+addEventListener("load", async () => {
+  await echoReady
+  await window.WORKSPACES_ECHO.start()
+  readFrames()
+  setLicence((await api("/api/licence-state").catch(() => ({}))).status ?? null)
+  if (START_VIEW && licence?.kind !== "expired") showEditor(START_VIEW)
+}, { once: true })
+
+// ── Measuring (WORKSPACES_DEBUG=1 only) ─────────────────────────────────────
+// With the probe page (debug/probe.html) in a cell, each trial clicks or
+// scrolls it through the cell's own handlers and waits for the probe's square
+// to change colour on the cell's canvas: the time from the input to the frame
+// on screen, split by the helper's trace into where it went (batch: held in
+// the page; post: to the helper; queue: behind other ops; cdp: Chrome takes
+// the input; paint: the page paints and Chrome captures; cast: the frame
+// reaches the helper; decode: the page decodes and draws it; show: on screen).
+if (DEBUG) window.WORKSPACES_DEBUG = (() => {
+  const sampler = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true })
+  const cellEl = cardOf
+  const colourOf = (media, x, y) => {
+    const w = media.width, h = media.height
+    const r = media.getBoundingClientRect()
+    if (!w || !r.width) return null
+    sampler.drawImage(media, (x / r.width) * w, (y / r.height) * h, 1, 1, 0, 0, 1, 1)
+    const [red, , blue] = sampler.getImageData(0, 0, 1, 1).data
+    return red > blue ? "red" : "blue"
+  }
+  const nextFrame = () => new Promise(resolve => requestAnimationFrame(now => resolve(performance.timeOrigin + now)))
+  async function trial(page, kind) {
+    const el = cellEl(page)
+    const view = el.querySelector(".view")
+    const media = view.querySelector("canvas")
+    const layer = view.querySelector(".input")
+    const before = colourOf(media, 30, 30)
+    const r = layer.getBoundingClientRect()
+    const at = { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true, pointerId: 1, button: 0, buttons: 1 }
+    const seq = seqN + 1
+    if (kind === "click") {
+      layer.dispatchEvent(new PointerEvent("pointerdown", at))
+      layer.dispatchEvent(new PointerEvent("pointerup", { ...at, buttons: 0 }))
+    } else layer.dispatchEvent(new WheelEvent("wheel", { ...at, deltaY: 120, cancelable: true }))
+    const until = Date.now() + 3000
+    while (Date.now() < until) {
+      const shown = await nextFrame()
+      if (colourOf(media, 30, 30) !== before) return { seq, kind, shown }
+    }
+    return { seq, kind, shown: null }
+  }
+  const pct = (xs, p) => { const s = xs.filter(x => Number.isFinite(x)).sort((a, b) => a - b); return s.length ? Math.round(s[Math.min(s.length - 1, Math.floor(p * s.length))]) : null }
+  async function run({ page = "probe", clicks = 20, scrolls = 20, gap = 350 } = {}) {
+    const trials = []
+    for (const kind of [...Array(clicks).fill("click"), ...Array(scrolls).fill("scroll")]) {
+      trials.push(await trial(page, kind))
+      await new Promise(r => setTimeout(r, gap))
+    }
+    const t = { ...(await api("/api/debug")), draws }
+    const rows = trials.map(x => {
+      const o = t.ops.find(op => op.seq === x.seq)
+      if (!o || !x.shown) return { ...x, lost: true }
+      const frame = t.frames.find(f => f.cell === page && f.captured >= o.done - 1)
+      const draw = frame && t.draws.find(d => d.cell === page && d.captured === frame.captured)
+      return {
+        kind: x.kind, total: x.shown - o.input,
+        batch: o.posted - o.input, post: o.arrived - o.posted, queue: o.sent - o.arrived, cdp: o.done - o.sent,
+        paint: frame ? frame.captured - o.done : NaN, cast: frame ? frame.received - frame.captured : NaN,
+        decode: draw ? draw.drawn - frame.received : NaN, show: draw ? x.shown - draw.drawn : NaN,
+      }
+    })
+    const report = {}
+    for (const kind of ["click", "scroll"]) {
+      const rs = rows.filter(r => r.kind === kind && !r.lost)
+      report[kind] = { n: rs.length, lost: rows.filter(r => r.kind === kind && r.lost).length }
+      for (const k of ["total", "batch", "post", "queue", "cdp", "paint", "cast", "decode", "show"]) report[kind][k] = { p50: pct(rs.map(r => r[k]), 0.5), p95: pct(rs.map(r => r[k]), 0.95) }
+    }
+    return report
+  }
+  /** Scrolls the page for `ms` (for measuring CPU while it moves). */
+  async function storm(page = "probe", ms = 10000) {
+    const layer = cellEl(page).querySelector(".input")
+    const r = layer.getBoundingClientRect()
+    const end = Date.now() + ms
+    let dir = 1, n = 0
+    while (Date.now() < end) {
+      if (++n % 40 === 0) dir = -dir
+      layer.dispatchEvent(new WheelEvent("wheel", { clientX: r.left + 50, clientY: r.top + 50, deltaY: 60 * dir, bubbles: true, cancelable: true }))
+      await new Promise(res => requestAnimationFrame(res))
+    }
+  }
+  /** Frames drawn per second in a cell over the last `ms`. */
+  const fps = (page = "probe", ms = 5000) => Math.round((draws.filter(d => d.cell === page && d.drawn > Date.now() - ms).length * 1000) / ms)
+  return { trial, run, storm, fps }
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+/* echo.css — the layout page's home: the wall of tiles, the dock, and the
+   cards. The Glyphh app's Echo launcher (styles.css .echo-* at v1.6.2) laid
+   out again in Claude's tokens (viewer.html): neutral surfaces, Claude's
+   type, its orange only for focus, selection and drop targets. */
+
+#echo { position: absolute; inset: 0; overflow: hidden; background: var(--c-outer); }
+
+/* ── The dock ───────────────────────────────────────────────────────────── */
+.echo-dock-wrap { position: absolute; top: 10px; left: 0; right: 0; display: flex; justify-content: center; z-index: 30;
+  transition: transform 0.22s ease, opacity 0.22s ease; pointer-events: none; }
+.echo-dock { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 16px;
+  background: var(--c-bg); border: 1px solid var(--c-line); box-shadow: 0 8px 24px var(--c-shadow); pointer-events: auto; }
+.echo-dock.drop { border-color: var(--c-accent); }
+body.echo-dock-off .echo-dock-wrap { display: none; }
+body.echo-dock-tucked .echo-dock-wrap { transform: translateY(calc(-100% - 12px)); opacity: 0; }
+body.echo-dock-tucked.echo-dock-peek .echo-dock-wrap { transform: none; opacity: 1; }
+.echo-dock-hot { position: absolute; top: 0; left: 0; right: 0; height: 8px; z-index: 29; display: none; }
+body.echo-dock-tucked .echo-dock-hot { display: block; }
+.echo-dock-btn { position: relative; width: 40px; height: 40px; padding: 0; border: none; background: none; cursor: pointer;
+  transform-origin: 50% 0; transition: transform 0.08s linear; color: var(--c-text); }
+/* Its name under an item while the pointer is on it, as the Mac's dock does. */
+.echo-dock-btn::after { content: attr(data-title); position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%);
+  padding: 3px 8px; border-radius: 6px; background: var(--c-field); border: 1px solid var(--c-line); font-size: 11.5px;
+  color: var(--c-text); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
+.echo-dock-btn:hover::after, .echo-dock-btn:focus-visible::after { opacity: 1; }
+.echo-dock-btn .echo-app-ic { width: 40px; height: 40px; border-radius: 10px; }
+
+/* ── The wall ───────────────────────────────────────────────────────────── */
+.echo-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; }
+body.echo-cards-up .echo-stage { visibility: hidden; }
+.echo-search-wrap { margin-top: var(--echo-search-top, 96px); width: min(420px, calc(100% - 32px)); position: relative; flex: none; }
+.echo-search { width: 100%; height: 34px; padding: 0 14px 0 36px; border-radius: 17px; border: 1px solid var(--c-line);
+  background: var(--c-field); color: var(--c-text); font: 13px var(--font); outline: none; }
+.echo-search:focus { border-color: var(--c-accent); }
+.echo-search-wrap svg { position: absolute; left: 12px; top: 9px; width: 16px; height: 16px; color: var(--c-text-2); }
+.echo-pages { flex: 1; min-height: 0; width: 100%; display: flex; overflow: hidden; touch-action: pan-y; margin-top: 24px; }
+.echo-pages::-webkit-scrollbar { display: none; }
+.echo-page { flex: none; width: 100%; height: 100%; overflow-y: auto; scrollbar-width: none; display: flex; justify-content: center; }
+.echo-page-grid { width: min(1080px, calc(100% - 48px)); display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-rows: 112px; gap: 8px 12px; align-content: start; }
+.echo-dots { flex: none; display: flex; gap: 8px; justify-content: center; padding: 10px 0 18px; }
+.echo-dot { width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; background: var(--c-line-2); cursor: pointer; }
+.echo-dot.active { background: var(--c-text-2); }
+
+/* A tile: its icon, its name. */
+.echo-app-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 4px; border: none;
+  border-radius: 12px; background: none; color: var(--c-text); cursor: pointer; font: 12px var(--font); }
+.echo-app-btn:hover { background: var(--c-hover); }
+.echo-app-btn:focus-visible { outline: 1px solid var(--c-accent); }
+.echo-app-btn.drop { box-shadow: inset 0 0 0 1px var(--c-accent); }
+.echo-app-btn.drop-before, .echo-dock-btn.drop-before { box-shadow: -2px 0 0 var(--c-accent); }
+.echo-app-btn.drop-after, .echo-dock-btn.drop-after { box-shadow: 2px 0 0 var(--c-accent); }
+.echo-app-btn.echo-search-miss { opacity: 0.28; }
+.echo-app-name { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c-text); }
+.echo-app-ic { width: 56px; height: 56px; border-radius: 14px; background: var(--c-field); border: 1px solid var(--c-line);
+  display: grid; place-items: center; overflow: hidden; flex: none; color: var(--c-text-2); }
+.echo-app-ic img { width: 60%; height: 60%; object-fit: contain; }
+.echo-app-ic > svg { width: 50%; height: 50%; }
+.echo-app-fallback { font-size: 20px; font-weight: 600; color: var(--c-text-2); }
+.echo-mini { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; width: 70%; height: 70%; }
+.echo-mini > span { border-radius: 4px; background: var(--c-bg); display: grid; place-items: center; overflow: hidden; font-size: 9px; color: var(--c-text-2); }
+.echo-mini img { width: 70%; height: 70%; object-fit: contain; }
+.echo-mini svg { width: 60%; height: 60%; }
+.echo-mini .echo-app-fallback { font-size: 9px; }
+.echo-dock-btn .echo-app-fallback { font-size: 15px; }
+.slot-head .icon .echo-app-fallback { display: block; font-size: 10px; line-height: 14px; text-align: center; }
+.echo-app-del { position: absolute; top: 2px; left: 12px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--c-line-2);
+  background: var(--c-field); color: var(--c-text); display: none; place-items: center; padding: 0; cursor: pointer; }
+.echo-app-del svg { width: 12px; height: 12px; }
+.echo-edit .echo-app-del { display: grid; }
+.echo-edit .echo-app-btn { cursor: grab; }
+.echo-edit .echo-app-ic { box-shadow: 0 0 0 1px var(--c-line-2); }
+
+/* The folder modal. */
+.echo-folder-back { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--c-overlay); }
+.echo-folder { width: min(560px, calc(100% - 48px)); padding: 18px; border-radius: 16px; background: var(--c-bg); border: 1px solid var(--c-line);
+  box-shadow: 0 18px 50px var(--c-shadow); }
+.echo-folder input { width: 100%; height: 32px; margin-bottom: 14px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--c-line);
+  background: var(--c-field); color: var(--c-text); font: 600 14px var(--font); outline: none; text-align: center; }
+.echo-folder input:focus { border-color: var(--c-accent); }
+.echo-folder-hint { margin-top: 10px; text-align: center; font-size: 12px; color: var(--c-text-2); }
+.echo-folder .echo-page-grid { width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* A line when a delete is refused (a workspace still uses the favourite). */
+.echo-toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 45; max-width: min(560px, calc(100% - 32px));
+  padding: 8px 14px; border-radius: 8px; background: var(--c-field); border: 1px solid var(--c-line-2); color: var(--c-text);
+  box-shadow: 0 8px 24px var(--c-shadow); font-size: 12.5px; }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+#cards { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+.card { position: absolute; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; background: var(--c-bg);
+  border: 1px solid var(--c-line); pointer-events: auto; transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease; }
+body.echo-dragging .card { transition: none; }
+body.echo-dragging .view canvas, body.echo-dragging .view .input { pointer-events: none; }
+.card.drop { border-color: var(--c-accent); }
+.card.no-chrome .app-chrome { display: none; }
+.card.dragging { opacity: 0.6; }
+.card .slot-head { cursor: grab; }
+.card .slot-head .icon img { width: 14px; height: 14px; object-fit: contain; display: block; }
+.card.expanded { z-index: 5; }
+.icon-btn.on { color: var(--c-accent); }
+.seam { position: absolute; z-index: 12; pointer-events: auto; }
+.seam.v { cursor: col-resize; width: 7px; }
+.seam.h { cursor: row-resize; height: 7px; }
+.seam:hover, .seam.drag { background: color-mix(in srgb, var(--c-accent) 60%, transparent); }
+.edge-drop { position: absolute; z-index: 13; width: 6px; border-radius: 3px; background: var(--c-accent); display: none; }
+.edge-drop.on { display: block; }

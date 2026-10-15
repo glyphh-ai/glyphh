@@ -1,0 +1,53 @@
+{
+  "name": "workspaces",
+  "version": "1.0.0",
+  "description": "Workspaces for the Claude desktop app: your favourite pages live in one layout, with the app's panes, in one command",
+  "author": {
+    "name": "Glyphh AI",
+    "url": "https://glyphh.ai"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "home": {
+      "type": "string",
+      "title": "Workspaces: home",
+      "description": "What the layout page opens on: the wall of favourites and workspaces, or the workspace you had open last",
+      "default": "wall",
+      "options": [
+        "wall",
+        "last workspace"
+      ]
+    },
+    "dock": {
+      "type": "string",
+      "title": "Workspaces: dock",
+      "description": "Show the dock at the top of the layout page; off, its items lead the wall instead",
+      "default": "on",
+      "options": [
+        "on",
+        "off"
+      ]
+    },
+    "dockAutoHide": {
+      "type": "string",
+      "title": "Workspaces: hide the dock behind cards",
+      "description": "With cards open, the dock slides away until the pointer comes to the top",
+      "default": "on",
+      "options": [
+        "on",
+        "off"
+      ]
+    },
+    "iconsPerPage": {
+      "type": "string",
+      "title": "Workspaces: icons per page",
+      "description": "How many tiles one page of the wall holds",
+      "default": "40",
+      "options": [
+        "24",
+        "40",
+        "56"
+      ]
+    }
+  }
+}

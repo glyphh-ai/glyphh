@@ -1,0 +1,28 @@
+{
+  "name": "drips",
+  "version": "1.0.0",
+  "description": "Drips: visual effects over Claude (confetti, fireworks, hearts, a matrix rain), in its window or over the whole screen; save your own recipes and let Claude play them",
+  "author": { "name": "Glyphh AI", "url": "https://glyphh.ai" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "display": {
+      "type": "string",
+      "title": "Where effects play",
+      "description": "claude-window plays them over Claude's window, in a page in its Browser pane; fullscreen plays them over the whole screen under the pointer (macOS, needs Swift from the Xcode Command Line Tools).",
+      "default": "claude-window",
+      "options": ["claude-window", "fullscreen"]
+    },
+    "confetti_after_long_turn": {
+      "type": "boolean",
+      "title": "Confetti after a long turn",
+      "description": "Plays confetti when Claude finishes a turn that ran longer than two minutes.",
+      "default": false
+    },
+    "matrix_while_tools": {
+      "type": "boolean",
+      "title": "Matrix while tools run",
+      "description": "Plays a faint matrix rain while Claude's tools run.",
+      "default": false
+    }
+  }
+}
