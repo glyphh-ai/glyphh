@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glyphh account</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;padding:16px;background:transparent;color:var(--color-text-primary,CanvasText);
+  font-family:var(--font-sans,system-ui,sans-serif);font-size:var(--font-text-md-size,14px);line-height:var(--font-text-md-line-height,1.45)}
+section{border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
+  border-radius:var(--border-radius-lg,12px);padding:12px 16px;margin-bottom:12px}
+h1{margin:0 0 4px;font-size:var(--font-heading-sm-size,16px);font-weight:var(--font-weight-semibold,600)}
+h2{margin:0 0 8px;font-size:var(--font-text-md-size,14px);font-weight:var(--font-weight-semibold,600)}
+p{margin:0 0 6px} .sub{color:var(--color-text-secondary,GrayText)}
+ul{margin:0;padding:0;list-style:none} li{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:4px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+button,select{font:inherit;padding:4px 12px;border-radius:var(--border-radius-md,8px);cursor:pointer;
+  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
+  background:var(--color-background-secondary,transparent);color:var(--color-text-primary,CanvasText)}
+button:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-primary,Highlight);outline-offset:2px}
+.bad{color:var(--color-text-danger,inherit)} [hidden]{display:none!important}
+</style></head>
+<body>
+<section><h1 id="who">Glyphh</h1><p class="sub" id="org"></p></section>
+<section><h2>Plan</h2><p id="plan">Loading…</p><ul id="mods"></ul>
+  <div class="row"><select id="plans" aria-label="Plan"></select><button id="upgrade">Upgrade</button>
+  <button id="billing">Manage billing</button></div></section>
+<section><h2>Installs</h2><ul id="installs"></ul></section>
+<section><h2>Connector grants</h2><ul id="grants"></ul></section>
+<p class="bad" id="error" hidden></p>
+<script type="module">__APP_JS__</script>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const app = new window.McpApp({ name: "glyphh-account", version: "1" }, {}, { autoResize: true });
+const amount = (n) => (n === null ? "unlimited" : String(n));
+
+function theme(ctx) {
+  if (!ctx) return;
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(ctx.styles?.variables || {})) if (v) root.style.setProperty(k, v);
+  if (ctx.theme) root.style.colorScheme = ctx.theme;
+  const fonts = ctx.styles?.css?.fonts;
+  if (fonts && !$("host-fonts")) { const s = document.createElement("style"); s.id = "host-fonts"; s.textContent = fonts; document.head.append(s); }
+}
+
+function failed(message) { $("error").textContent = message; $("error").hidden = !message; }
+
+async function call(name, args = {}) {
+  const r = await app.callServerTool({ name, arguments: args });
+  if (r?.isError) throw new Error(r.structuredContent?.error?.message || r.content?.[0]?.text || `${name} failed`);
+  return r?.structuredContent || {};
+}
+
+function item(text, label, onClick) {
+  const li = document.createElement("li");
+  const span = document.createElement("span"); span.textContent = text; li.append(span);
+  if (label) { const b = document.createElement("button"); b.textContent = label; b.onclick = onClick; li.append(b); }
+  return li;
+}
+
+function showWho(w) {
+  $("who").textContent = `${w.name || w.email} (${w.email})`;
+  $("org").textContent = `${w.role === "admin" ? "Admin" : "Member"} of ${w.org.name}`;
+}
+
+function showPlan(d) {
+  const p = d.plan, o = d.org, used = d.used.mods || {};
+  const renews = o.renews_at ? `, renews ${o.renews_at.slice(0, 10)}` : "";
+  $("plan").textContent = `${p.name}: ${o.seats} seats, billing ${o.billing_status}${renews}. ` +
+    `Installs ${d.used.installs} of ${amount(p.limits.installs)}.`;
+  $("mods").replaceChildren(...Object.entries(p.mods).map(([slug, m]) => item(`${slug}: ` +
+    Object.entries(m.limits).map(([k, v]) => (used[slug]?.[k] === undefined ? `${k} ${amount(v)}` : `${k} ${used[slug][k]} of ${amount(v)}`)).join(", "))));
+}
+
+async function refresh() {
+  try {
+    const [w, p, plans, i, g] = await Promise.all([call("whoami"), call("plan"), call("plans"), call("installs"), call("connector_grants")]);
+    showWho(w); showPlan(p);
+    $("plans").replaceChildren(...plans.plans.filter((x) => x.name !== p.plan.name).map((x) => new Option(x.name, x.name)));
+    $("installs").replaceChildren(...i.installs.map((x) => item(`${x.name} (${x.surface})`, "Sign out", () => act("sign_out_install", { install_id: x.id }))));
+    $("grants").replaceChildren(...g.grants.map((x) => item(`${x.client}${x.current ? " (this one)" : ""}`, "Revoke", () => act("revoke_grant", { grant_id: x.id }))));
+    failed("");
+  } catch (e) { failed(e.message); }
+}
+
+async function act(name, args) { try { await call(name, args); await refresh(); } catch (e) { failed(e.message); } }
+
+async function open(name, args) {
+  try { const d = await call(name, args); if (d.url) await app.openLink({ url: d.url }); else await refresh(); failed(""); }
+  catch (e) { failed(e.message); }
+}
+
+$("upgrade").onclick = () => open("upgrade", { plan: $("plans").value });
+$("billing").onclick = () => open("billing_portal");
+app.ontoolresult = () => refresh();
+app.onhostcontextchanged = theme;
+app.connect().then(() => { theme(app.getHostContext()); return refresh(); }).catch((e) => failed("The panel could not connect: " + (e?.message || e)));
+</script>
+</body></html>

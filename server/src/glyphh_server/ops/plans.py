@@ -49,8 +49,12 @@ async def active_mods(conn: AsyncConnection) -> list[str]:
 
 
 def included(row: Row, mods: list[str]) -> dict[str, ModLimits]:
-    """The active mods a version includes, by slug, sorted, each with its limits."""
-    return {slug: ModLimits(limits=row.mod_limits[slug]) for slug in sorted(row.mod_limits) if slug in mods}
+    """The active mods a version includes, by slug, each with its limits, both sorted by name."""
+    return {
+        slug: ModLimits(limits=dict(sorted(row.mod_limits[slug].items())))
+        for slug in sorted(row.mod_limits)
+        if slug in mods
+    }
 
 
 def mod_limit(row: Row, mod: str, limit: str) -> int | None:

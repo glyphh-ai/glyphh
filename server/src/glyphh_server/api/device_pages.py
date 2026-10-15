@@ -11,7 +11,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from starlette.responses import RedirectResponse, Response
 
-from glyphh_server.api import link_pages
+from glyphh_server.api import link_pages, oauth_pages
 from glyphh_server.api.auth import Conn
 from glyphh_server.api.browser_session import (
     START_AGAIN,
@@ -55,11 +55,21 @@ async def device_page(request: Request, conn: Conn, code: str | None = None) -> 
 
 
 @router.get("/auth/{name}/start", include_in_schema=False)
-async def start(name: str, request: Request, conn: Conn, code: str | None = None, link: str | None = None) -> Response:
-    """Off to the provider, for a device sign-in (`code`) or to link the provider to an account (`link`)."""
+async def start(
+    name: str,
+    request: Request,
+    conn: Conn,
+    code: str | None = None,
+    link: str | None = None,
+    oauth: str | None = None,
+) -> Response:
+    """Off to the provider, for a device sign-in (`code`), to link the provider to an account (`link`), or to allow
+    the connector (`oauth`)."""
     settings = cfg(request)
     chosen = provider(name, settings)
-    if link:
+    if oauth:
+        purpose = oauth_pages.purpose(settings, name, oauth)
+    elif link:
         purpose = link_pages.purpose(settings, name, link)
     elif code:
         purpose = {"c": (await device_approval.waiting(conn, code)).user_code, "p": name}
@@ -82,6 +92,8 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
         raise Forbidden("Signing in was cancelled. Start again in Claude when you're ready.", reason="cancelled")
     if link_pages.is_link(st):
         return await link_pages.finish(request, conn, chosen, st, code)
+    if oauth_pages.is_oauth(st):
+        return await oauth_pages.allow_page(request, conn, chosen, st, code)
     found = await device_approval.waiting(conn, st["c"])
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, name))
     user_id = await sign_in(conn, profile)

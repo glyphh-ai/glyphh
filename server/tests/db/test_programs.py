@@ -1,6 +1,6 @@
 """The record of programs: runtimes (one hosted per user, one local per install), programs and their versions (a
-commit each), deployments, runs and approvals, GitHub installations, routine triggers and program events, and
-connector grants, each seen only by its own org."""
+commit each), deployments, runs and approvals, GitHub installations, routine triggers and program events, each seen
+only by its own org."""
 
 import uuid
 
@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from glyphh_server.db import tenancy
 from glyphh_server.models import (
     Approval,
-    ConnectorGrant,
     Deployment,
     GitHubInstallation,
     Program,
@@ -31,7 +30,6 @@ TABLES = (
     Deployment,
     Run,
     Approval,
-    ConnectorGrant,
     GitHubInstallation,
     RoutineTrigger,
     ProgramEvent,
@@ -69,7 +67,6 @@ async def _programs_of(engine: AsyncEngine, who: Person) -> None:
         values = {"program_version_id": version_id, "rrotor_id": rrotor_id, "function": "start", "status": "done"}
         run_id = await _new(conn, Run, **values, caller="routine")
         await _new(conn, Approval, run_id=run_id, step="post", prompt="Post it?")
-        await _new(conn, ConnectorGrant, user_id=who.user_id, client="claude.ai", token_hash=f"g-{who.email}")
         gh = {"user_id": who.user_id, "installation_id": uuid.uuid4().int % 10**12, "account_login": "octo"}
         await _new(conn, GitHubInstallation, **gh)
         trigger = {"user_id": who.user_id, "program_id": program_id, "name": "Sales", "fire_url": "u", "token_enc": "e"}

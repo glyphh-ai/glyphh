@@ -1,11 +1,12 @@
 """Tenant isolation: row-level security keyed on the org.
 
-A request made with an install's token runs as the role `glyphh_tenant` with its org in `glyphh.org_id`, and the
-policies below show it only that org's rows: the org, its users, invites and programs, and their identities,
-installs, tokens, workspaces, runtimes, GitHub installations, routine triggers and connector grants, and the
-programs' versions, deployments, runs, approvals and events. Sign-in, Stripe's webhook and the few operations that
-cross orgs on purpose (joining another org, being removed from one) run as the connecting role, which the policies
-don't bind. Applied on every boot."""
+A request made with an install's token, or with a connector access token on /mcp, runs as the role `glyphh_tenant`
+with its org in `glyphh.org_id`, and the policies below show it only that org's rows: the org, its users, invites and
+programs, and their identities, installs, tokens, workspaces, runtimes, GitHub installations, routine triggers,
+connector grants, their tokens and OAuth codes, and the programs' versions, deployments, runs, approvals and events.
+Sign-in, the connector's OAuth endpoints (a code or token is found by its hash before anyone is known), Stripe's
+webhook and the few operations that cross orgs on purpose (joining another org, being removed from one) run as the
+connecting role, which the policies don't bind. Applied on every boot."""
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -23,6 +24,8 @@ POLICIES: dict[str, str] = {
     "tokens": "install_id IN (SELECT id FROM installs)",
     "rrotors": "user_id IN (SELECT id FROM users)",
     "connector_grants": "user_id IN (SELECT id FROM users)",
+    "connector_tokens": "grant_id IN (SELECT id FROM connector_grants)",
+    "oauth_codes": "user_id IN (SELECT id FROM users)",
     "github_installations": "user_id IN (SELECT id FROM users)",
     "routine_triggers": "user_id IN (SELECT id FROM users)",
     "programs": f"org_id = {ORG}",

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from glyphh_server.api import (
     approvals,
     billing,
+    connector,
     device,
     device_pages,
     errors,
@@ -14,8 +15,12 @@ from glyphh_server.api import (
     github_pages,
     health,
     license,
+    mcp,
     me,
     mods,
+    oauth,
+    oauth_meta,
+    oauth_pages,
     org,
     plans,
     routine_triggers,
@@ -47,6 +52,11 @@ ROUTERS = (
     approvals,
     github,
     github_pages,
+    oauth_meta,
+    oauth,
+    oauth_pages,
+    connector,
+    mcp,
 )
 
 

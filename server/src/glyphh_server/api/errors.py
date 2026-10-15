@@ -27,7 +27,7 @@ _HTTP_CODES: dict[int, str] = {
     409: "E_CONFLICT",
 }
 
-PAGES: tuple[str, ...] = ("/auth/", "/v1/device", "/billing/")
+PAGES: tuple[str, ...] = ("/auth/", "/v1/device", "/billing/", "/oauth/authorize")
 # Pages on an address whose other methods are the API's.
 GET_PAGES: tuple[str, ...] = ("/v1/github/install", "/v1/github/callback")
 

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     secrets_key: str = ""
     # Where an invite's link points; the token rides its query. Defaults to {public_url}/join.
     invite_url: str = ""
+    # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
+    mcp_origins: str = "https://claude.ai,https://claude.com"
 
     @property
     def base_url(self) -> str:
@@ -46,6 +48,15 @@ class Settings(BaseSettings):
     @property
     def github_app_install_url(self) -> str:
         return f"https://github.com/apps/{self.github_app_slug}/installations/new"
+
+    @property
+    def mcp_resource(self) -> str:
+        """The connector's canonical URI: the resource its access tokens are bound to (RFC 8707)."""
+        return f"{self.base_url}/mcp"
+
+    @property
+    def mcp_origin_list(self) -> set[str]:
+        return {o.strip().rstrip("/") for o in self.mcp_origins.split(",") if o.strip()}
 
     @property
     def invite_base(self) -> str:

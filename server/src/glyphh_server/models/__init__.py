@@ -3,6 +3,7 @@
 from glyphh_server.models.approval import Approval
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
+from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
 from glyphh_server.models.deployment import Deployment
 from glyphh_server.models.device_code import DeviceCode
 from glyphh_server.models.github_installation import GitHubInstallation
@@ -10,6 +11,8 @@ from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
 from glyphh_server.models.mod import Mod
+from glyphh_server.models.oauth_client import AUTH_METHODS, OAuthClient
+from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
 from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.program import Program, ProgramVersion
@@ -22,6 +25,7 @@ from glyphh_server.models.user import ROLES, User
 from glyphh_server.models.workspace import Workspace
 
 __all__ = [
+    "AUTH_METHODS",
     "BILLING_STATUSES",
     "CALLERS",
     "MACHINE_ID",
@@ -29,10 +33,12 @@ __all__ = [
     "PROVIDERS",
     "ROLES",
     "SURFACES",
+    "TOKEN_KINDS",
     "TRIGGER_STATUSES",
     "Approval",
     "Base",
     "ConnectorGrant",
+    "ConnectorToken",
     "Deployment",
     "DeviceCode",
     "GitHubInstallation",
@@ -40,6 +46,8 @@ __all__ = [
     "Install",
     "Invite",
     "Mod",
+    "OAuthClient",
+    "OAuthCode",
     "Org",
     "Plan",
     "PlanVersion",
