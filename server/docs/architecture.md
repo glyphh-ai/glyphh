@@ -14,7 +14,15 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 | `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on Pro and Team | Every plan: local. Pro and Team: hosted, capped by hours and storage |
 
 - **Pro and Team include every mod**, and every mod as it ships. One mod sold on its own can come later without a redesign.
-- **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page and Stripe's.
+- **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page, the connector's sign-in and Allow page, and Stripe's.
+
+### Decisions (Chris, 2026-10-15)
+
+These come first where anything below says otherwise.
+
+1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`) and `drips` (limits `custom_drips`, `fullscreen`); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
+2. **The server is headless.** A person manages their Glyphh account from Claude, or any MCP client, through the **Glyphh connector**: a remote MCP server at `/mcp` (Streamable HTTP), signed in with OAuth. Its tools are the account: who am I, the plan and each mod's limits, the plans, upgrade, billing, seats, installs, members and invites, and the connector's own grants. Where the client shows MCP App panels, the connector serves one, the account panel (`ui://glyphh/account/1`); every other client gets the same tools as text and structured content. The server's only pages are the device page and the connector's sign-in and Allow page, both generic (styled together later).
+3. **Programs, runs, the runtime and hours are not in scope now.** Their tables stay as drawn; their API and connector tools wait.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
 - **Functional first.** Every screen works before design draws it.
@@ -210,32 +218,33 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install, so the plan's installs count machines, not sign-ins.
 - **Org:** the first user is its admin and pays; one org per user; members by invite.
 - **Plans and seats:** per seat, through Stripe.
-- **Mods:** the catalog; a plan version includes every mod or the free ones.
-- **License:** short-lived, signed, per install: plan, limits, mods.
+- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names, each with its limits.
+- **License:** short-lived, signed, per install: plan, account limits, and each included mod with its limits (below, The license).
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
-- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once); its tools are `programs_list`, `call`, `continue`, `run_status` and the live panel.
+- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once). Its tools now are the account's (below, The connector); `programs_list`, `call`, `continue`, `run_status` and the live panel come with programs.
 - **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back. A local runtime's token stops working when its install is revoked.
 - **Approvals, shown in Claude** (Chris, 2026-10-14): a step that needs approval is a row in `approvals` (the record, kept until answered) and a signal on **Redis** pub/sub to the server process holding the person's connection. The `glyphh` mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows a band above the prompt with Approve and Decline, a toast and a native notification, with no Claude turn; the first answer wins, the band clears in every open Claude, and an email goes out when no Claude is open (`notified_at`).
 - **Redis runs on the server's own Fly machine**, beside the server (Chris, 2026-10-14); in development it is a service in `compose.yaml`. It holds only what is live (pub/sub); Postgres holds everything kept.
 - **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and bills its storage up to the person's cap.
-- **Limits are enforced here:** members, installs, workspaces, runtime hours and storage.
+- **Limits are enforced here** where the server sees the use: members, seats and installs, and the `workspaces` mod's `workspaces` (each workspace's name is registered). Every other mod limit the mod enforces from its license.
 
 ### API
 
-JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the device flow's, the plans and mods lists and Stripe's webhook carries a token (`Authorization: Bearer`). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `limit`, `used`, `max` and the `plan` that lifts it.
+JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the device flow's, the plans and mods lists and Stripe's webhook carries an install's token (`Authorization: Bearer`); `/mcp` takes a connector access token instead, and only `/mcp` does. Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `limit`, `used`, `max` and the `plan` that lifts it.
 
 **Built:**
 
 | Area | Calls |
 |---|---|
 | Device flow | `POST /v1/device/code` (with the mod's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` |
-| Account | `GET`/`PATCH /v1/me`, `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
+| Account | `GET`/`PATCH /v1/me` (the plan with each mod's limits, and what is used where the server sees it: members, seats, installs, and `used.mods.workspaces.workspaces`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
 | Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
-| Mods, plans, billing | `GET /v1/mods`, `GET /v1/plans`, `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
+| Mods, plans, billing | `GET /v1/mods`, `GET /v1/plans` (each plan's newest version: price, account limits, each mod and its limits), `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run), `send_continue`, `send_cancel`, `send_deploy`. A runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; waking a stopped hosted runtime on Fly is one seam, `wake_hosted`, not built |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional program; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a program's events |
+| Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, the Allow page (`POST /auth/oauth/allow`), `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}` (below, The connector) |
 | Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` {`approve` \| `decline`} (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting). Not built yet: the email when no Claude is open waits on a mail provider (`notified_at` stays empty) |
 
 **To build, for programs:**
@@ -246,7 +255,74 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
 | Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); waking a stopped hosted runtime per call (Fly), behind the link's `wake_hosted` seam; the live panel's frames relayed from the link to its panel |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
-| Connector | `/mcp` (Streamable HTTP) and its OAuth endpoints (authorize, token, registration); the Allow page ("Allow Claude to use your Glyphh?", after Google or GitHub sign-in), the only server page besides the device page |
+| Connector | The programs tools on `/mcp`: `programs_list`, `call`, `continue`, `run_status` and the live panel |
+
+### The license
+
+`GET /v1/license` answers the install's license; `GET /v1/license/key` the public key (`{"alg": "Ed25519", "public_key": "<base64 of the raw 32 bytes>"}`). A mod verifies it offline: the signature (base64) is Ed25519 over the payload's canonical JSON, the payload's keys sorted at every level, no spaces, ASCII only (Python's `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, UTF-8), and the license holds until `expires_at` (24 hours; the mod fetches a new one daily).
+
+```json
+{
+  "payload": {
+    "install_id": "6a1d…",
+    "user_id": "0f3c…",
+    "org_id": "9b2e…",
+    "plan": "Pro",
+    "limits": {"members": 1, "installs": 5},
+    "mods": {
+      "drips": {"limits": {"custom_drips": null, "fullscreen": 1}},
+      "workspaces": {"limits": {"favorites": null, "stream": 1, "workspaces": 10}}
+    },
+    "expires_at": "2026-10-16T09:30:00Z"
+  },
+  "signature": "q8Zk…=="
+}
+```
+
+- `mods` names each mod the plan includes, and only those: a mod not in it is not included. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
+- `limits` at the top are the account's: `members` (per org) and `installs` (per user), `null` for unlimited.
+
+### The connector
+
+A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization server, following MCP's authorization spec (revision 2026-07-28). Through it a person manages their Glyphh account from Claude or any MCP client.
+
+**Discovery.**
+
+- `GET /.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp` (RFC 9728): `resource` `{public_url}/mcp`, `authorization_servers` `[{public_url}]`, `scopes_supported` `["account"]`, `bearer_methods_supported` `["header"]`.
+- `GET /.well-known/oauth-authorization-server` (RFC 8414): the issuer `{public_url}` and its endpoints; `response_types_supported` `["code"]`, `grant_types_supported` `["authorization_code", "refresh_token"]`, `code_challenge_methods_supported` `["S256"]`, `token_endpoint_auth_methods_supported` `["none", "client_secret_post", "client_secret_basic"]`, `scopes_supported` `["account"]`, `authorization_response_iss_parameter_supported` `true` (RFC 9207).
+- `/mcp` without a good token answers 401 with `WWW-Authenticate: Bearer resource_metadata="{public_url}/.well-known/oauth-protected-resource/mcp", scope="account"` (and `error="invalid_token"` when a token was sent).
+
+**Registration.** `POST /oauth/register` (RFC 7591): `redirect_uris` (1 to 10; each `https`, or `http` on `localhost`, `127.0.0.1` or `[::1]`; no fragment), `client_name`, `token_endpoint_auth_method` (`none` for public clients, the default, or `client_secret_post` / `client_secret_basic`, which get a `client_secret`, shown once and kept hashed), `grant_types` within `authorization_code` and `refresh_token`, `response_types` `["code"]`. Client ID metadata documents are not supported yet.
+
+**Authorization.** `GET /oauth/authorize` with `response_type=code`, `client_id`, `redirect_uri` (exactly as registered), `state` (required), `code_challenge` and `code_challenge_method=S256` (required), `scope` (`account`, the default) and `resource` (`{public_url}/mcp` or `{public_url}`; the token is bound to `{public_url}/mcp`). An unknown client or redirect URI is a page and never a redirect; any other refusal goes back to the redirect URI as `error`, `error_description`, `state` and `iss`. The page offers Continue with Google or GitHub (the same provider pages as the device sign-in, tied to the browser by the same cookie, 10 minutes), then the Allow page: "Allow <client name> to use your Glyphh account?", the redirect URI's host and the email signed in, Allow and Deny, its form signed and tied to that browser. Allow redirects with a `code` (single use, 2 minutes), `state` and `iss`; Deny with `error=access_denied`.
+
+**Tokens.** `POST /oauth/token` (form-encoded):
+
+- `grant_type=authorization_code`: `code`, `redirect_uri`, `client_id`, `code_verifier` (PKCE S256, compared in constant time), and `resource` if the authorization named one. A code used twice revokes what it issued.
+- `grant_type=refresh_token`: `refresh_token`, `client_id`. The refresh token rotates on every use; a used one presented again revokes the whole grant.
+- Answers `access_token` (opaque, 1 hour), `token_type` `Bearer`, `expires_in`, `refresh_token` (30 days) and `scope`, with `Cache-Control: no-store`. Every token and code is random and kept only as a SHA-256 hash.
+- `POST /oauth/revoke` (RFC 7009): a refresh token revokes its grant, an access token itself; always 200.
+- These endpoints answer refusals in OAuth's own shape (`{"error": "invalid_grant", "error_description": …}`, RFC 6749 section 5.2 and RFC 7591 section 3.2.2), not the API's: OAuth clients read that shape.
+
+**Grants.** One per person and client: allowing the same client again reuses its grant. `GET /v1/connector/grants` lists the person's grants (client, scope, when allowed and last used); `DELETE /v1/connector/grants/{id}` revokes one and every token it holds; the connector's own `revoke_grant` does the same.
+
+**`/mcp`.** Streamable HTTP, stateless: `POST` only (`GET` and `DELETE` answer 405), each request answered with one JSON object; no sessions. It speaks MCP 2026-07-28 (each request's `_meta` carries `io.modelcontextprotocol/protocolVersion` and `clientCapabilities`, mirrored in the `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name` headers, checked against the body; `server/discover`) and the earlier `initialize` revisions 2025-11-25, 2025-06-18 and 2025-03-26. An `Origin` header other than the server's own or `GLYPHH_MCP_ORIGINS` is refused (403). The access token must be one the authorization server issued for `{public_url}/mcp`, its grant not revoked; the request then runs as that person, in their org (row-level security).
+
+| Tool | Does | Who |
+|---|---|---|
+| `whoami` | The account, its org and role | Everyone |
+| `plan` | The plan, each mod and its limits, what is used, seats, billing status and when it renews | Everyone |
+| `plans` | What each plan costs and includes: account limits, each mod and its limits | Everyone |
+| `upgrade` | `plan`, `seats`: Stripe Checkout's address when not subscribed; changes plan (prorated) when subscribed | Admin |
+| `billing_portal` | Stripe's portal address: card, invoices, cancel | Admin |
+| `seats` | `seats`: change the seats, prorated | Admin |
+| `installs`, `sign_out_install` | The person's installs; sign one out (`install_id`) | Everyone |
+| `members`, `invite` | The org's members and open invites; invite by `email` (the link, shown once) | Everyone; `invite` the admin |
+| `connector_grants`, `revoke_grant` | The connector's grants; revoke one (`grant_id`) | Everyone |
+
+Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content.
+
+**The account panel.** One MCP App resource, `ui://glyphh/account/1` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami` and `plan` name it in `_meta.ui.resourceUri`. It shows who you are, the plan, each mod with its limits and what is used, Upgrade (opens Checkout), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables, for now.
 
 ### Panels
 
@@ -255,6 +331,7 @@ Each works before design draws it.
 | Panel | Mod | Kind |
 |---|---|---|
 | Sign in, account, org, plan, billing | `glyphh` | Mod |
+| The account: who, plan, each mod's limits and use, upgrade, billing, installs, grants | The Glyphh connector | MCP App |
 | Workspaces: list, create, edit, delete | `glyphh-workspaces` | Mod |
 | The local live panel: a profile's tab, steps, approvals, take control, record | `glyphh-rpa` | MCP App |
 | Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
@@ -291,7 +368,7 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 erDiagram
     PLANS ||--|{ PLAN_VERSIONS : "has versions"
     PLAN_VERSIONS ||--o{ ORGS : "pinned by"
-    MODS }o..o{ PLAN_VERSIONS : "free, or all_mods"
+    MODS }o..o{ PLAN_VERSIONS : "named in mod_limits"
     ORGS ||--|{ USERS : "members"
     ORGS |o--o| USERS : "admin"
     ORGS ||--o{ INVITES : "sends"
@@ -314,6 +391,11 @@ erDiagram
     PROGRAM_VERSIONS ||--o{ RUNS : "ran"
     RUNS ||--o{ APPROVALS : "waits on"
     USERS ||--o{ CONNECTOR_GRANTS : "allows"
+    OAUTH_CLIENTS ||--o{ CONNECTOR_GRANTS : "granted to"
+    OAUTH_CLIENTS ||--o{ OAUTH_CODES : "asked for"
+    USERS ||--o{ OAUTH_CODES : "allowed"
+    CONNECTOR_GRANTS |o--o{ OAUTH_CODES : "redeemed into"
+    CONNECTOR_GRANTS ||--o{ CONNECTOR_TOKENS : "holds"
     PLANS {
         uuid id PK
         text name UK
@@ -328,17 +410,15 @@ erDiagram
         int seat_price_cents
         int max_members
         int max_installs
-        int max_workspaces
         int runtime_hours
         int storage_cents_per_gb
-        bool all_mods
+        json mod_limits "mod to limit to number or null"
         timestamp created_at
     }
     MODS {
         text slug PK
         text name
         text description
-        bool free
         bool active
         int sort
     }
@@ -351,6 +431,7 @@ erDiagram
         text stripe_subscription_id UK
         int seats
         text billing_status
+        timestamp renews_at
         timestamp created_at
     }
     USERS {
@@ -498,19 +579,54 @@ erDiagram
         text session_url
         timestamp at
     }
+    OAUTH_CLIENTS {
+        uuid id PK "the client_id"
+        text name
+        text_array redirect_uris
+        text auth_method
+        text secret_hash "confidential clients"
+        text_array grant_types
+        timestamp created_at
+    }
+    OAUTH_CODES {
+        text code_hash PK
+        uuid client_id FK
+        uuid user_id FK
+        text redirect_uri
+        text code_challenge "S256"
+        text scope
+        text resource
+        uuid grant_id FK "once redeemed"
+        timestamp expires_at
+        timestamp used_at
+        timestamp created_at
+    }
     CONNECTOR_GRANTS {
         uuid id PK
         uuid user_id FK
-        text client
-        text token_hash UK
+        uuid client_id FK "one live per user"
+        text scope
+        text resource
+        timestamp last_used_at
         timestamp revoked_at
+        timestamp created_at
+    }
+    CONNECTOR_TOKENS {
+        uuid id PK
+        uuid grant_id FK
+        text kind "access or refresh"
+        text token_hash UK
+        timestamp expires_at
+        timestamp used_at "refresh: rotated"
+        timestamp revoked_at
+        timestamp created_at
     }
 ```
 
-Every table and column is drawn, as the database has them; the tables from rrotors on are for programs. Timestamps carry the time zone; ids are made by the database.
+Every table and column is drawn, as the database has them; the tables from rrotors on are for programs. (The image above predates 2026-10-15: the Mermaid block is the current one.) Timestamps carry the time zone; ids are made by the database.
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
-- **Mods:** `all_mods` true includes every active mod, new ones too (Pro, Team); false, only the free ones. A mod once free stays free.
+- **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods the version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). A mod not named is not included; a retired mod (`active` false) is in no license. Changing a mod's limits is a new version, like any limit.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
 - **Runtimes** (`rrotors`): one hosted per Pro and Team user (`mode: hosted`), and one local per install that started one (`mode: local`, keyed by its install); each its own token. `state` is `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again).
 - **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
@@ -520,7 +636,10 @@ Every table and column is drawn, as the database has them; the tables from rroto
 - **Routine triggers:** the routines the person let Glyphh start (fire URL and token, encrypted), marked broken on a 401. **Program events:** what a program raised and the routine session it started; an event that fired no routine has neither.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
 - **Approvals:** a step waiting for the person, until answered anywhere; `notified_at` when the person was emailed about it.
-- **Connector grants:** each Claude (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, revocable one by one.
+- **OAuth clients:** the MCP clients that registered (RFC 7591), each with its exact redirect URIs; a confidential one's secret only as a hash. They belong to no org.
+- **OAuth codes:** an authorization the person allowed, until its code is redeemed (once, within 2 minutes), with its PKCE challenge and the resource it is for; `grant_id` names the grant it went into, so a second use revokes it.
+- **Connector grants:** each client (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, one live per client, revocable one by one. **Connector tokens:** its access tokens (1 hour) and refresh tokens (30 days, rotated on use; a rotated one used again revokes the grant), kept only as hashes.
+- **Orgs:** `renews_at` is when the subscription renews, from Stripe; empty when it isn't subscribed or ends at the period's end.
 
 ### In rrotor
 
@@ -532,20 +651,24 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ## Plans
 
-Billed per seat, per month. Installs, workspaces, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). Installs, mod limits, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
 | Price per seat | $0 | ? | $8 | $16 |
-| Mods | `glyphh`, `glyphh-workspaces`, `glyphh-programs` (local) | ? | Every mod | Every mod |
 | Members | 1 | 1 | 1 | Unlimited |
 | Installs | 1 | ? | 5 | 10 |
-| Workspaces | 2 | ? | 10 | Unlimited |
+| `workspaces`: `workspaces` | 2 | ? | 10 | Unlimited |
+| `workspaces`: `favorites` | 5 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
+| `workspaces`: `stream` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
+| `drips`: `custom_drips` | 3 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
+| `drips`: `fullscreen` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
 | Local runtime | Yes | Yes | Yes | Yes |
 | Hosted runtime (cloud) | No | No | Yes | Yes |
 | Runtime hours a month | — | — | ? | ? |
 | Storage | — | — | $0.50 per GB-month, capped | $0.50 per GB-month, capped |
 
-- **Hours top-ups:** bought one-off, kept until used; optional auto top-up within a monthly spend cap.
+- **The mod limits marked TBD are placeholders** in the seed until Chris sets them; Solo is not seeded until its price and limits are set.
+- **Hours top-ups** (out of scope now): there are no one-off purchases (2026-10-15), so hours, when they come, come with the subscription.
 - **Storage is never included** (Chris, 2026-10-14): every GB is billed, at **$0.50 per GB-month** on what the runtime holds (its volume's size), prorated by the day on the monthly invoice. The person sets a cap (1 GB to start, up to 100 GB); the volume's size is the cap, so the bill can't pass it. Growing it is a click; it never shrinks.
 - To decide: the hours per plan and the top-up price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
