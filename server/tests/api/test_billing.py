@@ -9,16 +9,25 @@ from tests.fakes import FakeStripe
 
 async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> None:
     plans = (await client.get("/v1/plans")).json()
-    every = ["glyphh", "glyphh-programs", "glyphh-rpa", "glyphh-workspaces"]
-    assert [(p["name"], p["seat_price_cents"], p["mods"]) for p in plans] == [
-        ("Free", 0, ["glyphh", "glyphh-programs", "glyphh-workspaces"]),
-        ("Pro", 800, every),
-        ("Team", 1600, every),
-    ]
+    assert [(p["name"], p["seat_price_cents"]) for p in plans] == [("Free", 0), ("Pro", 800), ("Team", 1600)]
     assert [p["limits"] for p in plans] == [
-        {"members": 1, "installs": 1, "workspaces": 2},
-        {"members": 1, "installs": 5, "workspaces": 10},
-        {"members": None, "installs": 10, "workspaces": None},
+        {"members": 1, "installs": 1},
+        {"members": 1, "installs": 5},
+        {"members": None, "installs": 10},
+    ]
+    assert [p["mods"] for p in plans] == [
+        {
+            "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
+            "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
+        },
+        {
+            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
+        },
+        {
+            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
+        },
     ]
 
 

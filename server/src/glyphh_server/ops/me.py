@@ -1,8 +1,10 @@
-"""Who am I: the person, their org and role, the plan version and its limits, and what is used."""
+"""Who am I: the person, their org and role, the plan version with each mod's limits, and what is used where the
+server sees it."""
 
 import uuid
+from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -17,13 +19,25 @@ class MeOrg(BaseModel):
     name: str
     seats: int
     billing_status: str
+    renews_at: datetime | None = Field(description="When the subscription renews; null when not subscribed or ending")
 
 
 class Used(BaseModel):
     members: int
     seats: int
     installs: int
-    workspaces: int
+    mods: dict[str, dict[str, int]] = Field(
+        description="What is used of each mod's limits, where the server sees it: the workspaces mod's workspaces"
+    )
+
+
+async def used(conn: AsyncConnection, who: Principal) -> Used:
+    return Used(
+        members=await limits.members(conn, who.org_id),
+        seats=await limits.seats_taken(conn, who.org_id),
+        installs=await limits.installs(conn, who.user_id),
+        mods={"workspaces": {"workspaces": await limits.workspaces(conn, who.user_id)}},
+    )
 
 
 class Me(BaseModel):
@@ -39,17 +53,10 @@ class Me(BaseModel):
 
 async def me(conn: AsyncConnection, who: Principal) -> Me:
     person = (await conn.execute(select(User.email, User.name, User.role).where(User.id == who.user_id))).one()
-    org = (
-        await conn.execute(select(Org.id, Org.name, Org.seats, Org.billing_status).where(Org.id == who.org_id))
-    ).one()
+    columns = (Org.id, Org.name, Org.seats, Org.billing_status, Org.renews_at)
+    org = (await conn.execute(select(*columns).where(Org.id == who.org_id))).one()
     providers = await conn.execute(
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)
-    )
-    used = Used(
-        members=await limits.members(conn, who.org_id),
-        seats=await limits.seats_taken(conn, who.org_id),
-        installs=await limits.installs(conn, who.user_id),
-        workspaces=await limits.workspaces(conn, who.user_id),
     )
     return Me(
         id=who.user_id,
@@ -59,7 +66,7 @@ async def me(conn: AsyncConnection, who: Principal) -> Me:
         providers=list(providers.scalars()),
         org=MeOrg(**org._mapping),
         plan=await org_plan(conn, who.org_id),
-        used=used,
+        used=await used(conn, who),
     )
 
 

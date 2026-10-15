@@ -11,8 +11,9 @@ router = APIRouter(prefix="/v1/license", tags=["account"])
 
 @router.get("", operation_id="getLicense")
 async def get_license(caller: Caller, conn: Conn, request: Request) -> License:
-    """Plan, limits, mods (the slugs included, sorted) and expires_at (24 hours), signed with Ed25519 over the
-    payload's canonical JSON (keys sorted, no spaces, ASCII)."""
+    """Plan, the account's limits, mods (each mod included, by slug, with its limits: a number, or null for
+    unlimited) and expires_at (24 hours), signed with Ed25519 over the payload's canonical JSON (keys sorted at every
+    level, no spaces, ASCII)."""
     return await license.license_for(conn, caller, request.app.state.license_key)
 
 

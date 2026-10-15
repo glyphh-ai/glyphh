@@ -3,6 +3,7 @@ subscription that has ended puts the org back on Free."""
 
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, update
@@ -18,6 +19,15 @@ log = logging.getLogger("glyphh.billing")
 ENDED: frozenset[str] = frozenset({"canceled", "incomplete_expired"})
 
 
+def renews_at(sub: dict[str, Any]) -> datetime | None:
+    """When the subscription renews: the period's end (on its item in newer Stripe versions, on it in older ones),
+    unless it ends then."""
+    end = sub["items"]["data"][0].get("current_period_end") or sub.get("current_period_end")
+    if sub.get("cancel_at_period_end") or not end:
+        return None
+    return datetime.fromtimestamp(int(end), UTC)
+
+
 async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[str, Any]) -> None:
     current = (await conn.execute(select(Org.stripe_subscription_id).where(Org.id == org_id))).scalar_one()
     if current not in (None, sub["id"]):
@@ -26,10 +36,19 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
     status = sub["status"] if sub["status"] in BILLING_STATUSES else "none"
     if status in ENDED:
         free = await newest_version(conn, FREE)
-        values: dict[str, Any] = {"plan_version_id": free.id, "seats": 1, "stripe_subscription_id": None}
+        values: dict[str, Any] = {
+            "plan_version_id": free.id,
+            "seats": 1,
+            "stripe_subscription_id": None,
+            "renews_at": None,
+        }
     else:
         item = sub["items"]["data"][0]
-        values = {"seats": max(1, int(item["quantity"])), "stripe_subscription_id": sub["id"]}
+        values = {
+            "seats": max(1, int(item["quantity"])),
+            "stripe_subscription_id": sub["id"],
+            "renews_at": renews_at(sub),
+        }
         sold = select(PlanVersion.id).where(PlanVersion.stripe_price_id == item["price"]["id"])
         version_id = (await conn.execute(sold)).scalar_one_or_none()
         if version_id is None:

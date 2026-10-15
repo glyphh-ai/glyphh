@@ -3,28 +3,34 @@ the most allowed and the plan that would lift it. Callers lock the row the count
 the same moment are taken one after another."""
 
 import uuid
+from collections.abc import Callable
 
 from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import LimitReached
 from glyphh_server.models import Install, Invite, Org, User, Workspace
-from glyphh_server.ops.plans import newest_versions
+from glyphh_server.ops.plans import mod_limit, newest_versions
 
-COLUMN: dict[str, str] = {"members": "max_members", "installs": "max_installs", "workspaces": "max_workspaces"}
+# Each limit the server sees used, and where a plan version holds it: the account's in columns, a mod's in mod_limits.
+ALLOWED: dict[str, Callable[[Row], int | None]] = {
+    "members": lambda row: row.max_members,
+    "installs": lambda row: row.max_installs,
+    "workspaces": lambda row: mod_limit(row, "workspaces", "workspaces"),
+}
 
 
 async def lifting_plan(conn: AsyncConnection, limit: str, used: int) -> str | None:
     """The first plan (in the plans' order) whose newest version allows one more."""
     for row in await newest_versions(conn):
-        allowed = getattr(row, COLUMN[limit])
+        allowed = ALLOWED[limit](row)
         if allowed is None or allowed > used:
             return row.name
     return None
 
 
 async def check(conn: AsyncConnection, limit: str, used: int, version: Row) -> None:
-    allowed = getattr(version, COLUMN[limit])
+    allowed = ALLOWED[limit](version)
     if allowed is None or used < allowed:
         return
     lift = await lifting_plan(conn, limit, used)

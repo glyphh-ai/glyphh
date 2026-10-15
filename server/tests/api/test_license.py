@@ -34,23 +34,30 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     assert (p["install_id"], p["user_id"], p["org_id"]) == (str(ada.install_id), str(ada.user_id), str(ada.org_id))
     assert (p["plan"], p["limits"], p["mods"]) == (
         "Pro",
-        {"members": 1, "installs": 5, "workspaces": 10},
-        ["glyphh", "glyphh-programs", "glyphh-rpa", "glyphh-workspaces"],
+        {"members": 1, "installs": 5},
+        {
+            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
+        },
     )
-    assert "features" not in p
+    assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
+    assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
     assert timedelta(hours=23, minutes=59) < left <= timedelta(hours=24)
-    lic["payload"]["mods"].remove("glyphh-rpa")
+    lic["payload"]["mods"]["workspaces"]["limits"]["workspaces"] = None
     with pytest.raises(InvalidSignature):
         _verify(key, lic)
 
 
-async def test_free_has_only_the_free_mods_and_the_license_needs_a_token(
+async def test_free_carries_free_limits_and_the_license_needs_a_token(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine)
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert mods == ["glyphh", "glyphh-programs", "glyphh-workspaces"]
+    assert mods == {
+        "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
+        "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
+    }
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401
 

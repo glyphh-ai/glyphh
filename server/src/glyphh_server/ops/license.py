@@ -1,5 +1,6 @@
-"""The license: what an install's plan allows, signed with Ed25519 so the mod can check it offline with the public
-key, and short-lived so a change of plan reaches the machine within a day.
+"""The license: what an install's plan allows (the account's limits, and each mod it includes with that mod's limits),
+signed with Ed25519 so the mod can check it offline with the public key, and short-lived so a change of plan reaches
+the machine within a day. docs/architecture.md (The license) shows the payload.
 
 The signature is over the payload's canonical JSON: keys sorted, no spaces, ASCII only (json.dumps with
 sort_keys=True, separators=(",", ":")). That is what the mod rebuilds from `payload` to verify it."""
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.plans import Limits, org_plan
+from glyphh_server.ops.plans import Limits, ModLimits, org_plan
 
 LICENSE_TTL: timedelta = timedelta(hours=24)
 
@@ -28,7 +29,7 @@ class LicensePayload(BaseModel):
     org_id: uuid.UUID
     plan: str
     limits: Limits
-    mods: list[str]
+    mods: dict[str, ModLimits]
     expires_at: datetime
 
 

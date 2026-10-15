@@ -17,15 +17,24 @@ async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.As
     await client.post("/v1/org/invites", json={"email": "new@people.test"}, headers=ada.headers)
     me = (await client.get("/v1/me", headers=ada.headers)).json()
     assert (me["email"], me["name"], me["role"], me["providers"]) == (ada.email, "Ada Lovelace", "admin", [])
-    assert me["org"] == {"id": str(ada.org_id), "name": "Ada Lovelace's org", "seats": 3, "billing_status": "none"}
+    assert me["org"] == {
+        "id": str(ada.org_id),
+        "name": "Ada Lovelace's org",
+        "seats": 3,
+        "billing_status": "none",
+        "renews_at": None,
+    }
     assert me["plan"] == {
         "name": "Team",
         "version": 1,
         "seat_price_cents": 1600,
-        "limits": {"members": None, "installs": 10, "workspaces": None},
-        "mods": ["glyphh", "glyphh-programs", "glyphh-rpa", "glyphh-workspaces"],
+        "limits": {"members": None, "installs": 10},
+        "mods": {
+            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
+        },
     }
-    assert me["used"] == {"members": 2, "seats": 3, "installs": 1, "workspaces": 1}
+    assert me["used"] == {"members": 2, "seats": 3, "installs": 1, "mods": {"workspaces": {"workspaces": 1}}}
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

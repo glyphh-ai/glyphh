@@ -9,5 +9,5 @@ router = APIRouter(prefix="/v1", tags=["plans and billing"])
 
 @router.get("/mods", operation_id="listMods")
 async def list_mods(conn: Conn) -> list[ModView]:
-    """The catalog: each mod's slug, name, description, whether it is free, and the plans that include it."""
+    """The catalog: each mod's slug, name, description, and the plans whose newest version includes it."""
     return await mods.list_mods(conn)

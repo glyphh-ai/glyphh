@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -21,17 +23,15 @@ class Plan(Base):
 class PlanVersion(Base):
     """A plan's price and limits at one moment. Never changed: a new price or limit is a new version with its own
     Stripe price. A null limit is unlimited. runtime_hours is the hosted runtime's running time each month (0: none);
-    storage_cents_per_gb its storage rate, every GB billed. all_mods includes every active mod, new ones as they ship;
-    otherwise only the free ones."""
+    storage_cents_per_gb its storage rate, every GB billed. mod_limits names the mods the version includes, each with
+    every one of its limits: {"<mod>": {"<limit>": number | null}}; a mod not named is not included."""
 
     __tablename__ = "plan_versions"
     __table_args__ = (
         UniqueConstraint("plan_id", "version", name="plan_versions_version"),
         CheckConstraint("seat_price_cents >= 0", name="plan_versions_price"),
-        CheckConstraint(
-            "coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0 AND coalesce(max_workspaces, 1) > 0",
-            name="plan_versions_limits",
-        ),
+        CheckConstraint("coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0", name="plan_versions_limits"),
+        CheckConstraint("jsonb_typeof(mod_limits) = 'object'", name="plan_versions_mod_limits"),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -41,8 +41,7 @@ class PlanVersion(Base):
     seat_price_cents: Mapped[int]
     max_members: Mapped[int | None]
     max_installs: Mapped[int | None]
-    max_workspaces: Mapped[int | None]
     runtime_hours: Mapped[int | None]
     storage_cents_per_gb: Mapped[int | None]
-    all_mods: Mapped[bool]
+    mod_limits: Mapped[dict[str, dict[str, Any]]] = mapped_column(JSONB, server_default="{}")
     created_at: Mapped[datetime] = created_at()

@@ -1,10 +1,11 @@
 """The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
-versions)."""
+versions). A mod no longer seeded is retired, never deleted."""
 
 from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -17,39 +18,23 @@ class ModSeed:
     slug: str
     name: str
     description: str
-    free: bool
 
 
 MODS: tuple[ModSeed, ...] = (
     ModSeed(
-        "glyphh",
-        "Glyphh",
-        "The account: sign in, license, account, org, plan and billing panels, and the browser machine every other "
-        "mod uses",
-        True,
+        "workspaces",
+        "Workspaces",
+        "Sets up Claude for a kind of work in one command: a grid of your favourite pages and the app's panes, "
+        "switched with /dip",
     ),
     ModSeed(
-        "glyphh-workspaces",
-        "Glyphh Workspaces",
-        "Workspaces: a layout grid of live web tabs plus the Claude session it runs; switching workspaces switches "
-        "all of it",
-        True,
-    ),
-    ModSeed(
-        "glyphh-rpa",
-        "Glyphh RPA",
-        "A website as tools: commands and sequences on a site, a live tab in a panel in Claude, take control, record "
-        "a task once and run it",
-        False,
-    ),
-    ModSeed(
-        "glyphh-programs",
-        "Glyphh Programs",
-        "Programs: deterministic Python jobs, built with Claude, run by rrotor, called by Claude and by Claude's "
-        "routines",
-        True,
+        "drips",
+        "Drips",
+        "Visual effects over Claude: confetti, fireworks, hearts, a matrix rain and more, and your own recipes",
     ),
 )
+
+ModLimits = dict[str, dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,18 +43,28 @@ class PlanSeed:
     seat_price_cents: int
     max_members: int | None
     max_installs: int | None
-    max_workspaces: int | None
     runtime_hours: int | None
     storage_cents_per_gb: int | None
-    all_mods: bool
+    mod_limits: ModLimits
 
 
 FREE: str = "Free"
-# Free has no hosted runtime (0 hours, no storage). Pro's and Team's hours are still to decide: null until then.
+
+
+def _limits(workspaces: int | None, favorites: int | None, on: int, custom_drips: int | None) -> ModLimits:
+    """Each mod's limits; a switch (stream, fullscreen) is 0 or 1."""
+    return {
+        "workspaces": {"workspaces": workspaces, "favorites": favorites, "stream": on},
+        "drips": {"custom_drips": custom_drips, "fullscreen": on},
+    }
+
+
+# TBD (Chris): favorites, stream, custom_drips and fullscreen are placeholders until set; workspaces keeps the limits
+# it had. Free has no hosted runtime (0 hours, no storage); Pro's and Team's hours are still to decide (null).
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 2, 0, None, False),
-    PlanSeed("Pro", 800, 1, 5, 10, None, 50, True),
-    PlanSeed("Team", 1_600, None, 10, None, None, 50, True),
+    PlanSeed(FREE, 0, 1, 1, 0, None, _limits(2, 5, 0, 3)),
+    PlanSeed("Pro", 800, 1, 5, None, 50, _limits(10, None, 1, None)),
+    PlanSeed("Team", 1_600, None, 10, None, 50, _limits(None, None, 1, None)),
 )
 
 
@@ -80,8 +75,9 @@ def stripe_prices(settings: Settings) -> dict[str, str | None]:
 
 async def seed_mods(conn: AsyncConnection) -> None:
     for sort, seed in enumerate(MODS):
-        values = {"slug": seed.slug, "name": seed.name, "description": seed.description, "free": seed.free}
+        values = {"slug": seed.slug, "name": seed.name, "description": seed.description}
         await conn.execute(upsert(Mod).values(**values, sort=sort).on_conflict_do_nothing(index_elements=[Mod.slug]))
+    await conn.execute(update(Mod).where(Mod.slug.not_in([m.slug for m in MODS])).values(active=False))
 
 
 async def seed_plans(conn: AsyncConnection, settings: Settings) -> None:
@@ -116,9 +112,8 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             seat_price_cents=seed.seat_price_cents,
             max_members=seed.max_members,
             max_installs=seed.max_installs,
-            max_workspaces=seed.max_workspaces,
             runtime_hours=seed.runtime_hours,
             storage_cents_per_gb=seed.storage_cents_per_gb,
-            all_mods=seed.all_mods,
+            mod_limits=seed.mod_limits,
         )
     )

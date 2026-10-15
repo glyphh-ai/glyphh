@@ -25,7 +25,7 @@ async def list_workspaces(caller: Caller, conn: Conn) -> list[WorkspaceView]:
 
 @router.post("", operation_id="createWorkspace", status_code=201)
 async def create_workspace(body: WorkspaceName, caller: Caller, conn: Conn) -> WorkspaceView:
-    """Register a workspace's name; refused past the plan's max_workspaces."""
+    """Register a workspace's name; refused past the plan's limit: the workspaces mod's workspaces."""
     return await workspaces.create_workspace(conn, caller, body.name.strip())
 
 

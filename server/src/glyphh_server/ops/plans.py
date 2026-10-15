@@ -1,5 +1,5 @@
 """Plans as callers see them: each plan's newest version, and the version an org is pinned to, with the mods each
-includes: every active mod when all_mods, otherwise the active free ones."""
+includes and each mod's limits: the active mods its mod_limits names."""
 
 import uuid
 
@@ -15,7 +15,12 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 class Limits(BaseModel):
     members: int | None = Field(description="null = unlimited")
     installs: int | None = Field(description="null = unlimited; per user")
-    workspaces: int | None = Field(description="null = unlimited; per user")
+
+
+class ModLimits(BaseModel):
+    limits: dict[str, int | None] = Field(
+        description="Each of the mod's limits, per user: null = unlimited; a switch is 0 or 1"
+    )
 
 
 class PlanView(BaseModel):
@@ -23,7 +28,7 @@ class PlanView(BaseModel):
     version: int
     seat_price_cents: int
     limits: Limits
-    mods: list[str] = Field(description="The slugs of the mods this version includes, sorted")
+    mods: dict[str, ModLimits] = Field(description="The mods this version includes, by slug; a mod not here is not")
 
 
 COLUMNS = (
@@ -34,27 +39,31 @@ COLUMNS = (
     PlanVersion.seat_price_cents,
     PlanVersion.max_members,
     PlanVersion.max_installs,
-    PlanVersion.max_workspaces,
-    PlanVersion.all_mods,
+    PlanVersion.mod_limits,
 )
 
 
-async def active_mods(conn: AsyncConnection) -> list[Row]:
-    """Every active mod's slug and whether it is free, in the catalog's order."""
-    return list(await conn.execute(select(Mod.slug, Mod.free).where(Mod.active).order_by(Mod.sort, Mod.slug)))
+async def active_mods(conn: AsyncConnection) -> list[str]:
+    """Every active mod's slug, in the catalog's order."""
+    return list((await conn.execute(select(Mod.slug).where(Mod.active).order_by(Mod.sort, Mod.slug))).scalars())
 
 
-def included(row: Row, mods: list[Row]) -> list[str]:
-    """The slugs a version includes, sorted."""
-    return sorted(m.slug for m in mods if row.all_mods or m.free)
+def included(row: Row, mods: list[str]) -> dict[str, ModLimits]:
+    """The active mods a version includes, by slug, sorted, each with its limits."""
+    return {slug: ModLimits(limits=row.mod_limits[slug]) for slug in sorted(row.mod_limits) if slug in mods}
 
 
-def view(row: Row, mods: list[Row]) -> PlanView:
+def mod_limit(row: Row, mod: str, limit: str) -> int | None:
+    """One limit of one mod on a version: 0 when the version doesn't include the mod, None when unlimited."""
+    return row.mod_limits[mod][limit] if mod in row.mod_limits else 0
+
+
+def view(row: Row, mods: list[str]) -> PlanView:
     return PlanView(
         name=row.name,
         version=row.version,
         seat_price_cents=row.seat_price_cents,
-        limits=Limits(members=row.max_members, installs=row.max_installs, workspaces=row.max_workspaces),
+        limits=Limits(members=row.max_members, installs=row.max_installs),
         mods=included(row, mods),
     )
 

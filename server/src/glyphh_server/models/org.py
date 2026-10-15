@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -39,4 +39,6 @@ class Org(Base):
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, unique=True)
     seats: Mapped[int] = mapped_column(server_default="1")
     billing_status: Mapped[str] = mapped_column(Text, server_default="none")
+    # When the subscription renews, from Stripe; empty when not subscribed or ending at the period's end.
+    renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()

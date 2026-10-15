@@ -3,6 +3,7 @@
 import json
 import time
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -39,7 +40,7 @@ async def test_a_finished_checkout_puts_the_org_on_its_plan_and_seats(
     client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
 ) -> None:
     ada = await person(engine)
-    stripe.sub("sub_new", "cus_new", "price_test_team", 4)
+    stripe.sub("sub_new", "cus_new", "price_test_team", 4)["items"]["data"][0]["current_period_end"] = 1_800_000_000
     obj = {
         "mode": "subscription",
         "client_reference_id": str(ada.org_id),
@@ -48,7 +49,9 @@ async def test_a_finished_checkout_puts_the_org_on_its_plan_and_seats(
     }
     assert (await _send(client, _event("checkout.session.completed", obj))).status_code == 204
     assert await _plan(engine, ada.org_id) == ("Team", 4, "active", "sub_new")
-    assert (await org_row(engine, ada.org_id)).stripe_customer_id == "cus_new"
+    org = await org_row(engine, ada.org_id)
+    assert org.stripe_customer_id == "cus_new"
+    assert org.renews_at == datetime.fromtimestamp(1_800_000_000, UTC)
 
 
 async def test_subscription_changes_are_read_fresh_and_a_deleted_one_returns_the_org_to_free(
@@ -56,10 +59,12 @@ async def test_subscription_changes_are_read_fresh_and_a_deleted_one_returns_the
 ) -> None:
     ada = await person(engine, "Team", seats=3)
     await subscribed(engine, ada.org_id, "sub_live", "cus_live")
-    stripe.sub("sub_live", "cus_live", "price_test_pro", 1, "past_due")
+    ending = stripe.sub("sub_live", "cus_live", "price_test_pro", 1, "past_due")
+    ending.update(current_period_end=1_800_000_000, cancel_at_period_end=True)
     stale = {"id": "sub_live", "customer": "cus_live", "metadata": {}, "status": "active"}
     assert (await _send(client, _event("customer.subscription.updated", stale))).status_code == 204
     assert await _plan(engine, ada.org_id) == ("Pro", 1, "past_due", "sub_live")
+    assert (await org_row(engine, ada.org_id)).renews_at is None
     stripe.sub("sub_live", "cus_live", "price_test_pro", 1, "canceled")
     await _send(client, _event("customer.subscription.deleted", stale))
     assert await _plan(engine, ada.org_id) == ("Free", 1, "canceled", None)
