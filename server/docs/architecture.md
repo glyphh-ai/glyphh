@@ -13,7 +13,7 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 | `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
 | `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on Pro and Team | Every plan: local. Pro and Team: hosted, capped by hours and storage |
 
-- **Pro and Team include every mod**, and every mod as it ships. One mod sold on its own can come later without a redesign.
+- **The base subscription includes Workspaces; every other mod is an add-on** (Decisions, 5, which replaces "Pro and Team include every mod").
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page, the connector's sign-in and Allow page, and Stripe's.
 
 ### Decisions (Chris, 2026-10-15)
@@ -32,6 +32,14 @@ These come first where anything below says otherwise.
     - **Claude reaches rrotor** locally through the mods (their tools call rrotor's local API on 127.0.0.1 with a local token only the mod holds), remotely through the Glyphh connector, the server and the runtime link. rrotor serves no MCP to Claude; no plugin carries an MCP server.
     - **Local runtimes:** Apple's `container` where present, else OrbStack, else Docker. Hosting on Fly is designed only.
     - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `workspaces`, `drips`, `programs` (and later `gateway`, `ada`).
+5. **A base subscription and mod add-ons** (Chris, 2026-10-15, later still: "The base subscription comes with Workspaces. Then everything is an add-on."). This comes first where 1 and 4 say otherwise.
+    - **The plans (Free, Pro, Team; Solo still unseeded) include only `workspaces`** in their `mod_limits`, with its per-plan limits as before.
+    - **Every other mod is an add-on**, sold through Stripe: `drips`, `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `workspaces`, `drips`, `programs`, `gateway` and `ada`.
+    - **One Stripe subscription per org:** the plan's item and one subscription item per add-on, on one invoice; adding or removing an add-on is prorated. An add-on is per seat (its quantity follows the seats) or flat (quantity 1), set per add-on; per seat until Chris decides.
+    - **An add-on needs a paid plan,** unless the catalog marks it allowed on Free (per add-on, off by default); a Free org then subscribes to the add-ons alone, through Checkout.
+    - **The add-on catalog is versioned like plan versions:** a used row never changes; a new Stripe price is a new version, and an org keeps the version it added.
+    - **Which add-ons an org has comes from its subscription's items,** read fresh from Stripe on every event, not from Stripe Entitlements: Entitlements carry no quantity and no subscription item, which per-seat quantities and removing an add-on need anyway; feature changes reach existing subscriptions only at their next period; and the org's add-ons would then follow two event streams instead of the one that already keeps its plan true.
+    - **The license's `mods`** is the plan's mods (Workspaces) and each add-on the org has, each with its limits on the org's plan.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
 - **Functional first.** Every screen works before design draws it.
@@ -227,8 +235,9 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install, so the plan's installs count machines, not sign-ins.
 - **Org:** the first user is its admin and pays; one org per user; members by invite.
 - **Plans and seats:** per seat, through Stripe.
-- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names, each with its limits.
-- **License:** short-lived, signed, per install: plan, account limits, and each included mod with its limits (below, The license).
+- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names (now only `workspaces`), each with its limits.
+- **Add-ons:** every other mod, one Stripe subscription item each on the org's one subscription, prorated; per seat or flat; each add-on version names the plans it may be added to, whether Free may have it, and the mod's limits on each plan (below, Add-ons).
+- **License:** short-lived, signed, per install: plan, account limits, and each included mod, from the plan or an add-on, with its limits (below, The license).
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once). Its tools now are the account's (below, The connector); `programs_list`, `call`, `continue`, `run_status` and the live panel come with programs.
 - **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back. A local runtime's token stops working when its install is revoked.
@@ -250,6 +259,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods`, `GET /v1/plans` (each plan's newest version: price, account limits, each mod and its limits), `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
+| Add-ons | `GET /v1/addons` (the catalog for the org's plan, with prices, and what the org has), `POST /v1/billing/checkout` with `addons`, `POST /v1/billing/addons/preview`, `POST /v1/billing/addons`, `DELETE /v1/billing/addons/{mod}` (below, Add-ons) |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run), `send_continue`, `send_cancel`, `send_deploy`. A runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; waking a stopped hosted runtime on Fly is one seam, `wake_hosted`, not built |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional program; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a program's events |
@@ -280,6 +290,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
     "limits": {"members": 1, "installs": 5},
     "mods": {
       "drips": {"limits": {"custom_drips": null, "fullscreen": 1}},
+      "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
       "workspaces": {"limits": {"favorites": null, "stream": 1, "workspaces": 10}}
     },
     "expires_at": "2026-10-16T09:30:00Z"
@@ -288,8 +299,22 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 }
 ```
 
-- `mods` names each mod the plan includes, and only those: a mod not in it is not included. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
+(A Pro org with the Drips and Programs add-ons.)
+
+- `mods` names each mod the org has, and only those: the plan's (`workspaces`), and each add-on on its subscription, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
 - `limits` at the top are the account's: `members` (per org) and `installs` (per user), `null` for unlimited.
+
+### Add-ons
+
+Every mod but Workspaces is an add-on to the plan: a line on the org's one Stripe subscription, on the same invoice, prorated when it changes. Writes are the admin's.
+
+- **`GET /v1/addons`** (anyone in the org): each add-on on sale, and each the org has (at the version it added): `mod`, `name`, `description`, `version`, `price_cents` (a month, per seat when `per_seat`, else flat), `per_seat`, `monthly_cents` (for the org's seats now), `plans` (the paid plans it may be added to), `free` (whether a Free org may have it), `allowed` (on the org's plan), `limits` (the mod's limits on the org's plan; `null` when not allowed), `added`, `quantity` (on the subscription; `null` when not added).
+- **`POST /v1/billing/checkout`** `{"plan", "seats", "addons": ["drips", …]}`: one Checkout with the plan's line and one per add-on (a per-seat add-on's quantity is the seats, a flat one's 1). `plan` `Free` with only add-ons the catalog allows on Free subscribes to those alone.
+- **`POST /v1/billing/addons/preview`** `{"mod", "action": "add" | "remove"}`: what changes now, from Stripe's preview invoice (`POST /v1/invoices/create_preview` on the subscription): `{"mod", "action", "prorated_cents", "currency", "monthly_cents", "proration_date"}`; `prorated_cents` is the sum of the proration lines (negative for a credit), `monthly_cents` the add-on's monthly amount at the seats now. Passing `proration_date` back when applying makes Stripe charge exactly what was previewed.
+- **`POST /v1/billing/addons`** `{"mod", "proration_date"?}` adds a subscription item, prorated; **`DELETE /v1/billing/addons/{mod}`** (`?proration_date=`) deletes it, prorated (a credit). Both answer the same list as `GET /v1/addons`, synced from Stripe's answer at once.
+- **Refusals** (stable codes): not the admin `E_FORBIDDEN`; no subscription `E_CONFLICT` `reason: not_subscribed` (subscribe with checkout); not allowed on the org's plan `E_CONFLICT` `reason: not_on_plan`; already added `E_CONFLICT` `reason: already_added`; not added `E_NOT_FOUND` `reason: not_added`; the subscription's last item `E_CONFLICT` `reason: last_item` (cancel in the billing portal); a mod with no add-on on sale `E_INVALID` `reason: no_addon`. Changing plan to one an added add-on isn't allowed on is `E_CONFLICT` `reason: not_on_plan`.
+- **Seats:** changing the seats changes every per-seat add-on's quantity with the plan's, in one prorated update.
+- **Stripe's webhook** keeps the org's add-ons true: on every subscription event it reads the subscription fresh and matches each item's price to an add-on version (the plan's item to a plan version); an item there is an add-on the org has (`active`, its item id and quantity), an add-on no longer there is `removed`; a subscription that ended removes them all. Replays and events out of order change nothing, as for the plan.
 
 ### The connector
 
@@ -322,7 +347,9 @@ Nothing on these endpoints is rate-limited yet: the server has no rate limiting 
 | Tool | Does | Who |
 |---|---|---|
 | `whoami` | The account, its org and role | Everyone |
-| `plan` | The plan, each mod and its limits, what is used, seats, billing status and when it renews | Everyone |
+| `plan` | The plan, each mod and its limits, the add-ons the org has, what is used, seats, billing status and when it renews | Everyone |
+| `addons` | The add-on catalog for the org's plan, with prices and limits, and which the org has | Everyone |
+| `add_mod`, `remove_mod` | `mod`: the first call answers the prorated price now and the monthly price (Stripe's preview) and changes nothing; the same call with `confirm: true` (and the `proration_date` the first answered) adds or removes it, prorated | Admin |
 | `plans` | What each plan costs and includes: account limits, each mod and its limits | Everyone |
 | `upgrade` | `plan`, `seats`: Stripe Checkout's address when not subscribed; changes plan (prorated) when subscribed | Admin |
 | `billing_portal` | Stripe's portal address: card, invoices, cancel | Admin |
@@ -333,7 +360,7 @@ Nothing on these endpoints is rate-limited yet: the server has no rate limiting 
 
 Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content.
 
-**The account panel.** One MCP App resource, `ui://glyphh/account/1` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami` and `plan` name it in `_meta.ui.resourceUri`. It shows who you are, the plan, each mod with its limits and what is used, Upgrade (opens Checkout), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables, for now.
+**The account panel.** One MCP App resource, `ui://glyphh/account/1` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami` and `plan` name it in `_meta.ui.resourceUri`. It shows who you are, the plan, each mod with its limits and what is used, the add-ons with their prices and Add or Remove (each shows the prorated price and asks to confirm before it applies), Upgrade (opens Checkout), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables, for now.
 
 ### Panels
 
@@ -342,7 +369,7 @@ Each works before design draws it.
 | Panel | Mod | Kind |
 |---|---|---|
 | Sign in, account, org, plan, billing | `glyphh` | Mod |
-| The account: who, plan, each mod's limits and use, upgrade, billing, installs, grants | The Glyphh connector | MCP App |
+| The account: who, plan, each mod's limits and use, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App |
 | Workspaces: list, create, edit, delete | `glyphh-workspaces` | Mod |
 | The local live panel: a profile's tab, steps, approvals, take control, record | `glyphh-rpa` | MCP App |
 | Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
@@ -380,6 +407,9 @@ erDiagram
     PLANS ||--|{ PLAN_VERSIONS : "has versions"
     PLAN_VERSIONS ||--o{ ORGS : "pinned by"
     MODS }o..o{ PLAN_VERSIONS : "named in mod_limits"
+    MODS ||--o{ ADDONS : "sold as"
+    ADDONS ||--o{ ORG_ADDONS : "pinned by"
+    ORGS ||--o{ ORG_ADDONS : "has"
     ORGS ||--|{ USERS : "members"
     ORGS |o--o| USERS : "admin"
     ORGS ||--o{ INVITES : "sends"
@@ -432,6 +462,29 @@ erDiagram
         text description
         bool active
         int sort
+    }
+    ADDONS {
+        uuid id PK
+        text mod FK
+        int version "unique per mod"
+        text stripe_price_id UK
+        int price_cents "a month, per seat or flat"
+        bool per_seat
+        text_array plans "paid plans it may be added to"
+        bool free "a Free org may have it"
+        json limits "plan or * to limit to number or null"
+        bool active
+        timestamp created_at
+    }
+    ORG_ADDONS {
+        uuid org_id PK, FK
+        text mod PK, FK
+        uuid addon_id FK
+        text stripe_item_id UK
+        int quantity
+        text status "active or removed"
+        timestamp created_at
+        timestamp updated_at
     }
     ORGS {
         uuid id PK
@@ -638,6 +691,8 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods the version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). A mod not named is not included; a retired mod (`active` false) is in no license. Changing a mod's limits is a new version, like any limit.
+- **Add-ons** (`addons`): each mod but Workspaces, sold as a line on the org's subscription. A version never changes its price, flags or limits: a new Stripe price is a new version (as plan versions); `active` false takes it off sale, and an org keeps the version it added. `limits` is `{"<plan>" | "*": {"<limit>": number | null}}`: the mod's limits on that plan, `*` for every plan not named. `plans` names the paid plans it may be added to; `free` lets a Free org have it (off unless set).
+- **Org add-ons** (`org_addons`): one row per org and mod, written only from Stripe's subscription: the version it sells (`addon_id`), its subscription item and quantity, `active` while the item is on the subscription and `removed` after (the item id cleared). Row-level security on the org, as the rest.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
 - **Runtimes** (`rrotors`): one hosted per Pro and Team user (`mode: hosted`), and one local per install that started one (`mode: local`, keyed by its install); each its own token. `state` is `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again).
 - **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
@@ -662,7 +717,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ## Plans
 
-Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). Installs, mod limits, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). **The base subscription comes with Workspaces; every other mod is an add-on** (Decisions, 5). Installs, mod limits, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
@@ -672,16 +727,26 @@ Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). In
 | `workspaces`: `workspaces` | 2 | ? | 10 | Unlimited |
 | `workspaces`: `favorites` | 5 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
 | `workspaces`: `stream` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
-| `drips`: `custom_drips` | 3 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
-| `drips`: `fullscreen` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
-| `programs`: `programs` | 3 (TBD) | ? | 25 (TBD) | Unlimited (TBD) |
-| `programs`: `runs_per_day` | 50 (TBD) | ? | 1000 (TBD) | Unlimited (TBD) |
+| Add-ons (below) | Only those allowed on Free | ? | Every add-on | Every add-on |
 | Local runtime | Yes | Yes | Yes | Yes |
 | Hosted runtime (cloud) | No | No | Yes | Yes |
 | Runtime hours a month | — | — | ? | ? |
 | Storage | — | — | $0.50 per GB-month, capped | $0.50 per GB-month, capped |
 
 - **The mod limits marked TBD are placeholders** in the seed until Chris sets them; Solo is not seeded until its price and limits are set.
+
+### Add-ons
+
+Each a line on the org's subscription, prorated when added or removed; per seat (its quantity follows the seats) unless set flat. Each Stripe price comes from the environment (`GLYPHH_STRIPE_PRICE_<MOD>`), as the plans' do.
+
+| Add-on | Price a month | Per seat | Plans | On Free | Limits on Pro | Limits on Team |
+|---|---|---|---|---|---|---|
+| `drips` | $2 (TBD) | Yes (TBD) | Pro, Team | No | `custom_drips` unlimited, `fullscreen` 1 (TBD) | The same (TBD) |
+| `programs` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `programs` 25, `runs_per_day` 1000 (TBD) | Unlimited, unlimited (TBD) |
+| `gateway` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 5, `keys` 10 (TBD) | Unlimited, unlimited (TBD) |
+| `ada` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 3, `precedents` 10000 (TBD) | Unlimited, unlimited (TBD) |
+
+- **Every price, the per-seat choice and every limit here is a placeholder** in the seed (`db/seed_addons.py`) until Chris sets them.
 - **Hours top-ups** (out of scope now): there are no one-off purchases (2026-10-15), so hours, when they come, come with the subscription.
 - **Storage is never included** (Chris, 2026-10-14): every GB is billed, at **$0.50 per GB-month** on what the runtime holds (its volume's size), prorated by the day on the monthly invoice. The person sets a cap (1 GB to start, up to 100 GB); the volume's size is the cap, so the bill can't pass it. Growing it is a click; it never shrinks.
 - To decide: the hours per plan and the top-up price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
