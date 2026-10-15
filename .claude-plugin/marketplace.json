@@ -11,12 +11,6 @@
       "source": "./plugins/drips",
       "description": "Drips: visual effects over Claude (confetti, fireworks, hearts, a matrix rain), in its window or over the whole screen; save your own recipes and let Claude play them",
       "version": "1.0.0"
-    },
-    {
-      "name": "workspaces",
-      "source": "./plugins/workspaces",
-      "description": "Workspaces for the Claude desktop app: your favourite pages live in one layout, with the app's panes, in one command",
-      "version": "1.0.0"
     }
   ]
 }
