@@ -1,6 +1,7 @@
-"""The license: what an install's plan allows (the account's limits, and each mod it includes with that mod's limits),
-signed with Ed25519 so the mod can check it offline with the public key, and short-lived so a change of plan reaches
-the machine within a day. docs/architecture.md (The license) shows the payload.
+"""The license: what an install's plan allows (the account's limits, and each mod the org has, from its plan or an
+add-on, with that mod's limits), signed with Ed25519 so the mod can check it offline with the public key, and
+short-lived so a change of plan or add-ons reaches the machine within a day. docs/architecture.md (The license) shows
+the payload.
 
 The signature is over the payload's canonical JSON: keys sorted, no spaces, ASCII only (json.dumps with
 sort_keys=True, separators=(",", ":")). That is what the mod rebuilds from `payload` to verify it."""
@@ -17,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
+from glyphh_server.ops.addons import licensed
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import Limits, ModLimits, org_plan
 
@@ -58,13 +60,14 @@ def canonical(payload: dict[str, Any]) -> bytes:
 
 async def license_for(conn: AsyncConnection, who: Principal, key: Ed25519PrivateKey) -> License:
     plan = await org_plan(conn, who.org_id)
+    mods = plan.mods | await licensed(conn, who.org_id, plan.name)
     payload = LicensePayload(
         install_id=who.install_id,
         user_id=who.user_id,
         org_id=who.org_id,
         plan=plan.name,
         limits=plan.limits,
-        mods=plan.mods,
+        mods=dict(sorted(mods.items())),
         expires_at=datetime.now(UTC).replace(microsecond=0) + LICENSE_TTL,
     )
     signature = key.sign(canonical(payload.model_dump(mode="json")))

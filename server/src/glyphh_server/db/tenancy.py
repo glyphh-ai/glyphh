@@ -1,9 +1,10 @@
 """Tenant isolation: row-level security keyed on the org.
 
 A request made with an install's token, or with a connector access token on /mcp, runs as the role `glyphh_tenant`
-with its org in `glyphh.org_id`, and the policies below show it only that org's rows: the org, its users, invites and
-programs, and their identities, installs, tokens, workspaces, runtimes, GitHub installations, routine triggers,
-connector grants, their tokens and OAuth codes, and the programs' versions, deployments, runs, approvals and events.
+with its org in `glyphh.org_id`, and the policies below show it only that org's rows: the org, its users, invites,
+add-ons and programs, and their identities, installs, tokens, workspaces, runtimes, GitHub installations, routine
+triggers, connector grants, their tokens and OAuth codes, and the programs' versions, deployments, runs, approvals and
+events.
 Sign-in, the connector's OAuth endpoints (a code or token is found by its hash before anyone is known), Stripe's
 webhook and the few operations that cross orgs on purpose (joining another org, being removed from one) run as the
 connecting role, which the policies don't bind. Applied on every boot."""
@@ -18,6 +19,7 @@ POLICIES: dict[str, str] = {
     "orgs": f"id = {ORG}",
     "users": f"org_id = {ORG}",
     "invites": f"org_id = {ORG}",
+    "org_addons": f"org_id = {ORG}",
     "identities": "user_id IN (SELECT id FROM users)",
     "installs": "user_id IN (SELECT id FROM users)",
     "workspaces": "user_id IN (SELECT id FROM users)",

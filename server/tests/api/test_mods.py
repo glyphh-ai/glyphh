@@ -1,5 +1,5 @@
-"""The mods catalog: each mod in the plans whose newest version names it in mod_limits; a retired mod in none, and a
-mod no longer seeded retired."""
+"""The mods catalog: each mod in the plans whose newest version names it in mod_limits, or sold as an add-on; a retired
+mod in none, and a mod no longer seeded retired."""
 
 import httpx
 from sqlalchemy import delete, insert, select, update
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.db.schema import apply_schema
 from glyphh_server.models import Mod
 from tests.conftest import SETTINGS
-from tests.db.helpers import person
+from tests.db.helpers import person, with_addon
 
 
 async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: httpx.AsyncClient) -> None:
@@ -17,10 +17,17 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     mods = res.json()
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
         ("workspaces", "Workspaces", ["Free", "Pro", "Team"]),
-        ("drips", "Drips", ["Free", "Pro", "Team"]),
-        ("programs", "Programs", ["Free", "Pro", "Team"]),
+        ("drips", "Drips", []),
+        ("programs", "Programs", []),
+        ("gateway", "Gateway", []),
+        ("ada", "Ada", []),
     ]
     assert all(m["description"] for m in mods)
+    assert mods[0]["addon"] is None
+    assert [m["addon"] for m in mods[1:]] == [
+        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False}
+        for cents in (200, 400, 400, 400)
+    ]
 
 
 async def test_seeding_again_keeps_the_catalog(engine: AsyncEngine) -> None:
@@ -35,16 +42,18 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     pro = await person(engine, "Pro")
+    await with_addon(engine, pro.org_id, "drips")
     async with engine.begin() as conn:
         await conn.execute(insert(Mod).values(slug="glyphh-old", name="Old", description="Gone", sort=9))
         await conn.execute(update(Mod).where(Mod.slug == "drips").values(active=False))
     try:
         await apply_schema(engine, SETTINGS)
         lic = (await client.get("/v1/license", headers=pro.headers)).json()["payload"]
-        assert list(lic["mods"]) == ["programs", "workspaces"]
-        mods = (await client.get("/v1/me", headers=pro.headers)).json()["plan"]["mods"]
-        assert list(mods) == ["programs", "workspaces"]
-        assert [m["slug"] for m in (await client.get("/v1/mods")).json()] == ["workspaces", "programs"]
+        assert list(lic["mods"]) == ["workspaces"]
+        assert list((await client.get("/v1/me", headers=pro.headers)).json()["plan"]["mods"]) == ["workspaces"]
+        slugs = [m["slug"] for m in (await client.get("/v1/mods")).json()]
+        assert slugs == ["workspaces", "programs", "gateway", "ada"]
+        assert "drips" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
         async with engine.connect() as conn:
             assert (await conn.execute(select(Mod.active).where(Mod.slug == "glyphh-old"))).scalar_one() is False
     finally:

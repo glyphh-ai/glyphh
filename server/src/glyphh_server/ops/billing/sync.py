@@ -1,5 +1,5 @@
-"""Keeping the org true to its Stripe subscription: the plan version its price sells, its seats, its status. A
-subscription that has ended puts the org back on Free."""
+"""Keeping the org true to its Stripe subscription: the plan version its plan item sells, its seats, its status, and
+the add-ons its other items sell. A subscription that has ended puts the org back on Free, with no add-ons."""
 
 import logging
 import uuid
@@ -10,8 +10,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.db.seed import FREE
-from glyphh_server.models import BILLING_STATUSES, Org, PlanVersion
+from glyphh_server.models import BILLING_STATUSES, Org
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops.billing.items import classify, sync_addons
 from glyphh_server.ops.plans import newest_version
 
 log = logging.getLogger("glyphh.billing")
@@ -42,19 +43,13 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
             "stripe_subscription_id": None,
             "renews_at": None,
         }
+        await sync_addons(conn, org_id, {})
     else:
-        item = sub["items"]["data"][0]
-        values = {
-            "seats": max(1, int(item["quantity"])),
-            "stripe_subscription_id": sub["id"],
-            "renews_at": renews_at(sub),
-        }
-        sold = select(PlanVersion.id).where(PlanVersion.stripe_price_id == item["price"]["id"])
-        version_id = (await conn.execute(sold)).scalar_one_or_none()
-        if version_id is None:
-            log.warning("unknown stripe price", extra=fields(org=str(org_id), price=item["price"]["id"]))
-        else:
-            values["plan_version_id"] = version_id
+        found = await classify(conn, org_id, sub)
+        values = {"stripe_subscription_id": sub["id"], "renews_at": renews_at(sub)}
+        if found.plan is not None:
+            values |= {"seats": max(1, int(found.plan["quantity"])), "plan_version_id": found.plan_version_id}
+        await sync_addons(conn, org_id, found.addons)
     await conn.execute(
         update(Org).where(Org.id == org_id).values(**values, billing_status=status, stripe_customer_id=sub["customer"])
     )

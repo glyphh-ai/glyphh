@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
-from glyphh_server.models import Install, Org, User
+from glyphh_server.models import Addon, Install, Org, OrgAddon, User
 from glyphh_server.ops.auth import tokens
 from glyphh_server.ops.orgs import new_person
 from glyphh_server.ops.plans import newest_version
@@ -81,3 +81,16 @@ async def subscribed(engine: AsyncEngine, org_id: uuid.UUID, sub_id: str, custom
 async def org_row(engine: AsyncEngine, org_id: uuid.UUID):  # type: ignore[no-untyped-def]
     async with engine.connect() as conn:
         return (await conn.execute(select(Org).where(Org.id == org_id))).one()
+
+
+async def with_addon(engine: AsyncEngine, org_id: uuid.UUID, mod: str, quantity: int = 1) -> str:
+    """The org has this add-on (its newest version) on its subscription, as the webhook would have recorded it: the
+    item's id."""
+    item = f"si_{org_id.hex}_{mod}"
+    async with engine.begin() as conn:
+        addon_id = (
+            await conn.execute(select(Addon.id).where(Addon.mod == mod).order_by(Addon.version.desc()).limit(1))
+        ).scalar_one()
+        values = {"org_id": org_id, "mod": mod, "addon_id": addon_id, "stripe_item_id": item, "quantity": quantity}
+        await conn.execute(insert(OrgAddon).values(values))
+    return item

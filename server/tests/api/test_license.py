@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.ops.license import load_key
 from tests.conftest import SETTINGS
-from tests.db.helpers import person
+from tests.db.helpers import person, with_addon
 
 
 def _verify(key: dict, lic: dict) -> None:
@@ -26,6 +26,8 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Pro")
+    await with_addon(engine, ada.org_id, "drips")
+    await with_addon(engine, ada.org_id, "programs")
     lic = (await client.get("/v1/license", headers=ada.headers)).json()
     key = (await client.get("/v1/license/key", headers=ada.headers)).json()
     assert key["alg"] == "Ed25519"
@@ -41,6 +43,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
         },
     )
+    assert list(p["mods"]) == ["drips", "programs", "workspaces"]
     assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
     assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
@@ -55,11 +58,7 @@ async def test_free_carries_free_limits_and_the_license_needs_a_token(
 ) -> None:
     ada = await person(engine)
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert mods == {
-        "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
-        "programs": {"limits": {"programs": 3, "runs_per_day": 50}},
-        "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
-    }
+    assert mods == {"workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}}}
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401
 

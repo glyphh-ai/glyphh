@@ -16,21 +16,9 @@ async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> Non
         {"members": None, "installs": 10},
     ]
     assert [p["mods"] for p in plans] == [
-        {
-            "drips": {"limits": {"custom_drips": 3, "fullscreen": 0}},
-            "programs": {"limits": {"programs": 3, "runs_per_day": 50}},
-            "workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}},
-        },
-        {
-            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
-            "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
-            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
-        },
-        {
-            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
-            "programs": {"limits": {"programs": None, "runs_per_day": None}},
-            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
-        },
+        {"workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}}},
+        {"workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}}},
+        {"workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}}},
     ]
 
 
@@ -45,10 +33,11 @@ async def test_checkout_makes_the_customer_once_and_sells_the_newest_price_per_s
     assert session["mode"] == "subscription" and session["line_items[0][price]"] == "price_test_team"
     assert (session["line_items[0][quantity]"], session["client_reference_id"]) == ("4", str(ada.org_id))
     assert session["success_url"] == "http://localhost:8080/billing/done"
-    assert (await org_row(engine, ada.org_id)).stripe_customer_id == "cus_1"
+    customer = (await org_row(engine, ada.org_id)).stripe_customer_id
+    assert customer.startswith("cus_")
     await client.post("/v1/billing/checkout", json={"plan": "Pro", "seats": 1}, headers=ada.headers)
     assert [c[1] for c in stripe.calls] == ["/customers", "/checkout/sessions", "/checkout/sessions"]
-    assert stripe.calls[-1][2]["customer"] == "cus_1"
+    assert stripe.calls[-1][2]["customer"] == customer
 
 
 async def test_checkout_refuses_what_it_cannot_sell(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

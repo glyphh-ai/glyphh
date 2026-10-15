@@ -83,3 +83,32 @@ async def test_the_plans_carry_their_hosted_runtime_hours_and_storage_rate(engin
             .order_by(Plan.sort)
         )
         assert [tuple(r) for r in rows] == [("Free", 0, None), ("Pro", None, 50), ("Team", None, 50)]
+
+
+async def test_an_addons_new_stripe_price_is_a_new_version_and_an_org_keeps_the_one_it_added(
+    engine: AsyncEngine,
+) -> None:
+    from sqlalchemy import delete
+
+    from glyphh_server.db import seed_addons
+    from glyphh_server.models import Addon, OrgAddon
+    from glyphh_server.ops.addons import list_addons, newest_addons
+    from tests.db.helpers import person, with_addon
+
+    ada = await person(engine, "Pro")
+    await with_addon(engine, ada.org_id, "ada")
+    try:
+        await apply_schema(engine, SETTINGS.model_copy(update={"stripe_price_ada": "price_test_ada_2026"}))
+        await apply_schema(engine, SETTINGS.model_copy(update={"stripe_price_ada": None}))
+        async with engine.begin() as conn:
+            (seed,) = [s for s in seed_addons.ADDONS if s.mod == "ada"]
+            await seed_addons.seed_addon(conn, seed, "price_test_drips")
+            versions = await conn.execute(select(Addon.version, Addon.stripe_price_id).where(Addon.mod == "ada"))
+            assert sorted(tuple(v) for v in versions) == [(1, "price_test_ada"), (2, "price_test_ada_2026")]
+            assert next(r for r in await newest_addons(conn) if r.mod == "ada").version == 2
+            mine = next(a for a in await list_addons(conn, ada.org_id) if a.mod == "ada")
+            assert (mine.version, mine.added) == (1, True)
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(delete(OrgAddon).where(OrgAddon.org_id == ada.org_id))
+            await conn.execute(delete(Addon).where(Addon.mod == "ada", Addon.version == 2))

@@ -5,6 +5,7 @@ import httpx
 from fastapi import FastAPI
 
 from glyphh_server.api import (
+    addons,
     approvals,
     billing,
     connector,
@@ -46,6 +47,7 @@ ROUTERS = (
     org,
     mods,
     plans,
+    addons,
     billing,
     runtime,
     routine_triggers,

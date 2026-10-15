@@ -77,7 +77,7 @@ async def test_the_org_is_found_by_metadata_when_stripe_has_no_customer_of_ours(
     stripe.sub("sub_meta", "cus_meta", "price_unknown", 2, "weird_status")
     obj = {"id": "sub_meta", "customer": "cus_meta", "metadata": {"org_id": str(ada.org_id)}}
     await _send(client, _event("customer.subscription.created", obj))
-    assert await _plan(engine, ada.org_id) == ("Free", 2, "none", "sub_meta")
+    assert await _plan(engine, ada.org_id) == ("Free", 1, "none", "sub_meta")
 
 
 async def test_events_for_no_org_another_subscription_or_of_no_interest_change_nothing(

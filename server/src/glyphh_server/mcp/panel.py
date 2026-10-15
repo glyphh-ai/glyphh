@@ -8,14 +8,15 @@ from typing import Any
 
 from glyphh_server.mcp.protocol import Call
 
-URI: str = "ui://glyphh/account/1"
+URI: str = "ui://glyphh/account/2"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {
     "uri": URI,
     "name": "account",
     "title": "Glyphh account",
-    "description": "Your Glyphh account: plan, each mod's limits and use, upgrade, billing, installs and grants.",
+    "description": "Your Glyphh account: plan, each mod's limits and use, add-ons, upgrade, billing, installs and "
+    "grants.",
     "mimeType": MIME,
 }
 

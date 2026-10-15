@@ -3,6 +3,7 @@ server's own code runs unchanged against them, and no test ever reaches the real
 
 import base64
 import json
+import uuid
 from typing import Any
 from urllib.parse import parse_qsl
 
@@ -40,12 +41,24 @@ def answer(found: Any) -> httpx.Response:
     return found if isinstance(found, httpx.Response) else httpx.Response(200, json=found)
 
 
+def _items(body: dict[str, str], prefix: str = "items") -> list[dict[str, str]]:
+    """Stripe's form-encoded items (items[0][price], …) back into a list."""
+    found: dict[int, dict[str, str]] = {}
+    for key, value in body.items():
+        if key.startswith(f"{prefix}["):
+            index, name = key.removeprefix(f"{prefix}[").rstrip("]").split("][")
+            found.setdefault(int(index), {})[name] = value
+    return [found[i] for i in sorted(found)]
+
+
 class FakeStripe:
-    """Stripe's few endpoints billing uses, remembering every call and every subscription."""
+    """Stripe's few endpoints billing uses, remembering every call and every subscription: items changed, added and
+    deleted as Stripe does, and preview invoices whose proration lines are half a month of each item changed."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, dict[str, str]]] = []
         self.subs: dict[str, dict[str, Any]] = {}
+        self.prices: dict[str, int] = {}
         self.fail: bool = False
 
     def sub(self, sub_id: str, customer: str, price: str, quantity: int, status: str = "active") -> dict[str, Any]:
@@ -58,6 +71,46 @@ class FakeStripe:
         }
         return self.subs[sub_id]
 
+    def add_item(self, sub_id: str, price: str, quantity: int) -> dict[str, Any]:
+        item = {"id": f"si_{sub_id}_{price}", "price": {"id": price}, "quantity": quantity}
+        self.subs[sub_id]["items"]["data"].append(item)
+        return item
+
+    def _change(self, sub: dict[str, Any], body: dict[str, str]) -> dict[str, Any]:
+        data = sub["items"]["data"]
+        for change in _items(body):
+            if "id" not in change:
+                data.append({"id": f"si_{uuid.uuid4().hex}", "price": {"id": change["price"]}})
+                change["id"] = data[-1]["id"]
+            item = next(i for i in data if i["id"] == change["id"])
+            if change.get("deleted") == "true":
+                data.remove(item)
+                continue
+            if "price" in change:
+                item["price"] = {"id": change["price"]}
+                item["quantity"] = int(change.get("quantity", 1))
+            if "quantity" in change:
+                item["quantity"] = int(change["quantity"])
+        return sub
+
+    def _preview(self, body: dict[str, str]) -> dict[str, Any]:
+        """A new item's half month is a new-style proration line, a deleted one's credit an old-style one; the next
+        month's own line is no proration."""
+        sub = self.subs[body["subscription"]]
+        lines: list[dict[str, Any]] = [
+            {"amount": 999_999, "parent": {"subscription_item_details": {"proration": False}}}
+        ]
+        for change in _items(body, "subscription_details[items]"):
+            if "id" in change:
+                item = next(i for i in sub["items"]["data"] if i["id"] == change["id"])
+                lines.append(
+                    {"amount": -self.prices.get(item["price"]["id"], 0) * item["quantity"] // 2, "proration": True}
+                )
+            else:
+                half = self.prices.get(change["price"], 0) * int(change["quantity"]) // 2
+                lines.append({"amount": half, "parent": {"subscription_item_details": {"proration": True}}})
+        return {"object": "invoice", "currency": "usd", "lines": {"data": lines}}
+
     def handle(self, request: httpx.Request) -> httpx.Response:
         if self.fail:
             return httpx.Response(500, json={"error": {"message": "down"}})
@@ -65,18 +118,15 @@ class FakeStripe:
         path = request.url.path.removeprefix("/v1")
         self.calls.append((request.method, path, body))
         if path == "/customers":
-            return answer({"id": f"cus_{len(self.calls)}"})
+            return answer({"id": f"cus_{uuid.uuid4().hex}"})
         if path == "/checkout/sessions":
             return answer({"id": "cs_1", "url": "https://checkout.stripe.test/cs_1"})
         if path == "/billing_portal/sessions":
             return answer({"url": "https://billing.stripe.test/p_1"})
+        if path == "/invoices/create_preview":
+            return answer(self._preview(body))
         sub = self.subs[path.removeprefix("/subscriptions/")]
-        item = sub["items"]["data"][0]
-        if "items[0][price]" in body:
-            item["price"] = {"id": body["items[0][price]"]}
-        if "items[0][quantity]" in body:
-            item["quantity"] = int(body["items[0][quantity]"])
-        return answer(sub)
+        return answer(self._change(sub, body) if request.method == "POST" else sub)
 
 
 def _unb64(part: str) -> bytes:

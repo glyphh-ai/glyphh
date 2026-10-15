@@ -1,9 +1,9 @@
-"""Who am I, my plan with each mod's limits and what is used, and what each plan includes."""
+"""Who am I, my plan with each mod's limits, its add-ons and what is used, and what each plan includes."""
 
 from typing import Any
 
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, amount, dump
-from glyphh_server.ops import me, plans
+from glyphh_server.ops import addons, me, plans
 from glyphh_server.ops.plans import PlanView
 
 
@@ -37,14 +37,16 @@ def price(plan: PlanView) -> str:
 async def plan(ctx: Context, _: NoArgs) -> Done:
     found = await me.me(ctx.conn, ctx.who)
     org, used, p = found.org, found.used, found.plan
+    added = [a for a in await addons.list_addons(ctx.conn, ctx.who.org_id) if a.added]
     renews = f", renews {org.renews_at:%Y-%m-%d}" if org.renews_at else ""
     lines = [
         f"{p.name} (version {p.version}), {price(p)}: {org.seats} seats, billing {org.billing_status}{renews}.",
         f"Members {used.members} of {amount(p.limits.members)}; "
         f"installs {used.installs} of {amount(p.limits.installs)}.",
         *mod_lines(p, used.mods),
+        "Add-ons: " + (", ".join(f"{a.mod} ({a.quantity})" for a in added) or "none") + ".",
     ]
-    data: dict[str, Any] = {"plan": dump(p), "used": dump(used), "org": dump(org)}
+    data: dict[str, Any] = {"plan": dump(p), "used": dump(used), "org": dump(org), "addons": [dump(a) for a in added]}
     return Done("\n".join(lines), data)
 
 
@@ -63,8 +65,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "plan",
         "My plan",
-        "The org's Glyphh plan: each mod it includes with that mod's limits and what is used, the seats, billing "
-        "status and when it renews.",
+        "The org's Glyphh plan: each mod it includes with that mod's limits and what is used, its add-ons, the "
+        "seats, billing status and when it renews.",
         NoArgs,
         plan,
         True,

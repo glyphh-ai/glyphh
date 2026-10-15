@@ -14,6 +14,9 @@ class UpgradeArgs(BaseModel):
     seats: int | None = Field(
         default=None, ge=1, le=10_000, description="Seats to subscribe with; defaults to the seats taken"
     )
+    addons: list[str] = Field(
+        default_factory=list, max_length=20, description="When subscribing: mods to add on, as addons lists them"
+    )
 
 
 class SeatsArgs(BaseModel):
@@ -29,8 +32,9 @@ async def upgrade(ctx: Context, args: UpgradeArgs) -> Done:
         changed = await changes.change_plan(ctx.conn, ctx.who, stripe, args.plan)
         return Done(f"Your org is on {changed.plan.name} now, prorated.", {"org": dump(changed)})
     seats = args.seats or max(1, await limits.seats_taken(ctx.conn, ctx.who.org_id))
-    page = await checkout.checkout(ctx.conn, ctx.who, stripe, ctx.settings, args.plan, seats)
-    return Done(f"Open Stripe Checkout to subscribe to {args.plan} with {seats} seats: {page.url}", dump(page))
+    page = await checkout.checkout(ctx.conn, ctx.who, stripe, ctx.settings, args.plan, seats, args.addons)
+    extra = f" and {', '.join(args.addons)}" if args.addons else ""
+    return Done(f"Open Stripe Checkout to subscribe to {args.plan}{extra} with {seats} seats: {page.url}", dump(page))
 
 
 async def portal(ctx: Context, _: NoArgs) -> Done:
@@ -47,8 +51,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "upgrade",
         "Upgrade",
-        "Subscribe to a Glyphh plan (answers Stripe Checkout's address to open) or, when already subscribed, change "
-        "to it, prorated. Only the org's admin can.",
+        "Subscribe to a Glyphh plan, with any add-ons (answers Stripe Checkout's address to open) or, when already "
+        "subscribed, change to it, prorated (add-ons then with add_mod). Only the org's admin can.",
         UpgradeArgs,
         upgrade,
     ),

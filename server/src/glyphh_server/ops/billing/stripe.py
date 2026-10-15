@@ -15,7 +15,7 @@ API: str = "https://api.stripe.com/v1"
 
 
 def form(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
-    """Stripe's form encoding: nested keys as a[b][c], lists as a[0][b]."""
+    """Stripe's form encoding: nested keys as a[b][c], lists as a[0][b], booleans as true and false."""
     flat: dict[str, str] = {}
     for key, value in data.items():
         name = f"{prefix}[{key}]" if prefix else str(key)
@@ -23,6 +23,8 @@ def form(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
             flat.update(form(value, name))
         elif isinstance(value, list):
             flat.update(form(dict(enumerate(value)), name))
+        elif isinstance(value, bool):
+            flat[name] = str(value).lower()
         else:
             flat[name] = str(value)
     return flat
@@ -49,7 +51,8 @@ class StripeClient:
         made = await self.call("POST", "/customers", {"email": email, "name": name, "metadata": {"org_id": org_id}})
         return str(made["id"])
 
-    async def checkout(self, customer: str, price: str, seats: int, org_id: str, return_url: str) -> str:
+    async def checkout(self, customer: str, lines: list[dict[str, Any]], org_id: str, return_url: str) -> str:
+        """Checkout for a subscription of these lines (each a price and quantity): the plan's and each add-on's."""
         session = await self.call(
             "POST",
             "/checkout/sessions",
@@ -57,7 +60,7 @@ class StripeClient:
                 "mode": "subscription",
                 "customer": customer,
                 "client_reference_id": org_id,
-                "line_items": [{"price": price, "quantity": seats}],
+                "line_items": lines,
                 "subscription_data": {"metadata": {"org_id": org_id}},
                 "success_url": return_url,
                 "cancel_url": return_url,
@@ -68,10 +71,21 @@ class StripeClient:
     async def subscription(self, subscription_id: str) -> dict[str, Any]:
         return await self.call("GET", f"/subscriptions/{subscription_id}")
 
-    async def change(self, subscription_id: str, item: dict[str, Any]) -> dict[str, Any]:
-        """Change the subscription's one item (its price or quantity), prorated."""
-        body = {"items": [item], "proration_behavior": "create_prorations"}
+    async def change(
+        self, subscription_id: str, items: list[dict[str, Any]], proration_date: int | None = None
+    ) -> dict[str, Any]:
+        """Change the subscription's items (an item's price or quantity, a new item, an item deleted), prorated; at
+        proration_date when given, so the change costs exactly what its preview said."""
+        body: dict[str, Any] = {"items": items, "proration_behavior": "create_prorations"}
+        if proration_date is not None:
+            body["proration_date"] = proration_date
         return await self.call("POST", f"/subscriptions/{subscription_id}", body)
+
+    async def preview(self, subscription_id: str, items: list[dict[str, Any]], proration_date: int) -> dict[str, Any]:
+        """The next invoice if these items changed at proration_date, prorated: nothing is changed."""
+        details = {"items": items, "proration_behavior": "create_prorations", "proration_date": proration_date}
+        body = {"subscription": subscription_id, "subscription_details": details}
+        return await self.call("POST", "/invoices/create_preview", body)
 
     async def portal(self, customer: str, return_url: str) -> str:
         session = await self.call("POST", "/billing_portal/sessions", {"customer": customer, "return_url": return_url})

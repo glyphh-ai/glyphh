@@ -1,6 +1,7 @@
 """The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
-versions). A mod no longer seeded is retired, never deleted."""
+versions). A mod no longer seeded is retired, never deleted. The plans include only Workspaces; every other mod is an
+add-on (db/seed_addons.py)."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -38,6 +39,17 @@ MODS: tuple[ModSeed, ...] = (
         "Programs built with Claude, deployed by commit and run in rrotor, your own isolated runtime; called by Claude "
         "and by its routines",
     ),
+    ModSeed(
+        "gateway",
+        "Gateway",
+        "Your own models and keys in your rrotor, served as OpenAI- and Anthropic-compatible endpoints to your "
+        "programs and mods",
+    ),
+    ModSeed(
+        "ada",
+        "Ada",
+        "Ada models in your rrotor: a spec and a small program, deployed by commit, learning from their precedents",
+    ),
 )
 
 ModLimits = dict[str, dict[str, Any]]
@@ -57,28 +69,17 @@ class PlanSeed:
 FREE: str = "Free"
 
 
-def _limits(
-    workspaces: int | None,
-    favorites: int | None,
-    on: int,
-    custom_drips: int | None,
-    programs: tuple[int | None, int | None],
-) -> ModLimits:
-    """Each mod's limits; a switch (stream, fullscreen) is 0 or 1; programs is (programs, runs_per_day)."""
-    return {
-        "workspaces": {"workspaces": workspaces, "favorites": favorites, "stream": on},
-        "drips": {"custom_drips": custom_drips, "fullscreen": on},
-        "programs": {"programs": programs[0], "runs_per_day": programs[1]},
-    }
+def _limits(workspaces: int | None, favorites: int | None, stream: int) -> ModLimits:
+    """The base subscription's one mod, Workspaces, and its limits; stream is a switch, 0 or 1."""
+    return {"workspaces": {"workspaces": workspaces, "favorites": favorites, "stream": stream}}
 
 
-# TBD (Chris): favorites, stream, custom_drips, fullscreen and the programs limits (programs, runs_per_day) are
-# placeholders until set; workspaces keeps the limits it had. Free has no hosted runtime (0 hours, no storage); Pro's
-# and Team's hours are still to decide (null).
+# TBD (Chris): favorites and stream are placeholders until set; workspaces keeps the limits it had. Free has no hosted
+# runtime (0 hours, no storage); Pro's and Team's hours are still to decide (null).
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 0, None, _limits(2, 5, 0, 3, (3, 50))),
-    PlanSeed("Pro", 800, 1, 5, None, 50, _limits(10, None, 1, None, (25, 1_000))),
-    PlanSeed("Team", 1_600, None, 10, None, 50, _limits(None, None, 1, None, (None, None))),
+    PlanSeed(FREE, 0, 1, 1, 0, None, _limits(2, 5, 0)),
+    PlanSeed("Pro", 800, 1, 5, None, 50, _limits(10, None, 1)),
+    PlanSeed("Team", 1_600, None, 10, None, 50, _limits(None, None, 1)),
 )
 
 
