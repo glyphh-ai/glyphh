@@ -9,7 +9,6 @@ import type { Ctx } from '../ui'
 const LIMIT_KEYS: [string, string][] = [
   ['members', 'max_members'],
   ['installs', 'max_installs'],
-  ['workspaces', 'max_workspaces'],
 ]
 
 export function planLimits(plan: Json): string {

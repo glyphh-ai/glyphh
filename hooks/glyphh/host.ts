@@ -5,7 +5,7 @@
 // plain to test.)
 import type { FsEntry, HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
 
-import type { AuthState, GlyphhNote, GlyphhSection, Json, LicenseInfo, Layout } from '../../types'
+import type { AuthState, GlyphhNote, GlyphhSection, Json, LicenseInfo } from '../../types'
 
 /** One state value: read it, or change it from what it is. */
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
@@ -27,7 +27,7 @@ export type Host = {
   copy(text: string, surface?: RenderSurface): Promise<boolean>
   /** Opens the Glyphh panel; false where no surface could place it. */
   openPanel(): Promise<boolean>
-  /** Asks Claude, as a prompt in the chat (a turn), as the grid's layoutToPane does. */
+  /** Asks Claude, as a prompt in the chat (a turn). */
   ask(text: string): Promise<void>
   pluginRoot: string
   state: {
@@ -36,11 +36,7 @@ export type Host = {
     me: Value<Json | null>
     lists: Value<Record<string, Json[]>>
     note: Value<GlyphhNote | null>
-    selected: Value<string | null>
     inviteLink: Value<string | null>
     license: Value<LicenseInfo | null>
-    layouts: Value<Layout[]>
-    active: Value<string>
-    previous: Value<string | null>
   }
 }

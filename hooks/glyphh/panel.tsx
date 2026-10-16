@@ -7,7 +7,6 @@ import { Billing } from './sections/billing'
 import { Org } from './sections/org'
 import { Plan } from './sections/plan'
 import { SignIn } from './sections/signin'
-import { Workspaces } from './sections/workspaces'
 import { str, userOf } from './shape'
 import { SECTIONS } from './state'
 import { linkOrText, type Ctx } from './ui'
@@ -19,7 +18,6 @@ async function sectionBody(ctx: Ctx, a: AuthState, open: GlyphhSection) {
     case 'org': return Org(ctx)
     case 'plan': return Plan(ctx)
     case 'billing': return Billing(ctx)
-    case 'workspaces': return Workspaces(ctx)
   }
 }
 

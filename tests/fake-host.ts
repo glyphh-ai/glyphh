@@ -3,8 +3,6 @@
 import type { FsEntry, McpToolResult, RenderSurface } from 'claude-code'
 
 import type { Host, Value } from '../hooks/glyphh/host'
-import { DEFAULTS } from '../hooks/layouts'
-import type { Layout } from '../types'
 import { fakeServer } from './fake-server'
 
 export const HOME = '/home/t'
@@ -88,12 +86,8 @@ const freshState = (): Host['state'] => ({
   me: value(null),
   lists: value({}),
   note: value(null),
-  selected: value(null),
   inviteLink: value(null),
   license: value(null),
-  layouts: value(DEFAULTS as Layout[]),
-  active: value(DEFAULTS[0]!.name),
-  previous: value(null),
 })
 
 export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}) {

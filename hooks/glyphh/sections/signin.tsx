@@ -53,7 +53,7 @@ export function SignIn(ctx: Ctx, a: AuthState) {
   }
   return (
     <Box flexDirection="column" gap={1}>
-      <Text>Sign in to Glyphh with Google or GitHub to see your account, org, plan and workspaces.</Text>
+      <Text>Sign in to Glyphh with Google or GitHub to see your account, org and plan.</Text>
       {a.status === 'out' && a.error && <Text color="error">{a.error}</Text>}
       <Box>
         <Button key="signin" label="Sign in" variant="primary" onPress={() => beginSignIn(gh, surface)} />

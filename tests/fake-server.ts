@@ -15,13 +15,12 @@ function newState() {
   return {
     calls: [] as Call[],
     polls: ['authorization_pending', 'slow_down', 'ok'] as string[],
-    workspaces: ['Comms'] as string[],
-    maxWorkspaces: 2,
     members: [
       { user_id: 'u1', name: 'Chris', email: 'chris@example.com', role: 'admin' },
       { user_id: 'u2', name: 'Sam', email: 'sam@example.com', role: 'member' },
     ] as Json[],
     invites: [] as Json[],
+    maxMembers: 10,
     installs: [{ id: 'i1', name: 'mac', surface: 'desktop' }, { id: 'i2', name: 'laptop', surface: 'cli' }] as Json[],
     role: 'admin',
     providers: ['google'] as string[],
@@ -38,8 +37,8 @@ const meOf = (s: State) => ({
   user: { id: 'u1', name: s.name, email: 'chris@example.com', role: s.role },
   providers: [...s.providers],
   org: { id: 'o1', name: s.orgName, seats: 2, billing_status: 'active' },
-  plan: { name: 'Free', version: 1, limits: { max_members: 1, max_installs: 1, max_workspaces: s.maxWorkspaces }, features: { rpa: false } },
-  used: { members: s.members.length, seats: 2, installs: s.installs.length, workspaces: s.workspaces.length },
+  plan: { name: 'Free', version: 1, limits: { max_members: 1, max_installs: 1 }, features: { rpa: false } },
+  used: { members: s.members.length, seats: 2, installs: s.installs.length },
 })
 
 const refuse = (status: number, code: string, message: string, detail: Json = {}) => ({
@@ -48,7 +47,7 @@ const refuse = (status: number, code: string, message: string, detail: Json = {}
 })
 
 async function license(s: State) {
-  const claims = { plan: 'Pro', features: { rpa: true }, limits: { max_workspaces: 10 }, expires_at: s.licenseExpires }
+  const claims = { plan: 'Pro', features: { rpa: true }, limits: { max_members: 10 }, expires_at: s.licenseExpires }
   const payload = JSON.stringify(claims)
   const { sign } = await keyPair(SEED)
   const sig = await sign(new TextEncoder().encode(payload))
@@ -60,7 +59,7 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
   const ok = (body: unknown = {}) => ({ status: 200, body })
   const open = ['/v1/device/code', '/v1/device/token', '/v1/plans']
   if (!open.includes(c.path) && c.bearer !== TOKEN) return refuse(401, 'E_UNAUTHORIZED', 'Bad token.')
-  const key = `${c.method} ${c.path.replace(/\/v1\/(installs|org\/members|org\/invites|workspaces|me\/identities)\/[^/]+$/, '/v1/$1/:id')}`
+  const key = `${c.method} ${c.path.replace(/\/v1\/(installs|org\/members|org\/invites|me\/identities)\/[^/]+$/, '/v1/$1/:id')}`
   const id = decodeURIComponent(c.path.split('/').pop() ?? '')
   switch (key) {
     case 'POST /v1/device/code':
@@ -84,16 +83,6 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
     case 'POST /v1/sign-out': return ok()
     case 'GET /v1/license': return ok(await license(s))
     case 'GET /v1/license/key': return ok({ key: b64((await keyPair(SEED)).publicKey) })
-    case 'GET /v1/workspaces': return ok(s.workspaces.map(name => ({ name })))
-    case 'POST /v1/workspaces':
-      if (s.workspaces.length >= s.maxWorkspaces) return refuse(403, 'E_LIMIT', 'Upgrade to add more.', { limit: 'workspaces', used: s.workspaces.length, max: s.maxWorkspaces, plan: 'Pro' })
-      s.workspaces.push(String(c.body.name)); return ok({ name: c.body.name })
-    case 'PATCH /v1/workspaces/:id':
-      if (!s.workspaces.includes(id)) return refuse(404, 'E_NOT_FOUND', 'No such workspace.')
-      s.workspaces = s.workspaces.map(w => (w === id ? String(c.body.name) : w)); return ok()
-    case 'DELETE /v1/workspaces/:id':
-      if (!s.workspaces.includes(id)) return refuse(404, 'E_NOT_FOUND', 'No such workspace.')
-      s.workspaces = s.workspaces.filter(w => w !== id); return ok()
     default: return adminRoute(s, c, key, id, ok)
   }
 }
@@ -108,9 +97,12 @@ function adminRoute(s: State, c: Call, key: string, id: string, ok: (b?: unknown
     case 'GET /v1/org/members': return ok({ members: s.members })
     case 'DELETE /v1/org/members/:id': s.members = s.members.filter(m => m.user_id !== id); return ok()
     case 'GET /v1/org/invites': return ok({ invites: s.invites })
-    case 'POST /v1/org/invites':
+    case 'POST /v1/org/invites': {
+      const used = s.members.length + s.invites.length
+      if (used >= s.maxMembers) return refuse(403, 'E_LIMIT', 'Upgrade to add more.', { limit: 'members', used, max: s.maxMembers, plan: 'Pro' })
       s.invites.push({ id: `inv-${s.invites.length + 1}`, email: c.body.email })
       return ok({ id: 'inv-1', link: 'https://glyphh.test/join?t=abc' })
+    }
     case 'DELETE /v1/org/invites/:id': s.invites = s.invites.filter(i => i.id !== id); return ok()
     case 'GET /v1/plans': return ok({ plans: [{ name: 'Free', seat_price_cents: 0 }, { name: 'Pro', seat_price_cents: 800 }] })
     case 'POST /v1/billing/checkout': return ok({ url: 'https://checkout.stripe.test/c1' })

@@ -56,7 +56,7 @@ for (const surface of SURFACES) {
     const w = world(on, surface)
     const ui = await $.ui.mount(pane(surface))
     expect(await ui.find({ type: 'Button', key: 'signin' })).toBeDefined()
-    await ui.press({ key: 'sec-workspaces' })
+    await ui.press({ key: 'sec-plan' })
     expect(await ui.find({ type: 'Button', key: 'signin' })).toBeDefined()
 
     await ui.press({ key: 'signin' })
@@ -95,11 +95,6 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   expect((await ui.find({ type: 'Link' }))?.props.href).toBe('https://accounts.github.test/auth?link=1')
   await ui.input({ key: 'me-name', text: 'Christopher' })
   expect(w.server.s.name).toBe('Christopher')
-  await ui.press({ key: 'sec-workspaces' })
-  await ui.input({ key: 'ws-new', text: 'Research' })
-  expect(w.server.s.workspaces).toContain('Research')
-  await ui.input({ key: 'ws-new', text: 'Third' })
-  expect(await ui.find({ type: 'Text', text: /\(2 of 2 workspaces used\)/ })).toBeDefined()
 })
 
 test('/glyphh after the sign-in card signed in (install.json written mid-session) says who is signed in', async ($, on) => {
@@ -109,19 +104,4 @@ test('/glyphh after the sign-in card signed in (install.json written mid-session
   const r = (await $.command.run({ command: 'glyphh', args: '' } as unknown as CommandRunInput)) as { text: string }
   expect(r.text).toStartWith('Glyphh: signed in as chris@example.com')
   expect(w.server.s.calls.some(c => c.path === '/v1/device/code')).toBe(false)
-})
-
-test('a divider dragged in the grid is saved to the workspace file', async ($, on) => {
-  const w = world(on, 'terminal')
-  on('session.cwd', () => ({ value: '/proj' }))
-  await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
-  const file = `${HOME}/.glyphh/workspaces/browse-file.json`
-  expect(JSON.parse(w.files.get(file)!).col_widths).toEqual([0.6, 0.4])
-  const ui = await $.ui.mount({ ...pane('terminal'), requestId: 'workspaces', props: { ...pane('terminal').props, title: 'Workspaces', bodyColumns: 101 }, viewport: { columns: 101, rows: 30 } })
-  await ui.press({ key: 'tab-1' })
-  await ui.pointer({ type: 'down', x: 0, y: 3, button: 'left', in: 'vdiv-0' })
-  await ui.pointer({ type: 'move', x: 10, y: 3, button: 'left', in: 'vdiv-0' })
-  await ui.pointer({ type: 'up', x: 10, y: 3, button: 'left', in: 'vdiv-0' })
-  const widths = JSON.parse(w.files.get(file)!).col_widths as number[]
-  expect(Math.abs(widths[0]! - (0.6 + 10 / 101))).toBeLessThan(1e-9)
 })

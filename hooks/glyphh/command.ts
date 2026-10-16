@@ -10,15 +10,13 @@ import type { Host } from './host'
 import { beginSignIn } from './sections/signin'
 import { planName, str, userOf } from './shape'
 import { SECTIONS } from './state'
-import { migrateAndLoad } from './wsfiles'
 
 export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.'
 
-export const USAGE = '/glyphh [login | logout | account | org | plan | billing | workspaces]'
+export const USAGE = '/glyphh [login | logout | account | org | plan | billing]'
 
-/** At session start: workspace files (migrated on first run), the sign-in. */
+/** At session start: the sign-in. */
 export async function startGlyphh(gh: Host) {
-  await migrateAndLoad(gh).catch(() => undefined)
   await initAccount(gh).catch(() => undefined)
   await resumePolling(gh)
   watchOpenRequests(gh)

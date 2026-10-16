@@ -15,9 +15,9 @@ export async function openUrl(gh: Host, url: string, hint?: RenderSurface): Prom
   const surface = await surfaceNow(gh, hint)
   let ok = surface === 'desktop' && (await openInPane(gh, url))
   if (!ok && surface === 'desktop') {
-    // As the grid's layoutToPane does: when auto mode refuses the mod's own
-    // call, Claude is asked to open it (a turn, slower, but it gets there).
-    ok = await gh.ask(`Open this in the browser pane, in the tab already on ${new URL(url).host} if one is open (navigate that tab, as the grid's showInPane reuses a tab on the same site; no new tab): ${url}`).then(() => true, () => false)
+    // When auto mode refuses the mod's own call, Claude is asked to open it
+    // (a turn, slower, but it gets there).
+    ok = await gh.ask(`Open this in the browser pane, in the tab already on ${new URL(url).host} if one is open (navigate that tab; no new tab): ${url}`).then(() => true, () => false)
   }
   const dir = await gh.env.home().catch(() => '')
   if (dir) await gh.fs.write(`${dir}/.glyphh/open-log.txt`, `${new Date().toISOString()} surface=${surface} opened=${ok}${ok ? '' : ` error=${lastOpenError}`}\n`).catch(() => undefined)
@@ -43,9 +43,8 @@ async function openInPane(gh: Host, url: string): Promise<boolean> {
 /** Why the last open failed, for the log. */
 export let lastOpenError = ''
 
-/** The tab opens in the browser pane, which may be hidden: no tool shows it, so,
- *  as the grid does (togglePane), the app's View menu does ("Show Browser"),
- *  clicked through System Events. Best effort: a refusal leaves the tab there. */
+/** The tab opens in the browser pane, which may be hidden: no tool shows it, so
+ *  the app's View menu does ("Show Browser"), clicked through System Events. Best effort: a refusal leaves the tab there. */
 async function showBrowserPane(gh: Host) {
   const menu = (script: string) =>
     gh.process.run([

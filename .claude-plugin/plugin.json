@@ -4,6 +4,6 @@
   "author": {
     "name": "Glyphh"
   },
-  "description": "Glyphh for Claude: your account, workspaces of live tabs, and the sign-in card",
+  "description": "Glyphh for Claude: your account and the sign-in card",
   "types": "./types/index.d.ts"
 }

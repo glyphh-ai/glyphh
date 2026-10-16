@@ -20,7 +20,6 @@ const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
   },
   plan: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
   billing: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
-  workspaces: gh => api(gh, 'GET', '/v1/workspaces').then(b => setList(gh, 'workspaces', listOf(b, 'workspaces'))),
 }
 
 /** Opens a section and loads what it shows (signed out: nothing to load). */

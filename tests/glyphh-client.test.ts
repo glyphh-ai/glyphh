@@ -30,13 +30,13 @@ test('client: localhost:8080 by default, GLYPHH_SERVER_URL when set, the install
 test('client: refusals read as {error: {code, message, trace_id}}; E_LIMIT names limit, use and plan', async () => {
   const w = fakeHost()
   await signIn(w)
-  w.s.workspaces = ['a', 'b']
-  const err = await api(w.gh, 'POST', '/v1/workspaces', { name: 'c' }).catch(e => e)
+  w.s.maxMembers = 2
+  const err = await api(w.gh, 'POST', '/v1/org/invites', { email: 'c@example.com' }).catch(e => e)
   expect(err).toBeInstanceOf(ApiError)
   expect((err as ApiError).code).toBe('E_LIMIT')
-  expect(describe(err)).toBe('Upgrade to add more. (2 of 2 workspaces used) (trace tr-1)')
-  const missing = await api(w.gh, 'DELETE', '/v1/workspaces/zzz').catch(e => e)
-  expect(describe(missing)).toBe('No such workspace. (trace tr-1)')
+  expect(describe(err)).toBe('Upgrade to add more. (2 of 2 members used) (trace tr-1)')
+  const missing = await api(w.gh, 'DELETE', '/v1/nothing/zzz').catch(e => e)
+  expect(describe(missing)).toBe('No route DELETE /v1/nothing/zzz (trace tr-1)')
 })
 
 test('client: an unreachable server says where it looked', async () => {
@@ -107,12 +107,12 @@ test("license: the server's own answer, signed by glyphh_server.ops.license, che
     user_id: '22222222-2222-2222-2222-222222222222',
     org_id: '33333333-3333-3333-3333-333333333333',
     plan: 'Café Pro',
-    limits: { max_members: 1, max_installs: 5, max_workspaces: null },
+    limits: { max_members: 1, max_installs: 5 },
     features: { rpa: true },
     expires_at: '2099-01-01T00:00:00Z',
   }
-  const signature = 'EaESoEENcc6rUSXiev5tW8Jqk+k9E4SBUMBqcLz7lq3O8AdtjSGPsS313eh2Nj0Di18ubWpoptxKAbG5GSGKCA=='
-  const key = { alg: 'Ed25519', public_key: '6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=' }
+  const signature = '8wRzw8Grb8P5e8I7J/wzxWkE1DhN+jB/uizcHLN/b6mvP6WCcti2Q9e19+uhyoLdJ6N6Oa+fw5ZSW5NZK4IPDw=='
+  const key = { alg: 'Ed25519', public_key: 'NdI9aO1bIfswQd7y1XukRN8DwQCqqRAh84wB4libVgE=' }
   expect(await check({ payload, signature }, key, 0)).toMatchObject({ ok: true, plan: 'Café Pro', features: { rpa: true } })
   expect((await check({ payload: { ...payload, plan: 'Team' }, signature }, key, 0)).ok).toBe(false)
 })
