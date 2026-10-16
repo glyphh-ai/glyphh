@@ -38,7 +38,7 @@ export async function listCustoms(store: Store): Promise<CustomDrip[]> {
 export async function saveCustom(store: Store, name: string, recipe: string): Promise<string> {
   const rec = dripRecordOf(name, recipe)
   if (!rec.name) return 'A drip needs a name.'
-  if (!rec.recipe) return `A drip needs a recipe: /drip save ${rec.name} <recipe>`
+  if (!rec.recipe) return `A drip needs a recipe: /drips save ${rec.name} <recipe>`
   const customs = await readCustoms(store)
   await store.set(STORE_KEY, { ...customs, [rec.name]: rec.recipe })
   return `saved drip "${rec.name}" → ${rec.recipe}`

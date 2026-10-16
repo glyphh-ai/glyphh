@@ -1,25 +1,27 @@
 # Drips
 
-Drips plays visual effects over Claude: confetti, fireworks, hearts,
+Drips plays visual effects over Claude, with sound: confetti, fireworks, hearts,
 stars, bubbles, a matrix rain, an aurora and more. Play one with a
 command, save your own recipes, and let Claude play them too.
 
 ```
-/drip confetti
-/drip 3 hearts stars
-/drip -1 aurora
-/drip stop
+/drips confetti
+/drips 3 hearts stars
+/drips -1 aurora
+/drips stop
 ```
 
-Drips works in Claude Code on a Mac.
+Drips works in Claude Code on a Mac. It's a one-time $8 per machine:
+`/drips unlock` buys it. For games, see Games (`/games`).
 
 ## Requirements
 
-- **Node.js 18 or newer** (https://nodejs.org). It runs the small local
-  page that plays effects in Claude's window and holds the Drips editor.
-- For **fullscreen** effects: the **Xcode Command Line Tools**, which bring
-  Swift (`xcode-select --install`). Without them, Drips plays effects in
-  Claude's window and tells you so.
+- **macOS** and the **Xcode Command Line Tools**, which bring Swift
+  (`xcode-select --install`). Drips builds its small overlay program with
+  them, to play effects over Claude's window or the whole screen. Without
+  them, effects don't play: Drips tells you once what to install.
+- **Node.js 18 or newer** (https://nodejs.org). It runs the Drips page: your
+  saved drips and the editor.
 
 ## Install
 
@@ -46,15 +48,27 @@ page for you.
 
 | Command | What it does |
 |---|---|
-| `/drip <recipe>` | Plays a recipe, or one of your saved drips by name |
-| `/drip list` | Lists the effects and your saved drips |
-| `/drip save <name> <recipe>` | Saves a recipe under a name |
-| `/drip delete <name>` | Deletes a saved drip |
-| `/drip stop` | Stops every effect that keeps playing |
-| `/drips` | Opens the Drips page: your saved drips, and an editor |
-| `/drips key <licence>` | Unlocks Drips with a licence key |
+| `/drips <recipe>` | Plays a recipe, or one of your saved drips by name |
+| `/drips list` | Lists the effects and your saved drips |
+| `/drips save <name> <recipe>` | Saves a recipe under a name |
+| `/drips delete <name>` | Deletes a saved drip |
+| `/drips stop` | Stops every effect that keeps playing |
+| `/drips page` | Opens the Drips page: your saved drips and an editor |
+| `/drips unlock` | Buys Drips: $8, once, for this machine |
+| `/drips key <licence>` | Unlocks Drips with a licence bought on another Mac |
 
-`/drip` runs straight away, even while Claude is working.
+`/drips` runs straight away, even while Claude is working.
+
+## The Drips button
+
+A **💧 Drips** button sits by the prompt: in the terminal, in the hint line
+under it; in the desktop app, in the prompt's footer. Press it and a row opens just above the
+prompt: **fireworks**, **confetti**, **hearts**, **stars**, and **gunfight**, then your
+saved drips, then **■ Stop** while something keeps playing, and **✕** to
+close the row. A press plays the effect the way `/drips` does, where your
+**Where effects play** setting says. Until Drips is bought, the row
+says so and **Open Drips** opens the page to buy it. To hide the
+button, turn off **Drips button** under Drips in `/config`.
 
 ## Recipes
 
@@ -62,38 +76,60 @@ A recipe is a few words, in any order:
 
 - **An effect**: `fireworks`, `hearts`, `confetti`, `stars`, `rain`,
   `bubbles`, `sparkle`, `spiral`, `emoji`, `wave`, `thumbsup`, `peace`,
-  `cat`, and the backgrounds `matrix`, `aurora`, `nebula`, `plasma`,
+  `cat`, `gunfight`, and the backgrounds `matrix`, `aurora`, `nebula`, `plasma`,
   `fireflies`, `starfield`. Name several and they play one after another.
 - **A number from 1 to 10**: how many times to play them. Each effect
   starts 1.5 seconds after the one before.
 - **A number between 0 and 1**: how see-through the effect is (`0.4`).
 - **`-1`**: keep playing. The effect stays until you play the same
-  recipe again, run `/drip stop`, or press Esc in the Drips page. Nothing
+  recipe again, run `/drips stop`, or press Stop in the Drips page. Nothing
   plays for longer than 30 minutes.
 - **A saved drip's name**: its effects join in.
 
-`/drip` alone plays fireworks.
+`/drips` alone plays fireworks.
 
 ## Where effects play
 
 Open `/config` and find **Where effects play** under Drips:
 
-- **claude-window** (the default) plays effects over Claude's window, in
-  the Drips page in the desktop app's Browser pane. The first effect opens
-  the page. Outside the desktop app, the page opens in your own browser.
+- **claude-window** (the default) plays effects over the window Claude is
+  running in: the Claude desktop app's window, or the terminal window
+  running Claude Code (Ghostty, Terminal, iTerm2, kitty, WezTerm, the
+  VS Code and Cursor terminals, and others). The effect sits just above
+  that window and moves and resizes with it. Windows in front of Claude,
+  menus and notifications stay in front. If Drips can't find the window, it
+  plays over the screen under the pointer and says so once.
 - **fullscreen** plays effects over the whole screen under the pointer,
-  above every app and on every Space. Effects never take the pointer or
-  the keyboard: you can keep working through them. The first fullscreen
-  effect takes a few seconds longer, while Drips builds its small overlay
-  program with Swift. It's built once and kept in
-  `~/Library/Caches/glyphh-drips`.
+  above every app and on every Space.
 
-Previews from the Drips page always play in the page, and a preview that
-keeps playing stops by itself after 12 seconds.
+Effects never take the pointer or the keyboard: you can keep working
+through them. The first effect over Claude's window or the screen takes a
+few seconds longer, while Drips builds its small overlay program with
+Swift. It's built once and kept in `~/Library/Caches/glyphh-overlay`. Drips
+needs no extra permission for this: it reads only where Claude's window is
+and how big, never what's in it, so macOS doesn't ask for Screen Recording.
+
+Before version 1.1, **claude-window** meant the page in the Browser pane. If
+you chose it then, effects now play over Claude's window itself. Version 1.1
+had a third choice, **browser-pane**, that played effects in the Drips page;
+it's gone since 1.2, and a stored browser-pane plays over Claude's window.
+
+Previews from the Drips page play where every effect plays, and a preview
+that keeps playing stops by itself after 12 seconds.
+
+
+## Sounds
+
+Every effect has its own sound: rockets whistle up and boom in
+`fireworks`, a popper goes off in `confetti`, the cat meows, and the
+backgrounds play something soft and slow for as long as they stay. Every
+sound is made as it plays; none is a recording. To turn them off, open
+`/config` and turn off **Sounds** under Drips. The faint matrix that plays
+while Claude's tools run is always silent.
 
 ## The Drips page
 
-`/drips` opens the page. **Your drips** lists each saved drip with its
+`/drips page` opens the page. **Your drips** lists each saved drip with its
 recipe and a **Play** button. Search by name or recipe, or click **+ Add**
 to make one. Click a drip to edit it:
 
@@ -123,26 +159,27 @@ Two more rows in `/config`, both off until you turn them on:
   run. It goes a moment after the last one finishes. A matrix you started
   yourself is left alone.
 
-## Trial and unlock
+## Buying it
 
-Drips is free for 7 days. While the trial runs, the Drips page shows the
-days left and an **Unlock — $5** button.
+Drips is a one-time $8 for each machine: no account, no subscription,
+no trial. Until you buy it, effects don't play (`/drips list`, `delete` and
+`stop` still work).
 
-When the trial ends, effects stop playing until you unlock (your saved
-drips stay, and `/drip list`, `save`, `delete` and `stop` still work).
-Open the page with `/drips` and press **Unlock — $5**. Checkout opens in
-your browser, and Drips unlocks by itself once you've paid. It's a one-off
-payment, not a subscription.
+**Buy.** Run `/drips unlock` (or press **Unlock — $8** in the Drips page).
+Stripe's checkout opens in your browser; pay there, and Drips unlocks
+on its own a few seconds later. **Cancel** in the page stops it waiting.
 
-The licence is checked on your machine, so after you unlock, Drips never
-needs to contact a server again. To use it on another machine, run
-`/drips key <licence>` there.
+**Another Mac.** In the Drips page of the Mac you bought it on, press
+**Copy licence key**, then on the other Mac run `/drips key <licence>`.
+
+**Offline.** Your licence is checked on your Mac, with a signature, and
+Drips never calls home once it holds one.
 
 ## Where things are kept
 
 Everything stays on your machine. Your saved drips are kept in Claude
-Code's store for Drips. The fullscreen overlay program is kept in
-`~/Library/Caches/glyphh-drips`.
+Code's store for Drips, and so is your licence. The overlay program is kept in
+`~/Library/Caches/glyphh-overlay`, shared with Games.
 
 ## Security
 
@@ -154,13 +191,23 @@ Code's store for Drips. The fullscreen overlay program is kept in
   with a one-time address that stops working once it has been used.
 - Each effect runs in a sandboxed frame that can run its own animation and
   nothing else: it can't reach the page, your files or the network.
-- The fullscreen overlay is built on your Mac from the source in the
-  plugin (`native/overlay.swift`). It shows one effect, ignores the
-  pointer, closes when the effect ends or after its time limit (never more
-  than 30 minutes), and quits if Claude Code goes away.
+- The overlay is built on your Mac from the source in the plugin
+  (`native/overlay.swift`). It shows one effect, ignores the pointer,
+  closes when the effect ends or after its time limit (never more than 30
+  minutes), and quits if Claude Code goes away. To find Claude's window it
+  reads only each window's owner, layer and position, never a title or what
+  a window shows.
+- Drips talks to Glyphh only while you unlock it: it asks glyphh.ai whether
+  this install's purchase has gone through, sending the mod's name and a
+  random install ID, never your drips or anything about your Mac. The
+  licence is never shown to the page or written to a log.
 
 ## For developers
 
 This mod is built from the private source repository to the Glyphh mod standard
-(`docs/mod-standard.md` there). Its licence code in `hooks/licence/` is a copy of the
+(`docs/mod-standard.md` there). Its account code in `hooks/licence/` is a copy of the
 shared module: change the source and sync, never the copy.
+
+Each drip is one file in `hooks/drips/effects/` that builds its whole
+document, listed once in `hooks/drips/effects/index.ts`. A new drip is a new
+file there and a line in that list.

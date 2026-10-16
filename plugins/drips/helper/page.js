@@ -1,9 +1,8 @@
 // page.js — the Drips page: the list of saved drips and the recipe editor
-// (the Glyphh app's Drips section), and the effects the mod plays over it
-// (./runner.mjs). Saving, deleting and playing are the mod's: the page asks
-// (POST /api/ask) and draws what the mod sends back (GET /api/library).
+// (the Glyphh app's Drips section). Saving, deleting and playing are the
+// mod's: the page asks (POST /api/ask) and draws what the mod sends back (GET
+// /api/library); effects play over Claude's window or the whole screen.
 import { buildRecipe, checkDrip, countText, dripEmojis, filterDrips, parseRecipe } from "./builder.mjs"
-import { createRunner, makeFrame } from "./runner.mjs"
 
 const T = window.DRIPS_TOKEN
 history.replaceState(null, "", "/")
@@ -22,33 +21,11 @@ async function api(path, body) {
 }
 const ask = msg => api("/api/ask", msg).catch(() => {})
 
-// ── Effects over the page ───────────────────────────────────────────────────
-const runner = createRunner({
-  frame: html => makeFrame(document, html),
-  later: (ms, fn) => setTimeout(fn, ms),
-  cancel: timer => clearTimeout(timer),
-  loopClosed: effect => ask({ t: "closed", effect }),
-})
-addEventListener("message", ev => runner.message(ev.source, ev.data))
-// Esc clears every looping effect (the page's twin of /drip stop).
-addEventListener("keydown", ev => {
-  if (ev.key !== "Escape" || !runner.loopsPlaying()) return
-  runner.stopAll()
-  ask({ t: "stop" })
-})
-
-let sizeTimer = null
-const sendSize = () => api("/api/viewport", { w: innerWidth, h: innerHeight }).catch(() => {})
-addEventListener("resize", () => {
-  clearTimeout(sizeTimer)
-  sizeTimer = setTimeout(sendSize, 150)
-})
-
 // ── The list ────────────────────────────────────────────────────────────────
 let library = { drips: [], effects: [], display: "claude-window" }
 let editing = null // the name of the drip open in the editor; "" for a new one
 
-const PLACES = { "claude-window": "Plays in Claude's window", fullscreen: "Plays fullscreen" }
+const PLACES = { "claude-window": "Plays over Claude's window", fullscreen: "Plays fullscreen" }
 
 function drawList() {
   const list = $("list")
@@ -125,6 +102,7 @@ function addEffectRow(value = "") {
   drawPreview()
 }
 
+/** The editor's error line. */
 function showError(text) {
   $("error").textContent = text
   $("error").classList.toggle("hidden", !text)
@@ -200,8 +178,10 @@ $("mode").onchange = () => {
 $("count-input").oninput = drawPreview
 
 // ── The licence ─────────────────────────────────────────────────────────────
-// The mod tells the page the licence's state in words; Unlock, Cancel and
-// Copy licence key go back to it, and the buying and checking stay in the mod.
+// The mod tells the page the licence's state in words: unlocked, or locked
+// until it is bought (a one-time price, per machine). Unlock, Cancel and Copy
+// licence key go back to it; the buying and checking stay in the mod, and the
+// licence itself never reaches the page.
 let licence = null
 const licenceAsk = action => api("/api/licence", { action }).catch(() => {})
 const button = (label, cls, onclick) => Object.assign(el("button", `btn ${cls}`, label), { type: "button", onclick })
@@ -209,23 +189,20 @@ const button = (label, cls, onclick) => Object.assign(el("button", `btn ${cls}`,
 function drawLicence() {
   const bar = $("licence")
   bar.replaceChildren()
-  if (licence?.kind === "trial") {
-    if (licence.isWaiting) bar.append(el("span", "", licence.note || "Finish checkout in your browser…"), button("Cancel", "secondary", () => licenceAsk("cancel")))
-    else bar.append(el("span", "", licence.trial), button(`Unlock — ${licence.price}`, "secondary", () => licenceAsk("buy")))
-  }
+  if (licence?.kind === "licensed") bar.append(el("span", "plan", "Unlocked"), button("Copy licence key", "secondary", () => licenceAsk("copy")))
   const locked = $("locked")
-  const isLocked = licence?.kind === "expired"
+  const isLocked = licence?.kind === "locked"
   locked.classList.toggle("hidden", !isLocked)
   $("app").classList.toggle("hidden", isLocked)
   if (!isLocked) return locked.replaceChildren()
-  runner.stopAll()
   const card = el("div", "card")
   card.append(el("h1", "", licence.product), ...licence.about.map(line => el("p", "", line)))
-  card.append(el("p", "ended", `The ${licence.trialDays}-day trial has ended. Unlock ${licence.product} for ${licence.price}, once.`))
+  card.append(el("p", "ended", `${licence.product} is a one-time ${licence.price} for this machine.`))
   const row = el("div", "row-buttons")
-  row.append(licence.isWaiting ? button("Cancel", "secondary", () => licenceAsk("cancel")) : button(`Unlock — ${licence.price}`, "primary", () => licenceAsk("buy")))
+  if (licence.isWaiting) row.append(el("span", "", licence.note || "Finish checkout in your browser…"), button("Cancel", "secondary", () => licenceAsk("cancel")))
+  else row.append(button(`Unlock — ${licence.price}`, "primary", () => licenceAsk("buy")))
   card.append(row)
-  if (licence.note) card.append(el("p", "small", licence.note))
+  if (licence.note && !licence.isWaiting) card.append(el("p", "small", licence.note))
   card.append(el("p", "small", `Bought it on another machine? ${licence.command} key <licence>`))
   locked.replaceChildren(card)
 }
@@ -240,17 +217,11 @@ const events = new EventSource(`/events?t=${T}`)
 events.onmessage = ev => {
   const m = JSON.parse(ev.data)
   if (m.t === "library") return loadLibrary()
-  if (m.t === "play") return runner.play(m)
-  if (m.t === "close") return runner.close(m.effect)
-  if (m.t === "stop") return runner.stopAll()
   if (m.t === "licence") {
     licence = m.status
     return drawLicence()
   }
 }
-events.onopen = sendSize
-
-sendSize()
 loadLibrary().catch(() => {})
 api("/api/licence-state").then(r => {
   licence = r.status ?? null

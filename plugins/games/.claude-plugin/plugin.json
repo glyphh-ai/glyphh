@@ -1,0 +1,23 @@
+{
+  "name": "games",
+  "version": "1.0.0",
+  "description": "Games: games with sound over Claude (Missile Command, Chickn, Blocks, Rocks, Dash), endless and harder as they go, your top score to beat. A one-time $8 per machine.",
+  "author": { "name": "Glyphh AI", "url": "https://glyphh.ai" },
+  "icon": "./icon.png",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "display": {
+      "type": "string",
+      "title": "Where games play",
+      "description": "claude-window plays them over the window Claude runs in (the desktop app, or your terminal); fullscreen over the whole screen under the pointer. Both need macOS and Swift from the Xcode Command Line Tools.",
+      "default": "claude-window",
+      "options": ["claude-window", "fullscreen"]
+    },
+    "sounds": {
+      "type": "boolean",
+      "title": "Sounds",
+      "description": "Games play sounds. In a game, M mutes it too.",
+      "default": true
+    }
+  }
+}

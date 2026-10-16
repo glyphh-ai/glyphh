@@ -2,41 +2,60 @@
 // the mod's state (the engine follows `$` and atoms only within the file
 // whose hook received them), handing the rest closures. It runs the Drips
 // page's helper (helper/server.mjs), detached so it outlives the mod's
-// reloads, and the fullscreen overlay (native/overlay.swift), one process per
-// effect. Where effects play is the /config row `display`.
+// reloads, and the native overlay (native/overlay.swift), one process per
+// effect, over Claude's window or the whole screen. Where effects play is the
+// /config row `display`. The Drips button sits in the hint line under the
+// prompt; pressed, a row of quick plays opens above the prompt.
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, On, PluginOptions, Timer } from 'claude-code'
+import type { EngineInterface, On, PluginOptions, RenderChildren, Timer } from 'claude-code'
 
 import type { HelperInfo } from '../../types'
-import { INITIAL, refusal } from '../licence/access.ts'
+import { INITIAL, refusal } from '../unlock/access.ts'
 import { BUILTIN_EFFECT_LIST, BUILTIN_EFFECTS } from './effects.ts'
 import { createFun } from './fun.ts'
-import { eventsOf, fullscreenHost, prepareOverlay, type FullscreenDeps, type Prepared } from './fullscreen.ts'
 import { deleteCustom, dripId, listCustoms, readCustoms, saveCustom, type Store } from './library.ts'
 import { HELPER_FILES, linkTo, versionOf, type Link, type PageMessage } from './link.ts'
 import { createManager, customEffects, type Host, type Manager } from './manager.ts'
+import { ancestorsOf, eventsOf, prepareOverlay, type Placement, type Prepared } from '../overlay/host.ts'
+import { selectTarget, type Target, type TerminalEnv } from '../overlay/target.ts'
+import { nativeHost, type NativeDeps } from './native.ts'
 import { findNode, NODE_MISSING } from './node.ts'
 import { settingsOf, type Settings } from './settings.ts'
-import { showPage, shownText, windowHost, type PageDeps, type WindowHost } from './window.ts'
+import { showPage, shownText, type PageDeps } from './window.ts'
 
 const licence = atom({ plugin: 'drips', key: 'licence' } as const, INITIAL)
 const helperInfo = atom({ plugin: 'drips', key: 'helper' } as const, null as HelperInfo | null)
 const pageTab = atom({ plugin: 'drips', key: 'pageTab' } as const, null as string | null)
 const nodePath = atom({ plugin: 'drips', key: 'node' } as const, null as string | null)
+const bandOpen = atom({ plugin: 'drips', key: 'bandOpen' } as const, false)
+
+/** The effects the row above the prompt offers first, before the saved drips. */
+export const QUICK_EFFECTS = ['fireworks', 'confetti', 'hearts', 'stars', 'gunfight']
 
 const TOOL_PREFIX = 'mcp__drips__'
 const NOT_A_RECIPE = ['save', 'delete', 'list']
 
 /** This load's pieces: made at the session's start (a reload makes them again). */
-type Mod = { manager: Manager; window: WindowHost; fullscreen: Promise<Prepared> | null; fun: ReturnType<typeof createFun> }
+type Mod = {
+  manager: Manager
+  /** The native overlay's binary, built on first use. */
+  native: Promise<Prepared> | null
+  /** The window Claude runs in, found on first use. */
+  target: Promise<Target | null> | null
+  fun: ReturnType<typeof createFun>
+}
 let settings: Settings
 let mod: Mod | null = null
 /** The helper this load talks to, and the timer that collects the page's messages. */
 let helper: Link | null = null
 let collecting: Timer | null = null
 let starting: Promise<Link> | null = null
-/** The fullscreen fallback is said once per load. */
-let isFallbackSaid = false
+/** Each is said once per load: the overlay unavailable, Claude's window not found. */
+let isUnavailableSaid = false
+let isMissedSaid = false
+
+/** The overlay cannot run here: said once by a toast, never again by report. */
+class Unavailable extends Error {}
 
 const short = (err: unknown) => String(err instanceof Error ? err.message : err).replace(/^(Hooks)?Error: /, '').slice(0, 300)
 
@@ -55,37 +74,40 @@ function pageDeps($: EngineInterface): PageDeps {
       void $.clock.after(0, () => {
         $.prompt.submit({ text }).catch(() => $.ui.toast('The Browser pane is not available: allow mcp__Claude_Browser__preview_start'))
       }),
-    sleep: ms => $.clock.sleep(ms),
     link: () => startHelper($),
     tab: { get: () => read($, pageTab), set: async fn => void (await update($, pageTab, fn)) },
   }
 }
 
-function fullscreenDeps($: EngineInterface): FullscreenDeps {
+/** `quiet`: the overlay plays no sound whatever the setting (the matrix while
+ *  tools run, which would otherwise sound through every long run). */
+function nativeDeps($: EngineInterface, quiet = false): NativeDeps {
   return {
-    run: (argv, timeoutMs) => $.process.run(argv, timeoutMs ? { timeoutMs } : undefined).catch(() => null),
+    run: (argv, opts) => $.process.run(argv, opts).catch(() => null),
     spawn: (argv, input) => eventsOf($.process.spawn({ argv, input })),
     read: async path => String(await $.fs.read(path)),
     exists: path => $.fs.exists(path),
     home: () => $.env.get('HOME'),
     root: $.plugin.root,
+    sounds: () => !quiet && settings.sounds,
   }
 }
 
 function build($: EngineInterface): Mod {
-  const report = (err: unknown) => $.ui.toast(`Drips: ${short(err)}`)
+  const report = (err: unknown) => void (err instanceof Unavailable || $.ui.toast(`Drips: ${short(err)}`))
   const manager = createManager({
     store: store($),
     customs: () => readCustoms(store($)),
     after: (ms, fn) => void $.clock.after(ms, fn),
     report,
+    changed: () => $.ui.invalidate('ui.render'), // the row's Stop comes and goes
   })
-  const m: Mod = { manager, window: windowHost(pageDeps($)), fullscreen: null, fun: null as never }
+  const m: Mod = { manager, native: null, target: null, fun: null as never }
   m.fun = createFun(
     {
       isAllowed: async () => !(await refused($)),
       play: async recipe => void (await manager.execute(() => hostOf($, m), recipe)),
-      ensure: async effect => manager.ensure(await hostOf($, m), effect),
+      ensure: async effect => manager.ensure(await hostOf($, m, true), effect),
       release: effect => manager.release(effect),
       after: (ms, fn) => $.clock.after(ms, fn),
       report,
@@ -97,23 +119,60 @@ function build($: EngineInterface): Mod {
 
 const modOf = ($: EngineInterface) => (mod ??= build($))
 
-/** Where effects play now: the setting's host; Claude's window for a preview,
- *  and where the fullscreen overlay cannot run here (said once). */
-async function hostOf($: EngineInterface, m: Mod, preview = false): Promise<Host> {
-  if (!preview && settings.display === 'fullscreen') {
-    m.fullscreen ??= prepareOverlay(fullscreenDeps($))
-    const prepared = await m.fullscreen
-    if ('binary' in prepared) return fullscreenHost(fullscreenDeps($), prepared.binary)
-    if (!isFallbackSaid) $.ui.toast(`${prepared.missing} Playing in Claude's window instead.`)
-    isFallbackSaid = true
+/** The window Claude runs in: the desktop app's, or the terminal's that
+ *  hosts this session (its ancestors, as the overlay sees them, and the
+ *  environment). */
+async function findTarget($: EngineInterface, binary: string): Promise<Target | null> {
+  const env: TerminalEnv = {
+    TERM_PROGRAM: await $.env.get('TERM_PROGRAM'),
+    __CFBundleIdentifier: await $.env.get('__CFBundleIdentifier'),
+    TERM: await $.env.get('TERM'),
   }
-  if (!(await read($, nodePath))) throw new Error(NODE_MISSING)
-  return m.window
+  const isDesktop = (await $.session.surfaces()).includes('desktop')
+  return selectTarget({ isDesktop, env, ancestors: await ancestorsOf(nativeDeps($), binary) })
 }
 
-/** Why effects may not play now (the trial is over), or null. */
+function placement($: EngineInterface, m: Mod, binary: string, display: 'claude-window' | 'fullscreen'): Placement {
+  if (display === 'fullscreen') return { kind: 'fullscreen' }
+  return {
+    kind: 'window',
+    target: () => (m.target ??= findTarget($, binary)),
+    missed: () => {
+      if (!isMissedSaid) $.ui.toast("Drips could not find Claude's window: effects play over the screen under the pointer.")
+      isMissedSaid = true
+    },
+  }
+}
+
+/** Where effects play now: the setting's host, the native overlay. Where the
+ *  overlay cannot run here (not a Mac, no Command Line Tools), nothing plays:
+ *  a toast says why, once, and the play answers with the same reason. */
+async function hostOf($: EngineInterface, m: Mod, quiet = false): Promise<Host> {
+  const display = settings.display
+  m.native ??= prepareOverlay(nativeDeps($))
+  const prepared = await m.native
+  if ('binary' in prepared) return nativeHost(nativeDeps($, quiet), prepared.binary, placement($, m, prepared.binary, display))
+  if (!isUnavailableSaid) $.ui.toast(prepared.missing)
+  isUnavailableSaid = true
+  throw new Unavailable(prepared.missing)
+}
+
+/** Why effects may not play now (not bought on this machine), or null.
+ *  Bought, everything is open: no limits. */
+/** The engine's own line with the Drips button after it; pressed, it opens or closes the row above the prompt. */
+async function withButton($: EngineInterface, e: Parameters<EngineInterface['ui']['resolve']>[0], line: RenderChildren) {
+  const { Box, Button } = $.ui.resolve(e)
+  const isOpen = await read($, bandOpen)
+  return (
+    <Box flexDirection="row" gap={2}>
+      {line}
+      <Button key="drips" label="💧 Drips" plain dimColor={!isOpen} onPress={() => update($, bandOpen, v => !v)} />
+    </Box>
+  )
+}
+
 async function refused($: EngineInterface): Promise<string | null> {
-  return refusal(await read($, licence), await $.clock.now())
+  return refusal(await read($, licence))
 }
 
 // ── The Drips page's helper ─────────────────────────────────────────────────
@@ -128,22 +187,18 @@ async function helperVersion($: EngineInterface): Promise<string> {
 
 /** The page's saved recipes and effects, sent to the helper. */
 async function pushLibrary($: EngineInterface): Promise<void> {
+  $.ui.invalidate('ui.render') // the row above the prompt lists them too
   await helper?.library({ drips: await listCustoms(store($)), effects: BUILTIN_EFFECTS, display: settings.display })
 }
 
 /** What the page asked: a preview played, everything stopped, a recipe saved or deleted. */
 async function onPage($: EngineInterface, m: PageMessage): Promise<void> {
-  const { manager, window } = modOf($)
-  if (m.t === 'closed') return window.closed(m.effect)
-  if (m.t === 'stop') {
-    await manager.stopAll()
-    await helper?.stop()
-    return
-  }
+  const { manager } = modOf($)
+  if (m.t === 'stop') return manager.stopAll()
   if (m.t === 'play') {
     const no = await refused($)
     if (no) return $.ui.toast(no)
-    await manager.execute(() => hostOf($, modOf($), true), m.recipe, { preview: true })
+    await manager.execute(() => hostOf($, modOf($)), m.recipe, { preview: true })
     return
   }
   if (m.t === 'save') {
@@ -163,7 +218,7 @@ async function attach($: EngineInterface, link: Link): Promise<Link> {
     link
       .inbox()
       .then(async messages => {
-        for (const m of messages) await onPage($, m).catch(err => $.ui.toast(`Drips: ${short(err)}`))
+        for (const m of messages) await onPage($, m).catch(err => void (err instanceof Unavailable || $.ui.toast(`Drips: ${short(err)}`)))
       })
       .catch(async () => {
         if (helper !== link) return
@@ -177,17 +232,13 @@ async function attach($: EngineInterface, link: Link): Promise<Link> {
 }
 
 /** The helper kept from before this load: found again when its code is this
- *  copy's (its looping effects ended: this load starts with none); told to
- *  leave when it is not. */
+ *  copy's; told to leave when it is not. */
 async function reattach($: EngineInterface, version: string): Promise<Link | null> {
   const kept = await read($, helperInfo)
   if (!kept) return null
   const link = linkOf($, kept)
   const running = await link.state().then(s => s.version, () => null)
-  if (running === version) {
-    await link.stop().catch(() => undefined)
-    return attach($, link)
-  }
+  if (running === version) return attach($, link)
   if (running !== null) await link.quit().catch(() => undefined)
   collecting?.cancel()
   helper = null
@@ -230,16 +281,30 @@ function startHelper($: EngineInterface): Promise<Link> {
   return starting
 }
 
+// ── The Drips button and its row ────────────────────────────────────────────
+
+/** A play from the row: the plan's gate first, then the same path as /drips. */
+async function bandPlay($: EngineInterface, recipe: string): Promise<void> {
+  const no = await refused($)
+  if (no) return $.ui.toast(no)
+  const m = modOf($)
+  await m.manager.execute(() => hostOf($, m), recipe).catch(err => void (err instanceof Unavailable || $.ui.toast(`Drips: ${short(err)}`)))
+}
+
+async function bandOpenPage($: EngineInterface): Promise<void> {
+  if (!(await read($, nodePath))) return $.ui.toast(NODE_MISSING)
+  await showPage(pageDeps($)).catch(err => $.ui.toast(`Drips page ✗ ${short(err)}`))
+}
+
 // ── Hooks ───────────────────────────────────────────────────────────────────
 
 async function registerAll($: EngineInterface): Promise<void> {
   await $.command.register({
-    name: 'drip',
-    description: 'Play a visual effect: /drip confetti, /drip 3 hearts stars, /drip -1 aurora; list, save <name> <recipe>, delete <name>, stop',
-    argumentHint: '<recipe> | list | save <name> <recipe> | delete <name> | stop',
+    name: 'drips',
+    description: 'Play a visual effect: /drips confetti, /drips 3 hearts stars, /drips -1 aurora; list, save <name> <recipe>, delete <name>, stop; page opens your saved drips and the editor; unlock buys Drips ($8, once); key <licence> unlocks it with a licence from another machine',
+    argumentHint: '<recipe> | list | save <name> <recipe> | delete <name> | stop | page | unlock | key <licence>',
     immediate: true,
   })
-  await $.command.register({ name: 'drips', description: 'Open the Drips page: your saved drips, and an editor; key <licence> unlocks Drips', argumentHint: '[key <licence>]' })
   await $.tool.register({
     name: 'play_drip',
     description:
@@ -260,7 +325,8 @@ export function drips(on: On, options: PluginOptions) {
   settings = settingsOf(options)
   mod = null
   helper = null
-  isFallbackSaid = false
+  isUnavailableSaid = false
+  isMissedSaid = false
 
   on('session.start', async ($, e, next) => {
     mod = build($)
@@ -272,51 +338,97 @@ export function drips(on: On, options: PluginOptions) {
     return next(e)
   })
 
-  on('command.run', { command: 'drip' }, async ($, e) => {
-    const line = e.args.trim()
+  on('command.run', { command: 'drips' }, async ($, e) => {
+    // As /games: `list` (or nothing) lists, anything else is a recipe or a name to play.
+    const line = e.args.trim() || 'list'
     const sub = line.split(/\s+/)[0]?.toLowerCase() ?? ''
+    if (sub === 'page') {
+      if (!(await read($, nodePath))) return { text: NODE_MISSING }
+      return { text: await showPage(pageDeps($)).then(shownText, err => `The Drip page ✗ ${short(err)}`) }
+    }
     if (!['list', 'save', 'delete', 'stop'].includes(sub)) {
       const no = await refused($)
       if (no) return { text: no }
     }
     try {
       const m = modOf($)
-      const text = await m.manager.execute(() => hostOf($, m), line)
+      let text = await m.manager.execute(() => hostOf($, m), line)
       if (sub === 'save' || sub === 'delete') await pushLibrary($).catch(() => undefined)
-      if (sub === 'stop') await helper?.stop().catch(() => undefined) // frames a reload left behind
+      // As /games: the listing ends with the locked line until it is bought.
+      if (sub === 'list') {
+        const locked = await refused($)
+        if (locked) text = `${text}\n\n${locked}`
+      }
       return { text }
     } catch (err) {
-      return { text: `/drip: ${short(err)}` }
-    }
-  })
-
-  on('command.run', { command: 'drips' }, async ($, e) => {
-    if (e.args.trim()) return { text: 'Usage: /drips [key <licence>]' }
-    if (!(await read($, nodePath))) return { text: NODE_MISSING }
-    try {
-      return { text: shownText(await showPage(pageDeps($))) }
-    } catch (err) {
-      return { text: `Drips page ✗ ${short(err)}` }
+      return { text: `/drips: ${short(err)}` }
     }
   })
 
   on('tool.call', { tool: 'mcp__drips__play_drip' }, async ($, e) => {
     const no = await refused($)
-    if (no) return { result: { error: no } }
+    if (no) return { result: `Not played: ${no}` }
     const recipe = String((e.input as { recipe?: unknown } | undefined)?.recipe ?? '').trim()
-    if (NOT_A_RECIPE.includes(recipe.split(/\s+/)[0]?.toLowerCase() ?? '')) return { result: { error: 'play_drip takes a recipe or "stop"; list_drips lists the effects.' } }
+    if (NOT_A_RECIPE.includes(recipe.split(/\s+/)[0]?.toLowerCase() ?? '')) return { result: 'play_drip takes a recipe or "stop"; list_drips lists the effects.' }
     try {
       const m = modOf($)
-      return { result: { status: await m.manager.execute(() => hostOf($, m), recipe) } }
+      return { result: String(await m.manager.execute(() => hostOf($, m), recipe)) }
     } catch (err) {
-      return { result: { error: short(err) } }
+      return { result: `Not played: ${short(err)}` }
     }
   })
 
   on('tool.call', { tool: 'mcp__drips__list_drips' }, async ($, e) => {
     const no = await refused($)
-    if (no) return { result: { error: no } }
-    return { result: { effects: BUILTIN_EFFECT_LIST, custom: await listCustoms(store($)), running: modOf($).manager.running() } }
+    if (no) return { result: `Not played: ${no}` }
+    return { result: JSON.stringify({ effects: BUILTIN_EFFECT_LIST, custom: await listCustoms(store($)), running: modOf($).manager.running() }) }
+  })
+
+  // The Drips button, beside the engine's own line: on the terminal the hint
+  // under the prompt; on the desktop, which draws no hint line of the engine's,
+  // the mode labels in the prompt's footer.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const line = await next(e)
+    if (!settings.button || e.surface === 'desktop') return line
+    return withButton($, e, line)
+  })
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
+    const line = await next(e)
+    if (!settings.button || e.surface !== 'desktop') return line
+    return withButton($, e, line)
+  })
+
+  // Its row above the prompt: quick plays, the saved drips, Stop while
+  // something persistent plays, ✕; once the trial is over, Unlock.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (!settings.button || e.props.hasSurvey || !(await read($, bandOpen))) return next(e)
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const close = <Button key="close" label="✕" plain role="dismiss" onPress={() => update($, bandOpen, () => false)} />
+    const no = await refused($)
+    if (no) {
+      return (
+        <Box flexDirection="row" gap={1}>
+          <Text dimColor>💧 {no}</Text>
+          <Button key="open" label="Open Drips" variant="primary" onPress={() => bandOpenPage($)} />
+          {close}
+        </Box>
+      )
+    }
+    const saved = await listCustoms(store($))
+    const isPlaying = modOf($).manager.running().length > 0
+    return (
+      <Box flexDirection="row" flexWrap="wrap" gap={1}>
+        <Text dimColor>💧</Text>
+        {QUICK_EFFECTS.map(effect => (
+          <Button key={`play:${effect}`} label={effect} onPress={() => bandPlay($, effect)} />
+        ))}
+        {saved.map(d => (
+          <Button key={`drip:${d.name}`} label={d.name} variant="secondary" onPress={() => bandPlay($, d.name)} />
+        ))}
+        {isPlaying ? [<Button key="stop" label="■ Stop" onPress={() => modOf($).manager.stopAll()} />] : []}
+        {close}
+      </Box>
+    )
   })
 
   // The fun hooks: each does nothing unless its /config toggle is on.
@@ -334,7 +446,7 @@ export function drips(on: On, options: PluginOptions) {
   on('turn.complete', async ($, e, next) => {
     void modOf($)
       .fun.turnEnd({ durationMs: e.durationMs, reason: e.reason, isMainLoop: !e.agentId })
-      .catch(err => $.ui.toast(`Drips: ${short(err)}`))
+      .catch(err => void (err instanceof Unavailable || $.ui.toast(`Drips: ${short(err)}`)))
     return next(e)
   })
 }

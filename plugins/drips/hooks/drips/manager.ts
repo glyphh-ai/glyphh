@@ -1,10 +1,10 @@
-// What `/drip`, the play_drip tool and the Drips page's Play do: the Glyphh
-// app's DripManager.execute (src/main/drip-manager.ts at v2.0.2), on a Host
+// What `/drips`, the play_drip tool and the Drips page's Play do: the Glyphh
+// app's DripManager.execute (src/main/drips-manager.ts at v2.0.2), on a Host
 // that shows effects (Claude's window or the full screen). Counted effects
 // stagger 1500 ms apart; a persistent (`-1`) effect fired again toggles off;
 // a preview's persistent effect is bounded to 12 s; any other persistent
 // effect to PERSISTENT_CAP_MS, so nothing runs forever.
-import { BUILTIN_EFFECTS, parseDripRecipe } from './effects.ts'
+import { BUILTIN_EFFECTS, ONE_SHOT_EFFECTS, parseDripRecipe } from './effects.ts'
 import { deleteCustom, saveCustom, type Store } from './library.ts'
 
 export const STAGGER_MS = 1500
@@ -34,6 +34,8 @@ export type ManagerDeps = {
   after(ms: number, fn: () => void): void
   /** A staggered play that failed after the command had answered. */
   report(err: unknown): void
+  /** The persistent effects on screen changed (one started or ended). */
+  changed?(): void
 }
 
 export type ExecuteOptions = { preview?: boolean }
@@ -52,6 +54,11 @@ export function customEffects(recipe: string): string[] {
     .map(p => p.toLowerCase())
 }
 
+/** What a recipe naming no effect and no saved drip is told; nothing plays. */
+export function unknownText(names: string[]): string {
+  return `No effect or saved drip is called ${names.join(', ')}. /drips list shows them.`
+}
+
 export function listText(customs: Record<string, string>): string {
   const entries = Object.entries(customs)
   const custom = entries.length ? entries.map(([name, recipe]) => `${name} → ${recipe}`).join(', ') : '(none)'
@@ -63,6 +70,7 @@ export function createManager(d: ManagerDeps) {
 
   async function closeSlot(slot: Slot): Promise<void> {
     slot.isCancelled = true
+    d.changed?.()
     await slot.closer?.close()
   }
 
@@ -81,7 +89,9 @@ export function createManager(d: ManagerDeps) {
     const slot: Slot = { closer: null, isCancelled: false }
     persistent.set(effect, slot)
     const forget = () => {
-      if (persistent.get(effect) === slot) persistent.delete(effect)
+      if (persistent.get(effect) !== slot) return
+      persistent.delete(effect)
+      d.changed?.()
     }
     try {
       slot.closer = await host.persistent(effect, opacity, maxMs, forget)
@@ -89,24 +99,27 @@ export function createManager(d: ManagerDeps) {
       forget()
       throw err
     }
+    d.changed?.()
     if (slot.isCancelled) await slot.closer.close() // toggled off while it started
   }
 
   async function executeRaw(hostOf: () => Promise<Host>, raw: string, customs: Record<string, string>, maxMs: number): Promise<string> {
     const { count, opacity, effects } = parseDripRecipe(raw, name => (customs[name] ? customEffects(customs[name]!) : null))
+    const unknown = [...new Set(effects.filter(effect => !(effect in ONE_SHOT_EFFECTS)))]
+    if (unknown.length) return unknownText(unknown)
     const host = await hostOf()
+    let slot = 0
+    const play = (effect: string, op: number) => {
+      d.after(slot++ * STAGGER_MS, () => void host.oneShot(effect, op).catch(d.report))
+    }
     if (count === -1) {
       const op = opacity > 0 ? opacity : PERSISTENT_OPACITY
       for (const effect of effects) await firePersistent(host, effect, op, maxMs)
       return `drip: ${effects.join(' + ')} constant`
     }
     const op = opacity > 0 ? opacity : -1
-    for (let i = 0; i < count; i++) {
-      effects.forEach((effect, j) => {
-        d.after((i * effects.length + j) * STAGGER_MS, () => void host.oneShot(effect, op).catch(d.report))
-      })
-    }
-    return count > 1 ? `drip: ${effects.join(' + ')} x${count}` : `drip: ${effects.join(' + ')}`
+    for (let i = 0; i < count; i++) for (const effect of effects) play(effect, op)
+    return `drip: ${count > 1 ? `${effects.join(' + ')} x${count}` : effects.join(' + ')}`
   }
 
   /** Ends every persistent effect. */
@@ -117,17 +130,17 @@ export function createManager(d: ManagerDeps) {
   }
 
   return {
-    /** One `/drip` line: a recipe, a saved recipe's name, or list, save, delete, stop.
+    /** One `/drips` line: a recipe, a saved recipe's name, or list, save, delete, stop.
      *  `hostOf` is asked for the host only when something is to play. */
     async execute(hostOf: () => Promise<Host>, line: string, opts: ExecuteOptions = {}): Promise<string> {
       const args = line.trim().split(/\s+/).filter(Boolean)
       const maxMs = opts.preview ? PREVIEW_MAX_MS : PERSISTENT_CAP_MS
       const sub = args[0]?.toLowerCase() ?? ''
       if (sub === 'save') {
-        if (args.length < 3) return 'Usage: /drip save <name> <recipe>'
+        if (args.length < 3) return 'Usage: /drips save <name> <recipe>'
         return saveCustom(d.store, args[1]!, args.slice(2).join(' '))
       }
-      if (sub === 'delete') return args[1] ? deleteCustom(d.store, args[1]) : 'Usage: /drip delete <name>'
+      if (sub === 'delete') return args[1] ? deleteCustom(d.store, args[1]) : 'Usage: /drips delete <name>'
       if (sub === 'list') return listText(await d.customs())
       if (sub === 'stop') {
         await stopAll()

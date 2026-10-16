@@ -23,4 +23,4 @@ export async function findNode(p: Probe): Promise<string | null> {
   return null
 }
 
-export const NODE_MISSING = "Drips plays in Claude's window through a small local page that needs Node.js 18 or newer (https://nodejs.org). Install it, then start a new session, or set Display to fullscreen in /config."
+export const NODE_MISSING = "The Drips page needs Node.js 18 or newer (https://nodejs.org). Install it, then start a new session."
