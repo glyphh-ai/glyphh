@@ -7,14 +7,17 @@
 // sends the page's helper the licence's state in words (pageStatus, never the
 // licence) when that changed, and takes what the page asked (Unlock, Cancel,
 // Copy licence key). Commands it gates check `refusal()` from ./access
-// themselves, reading this same state.
+// themselves, reading this same state. A row of the mod's command that
+// answered with that refusal draws as the locked card: the Glyphh logo, the
+// row's text, and Unlock, which opens checkout as /<COMMAND> unlock does.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
 
 import type { HelperInfo } from '../../types'
-import { INITIAL, PAGE_ACTIONS, pageStatus, type PageAction } from './access.ts'
+import { INITIAL, PAGE_ACTIONS, pageStatus, refusal, type PageAction } from './access.ts'
 import { COMMAND, MOD, PRICE, PRODUCT } from './config.ts'
 import { accept, buy, cancel, start, type Deps } from './flow.ts'
+import { LOGO_ALT, LOGO_SVG } from './logo.ts'
 import { verify } from './verify.ts'
 
 // The engine reads a state reference's plugin and key, and a hook's matcher,
@@ -86,6 +89,9 @@ async function sync($: EngineInterface): Promise<void> {
   sent = status
 }
 
+/** The line every locked answer of the mod's command ends with. */
+const LOCKED = refusal(INITIAL)!
+
 export function licensing(on: On) {
   // Two values that between them match every session: a plugin has one
   // session.start hook without a matcher, and that one is the mod's own.
@@ -112,5 +118,37 @@ export function licensing(on: On) {
     if (words.length !== 2) return { text: `Usage: /${COMMAND} key <licence>` }
     const ok = await accept(deps($), words[1]!)
     return { text: ok ? `${PRODUCT} unlocked.` : 'That licence key did not check out.' }
+  })
+
+  // The locked card: a row of the mod's command that answered locked. It
+  // follows the licence, so pressing Unlock shows the wait, then unlocked.
+  on('ui.render', { component: 'CommandOutput' }, async ($, e, next) => {
+    if (e.props.command !== 'drips' || e.props.isErrored || !e.props.text.includes(LOCKED)) return next(e)
+    const els = $.ui.resolve(e)
+    const { Box, Text, Button, Markdown } = els
+    const state = await read($, licence)
+    const text = e.props.text.replace(LOCKED, '').trim()
+    // Every surface but the terminal draws SVG; the terminal gets the name in words.
+    const logo = e.surface !== 'terminal' && 'Svg' in els ? <els.Svg source={LOGO_SVG} alt={LOGO_ALT} height={22} /> : <Text bold>{LOGO_ALT}</Text>
+    const action = state.licence ? (
+      <Text>✓ {PRODUCT} is unlocked on this machine.</Text>
+    ) : state.isWaiting ? (
+      <Box flexDirection="row" gap={2} alignItems="center">
+        <Text dimColor>{state.note ?? 'Waiting for checkout…'}</Text>
+        <Button key="cancel" label="Cancel" plain onPress={() => void cancel(deps($))} />
+      </Box>
+    ) : (
+      <Box flexDirection="row" gap={2} alignItems="center">
+        <Button key="unlock" label={`Unlock ${PRODUCT}`} variant="primary" onPress={() => void buy(deps($))} />
+        <Text dimColor>{PRICE}, once, for this machine</Text>
+      </Box>
+    )
+    return (
+      <Box flexDirection="column" gap={1} padding={1} borderStyle="round" borderDimColor>
+        {logo}
+        {text ? <Markdown text={text} /> : null}
+        {action}
+      </Box>
+    )
   })
 }

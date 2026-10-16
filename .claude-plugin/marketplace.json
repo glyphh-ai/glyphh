@@ -10,13 +10,13 @@
       "name": "drips",
       "source": "./plugins/drips",
       "description": "Drips: visual effects with sound over Claude (confetti, fireworks, hearts, a matrix rain), over Claude's window or the whole screen; save your own recipes and let Claude play them. A one-time $8 per machine.",
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "name": "games",
       "source": "./plugins/games",
       "description": "Games: games with sound over Claude (Missile Command, Chickn, Blocks, Rocks, Dash), endless and harder as they go, your top score to beat. A one-time $8 per machine.",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }
