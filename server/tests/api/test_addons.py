@@ -92,7 +92,7 @@ async def test_a_free_org_checks_out_only_addons_allowed_on_free(
         for addons, status, reason in (
             (["gateway"], 409, "not_on_plan"),
             (["confetti", "confetti"], 422, "duplicate_addon"),
-            (["rpa"], 422, "no_addon"),
+            (["nothing"], 422, "no_addon"),
         ):
             body = {"plan": "Free", "seats": 1, "addons": addons}
             res = await client.post("/v1/billing/checkout", json=body, headers=ada.headers)

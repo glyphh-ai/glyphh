@@ -77,7 +77,7 @@ async def test_adding_and_removing_refuse_with_stable_codes(
         for method, path, body, status, reason in (
             ("POST", "/v1/billing/addons", {"mod": "Gateway"}, 409, "already_added"),
             ("POST", "/v1/billing/addons", {"mod": CONFETTI}, 409, "not_on_plan"),
-            ("POST", "/v1/billing/addons", {"mod": "rpa"}, 422, "no_addon"),
+            ("POST", "/v1/billing/addons", {"mod": "nothing"}, 422, "no_addon"),
             ("DELETE", "/v1/billing/addons/programs", None, 404, "not_added"),
             ("POST", "/v1/billing/addons/preview", {"mod": "ada", "action": "remove"}, 404, "not_added"),
         ):

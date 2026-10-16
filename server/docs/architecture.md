@@ -12,7 +12,6 @@ The design of Glyphh as it stands: the [product](#product), the [architecture](#
 | `programs` | Deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | rrotor, local on every plan; hosted on Pro and Team | Add-on | Mod built (starts rrotor, calls it); the server's programs and runs API designed |
 | `gateway` | Your own models and keys in your rrotor, served as OpenAI- and Anthropic-compatible endpoints to your programs and mods; never hosted by Glyphh | rrotor | Add-on | Designed |
 | `ada` | Ada models in your rrotor: a typed spec and a precedent store, deployed by commit like a program, no network | rrotor | Add-on | Designed |
-| `rpa` | A browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The local rrotor only | Not in the catalog | Designed |
 
 - **Every mod is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
 - **Everything is a subscription.** Nothing is bought one-off.
@@ -146,15 +145,6 @@ Routines run without approvals, so Glyphh's own rule is the brake: a step that `
 - **Gateway** runs in the person's own rrotor (local, or wherever they host it), never on Glyphh's machines. Models and keys are added in the mod and stay in rrotor, encrypted. It serves OpenAI- and Anthropic-compatible endpoints to programs and mods: third-party inference for them. It never routes a Claude subscription and never offers a Claude login.
 - **Ada** is a library, and an Ada model is a program: a repo with `spec.json` and a small program file whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`), deployed by commit, run with no network, its precedent store in the program's persistent data folder outside git.
 
-### `rpa` (designed, not in the catalog)
-
-A browser for Claude apart from the person's own, in the local rrotor only. Claude works in a named profile holding only the sign-ins made in it, never in the person's own browser.
-
-- **Everything is a tool**, and a skill teaches Claude the flow: open the live panel, pick or make a profile, ask the person to sign in (they take control; Claude sees nothing while they do), record the task or work it out, save it as a sequence and test-run it, stopping at every `ask` step.
-- **Tools:** `profile_list`, `profile_create`, `panel_open`, `ask_user` (`login`, `approve`, `choose`, `text`), `page_read`, `page_act`, `record_start`, `record_stop`, `site_save`, `sequence_save`, `run`, `sites_list`, `log_read`.
-- **Sites and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), each step `auto` or `ask`; saved sequences become tools (`<site>_<sequence>`).
-- **Runs on a schedule** through Claude's Desktop scheduled tasks, which run on the person's machine, if they load plugins (to prove).
-
 ### rrotor
 
 **One isolated runtime per person, local and hosted.** A person never sees machines: they have a runtime where their programs live and run.
@@ -188,7 +178,7 @@ Only what the mods need to start and sign in; nothing here goes to the cloud.
 
 ### In rrotor: `/data`
 
-The same layout in the local and the hosted rrotor; RPA sites, when RPA is built, only in the local one.
+The same layout in the local and the hosted rrotor.
 
 | Path | What |
 |---|---|
@@ -200,7 +190,6 @@ The same layout in the local and the hosted rrotor; RPA sites, when RPA is built
 | `parts/<part>/` | The parts the mods installed |
 | `db/` | The database parts' data: each program its own database |
 | `runs/<run_id>/` | A run's log, checkpoints and outputs |
-| `rpa/<slug>.json`, `rpa/log/` | RPA sites and sequences, and what ran (designed) |
 
 ### The server
 
@@ -364,14 +353,12 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 - **Apple's `container`** running rrotor on macOS 26 (detected and started, not yet tested).
 - **Dependencies through the marketplace**, and **a built mod loading** as its source does.
 - **Google sign-in in Chromium under automation** ("This browser or app may not be secure").
-- **Desktop scheduled tasks** loading plugins, for RPA on a schedule.
 
 **To decide (Chris):**
 
 - Every add-on's price, per seat or flat, and its limits (placeholders in `db/seed_addons.py`).
 - Solo: its price and limits; it is not seeded until then.
 - The hosted runtime's hours per plan, and how more hours are bought (within the subscription: nothing is bought one-off).
-- Whether RPA joins the catalog, and as which add-on.
 - The marketplace's home: the release builds write `glyphh-ai/glyphh`, which also holds the `glyphh` mod's source.
 - Email for approvals when no Claude is open: the mail provider (`notified_at` stays empty until then).
 
@@ -682,11 +669,8 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ### In rrotor
 
-![What lives in rrotor's /data](img/data-model-local.png)
-
 - **Programs** live under `programs/<name>/`: each deployed commit, the program's own folder and its persistent data.
 - **Named profiles** (`profiles/<name>/`) hold only the sign-ins made in them.
-- **RPA sites** (designed): one file each (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
 
 ## Plans
 
