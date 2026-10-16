@@ -134,6 +134,7 @@ class Call(Message):
     function: Name
     inputs: dict[str, Any]
     caller: Caller
+    clearance: float = Field(1.0, ge=0, le=1)  # who asks, 0 to 1: the model's ctx.clearance (Ada cuts what is seen)
 
 
 class Continue(Message):

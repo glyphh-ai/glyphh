@@ -5,9 +5,11 @@ sequence numbers again: the mod asks for one when it starts a rrotor whose /data
 import uuid
 
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_server.errors import NotFound
 from glyphh_server.models import Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
@@ -30,3 +32,22 @@ async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
     ).returning(Rrotor.id)
     runtime_id = (await conn.execute(rotated)).scalar_one()
     return LocalRuntime(runtime_id=runtime_id, token=token)
+
+
+async def runtime_for(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID:
+    """The runtime a deploy or a call goes to: the one named, when it is the person's; else the local one of the
+    install calling, else the person's runtime seen most recently (the connector calls from no install)."""
+    mine = select(Rrotor.id).where(Rrotor.user_id == who.user_id)
+    if runtime_id is not None:
+        found = (await conn.execute(mine.where(Rrotor.id == runtime_id))).scalar()
+        if found is None:
+            raise NotFound("You have no such runtime.", runtime_id=str(runtime_id))
+        return found
+    if who.install_id is not None:
+        found = (await conn.execute(mine.where(Rrotor.install_id == who.install_id))).scalar()
+        if found is not None:
+            return found
+    found = (await conn.execute(mine.order_by(Rrotor.last_seen_at.desc().nulls_last(), Rrotor.id).limit(1))).scalar()
+    if found is None:
+        raise NotFound("You have no runtime. Start one from Claude (/ada start).", reason="no_runtime")
+    return found

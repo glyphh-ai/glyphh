@@ -68,6 +68,7 @@ async def test_a_call_its_approval_the_answer_and_the_result_are_each_recorded_o
             "function": "start",
             "inputs": {"day": "2026-10-13"},
             "caller": "claude",
+            "clearance": 1.0,
         }
         assert (await _run(engine, run_id)).status == "running"
         asking = _result(run_id, 1, "needs_approval", 3, step="write", prompt="Write Monday's total?")

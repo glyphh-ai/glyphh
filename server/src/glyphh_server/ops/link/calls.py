@@ -93,15 +93,23 @@ async def send_call(
     function: str,
     inputs: dict[str, Any],
     caller: str,
+    clearance: float = 1.0,
 ) -> uuid.UUID:
-    """Open a run: its row (running), then `call` down the runtime's link. Answers the run's id."""
+    """Open a run: its row (running), then `call` down the runtime's link, with the caller's clearance (0 to 1; 1 is
+    the person themself). Answers the run's id."""
     runtime = await _runtime(conn, runtime_id)
     found = await _version(conn, runtime_id, model_id, version)
     values = {"model_version_id": found.id, "rrotor_id": runtime_id, "function": function, "caller": caller}
     run_id = (await conn.execute(insert(Run).values(**values, status=RUNNING).returning(Run.id))).scalar_one()
     await hold_run(conn, run_id)
     message = Call(
-        run_id=run_id, model=found.name, version=found.version, function=function, inputs=inputs, caller=caller
+        run_id=run_id,
+        model=found.name,
+        version=found.version,
+        function=function,
+        inputs=inputs,
+        caller=caller,
+        clearance=clearance,
     )
     await deliver(hub, runtime, message)
     return run_id

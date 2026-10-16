@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.config import Settings
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.link.hub import Hub
 
 
 class NoArgs(BaseModel):
@@ -25,6 +26,7 @@ class Context:
     who: Principal
     settings: Settings
     http: httpx.AsyncClient
+    hub: Hub
 
     def stripe(self) -> StripeClient:
         return StripeClient(self.http, self.settings.stripe_secret_key)
