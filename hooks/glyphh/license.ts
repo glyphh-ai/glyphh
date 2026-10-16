@@ -1,5 +1,5 @@
 // license.json: GET /v1/license, its Ed25519 signature checked against
-// GET /v1/license/key before it is kept. What it gates locally: RPA.
+// GET /v1/license/key before it is kept.
 //
 // Accepted shapes (the server's choice, any one):
 //   { token: "<header>.<payload>.<sig>" }                 compact JWS, EdDSA
@@ -69,7 +69,6 @@ export function toInfo(claims: Json, ok: boolean, error?: string): LicenseInfo {
     ok,
     error,
     plan: typeof plan === 'string' ? plan : plan ? String(plan.name ?? '') : undefined,
-    features: (claims.features ?? (plan as Json)?.features ?? {}) as Record<string, boolean>,
     limits: (claims.limits ?? (plan as Json)?.limits ?? {}) as Record<string, number | null>,
     expires_at: typeof exp === 'number' ? new Date(exp * 1000).toISOString() : (exp as string | undefined),
   }
@@ -110,6 +109,3 @@ export async function loadLicense(gh: Host): Promise<LicenseInfo | null> {
   await gh.state.license.set(() => info)
   return info
 }
-
-/** Whether the license allows a feature (`rpa`). No license, no feature. */
-export const allows = (info: LicenseInfo | null, feature: string) => info?.ok === true && info.features[feature] === true

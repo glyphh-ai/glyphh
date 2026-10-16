@@ -26,7 +26,7 @@ the name (a command or skill already has it), the command is `/glyphh-account`.
 | Sign in | Device flow: shows the code and the link; on the desktop opens `verification_uri_complete` in Claude's browser pane, in a terminal prints it; polls `/v1/device/token` at `interval`, 5 s slower on `slow_down`, until the token, `expired_token` or `access_denied`. Copy link, Cancel |
 | Account | Name (Enter renames), email, sign-in providers, installs (revoke one; revoking this one signs out), Sign out |
 | Org | Name (admin renames), members with roles (admin removes, never the admin), invites: send (the link is shown to copy), revoke, pending |
-| Plan | The plan, its limits and what is used (`/v1/me`), the license this machine holds (valid, until, RPA on/off), every plan (`/v1/plans`) |
+| Plan | The plan, its limits and what is used (`/v1/me`), the license this machine holds (valid, until), every plan (`/v1/plans`) |
 | Billing (admin) | Checkout (not subscribed) or switch plan (subscribed), seats, Card and invoices (Stripe's portal); Stripe's pages open in the browser pane, or as a link in a terminal |
 
 Every action ends in one line under the tabs: what it did, or why not. A
@@ -81,7 +81,7 @@ the plugin needs only `node`, 20 or later).
 |---|---|
 | `machine.json` | `{id}`: a random machine id, made only where no hardware id or MAC can be read |
 | `install.json` | `{install_id, token}`, mode 0600: written by `sh` under `umask 077` to a temporary file and moved into place, the token on stdin, never on a command line or in a log |
-| `license.json` | The server's signed license answer and the key it was checked with. Refreshed from `GET /v1/license` at session start and sign-in; its Ed25519 signature is checked against `GET /v1/license/key` before it is kept (a bad one never is), and again offline at each start. An expired license is not valid. RPA is gated on `features.rpa` |
+| `license.json` | The server's signed license answer and the key it was checked with. Refreshed from `GET /v1/license` at session start and sign-in; its Ed25519 signature is checked against `GET /v1/license/key` before it is kept (a bad one never is), and again offline at each start. An expired license is not valid. |
 
 The license may come in any of three shapes: a compact JWS (`{token}`, EdDSA),
 `{payload, signature}` (the signature over the payload's bytes), or

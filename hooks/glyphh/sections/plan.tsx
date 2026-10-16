@@ -2,7 +2,6 @@
 // this machine holds, and every plan (/v1/plans).
 
 import type { Json } from '../../../types'
-import { allows } from '../license'
 import { limitText, limitsOf, obj, planName, priceText, str, usedOf } from '../shape'
 import type { Ctx } from '../ui'
 
@@ -13,9 +12,7 @@ const LIMIT_KEYS: [string, string][] = [
 
 export function planLimits(plan: Json): string {
   const limits = { ...plan, ...obj(plan.limits) }
-  const parts = LIMIT_KEYS.map(([label, key]) => `${label} ${limitText(limits[key])}`)
-  const rpa = (obj(plan.features).rpa ?? plan.rpa) === true
-  return `${parts.join(' · ')} · RPA ${rpa ? 'yes' : 'no'}`
+  return LIMIT_KEYS.map(([label, key]) => `${label} ${limitText(limits[key])}`).join(' · ')
 }
 
 export async function Plan(ctx: Ctx) {
@@ -38,7 +35,7 @@ export async function Plan(ctx: Ctx) {
       </Box>
       <Text dimColor>
         {lic
-          ? `License: ${lic.ok ? 'valid' : `not valid (${lic.error ?? 'unknown'})`}${lic.expires_at ? `, until ${lic.expires_at}` : ''} · RPA ${allows(lic, 'rpa') ? 'on' : 'off'}`
+          ? `License: ${lic.ok ? 'valid' : `not valid (${lic.error ?? 'unknown'})`}${lic.expires_at ? `, until ${lic.expires_at}` : ''}`
           : 'License: none yet.'}
       </Text>
       <Box flexDirection="column">

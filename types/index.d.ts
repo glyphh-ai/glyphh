@@ -22,7 +22,7 @@ export type GlyphhNote = { text: string; isError: boolean; link?: string }
 export type Json = { [key: string]: unknown }
 
 /** The checked license: what it says, and whether it checked out. */
-export type LicenseInfo = { ok: boolean; error?: string; plan?: string; features: Record<string, boolean>; limits: Record<string, number | null>; expires_at?: string }
+export type LicenseInfo = { ok: boolean; error?: string; plan?: string; limits: Record<string, number | null>; expires_at?: string }
 
 declare module 'claude-code' {
   interface PluginState {

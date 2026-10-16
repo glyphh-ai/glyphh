@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { signedIn } from '../hooks/glyphh/account'
 import { ApiError, api, describe } from '../hooks/glyphh/api'
 import { keyPair } from '../hooks/glyphh/ed25519'
-import { allows, canonical, check, loadLicense, refreshLicense } from '../hooks/glyphh/license'
+import { canonical, check, loadLicense, refreshLicense } from '../hooks/glyphh/license'
 import { HOME, fakeHost } from './fake-host'
 
 const signIn = async (w: ReturnType<typeof fakeHost>) => signedIn(w.gh, 'i1', w.server.TOKEN)
@@ -62,13 +62,12 @@ test('storage: install.json is written 0600 through the umask writer, never fs.w
   expect(await w.note()).toBe('Signed in.')
 })
 
-test('license: checked with Ed25519 against the key, kept, and gates RPA', async () => {
+test('license: checked with Ed25519 against the key, and kept', async () => {
   const w = fakeHost()
   await signIn(w) // fetches the license too
   const info = await w.gh.state.license.get()
   expect(info?.ok).toBe(true)
   expect(info?.plan).toBe('Pro')
-  expect(allows(info, 'rpa')).toBe(true)
   expect(w.files.has(`${HOME}/.glyphh/license.json`)).toBe(true)
   expect((await loadLicense(w.gh))?.ok).toBe(true)
 
@@ -77,7 +76,6 @@ test('license: checked with Ed25519 against the key, kept, and gates RPA', async
   const bad = await refreshLicense(w.gh)
   expect(bad.ok).toBe(false)
   expect(bad.error).toBe('signature does not check out')
-  expect(allows(bad, 'rpa')).toBe(false)
   expect(w.files.has(`${HOME}/.glyphh/license.json`)).toBe(false) // a bad one is never kept
 })
 
@@ -91,7 +89,7 @@ test('license: expired is not valid; JWS and canonical-JSON forms check too', as
   const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b))
   const b64u = (b: Uint8Array) => b64(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   const key = { kty: 'OKP', crv: 'Ed25519', x: b64u(publicKey) }
-  const claims = { plan: 'Team', features: { rpa: true }, limits: { max_members: null } }
+  const claims = { plan: 'Team', limits: { max_members: null } }
   const head = b64u(new TextEncoder().encode('{"alg":"EdDSA"}'))
   const body = b64u(new TextEncoder().encode(JSON.stringify(claims)))
   const jws = `${head}.${body}.${b64u(await sign(new TextEncoder().encode(`${head}.${body}`)))}`
@@ -108,11 +106,10 @@ test("license: the server's own answer, signed by glyphh_server.ops.license, che
     org_id: '33333333-3333-3333-3333-333333333333',
     plan: 'Café Pro',
     limits: { max_members: 1, max_installs: 5 },
-    features: { rpa: true },
     expires_at: '2099-01-01T00:00:00Z',
   }
-  const signature = '8wRzw8Grb8P5e8I7J/wzxWkE1DhN+jB/uizcHLN/b6mvP6WCcti2Q9e19+uhyoLdJ6N6Oa+fw5ZSW5NZK4IPDw=='
-  const key = { alg: 'Ed25519', public_key: 'NdI9aO1bIfswQd7y1XukRN8DwQCqqRAh84wB4libVgE=' }
-  expect(await check({ payload, signature }, key, 0)).toMatchObject({ ok: true, plan: 'Café Pro', features: { rpa: true } })
+  const signature = 'm9Ek926JXUmX9eifDNGAFBZdEtlk5gS5R8YtnDS5sX209Iat2ynD17hIj4K1UcUOS8pT4aXZG5erZwj49hPwBw=='
+  const key = { alg: 'Ed25519', public_key: 'RvajuVw4Bepp7F7kccgcXhZXtpJ2gK093YPSIrk+6mA=' }
+  expect(await check({ payload, signature }, key, 0)).toMatchObject({ ok: true, plan: 'Café Pro' })
   expect((await check({ payload: { ...payload, plan: 'Team' }, signature }, key, 0)).ok).toBe(false)
 })

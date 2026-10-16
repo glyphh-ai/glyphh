@@ -37,7 +37,7 @@ const meOf = (s: State) => ({
   user: { id: 'u1', name: s.name, email: 'chris@example.com', role: s.role },
   providers: [...s.providers],
   org: { id: 'o1', name: s.orgName, seats: 2, billing_status: 'active' },
-  plan: { name: 'Free', version: 1, limits: { max_members: 1, max_installs: 1 }, features: { rpa: false } },
+  plan: { name: 'Free', version: 1, limits: { max_members: 1, max_installs: 1 } },
   used: { members: s.members.length, seats: 2, installs: s.installs.length },
 })
 
@@ -47,7 +47,7 @@ const refuse = (status: number, code: string, message: string, detail: Json = {}
 })
 
 async function license(s: State) {
-  const claims = { plan: 'Pro', features: { rpa: true }, limits: { max_members: 10 }, expires_at: s.licenseExpires }
+  const claims = { plan: 'Pro', limits: { max_members: 10 }, expires_at: s.licenseExpires }
   const payload = JSON.stringify(claims)
   const { sign } = await keyPair(SEED)
   const sig = await sign(new TextEncoder().encode(payload))
