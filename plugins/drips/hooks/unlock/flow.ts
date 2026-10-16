@@ -25,7 +25,7 @@ export type Deps = {
   /** Opens a page in the person's browser; false when it could not. */
   open(url: string): Promise<boolean>
   copy(text: string): Promise<boolean>
-  toast(text: string): void
+  toast(text: string, ms?: number): void
   log(text: string): void
 }
 
@@ -37,6 +37,9 @@ function stopPolling() {
   poll?.cancel()
   poll = null
 }
+
+/** How long the unlocked notification stays: long enough to see after coming back from checkout. */
+export const UNLOCKED_MS = 10_000
 
 /** This install's id: made once, kept in the store. */
 async function installId(d: Deps): Promise<string> {
@@ -82,7 +85,7 @@ export async function buy(d: Deps): Promise<void> {
   const install = await installId(d)
   const held = await paidLicence(d, install)
   if (held && (await accept(d, held))) {
-    d.toast(`${PRODUCT} unlocked. Thank you!`)
+    d.toast(`${PRODUCT} unlocked. Thank you!`, UNLOCKED_MS)
     return
   }
   const url = `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(install)}`
@@ -123,6 +126,6 @@ async function tick(d: Deps, timer: Timer, install: string, since: number): Prom
   const licence = await paidLicence(d, install)
   if (poll !== timer || !licence) return
   stopPolling()
-  if (await accept(d, licence)) d.toast(`${PRODUCT} unlocked. Thank you!`)
+  if (await accept(d, licence)) d.toast(`${PRODUCT} unlocked. Thank you!`, UNLOCKED_MS)
   else await d.state.set(s => ({ ...s, isWaiting: false, note: 'The licence the server sent did not check out. Press Unlock to try again.' }))
 }

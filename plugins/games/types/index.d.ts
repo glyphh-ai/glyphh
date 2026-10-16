@@ -17,6 +17,8 @@ declare module 'claude-code' {
     'games': {
       licence: LicenceState
       helper: HelperInfo | null
+      /** The games card's page, from 0. */
+      page: number
     }
   }
 }

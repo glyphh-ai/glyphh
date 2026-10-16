@@ -46,7 +46,7 @@ function deps($: EngineInterface): Deps {
     fetch: url => $.http.fetch(url),
     open: async url => (await $.process.run(['open', url]).catch(() => null))?.exitCode === 0,
     copy: async text => (await $.ui.copy({ text })).isCopied,
-    toast: text => $.ui.toast(text),
+    toast: (text, ms) => $.ui.toast(text, ms ? { timeoutMs: ms } : undefined),
     log: text => $.ui.log(text),
   }
 }
