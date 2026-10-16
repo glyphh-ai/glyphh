@@ -16,6 +16,7 @@ class KeyName(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=80, description="What the key is for: 'Claude', 'the CRM'")
+    expires_in_days: int | None = Field(None, ge=1, le=365, description="Days until the key expires; left out, never")
 
 
 class KeyId(BaseModel):
@@ -53,6 +54,7 @@ async def list_keys(ctx: Context, _: NoArgs) -> Done:
     lines = [
         f"{k.name}, made {k.created_at:%Y-%m-%d}"
         + (f", revoked {k.revoked_at:%Y-%m-%d}" if k.revoked_at else "")
+        + f", {k.calls} calls"
         + f", id {k.id}"
         for k in found
     ]
@@ -60,8 +62,10 @@ async def list_keys(ctx: Context, _: NoArgs) -> Done:
 
 
 async def create_key(ctx: Context, args: KeyName) -> Done:
-    made = await runtime_keys.create_key(ctx.conn, ctx.hub, ctx.who, args.name.strip())
-    text = f"Runtime key {made.name}: {made.key}\nShown once. Use it as the bearer at your runtime's address."
+    made = await runtime_keys.create_key(ctx.conn, ctx.hub, ctx.who, args.name.strip(), args.expires_in_days)
+    expires = made.expires_at.date().isoformat() if made.expires_at else "never"
+    text = f"Runtime key {made.name}: {made.key}\nShown once, expires {expires}."
+    text += " Use it as the bearer at your runtime's address."
     return Done(text, dump(made))
 
 
@@ -90,7 +94,7 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "create_runtime_key",
         "Create a runtime key",
-        "A new key for your runtime's address (REST and MCP), shown once.",
+        "A new key for your runtime's address (REST and MCP), shown once; it expires after the days given, or never.",
         KeyName,
         create_key,
     ),

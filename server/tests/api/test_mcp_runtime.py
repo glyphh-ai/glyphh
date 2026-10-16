@@ -24,15 +24,18 @@ async def test_the_runtime_is_started_shown_keyed_and_stopped_from_claude(engine
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         none = await tool(client, auth, "runtime")
         assert none["content"][0]["text"] == "You have no hosted runtime yet: start_runtime makes one."
-        _refused(await key_tool(client, auth, name="Claude"), "E_NOT_FOUND")
+        _refused(await key_tool(client, auth, name="Claude", expires_in_days=30), "E_NOT_FOUND")
         started = await tool(client, auth, "start_runtime")
         text = started["content"][0]["text"]
         assert text.startswith("Your runtime is stopped at https://m_2.glyphh.app, 0.0 h of 5 this month.")
         assert "Add it to Claude as a connector" in text and started["structuredContent"]["state"] == "stopped"
         assert (await tool(client, auth, "runtime_keys"))["content"][0]["text"] == "No runtime keys yet."
-        made = await key_tool(client, auth, name="Claude")
+        made = await key_tool(client, auth, name="Claude", expires_in_days=30)
         key = made["structuredContent"]["key"]
-        assert key.startswith("glyphh_rk_") and f"Runtime key Claude: {key}\nShown once." in made["content"][0]["text"]
+        assert (
+            key.startswith("glyphh_rk_")
+            and f"Runtime key Claude: {key}\nShown once, expires " in made["content"][0]["text"]
+        )
         listed = await tool(client, auth, "runtime_keys")
         assert (
             listed["content"][0]["text"].startswith("Claude, made ")

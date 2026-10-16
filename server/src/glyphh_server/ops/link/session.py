@@ -22,7 +22,7 @@ from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.license import sign_license
-from glyphh_server.ops.link import inbound
+from glyphh_server.ops.link import inbound, reports
 from glyphh_server.ops.link.hello import next_text, read_hello
 from glyphh_server.ops.link.hub import Hub, Link
 from glyphh_server.ops.link.presence import OFFLINE, ONLINE, Refused, Runtime, mark, runtime_for
@@ -39,6 +39,7 @@ from glyphh_server.ops.link.protocol import (
     Ping,
     Pong,
     Result,
+    Usage,
     Welcome,
 )
 from glyphh_server.ops.routines import Routines
@@ -77,6 +78,7 @@ async def serve(ws: WebSocket, ctx: Context, token: str | None) -> None:
         if hello is None:
             return
         await mark(ctx.engine, runtime, ONLINE, hello.version)
+        await inbound.record_hello(ctx.engine, runtime, hello.deployed)
         link = Link(ws, runtime.id)
         log.info("runtime linked", extra=fields(runtime=str(runtime.id), mode=runtime.mode, version=hello.version))
         try:
@@ -163,12 +165,16 @@ async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -
     return True
 
 
-async def _record(conn: AsyncConnection, ctx: Context, runtime: Runtime, message: Result | Deployed | Event) -> None:
+async def _record(
+    conn: AsyncConnection, ctx: Context, runtime: Runtime, message: Result | Deployed | Event | Usage
+) -> None:
     if isinstance(message, Deployed):
         await inbound.apply_deployed(conn, runtime, message)
     elif not await inbound.first_time(conn, runtime, message.seq):
         log.info("replay skipped", extra=fields(runtime=str(runtime.id), seq=message.seq))
     elif isinstance(message, Result):
         await inbound.apply_result(conn, ctx.redis, runtime, message)
+    elif isinstance(message, Usage):
+        await reports.apply_usage(conn, runtime, message)
     else:
         await inbound.apply_event(conn, ctx.routines, ctx.secrets_key, runtime, message)

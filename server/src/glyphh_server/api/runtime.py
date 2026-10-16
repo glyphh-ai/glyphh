@@ -35,6 +35,7 @@ def fly(request: Request) -> Fly:
 
 class NewKey(BaseModel):
     name: str = Field(min_length=1, max_length=80, pattern=r"\S", description="What the key is for")
+    expires_in_days: int | None = Field(None, description="Days until the key expires, 1 to 365; left out, never")
 
 
 @router.get("", operation_id="hostedRuntime")
@@ -64,15 +65,23 @@ async def list_runtime_keys(caller: Caller, conn: Conn) -> list[KeyView]:
 
 @router.post("/keys", operation_id="createRuntimeKey", status_code=201)
 async def create_runtime_key(body: NewKey, caller: Caller, conn: Conn, request: Request) -> MadeKey:
-    """A new key, shown once: the bearer for your runtime's REST API and its /mcp. rrotor gets its hash at once
-    when linked, else in its next welcome."""
-    return await runtime_keys.create_key(conn, request.app.state.hub, caller, body.name.strip())
+    """A new key, shown once: the bearer for your runtime's REST API and its /mcp, expiring 1 to 365 days on, or
+    never. rrotor gets its hash at once when linked, else in its next welcome."""
+    hub = request.app.state.hub
+    return await runtime_keys.create_key(conn, hub, caller, body.name.strip(), body.expires_in_days)
 
 
 @router.delete("/keys/{key_id}", operation_id="revokeRuntimeKey")
 async def revoke_runtime_key(key_id: uuid.UUID, caller: Caller, conn: Conn, request: Request) -> KeyView:
     """Revoke one key; rrotor stops taking it the same way."""
     return await runtime_keys.revoke_key(conn, request.app.state.hub, caller, key_id)
+
+
+@router.delete("/keys/{key_id}/record", operation_id="deleteRuntimeKey", status_code=204)
+async def delete_runtime_key(key_id: uuid.UUID, caller: Caller, conn: Conn) -> Response:
+    """Delete a revoked or expired key from your list; a live one must be revoked first."""
+    await runtime_keys.delete_key(conn, caller, key_id)
+    return Response(status_code=204)
 
 
 @router.delete("", operation_id="destroyHostedRuntime", status_code=204)

@@ -5,6 +5,7 @@ Results and events carry `seq`, one rising counter per runtime: the Cloud acks e
 once, so a replay after a reconnect is never doubled."""
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, Field, TypeAdapter, model_validator
@@ -85,7 +86,25 @@ class Result(Message):
 
 
 class Deployed(Version, Message):
+    """A version now active on the runtime, however its deploy was asked for; the repo and manifest when known."""
+
     type: Literal["deployed"]
+    repo: Name | None = None
+    manifest: dict[str, Any] | None = None
+
+
+class KeyUse(BaseModel):
+    key_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    calls: int = Field(ge=1)
+    last_used_at: datetime
+
+
+class Usage(Message):
+    """The runtime keys' calls since the last report: one entry per key that let a request in."""
+
+    type: Literal["usage"]
+    seq: Seq
+    keys: list[KeyUse] = Field(min_length=1)
 
 
 class Event(Message):
@@ -110,7 +129,7 @@ class Ack(Message):
     of: Id
 
 
-Inbound = Annotated[Result | Deployed | Event | Ping | Pong | Ack, Field(discriminator="type")]
+Inbound = Annotated[Result | Deployed | Event | Usage | Ping | Pong | Ack, Field(discriminator="type")]
 INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
 
 

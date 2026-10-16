@@ -18,6 +18,7 @@ from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.link.protocol import Pause, Resume
 from glyphh_server.ops.plans import org_version
+from glyphh_server.ops.runtime_keys import push_expired
 from glyphh_server.ops.runtimes import NOT_LINKED, month_of
 
 log = logging.getLogger("glyphh.runtime")
@@ -71,6 +72,8 @@ async def tally(engine: AsyncEngine, fly: Fly, hub: Hub, step: int) -> list[uuid
 
 
 async def tend(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, step: int) -> None:
-    """One tick of the server's care of hosted runtimes: the hours tallied, the idle ones stopped."""
+    """One tick of the server's care of hosted runtimes: the hours tallied, the idle ones stopped, and the keys that
+    expired since the last tick (with a tick to spare) taken off their runtimes."""
     await tally(engine, fly, hub, step)
     await stop_idle(engine, fly, idle)
+    await push_expired(engine, hub, timedelta(seconds=2 * step))

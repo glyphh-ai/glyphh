@@ -2,7 +2,8 @@
 
 A result updates its run (status, seconds, ended once final), and a step that needs approval waits in `approvals`.
 An event is recorded, and fires the routine trigger it names when that trigger is the model owner's and for that
-model (or for any). A deployed version becomes the model's active one on that runtime. A result or event is
+model (or for any). A deployed version, recorded when new (ops/link/reports.py), becomes the model's active one on
+that runtime. A result or event is
 applied once: its `seq` must be past the runtime's last applied one, else it is a replay, acked and skipped."""
 
 import json
@@ -12,14 +13,16 @@ import uuid
 from redis.asyncio import Redis
 from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as upsert
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from glyphh_server.db import tenancy
 from glyphh_server.models import Deployment, Model, ModelEvent, ModelVersion, RoutineTrigger, Rrotor, Run
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.approvals import ask_approval
+from glyphh_server.ops.link import reports
 from glyphh_server.ops.link.calls import hold_run
 from glyphh_server.ops.link.presence import Runtime
-from glyphh_server.ops.link.protocol import FINAL, Deployed, Event, Result
+from glyphh_server.ops.link.protocol import FINAL, Deployed, Event, Result, Version
 from glyphh_server.ops.routines import Routines, fire_routine
 
 log = logging.getLogger("glyphh.link")
@@ -76,29 +79,25 @@ async def apply_event(
 
 
 async def apply_deployed(conn: AsyncConnection, runtime: Runtime, message: Deployed) -> None:
-    found = (
-        select(ModelVersion.id, ModelVersion.model_id)
-        .join(Model, Model.id == ModelVersion.model_id)
-        .where(
-            Model.user_id == runtime.user_id,
-            Model.name == message.model,
-            ModelVersion.version == message.version,
-            ModelVersion.commit_sha == message.commit_sha,
-        )
-    )
-    version = (await conn.execute(found)).first()
-    if version is None:
-        log.warning("deployed a version Glyphh has no record of", extra=fields(model=message.model))
-        return
-    siblings = select(ModelVersion.id).where(ModelVersion.model_id == version.model_id)
+    model_id, version_id = await reports.version_for(conn, runtime, message)
+    siblings = select(ModelVersion.id).where(ModelVersion.model_id == model_id)
     await conn.execute(
         update(Deployment)
         .where(Deployment.rrotor_id == runtime.id, Deployment.model_version_id.in_(siblings))
         .values(active=False)
     )
-    made = upsert(Deployment).values(rrotor_id=runtime.id, model_version_id=version.id, active=True)
+    made = upsert(Deployment).values(rrotor_id=runtime.id, model_version_id=version_id, active=True)
     await conn.execute(
         made.on_conflict_do_update(
             index_elements=["rrotor_id", "model_version_id"], set_={"active": True, "deployed_at": func.now()}
         )
     )
+
+
+async def record_hello(engine: AsyncEngine, runtime: Runtime, active: list[Version]) -> None:
+    """The versions a hello says are active, recorded as a `deployed` of each is, in one transaction as the owner:
+    a model deployed while the link was down is never missed."""
+    async with engine.begin() as conn:
+        await tenancy.enter(conn, runtime.org_id)
+        for version in active:
+            await apply_deployed(conn, runtime, Deployed(type="deployed", **version.model_dump()))

@@ -231,10 +231,12 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
     fly.machines["m_0"] = {"id": "m_0", "name": "other", "state": "stopped"}  # not the doorman: looked past
     ada, eve = await person(engine), await person(engine)
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        res = await client.post("/v1/runtime/keys", json={"name": "Claude"}, headers=ada.headers)
+        res = await client.post("/v1/runtime/keys", json={"name": "Claude", "expires_in_days": 30}, headers=ada.headers)
         assert (res.status_code, res.json()["error"]["reason"]) == (404, "no_runtime")
         runtime_id = (await client.post("/v1/runtime/start", headers=ada.headers)).json()["runtime_id"]
-        made = await client.post("/v1/runtime/keys", json={"name": " Claude "}, headers=ada.headers)
+        made = await client.post(
+            "/v1/runtime/keys", json={"name": " Claude ", "expires_in_days": 30}, headers=ada.headers
+        )
         assert made.status_code == 201, made.text
         key = made.json()
         assert key["key"].startswith("glyphh_rk_") and key["name"] == "Claude" and key["revoked_at"] is None
@@ -242,7 +244,11 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
             row = (await conn.execute(select(RuntimeKey).where(RuntimeKey.id == uuid.UUID(key["id"])))).one()
         assert row.key_hash == key_hash(key["key"]) and str(row.rrotor_id) == runtime_id
         async with holding(redis, uuid.UUID(runtime_id)) as sent:
-            second = (await client.post("/v1/runtime/keys", json={"name": "the CRM"}, headers=ada.headers)).json()
+            second = (
+                await client.post(
+                    "/v1/runtime/keys", json={"name": "the CRM", "expires_in_days": 90}, headers=ada.headers
+                )
+            ).json()
             pushed = await sent()
             assert (pushed["type"], pushed["hashes"]) == ("keys", [row.key_hash, key_hash(second["key"])])
             gone = await client.delete(f"/v1/runtime/keys/{key['id']}", headers=ada.headers)
