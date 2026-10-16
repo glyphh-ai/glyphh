@@ -28,12 +28,10 @@ flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh"]
-            Ada["ada"]
             Fun["drips, games"]
         end
         LocalRotor["rrotor, local<br/>models, parts"]
         Local[("~/.glyphh<br/>install, license")]
-        Ada --> LocalRotor
         Base --> Local
     end
 
@@ -41,25 +39,29 @@ flowchart TB
         Routine["Claude routines<br/>schedule, API, GitHub"]
     end
 
+    Apps["Any app or Claude session<br/>with a runtime key"]
+
     subgraph Cloud["Glyphh cloud"]
-        API["Server<br/>accounts, license, billing,<br/>MCP connector, relay"]
+        API["Server<br/>accounts, license, billing,<br/>MCP connector (the account),<br/>provisioning, the record"]
         DB[("Postgres")]
         API --- DB
     end
 
-    subgraph Fly["Glyphh hosting (Fly)"]
-        Rotor["rrotor machines<br/>runs models"]
+    subgraph Fly["Glyphh hosting (Fly): the runtimes app, *.glyphh.app"]
+        Door["doorman machine<br/>replays by Host"]
+        Rotor["the person's rrotor machine<br/>models, parts, keys<br/>REST + MCP on &lt;machine&gt;.glyphh.app"]
+        Door -. "fly-replay: instance" .-> Rotor
     end
 
-    Base <-- "device flow, license" --> API
-    Ada <-- "runtime token, models, approvals" --> API
+    Base <-- "device flow, license, runtime keys" --> API
     Fun -- "the licence, once paid" --> API
-    Routine -- "Glyphh connector (MCP)" --> API
-    Rotor -- "outbound link" --> API
+    Routine -- "MCP, bearer key" --> Fly
+    Apps -- "REST or MCP, bearer key" --> Fly
+    Rotor -- "outbound link: online, deployed,<br/>events, approvals; licence, pause" --> API
     LocalRotor -- "outbound link" --> API
 ```
 
-**What a person makes stays theirs:** their models, their precedents and their data, in their own rrotor. The server holds who they are, what they pay for, and the record of their models and runs, never their content.
+**What a person makes stays theirs:** their models, their precedents and their data, in their own rrotor. **Nothing of Glyphh's is on the data path:** a call goes from the caller to the person's machine over Fly's proxy, and the answer comes straight back. The server holds who they are, what they pay for, and the record of their models and runs, never their content, and never a result.
 
 ### The parts
 
@@ -98,7 +100,7 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 
 **An Ada model is a typed spec and a precedent store; rrotor runs it; Claude calls it.** Ada is a library (`glyphh_kernel.py`, `glyphh_spec.py`, `glyphh_nsm.py`; numpy only): a model is `spec.json` and a small `model.py` whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`). Nothing is trained; the model learns from the precedents it records. To rrotor a model is a **model**: a Python package with a manifest, deployed by commit, run in the sandbox, answering with a `Result`.
 
-**Built:** rrotor deploys a model by commit and runs it in its sandbox; the server hands a mod the runtime token and takes rrotor's link, approvals and the GitHub App. **Designed:** the Ada mod (it installs and starts rrotor, deploys models and calls them), the Ada part (numpy and the kernel), the server's models and runs API, the hosted runtime, the live panel and calls from routines.
+**Built:** rrotor deploys a model by commit and runs it in its sandbox; the Ada part; the hosted runtime on Fly (made on first start, woken, stopped when idle); the server's models record; rrotor's link, approvals and the GitHub App. **Designed (2026-10-16, replacing calls through the server):** each runtime reached directly at `<machine>.glyphh.app` (below, Reaching a runtime), runtime keys, rrotor serving MCP itself, the hours gate as a pause. **To remove once that lands:** the server's `/v1/runs`, calls down the link, and the connector's model tools.
 
 **A model**, as rrotor runs one:
 
@@ -130,13 +132,13 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 - **`clearance`** comes from the caller's Glyphh identity (the run's caller, the person's plan and org role), passed in the call and never from the inputs, so a model's facts are filtered by who asks.
 - **Secrets are never committed:** they stay in rrotor's vault.
 
-**Build time: in Claude, with the mod.** The mod's tools and skills let Claude, with the person, write the spec and the model's functions, run it against their rrotor, read the result and fix it until it passes, then deploy it and create its routine. Whatever is missing, Claude asks for: a Claude connector, or a secret.
+**Build time: in Claude, on the runtime.** Claude has the person's runtime as a connector (`https://<machine>.glyphh.app/mcp`, a runtime key): with the person it writes the spec and the model's functions, deploys by commit, calls the model, reads the result and fixes it until it passes, then creates its routine. There is no Ada mod; the `glyphh` mod (the account) is where the runtime is started and its keys are made.
 
 **Run time: Claude's routines are the runner** (designed).
 
 1. A routine fires on its schedule, its API trigger or a GitHub event, on Anthropic's machines, on the person's own Claude subscription.
-2. Claude calls the **Glyphh connector**: `call(model, function, inputs)`, then `continue(run_id, answer)` as needed.
-3. The server wakes the person's hosted runtime and passes the call over its outbound link. (A local runtime is reached by Claude on that computer, so cloud routines call the hosted one; local scheduled tasks call the local one.)
+2. Claude calls the **runtime's own MCP** at `<machine>.glyphh.app`: `model_call(model, function, inputs)`, then `model_continue(run_id, answer)` as needed. Any app does the same over REST (`POST /v1/runs`) with a runtime key.
+3. Fly's proxy lands the request on the person's machine, starting it if it was stopped. Nothing of Glyphh's sees the call or the answer.
 4. rrotor runs the step in its sandbox and answers the `Result`; Claude decides what is next.
 
 Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the band in Claude, a toast, an email). Claude can also call a model directly, in any session.
@@ -151,8 +153,8 @@ Routines run without approvals, so Glyphh's own rule is the brake: a step that `
 |---|---|---|
 | Who | Every plan, Free included | Pro and Team |
 | Where | The person's own computer (Apple's `container`, else OrbStack, else Docker), installed and started by the first mod that needs it | One Fly machine and its volume per person, made the first time the person starts it (`POST /v1/runtime/start`); nobody sees or manages it |
-| Up | While the computer is on | Stopped after `GLYPHH_RUNTIME_IDLE_MINUTES` (10) with no run, woken per call |
-| Called by | Claude on that computer, through the mods' local API | Claude anywhere and Claude's routines, through the Glyphh connector |
+| Up | While the computer is on | Stopped after `GLYPHH_RUNTIME_IDLE_MINUTES` (10) with no run; a request to its hostname starts it (Fly) |
+| Called by | Claude on that computer, on its loopback API | Claude anywhere, Claude's routines and any app, at `<machine>.glyphh.app` with a runtime key (designed) |
 | Caps | The computer's own | Runtime hours a month and storage, per plan |
 
 Both run the same image and the same SDK; a model built locally deploys to the hosted runtime unchanged.
@@ -164,6 +166,35 @@ Both run the same image and the same SDK; a model built locally deploys to the h
 - **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its model and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
 - **One volume, `/data`:** model versions, secrets (encrypted), run logs and outputs.
 - **No Claude login, no model, no keys of Claude's** anywhere in it.
+
+### Reaching a runtime (designed, 2026-10-16)
+
+**Every hosted runtime has a public address, `https://<machine>.glyphh.app`, and nothing of Glyphh's is between the caller and it.**
+
+![Reaching a runtime](img/reach-runtime.png)
+
+```mermaid
+sequenceDiagram
+    participant C as Claude or an app
+    participant F as Fly proxy (*.glyphh.app)
+    participant D as doorman machine
+    participant R as the person's rrotor
+    participant G as Glyphh server
+    C->>F: POST https://3d8f….glyphh.app/v1/runs (Bearer runtime key)
+    F->>D: any started machine in the app
+    D-->>F: fly-replay#58; instance=3d8f… (Host says which)
+    F->>R: the same request (the machine started if stopped)
+    R->>R: key checked (SHA-256 held)#59; paused? 402
+    R-->>C: the Result, with its data
+    R-)G: link#58; online, deployed, events, approvals (never results)
+```
+
+- **One Fly app, `glyphh-runtimes`, a wildcard certificate `*.glyphh.app` and a wildcard DNS record.** The hostname *is* the machine id, so no lookup anywhere: a machine that gets a request for another `Host` answers `fly-replay: instance=<id>` and Fly's proxy replays it there, starting that machine if it is stopped. One small always-on **doorman** machine takes the first hop, so nobody's machine is woken to bounce someone else's request. `fly-replay` carries bodies up to 1 MB: calls, continues and MCP; a deploy bundle goes by git through the link as before.
+- **Auth is rrotor's:** a request carries a **runtime key** (`Authorization: Bearer`), checked against the SHA-256s rrotor holds. Keys are made from the account (`POST /v1/runtime/keys`, or the `glyphh` mod and the connector's `create_runtime_key`), shown once, and their hashes reach rrotor in its `welcome` and as `keys` down the link when they change; revoking one is the same message. The local rrotor keeps its loopback-only API and local token.
+- **The API on the machine is rrotor's own** (rrotor's `docs/architecture.md`, section 7): `POST /v1/runs` answers the first `Result` with its data, `/continue`, `/cancel`, `GET /v1/runs/{id}`, `/log`, `/approvals`, `GET /v1/models`, `POST /v1/models/deploy`. **MCP too:** `https://<machine>.glyphh.app/mcp` (Streamable HTTP, the runtime key as the bearer) with `models_list`, `model_deploy`, `model_call`, `model_continue`, `run_status`, so Claude adds the runtime as a connector and talks to it directly.
+- **The hours gate:** the plan version carries the month's hosted hours; the server counts the machine's uptime (Fly's machine events) and, past the cap, sends `pause` down the link and stops the machine; rrotor answers `402 E_LIMIT runtime_hours` to every request until `resume` (the next month, or a bigger plan). `models` and `precedents` come from the licence in `welcome`, as now.
+- **The server's part:** provisioning (the machine, its volume, the keys' hashes in its environment), keys, hours, the licence, the record of versions (`/v1/models`, by commit) and what rrotor reports up the link. No call goes down the link; no result comes up it. The Glyphh connector keeps the account's tools only.
+- **Why not a proxy of ours:** the server on the data path couples every customer's throughput to it and makes "we never see your data" a promise instead of a fact; a Cloudflare Worker (the archived `edge`) would do the routing with a lookup, a service token and an origin secret, and still terminate TLS on a third party. Fly's replay does it with none of that; if it proves flaky, the Worker is the fallback, with the same rrotor and server contract.
 
 ### On the machine: `~/.glyphh`
 
@@ -197,8 +228,8 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Plans and seats:** per seat, through Stripe. A plan sets the account's limits; it includes no mod.
 - **Add-ons:** every mod, one Stripe subscription item each on the org's one subscription, prorated; per seat or flat; each add-on version names the plans it may be added to, whether Free may have it, and the mod's limits on each plan (below, Add-ons).
 - **Licence:** short-lived, signed, per install: plan, account limits, and each add-on the org has, with its limits (below, The license).
-- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools are the account's and the models': `models_list`, `call`, `continue`, `run_status`.
-- **The runtime link:** rrotor's outbound WebSocket (its own token); calls go down it, results and events come back. A local runtime's token stops working when its install is signed out.
+- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools are the account's (the models' tools it has today go once runtimes are reached directly; a runtime serves its own MCP).
+- **The runtime link:** rrotor's outbound WebSocket (its own token); today calls go down it and results come back; designed: only what rrotor reports comes up (online, deployed, events, approvals) and only the licence, keys and pause go down. A local runtime's token stops working when its install is signed out.
 - **Approvals, shown in Claude:** a step that needs approval is a row in `approvals` and a signal on **Redis** pub/sub to the server process holding the person's connection; the mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows Approve and Decline; the first answer wins. Redis runs on the server's own Fly machine and holds only what is live; Postgres holds everything kept.
 - **Models:** the record of each Ada model (a model, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (built: `/v1/models`, `/v1/runs`).
 - **Hosting:** makes each Pro and Team person's runtime on Fly when they first start it (a machine and a volume in Glyphh's one Fly app, the runtime token in the machine's environment, the licence in its `welcome`), wakes it per call, stops it when idle and counts its run time (built); billing its storage and hours beyond the plan's is designed.
@@ -223,17 +254,17 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional model; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a model's events |
 | Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, the Allow page (`POST /auth/oauth/allow`), `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}` (below, The connector) |
 | Models | `GET`/`POST /v1/models` (within Ada's `models` limit, `E_LIMIT` past it; `E_FORBIDDEN` `no_ada` without Ada; a name once per person), `GET`/`DELETE /v1/models/{id}` (the record, its versions, deployments and runs; the rrotor keeps its copy until a `remove` deploy), `POST /v1/models/{id}/versions` (a commit's SHA and its manifest: the next version; `E_CONFLICT` `commit_known`), `POST /v1/models/{id}/deploy` (`version`, `action` deploy \| activate \| remove, `runtime_id` or the caller's own: the install's local runtime, else the one seen most recently; the rrotor answers `deployed` on its link and only then is the version active there) |
-| Runs | `POST /v1/runs` (`model`, `function`, `inputs`, `version` or the active one, `runtime_id` as above, `caller`, `clearance` 0 to 1, default 1: `running` once the call went down the link; the result comes back on the link, never inputs or outputs here), `GET /v1/runs/{id}`, `GET /v1/runs?model=&status=&limit=&before=` (newest first, paged by `started_at`), `POST /v1/runs/{id}/continue` {`answer`} (only a run waiting, `E_CONFLICT` else), `POST /v1/runs/{id}/cancel` (a run not ended) |
+| Runs | **Built, to remove** (runs are called on the runtime itself once it is reached directly): `POST /v1/runs`, `GET /v1/runs/{id}`, `GET /v1/runs`, `POST /v1/runs/{id}/continue`, `POST /v1/runs/{id}/cancel`. The server keeps the run record it hears over the link (status, times, seconds), never inputs or outputs |
 | Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` {`approve` \| `decline`} (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting). Not built yet: the email when no Claude is open waits on a mail provider (`notified_at` stays empty) |
 
 **To build, for Ada** (the server's resource is still named `models`: what rrotor calls a model):
 
 | Area | Calls |
 |---|---|
-| Runs | `GET /v1/runs/{id}/live` (the stream, by ticket) |
-| Runtime | `POST /v1/runtime/storage` (grow the volume); the live panel's run events relayed from the link to its panel |
+| Reaching a runtime | The wildcard certificate and DNS on `glyphh-runtimes`, the doorman machine, rrotor's `Host` replay, key auth and `/mcp` on the machine (rrotor); `GET`/`POST /v1/runtime/keys`, `DELETE /v1/runtime/keys/{id}` (a key shown once; its hash to the machine's environment and down the link as `keys`); the hours count from Fly's machine events and `pause`/`resume` down the link; the connector's `create_runtime_key`, `runtime_keys`, `revoke_runtime_key` (above, Reaching a runtime) |
+| Runtime | `POST /v1/runtime/storage` (grow the volume); the live panel's run events from the runtime's own stream |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
-| Connector | The live panel on `/mcp` |
+| Connector | The live panel, served by the runtime's own MCP |
 
 ### The license
 
@@ -322,10 +353,7 @@ Nothing on these endpoints is rate-limited yet: the server has no rate limiting 
 | `installs`, `sign_out_install` | The person's installs; sign one out (`install_id`) | Everyone |
 | `members`, `invite` | The org's members and open invites; invite by `email` (the link, shown once) | Everyone; `invite` the admin |
 | `connector_grants`, `revoke_grant` | The connector's grants; revoke one (`grant_id`) | Everyone |
-| `models_list` | The person's models: each one's versions and which is active on a runtime | Everyone |
-| `call` | `model`, `function` (default `start`), `inputs`, `version`, `runtime_id`: call the model on the person's runtime as `claude`, clearance 1; the run, `running` | Everyone |
-| `continue` | `run_id`, `answer`: answer a run waiting for input | Everyone |
-| `run_status` | `run_id`: the run's status and timing | Everyone |
+| `models_list`, `call`, `continue`, `run_status` | Built; to go: a runtime serves its own MCP (above, Reaching a runtime). Until then they call the runtime through the link and answer status only, never the result's data | Everyone |
 
 Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content.
 
@@ -360,7 +388,7 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 
 - **The live panel from a mod's own MCP server** in the Code tab, on a run in rrotor.
 - **The Glyphh connector in a routine:** a routine calling `call` and `continue` on a test model, end to end.
-- **Waking the hosted runtime per call** fast enough for a tool call (Fly start, link up, answer).
+- **Fly's replay to a stopped machine:** `fly-replay: instance=` from the doorman to a machine that is stopped starts it and lands the request within a tool call's patience; and `*.glyphh.app` as one wildcard certificate on the runtimes app.
 - **Apple's `container`** running rrotor on macOS 26 (detected and started, not yet tested).
 - **Dependencies through the marketplace**, and **a built mod loading** as its source does.
 
