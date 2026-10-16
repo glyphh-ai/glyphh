@@ -68,9 +68,23 @@ export async function accept(d: Deps, raw: string): Promise<boolean> {
   return true
 }
 
-/** Opens checkout for this install, then waits for the server to say it is paid. */
+/** The licence the server holds for this install once it is paid; null until then, or when it can't be asked. */
+async function paidLicence(d: Deps, install: string): Promise<string | null> {
+  const res = await d.fetch(`${SERVER}/v1/unlock/license?mod=${MOD}&install=${encodeURIComponent(install)}`).catch(() => null)
+  const body = res?.ok ? parse(res.text) : null
+  return body?.paid === true && typeof body.licence === 'string' ? body.licence : null
+}
+
+/** Opens checkout for this install, then waits for the server to say it is paid.
+ *  An install already paid for (a wait that ended or a session that closed
+ *  before the licence came) unlocks at once, with no second checkout. */
 export async function buy(d: Deps): Promise<void> {
   const install = await installId(d)
+  const held = await paidLicence(d, install)
+  if (held && (await accept(d, held))) {
+    d.toast(`${PRODUCT} unlocked. Thank you!`)
+    return
+  }
   const url = `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(install)}`
   await d.state.set(s => ({ ...s, isWaiting: true, note: `Finish checkout in your browser: ${PRODUCT} unlocks on its own.` }))
   if (!(await d.open(url))) {
@@ -106,11 +120,9 @@ async function tick(d: Deps, timer: Timer, install: string, since: number): Prom
     await d.state.set(s => ({ ...s, isWaiting: false, note: 'No purchase seen in 10 minutes. Press Unlock to try again.' }))
     return
   }
-  const res = await d.fetch(`${SERVER}/v1/unlock/license?mod=${MOD}&install=${encodeURIComponent(install)}`).catch(() => null)
-  if (poll !== timer || !res?.ok) return
-  const body = parse(res.text)
-  if (body?.paid !== true || typeof body.licence !== 'string') return
+  const licence = await paidLicence(d, install)
+  if (poll !== timer || !licence) return
   stopPolling()
-  if (await accept(d, body.licence)) d.toast(`${PRODUCT} unlocked. Thank you!`)
+  if (await accept(d, licence)) d.toast(`${PRODUCT} unlocked. Thank you!`)
   else await d.state.set(s => ({ ...s, isWaiting: false, note: 'The licence the server sent did not check out. Press Unlock to try again.' }))
 }

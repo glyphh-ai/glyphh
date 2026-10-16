@@ -112,6 +112,7 @@ export function licensing(on: On) {
     if (words[0] === 'unlock') {
       if ((await read($, licence)).licence) return { text: `${PRODUCT} is already unlocked on this machine.` }
       await buy(deps($))
+      if ((await read($, licence)).licence) return { text: `${PRODUCT} unlocked: it was already paid for on this machine.` }
       return { text: `Checkout for ${PRODUCT} (${PRICE}, once) is open in your browser. ${PRODUCT} unlocks on its own when you've paid.` }
     }
     if (words[0] !== 'key') return next(e)
