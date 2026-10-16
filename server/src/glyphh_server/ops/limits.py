@@ -9,14 +9,13 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import LimitReached
-from glyphh_server.models import Install, Invite, Org, User, Workspace
-from glyphh_server.ops.plans import mod_limit, newest_versions
+from glyphh_server.models import Install, Invite, Org, User
+from glyphh_server.ops.plans import newest_versions
 
-# Each limit the server sees used, and where a plan version holds it: the account's in columns, a mod's in mod_limits.
+# Each limit the server sees used, and the plan version's column that holds it.
 ALLOWED: dict[str, Callable[[Row], int | None]] = {
     "members": lambda row: row.max_members,
     "installs": lambda row: row.max_installs,
-    "workspaces": lambda row: mod_limit(row, "workspaces", "workspaces"),
 }
 
 
@@ -79,7 +78,3 @@ async def seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
 async def installs(conn: AsyncConnection, user_id: uuid.UUID) -> int:
     """Active installs: the person's machines, since a machine has at most one."""
     return await _count(conn, Install.user_id == user_id, Install.revoked_at.is_(None))
-
-
-async def workspaces(conn: AsyncConnection, user_id: uuid.UUID) -> int:
-    return await _count(conn, Workspace.user_id == user_id)

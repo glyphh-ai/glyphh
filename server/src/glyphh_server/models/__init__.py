@@ -23,7 +23,6 @@ from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
 from glyphh_server.models.token import Token
 from glyphh_server.models.user import ROLES, User
-from glyphh_server.models.workspace import Workspace
 
 __all__ = [
     "ADDON_STATUSES",
@@ -63,5 +62,4 @@ __all__ = [
     "Run",
     "Token",
     "User",
-    "Workspace",
 ]

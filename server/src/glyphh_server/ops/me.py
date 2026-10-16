@@ -26,9 +26,6 @@ class Used(BaseModel):
     members: int
     seats: int
     installs: int
-    mods: dict[str, dict[str, int]] = Field(
-        description="What is used of each mod's limits, where the server sees it: the workspaces mod's workspaces"
-    )
 
 
 async def used(conn: AsyncConnection, who: Principal) -> Used:
@@ -36,7 +33,6 @@ async def used(conn: AsyncConnection, who: Principal) -> Used:
         members=await limits.members(conn, who.org_id),
         seats=await limits.seats_taken(conn, who.org_id),
         installs=await limits.installs(conn, who.user_id),
-        mods={"workspaces": {"workspaces": await limits.workspaces(conn, who.user_id)}},
     )
 
 

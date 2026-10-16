@@ -57,11 +57,6 @@ def included(row: Row, mods: list[str]) -> dict[str, ModLimits]:
     }
 
 
-def mod_limit(row: Row, mod: str, limit: str) -> int | None:
-    """One limit of one mod on a version: 0 when the version doesn't include the mod, None when unlimited."""
-    return row.mod_limits[mod][limit] if mod in row.mod_limits else 0
-
-
 def view(row: Row, mods: list[str]) -> PlanView:
     return PlanView(
         name=row.name,

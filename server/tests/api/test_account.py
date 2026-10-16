@@ -13,7 +13,6 @@ from tests.db.helpers import another_install, member, person
 async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await person(engine, "Team", seats=3)
     await member(engine, ada.org_id)
-    await client.post("/v1/workspaces", json={"name": "Inbox"}, headers=ada.headers)
     await client.post("/v1/org/invites", json={"email": "new@people.test"}, headers=ada.headers)
     me = (await client.get("/v1/me", headers=ada.headers)).json()
     assert (me["email"], me["name"], me["role"], me["providers"]) == (ada.email, "Ada Lovelace", "admin", [])
@@ -29,11 +28,9 @@ async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.As
         "version": 1,
         "seat_price_cents": 1600,
         "limits": {"members": None, "installs": 10},
-        "mods": {
-            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
-        },
+        "mods": {},
     }
-    assert me["used"] == {"members": 2, "seats": 3, "installs": 1, "mods": {"workspaces": {"workspaces": 1}}}
+    assert me["used"] == {"members": 2, "seats": 3, "installs": 1}
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

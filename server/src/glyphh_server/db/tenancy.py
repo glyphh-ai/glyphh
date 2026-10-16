@@ -2,7 +2,7 @@
 
 A request made with an install's token, or with a connector access token on /mcp, runs as the role `glyphh_tenant`
 with its org in `glyphh.org_id`, and the policies below show it only that org's rows: the org, its users, invites,
-add-ons and programs, and their identities, installs, tokens, workspaces, runtimes, GitHub installations, routine
+add-ons and programs, and their identities, installs, tokens, runtimes, GitHub installations, routine
 triggers, connector grants, their tokens and OAuth codes, and the programs' versions, deployments, runs, approvals and
 events.
 Sign-in, the connector's OAuth endpoints (a code or token is found by its hash before anyone is known), Stripe's
@@ -22,7 +22,6 @@ POLICIES: dict[str, str] = {
     "org_addons": f"org_id = {ORG}",
     "identities": "user_id IN (SELECT id FROM users)",
     "installs": "user_id IN (SELECT id FROM users)",
-    "workspaces": "user_id IN (SELECT id FROM users)",
     "tokens": "install_id IN (SELECT id FROM installs)",
     "rrotors": "user_id IN (SELECT id FROM users)",
     "connector_grants": "user_id IN (SELECT id FROM users)",

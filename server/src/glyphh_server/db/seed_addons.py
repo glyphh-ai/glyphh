@@ -1,4 +1,4 @@
-"""The add-ons every Glyphh database starts with: every mod but Workspaces, each with its first version. As with plans,
+"""The add-ons every Glyphh database starts with: every mod, each with its first version. As with plans,
 a Stripe price set for an add-on that its newest version doesn't sell on becomes a new version; a used version never
 changes."""
 

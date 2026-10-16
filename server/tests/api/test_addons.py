@@ -59,7 +59,6 @@ async def test_the_license_carries_each_addon_with_its_limits_on_the_orgs_plan(
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
     assert mods == {
         "gateway": {"limits": {"keys": None, "models": None}},
-        "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}},
     }
 
 

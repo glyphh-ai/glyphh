@@ -66,12 +66,12 @@ function showWho(w) {
 }
 
 function showPlan(d) {
-  const p = d.plan, o = d.org, used = d.used.mods || {};
+  const p = d.plan, o = d.org;
   const renews = o.renews_at ? `, renews ${o.renews_at.slice(0, 10)}` : "";
   $("plan").textContent = `${p.name}: ${o.seats} seats, billing ${o.billing_status}${renews}. ` +
     `Installs ${d.used.installs} of ${amount(p.limits.installs)}.`;
   $("mods").replaceChildren(...Object.entries(p.mods).map(([slug, m]) => item(`${slug}: ` +
-    Object.entries(m.limits).map(([k, v]) => (used[slug]?.[k] === undefined ? `${k} ${amount(v)}` : `${k} ${used[slug][k]} of ${amount(v)}`)).join(", "))));
+    Object.entries(m.limits).map(([k, v]) => `${k} ${amount(v)}`).join(", "))));
 }
 
 const money = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(2)}`;

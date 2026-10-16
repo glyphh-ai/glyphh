@@ -26,7 +26,6 @@ from glyphh_server.api import (
     plans,
     routine_triggers,
     runtime,
-    workspaces,
 )
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
@@ -43,7 +42,6 @@ ROUTERS = (
     device_pages,
     me,
     license,
-    workspaces,
     org,
     mods,
     plans,

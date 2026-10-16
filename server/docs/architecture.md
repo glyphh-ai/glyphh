@@ -9,37 +9,36 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 | Mod | What it is | Runs | Plans |
 |---|---|---|---|
 | `glyphh` | The account: sign in, license, account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan |
-| `glyphh-workspaces` | Workspaces: a layout grid of live web tabs plus the Claude session it runs (model, folder, permission mode, effort); switching workspaces switches all of it | The person's machine | Licensed; Free up to 2 workspaces |
 | `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
 | `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on Pro and Team | Every plan: local. Pro and Team: hosted, capped by hours and storage |
 
-- **The base subscription includes Workspaces; every other mod is an add-on** (Decisions, 5, which replaces "Pro and Team include every mod").
+- **Every mod is an add-on** to the plan (Decisions, 5, which replaces "Pro and Team include every mod").
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page, the connector's sign-in and Allow page, and Stripe's.
 
 ### Decisions (Chris, 2026-10-15)
 
 These come first where anything below says otherwise.
 
-1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`) and `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
+1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below), `gateway` and `ada`; a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
 2. **The server is headless.** A person manages their Glyphh account from Claude, or any MCP client, through the **Glyphh connector**: a remote MCP server at `/mcp` (Streamable HTTP), signed in with OAuth. Its tools are the account: who am I, the plan and each mod's limits, the plans, upgrade, billing, seats, installs, members and invites, and the connector's own grants. Where the client shows MCP App panels, the connector serves one, the account panel (`ui://glyphh/account/2`); every other client gets the same tools as text and structured content. The server's only pages are the device page and the connector's sign-in and Allow page, both generic (styled together later).
 3. **Programs, runs, the runtime and hours are not in scope now.** Their tables stay as drawn; their API and connector tools wait.
 4. **The mods that use rrotor** (Chris, 2026-10-15, later the same day; rrotor's `docs/architecture.md`, Decisions and sections 9 to 11, has the detail):
-    - The product is mods sold by subscription: **Workspaces** (no rrotor), and **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
+    - The product is mods sold by subscription: **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
     - **Gateway is a mod, never hosted by Glyphh:** it runs in the person's rrotor; models and keys are added in its UI and stay in rrotor, encrypted; it serves OpenAI- and Anthropic-compatible endpoints to programs and mods. It never routes a Claude subscription nor offers a Claude login ([Anthropic's terms](#anthropics-terms)). Designed only.
     - **Ada is a mod** on rrotor: an Ada model is a program (`spec.json` and a small program file, deployed by commit, no network, its precedent store in a per-program data folder outside git). Designed only.
     - **A small base image and a part per mod** (Programs: Chromium and profiles; Gateway: its runtime; Ada: numpy and the kernel); Postgres with pgvector, MongoDB and Neo4j are parts, not the base. Parts are versioned, come from the mod's release, are verified, and are licensed by the plan's per-mod limits.
     - **rrotor has no sign-in of its own:** the mod, signed in, asks `POST /v1/runtime/local` for the runtime token and hands it to rrotor; signing the install out cuts rrotor off. A hosted rrotor's token is made by the server at provisioning (designed).
     - **Claude reaches rrotor** locally through the mods (their tools call rrotor's local API on 127.0.0.1 with a local token only the mod holds), remotely through the Glyphh connector, the server and the runtime link. rrotor serves no MCP to Claude; no plugin carries an MCP server.
     - **Local runtimes:** Apple's `container` where present, else OrbStack, else Docker. Hosting on Fly is designed only.
-    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `workspaces`, `programs` (and later `gateway`, `ada`).
-5. **A base subscription and mod add-ons** (Chris, 2026-10-15, later still: "The base subscription comes with Workspaces. Then everything is an add-on."). This comes first where 1 and 4 say otherwise.
-    - **The plans (Free, Pro, Team; Solo still unseeded) include only `workspaces`** in their `mod_limits`, with its per-plan limits as before.
-    - **Every other mod is an add-on**, sold through Stripe: `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `workspaces`, `programs`, `gateway` and `ada`.
+    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `programs` (and later `gateway`, `ada`).
+5. **Every mod is an add-on** (Chris, 2026-10-15). This comes first where 1 and 4 say otherwise.
+    - **The plans (Free, Pro, Team; Solo still unseeded) include no mod:** their `mod_limits` are empty; a plan sets the account's limits and which add-ons it may have.
+    - **Every mod is an add-on**, sold through Stripe: `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `programs`, `gateway` and `ada`.
     - **One Stripe subscription per org:** the plan's item and one subscription item per add-on, on one invoice; adding or removing an add-on is prorated. An add-on is per seat (its quantity follows the seats) or flat (quantity 1), set per add-on; per seat until Chris decides.
     - **An add-on needs a paid plan,** unless the catalog marks it allowed on Free (per add-on, off by default); a Free org then subscribes to the add-ons alone, through Checkout.
     - **The add-on catalog is versioned like plan versions:** a used row never changes; a new Stripe price is a new version, and an org keeps the version it added.
     - **Which add-ons an org has comes from its subscription's items,** read fresh from Stripe on every event, not from Stripe Entitlements: Entitlements carry no quantity and no subscription item, which per-seat quantities and removing an add-on need anyway; feature changes reach existing subscriptions only at their next period; and the org's add-ons would then follow two event streams instead of the one that already keeps its plan true.
-    - **The license's `mods`** is the plan's mods (Workspaces) and each add-on the org has, each with its limits on the org's plan.
+    - **The license's `mods`** is each add-on the org has, each with its limits on the org's plan.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
 - **Functional first.** Every screen works before design draws it.
@@ -53,13 +52,11 @@ flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh"]
-            WS["glyphh-workspaces"]
             RPA["glyphh-rpa"]
             PR["glyphh-programs"]
         end
-        LocalRotor["rrotor, local<br/>browser, profiles, workspaces,<br/>sites, programs"]
+        LocalRotor["rrotor, local<br/>browser, profiles,<br/>sites, programs"]
         Local[("~/.glyphh<br/>install, license")]
-        WS --> LocalRotor
         RPA --> LocalRotor
         PR --> LocalRotor
         Base --> Local
@@ -85,7 +82,7 @@ flowchart TB
     Rotor -- "outbound link" --> API
 ```
 
-**What a person makes stays theirs:** workspaces and RPA on their own machine; programs, their data and their sign-ins in their own rrotor. The server holds who they are, what they pay for, and the record of their programs and runs, never their content.
+**What a person makes stays theirs:** RPA on their own machine; programs, their data and their sign-ins in their own rrotor. The server holds who they are, what they pay for, and the record of their programs and runs, never their content.
 
 ### Mods and how they are installed
 
@@ -100,7 +97,7 @@ flowchart TB
 |---|---|---|
 | What | Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts that an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), shown in a frame |
 | Can | Forms, lists, actions, on desktop and CLI | Live pictures, take control, anything a page can do; the host passes its theme as CSS variables |
-| Used for | Account, org, plan, billing, workspaces, programs, sequences | **The live panel:** a run streamed live, sign-ins, approvals |
+| Used for | Account, org, plan, billing, programs, sequences | **The live panel:** a run streamed live, sign-ins, approvals |
 
 Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App panel in Claude showed a machine's screen live and took control of it. Its lessons hold: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
 
@@ -109,18 +106,7 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 - **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub. One sign-in serves every mod on that machine.
 - **License:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
 - **Panels:** account, org, plan, billing.
-- **Starts the local rrotor** (Docker, OrbStack or Apple's `container`): the one place on the machine that holds the browser and its named profiles, workspaces, RPA sites and programs (Chris, 2026-10-14). The other mods work through it.
-
-### `glyphh-workspaces`
-
-Built from `~/development/glyphh/workspaces`.
-
-- **Workspaces:** switch with `/dip`. A workspace sets the session's model, folder, permission mode and effort, and opens its grid of tabs.
-- **Tabs:** a URL, its profile, and **no redirect** (a site is never handed to its native app: Slack, Teams, Zoom, Discord, Notion).
-- **Workspace files live in the local rrotor** (`/data/workspaces/<slug>.json`); its Chromium renders the tabs.
-- **Live pages:** on desktop the layout as one page in Claude's browser pane (`/stream`, WebRTC, JPEG fallback); in the CLI drawn in the terminal (kitty graphics: Ghostty, kitty).
-- **The limit:** each workspace's name is registered with the server; past the plan's limit it is refused.
-- **With RPA licensed,** a tab on a site that has sequences gets their tools, run in the tab.
+- **Starts the local rrotor** (Docker, OrbStack or Apple's `container`): the one place on the machine that holds the browser and its named profiles, RPA sites and programs (Chris, 2026-10-14). The other mods work through it.
 
 ### `glyphh-rpa`: local only
 
@@ -214,7 +200,7 @@ Only what the mods need to start and sign in; nothing here goes to the cloud.
 
 ### In rrotor: `/data`
 
-The same layout in the local and the hosted rrotor; workspaces and RPA sites are only in the local one.
+The same layout in the local and the hosted rrotor; RPA sites are only in the local one.
 
 
 | Path | What |
@@ -222,7 +208,6 @@ The same layout in the local and the hosted rrotor; workspaces and RPA sites are
 | `programs/<name>/<commit>/` | A deployed version: the checkout of that commit, its manifest and installed dependencies |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
 | `profiles/<name>/` | Named Chromium profiles: each holds only the sign-ins made in it |
-| `workspaces/<slug>.json` | Workspaces (local rrotor): session, grid, cells, tabs |
 | `rpa/<slug>.json`, `rpa/log/` | RPA sites and sequences with their approval rules, and what ran (local rrotor) |
 | `programs/<name>/files/` | The program's own folder, the only folder it sees |
 | `db/` | Postgres (pgvector), MongoDB and Neo4j data: each program its own database |
@@ -235,8 +220,8 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install, so the plan's installs count machines, not sign-ins.
 - **Org:** the first user is its admin and pays; one org per user; members by invite.
 - **Plans and seats:** per seat, through Stripe.
-- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names (now only `workspaces`), each with its limits.
-- **Add-ons:** every other mod, one Stripe subscription item each on the org's one subscription, prorated; per seat or flat; each add-on version names the plans it may be added to, whether Free may have it, and the mod's limits on each plan (below, Add-ons).
+- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names (now none), each with its limits.
+- **Add-ons:** every mod, one Stripe subscription item each on the org's one subscription, prorated; per seat or flat; each add-on version names the plans it may be added to, whether Free may have it, and the mod's limits on each plan (below, Add-ons).
 - **License:** short-lived, signed, per install: plan, account limits, and each included mod, from the plan or an add-on, with its limits (below, The license).
 - **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once). Its tools now are the account's (below, The connector); `programs_list`, `call`, `continue`, `run_status` and the live panel come with programs.
@@ -244,7 +229,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Approvals, shown in Claude** (Chris, 2026-10-14): a step that needs approval is a row in `approvals` (the record, kept until answered) and a signal on **Redis** pub/sub to the server process holding the person's connection. The `glyphh` mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows a band above the prompt with Approve and Decline, a toast and a native notification, with no Claude turn; the first answer wins, the band clears in every open Claude, and an email goes out when no Claude is open (`notified_at`).
 - **Redis runs on the server's own Fly machine**, beside the server (Chris, 2026-10-14); in development it is a service in `compose.yaml`. It holds only what is live (pub/sub); Postgres holds everything kept.
 - **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and bills its storage up to the person's cap.
-- **Limits are enforced here** where the server sees the use: members, seats and installs, and the `workspaces` mod's `workspaces` (each workspace's name is registered). Every other mod limit the mod enforces from its license.
+- **Limits are enforced here** where the server sees the use: members, seats and installs. Every mod limit the mod enforces from its license.
 
 ### API
 
@@ -255,8 +240,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Area | Calls |
 |---|---|
 | Device flow | `POST /v1/device/code` (with the mod's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` |
-| Account | `GET`/`PATCH /v1/me` (the plan with each mod's limits, and what is used where the server sees it: members, seats, installs, and `used.mods.workspaces.workspaces`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
-| Workspaces | `GET`/`POST /v1/workspaces`, `PATCH`/`DELETE /v1/workspaces/{name}` |
+| Account | `GET`/`PATCH /v1/me` (the plan with each mod's limits, and what is used where the server sees it: members, seats, installs), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods` (each mod, the plans that include it, and `addon`: the add-on it is sold as, `price_cents`, `per_seat`, `plans` and `free`, or `null`), `GET /v1/plans` (each plan's newest version: price, account limits, each mod and its limits), `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
 | Add-ons | `GET /v1/addons` (the catalog for the org's plan, with prices, and what the org has), `POST /v1/billing/checkout` with `addons`, `POST /v1/billing/addons/preview`, `POST /v1/billing/addons`, `DELETE /v1/billing/addons/{mod}` (below, Add-ons) |
@@ -290,8 +274,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
     "limits": {"members": 1, "installs": 5},
     "mods": {
       "gateway": {"limits": {"keys": 10, "models": 5}},
-      "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
-      "workspaces": {"limits": {"favorites": null, "stream": 1, "workspaces": 10}}
+      "programs": {"limits": {"programs": 25, "runs_per_day": 1000}}
     },
     "expires_at": "2026-10-16T09:30:00Z"
   },
@@ -301,12 +284,12 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 
 (A Pro org with the Gateway and Programs add-ons.)
 
-- `mods` names each mod the org has, and only those: the plan's (`workspaces`), and each add-on on its subscription, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
+- `mods` names each mod the org has, and only those: each add-on on its subscription, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
 - `limits` at the top are the account's: `members` (per org) and `installs` (per user), `null` for unlimited.
 
 ### Add-ons
 
-Every mod but Workspaces is an add-on to the plan: a line on the org's one Stripe subscription, on the same invoice, prorated when it changes. Writes are the admin's.
+Every mod is an add-on to the plan: a line on the org's one Stripe subscription, on the same invoice, prorated when it changes. Writes are the admin's.
 
 - **`GET /v1/addons`** (anyone in the org): each add-on on sale, and each the org has (at the version it added): `mod`, `name`, `description`, `version`, `price_cents` (a month, per seat when `per_seat`, else flat), `per_seat`, `monthly_cents` (for the org's seats now), `plans` (the paid plans it may be added to), `free` (whether a Free org may have it), `allowed` (on the org's plan), `limits` (the mod's limits on the org's plan; `null` when the plan may not have it and the org hasn't it), `added`, `quantity` (on the subscription; `null` when not added).
 - **`POST /v1/billing/checkout`** `{"plan", "seats", "addons": ["programs", …]}`: one Checkout with the plan's line and one per add-on (a per-seat add-on's quantity is the seats, a flat one's 1). `plan` `Free` with only add-ons the catalog allows on Free subscribes to those alone.
@@ -370,7 +353,6 @@ Each works before design draws it.
 |---|---|---|
 | Sign in, account, org, plan, billing | `glyphh` | Mod |
 | The account: who, plan, each mod's limits and use, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App |
-| Workspaces: list, create, edit, delete | `glyphh-workspaces` | Mod |
 | The local live panel: a profile's tab, steps, approvals, take control, record | `glyphh-rpa` | MCP App |
 | Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
 | Programs: list, versions, deploy, runs, needs you | `glyphh-programs` | Mod |
@@ -415,7 +397,6 @@ erDiagram
     ORGS ||--o{ INVITES : "sends"
     USERS ||--|{ IDENTITIES : "signs in with"
     USERS ||--o{ INSTALLS : "has"
-    USERS ||--o{ WORKSPACES : "owns"
     INSTALLS ||--o{ TOKENS : "holds"
     INSTALLS ||--o{ DEVICE_CODES : "approved by"
     USERS ||--o{ RROTORS : "has: one hosted, one local per install"
@@ -555,11 +536,6 @@ erDiagram
         timestamp denied_at
         timestamp created_at
     }
-    WORKSPACES {
-        uuid user_id PK, FK
-        text name PK
-        timestamp created_at
-    }
     RROTORS {
         uuid id PK
         uuid user_id FK
@@ -691,7 +667,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods the version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). A mod not named is not included; a retired mod (`active` false) is in no license. Changing a mod's limits is a new version, like any limit.
-- **Add-ons** (`addons`): each mod but Workspaces, sold as a line on the org's subscription. A version never changes its price, flags or limits: a new Stripe price is a new version (as plan versions); `active` false takes it off sale, and an org keeps the version it added. `limits` is `{"<plan>" | "*": {"<limit>": number | null}}`: the mod's limits on that plan, `*` for every plan not named. `plans` names the paid plans it may be added to; `free` lets a Free org have it (off unless set).
+- **Add-ons** (`addons`): each mod, sold as a line on the org's subscription. A version never changes its price, flags or limits: a new Stripe price is a new version (as plan versions); `active` false takes it off sale, and an org keeps the version it added. `limits` is `{"<plan>" | "*": {"<limit>": number | null}}`: the mod's limits on that plan, `*` for every plan not named. `plans` names the paid plans it may be added to; `free` lets a Free org have it (off unless set).
 - **Org add-ons** (`org_addons`): one row per org and mod, written only from Stripe's subscription: the version it sells (`addon_id`), its subscription item and quantity, `active` while the item is on the subscription and `removed` after (the item id cleared). Row-level security on the org, as the rest.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
 - **Runtimes** (`rrotors`): one hosted per Pro and Team user (`mode: hosted`), and one local per install that started one (`mode: local`, keyed by its install); each its own token. `state` is `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again).
@@ -711,22 +687,18 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ![What lives in rrotor's /data](img/data-model-local.png)
 
-- **A workspace is one file**: its session, its grid with saved sizes, its cells and tabs (URL, profile, no redirect).
 - **A site is one file** (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
 - **Named profiles** (`profiles/<name>/`) hold only the sign-ins made in them.
 
 ## Plans
 
-Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). **The base subscription comes with Workspaces; every other mod is an add-on** (Decisions, 5). Installs, mod limits, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). **Every mod is an add-on** (Decisions, 5). Installs, mod limits, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
 | Price per seat | $0 | ? | $8 | $16 |
 | Members | 1 | 1 | 1 | Unlimited |
 | Installs | 1 | ? | 5 | 10 |
-| `workspaces`: `workspaces` | 2 | ? | 10 | Unlimited |
-| `workspaces`: `favorites` | 5 (TBD) | ? | Unlimited (TBD) | Unlimited (TBD) |
-| `workspaces`: `stream` | 0 (TBD) | ? | 1 (TBD) | 1 (TBD) |
 | Add-ons (below) | Only those allowed on Free | ? | Every add-on | Every add-on |
 | Local runtime | Yes | Yes | Yes | Yes |
 | Hosted runtime (cloud) | No | No | Yes | Yes |

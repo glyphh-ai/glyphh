@@ -7,7 +7,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.db import tenancy
-from glyphh_server.models import Identity, Install, Invite, Org, Token, User, Workspace
+from glyphh_server.models import Identity, Install, Invite, Org, Token, User
 from tests.db.helpers import member, person
 
 
@@ -16,7 +16,6 @@ async def test_a_tenant_sees_only_its_own_org(engine: AsyncEngine, client: httpx
     bob = await member(engine, ada.org_id)
     eve = await person(engine, "Team", seats=3)
     for who in (ada, eve):
-        await client.post("/v1/workspaces", json={"name": "W"}, headers=who.headers)
         await client.post("/v1/org/invites", json={"email": "x@tenancy.test"}, headers=who.headers)
     async with engine.begin() as conn:
         await tenancy.enter(conn, ada.org_id)
@@ -24,7 +23,6 @@ async def test_a_tenant_sees_only_its_own_org(engine: AsyncEngine, client: httpx
         assert set((await conn.execute(select(User.id))).scalars()) == {ada.user_id, bob.user_id}
         assert set((await conn.execute(select(Invite.org_id))).scalars()) == {ada.org_id}
         assert set((await conn.execute(select(Install.user_id))).scalars()) == {ada.user_id, bob.user_id}
-        assert set((await conn.execute(select(Workspace.user_id))).scalars()) == {ada.user_id}
         assert (await conn.execute(select(func.count()).select_from(Token))).scalar_one() == 2
         assert (await conn.execute(select(func.count()).select_from(Identity))).scalar_one() == 0
         gone = await conn.execute(update(User).where(User.id == eve.user_id).values(name="hacked"))

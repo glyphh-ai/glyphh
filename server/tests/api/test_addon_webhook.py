@@ -27,7 +27,7 @@ async def test_a_finished_checkout_records_each_addon_and_a_replay_changes_nothi
             "programs": ("active", programs["id"], 3),
         }
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert list(mods) == ["gateway", "programs", "workspaces"]
+    assert list(mods) == ["gateway", "programs"]
 
 
 async def test_an_addon_gone_from_the_subscription_is_removed_even_when_older_events_arrive_after(

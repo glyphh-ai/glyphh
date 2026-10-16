@@ -67,7 +67,7 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "addons",
         "Add-ons",
-        "The Glyphh add-ons for the org's plan (every mod but Workspaces): each one's price, its limits on the plan, "
+        "The Glyphh add-ons for the org's plan (every mod): each one's price, its limits on the plan, "
         "and which the org has.",
         NoArgs,
         list_addons,

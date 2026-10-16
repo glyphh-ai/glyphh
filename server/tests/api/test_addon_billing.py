@@ -44,7 +44,7 @@ async def test_previewing_changes_nothing_and_adding_then_removing_is_prorated(
     item = stripe.subs[sub]["items"]["data"][1]["id"]
     assert await org_addons(engine, ada.org_id) == {"gateway": ("active", item, 1)}
     lic = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert list(lic) == ["gateway", "workspaces"]
+    assert list(lic) == ["gateway"]
     credit = await client.post(
         "/v1/billing/addons/preview", json={"mod": "gateway", "action": "remove"}, headers=ada.headers
     )
@@ -54,7 +54,7 @@ async def test_previewing_changes_nothing_and_adding_then_removing_is_prorated(
     assert (stripe.calls[-1][2]["items[0][id]"], stripe.calls[-1][2]["items[0][deleted]"]) == (item, "true")
     assert "proration_date" not in stripe.calls[-1][2]
     assert await org_addons(engine, ada.org_id) == {"gateway": ("removed", None, 1)}
-    assert list((await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]) == ["workspaces"]
+    assert list((await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]) == []
 
 
 async def test_adding_and_removing_refuse_with_stable_codes(

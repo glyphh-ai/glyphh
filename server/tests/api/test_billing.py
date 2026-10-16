@@ -15,11 +15,7 @@ async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> Non
         {"members": 1, "installs": 5},
         {"members": None, "installs": 10},
     ]
-    assert [p["mods"] for p in plans] == [
-        {"workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}}},
-        {"workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}}},
-        {"workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": None}}},
-    ]
+    assert [p["mods"] for p in plans] == [{}, {}, {}]
 
 
 async def test_checkout_makes_the_customer_once_and_sells_the_newest_price_per_seat(

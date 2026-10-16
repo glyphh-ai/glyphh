@@ -1,7 +1,7 @@
 """The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
-versions). A mod no longer seeded is retired, never deleted. The plans include only Workspaces; every other mod is an
-add-on (db/seed_addons.py)."""
+versions). A mod no longer seeded is retired, never deleted. The plans include no mod; every mod is an add-on
+(db/seed_addons.py)."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -22,12 +22,6 @@ class ModSeed:
 
 
 MODS: tuple[ModSeed, ...] = (
-    ModSeed(
-        "workspaces",
-        "Workspaces",
-        "Sets up Claude for a kind of work in one command: a grid of your favourite pages and the app's panes, "
-        "switched with /dip",
-    ),
     ModSeed(
         "programs",
         "Programs",
@@ -64,17 +58,12 @@ class PlanSeed:
 FREE: str = "Free"
 
 
-def _limits(workspaces: int | None, favorites: int | None, stream: int) -> ModLimits:
-    """The base subscription's one mod, Workspaces, and its limits; stream is a switch, 0 or 1."""
-    return {"workspaces": {"workspaces": workspaces, "favorites": favorites, "stream": stream}}
-
-
-# TBD (Chris): favorites and stream are placeholders until set; workspaces keeps the limits it had. Free has no hosted
-# runtime (0 hours, no storage); Pro's and Team's hours are still to decide (null).
+# Free has no hosted runtime (0 hours, no storage); Pro's and Team's hours are still to decide (null). No plan includes
+# a mod: every mod is an add-on.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 0, None, _limits(2, 5, 0)),
-    PlanSeed("Pro", 800, 1, 5, None, 50, _limits(10, None, 1)),
-    PlanSeed("Team", 1_600, None, 10, None, 50, _limits(None, None, 1)),
+    PlanSeed(FREE, 0, 1, 1, 0, None, {}),
+    PlanSeed("Pro", 800, 1, 5, None, 50, {}),
+    PlanSeed("Team", 1_600, None, 10, None, 50, {}),
 )
 
 

@@ -42,7 +42,7 @@ class Conflict(GlyphhError):
 
 
 class LimitReached(GlyphhError):
-    """The plan allows no more: members, seats, installs or workspaces. The detail names the limit, what is used,
+    """The plan allows no more: members, seats or installs. The detail names the limit, what is used,
     the most allowed, and the plan that would lift it."""
 
     code = "E_LIMIT"

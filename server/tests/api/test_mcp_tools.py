@@ -27,7 +27,6 @@ async def test_whoami_and_plan_show_the_account_each_mods_limits_and_what_is_use
 ) -> None:
     ada = await person(engine)
     _, auth = await granted(engine, ada)
-    await client.post("/v1/workspaces", json={"name": "Inbox"}, headers=ada.headers)
     async with engine.begin() as conn:
         renews = datetime(2026, 11, 15, tzinfo=UTC)
         await conn.execute(update(Org).where(Org.id == ada.org_id).values(renews_at=renews))
@@ -37,12 +36,11 @@ async def test_whoami_and_plan_show_the_account_each_mods_limits_and_what_is_use
     plan = await tool(client, auth, "plan")
     text = plan["content"][0]["text"]
     assert "Free (version 1), $0 per seat a month: 1 seats, billing none, renews 2026-11-15." in text
-    assert "workspaces: favorites 5, stream 0, workspaces 1 of 2\nAdd-ons: none." in text
+    assert "Members 1 of 1; installs 1 of 1.\nAdd-ons: none." in text
     data = plan["structuredContent"]
-    assert data["used"]["mods"] == {"workspaces": {"workspaces": 1}} and data["org"]["renews_at"].startswith(
-        "2026-11-15"
-    )
-    assert list(data["plan"]["mods"]) == ["workspaces"] and data["addons"] == []
+    assert data["used"] == {"members": 1, "seats": 1, "installs": 1}
+    assert data["org"]["renews_at"].startswith("2026-11-15")
+    assert data["plan"]["mods"] == {} and data["addons"] == []
 
 
 async def test_plans_lists_what_each_plan_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

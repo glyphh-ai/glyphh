@@ -1,4 +1,4 @@
-"""The add-on catalog: every mod but Workspaces, sold as a line on the org's subscription. Each add-on's newest version
+"""The add-on catalog: every mod, sold as a line on the org's subscription. Each add-on's newest version
 on sale, the versions an org has, the plans each may be added to, and the mod's limits on each plan."""
 
 import uuid

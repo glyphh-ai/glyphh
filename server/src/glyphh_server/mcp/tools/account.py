@@ -19,15 +19,11 @@ async def whoami(ctx: Context, _: NoArgs) -> Done:
     return Done(f"{found.name or found.email} ({found.email}), {found.role} of {found.org.name}.", data)
 
 
-def mod_lines(plan: PlanView, used: dict[str, dict[str, int]]) -> list[str]:
-    lines = []
-    for slug, mod in plan.mods.items():
-        parts = []
-        for limit, allowed in mod.limits.items():
-            seen = used.get(slug, {}).get(limit)
-            parts.append(f"{limit} {amount(allowed)}" if seen is None else f"{limit} {seen} of {amount(allowed)}")
-        lines.append(f"{slug}: {', '.join(parts)}")
-    return lines
+def mod_lines(plan: PlanView) -> list[str]:
+    return [
+        f"{slug}: {', '.join(f'{limit} {amount(allowed)}' for limit, allowed in mod.limits.items())}"
+        for slug, mod in plan.mods.items()
+    ]
 
 
 def price(plan: PlanView) -> str:
@@ -43,7 +39,7 @@ async def plan(ctx: Context, _: NoArgs) -> Done:
         f"{p.name} (version {p.version}), {price(p)}: {org.seats} seats, billing {org.billing_status}{renews}.",
         f"Members {used.members} of {amount(p.limits.members)}; "
         f"installs {used.installs} of {amount(p.limits.installs)}.",
-        *mod_lines(p, used.mods),
+        *mod_lines(p),
         "Add-ons: " + (", ".join(f"{a.mod} ({a.quantity})" for a in added) or "none") + ".",
     ]
     data: dict[str, Any] = {"plan": dump(p), "used": dump(used), "org": dump(org), "addons": [dump(a) for a in added]}
@@ -54,7 +50,7 @@ async def list_plans(ctx: Context, _: NoArgs) -> Done:
     found = await plans.list_plans(ctx.conn)
     lines = [
         f"{p.name}: {price(p)}; members {amount(p.limits.members)}, installs {amount(p.limits.installs)}; "
-        + "; ".join(mod_lines(p, {}))
+        + "; ".join(mod_lines(p))
         for p in found
     ]
     return Done("\n".join(lines), {"plans": [dump(p) for p in found]})

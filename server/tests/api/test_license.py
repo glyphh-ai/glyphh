@@ -40,15 +40,14 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
         {
             "gateway": {"limits": {"keys": 10, "models": 5}},
             "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
-            "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
         },
     )
-    assert list(p["mods"]) == ["gateway", "programs", "workspaces"]
+    assert list(p["mods"]) == ["gateway", "programs"]
     assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
     assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
     assert timedelta(hours=23, minutes=59) < left <= timedelta(hours=24)
-    lic["payload"]["mods"]["workspaces"]["limits"]["workspaces"] = None
+    lic["payload"]["mods"]["gateway"]["limits"]["keys"] = None
     with pytest.raises(InvalidSignature):
         _verify(key, lic)
 
@@ -58,7 +57,7 @@ async def test_free_carries_free_limits_and_the_license_needs_a_token(
 ) -> None:
     ada = await person(engine)
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert mods == {"workspaces": {"limits": {"favorites": 5, "stream": 0, "workspaces": 2}}}
+    assert mods == {}
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401
 
