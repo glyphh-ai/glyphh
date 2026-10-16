@@ -26,8 +26,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "gateway")
-    await with_addon(engine, ada.org_id, "programs")
+    await with_addon(engine, ada.org_id, "ada")
     lic = (await client.get("/v1/license", headers=ada.headers)).json()
     key = (await client.get("/v1/license/key", headers=ada.headers)).json()
     assert key["alg"] == "Ed25519"
@@ -38,16 +37,15 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
         "Pro",
         {"members": 1, "installs": 5},
         {
-            "gateway": {"limits": {"keys": 10, "models": 5}},
-            "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
+            "ada": {"limits": {"models": 3, "precedents": 10000}},
         },
     )
-    assert list(p["mods"]) == ["gateway", "programs"]
+    assert list(p["mods"]) == ["ada"]
     assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
     assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
     assert timedelta(hours=23, minutes=59) < left <= timedelta(hours=24)
-    lic["payload"]["mods"]["gateway"]["limits"]["keys"] = None
+    lic["payload"]["mods"]["ada"]["limits"]["models"] = None
     with pytest.raises(InvalidSignature):
         _verify(key, lic)
 

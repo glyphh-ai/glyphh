@@ -23,18 +23,6 @@ class ModSeed:
 
 MODS: tuple[ModSeed, ...] = (
     ModSeed(
-        "programs",
-        "Programs",
-        "Programs built with Claude, deployed by commit and run in rrotor, your own isolated runtime; called by Claude "
-        "and by its routines",
-    ),
-    ModSeed(
-        "gateway",
-        "Gateway",
-        "Your own models and keys in your rrotor, served as OpenAI- and Anthropic-compatible endpoints to your "
-        "programs and mods",
-    ),
-    ModSeed(
         "ada",
         "Ada",
         "Ada models in your rrotor: a spec and a small program, deployed by commit, learning from their precedents",

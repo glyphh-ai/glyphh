@@ -16,13 +16,11 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     assert res.status_code == 200
     mods = res.json()
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
-        ("programs", "Programs", []),
-        ("gateway", "Gateway", []),
         ("ada", "Ada", []),
     ]
     assert all(m["description"] for m in mods)
     assert [m["addon"] for m in mods] == [
-        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False} for cents in (400, 400, 400)
+        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False} for cents in (400,)
     ]
 
 
@@ -38,20 +36,20 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     pro = await person(engine, "Pro")
-    await with_addon(engine, pro.org_id, "gateway")
+    await with_addon(engine, pro.org_id, "ada")
     async with engine.begin() as conn:
         await conn.execute(insert(Mod).values(slug="glyphh-old", name="Old", description="Gone", sort=9))
-        await conn.execute(update(Mod).where(Mod.slug == "gateway").values(active=False))
+        await conn.execute(update(Mod).where(Mod.slug == "ada").values(active=False))
     try:
         await apply_schema(engine, SETTINGS)
         lic = (await client.get("/v1/license", headers=pro.headers)).json()["payload"]
         assert list(lic["mods"]) == []
         slugs = [m["slug"] for m in (await client.get("/v1/mods")).json()]
-        assert slugs == ["programs", "ada"]
-        assert "gateway" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
+        assert slugs == []
+        assert "ada" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
         async with engine.connect() as conn:
             assert (await conn.execute(select(Mod.active).where(Mod.slug == "glyphh-old"))).scalar_one() is False
     finally:
         async with engine.begin() as conn:
             await conn.execute(delete(Mod).where(Mod.slug == "glyphh-old"))
-            await conn.execute(update(Mod).where(Mod.slug == "gateway").values(active=True))
+            await conn.execute(update(Mod).where(Mod.slug == "ada").values(active=True))

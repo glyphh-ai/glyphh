@@ -102,7 +102,7 @@ async def test_an_addons_new_stripe_price_is_a_new_version_and_an_org_keeps_the_
         await apply_schema(engine, SETTINGS.model_copy(update={"stripe_price_ada": None}))
         async with engine.begin() as conn:
             (seed,) = [s for s in seed_addons.ADDONS if s.mod == "ada"]
-            await seed_addons.seed_addon(conn, seed, "price_test_gateway")
+            await seed_addons.seed_addon(conn, seed, "price_test_ada")
             versions = await conn.execute(select(Addon.version, Addon.stripe_price_id).where(Addon.mod == "ada"))
             assert sorted(tuple(v) for v in versions) == [(1, "price_test_ada"), (2, "price_test_ada_2026")]
             assert next(r for r in await newest_addons(conn) if r.mod == "ada").version == 2

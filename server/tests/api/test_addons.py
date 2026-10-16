@@ -16,13 +16,11 @@ async def test_the_catalog_shows_each_addon_its_price_and_whether_the_plan_may_h
     free = await person(engine)
     listed = (await client.get("/v1/addons", headers=free.headers)).json()
     assert [(a["mod"], a["price_cents"], a["allowed"], a["limits"], a["added"]) for a in listed] == [
-        ("programs", 400, False, None, False),
-        ("gateway", 400, False, None, False),
         ("ada", 400, False, None, False),
     ]
     assert listed[0] | {"description": ""} == {
-        "mod": "programs",
-        "name": "Programs",
+        "mod": "ada",
+        "name": "Ada",
         "description": "",
         "version": 1,
         "price_cents": 400,
@@ -42,23 +40,22 @@ async def test_the_catalog_for_a_team_shows_team_limits_seat_prices_and_what_it_
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Team", seats=3)
-    await with_addon(engine, ada.org_id, "programs", quantity=3)
+    await with_addon(engine, ada.org_id, "ada", quantity=3)
     bob = await member(engine, ada.org_id)
     listed = {a["mod"]: a for a in (await client.get("/v1/addons", headers=bob.headers)).json()}
-    assert (listed["programs"]["added"], listed["programs"]["quantity"]) == (True, 3)
-    assert listed["programs"]["limits"] == {"programs": None, "runs_per_day": None}
-    assert (listed["programs"]["monthly_cents"], listed["gateway"]["monthly_cents"]) == (1200, 1200)
-    assert listed["gateway"]["limits"] == {"keys": None, "models": None} and not listed["gateway"]["added"]
+    assert (listed["ada"]["added"], listed["ada"]["quantity"]) == (True, 3)
+    assert listed["ada"]["limits"] == {"models": None, "precedents": None}
+    assert listed["ada"]["monthly_cents"] == 1200
 
 
 async def test_the_license_carries_each_addon_with_its_limits_on_the_orgs_plan(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Team", seats=2)
-    await with_addon(engine, ada.org_id, "gateway", quantity=2)
+    await with_addon(engine, ada.org_id, "ada", quantity=2)
     mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
     assert mods == {
-        "gateway": {"limits": {"keys": None, "models": None}},
+        "ada": {"limits": {"models": None, "precedents": None}},
     }
 
 
@@ -67,13 +64,13 @@ async def test_checkout_sells_the_plan_and_each_addon_as_its_own_line(
 ) -> None:
     ada = await person(engine, "Team", seats=3)
     async with confetti(engine):
-        body = {"plan": "Team", "seats": 3, "addons": ["gateway", "Confetti"]}
+        body = {"plan": "Team", "seats": 3, "addons": ["ada", "Confetti"]}
         res = await client.post("/v1/billing/checkout", json=body, headers=ada.headers)
     assert res.status_code == 200
     session = stripe.calls[-1][2]
     assert [(session[f"line_items[{i}][price]"], session[f"line_items[{i}][quantity]"]) for i in range(3)] == [
         ("price_test_team", "3"),
-        ("price_test_gateway", "3"),
+        ("price_test_ada", "3"),
         ("price_test_confetti", "1"),
     ]
 
@@ -90,7 +87,7 @@ async def test_a_free_org_checks_out_only_addons_allowed_on_free(
         session = stripe.calls[-1][2]
         assert (session["line_items[0][price]"], "line_items[1][price]" in session) == ("price_test_confetti", False)
         for addons, status, reason in (
-            (["gateway"], 409, "not_on_plan"),
+            (["ada"], 409, "not_on_plan"),
             (["confetti", "confetti"], 422, "duplicate_addon"),
             (["nothing"], 422, "no_addon"),
         ):

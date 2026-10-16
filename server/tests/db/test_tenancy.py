@@ -44,8 +44,8 @@ async def test_a_tenant_sees_and_writes_only_its_own_orgs_addons(engine: AsyncEn
     from tests.db.helpers import with_addon
 
     ada, eve = await person(engine, "Pro"), await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "gateway")
-    await with_addon(engine, eve.org_id, "gateway")
+    await with_addon(engine, ada.org_id, "ada")
+    await with_addon(engine, eve.org_id, "ada")
     async with engine.begin() as conn:
         await tenancy.enter(conn, ada.org_id)
         assert set((await conn.execute(select(OrgAddon.org_id))).scalars()) == {ada.org_id}
