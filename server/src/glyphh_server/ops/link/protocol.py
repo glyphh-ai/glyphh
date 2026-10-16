@@ -23,7 +23,7 @@ FAILED: int = 1011  # the Cloud could not record a message: reconnect, and repla
 RESTART: int = 1012  # the server is restarting: reconnect
 
 RUNNING: str = "running"
-WAITING: frozenset[str] = frozenset({"needs_input", "needs_approval", "needs_signin"})
+WAITING: frozenset[str] = frozenset({"needs_input", "needs_approval"})
 FINAL: frozenset[str] = frozenset({"done", "failed", "expired", "cancelled"})
 
 Id = Annotated[str, Field(min_length=1, max_length=64)]
@@ -63,7 +63,7 @@ class Hello(Message):
 class Outcome(BaseModel):
     """A run's `Result`; `expired` and `cancelled` end a run that waited too long or was cancelled (5.4)."""
 
-    status: Literal["done", "needs_input", "needs_approval", "needs_signin", "failed", "expired", "cancelled"]
+    status: Literal["done", "needs_input", "needs_approval", "failed", "expired", "cancelled"]
     data: Any = None
     step: Name | None = None
     prompt: str | None = None
@@ -85,13 +85,6 @@ class Result(Message):
 
 class Deployed(Version, Message):
     type: Literal["deployed"]
-
-
-class Frame(Message):
-    type: Literal["frame"]
-    run_id: uuid.UUID
-    image: str  # a JPEG, base64
-    seq: int = Field(ge=0)
 
 
 class Event(Message):
@@ -116,7 +109,7 @@ class Ack(Message):
     of: Id
 
 
-Inbound = Annotated[Result | Deployed | Frame | Event | Ping | Pong | Ack, Field(discriminator="type")]
+Inbound = Annotated[Result | Deployed | Event | Ping | Pong | Ack, Field(discriminator="type")]
 INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
 
 
@@ -172,25 +165,4 @@ class SecretSet(Message):
     value: str  # encrypted to the rrotor's public key, base64
 
 
-class Live(Message):
-    """live_open or live_close: frames of one run, or of one profile's browser."""
-
-    type: Literal["live_open", "live_close"]
-    run_id: uuid.UUID | None = None
-    profile: Name | None = None
-
-    @model_validator(mode="after")
-    def _one_target(self) -> Self:
-        if (self.run_id is None) == (self.profile is None):
-            raise ValueError("live names a run_id or a profile")
-        return self
-
-
-class Input(Message):
-    type: Literal["input"] = "input"
-    run_id: uuid.UUID
-    kind: Literal["take", "give_back", "click", "key", "paste"]
-    data: dict[str, Any] = {}
-
-
-Outbound = Welcome | Call | Continue | Cancel | Deploy | SecretSet | Live | Input | Ping | Pong | Ack
+Outbound = Welcome | Call | Continue | Cancel | Deploy | SecretSet | Ping | Pong | Ack

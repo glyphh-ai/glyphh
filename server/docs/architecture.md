@@ -30,7 +30,7 @@ flowchart TB
             Base["glyphh"]
             PR["programs, gateway, ada"]
         end
-        LocalRotor["rrotor, local<br/>browser, profiles,<br/>programs, parts"]
+        LocalRotor["rrotor, local<br/>programs, parts"]
         Local[("~/.glyphh<br/>install, license")]
         PR --> LocalRotor
         Base --> Local
@@ -47,7 +47,7 @@ flowchart TB
     end
 
     subgraph Fly["Glyphh hosting (Fly)"]
-        Rotor["rrotor machines<br/>runs programs, Chromium"]
+        Rotor["rrotor machines<br/>runs programs"]
     end
 
     Base <-- "device flow, license" --> API
@@ -82,7 +82,7 @@ flowchart TB
 |---|---|---|
 | What | Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts that an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), shown in a frame |
 | Can | Forms, lists, actions, on desktop and CLI | Live pictures, take control, anything a page can do; the host passes its theme as CSS variables |
-| Used for | Account, org, plan, billing, programs | **The live panel:** a run streamed live, sign-ins, approvals; the connector's account panel |
+| Used for | Account, org, plan, billing, programs | **The live panel:** a run's steps and log as they happen, approvals; the connector's account panel |
 
 Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App panel in Claude showed a machine's screen live and took control of it. Its lessons hold: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
 
@@ -104,7 +104,7 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 from rrotor import Ctx, Result
 
 
-def load(ctx: Ctx) -> None: ...  # once per run: open the profile, read config
+def load(ctx: Ctx) -> None: ...  # once per run: read config, open connections
 def start(ctx: Ctx, inputs: dict) -> Result: ...  # the main job
 def fetch_leads(ctx: Ctx, since: str) -> Result: ...  # custom functions, each callable on its own
 def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
@@ -117,17 +117,16 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 | `done` | Here is the result: data, a file, a link | Uses it, or finishes |
 | `needs_input` | A value is missing, or a choice: "pick A, B or C" | Answers, then `continue` |
 | `needs_approval` | About to act: "click Post" | Asks the person; unattended, leaves it waiting for them |
-| `needs_signin` | A site signed the program out | Opens the live panel for the person; unattended, stops and says so |
 | `failed` | Which step and why | Retries, tries another way, or reports |
 
-- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db` (its own databases, from the database parts), `ctx.gateway` (with the Gateway part), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
+- **`ctx` is what the program was granted**, nothing else: `ctx.http` (only the hosts the manifest declares), `ctx.db` (its own databases, from the database parts), `ctx.gateway` (with the Gateway part), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
 - **Folders exist only through the program:** a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; no program reaches another's.
-- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles, the steps that need approval, and the Claude connectors its routine needs.
+- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, the steps that need approval, and the Claude connectors its routine needs.
 - **Programs live in the runtime and in git:** each program is a repo in the person's own GitHub account; a version is a commit. The server keeps only an index (name, repo, versions as commit SHAs, where each is deployed) and the run records. Glyphh's cloud never keeps a copy of the code.
 - **Git is required for hosted programs:** the person installs the Glyphh GitHub App on their account (built); deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
 - **Secrets are never committed:** they stay in rrotor's vault.
 
-**Build time: in Claude, with the mod.** The mod's tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and create its routine. Whatever is missing, Claude asks for: a Claude connector, a secret, or a **sign-in to a site**, which opens the live panel on the run: the person takes control and signs in; the sign-in stays in that profile in rrotor; Claude sees nothing while they hold it.
+**Build time: in Claude, with the mod.** The mod's tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and create its routine. Whatever is missing, Claude asks for: a Claude connector, or a secret.
 
 **Run time: Claude's routines are the runner** (designed).
 
@@ -138,7 +137,7 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 
 Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the band in Claude, a toast, an email). Claude can also call programs directly, in any session.
 
-**The live panel** (designed) streams a run: the program's browser, its steps, its log, approvals, take control. It is an MCP App panel; frames come from rrotor through the server's relay.
+**The live panel** (designed) shows a run as it happens: its steps, its log and its approvals. It is an MCP App panel; the run's events come from rrotor through the server's relay.
 
 ### `gateway` and `ada` (designed)
 
@@ -160,11 +159,11 @@ Routines run without approvals, so Glyphh's own rule is the brake: a step that `
 Both run the same image, the same programs and the same SDK; a program built locally deploys to the hosted runtime unchanged.
 
 - **A small base image** (`ghcr.io/glyphh-ai/rrotor`): Python, Node, the program sandbox, the link client, the local API and the program runner. **Headless:** no UI, no desktop, nothing to log into.
-- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Programs' browser (Chromium and named profiles), Gateway's runtime, Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a program asks for.
+- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Gateway's runtime, Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a program asks for.
 - **No sign-in of its own:** the mod, signed in, asks the server for the runtime token (`POST /v1/runtime/local`) and hands it to rrotor; signing the install out cuts rrotor off.
 - **No inbound ports from outside the machine:** the local API listens on loopback only, behind a token only the mod holds; rrotor connects out to the server and takes remote calls over that link.
 - **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its program and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
-- **One volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
+- **One volume, `/data`:** program versions, secrets (encrypted), run logs and outputs.
 - **No Claude login, no model, no keys of Claude's** anywhere in it.
 
 ### On the machine: `~/.glyphh`
@@ -186,7 +185,6 @@ The same layout in the local and the hosted rrotor.
 | `programs/<name>/files/` | The program's own folder, the only folder it sees |
 | `programs/<name>/data/` | Data a program's mod keeps outside git (Ada's precedent store) |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
-| `profiles/<name>/` | Named Chromium profiles: each holds only the sign-ins made in it |
 | `parts/<part>/` | The parts the mods installed |
 | `db/` | The database parts' data: each program its own database |
 | `runs/<run_id>/` | A run's log, checkpoints and outputs |
@@ -232,7 +230,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 |---|---|
 | Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (commit SHA, manifest), `POST /v1/programs/{id}/deploy` (a version) |
 | Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
-| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); waking a stopped hosted runtime per call (Fly), behind the link's `wake_hosted` seam; the live panel's frames relayed from the link to its panel |
+| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); waking a stopped hosted runtime per call (Fly), behind the link's `wake_hosted` seam; the live panel's run events relayed from the link to its panel |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
 | Connector | The programs tools on `/mcp`: `programs_list`, `call`, `continue`, `run_status` and the live panel |
 
@@ -332,7 +330,7 @@ Each works before design draws it.
 | The account: who, plan, each mod's limits, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App | Built |
 | Not in your plan, with the add-on's offer and **Add it** | every mod | Mod | Built |
 | Programs: list, versions, deploy, runs, needs you | `programs` | Mod | Designed |
-| The live panel: a run in rrotor, its browser, steps, approvals, take control, sign in | `programs` | MCP App | Designed |
+| The live panel: a run in rrotor, its steps, log and approvals | `programs` | MCP App | Designed |
 | Runtime: local on or off; hosted state, hours and storage used, grow storage | `programs` | Mod | Designed |
 
 ### Anthropic's terms
@@ -347,12 +345,11 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 
 **To prove:**
 
-- **The live panel from a mod's own MCP server** in the Code tab, on a run in rrotor, with take control and a sign-in.
+- **The live panel from a mod's own MCP server** in the Code tab, on a run in rrotor.
 - **The Glyphh connector in a routine:** a routine calling `call` and `continue` on a test program, end to end.
 - **Waking the hosted runtime per call** fast enough for a tool call (Fly start, link up, answer).
 - **Apple's `container`** running rrotor on macOS 26 (detected and started, not yet tested).
 - **Dependencies through the marketplace**, and **a built mod loading** as its source does.
-- **Google sign-in in Chromium under automation** ("This browser or app may not be secure").
 
 **To decide (Chris):**
 
@@ -670,7 +667,6 @@ Every table and column is drawn, as the database has them; the tables from rroto
 ### In rrotor
 
 - **Programs** live under `programs/<name>/`: each deployed commit, the program's own folder and its persistent data.
-- **Named profiles** (`profiles/<name>/`) hold only the sign-ins made in them.
 
 ## Plans
 

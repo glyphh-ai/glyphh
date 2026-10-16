@@ -143,7 +143,6 @@ async def test_unreadable_messages_are_skipped_and_the_link_stays(engine: AsyncE
                 "result": {"status": "needs_approval"},
             },
             {"type": "event", "id": "e", "seq": 0, "program": "p", "kind": "k"},
-            {"type": "frame", "id": "f", "run_id": str(rt.id), "image": "/9j/", "seq": 0},
             {"type": "ack", "id": "a", "of": "w"},
         ):
             await ws.send_json(message)

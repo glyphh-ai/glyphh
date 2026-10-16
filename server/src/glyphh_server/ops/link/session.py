@@ -32,7 +32,6 @@ from glyphh_server.ops.link.protocol import (
     Ack,
     Deployed,
     Event,
-    Frame,
     Inbound,
     Limits,
     Ping,
@@ -131,10 +130,10 @@ async def _read(ctx: Context, runtime: Runtime, link: Link, clock: Clock) -> Non
 
 async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -> bool:
     """Answer or record one message; False once the link is closed because it could not be recorded."""
-    if isinstance(message, Ping | Pong | Ack | Frame):
+    if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
             await link.send(Pong().model_dump())
-        return True  # heard; frames are best effort and no live panel takes them yet, so they are dropped
+        return True
     try:
         async with ctx.engine.begin() as conn:
             await tenancy.enter(conn, runtime.org_id)

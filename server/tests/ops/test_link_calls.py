@@ -7,7 +7,6 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
 from redis.asyncio import Redis
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -19,7 +18,6 @@ from glyphh_server.ops import github_app
 from glyphh_server.ops.github_app import GitHubApp
 from glyphh_server.ops.link.calls import send_call, send_cancel, send_continue, send_deploy
 from glyphh_server.ops.link.hub import Hub, Link
-from glyphh_server.ops.link.protocol import Live
 from tests.conftest import GITHUB_APP_ID, GITHUB_APP_KEY, SETTINGS
 from tests.db.helpers import Person, person
 from tests.fakes import FakeGitHubApp, fake_http
@@ -161,10 +159,3 @@ async def test_a_link_already_gone_answers_false_and_closes_quietly(redis: Redis
     await link.close(1000, "bye")
     hub.detach(Link(_Gone(), link.runtime_id))  # type: ignore[arg-type]  # not the one held: kept
     assert hub.links[link.runtime_id] is link
-
-
-def test_live_names_a_run_or_a_profile() -> None:
-    assert Live(type="live_open", profile="work").profile == "work"
-    for both_or_neither in ({"run_id": uuid.uuid4(), "profile": "work"}, {}):
-        with pytest.raises(ValidationError, match="run_id or a profile"):
-            Live(type="live_close", **both_or_neither)
