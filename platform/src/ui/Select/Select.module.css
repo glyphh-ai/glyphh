@@ -1,0 +1,19 @@
+.box {
+  position: relative;
+}
+
+.select {
+  width: 100%;
+  padding-right: 36px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
