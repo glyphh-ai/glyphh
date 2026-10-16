@@ -1,16 +1,17 @@
-"""What other code sends down a runtime's link: a call, a continue, a cancel, a deploy.
+"""What other code sends down a runtime's link: an approval's answer (`continue`) and a deploy. Calls never go
+down it: a runtime is called at its own address (docs, Reaching a runtime).
 
 Each runs in the caller's transaction, as the caller's org, so only the caller's own runtimes and runs are found. A
-run is held (hold_run) before its message goes down, so its result is applied only once the caller commits;
-a message that cannot go raises, and the caller's transaction, a new run's row too, rolls back. A local runtime no
-process holds answers E_UNAVAILABLE with when it was last seen; a hosted one is woken (its Fly machine started, by
-the hub's waker) and the message waits for its link, up to WAKE_WAIT."""
+run is held (hold_run) before its message goes down, so its result is applied only once the caller commits; a
+message that cannot go raises, and the caller's transaction rolls back. A local runtime no process holds answers
+E_UNAVAILABLE with when it was last seen; a hosted one is woken (its Fly machine started, by the hub's waker) and
+the message waits for its link, up to WAKE_WAIT."""
 
 import uuid
 from typing import Any, Literal
 
 import anyio
-from sqlalchemy import Row, delete, insert, select, update
+from sqlalchemy import Row, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict, NotFound, Unavailable
@@ -19,7 +20,7 @@ from glyphh_server.ops.auth.signin import lock
 from glyphh_server.ops.github_app import GitHubApp
 from glyphh_server.ops.github_installations import repo_token
 from glyphh_server.ops.link.hub import Hub
-from glyphh_server.ops.link.protocol import FINAL, RUNNING, WAITING, Call, Cancel, Continue, Deploy, Outbound
+from glyphh_server.ops.link.protocol import RUNNING, WAITING, Continue, Deploy, Outbound
 
 DeployAction = Literal["deploy", "activate", "remove"]
 WAKE_WAIT: float = 45.0  # a stopped Fly machine starts in seconds; its rrotor links in a few more
@@ -74,56 +75,6 @@ async def deliver(hub: Hub, runtime: Row, message: Outbound) -> None:
     )
 
 
-async def _version(conn: AsyncConnection, runtime_id: uuid.UUID, model_id: uuid.UUID, version: int | None) -> Row:
-    """That version of the model, or, with none named, the one active on this runtime."""
-    found = (
-        select(ModelVersion.id, ModelVersion.version, Model.name)
-        .join(Model, Model.id == ModelVersion.model_id)
-        .where(Model.id == model_id)
-    )
-    if version is None:
-        found = found.join(Deployment, Deployment.model_version_id == ModelVersion.id).where(
-            Deployment.rrotor_id == runtime_id, Deployment.active.is_(True)
-        )
-    else:
-        found = found.where(ModelVersion.version == version)
-    row = (await conn.execute(found)).first()
-    if row is None:
-        raise NotFound("That model has no such version on this runtime.", model_id=str(model_id))
-    return row
-
-
-async def send_call(
-    conn: AsyncConnection,
-    hub: Hub,
-    runtime_id: uuid.UUID,
-    model_id: uuid.UUID,
-    version: int | None,
-    function: str,
-    inputs: dict[str, Any],
-    caller: str,
-    clearance: float = 1.0,
-) -> uuid.UUID:
-    """Open a run: its row (running), then `call` down the runtime's link, with the caller's clearance (0 to 1; 1 is
-    the person themself). Answers the run's id."""
-    runtime = await _runtime(conn, runtime_id)
-    found = await _version(conn, runtime_id, model_id, version)
-    values = {"model_version_id": found.id, "rrotor_id": runtime_id, "function": function, "caller": caller}
-    run_id = (await conn.execute(insert(Run).values(**values, status=RUNNING).returning(Run.id))).scalar_one()
-    await hold_run(conn, run_id)
-    message = Call(
-        run_id=run_id,
-        model=found.name,
-        version=found.version,
-        function=function,
-        inputs=inputs,
-        caller=caller,
-        clearance=clearance,
-    )
-    await deliver(hub, runtime, message)
-    return run_id
-
-
 async def _held_run(conn: AsyncConnection, run_id: uuid.UUID) -> Row:
     await hold_run(conn, run_id)
     row = (await conn.execute(select(Run.rrotor_id, Run.status).where(Run.id == run_id))).first()
@@ -139,14 +90,6 @@ async def send_continue(conn: AsyncConnection, hub: Hub, run_id: uuid.UUID, answ
         raise Conflict("This run is not waiting for an answer.", run_id=str(run_id), status=run.status)
     await conn.execute(update(Run).where(Run.id == run_id).values(status=RUNNING))
     await deliver(hub, await _runtime(conn, run.rrotor_id), Continue(run_id=run_id, answer=answer))
-
-
-async def send_cancel(conn: AsyncConnection, hub: Hub, run_id: uuid.UUID) -> None:
-    """Stop a run; the rrotor runs its `end` and answers its result, `cancelled`."""
-    run = await _held_run(conn, run_id)
-    if run.status in FINAL:
-        raise Conflict("This run has ended.", run_id=str(run_id), status=run.status)
-    await deliver(hub, await _runtime(conn, run.rrotor_id), Cancel(run_id=run_id))
 
 
 async def send_deploy(

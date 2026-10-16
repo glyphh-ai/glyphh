@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     fly_app: str = ""
     fly_region: str = "iad"
     fly_image: str = ""
+    # The runtimes' public addresses: <machine>.<domain>, a wildcard certificate and DNS record on the app.
+    fly_public_domain: str = "glyphh.app"
     fly_cpus: int = 1
     fly_memory_mb: int = 1024
     fly_volume_gb: int = 3

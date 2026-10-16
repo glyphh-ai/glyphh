@@ -16,7 +16,7 @@ async def test_the_catalog_shows_each_addon_its_price_and_whether_the_plan_may_h
     free = await person(engine)
     listed = (await client.get("/v1/addons", headers=free.headers)).json()
     assert [(a["mod"], a["price_cents"], a["allowed"], a["limits"], a["added"]) for a in listed] == [
-        ("ada", 400, False, None, False),
+        ("ada", 400, True, {"models": 3, "precedents": 10000}, False),
     ]
     assert listed[0] | {"description": ""} == {
         "mod": "ada",
@@ -26,10 +26,10 @@ async def test_the_catalog_shows_each_addon_its_price_and_whether_the_plan_may_h
         "price_cents": 400,
         "per_seat": True,
         "monthly_cents": 400,
-        "plans": ["Pro", "Team"],
-        "free": False,
-        "allowed": False,
-        "limits": None,
+        "plans": ["Free", "Pro", "Team"],
+        "free": True,
+        "allowed": True,
+        "limits": {"models": 3, "precedents": 10000},
         "added": False,
         "quantity": None,
     }
@@ -86,12 +86,12 @@ async def test_a_free_org_checks_out_only_addons_allowed_on_free(
         assert res.status_code == 200
         session = stripe.calls[-1][2]
         assert (session["line_items[0][price]"], "line_items[1][price]" in session) == ("price_test_confetti", False)
-        for addons, status, reason in (
-            (["ada"], 409, "not_on_plan"),
-            (["confetti", "confetti"], 422, "duplicate_addon"),
-            (["nothing"], 422, "no_addon"),
+        for plan, addons, status, reason in (
+            ("Pro", ["confetti"], 409, "not_on_plan"),
+            ("Free", ["confetti", "confetti"], 422, "duplicate_addon"),
+            ("Free", ["nothing"], 422, "no_addon"),
         ):
-            body = {"plan": "Free", "seats": 1, "addons": addons}
+            body = {"plan": plan, "seats": 1, "addons": addons}
             res = await client.post("/v1/billing/checkout", json=body, headers=ada.headers)
             assert (res.status_code, res.json()["error"].get("reason")) == (status, reason), addons
     pro = await client.post(

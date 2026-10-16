@@ -11,12 +11,12 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import NotFound
-from glyphh_server.models import Rrotor, Run
+from glyphh_server.models import Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.plans import org_version
@@ -31,12 +31,14 @@ class LocalRuntime(BaseModel):
 
 class HostedRuntime(BaseModel):
     runtime_id: uuid.UUID | None = Field(description="None until the runtime is first started")
+    address: str | None = Field(description="Where it is called: https://<machine>.<domain>, REST and /mcp")
     state: str = Field(description="none, stopped, online or offline")
     region: str | None
     image_version: str | None
     last_seen_at: datetime | None
-    seconds_used: int = Field(description="Run time this calendar month")
+    seconds_used: int = Field(description="Online time this calendar month")
     hours_allowed: int | None = Field(description="The plan's hosted hours a month; null is unlimited")
+    paused: bool = Field(description="The month's hours are spent: calls answer 402 until the month turns")
 
 
 async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
@@ -52,56 +54,54 @@ async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
 
 
 async def runtime_for(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID:
-    """The runtime a deploy or a call goes to: the one named, when it is the person's; else the local one of the
-    install calling, else the person's runtime seen most recently (the connector calls from no install)."""
+    """The runtime a deploy goes to: the one named, when it is the person's; else the local one of the install
+    calling; else the person's hosted one."""
     mine = select(Rrotor.id).where(Rrotor.user_id == who.user_id)
     if runtime_id is not None:
         found = (await conn.execute(mine.where(Rrotor.id == runtime_id))).scalar()
         if found is None:
             raise NotFound("You have no such runtime.", runtime_id=str(runtime_id))
         return found
-    if who.install_id is not None:
-        found = (await conn.execute(mine.where(Rrotor.install_id == who.install_id))).scalar()
-        if found is not None:
-            return found
-    found = (await conn.execute(mine.order_by(Rrotor.last_seen_at.desc().nulls_last(), Rrotor.id).limit(1))).scalar()
+    local = mine.where(Rrotor.install_id == who.install_id) if who.install_id else mine.where(False)
+    hosted = mine.where(Rrotor.mode == "hosted")
+    found = (await conn.execute(local)).scalar() or (await conn.execute(hosted)).scalar()
     if found is None:
-        raise NotFound("You have no runtime. Start one from Claude (/ada start).", reason="no_runtime")
+        raise NotFound("You have no runtime. Start one from Claude.", reason="no_runtime")
     return found
 
 
 # Hosted
 
 
-def _month_start(now: datetime) -> datetime:
-    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+def month_of(now: datetime) -> str:
+    return now.strftime("%Y-%m")
 
 
-async def seconds_used(conn: AsyncConnection, runtime_id: uuid.UUID) -> int:
-    since = _month_start(datetime.now(UTC))
-    used = select(func.coalesce(func.sum(Run.seconds), 0)).where(Run.rrotor_id == runtime_id, Run.started_at >= since)
-    return int((await conn.execute(used)).scalar_one())
-
-
-async def hosted_view(conn: AsyncConnection, who: Principal) -> HostedRuntime:
+async def hosted_view(conn: AsyncConnection, who: Principal, domain: str) -> HostedRuntime:
     version = await org_version(conn, who.org_id)
-    row = (await conn.execute(select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted"))).first()
+    mine = select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
+    row = (await conn.execute(mine)).first()
     if row is None:
         return HostedRuntime(
             runtime_id=None,
+            address=None,
             state="none",
             region=None,
             image_version=None,
             last_seen_at=None,
             seconds_used=0,
             hours_allowed=version.runtime_hours,
+            paused=False,
         )
+    this_month = row.month == month_of(datetime.now(UTC))
     return HostedRuntime(
         runtime_id=row.id,
+        address=f"https://{row.fly_machine_id}.{domain}" if row.fly_machine_id else None,
         state=row.state,
         region=row.region,
         image_version=row.image_version,
         last_seen_at=row.last_seen_at,
-        seconds_used=await seconds_used(conn, row.id),
+        seconds_used=row.month_seconds if this_month else 0,
         hours_allowed=version.runtime_hours,
+        paused=row.paused_at is not None and this_month,
     )

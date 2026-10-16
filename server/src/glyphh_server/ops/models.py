@@ -94,15 +94,6 @@ async def get_model(conn: AsyncConnection, who: Principal, model_id: uuid.UUID) 
     return found[0]
 
 
-async def by_name(conn: AsyncConnection, who: Principal, name: str) -> uuid.UUID:
-    """The person's model of that name (the newest, should a name have been used twice)."""
-    mine = select(Model.id).where(Model.user_id == who.user_id, Model.name == name)
-    found = (await conn.execute(mine.order_by(Model.created_at.desc(), Model.id.desc()).limit(1))).scalar()
-    if found is None:
-        raise NotFound("You have no model of that name.", model=name)
-    return found
-
-
 async def create_model(conn: AsyncConnection, who: Principal, name: str, repo: str | None) -> ModelView:
     """A new model, within Ada's models limit, its name new to the person; no versions yet."""
     await lock_user(conn, who.user_id)

@@ -335,6 +335,9 @@ CREATE TABLE IF NOT EXISTS rrotors (
     install_id UUID,
     fly_machine_id TEXT,
     fly_volume_id TEXT,
+    month TEXT,
+    month_seconds INTEGER DEFAULT 0 NOT NULL,
+    paused_at TIMESTAMP WITH TIME ZONE,
     region TEXT,
     image_version TEXT,
     state TEXT NOT NULL,
@@ -350,6 +353,23 @@ CREATE TABLE IF NOT EXISTS rrotors (
     UNIQUE (token_hash)
 );
 CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
+
+-- runtime_keys
+CREATE TABLE IF NOT EXISTS runtime_keys (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    rrotor_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
+    UNIQUE (key_hash)
+);
+CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
+CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS rrotors_one_hosted ON rrotors (user_id) WHERE mode = 'hosted';
 
 -- tokens
@@ -496,6 +516,9 @@ CREATE POLICY tenant ON oauth_codes USING (user_id IN (SELECT id FROM users));
 ALTER TABLE github_installations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON github_installations;
 CREATE POLICY tenant ON github_installations USING (user_id IN (SELECT id FROM users));
+ALTER TABLE runtime_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON runtime_keys;
+CREATE POLICY tenant ON runtime_keys USING (user_id IN (SELECT id FROM users));
 ALTER TABLE routine_triggers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON routine_triggers;
 CREATE POLICY tenant ON routine_triggers USING (user_id IN (SELECT id FROM users));

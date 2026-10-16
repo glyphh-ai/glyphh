@@ -132,8 +132,6 @@ async def test_a_free_org_with_only_addons_keeps_its_last_one_until_it_cancels_o
     async with confetti(engine):
         ada, sub = await on_stripe(engine, stripe, "Free")
         assert (await client.post("/v1/billing/addons", json={"mod": CONFETTI}, headers=ada.headers)).status_code == 200
-        no = await client.post("/v1/billing/addons", json={"mod": "ada"}, headers=ada.headers)
-        assert no.json()["error"]["reason"] == "not_on_plan"
         last = await client.delete(f"/v1/billing/addons/{CONFETTI}", headers=ada.headers)
         assert (last.status_code, last.json()["error"]["reason"]) == (409, "last_item")
         seats = await client.post("/v1/billing/seats", json={"seats": 1}, headers=ada.headers)

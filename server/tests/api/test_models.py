@@ -11,7 +11,7 @@ from glyphh_server.app import create_app
 from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.db.helpers import Person, person, with_addon
 from tests.fakes import fake_http
-from tests.link import SHA, SHA2, deploy, holding, local_runtime
+from tests.link import SHA, SHA2, deploy, holding, hosted_runtime, local_runtime
 
 
 async def with_ada(engine: AsyncEngine) -> Person:
@@ -115,6 +115,17 @@ async def test_a_deploy_goes_down_the_callers_runtimes_link(
     )
     assert other["runtime_id"] == str(theirs.id)
     _error(await client.post(path, json={"version": 1}, headers=eve.headers), 404, "E_NOT_FOUND")
+    bob = await with_ada(engine)  # no local runtime on this install: the deploy goes to the hosted one
+    hosted = await hosted_runtime(engine, bob)
+    bobs = (await client.post("/v1/models", json={"name": "leads"}, headers=bob.headers)).json()
+    await client.post(
+        f"/v1/models/{bobs['id']}/versions", json={"commit_sha": SHA, "manifest": {}}, headers=bob.headers
+    )
+    async with holding(redis, hosted.id) as sent:
+        res = await client.post(f"/v1/models/{bobs['id']}/deploy", json={"version": 1}, headers=bob.headers)
+        assert (
+            res.status_code == 200 and res.json()["runtime_id"] == str(hosted.id) and (await sent())["type"] == "deploy"
+        )
     _error(
         await client.post(path, json={"version": 1, "runtime_id": str(uuid.uuid4())}, headers=ada.headers),
         404,

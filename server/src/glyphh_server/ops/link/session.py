@@ -42,6 +42,7 @@ from glyphh_server.ops.link.protocol import (
     Welcome,
 )
 from glyphh_server.ops.routines import Routines
+from glyphh_server.ops.runtime_keys import hashes_for
 
 log = logging.getLogger("glyphh.link")
 
@@ -110,11 +111,12 @@ async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
     if runtime.mode != "hosted":
         return Welcome(limits=Limits(runtime_hours=None))
     licence = None
-    if ctx.license_key is not None:
-        async with ctx.engine.begin() as conn:
-            await tenancy.enter(conn, runtime.org_id)
+    async with ctx.engine.begin() as conn:
+        await tenancy.enter(conn, runtime.org_id)
+        keys = await hashes_for(conn, runtime.id)
+        if ctx.license_key is not None:
             licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None)
-    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours), licence=licence)
+    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours), licence=licence, keys=keys)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:

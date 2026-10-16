@@ -20,7 +20,7 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     ]
     assert all(m["description"] for m in mods)
     assert [m["addon"] for m in mods] == [
-        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False} for cents in (400,)
+        {"price_cents": cents, "per_seat": True, "plans": ["Free", "Pro", "Team"], "free": True} for cents in (400,)
     ]
 
 

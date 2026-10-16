@@ -1,6 +1,7 @@
-"""Runs over the link: a call down it, its results recorded once each, a step that needs approval waiting for the
-person and their answer reaching the runtime, a call routed through Redis to the process holding the link, events
-recorded and fired, deploys recorded, and a message that cannot be recorded closing the link unacked."""
+"""Runs over the link: a run the runtime was called for at its address, its results recorded once each, a step
+that needs approval waiting for the person and their answer reaching the runtime (through Redis when another process
+holds the link), events recorded and fired, deploys recorded, and a message that cannot be recorded closing the link
+unacked."""
 
 import json
 import uuid
@@ -13,11 +14,11 @@ from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.db import tenancy
-from glyphh_server.models import Approval, Deployment, ModelEvent, RoutineTrigger, Run
+from glyphh_server.models import Approval, Deployment, ModelEvent, ModelVersion, RoutineTrigger, Run
 from glyphh_server.ops import vault
 from glyphh_server.ops.approvals import channel
 from glyphh_server.ops.link import inbound
-from glyphh_server.ops.link.calls import send_call
+from glyphh_server.ops.link.calls import send_continue
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.routine_triggers import sealed_for
 from tests.conftest import SETTINGS
@@ -29,9 +30,12 @@ FIRE: str = "https://api.anthropic.com/v1/claude_code/routines/trig_01XYZ/fire"
 
 
 async def _call(engine: AsyncEngine, hub: Hub, who: Person, rt: Rt, model_id: uuid.UUID) -> uuid.UUID:
+    """A run the runtime opened when it was called at its address: the server's record of it, running."""
     async with engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)
-        return await send_call(conn, hub, rt.id, model_id, None, "start", {"day": "2026-10-13"}, "claude")
+        version_id = (await conn.execute(select(ModelVersion.id).where(ModelVersion.model_id == model_id))).scalar()
+        values = {"model_version_id": version_id, "rrotor_id": rt.id, "function": "start", "caller": "claude"}
+        return (await conn.execute(insert(Run).values(**values, status="running").returning(Run.id))).scalar_one()
 
 
 async def _run(engine: AsyncEngine, run_id: uuid.UUID):  # type: ignore[no-untyped-def]
@@ -59,17 +63,6 @@ async def test_a_call_its_approval_the_answer_and_the_result_are_each_recorded_o
     async with server() as srv, linked(srv, rt) as ws, redis.pubsub() as person_channel:
         await person_channel.subscribe(channel(ada.user_id))
         run_id = await _call(engine, srv.app.state.hub, ada, rt, model_id)
-        call = await receive(ws, "call")
-        assert {k: v for k, v in call.items() if k != "id"} == {
-            "type": "call",
-            "run_id": str(run_id),
-            "model": "daily_sales",
-            "version": 1,
-            "function": "start",
-            "inputs": {"day": "2026-10-13"},
-            "caller": "claude",
-            "clearance": 1.0,
-        }
         assert (await _run(engine, run_id)).status == "running"
         asking = _result(run_id, 1, "needs_approval", 3, step="write", prompt="Write Monday's total?")
         await ws.send_json(asking)
@@ -95,7 +88,7 @@ async def test_a_call_its_approval_the_answer_and_the_result_are_each_recorded_o
     assert (await runtime_row(engine, rt.id)).seq == 2
 
 
-async def test_a_call_made_on_another_process_reaches_the_link_through_redis(engine: AsyncEngine) -> None:
+async def test_a_result_is_recorded_whichever_process_holds_the_link(engine: AsyncEngine) -> None:
     ada = await person(engine)
     rt = await local_runtime(engine, ada)
     model_id, v1, _ = await a_model(engine, ada)
@@ -103,9 +96,15 @@ async def test_a_call_made_on_another_process_reaches_the_link_through_redis(eng
     async with server() as holder, server() as other, linked(holder, rt) as ws:
         assert rt.id not in other.app.state.hub.links
         run_id = await _call(engine, other.app.state.hub, ada, rt, model_id)
-        assert (await receive(ws, "call"))["run_id"] == str(run_id)
-        await ws.send_json(_result(run_id, 1, "failed", 1, step="load", data={"reason": "no profile"}))
+        await ws.send_json(_result(run_id, 1, "needs_input", 1, prompt="day?"))
         assert (await receive(ws, "ack"))["of"] == "r1"
+        async with engine.begin() as conn:  # the person's answer, sent from the other process, reaches the link
+            await tenancy.enter(conn, ada.org_id)
+            await send_continue(conn, other.app.state.hub, run_id, "monday")
+        cont = await receive(ws, "continue")
+        assert (cont["run_id"], cont["answer"]) == (str(run_id), "monday")
+        await ws.send_json(_result(run_id, 2, "failed", 1, step="load", data={"reason": "no profile"}))
+        assert (await receive(ws, "ack"))["of"] == "r2"
     run = await _run(engine, run_id)
     assert run.status == "failed" and run.ended_at is not None
 
@@ -116,9 +115,8 @@ async def test_a_result_for_a_run_it_does_not_have_is_acked_and_skipped(engine: 
     model_id, v1, _ = await a_model(engine, eve)
     eves = await local_runtime(engine, eve)
     await deploy(engine, eves.id, v1)
-    async with server() as srv, linked(srv, eves) as eve_ws, linked(srv, rt) as ws:
+    async with server() as srv, linked(srv, eves), linked(srv, rt) as ws:
         eve_run = await _call(engine, srv.app.state.hub, eve, eves, model_id)
-        await receive(eve_ws, "call")
         for seq, run_id in enumerate((uuid.uuid4(), eve_run), start=1):
             await ws.send_json(_result(run_id, seq, "done", 1))
             assert (await receive(ws, "ack"))["of"] == f"r{seq}"

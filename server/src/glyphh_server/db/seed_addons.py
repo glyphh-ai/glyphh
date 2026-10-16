@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.config import Settings
 from glyphh_server.models import Addon
 
+FREE: str = "Free"
 PAID: list[str] = ["Pro", "Team"]
 EVERY_PLAN: str = "*"
 
@@ -31,8 +32,8 @@ ADDONS: tuple[AddonSeed, ...] = (
         "ada",
         400,
         True,
-        PAID,
-        False,
+        [FREE, *PAID],
+        True,
         {EVERY_PLAN: {"models": 3, "precedents": 10_000}, "Team": {"models": None, "precedents": None}},
     ),
 )

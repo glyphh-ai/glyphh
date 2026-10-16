@@ -15,14 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server import app as app_module
 from glyphh_server.app import create_app
 from glyphh_server.errors import Conflict, Unavailable
-from glyphh_server.models import Rrotor, Run
-from glyphh_server.ops import hosted
+from glyphh_server.models import Rrotor, Run, RuntimeKey
+from glyphh_server.ops import hosted, hours
 from glyphh_server.ops.auth.secrets import hash_secret
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.runtime_keys import key_hash
 from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.db.helpers import Person, person
 from tests.fakes import FakeFly, fake_http
-from tests.link import a_model, hosted_runtime
+from tests.link import a_model, holding, hosted_runtime
 
 FLY_SETTINGS = PROVIDER_SETTINGS.model_copy(
     update={"fly_api_token": "fly_test_token", "fly_app": "glyphh-runtimes", "fly_image": "registry.fly.io/r:1"}
@@ -34,11 +35,11 @@ async def _row(engine: AsyncEngine, runtime_id: str) -> Any:
         return (await conn.execute(select(Rrotor).where(Rrotor.id == uuid.UUID(runtime_id)))).one()
 
 
-async def test_a_pro_persons_runtime_is_made_on_first_start_then_started_stopped_shown_and_destroyed(
+async def test_a_persons_runtime_is_made_on_first_start_then_started_stopped_shown_and_destroyed(
     engine: AsyncEngine,
 ) -> None:
     fly = FakeFly()
-    ada = await person(engine, "Pro")
+    ada = await person(engine)  # Free: a runtime too, 5 hours a month
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
         res = await client.get("/v1/runtime", headers=ada.headers)
         assert res.status_code == 200, res.text
@@ -47,64 +48,78 @@ async def test_a_pro_persons_runtime_is_made_on_first_start_then_started_stopped
         res = await client.post("/v1/runtime/start", headers=ada.headers)
         assert res.status_code == 200, res.text
         view = res.json()
-        assert (view["state"], view["region"], view["seconds_used"], view["hours_allowed"]) == (
+        assert (view["state"], view["region"], view["seconds_used"], view["hours_allowed"], view["paused"]) == (
             "stopped",
             "iad",
             0,
-            none["hours_allowed"],
+            5,
+            False,
         )
         row = await _row(engine, view["runtime_id"])
-        assert (row.mode, row.fly_machine_id, row.fly_volume_id, row.install_id) == ("hosted", "m_1", "vol_1", None)
+        assert (row.mode, row.fly_machine_id, row.fly_volume_id, row.install_id) == ("hosted", "m_2", "vol_1", None)
+        assert view["address"] == "https://m_2.glyphh.app"
         assert [c[:2] for c in fly.calls] == [
+            ("GET", "/machines"),
+            ("POST", "/machines"),  # the doorman, made with the first runtime
+            ("POST", "/machines/m_1/start"),
             ("POST", "/volumes"),
             ("POST", "/machines"),
-            ("POST", "/machines/m_1/start"),
+            ("POST", "/machines/m_2/start"),
         ]
-        machine = fly.machines["m_1"]
+        doorman = fly.machines["m_1"]
+        assert (doorman["name"], doorman["config"]["env"], doorman["config"]["services"][0]["autostop"]) == (
+            "doorman",
+            {"RROTOR_MODE": "doorman", "RROTOR_PUBLIC_DOMAIN": "glyphh.app"},
+            "off",
+        )
+        assert "mounts" not in doorman["config"] and doorman["config"]["guest"]["memory_mb"] == 256
+        machine = fly.machines["m_2"]
         env = machine["config"]["env"]
         assert (machine["config"]["image"], machine["config"]["mounts"], machine["skip_launch"]) == (
             "registry.fly.io/r:1",
             [{"volume": "vol_1", "path": "/data"}],
             True,
         )
-        assert (env["RROTOR_MODE"], env["RROTOR_SERVER"], env["RROTOR_RUNTIME_ID"]) == (
+        service = machine["config"]["services"][0]
+        assert (service["internal_port"], service["autostart"], service["autostop"]) == (7777, True, "stop")
+        assert (env["RROTOR_MODE"], env["RROTOR_SERVER"], env["RROTOR_RUNTIME_ID"], env["RROTOR_PUBLIC_DOMAIN"]) == (
             "hosted",
             FLY_SETTINGS.base_url,
             view["runtime_id"],
+            "glyphh.app",
         )
         assert hash_secret(env["RROTOR_RUNTIME_TOKEN"]) == row.token_hash and machine["state"] == "started"
         again = await client.post("/v1/runtime/start", headers=ada.headers)
-        assert again.json()["runtime_id"] == view["runtime_id"] and len(fly.machines) == 1
-        assert fly.calls[-1][:2] == ("POST", "/machines/m_1/start")
-        async with engine.begin() as conn:  # linked, and ran this month and last
-            await conn.execute(update(Rrotor).where(Rrotor.id == row.id).values(state="online"))
-            _, v1, _ = await a_model(engine, ada)
-            now = datetime.now(UTC)
-            for started, seconds in ((now - timedelta(minutes=1), 90), (now - timedelta(days=40), 500)):
-                values = {"model_version_id": v1, "rrotor_id": row.id, "function": "start", "caller": "test"}
-                await conn.execute(insert(Run).values(**values, status="done", started_at=started, seconds=seconds))
-        starts = [c[1] for c in fly.calls].count("/machines/m_1/start")
+        assert again.json()["runtime_id"] == view["runtime_id"] and len(fly.machines) == 2
+        assert (
+            fly.calls[-1][:2] == ("POST", "/machines/m_2/start") and [c[1] for c in fly.calls].count("/machines") == 3
+        )
+        async with engine.begin() as conn:  # linked, with a tally of this month and a stale one
+            values = {"state": "online", "month": datetime.now(UTC).strftime("%Y-%m"), "month_seconds": 90}
+            await conn.execute(update(Rrotor).where(Rrotor.id == row.id).values(**values))
+        starts = [c[1] for c in fly.calls].count("/machines/m_2/start")
         online = await client.post("/v1/runtime/start", headers=ada.headers)
         assert online.json()["state"] == "online"
-        assert [c[1] for c in fly.calls].count("/machines/m_1/start") == starts == 2  # online: not started again
+        assert [c[1] for c in fly.calls].count("/machines/m_2/start") == starts == 2  # online: not started again
         shown = (await client.get("/v1/runtime", headers=ada.headers)).json()
         assert (shown["state"], shown["seconds_used"]) == ("online", 90)
+        async with engine.begin() as conn:
+            await conn.execute(update(Rrotor).where(Rrotor.id == row.id).values(month="2020-01"))
+        assert (await client.get("/v1/runtime", headers=ada.headers)).json()["seconds_used"] == 0  # another month's
         stopped = await client.post("/v1/runtime/stop", headers=ada.headers)
-        assert stopped.json()["state"] == "stopped" and fly.machines["m_1"]["state"] == "stopped"
+        assert stopped.json()["state"] == "stopped" and fly.machines["m_2"]["state"] == "stopped"
         assert (await client.delete("/v1/runtime", headers=ada.headers)).status_code == 204
-        assert fly.machines == {} and fly.volumes == {}
+        assert list(fly.machines) == ["m_1"] and fly.volumes == {}
         assert (await client.get("/v1/runtime", headers=ada.headers)).json()["state"] == "none"
         for path in ("/v1/runtime/stop", "/v1/runtime"):
             res = await client.request("POST" if path.endswith("stop") else "DELETE", path, headers=ada.headers)
             assert (res.status_code, res.json()["error"]["reason"]) == (404, "no_runtime")
 
 
-async def test_hosting_needs_the_plan_the_server_set_up_and_fly_answering(engine: AsyncEngine) -> None:
-    free, pro = await person(engine), await person(engine, "Pro")
+async def test_hosting_needs_the_server_set_up_and_fly_answering(engine: AsyncEngine) -> None:
+    pro = await person(engine, "Pro")
     fly = FakeFly()
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        res = await client.post("/v1/runtime/start", headers=free.headers)
-        assert (res.status_code, res.json()["error"]["reason"]) == (403, "not_on_plan")
         fly.fail = True
         res = await client.post("/v1/runtime/start", headers=pro.headers)
         error = res.json()["error"]
@@ -195,16 +210,94 @@ async def test_the_app_stops_idle_runtimes_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def stop_idle(engine: AsyncEngine, fly: Fly, idle: timedelta) -> int:
-        ticks.append(1)
+    async def tend(engine: AsyncEngine, fly: Fly, hub: Any, idle: timedelta, step: int) -> None:
+        ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("fly hiccup")
         stopped.set()
-        return 0
 
-    monkeypatch.setattr(hosted, "stop_idle", stop_idle)
+    monkeypatch.setattr(hours, "tend", tend)
     app = create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))
     async for _ in _client(app):
         assert app.state.hub.waker is not None
         await asyncio.wait_for(stopped.wait(), 5)
-    assert "stopping idle runtimes failed" in caplog.text and len(ticks) >= 2
+    assert "tending hosted runtimes failed" in caplog.text and len(ticks) >= 2
+
+
+async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked(
+    engine: AsyncEngine, redis: Any
+) -> None:
+    fly = FakeFly()
+    fly.machines["m_0"] = {"id": "m_0", "name": "other", "state": "stopped"}  # not the doorman: looked past
+    ada, eve = await person(engine), await person(engine)
+    async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
+        res = await client.post("/v1/runtime/keys", json={"name": "Claude"}, headers=ada.headers)
+        assert (res.status_code, res.json()["error"]["reason"]) == (404, "no_runtime")
+        runtime_id = (await client.post("/v1/runtime/start", headers=ada.headers)).json()["runtime_id"]
+        made = await client.post("/v1/runtime/keys", json={"name": " Claude "}, headers=ada.headers)
+        assert made.status_code == 201, made.text
+        key = made.json()
+        assert key["key"].startswith("glyphh_rk_") and key["name"] == "Claude" and key["revoked_at"] is None
+        async with engine.connect() as conn:
+            row = (await conn.execute(select(RuntimeKey).where(RuntimeKey.id == uuid.UUID(key["id"])))).one()
+        assert row.key_hash == key_hash(key["key"]) and str(row.rrotor_id) == runtime_id
+        async with holding(redis, uuid.UUID(runtime_id)) as sent:
+            second = (await client.post("/v1/runtime/keys", json={"name": "the CRM"}, headers=ada.headers)).json()
+            pushed = await sent()
+            assert (pushed["type"], pushed["hashes"]) == ("keys", [row.key_hash, key_hash(second["key"])])
+            gone = await client.delete(f"/v1/runtime/keys/{key['id']}", headers=ada.headers)
+            assert gone.status_code == 200 and gone.json()["revoked_at"] is not None
+            assert (await sent())["hashes"] == [key_hash(second["key"])]
+        listed = (await client.get("/v1/runtime/keys", headers=ada.headers)).json()
+        assert [(k["name"], k["revoked_at"] is None) for k in listed] == [("Claude", False), ("the CRM", True)]
+        assert "key" not in listed[0]
+        again = await client.delete(f"/v1/runtime/keys/{key['id']}", headers=ada.headers)
+        assert again.status_code == 404
+        theirs = await client.delete(f"/v1/runtime/keys/{second['id']}", headers=eve.headers)
+        assert theirs.status_code == 404
+        assert (await client.get("/v1/runtime/keys", headers=eve.headers)).json() == []
+        eves = (await client.post("/v1/runtime/start", headers=eve.headers)).json()
+        assert (
+            eves["address"] != f"https://{runtime_id}"
+            and [m["name"] for m in fly.machines.values()].count("doorman") == 1
+        )
+
+
+async def test_the_tally_counts_online_time_pauses_past_the_plans_hours_and_resumes_with_the_month(
+    engine: AsyncEngine, redis: Any
+) -> None:
+    fly = FakeFly()
+    for name in ("m_free", "m_pro"):
+        fly.machines[name] = {"id": name, "state": "started"}
+    free, pro = await person(engine), await person(engine, "Pro")
+    now = datetime.now(UTC)
+    month = now.strftime("%Y-%m")
+    free_id = await _hosted(engine, free, "online", now, "m_free")
+    pro_id = await _hosted(engine, pro, "online", now, "m_pro")
+    async with engine.begin() as conn:
+        await conn.execute(update(Rrotor).where(Rrotor.id == free_id).values(month=month, month_seconds=5 * 3600 - 60))
+        await conn.execute(
+            update(Rrotor).where(Rrotor.id == pro_id).values(month="2020-01", month_seconds=10**6, paused_at=now)
+        )
+    client = Fly(fake_http(fly=fly), FLY_SETTINGS)
+    from glyphh_server.ops.link.hub import Hub
+
+    hub = Hub(redis)
+    async with holding(redis, free_id) as free_sent, holding(redis, pro_id) as pro_sent:
+        assert await hours.tally(engine, client, hub, 60) == [free_id]
+        assert (await free_sent())["type"] == "pause"
+        assert (await pro_sent())["type"] == "resume"
+    free_row, pro_row = await _row(engine, str(free_id)), await _row(engine, str(pro_id))
+    assert (free_row.month_seconds, free_row.paused_at is not None, free_row.state) == (5 * 3600, True, "stopped")
+    assert fly.machines["m_free"]["state"] == "stopped"
+    assert (pro_row.month, pro_row.month_seconds, pro_row.paused_at) == (month, 60, None)
+    async for http in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
+        shown = (await http.get("/v1/runtime", headers=free.headers)).json()
+        assert (shown["paused"], shown["seconds_used"], shown["state"]) == (True, 5 * 3600, "stopped")
+    assert await hours.tally(engine, client, hub, 60) == []  # paused already: counted no further, not paused twice
+    assert (await _row(engine, str(free_id))).month_seconds == 5 * 3600
+    del fly.machines["m_pro"]
+    async with engine.begin() as conn:
+        await conn.execute(update(Rrotor).where(Rrotor.id == pro_id).values(month_seconds=50 * 3600))
+    assert await hours.tally(engine, client, hub, 60) == [pro_id]  # Fly lost the machine: paused all the same, logged
+    await hours.tend(engine, client, hub, timedelta(minutes=10), 60)

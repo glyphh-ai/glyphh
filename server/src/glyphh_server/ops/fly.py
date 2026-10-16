@@ -34,17 +34,38 @@ class Fly:
         made = await self.call("POST", "/volumes", {"name": name, "region": s.fly_region, "size_gb": s.fly_volume_gb})
         return str(made["id"])
 
-    async def create_machine(self, name: str, volume_id: str, env: dict[str, str]) -> str:
-        """A stopped machine on the volume, running the hosted image; started when first called."""
+    async def list_machines(self) -> list[dict[str, Any]]:
+        found = await self.call("GET", "/machines")
+        return found if isinstance(found, list) else []
+
+    async def create_machine(
+        self, name: str, volume_id: str | None, env: dict[str, str], always_on: bool = False
+    ) -> str:
+        """A machine running the hosted image, behind Fly's proxy on 443 and 80 (the service is what the proxy
+        routes to, and what starts a stopped machine on a request and stops an idle one). A runtime's has its volume
+        and stops when idle; the doorman's has none and never stops."""
         s = self.settings
-        config = {
+        service = {
+            "protocol": "tcp",
+            "internal_port": 7777,
+            "autostart": True,
+            "autostop": "off" if always_on else "stop",
+            "ports": [{"port": 443, "handlers": ["tls", "http"]}, {"port": 80, "handlers": ["http"]}],
+        }
+        config: dict[str, Any] = {
             "image": s.fly_image,
             "env": env,
-            "guest": {"cpu_kind": "shared", "cpus": s.fly_cpus, "memory_mb": s.fly_memory_mb},
-            "mounts": [{"volume": volume_id, "path": "/data"}],
-            "restart": {"policy": "on-failure"},
+            "guest": {
+                "cpu_kind": "shared",
+                "cpus": 1 if always_on else s.fly_cpus,
+                "memory_mb": 256 if always_on else s.fly_memory_mb,
+            },
+            "services": [service],
+            "restart": {"policy": "always" if always_on else "on-failure"},
             "auto_destroy": False,
         }
+        if volume_id is not None:
+            config["mounts"] = [{"volume": volume_id, "path": "/data"}]
         made = await self.call(
             "POST", "/machines", {"name": name, "region": s.fly_region, "config": config, "skip_launch": True}
         )

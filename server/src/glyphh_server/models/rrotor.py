@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Text, text
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, guid
@@ -28,6 +28,9 @@ class Rrotor(Base):
     install_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("installs.id", ondelete="CASCADE"), unique=True)
     fly_machine_id: Mapped[str | None] = mapped_column(Text)
     fly_volume_id: Mapped[str | None] = mapped_column(Text)
+    month: Mapped[str | None] = mapped_column(Text)  # the month the tally is of, YYYY-MM
+    month_seconds: Mapped[int] = mapped_column(Integer, server_default="0")  # online seconds that month
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the month's hours spent
     region: Mapped[str | None] = mapped_column(Text)
     image_version: Mapped[str | None] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)

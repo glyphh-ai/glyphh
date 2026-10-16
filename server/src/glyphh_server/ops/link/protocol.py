@@ -126,28 +126,31 @@ class Welcome(Message):
     accepted: bool = True
     limits: Limits
     licence: License | None = None  # a hosted runtime's plan licence: it has no mod to hand one in
+    keys: list[str] | None = None  # a hosted runtime's live runtime keys, as SHA-256s: what it checks bearers against
 
 
-class Call(Message):
-    type: Literal["call"] = "call"
-    run_id: uuid.UUID
-    model: Name
-    version: int
-    function: Name
-    inputs: dict[str, Any]
-    caller: Caller
-    clearance: float = Field(1.0, ge=0, le=1)  # who asks, 0 to 1: the model's ctx.clearance (Ada cuts what is seen)
+class Keys(Message):
+    """The runtime keys changed: the whole live list of their SHA-256s (one revoked is one gone)."""
+
+    type: Literal["keys"] = "keys"
+    hashes: list[str]
+
+
+class Pause(Message):
+    """The plan's hosted hours are spent: rrotor answers 402 to every call until `resume`."""
+
+    type: Literal["pause"] = "pause"
+    reason: str = "runtime_hours"
+
+
+class Resume(Message):
+    type: Literal["resume"] = "resume"
 
 
 class Continue(Message):
     type: Literal["continue"] = "continue"
     run_id: uuid.UUID
     answer: Any
-
-
-class Cancel(Message):
-    type: Literal["cancel"] = "cancel"
-    run_id: uuid.UUID
 
 
 class Deploy(Message):
@@ -168,4 +171,4 @@ class SecretSet(Message):
     value: str  # encrypted to the rrotor's public key, base64
 
 
-Outbound = Welcome | Call | Continue | Cancel | Deploy | SecretSet | Ping | Pong | Ack
+Outbound = Welcome | Continue | Deploy | Keys | Pause | Resume | SecretSet | Ping | Pong | Ack

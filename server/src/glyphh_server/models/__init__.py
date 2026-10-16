@@ -21,6 +21,7 @@ from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.routine_trigger import TRIGGER_STATUSES, RoutineTrigger
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
+from glyphh_server.models.runtime_key import RuntimeKey
 from glyphh_server.models.token import Token
 from glyphh_server.models.unlock import UNLOCK_MODS, Unlock
 from glyphh_server.models.user import ROLES, User
@@ -62,6 +63,7 @@ __all__ = [
     "RoutineTrigger",
     "Rrotor",
     "Run",
+    "RuntimeKey",
     "Token",
     "Unlock",
     "User",

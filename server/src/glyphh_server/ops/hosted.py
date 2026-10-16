@@ -1,7 +1,10 @@
-"""Hosted runtimes on Fly: one machine and one volume per Pro or Team person, made the first time the person starts
-theirs. The runtime token goes into the machine's environment (nobody signs in on it) and its licence comes in its
-welcome. A call wakes a stopped one (the hub's waker); the server stops one that sat idle; `state` is `stopped`
-until its hello, `online` while linked, `offline` after a link dropped."""
+"""Hosted runtimes on Fly: one machine and one volume per person, made the first time the person starts theirs, on
+any plan. The runtime token goes into the machine's environment (nobody signs in on it); its licence and its keys
+come in its welcome. It is reached at its own address, `https://<machine>.<domain>`, through Fly's proxy: a request
+starts a stopped machine, and the doorman machine (one per app, made with the first runtime) replays a request that
+landed elsewhere. The server stops a runtime that sat idle, tallies its online time against the plan's hours, and
+past them sends `pause` (rrotor answers 402) until the month turns; `state` is `stopped` until its hello, `online`
+while linked, `offline` after a link dropped."""
 
 import logging
 import uuid
@@ -13,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.config import Settings
 from glyphh_server.db import tenancy
-from glyphh_server.errors import Conflict, Forbidden, NotFound
+from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Rrotor, Run, User
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.auth.principal import Principal
@@ -21,12 +24,11 @@ from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.link.protocol import RUNNING, WAITING
-from glyphh_server.ops.plans import org_version
 from glyphh_server.ops.runtimes import NOT_LINKED, HostedRuntime, hosted_view
 
 log = logging.getLogger("glyphh.runtime")
 
-HOSTED_PLANS: frozenset[str] = frozenset({"Pro", "Team"})
+DOORMAN: str = "doorman"
 
 
 def machine_env(settings: Settings, runtime_id: uuid.UUID, token: str) -> dict[str, str]:
@@ -36,7 +38,21 @@ def machine_env(settings: Settings, runtime_id: uuid.UUID, token: str) -> dict[s
         "RROTOR_SERVER": settings.base_url,
         "RROTOR_RUNTIME_ID": str(runtime_id),
         "RROTOR_RUNTIME_TOKEN": token,
+        "RROTOR_PUBLIC_DOMAIN": settings.fly_public_domain,
     }
+
+
+async def ensure_doorman(fly: Fly, settings: Settings) -> str:
+    """The app's one always-on doorman machine, made the first time any runtime is: what Fly's proxy lands a
+    request on when the right machine is stopped, so it can be replayed there."""
+    for machine in await fly.list_machines():
+        if machine.get("name") == DOORMAN:
+            return str(machine["id"])
+    env = {"RROTOR_MODE": "doorman", "RROTOR_PUBLIC_DOMAIN": settings.fly_public_domain}
+    machine_id = await fly.create_machine(DOORMAN, None, env, always_on=True)
+    await fly.start(machine_id)
+    log.info("doorman made", extra=fields(machine=machine_id))
+    return machine_id
 
 
 async def _provision(conn: AsyncConnection, fly: Fly, settings: Settings, who: Principal) -> uuid.UUID:
@@ -50,6 +66,7 @@ async def _provision(conn: AsyncConnection, fly: Fly, settings: Settings, who: P
         "token_hash": hash_secret(token),
     }
     runtime_id = (await conn.execute(insert(Rrotor).values(**values).returning(Rrotor.id))).scalar_one()
+    await ensure_doorman(fly, settings)
     name = f"rt-{runtime_id.hex[:12]}"
     volume_id = await fly.create_volume(f"data_{runtime_id.hex[:12]}")
     machine_id = await fly.create_machine(name, volume_id, machine_env(settings, runtime_id, token))
@@ -60,10 +77,8 @@ async def _provision(conn: AsyncConnection, fly: Fly, settings: Settings, who: P
 
 
 async def start_hosted(conn: AsyncConnection, fly: Fly, settings: Settings, who: Principal) -> HostedRuntime:
-    """The person's hosted runtime, made the first time (Pro and Team), its machine started."""
-    version = await org_version(conn, who.org_id)
-    if version.name not in HOSTED_PLANS:
-        raise Forbidden("A hosted runtime comes with Pro and Team.", reason="not_on_plan", plan=version.name)
+    """The person's hosted runtime, made the first time, its machine started. Every plan has one; the plan's hours
+    say how long it runs a month."""
     await conn.execute(select(User.id).where(User.id == who.user_id).with_for_update())
     mine = select(Rrotor.id, Rrotor.fly_machine_id, Rrotor.state).where(
         Rrotor.user_id == who.user_id, Rrotor.mode == "hosted"
@@ -76,10 +91,10 @@ async def start_hosted(conn: AsyncConnection, fly: Fly, settings: Settings, who:
         runtime_id, machine_id = row.id, row.fly_machine_id
     if row is None or row.state != ONLINE:
         await fly.start(str(machine_id))
-    return await hosted_view(conn, who)
+    return await hosted_view(conn, who, settings.fly_public_domain)
 
 
-async def stop_hosted(conn: AsyncConnection, fly: Fly, who: Principal) -> HostedRuntime:
+async def stop_hosted(conn: AsyncConnection, fly: Fly, who: Principal, domain: str) -> HostedRuntime:
     """Stop the person's machine; a run in progress is left to the rrotor (it recovers it when next started)."""
     mine = select(Rrotor.id, Rrotor.fly_machine_id).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
     row = (await conn.execute(mine)).first()
@@ -87,7 +102,7 @@ async def stop_hosted(conn: AsyncConnection, fly: Fly, who: Principal) -> Hosted
         raise NotFound("You have no hosted runtime yet.", reason="no_runtime")
     await fly.stop(str(row.fly_machine_id))
     await conn.execute(update(Rrotor).where(Rrotor.id == row.id).values(state=NOT_LINKED))
-    return await hosted_view(conn, who)
+    return await hosted_view(conn, who, domain)
 
 
 async def destroy_hosted(conn: AsyncConnection, fly: Fly, who: Principal) -> None:

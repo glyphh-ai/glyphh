@@ -207,6 +207,8 @@ class FakeFly:
             volume_id = f"vol_{len(self.volumes) + 1}"
             self.volumes[volume_id] = {"id": volume_id, **body}
             return httpx.Response(201, json=self.volumes[volume_id])
+        if path == "/machines" and request.method == "GET":
+            return httpx.Response(200, json=list(self.machines.values()))
         if path == "/machines" and request.method == "POST":
             machine_id = f"m_{len(self.machines) + 1}"
             self.machines[machine_id] = {"id": machine_id, "state": "stopped", **body}

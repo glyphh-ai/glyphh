@@ -30,7 +30,6 @@ from glyphh_server.api import (
     org,
     plans,
     routine_triggers,
-    runs,
     runtime,
     unlock,
 )
@@ -39,7 +38,7 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, hosted, vault
+from glyphh_server.ops import github_app, hosted, hours, vault
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.license import load_key
 from glyphh_server.ops.link.hub import Hub
@@ -57,7 +56,6 @@ ROUTERS = (
     billing,
     runtime,
     models,
-    runs,
     unlock,
     routine_triggers,
     approvals,
@@ -74,14 +72,15 @@ ROUTERS = (
 IDLE_EVERY: float = 60.0
 
 
-async def stop_idle_forever(engine: AsyncEngine, fly: Fly, idle: timedelta) -> None:
-    """Every minute, stop the hosted runtimes that sat idle; a failure is logged and the next minute comes."""
+async def tend_forever(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta) -> None:
+    """Every minute, tally the hosted runtimes' hours (pausing those past their plan's) and stop the idle ones; a
+    failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await hosted.stop_idle(engine, fly, idle)
+            await hours.tend(engine, fly, hub, idle, int(IDLE_EVERY))
         except Exception:
-            logging.getLogger("glyphh.runtime").exception("stopping idle runtimes failed")
+            logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -99,7 +98,8 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
         if cfg.fly_configured:
             fly = Fly(app.state.http, cfg)
             app.state.hub.waker = hosted.waker(engine, fly)
-            idle = asyncio.create_task(stop_idle_forever(engine, fly, timedelta(minutes=cfg.runtime_idle_minutes)))
+            minutes = timedelta(minutes=cfg.runtime_idle_minutes)
+            idle = asyncio.create_task(tend_forever(engine, fly, app.state.hub, minutes))
         yield
         if idle is not None:
             idle.cancel()

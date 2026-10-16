@@ -16,7 +16,7 @@ async def test_addons_lists_the_catalog_for_the_plan(client: httpx.AsyncClient, 
     listed = await tool(client, auth, "addons")
     assert [a["mod"] for a in listed["structuredContent"]["addons"]] == ["ada"]
     text = listed["content"][0]["text"]
-    assert "ada: $4.00 per seat a month ($4.00 for you), not sold with your plan" in text
+    assert "ada: $4.00 per seat a month ($4.00 for you), available; models 3, precedents 10000" in text
 
 
 async def test_add_mod_shows_the_price_first_then_adds_on_confirm_and_remove_mod_the_same(

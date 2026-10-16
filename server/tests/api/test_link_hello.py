@@ -56,6 +56,7 @@ async def test_a_hosted_runtime_is_welcomed_with_its_plans_hours(engine: AsyncEn
         welcome = await ws.receive_json(timeout=WAIT)
         assert welcome["limits"] == {"runtime_hours": hours}
         key = (await srv.http.get("/v1/license/key", headers=ada.headers)).json()
+    assert welcome["keys"] == []
     payload = welcome["licence"]["payload"]
     assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))

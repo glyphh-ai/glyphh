@@ -82,7 +82,7 @@ async def test_the_plans_carry_their_hosted_runtime_hours_and_storage_rate(engin
             .where(PlanVersion.version == 1)
             .order_by(Plan.sort)
         )
-        assert [tuple(r) for r in rows] == [("Free", 0, None), ("Pro", None, 50), ("Team", None, 50)]
+        assert [tuple(r) for r in rows] == [("Free", 5, None), ("Pro", 50, 50), ("Team", 50, 50)]
 
 
 async def test_an_addons_new_stripe_price_is_a_new_version_and_an_org_keeps_the_one_it_added(

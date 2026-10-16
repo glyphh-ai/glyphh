@@ -148,10 +148,12 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "invite",
         "connector_grants",
         "revoke_grant",
-        "models_list",
-        "call",
-        "continue",
-        "run_status",
+        "runtime",
+        "start_runtime",
+        "stop_runtime",
+        "runtime_keys",
+        "create_runtime_key",
+        "revoke_runtime_key",
     }
     assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan"}
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}

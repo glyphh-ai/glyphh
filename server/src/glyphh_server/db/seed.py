@@ -46,12 +46,12 @@ class PlanSeed:
 FREE: str = "Free"
 
 
-# Free has no hosted runtime (0 hours, no storage); Pro's and Team's hours are still to decide (null). No plan includes
-# a mod: every mod is an add-on.
+# Every plan has a hosted runtime; its hours a month are the plan's (Chris, 2026-10-16: Free 5, Pro and Team 50;
+# storage is still to price). No plan includes a mod: every mod is an add-on.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 0, None, {}),
-    PlanSeed("Pro", 800, 1, 5, None, 50, {}),
-    PlanSeed("Team", 1_600, None, 10, None, 50, {}),
+    PlanSeed(FREE, 0, 1, 1, 5, None, {}),
+    PlanSeed("Pro", 800, 1, 5, 50, 50, {}),
+    PlanSeed("Team", 1_600, None, 10, 50, 50, {}),
 )
 
 
