@@ -37,7 +37,7 @@ async def stream_approvals(request: Request, creds: Bearer) -> StreamingResponse
     ends before the stream starts, so an open stream holds no database connection."""
     state = request.app.state
     async with state.engine.begin() as conn:
-        who = await authenticate(conn, creds)
+        who = await authenticate(conn, creds, state.settings.mcp_resource)
     events = approval_stream.stream(state.engine, state.redis, who)
     return StreamingResponse(events, media_type="text/event-stream", headers=SSE_HEADERS)
 

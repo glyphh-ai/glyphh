@@ -43,6 +43,19 @@ services:
       redis:
         condition: service_healthy
 
+  # The platform (glyphh-ai/platform, checked out beside this repo): every page a person sees, on :5173.
+  # Its settings, including its OAuth client at this server, are in ../platform/.env.docker.
+  platform:
+    build:
+      context: ../platform
+    env_file:
+      - path: ../platform/.env.docker
+        required: true
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+
   test:
     profiles: ["test"]
     build:

@@ -2,6 +2,9 @@
 ties each step to the browser that started it, so nobody can push their sign-in into someone else's browser. Installing
 the GitHub App is tied to its browser by the same cookie, on its own path."""
 
+from typing import Literal
+from urllib.parse import urlsplit
+
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -29,6 +32,19 @@ def browser(request: Request) -> str:
     return found
 
 
+def _site(url: str) -> str:
+    """A URL's site, as SameSite sees it: its host's last two labels (glyphh.ai for api.glyphh.ai)."""
+    return ".".join((urlsplit(url).hostname or "").split(".")[-2:])
+
+
+def same_site(settings: Settings) -> Literal["lax", "none"]:
+    """Lax when the platform and the server share a site. When they do not (locally, localhost beside a tunnel), the
+    platform's read of /auth/consent is cross-site, so the cookie must be None, which browsers only keep when Secure."""
+    if settings.public_url.startswith("https://") and _site(settings.public_url) != _site(settings.platform_url):
+        return "none"
+    return "lax"
+
+
 def new_browser() -> str:
     """A fresh value for this browser, sent with the step that leaves for Google or GitHub."""
     return make_secret()
@@ -40,7 +56,7 @@ def bind_browser(response: Response, settings: Settings, value: str, path: str =
         value,
         max_age=TTL,
         httponly=True,
-        samesite="lax",
+        samesite=same_site(settings),
         path=path,
         secure=settings.public_url.startswith("https://"),
     )

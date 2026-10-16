@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import NotFound
+from glyphh_server.errors import Invalid, NotFound
 from glyphh_server.models import Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
@@ -42,6 +42,8 @@ class HostedRuntime(BaseModel):
 
 
 async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
+    if who.install_id is None:
+        raise Invalid("A local runtime belongs to an install: link it from Claude Code.", reason="no_install")
     token = make_secret()
     made = upsert(Rrotor).values(
         user_id=who.user_id, mode="local", install_id=who.install_id, state=NOT_LINKED, token_hash=hash_secret(token)

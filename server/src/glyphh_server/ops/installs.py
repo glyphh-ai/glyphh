@@ -11,6 +11,7 @@ from glyphh_server.errors import NotFound
 from glyphh_server.models import Install
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.tokens import revoke_install
+from glyphh_server.ops.connector import grants
 
 
 class InstallView(BaseModel):
@@ -51,4 +52,10 @@ async def revoke(conn: AsyncConnection, who: Principal, install_id: uuid.UUID) -
 
 
 async def sign_out(conn: AsyncConnection, who: Principal) -> None:
-    await revoke_install(conn, who.install_id)
+    """Signs the caller out: an install's token signs that install out; an OAuth access token (the platform's
+    session) ends its grant."""
+    if who.install_id is not None:
+        await revoke_install(conn, who.install_id)
+        return
+    assert who.grant_id is not None, "every caller of /v1 has an install or a grant"
+    await grants.end(conn, who.grant_id)

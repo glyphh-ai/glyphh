@@ -33,6 +33,7 @@ from glyphh_server.api import (
     runtime,
     unlock,
 )
+from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
@@ -121,5 +122,11 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     errors.install(app)
     for module in ROUTERS:
         app.include_router(module.router)
-    app.add_middleware(TraceMiddleware)
+    _wrap(app, cfg)
     return app
+
+
+def _wrap(app: FastAPI, cfg: Settings) -> None:
+    """The outer layers, innermost first: CORS for the platform's read of a consent, then the trace."""
+    app.add_middleware(ConsentCorsMiddleware, platform_origin=cfg.platform_base)
+    app.add_middleware(TraceMiddleware)
