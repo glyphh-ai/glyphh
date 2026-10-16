@@ -10,7 +10,7 @@ The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at 
 
 Redis carries only live signals (pub/sub): an approval reaches whichever server process holds the person's `/v1/approvals/stream`, and a call reaches whichever holds the runtime's `/v1/runtime/link`. Nothing kept lives there; Postgres holds the record, so Redis saves nothing to disk. In production Redis runs on the server's own Fly machine, beside the server.
 
-Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it creates missing tables, applies row-level security and seeds the mods (`programs`, `gateway`, `ada`; a mod no longer seeded is retired), the plans (Free, Pro, Team), each with its first version (no plan includes a mod), and the add-ons, each with its first version (prices, per seat and limits are placeholders marked TBD in `db/seed_addons.py`). Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
+Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it runs `db/schema.sql`, the one file that holds the schema (every table and index, and the tenant role and its row-level security; safe to run again), then seeds the mods (`programs`, `gateway`, `ada`; a mod no longer seeded is retired), the plans (Free, Pro, Team), each with its first version (no plan includes a mod), and the add-ons, each with its first version (prices, per seat and limits are placeholders marked TBD in `db/seed_addons.py`). Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed):
 
@@ -40,7 +40,7 @@ Make a license key, or a secrets key, with:
 `src/glyphh_server/`, built database first, then the service functions, then thin routes:
 
 - `models/`: the schema, one table per module (drawn in `docs/architecture.md`, Data model)
-- `db/`: the engine, the schema step, the seed, the drift check, tenancy (row-level security keyed on the org) and `signals.py`, the Redis client for live signals
+- `db/`: the engine, `schema.sql` and the schema step, the seed, the drift check, tenancy (row-level security keyed on the org) and `signals.py`, the Redis client for live signals
 - `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe, `ops/connector/` the connector's OAuth 2.1 authorization server (clients, codes, grants, tokens)
 - `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages, `api/github_pages.py` installing the GitHub App in the browser, `api/oauth_pages.py` the connector's authorization and Allow page, `api/oauth.py` and `api/oauth_meta.py` its token, registration, revocation and metadata endpoints (refusals in OAuth's own shape), `api/mcp.py` `/mcp`
 - `mcp/`: the connector's MCP server: the protocol (2026-07-28 and the earlier `initialize` revisions), the tools (`mcp/tools/`) and the account panel (`mcp/panel/`, an MCP App that inlines the MCP Apps client bundle)
