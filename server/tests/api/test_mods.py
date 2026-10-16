@@ -17,7 +17,6 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     mods = res.json()
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
         ("workspaces", "Workspaces", ["Free", "Pro", "Team"]),
-        ("drips", "Drips", []),
         ("programs", "Programs", []),
         ("gateway", "Gateway", []),
         ("ada", "Ada", []),
@@ -25,8 +24,7 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     assert all(m["description"] for m in mods)
     assert mods[0]["addon"] is None
     assert [m["addon"] for m in mods[1:]] == [
-        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False}
-        for cents in (200, 400, 400, 400)
+        {"price_cents": cents, "per_seat": True, "plans": ["Pro", "Team"], "free": False} for cents in (400, 400, 400)
     ]
 
 
@@ -42,21 +40,21 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     pro = await person(engine, "Pro")
-    await with_addon(engine, pro.org_id, "drips")
+    await with_addon(engine, pro.org_id, "gateway")
     async with engine.begin() as conn:
         await conn.execute(insert(Mod).values(slug="glyphh-old", name="Old", description="Gone", sort=9))
-        await conn.execute(update(Mod).where(Mod.slug == "drips").values(active=False))
+        await conn.execute(update(Mod).where(Mod.slug == "gateway").values(active=False))
     try:
         await apply_schema(engine, SETTINGS)
         lic = (await client.get("/v1/license", headers=pro.headers)).json()["payload"]
         assert list(lic["mods"]) == ["workspaces"]
         assert list((await client.get("/v1/me", headers=pro.headers)).json()["plan"]["mods"]) == ["workspaces"]
         slugs = [m["slug"] for m in (await client.get("/v1/mods")).json()]
-        assert slugs == ["workspaces", "programs", "gateway", "ada"]
-        assert "drips" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
+        assert slugs == ["workspaces", "programs", "ada"]
+        assert "gateway" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
         async with engine.connect() as conn:
             assert (await conn.execute(select(Mod.active).where(Mod.slug == "glyphh-old"))).scalar_one() is False
     finally:
         async with engine.begin() as conn:
             await conn.execute(delete(Mod).where(Mod.slug == "glyphh-old"))
-            await conn.execute(update(Mod).where(Mod.slug == "drips").values(active=True))
+            await conn.execute(update(Mod).where(Mod.slug == "gateway").values(active=True))

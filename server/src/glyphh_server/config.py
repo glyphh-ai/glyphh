@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
     # The Stripe prices the add-ons sell on, one per mod sold as an add-on.
-    stripe_price_drips: str | None = None
     stripe_price_programs: str | None = None
     stripe_price_gateway: str | None = None
     stripe_price_ada: str | None = None

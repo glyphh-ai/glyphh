@@ -20,26 +20,27 @@ The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product)
 
 These come first where anything below says otherwise.
 
-1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`), `drips` (limits `custom_drips`, `fullscreen`) and `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
+1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `workspaces` (limits `workspaces`, `favorites`, `stream`) and `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below); a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
 2. **The server is headless.** A person manages their Glyphh account from Claude, or any MCP client, through the **Glyphh connector**: a remote MCP server at `/mcp` (Streamable HTTP), signed in with OAuth. Its tools are the account: who am I, the plan and each mod's limits, the plans, upgrade, billing, seats, installs, members and invites, and the connector's own grants. Where the client shows MCP App panels, the connector serves one, the account panel (`ui://glyphh/account/2`); every other client gets the same tools as text and structured content. The server's only pages are the device page and the connector's sign-in and Allow page, both generic (styled together later).
 3. **Programs, runs, the runtime and hours are not in scope now.** Their tables stay as drawn; their API and connector tools wait.
 4. **The mods that use rrotor** (Chris, 2026-10-15, later the same day; rrotor's `docs/architecture.md`, Decisions and sections 9 to 11, has the detail):
-    - The product is mods sold by subscription: **Workspaces** and **Drips** (no rrotor), and **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
+    - The product is mods sold by subscription: **Workspaces** (no rrotor), and **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
     - **Gateway is a mod, never hosted by Glyphh:** it runs in the person's rrotor; models and keys are added in its UI and stay in rrotor, encrypted; it serves OpenAI- and Anthropic-compatible endpoints to programs and mods. It never routes a Claude subscription nor offers a Claude login ([Anthropic's terms](#anthropics-terms)). Designed only.
     - **Ada is a mod** on rrotor: an Ada model is a program (`spec.json` and a small program file, deployed by commit, no network, its precedent store in a per-program data folder outside git). Designed only.
     - **A small base image and a part per mod** (Programs: Chromium and profiles; Gateway: its runtime; Ada: numpy and the kernel); Postgres with pgvector, MongoDB and Neo4j are parts, not the base. Parts are versioned, come from the mod's release, are verified, and are licensed by the plan's per-mod limits.
     - **rrotor has no sign-in of its own:** the mod, signed in, asks `POST /v1/runtime/local` for the runtime token and hands it to rrotor; signing the install out cuts rrotor off. A hosted rrotor's token is made by the server at provisioning (designed).
     - **Claude reaches rrotor** locally through the mods (their tools call rrotor's local API on 127.0.0.1 with a local token only the mod holds), remotely through the Glyphh connector, the server and the runtime link. rrotor serves no MCP to Claude; no plugin carries an MCP server.
     - **Local runtimes:** Apple's `container` where present, else OrbStack, else Docker. Hosting on Fly is designed only.
-    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `workspaces`, `drips`, `programs` (and later `gateway`, `ada`).
+    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `workspaces`, `programs` (and later `gateway`, `ada`).
 5. **A base subscription and mod add-ons** (Chris, 2026-10-15, later still: "The base subscription comes with Workspaces. Then everything is an add-on."). This comes first where 1 and 4 say otherwise.
     - **The plans (Free, Pro, Team; Solo still unseeded) include only `workspaces`** in their `mod_limits`, with its per-plan limits as before.
-    - **Every other mod is an add-on**, sold through Stripe: `drips`, `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `workspaces`, `drips`, `programs`, `gateway` and `ada`.
+    - **Every other mod is an add-on**, sold through Stripe: `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `workspaces`, `programs`, `gateway` and `ada`.
     - **One Stripe subscription per org:** the plan's item and one subscription item per add-on, on one invoice; adding or removing an add-on is prorated. An add-on is per seat (its quantity follows the seats) or flat (quantity 1), set per add-on; per seat until Chris decides.
     - **An add-on needs a paid plan,** unless the catalog marks it allowed on Free (per add-on, off by default); a Free org then subscribes to the add-ons alone, through Checkout.
     - **The add-on catalog is versioned like plan versions:** a used row never changes; a new Stripe price is a new version, and an org keeps the version it added.
     - **Which add-ons an org has comes from its subscription's items,** read fresh from Stripe on every event, not from Stripe Entitlements: Entitlements carry no quantity and no subscription item, which per-seat quantities and removing an add-on need anyway; feature changes reach existing subscriptions only at their next period; and the org's add-ons would then follow two event streams instead of the one that already keeps its plan true.
     - **The license's `mods`** is the plan's mods (Workspaces) and each add-on the org has, each with its limits on the org's plan.
+6. **Drips leaves the subscription** (Chris, 2026-10-15, evening). Drips is split into **Glyphh Drip** (effects, `/drip`) and **Glyphh Arcade** (games, `/games`), each a one-time purchase per machine (a Stripe Payment Link and a licence the site signs, checked offline), with no Glyphh account; their source is its own repository (`glyphh-ai/fun`), released into the same marketplace. The server holds nothing about them: `drips` is no longer seeded (so it is retired), is no add-on and has no Stripe price. This comes first where 1, 4 and 5 say otherwise, including "nothing is bought one-off", which now holds for the subscription only.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
 - **Functional first.** Every screen works before design draws it.
@@ -289,7 +290,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
     "plan": "Pro",
     "limits": {"members": 1, "installs": 5},
     "mods": {
-      "drips": {"limits": {"custom_drips": null, "fullscreen": 1}},
+      "gateway": {"limits": {"keys": 10, "models": 5}},
       "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
       "workspaces": {"limits": {"favorites": null, "stream": 1, "workspaces": 10}}
     },
@@ -299,7 +300,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 }
 ```
 
-(A Pro org with the Drips and Programs add-ons.)
+(A Pro org with the Gateway and Programs add-ons.)
 
 - `mods` names each mod the org has, and only those: the plan's (`workspaces`), and each add-on on its subscription, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
 - `limits` at the top are the account's: `members` (per org) and `installs` (per user), `null` for unlimited.
@@ -309,7 +310,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 Every mod but Workspaces is an add-on to the plan: a line on the org's one Stripe subscription, on the same invoice, prorated when it changes. Writes are the admin's.
 
 - **`GET /v1/addons`** (anyone in the org): each add-on on sale, and each the org has (at the version it added): `mod`, `name`, `description`, `version`, `price_cents` (a month, per seat when `per_seat`, else flat), `per_seat`, `monthly_cents` (for the org's seats now), `plans` (the paid plans it may be added to), `free` (whether a Free org may have it), `allowed` (on the org's plan), `limits` (the mod's limits on the org's plan; `null` when the plan may not have it and the org hasn't it), `added`, `quantity` (on the subscription; `null` when not added).
-- **`POST /v1/billing/checkout`** `{"plan", "seats", "addons": ["drips", …]}`: one Checkout with the plan's line and one per add-on (a per-seat add-on's quantity is the seats, a flat one's 1). `plan` `Free` with only add-ons the catalog allows on Free subscribes to those alone.
+- **`POST /v1/billing/checkout`** `{"plan", "seats", "addons": ["programs", …]}`: one Checkout with the plan's line and one per add-on (a per-seat add-on's quantity is the seats, a flat one's 1). `plan` `Free` with only add-ons the catalog allows on Free subscribes to those alone.
 - **`POST /v1/billing/addons/preview`** `{"mod", "action": "add" | "remove"}`: what changes now, from Stripe's preview invoice (`POST /v1/invoices/create_preview` on the subscription): `{"mod", "action", "prorated_cents", "currency", "monthly_cents", "proration_date"}`; `prorated_cents` is the sum of the proration lines (negative for a credit), `monthly_cents` the add-on's monthly amount at the seats now. Passing `proration_date` back when applying makes Stripe charge exactly what was previewed.
 - **`POST /v1/billing/addons`** `{"mod", "proration_date"?}` adds a subscription item, prorated; **`DELETE /v1/billing/addons/{mod}`** (`?proration_date=`) deletes it, prorated (a credit). Both answer the same list as `GET /v1/addons`, synced from Stripe's answer at once.
 - **Refusals** (stable codes): not the admin `E_FORBIDDEN`; no subscription `E_CONFLICT` `reason: not_subscribed` (subscribe with checkout); not allowed on the org's plan `E_CONFLICT` `reason: not_on_plan`; already added `E_CONFLICT` `reason: already_added`; not added `E_NOT_FOUND` `reason: not_added`; the subscription's last item `E_CONFLICT` `reason: last_item` (cancel in the billing portal); a mod with no add-on on sale `E_INVALID` `reason: no_addon`. Changing plan to one an added add-on isn't allowed on is `E_CONFLICT` `reason: not_on_plan`.
@@ -741,7 +742,6 @@ Each a line on the org's subscription, prorated when added or removed; per seat 
 
 | Add-on | Price a month | Per seat | Plans | On Free | Limits on Pro | Limits on Team |
 |---|---|---|---|---|---|---|
-| `drips` | $2 (TBD) | Yes (TBD) | Pro, Team | No | `custom_drips` unlimited, `fullscreen` 1 (TBD) | The same (TBD) |
 | `programs` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `programs` 25, `runs_per_day` 1000 (TBD) | Unlimited, unlimited (TBD) |
 | `gateway` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 5, `keys` 10 (TBD) | Unlimited, unlimited (TBD) |
 | `ada` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 3, `precedents` 10000 (TBD) | Unlimited, unlimited (TBD) |

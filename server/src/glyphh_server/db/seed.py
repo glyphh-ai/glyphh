@@ -29,11 +29,6 @@ MODS: tuple[ModSeed, ...] = (
         "switched with /dip",
     ),
     ModSeed(
-        "drips",
-        "Drips",
-        "Visual effects over Claude: confetti, fireworks, hearts, a matrix rain and more, and your own recipes",
-    ),
-    ModSeed(
         "programs",
         "Programs",
         "Programs built with Claude, deployed by commit and run in rrotor, your own isolated runtime; called by Claude "

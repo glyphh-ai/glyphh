@@ -63,8 +63,8 @@ async def test_a_plan_without_the_workspaces_mod_allows_no_workspace(
 ) -> None:
     ada = await person(engine)
     async with engine.begin() as conn:
-        plan_id = (await conn.execute(insert(Plan).values(name="Drips only", sort=8).returning(Plan.id))).scalar_one()
-        limits = {"drips": {"custom_drips": 1, "fullscreen": 0}}
+        plan_id = (await conn.execute(insert(Plan).values(name="Gateway only", sort=8).returning(Plan.id))).scalar_one()
+        limits = {"gateway": {"models": 1, "keys": 0}}
         values = {"plan_id": plan_id, "version": 1, "seat_price_cents": 0, "max_members": 1, "mod_limits": limits}
         version_id = (await conn.execute(insert(PlanVersion).values(values).returning(PlanVersion.id))).scalar_one()
         await conn.execute(update(Org).where(Org.id == ada.org_id).values(plan_version_id=version_id))

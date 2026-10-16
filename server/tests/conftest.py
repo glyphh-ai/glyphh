@@ -48,7 +48,6 @@ SETTINGS: Settings = Settings(
     stripe_webhook_secret=WEBHOOK_SECRET,
     stripe_price_pro="price_test_pro",
     stripe_price_team="price_test_team",
-    stripe_price_drips="price_test_drips",
     stripe_price_programs="price_test_programs",
     stripe_price_gateway="price_test_gateway",
     stripe_price_ada="price_test_ada",

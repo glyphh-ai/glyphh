@@ -14,7 +14,6 @@ from tests.fakes import FakeStripe
 PRICES: dict[str, int] = {
     "price_test_pro": 800,
     "price_test_team": 1600,
-    "price_test_drips": 200,
     "price_test_programs": 400,
     "price_test_gateway": 400,
     "price_test_ada": 400,

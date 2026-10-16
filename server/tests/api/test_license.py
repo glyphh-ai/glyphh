@@ -26,7 +26,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "drips")
+    await with_addon(engine, ada.org_id, "gateway")
     await with_addon(engine, ada.org_id, "programs")
     lic = (await client.get("/v1/license", headers=ada.headers)).json()
     key = (await client.get("/v1/license/key", headers=ada.headers)).json()
@@ -38,12 +38,12 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
         "Pro",
         {"members": 1, "installs": 5},
         {
-            "drips": {"limits": {"custom_drips": None, "fullscreen": 1}},
+            "gateway": {"limits": {"keys": 10, "models": 5}},
             "programs": {"limits": {"programs": 25, "runs_per_day": 1000}},
             "workspaces": {"limits": {"favorites": None, "stream": 1, "workspaces": 10}},
         },
     )
-    assert list(p["mods"]) == ["drips", "programs", "workspaces"]
+    assert list(p["mods"]) == ["gateway", "programs", "workspaces"]
     assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
     assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)

@@ -27,7 +27,6 @@ class AddonSeed:
 
 # TBD (Chris): every price, per_seat and every limit is a placeholder until set. None is allowed on Free.
 ADDONS: tuple[AddonSeed, ...] = (
-    AddonSeed("drips", 200, True, PAID, False, {EVERY_PLAN: {"custom_drips": None, "fullscreen": 1}}),
     AddonSeed(
         "programs",
         400,
@@ -58,7 +57,6 @@ ADDONS: tuple[AddonSeed, ...] = (
 def addon_prices(settings: Settings) -> dict[str, str | None]:
     """Which Stripe price each add-on sells on: per environment, so read from settings."""
     return {
-        "drips": settings.stripe_price_drips,
         "programs": settings.stripe_price_programs,
         "gateway": settings.stripe_price_gateway,
         "ada": settings.stripe_price_ada,
