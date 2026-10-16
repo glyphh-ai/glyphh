@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from functools import partial
 
 import anyio
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
@@ -20,6 +21,7 @@ from starlette.websockets import WebSocket
 from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops.license import sign_license
 from glyphh_server.ops.link import inbound
 from glyphh_server.ops.link.hello import next_text, read_hello
 from glyphh_server.ops.link.hub import Hub, Link
@@ -54,6 +56,7 @@ class Context:
     hub: Hub
     routines: Routines
     secrets_key: bytes | None
+    license_key: Ed25519PrivateKey | None = None  # signs the licence a hosted runtime's welcome carries
 
 
 @dataclass(slots=True)
@@ -88,8 +91,7 @@ async def serve(ws: WebSocket, ctx: Context, token: str | None) -> None:
 async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
     async with ctx.hub.listening(link) as pubsub:
         await ctx.hub.attach(link)
-        limits = Limits(runtime_hours=runtime.runtime_hours if runtime.mode == "hosted" else None)
-        await link.send(Welcome(limits=limits).model_dump(mode="json"))
+        await link.send((await _welcome(ctx, runtime)).model_dump(mode="json"))
         clock = Clock()
         async with anyio.create_task_group() as jobs:
 
@@ -100,6 +102,19 @@ async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
             jobs.start_soon(until_done, partial(_read, ctx, runtime, link, clock))
             jobs.start_soon(until_done, partial(_heartbeat, link, clock))
             jobs.start_soon(until_done, partial(ctx.hub.relay, link, pubsub))
+
+
+async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
+    """A local runtime's welcome has no limits (the computer's own) and no licence (its mod hands one in); a hosted
+    one's carries the plan's hours and its licence."""
+    if runtime.mode != "hosted":
+        return Welcome(limits=Limits(runtime_hours=None))
+    licence = None
+    if ctx.license_key is not None:
+        async with ctx.engine.begin() as conn:
+            await tenancy.enter(conn, runtime.org_id)
+            licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None)
+    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours), licence=licence)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:

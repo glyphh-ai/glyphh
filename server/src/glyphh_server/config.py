@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     invite_url: str = ""
     # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
     mcp_origins: str = "https://claude.ai,https://claude.com"
+    # Hosted runtimes on Fly: the deploy token, the one app the machines live in, their region, the hosted rrotor
+    # image (private: carries the Ada part), and each machine's size. Without a token and an app, hosting is off.
+    fly_api_token: str = ""
+    fly_app: str = ""
+    fly_region: str = "iad"
+    fly_image: str = ""
+    fly_cpus: int = 1
+    fly_memory_mb: int = 1024
+    fly_volume_gb: int = 3
+    # A hosted runtime with no run for this long is stopped; a call starts it again.
+    runtime_idle_minutes: int = 10
 
     @property
     def base_url(self) -> str:
@@ -50,6 +61,10 @@ class Settings(BaseSettings):
     @property
     def github_app_install_url(self) -> str:
         return f"https://github.com/apps/{self.github_app_slug}/installations/new"
+
+    @property
+    def fly_configured(self) -> bool:
+        return bool(self.fly_api_token and self.fly_app and self.fly_image)
 
     @property
     def mcp_resource(self) -> str:

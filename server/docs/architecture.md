@@ -11,7 +11,7 @@ The design of Glyphh as it stands: the [product](#product), the [architecture](#
 | `glyphh` | The account: sign in, the licence, and the account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan | Built |
 | `drips` | Visual effects with sound over Claude: confetti, fireworks, hearts, a matrix rain; your own recipes, played by name or by Claude | The person's Mac | Once, $8 per machine, no account | Built |
 | `games` | Games with sound over Claude: Missile Command, Chickn, Blocks, Rocks, Dash; your top score to beat | The person's Mac | Once, $8 per machine, no account | Built |
-| `ada` | Ada models in your rrotor: a typed spec and a precedent store, deployed by commit, run with no network, called by Claude and by Claude's routines | **rrotor**, an isolated runtime: local on every plan; hosted on Pro and Team | Add-on | Mod designed; rrotor built (local) |
+| `ada` | Ada models in your rrotor: a typed spec and a precedent store, deployed by commit, run with no network, called by Claude and by Claude's routines | **rrotor**, an isolated runtime: local on every plan; hosted on Pro and Team | Add-on | Built: rrotor local and hosted, the models and runs API, the connector's model tools; no mod of its own |
 
 - **Ada is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
 - **Drips and Games are bought once**, per machine, with no Glyphh account: a Stripe Payment Link, then a licence the server signs for that install, checked offline from then on (below, Bought once).
@@ -65,10 +65,10 @@ flowchart TB
 
 | Part | What it is | Repo | State |
 |---|---|---|---|
-| **The server** | Accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), the runtime link and approvals | `glyphh-ai/server` | Built (the models and runs API designed) |
+| **The server** | Accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), the runtime link and approvals | `glyphh-ai/server` | Built |
 | **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
-| **The mods** | `glyphh` (the account), `drips` and `games` (bought once, on `shared/unlock/`), `ada` (designed, on `shared/licence/`) | `glyphh-ai/mods` | Built, but Ada |
-| **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Local built; hosted designed |
+| **The mods** | `glyphh` (the account), `drips` and `games` (bought once, on `shared/unlock/`) | `glyphh-ai/mods` | Built |
+| **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Built, local and hosted |
 | **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
 
 ### Mods and how they are installed
@@ -147,11 +147,11 @@ Routines run without approvals, so Glyphh's own rule is the brake: a step that `
 
 **One isolated runtime per person, local and hosted.** A person never sees machines: they have a runtime where their models live and run.
 
-| | Local runtime (built) | Hosted runtime (designed) |
+| | Local runtime (built) | Hosted runtime (built) |
 |---|---|---|
 | Who | Every plan, Free included | Pro and Team |
-| Where | The person's own computer (Apple's `container`, else OrbStack, else Docker), installed and started by the first mod that needs it | One Fly machine and its volume per person, which Glyphh provisions on upgrade; nobody sees or manages it |
-| Up | While the computer is on | Stopped when idle, woken per call |
+| Where | The person's own computer (Apple's `container`, else OrbStack, else Docker), installed and started by the first mod that needs it | One Fly machine and its volume per person, made the first time the person starts it (`POST /v1/runtime/start`); nobody sees or manages it |
+| Up | While the computer is on | Stopped after `GLYPHH_RUNTIME_IDLE_MINUTES` (10) with no run, woken per call |
 | Called by | Claude on that computer, through the mods' local API | Claude anywhere and Claude's routines, through the Glyphh connector |
 | Caps | The computer's own | Runtime hours a month and storage, per plan |
 
@@ -200,8 +200,8 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools are the account's and the models': `models_list`, `call`, `continue`, `run_status`.
 - **The runtime link:** rrotor's outbound WebSocket (its own token); calls go down it, results and events come back. A local runtime's token stops working when its install is signed out.
 - **Approvals, shown in Claude:** a step that needs approval is a row in `approvals` and a signal on **Redis** pub/sub to the server process holding the person's connection; the mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows Approve and Decline; the first answer wins. Redis runs on the server's own Fly machine and holds only what is live; Postgres holds everything kept.
-- **Models:** the record of each Ada model (a model, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (designed).
-- **Hosting:** provisions each Pro and Team user's runtime on Fly, wakes it per call, stops it when idle, counts its hours and bills its storage (designed).
+- **Models:** the record of each Ada model (a model, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (built: `/v1/models`, `/v1/runs`).
+- **Hosting:** makes each Pro and Team person's runtime on Fly when they first start it (a machine and a volume in Glyphh's one Fly app, the runtime token in the machine's environment, the licence in its `welcome`), wakes it per call, stops it when idle and counts its run time (built); billing its storage and hours beyond the plan's is designed.
 - **Limits are enforced here** where the server sees the use: members, seats and installs. Every mod limit the mod enforces from its licence.
 
 ### API
@@ -218,7 +218,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Mods, plans, billing | `GET /v1/mods` (each mod, the plans that include it, and `addon`: the add-on it is sold as, `price_cents`, `per_seat`, `plans` and `free`, or `null`), `GET /v1/plans` (each plan's newest version: price, account limits, each mod and its limits), `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
 | Bought once | `GET /v1/unlock/license?mod=&install=` (open: `paid` false until the mod's Payment Link checkout for that install is paid, then the licence); Stripe's webhook records `checkout.session.completed` in `payment` mode and `charge.refunded` (below, Bought once) |
 | Add-ons | `GET /v1/addons` (the catalog for the org's plan, with prices, and what the org has), `POST /v1/billing/checkout` with `addons`, `POST /v1/billing/addons/preview`, `POST /v1/billing/addons`, `DELETE /v1/billing/addons/{mod}` (below, Add-ons) |
-| Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run; `call` carries the caller's `clearance`, 0 to 1, the model's `ctx.clearance`), `send_continue`, `send_cancel`, `send_deploy`. A runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; waking a stopped hosted runtime on Fly is one seam, `wake_hosted`, not built |
+| Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run; `call` carries the caller's `clearance`, 0 to 1, the model's `ctx.clearance`), `send_continue`, `send_cancel`, `send_deploy`. A local runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; a hosted one is woken (its machine started, `wake_hosted`) and the message waits up to 45 s for its link. `GET /v1/runtime` (the hosted runtime: state, region, image, run time this month, the plan's hours), `POST /v1/runtime/start` (made the first time: Pro and Team, `E_FORBIDDEN` `not_on_plan`; `E_UNAVAILABLE` `hosting_off` or `fly_failed`), `POST /v1/runtime/stop`, `DELETE /v1/runtime` (the machine, the volume and every model's data on it) |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional model; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a model's events |
 | Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, the Allow page (`POST /auth/oauth/allow`), `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}` (below, The connector) |
@@ -231,7 +231,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Area | Calls |
 |---|---|
 | Runs | `GET /v1/runs/{id}/live` (the stream, by ticket) |
-| Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); waking a stopped hosted runtime per call (Fly), behind the link's `wake_hosted` seam; the live panel's run events relayed from the link to its panel |
+| Runtime | `POST /v1/runtime/storage` (grow the volume); the live panel's run events relayed from the link to its panel |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
 | Connector | The live panel on `/mcp` |
 

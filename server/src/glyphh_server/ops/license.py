@@ -26,7 +26,7 @@ LICENSE_TTL: timedelta = timedelta(hours=24)
 
 
 class LicensePayload(BaseModel):
-    install_id: uuid.UUID
+    install_id: uuid.UUID | None  # none for a hosted runtime's licence: no install starts it
     user_id: uuid.UUID
     org_id: uuid.UUID
     plan: str
@@ -59,12 +59,18 @@ def canonical(payload: dict[str, Any]) -> bytes:
 
 
 async def license_for(conn: AsyncConnection, who: Principal, key: Ed25519PrivateKey) -> License:
-    plan = await org_plan(conn, who.org_id)
-    mods = plan.mods | await licensed(conn, who.org_id, plan.name)
+    return await sign_license(conn, key, who.user_id, who.org_id, who.install_id)
+
+
+async def sign_license(
+    conn: AsyncConnection, key: Ed25519PrivateKey, user_id: uuid.UUID, org_id: uuid.UUID, install_id: uuid.UUID | None
+) -> License:
+    plan = await org_plan(conn, org_id)
+    mods = plan.mods | await licensed(conn, org_id, plan.name)
     payload = LicensePayload(
-        install_id=who.install_id,
-        user_id=who.user_id,
-        org_id=who.org_id,
+        install_id=install_id,
+        user_id=user_id,
+        org_id=org_id,
         plan=plan.name,
         limits=plan.limits,
         mods=dict(sorted(mods.items())),

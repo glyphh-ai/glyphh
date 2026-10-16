@@ -39,6 +39,7 @@ COLUMNS = (
     PlanVersion.seat_price_cents,
     PlanVersion.max_members,
     PlanVersion.max_installs,
+    PlanVersion.runtime_hours,
     PlanVersion.mod_limits,
 )
 

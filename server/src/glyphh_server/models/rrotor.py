@@ -27,6 +27,7 @@ class Rrotor(Base):
     mode: Mapped[str] = mapped_column(Text)
     install_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("installs.id", ondelete="CASCADE"), unique=True)
     fly_machine_id: Mapped[str | None] = mapped_column(Text)
+    fly_volume_id: Mapped[str | None] = mapped_column(Text)
     region: Mapped[str | None] = mapped_column(Text)
     image_version: Mapped[str | None] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)

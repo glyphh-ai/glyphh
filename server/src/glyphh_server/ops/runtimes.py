@@ -1,18 +1,25 @@
-"""A person's runtimes. A local rrotor gets its runtime token from the install that starts it: one local runtime per
-install, its token shown once and kept only as a hash; asking again rotates it. A new token starts the link's
-sequence numbers again: the mod asks for one when it starts a rrotor whose /data holds none, a fresh volume."""
+"""A person's runtimes.
+
+A local rrotor gets its runtime token from the install that starts it: one local runtime per install, its token
+shown once and kept only as a hash; asking again rotates it. A new token starts the link's sequence numbers again:
+the mod asks for one when it starts a rrotor whose /data holds none, a fresh volume.
+
+A hosted rrotor (Pro and Team) is one Fly machine and one volume per person (ops/hosted.py makes, starts and stops
+it); here is how it is shown, and which runtime a call or a deploy goes to."""
 
 import uuid
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import NotFound
-from glyphh_server.models import Rrotor
+from glyphh_server.models import Rrotor, Run
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
+from glyphh_server.ops.plans import org_version
 
 NOT_LINKED: str = "stopped"
 
@@ -20,6 +27,16 @@ NOT_LINKED: str = "stopped"
 class LocalRuntime(BaseModel):
     runtime_id: uuid.UUID
     token: str = Field(description="The runtime's token for its outbound link: shown once, never stored")
+
+
+class HostedRuntime(BaseModel):
+    runtime_id: uuid.UUID | None = Field(description="None until the runtime is first started")
+    state: str = Field(description="none, stopped, online or offline")
+    region: str | None
+    image_version: str | None
+    last_seen_at: datetime | None
+    seconds_used: int = Field(description="Run time this calendar month")
+    hours_allowed: int | None = Field(description="The plan's hosted hours a month; null is unlimited")
 
 
 async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
@@ -51,3 +68,40 @@ async def runtime_for(conn: AsyncConnection, who: Principal, runtime_id: uuid.UU
     if found is None:
         raise NotFound("You have no runtime. Start one from Claude (/ada start).", reason="no_runtime")
     return found
+
+
+# Hosted
+
+
+def _month_start(now: datetime) -> datetime:
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def seconds_used(conn: AsyncConnection, runtime_id: uuid.UUID) -> int:
+    since = _month_start(datetime.now(UTC))
+    used = select(func.coalesce(func.sum(Run.seconds), 0)).where(Run.rrotor_id == runtime_id, Run.started_at >= since)
+    return int((await conn.execute(used)).scalar_one())
+
+
+async def hosted_view(conn: AsyncConnection, who: Principal) -> HostedRuntime:
+    version = await org_version(conn, who.org_id)
+    row = (await conn.execute(select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted"))).first()
+    if row is None:
+        return HostedRuntime(
+            runtime_id=None,
+            state="none",
+            region=None,
+            image_version=None,
+            last_seen_at=None,
+            seconds_used=0,
+            hours_allowed=version.runtime_hours,
+        )
+    return HostedRuntime(
+        runtime_id=row.id,
+        state=row.state,
+        region=row.region,
+        image_version=row.image_version,
+        last_seen_at=row.last_seen_at,
+        seconds_used=await seconds_used(conn, row.id),
+        hours_allowed=version.runtime_hours,
+    )

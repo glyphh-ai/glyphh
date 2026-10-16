@@ -2,17 +2,20 @@
 every refusal a close with its reason, the pings, a newer link taking over, and the server closing its links."""
 
 import asyncio
+import base64
 import json
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import Org, PlanVersion
 from glyphh_server.ops.auth import tokens
+from glyphh_server.ops.license import canonical
 from glyphh_server.ops.link import hello as hello_step
 from glyphh_server.ops.link import session
-from glyphh_server.ops.link.presence import bearer
+from glyphh_server.ops.link.presence import Runtime, bearer
 from tests.db.helpers import person
 from tests.link import WAIT, closed, connect, hello, hosted_runtime, linked, local_runtime, receive, runtime_row, server
 
@@ -50,7 +53,16 @@ async def test_a_hosted_runtime_is_welcomed_with_its_plans_hours(engine: AsyncEn
         hours = (await conn.execute(found.where(Org.id == ada.org_id))).scalar_one()
     async with server() as srv, connect(srv, rt.token) as ws:
         await ws.send_json(hello(rt))
-        assert (await ws.receive_json(timeout=WAIT))["limits"] == {"runtime_hours": hours}
+        welcome = await ws.receive_json(timeout=WAIT)
+        assert welcome["limits"] == {"runtime_hours": hours}
+        key = (await srv.http.get("/v1/license/key", headers=ada.headers)).json()
+    payload = welcome["licence"]["payload"]
+    assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
+    public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
+    public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
+    ctx = session.Context(engine, None, None, None, None)  # type: ignore[arg-type]
+    runtime = Runtime(rt.id, ada.user_id, ada.org_id, "hosted", hours)
+    assert (await session._welcome(ctx, runtime)).licence is None  # no key to sign with: hours, no licence
 
 
 async def test_a_link_without_a_good_token_is_refused_with_its_reason(engine: AsyncEngine) -> None:

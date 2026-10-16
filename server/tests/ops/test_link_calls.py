@@ -2,6 +2,7 @@
 not fit the run's state, and answers E_UNAVAILABLE, rolled back, when no process holds the link. Deploys carry a
 repo token only for a model in git. The hub's link answers False for a socket already gone."""
 
+import asyncio
 import random
 import uuid
 from datetime import UTC, datetime
@@ -16,6 +17,7 @@ from glyphh_server.errors import Conflict, NotFound, Unavailable
 from glyphh_server.models import Deployment, GitHubInstallation, Rrotor, Run
 from glyphh_server.ops import github_app
 from glyphh_server.ops.github_app import GitHubApp
+from glyphh_server.ops.link import calls
 from glyphh_server.ops.link.calls import send_call, send_cancel, send_continue, send_deploy
 from glyphh_server.ops.link.hub import Hub, Link
 from tests.conftest import GITHUB_APP_ID, GITHUB_APP_KEY, SETTINGS
@@ -60,14 +62,57 @@ async def test_a_runtime_nobody_holds_is_unavailable_with_when_it_was_seen_and_n
     seen = datetime(2026, 10, 14, 7, 7, tzinfo=UTC)
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == local.id).values(last_seen_at=seen, state="offline"))
-    for rt, reason, last_seen in ((local, "runtime_offline", seen.isoformat()), (hosted, "runtime_stopped", None)):
+    for rt, detail in (
+        (local, {"reason": "runtime_offline", "runtime_id": str(local.id), "last_seen_at": seen.isoformat()}),
+        (hosted, {"reason": "hosting_off", "runtime_id": str(hosted.id)}),
+    ):
         await deploy(engine, rt.id, v1)
         with pytest.raises(Unavailable) as refused:
             async with engine.begin() as conn:
                 await tenancy.enter(conn, ada.org_id)
                 await send_call(conn, Hub(redis), rt.id, model_id, None, "start", {}, "claude")
-        assert refused.value.detail == {"reason": reason, "runtime_id": str(rt.id), "last_seen_at": last_seen}
+        assert refused.value.detail == detail
         assert await _runs(engine, rt.id) == 0
+
+
+async def test_a_stopped_hosted_runtime_is_woken_and_the_call_waits_for_its_link(
+    engine: AsyncEngine, redis: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(calls, "WAKE_EVERY", 0.02)
+    monkeypatch.setattr(calls, "WAKE_WAIT", 2.0)
+    ada = await person(engine, "Pro")
+    rt = await hosted_runtime(engine, ada)
+    model_id, v1, _ = await a_model(engine, ada)
+    await deploy(engine, rt.id, v1)
+    woken: list[uuid.UUID] = []
+    heard: list[dict] = []
+    linked = asyncio.Event()
+
+    async def rrotor_links() -> None:
+        async with holding(redis, rt.id) as sent:
+            linked.set()
+            heard.append(await sent())
+
+    async def wake(runtime_id: uuid.UUID) -> None:
+        woken.append(runtime_id)
+        asyncio.get_running_loop().create_task(rrotor_links())  # the machine starts, its rrotor links a beat later
+        await linked.wait()
+
+    async with engine.begin() as conn:
+        await tenancy.enter(conn, ada.org_id)
+        run_id = await send_call(conn, Hub(redis, waker=wake), rt.id, model_id, None, "start", {}, "claude")
+    assert woken == [rt.id] and heard[0]["run_id"] == str(run_id)
+    monkeypatch.setattr(calls, "WAKE_WAIT", 0.05)
+
+    async def never(runtime_id: uuid.UUID) -> None:
+        woken.append(runtime_id)
+
+    with pytest.raises(Unavailable) as refused:
+        async with engine.begin() as conn:
+            await tenancy.enter(conn, ada.org_id)
+            await send_call(conn, Hub(redis, waker=never), rt.id, model_id, None, "start", {}, "claude")
+    assert refused.value.detail["reason"] == "runtime_offline" and len(woken) == 2
+    assert await _runs(engine, rt.id) == 1
 
 
 async def _a_run(engine: AsyncEngine, who: Person, status: str) -> tuple[uuid.UUID, uuid.UUID]:

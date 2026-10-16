@@ -334,6 +334,7 @@ CREATE TABLE IF NOT EXISTS rrotors (
     mode TEXT NOT NULL,
     install_id UUID,
     fly_machine_id TEXT,
+    fly_volume_id TEXT,
     region TEXT,
     image_version TEXT,
     state TEXT NOT NULL,

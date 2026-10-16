@@ -1,8 +1,12 @@
+import asyncio
+import logging
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+from datetime import timedelta
 
 import httpx
 from fastapi import FastAPI
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.api import (
     addons,
@@ -35,7 +39,8 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, vault
+from glyphh_server.ops import github_app, hosted, vault
+from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.license import load_key
 from glyphh_server.ops.link.hub import Hub
 
@@ -66,6 +71,19 @@ ROUTERS = (
 )
 
 
+IDLE_EVERY: float = 60.0
+
+
+async def stop_idle_forever(engine: AsyncEngine, fly: Fly, idle: timedelta) -> None:
+    """Every minute, stop the hosted runtimes that sat idle; a failure is logged and the next minute comes."""
+    while True:
+        await asyncio.sleep(IDLE_EVERY)
+        try:
+            await hosted.stop_idle(engine, fly, idle)
+        except Exception:
+            logging.getLogger("glyphh.runtime").exception("stopping idle runtimes failed")
+
+
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
     cfg: Settings = settings or get_settings()
     configure(cfg.log_level)
@@ -77,7 +95,16 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.http = http or httpx.AsyncClient(timeout=10)
+        idle: asyncio.Task[None] | None = None
+        if cfg.fly_configured:
+            fly = Fly(app.state.http, cfg)
+            app.state.hub.waker = hosted.waker(engine, fly)
+            idle = asyncio.create_task(stop_idle_forever(engine, fly, timedelta(minutes=cfg.runtime_idle_minutes)))
         yield
+        if idle is not None:
+            idle.cancel()
+            with suppress(asyncio.CancelledError):
+                await idle
         await app.state.hub.close_all()
         await app.state.http.aclose()
         await redis.aclose()

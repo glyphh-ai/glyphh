@@ -185,16 +185,63 @@ class FakeRoutines:
         return self.reply
 
 
+class FakeFly:
+    """Fly's Machines API for one app: volumes and machines by id, each machine's state, every call kept."""
+
+    def __init__(self, token: str = "fly_test_token", app: str = "glyphh-runtimes") -> None:
+        self.token, self.app = token, app
+        self.volumes: dict[str, dict[str, Any]] = {}
+        self.machines: dict[str, dict[str, Any]] = {}
+        self.calls: list[tuple[str, str, Any]] = []
+        self.fail: bool = False
+        self.on_start: Any = None  # called with the machine's id when one is started (a test's rrotor linking)
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == f"Bearer {self.token}"
+        body = json.loads(request.content) if request.content else None
+        path = request.url.path.removeprefix(f"/v1/apps/{self.app}")
+        self.calls.append((request.method, path, body))
+        if self.fail:
+            return httpx.Response(500, text="fly is down")
+        if path == "/volumes" and request.method == "POST":
+            volume_id = f"vol_{len(self.volumes) + 1}"
+            self.volumes[volume_id] = {"id": volume_id, **body}
+            return httpx.Response(201, json=self.volumes[volume_id])
+        if path == "/machines" and request.method == "POST":
+            machine_id = f"m_{len(self.machines) + 1}"
+            self.machines[machine_id] = {"id": machine_id, "state": "stopped", **body}
+            return httpx.Response(200, json=self.machines[machine_id])
+        parts = path.strip("/").split("/")
+        if parts[0] == "machines" and len(parts) >= 2:
+            machine = self.machines.get(parts[1].split("?")[0])
+            if machine is None:
+                return httpx.Response(404, json={"error": "machine not found"})
+            if request.method == "DELETE":
+                del self.machines[machine["id"]]
+                return httpx.Response(200, json={"ok": True})
+            if len(parts) == 2:
+                return httpx.Response(200, json=machine)
+            machine["state"] = "started" if parts[2] == "start" else "stopped"
+            return httpx.Response(200, json={"ok": True})
+        if parts[0] == "volumes" and len(parts) == 2 and request.method == "DELETE":
+            self.volumes.pop(parts[1], None)
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(404, json={"error": "no such route"})
+
+
 def fake_http(
     stripe: FakeStripe | None = None,
     over: dict[tuple[str, str], Any] | None = None,
     github_app: FakeGitHubApp | None = None,
     routines: FakeRoutines | None = None,
+    fly: FakeFly | None = None,
 ) -> httpx.AsyncClient:
     providers = provider_answers(over)
     billing = stripe or FakeStripe()
 
     def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.machines.dev" and fly:
+            return fly.handle(request)
         if request.url.host == "api.stripe.com":
             return billing.handle(request)
         if request.url.host == "api.github.com" and request.url.path.startswith("/app/") and github_app:

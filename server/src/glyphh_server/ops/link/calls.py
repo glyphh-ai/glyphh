@@ -2,13 +2,14 @@
 
 Each runs in the caller's transaction, as the caller's org, so only the caller's own runtimes and runs are found. A
 run is held (hold_run) before its message goes down, so its result is applied only once the caller commits;
-a message that cannot go raises, and the caller's transaction, a new run's row too, rolls back. A runtime no process
-holds answers E_UNAVAILABLE with when it was last seen. Waking a stopped hosted runtime on Fly is one seam,
-`wake_hosted`, not built in this pass."""
+a message that cannot go raises, and the caller's transaction, a new run's row too, rolls back. A local runtime no
+process holds answers E_UNAVAILABLE with when it was last seen; a hosted one is woken (its Fly machine started, by
+the hub's waker) and the message waits for its link, up to WAKE_WAIT."""
 
 import uuid
 from typing import Any, Literal
 
+import anyio
 from sqlalchemy import Row, delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -21,6 +22,8 @@ from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.protocol import FINAL, RUNNING, WAITING, Call, Cancel, Continue, Deploy, Outbound
 
 DeployAction = Literal["deploy", "activate", "remove"]
+WAKE_WAIT: float = 45.0  # a stopped Fly machine starts in seconds; its rrotor links in a few more
+WAKE_EVERY: float = 0.5
 
 
 async def hold_run(conn: AsyncConnection, run_id: uuid.UUID) -> None:
@@ -40,23 +43,29 @@ def _seen(runtime: Row) -> str | None:
     return runtime.last_seen_at.isoformat() if runtime.last_seen_at else None
 
 
-async def wake_hosted(runtime: Row) -> None:
-    """The seam for a stopped hosted runtime: start its Fly machine, wait for its link, then deliver again.
-
-    Not built in this pass (there is no Fly client yet): the call is refused, saying so."""
-    raise Unavailable(
-        "Your hosted runtime is stopped, and waking it is not built yet.",
-        reason="runtime_stopped",
-        runtime_id=str(runtime.id),
-        last_seen_at=_seen(runtime),
-    )
+async def wake_hosted(hub: Hub, runtime: Row, message: dict[str, Any]) -> bool:
+    """Start a hosted runtime's machine and deliver once its link is up; False when it never came up in time."""
+    if hub.waker is None:
+        raise Unavailable(
+            "Your hosted runtime is stopped, and hosting isn't set up on this server.",
+            reason="hosting_off",
+            runtime_id=str(runtime.id),
+        )
+    await hub.waker(runtime.id)
+    with anyio.move_on_after(WAKE_WAIT):
+        while True:
+            await anyio.sleep(WAKE_EVERY)
+            if await hub.deliver(runtime.id, message):
+                return True
+    return False
 
 
 async def deliver(hub: Hub, runtime: Row, message: Outbound) -> None:
-    if await hub.deliver(runtime.id, message.model_dump(mode="json")):
+    data = message.model_dump(mode="json")
+    if await hub.deliver(runtime.id, data):
         return
-    if runtime.mode == "hosted":
-        await wake_hosted(runtime)
+    if runtime.mode == "hosted" and await wake_hosted(hub, runtime, data):
+        return
     raise Unavailable(
         "Your local runtime is not connected. Start it from Claude, then try again.",
         reason="runtime_offline",

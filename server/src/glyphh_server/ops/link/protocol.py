@@ -10,6 +10,7 @@ from typing import Annotated, Any, Literal, Self
 from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
 from glyphh_server.models import CALLERS, MODES
+from glyphh_server.ops.license import License
 
 PROTOCOL: int = 1
 
@@ -124,6 +125,7 @@ class Welcome(Message):
     type: Literal["welcome"] = "welcome"
     accepted: bool = True
     limits: Limits
+    licence: License | None = None  # a hosted runtime's plan licence: it has no mod to hand one in
 
 
 class Call(Message):
