@@ -1,4 +1,4 @@
-"""The routine triggers a person gave Glyphh, so the Cloud can start their Claude routines on a program's events."""
+"""The routine triggers a person gave Glyphh, so the Cloud can start their Claude routines on a model's events."""
 
 import uuid
 
@@ -20,7 +20,7 @@ class NewTrigger(BaseModel):
         description="The routine's API trigger: https://api.anthropic.com/v1/claude_code/routines/<id>/fire",
     )
     token: str = Field(min_length=1, max_length=512, description="The trigger's token: kept encrypted, never shown")
-    program_id: uuid.UUID | None = Field(None, description="The program whose events fire it; none for any")
+    model_id: uuid.UUID | None = Field(None, description="The model whose events fire it; none for any")
 
 
 @router.get("", operation_id="listRoutineTriggers")
@@ -34,7 +34,7 @@ async def create_trigger(body: NewTrigger, caller: Caller, conn: Conn, request: 
     """Give Glyphh a routine's API trigger. Its token starts that routine only; it is not a Claude login."""
     key = request.app.state.secrets_key
     name = body.name.strip()
-    return await routine_triggers.create_trigger(conn, caller, key, name, body.fire_url, body.token, body.program_id)
+    return await routine_triggers.create_trigger(conn, caller, key, name, body.fire_url, body.token, body.model_id)
 
 
 @router.delete("/{trigger_id}", operation_id="deleteRoutineTrigger", status_code=204)

@@ -2,8 +2,8 @@
 
 A request made with an install's token, or with a connector access token on /mcp, runs as the role `glyphh_tenant`
 with its org in `glyphh.org_id`, and the policies in schema.sql show it only that org's rows: the org, its users,
-invites, add-ons and programs, and their identities, installs, tokens, runtimes, GitHub installations, routine
-triggers, connector grants, their tokens and OAuth codes, and the programs' versions, deployments, runs, approvals and
+invites, add-ons and models, and their identities, installs, tokens, runtimes, GitHub installations, routine
+triggers, connector grants, their tokens and OAuth codes, and the models' versions, deployments, runs, approvals and
 events.
 Sign-in, the connector's OAuth endpoints (a code or token is found by its hash before anyone is known), Stripe's
 webhook and the few operations that cross orgs on purpose (joining another org, being removed from one) run as the

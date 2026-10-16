@@ -64,7 +64,7 @@ flowchart TB
 | **The server** | Accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), the runtime link and approvals | `glyphh-ai/server` | Built (the models and runs API designed) |
 | **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
 | **The Ada mod** | `ada`, carrying the shared sign-in and licence module (`shared/licence/`) | `glyphh-ai/mods` | Designed |
-| **rrotor** | The runtime Ada installs into: a small base image, the program sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Local built; hosted designed |
+| **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Local built; hosted designed |
 | **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
 
 ### Mods and how they are installed
@@ -92,11 +92,11 @@ Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App pan
 
 ### `ada`: models and rrotor
 
-**An Ada model is a typed spec and a precedent store; rrotor runs it; Claude calls it.** Ada is a library (`glyphh_kernel.py`, `glyphh_spec.py`, `glyphh_nsm.py`; numpy only): a model is `spec.json` and a small `program.py` whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`). Nothing is trained; the model learns from the precedents it records. To rrotor a model is a **program**: a Python package with a manifest, deployed by commit, run in the sandbox, answering with a `Result`.
+**An Ada model is a typed spec and a precedent store; rrotor runs it; Claude calls it.** Ada is a library (`glyphh_kernel.py`, `glyphh_spec.py`, `glyphh_nsm.py`; numpy only): a model is `spec.json` and a small `model.py` whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`). Nothing is trained; the model learns from the precedents it records. To rrotor a model is a **model**: a Python package with a manifest, deployed by commit, run in the sandbox, answering with a `Result`.
 
-**Built:** rrotor deploys a program by commit and runs it in its sandbox; the server hands a mod the runtime token and takes rrotor's link, approvals and the GitHub App. **Designed:** the Ada mod (it installs and starts rrotor, deploys models and calls them), the Ada part (numpy and the kernel), the server's models and runs API, the hosted runtime, the live panel and calls from routines.
+**Built:** rrotor deploys a model by commit and runs it in its sandbox; the server hands a mod the runtime token and takes rrotor's link, approvals and the GitHub App. **Designed:** the Ada mod (it installs and starts rrotor, deploys models and calls them), the Ada part (numpy and the kernel), the server's models and runs API, the hosted runtime, the live panel and calls from routines.
 
-**A program**, as rrotor runs one:
+**A model**, as rrotor runs one:
 
 ```python
 from rrotor import Ctx, Result
@@ -117,9 +117,9 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 | `needs_approval` | About to act: "record this" | Asks the person; unattended, leaves it waiting for them |
 | `failed` | Which step and why | Retries, tries another way, or reports |
 
-- **`ctx` is what the program was granted**, nothing else: `ctx.http` (only the hosts the manifest declares; an Ada model declares none), `ctx.db` (its own databases, from the database parts), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
-- **Folders exist only through the program:** a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and its persistent data folder (`/data/programs/<name>/data`, Ada's precedent store, outside git) and nothing else; no program reaches another's.
-- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, the parts it needs (Ada's kernel), the steps that need approval, and the Claude connectors its routine needs.
+- **`ctx` is what the model was granted**, nothing else: `ctx.http` (only the hosts the manifest declares; an Ada model declares none), `ctx.db` (its own databases, from the database parts), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
+- **Folders exist only through the model:** a model sees its own folder (`ctx.files`, `/data/models/<name>/files`) and its persistent data folder (`/data/models/<name>/data`, Ada's precedent store, outside git) and nothing else; no model reaches another's.
+- **The manifest** declares the model's functions and their inputs, the hosts it reaches, its secrets, its databases, the parts it needs (Ada's kernel), the steps that need approval, and the Claude connectors its routine needs.
 - **A model lives in the runtime and in git:** each is a repo in the person's own GitHub account; a version is a commit. The server keeps only an index (name, repo, versions as commit SHAs, where each is deployed) and the run records. Glyphh's cloud never keeps a copy of the code or the precedents.
 - **Git is required for hosted models:** the person installs the Glyphh GitHub App on their account (built); deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
 - **A redeploy that changes the encoding** (the spec's `seed`, `dim`, `encoding` or `spec_id`) re-encodes the store from its recorded facts before the new version is active, or refuses the deploy (`E_ADA_ENCODING`) when the old facts cannot be read by the new spec.
@@ -153,12 +153,12 @@ Routines run without approvals, so Glyphh's own rule is the brake: a step that `
 
 Both run the same image and the same SDK; a model built locally deploys to the hosted runtime unchanged.
 
-- **A small base image** (`ghcr.io/glyphh-ai/rrotor`): Python, Node, the program sandbox, the link client, the local API and the program runner. **Headless:** no UI, no desktop, nothing to log into.
-- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a program asks for.
+- **A small base image** (`ghcr.io/glyphh-ai/rrotor`): Python, Node, the model sandbox, the link client, the local API and the model runner. **Headless:** no UI, no desktop, nothing to log into.
+- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a model asks for.
 - **No sign-in of its own:** the mod, signed in, asks the server for the runtime token (`POST /v1/runtime/local`) and hands it to rrotor; signing the install out cuts rrotor off.
 - **No inbound ports from outside the machine:** the local API listens on loopback only, behind a token only the mod holds; rrotor connects out to the server and takes remote calls over that link.
-- **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its program and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
-- **One volume, `/data`:** program versions, secrets (encrypted), run logs and outputs.
+- **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its model and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
+- **One volume, `/data`:** model versions, secrets (encrypted), run logs and outputs.
 - **No Claude login, no model, no keys of Claude's** anywhere in it.
 
 ### On the machine: `~/.glyphh`
@@ -172,13 +172,13 @@ Only what the mods need to start and sign in; nothing here goes to the cloud.
 
 ### In rrotor: `/data`
 
-The same layout in the local and the hosted rrotor. rrotor calls a deployed model a program, and its paths say so.
+The same layout in the local and the hosted rrotor. rrotor calls a deployed model a model, and its paths say so.
 
 | Path | What |
 |---|---|
-| `programs/<name>/<commit>/` | A deployed version of a model: the checkout of that commit, its manifest and installed dependencies |
-| `programs/<name>/files/` | The program's own folder, the only folder it sees |
-| `programs/<name>/data/` | The model's persistent data, outside git: its precedent store |
+| `models/<name>/<commit>/` | A deployed version of a model: the checkout of that commit, its manifest and installed dependencies |
+| `models/<name>/files/` | The model's own folder, the only folder it sees |
+| `models/<name>/data/` | The model's persistent data, outside git: its precedent store |
 | `secrets/` | Each model's secrets, encrypted with rrotor's key |
 | `parts/<part>/` | The parts the mods installed |
 | `db/` | The database parts' data: each model its own database |
@@ -196,7 +196,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools now are the account's; the model tools come with Ada.
 - **The runtime link:** rrotor's outbound WebSocket (its own token); calls go down it, results and events come back. A local runtime's token stops working when its install is signed out.
 - **Approvals, shown in Claude:** a step that needs approval is a row in `approvals` and a signal on **Redis** pub/sub to the server process holding the person's connection; the mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows Approve and Decline; the first answer wins. Redis runs on the server's own Fly machine and holds only what is live; Postgres holds everything kept.
-- **Models:** the record of each Ada model (a program, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (designed).
+- **Models:** the record of each Ada model (a model, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (designed).
 - **Hosting:** provisions each Pro and Team user's runtime on Fly, wakes it per call, stops it when idle, counts its hours and bills its storage (designed).
 - **Limits are enforced here** where the server sees the use: members, seats and installs. Every mod limit the mod enforces from its licence.
 
@@ -215,16 +215,16 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Add-ons | `GET /v1/addons` (the catalog for the org's plan, with prices, and what the org has), `POST /v1/billing/checkout` with `addons`, `POST /v1/billing/addons/preview`, `POST /v1/billing/addons`, `DELETE /v1/billing/addons/{mod}` (below, Add-ons) |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run), `send_continue`, `send_cancel`, `send_deploy`. A runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; waking a stopped hosted runtime on Fly is one seam, `wake_hosted`, not built |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
-| Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional program; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a program's events |
+| Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional model; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a model's events |
 | Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, the Allow page (`POST /auth/oauth/allow`), `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}` (below, The connector) |
 | Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` {`approve` \| `decline`} (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting). Not built yet: the email when no Claude is open waits on a mail provider (`notified_at` stays empty) |
 
-**To build, for Ada** (the server's resource is still named `programs`: what rrotor calls a model):
+**To build, for Ada** (the server's resource is still named `models`: what rrotor calls a model):
 
 | Area | Calls |
 |---|---|
-| Programs | `GET`/`POST /v1/programs`, `GET`/`DELETE /v1/programs/{id}`, `POST /v1/programs/{id}/versions` (commit SHA, manifest), `POST /v1/programs/{id}/deploy` (a version) |
-| Runs | `POST /v1/runs` (program, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
+| Models | `GET`/`POST /v1/models`, `GET`/`DELETE /v1/models/{id}`, `POST /v1/models/{id}/versions` (commit SHA, manifest), `POST /v1/models/{id}/deploy` (a version) |
+| Runs | `POST /v1/runs` (model, function, inputs), `POST /v1/runs/{id}/continue`, `GET /v1/runs/{id}`, `GET /v1/runs` (filtered, paged), `POST /v1/runs/{id}/approve`, `GET /v1/runs/{id}/live` (the stream, by ticket) |
 | Runtime | `GET /v1/runtime` (state, hours used, storage used), `POST /v1/runtime/start`, `/stop`, `POST /v1/runtime/storage` (grow it); waking a stopped hosted runtime per call (Fly), behind the link's `wake_hosted` seam; the live panel's run events relayed from the link to its panel |
 | Hours | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and the spend cap on `PATCH /v1/org` |
 | Connector | The model tools on `/mcp`: `models_list`, `call`, `continue`, `run_status` and the live panel |
@@ -378,14 +378,14 @@ erDiagram
     INSTALLS ||--o| RROTORS : "local runtime"
     USERS ||--o| GITHUB_INSTALLATIONS : "installed the App"
     USERS ||--o{ ROUTINE_TRIGGERS : "gave"
-    PROGRAMS ||--o{ PROGRAM_EVENTS : "raised"
-    ROUTINE_TRIGGERS ||--o{ PROGRAM_EVENTS : "fired by"
-    PROGRAMS |o--o{ ROUTINE_TRIGGERS : "for"
-    USERS ||--o{ PROGRAMS : "owns"
-    PROGRAMS ||--|{ PROGRAM_VERSIONS : "has"
-    PROGRAM_VERSIONS ||--o{ DEPLOYMENTS : "deployed as"
+    MODELS ||--o{ MODEL_EVENTS : "raised"
+    ROUTINE_TRIGGERS ||--o{ MODEL_EVENTS : "fired by"
+    MODELS |o--o{ ROUTINE_TRIGGERS : "for"
+    USERS ||--o{ MODELS : "owns"
+    MODELS ||--|{ MODEL_VERSIONS : "has"
+    MODEL_VERSIONS ||--o{ DEPLOYMENTS : "deployed as"
     RROTORS ||--o{ DEPLOYMENTS : "runs"
-    PROGRAM_VERSIONS ||--o{ RUNS : "ran"
+    MODEL_VERSIONS ||--o{ RUNS : "ran"
     RUNS ||--o{ APPROVALS : "waits on"
     USERS ||--o{ CONNECTOR_GRANTS : "allows"
     OAUTH_CLIENTS ||--o{ CONNECTOR_GRANTS : "granted to"
@@ -524,7 +524,7 @@ erDiagram
         timestamp last_seen_at
         bigint seq "last applied from its link"
     }
-    PROGRAMS {
+    MODELS {
         uuid id PK
         uuid user_id FK
         uuid org_id FK
@@ -532,23 +532,23 @@ erDiagram
         text repo
         timestamp created_at
     }
-    PROGRAM_VERSIONS {
+    MODEL_VERSIONS {
         uuid id PK
-        uuid program_id FK
-        int version "unique per program"
+        uuid model_id FK
+        int version "unique per model"
         text commit_sha "the version's identity"
         json manifest
         timestamp created_at
     }
     DEPLOYMENTS {
         uuid rrotor_id PK, FK
-        uuid program_version_id PK, FK
+        uuid model_version_id PK, FK
         timestamp deployed_at
         bool active
     }
     RUNS {
         uuid id PK
-        uuid program_version_id FK
+        uuid model_version_id FK
         uuid rrotor_id FK
         text function
         text caller
@@ -578,7 +578,7 @@ erDiagram
     ROUTINE_TRIGGERS {
         uuid id PK
         uuid user_id FK
-        uuid program_id FK
+        uuid model_id FK
         text name
         text fire_url
         text token_enc
@@ -586,9 +586,9 @@ erDiagram
         timestamp last_fired_at
         timestamp created_at
     }
-    PROGRAM_EVENTS {
+    MODEL_EVENTS {
         uuid id PK
-        uuid program_id FK
+        uuid model_id FK
         uuid routine_trigger_id FK
         text kind
         text session_url
@@ -638,7 +638,7 @@ erDiagram
     }
 ```
 
-Every table and column is drawn, as the database has them; the tables from rrotors on are for Ada models, which rrotor runs as programs, so the tables say `programs`. Timestamps carry the time zone; ids are made by the database.
+Every table and column is drawn, as the database has them; the tables from rrotors on are for Ada models, which rrotor runs as models, so the tables say `models`. Timestamps carry the time zone; ids are made by the database.
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods a version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). Every plan's is empty now, since every mod is an add-on. A retired mod (`active` false) is in no license.
@@ -648,9 +648,9 @@ Every table and column is drawn, as the database has them; the tables from rroto
 - **Runtimes** (`rrotors`): one hosted per Pro and Team user (`mode: hosted`), and one local per install that started one (`mode: local`, keyed by its install); each its own token. `state` is `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again).
 - **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked, no limit checked) or makes one within `max_installs`. Revoking an install frees its slot.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
-- **Programs** (Ada models, as rrotor runs them): the record only: name, repo, versions (commit SHA, manifest), where each is deployed. The code is in the person's repo and their runtimes; secrets and data are in the rrotor.
+- **Models** (Ada models, as rrotor runs them): the record only: name, repo, versions (commit SHA, manifest), where each is deployed. The code is in the person's repo and their runtimes; secrets and data are in the rrotor.
 - **GitHub installations:** the person's Glyphh GitHub App installation, from which the Cloud mints a short-lived token per deploy; no long-lived GitHub key is kept.
-- **Routine triggers:** the routines the person let Glyphh start (fire URL and token, encrypted), marked broken on a 401. **Program events:** what a program raised and the routine session it started; an event that fired no routine has neither.
+- **Routine triggers:** the routines the person let Glyphh start (fire URL and token, encrypted), marked broken on a 401. **Model events:** what a model raised and the routine session it started; an event that fired no routine has neither.
 - **Runs:** who called (`routine`, `claude`, `panel`, `test`), the status, the times and the seconds rrotor ran, for the log and the hours; never inputs, outputs or content.
 - **Approvals:** a step waiting for the person, until answered anywhere; `notified_at` when the person was emailed about it.
 - **OAuth clients:** the MCP clients that registered (RFC 7591), each with its exact redirect URIs; a confidential one's secret only as a hash. They belong to no org.
@@ -660,7 +660,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ### In rrotor
 
-- **Models** live under `programs/<name>/`: each deployed commit, the model's own folder and its precedent store.
+- **Models** live under `models/<name>/`: each deployed commit, the model's own folder and its precedent store.
 
 ## Plans
 

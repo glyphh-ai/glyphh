@@ -12,12 +12,12 @@ from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
 from glyphh_server.models.mod import Mod
+from glyphh_server.models.model import Model, ModelVersion
+from glyphh_server.models.model_event import ModelEvent
 from glyphh_server.models.oauth_client import AUTH_METHODS, OAuthClient
 from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
 from glyphh_server.models.plan import Plan, PlanVersion
-from glyphh_server.models.program import Program, ProgramVersion
-from glyphh_server.models.program_event import ProgramEvent
 from glyphh_server.models.routine_trigger import TRIGGER_STATUSES, RoutineTrigger
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
@@ -48,15 +48,15 @@ __all__ = [
     "Install",
     "Invite",
     "Mod",
+    "Model",
+    "ModelEvent",
+    "ModelVersion",
     "OAuthClient",
     "OAuthCode",
     "Org",
     "OrgAddon",
     "Plan",
     "PlanVersion",
-    "Program",
-    "ProgramEvent",
-    "ProgramVersion",
     "RoutineTrigger",
     "Rrotor",
     "Run",

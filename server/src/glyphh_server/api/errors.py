@@ -43,7 +43,7 @@ def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
 
 
 def refusal(method: str, path: str, code: str, message: str, status: int, **detail: Any) -> Response:
-    """A person on a page gets a page; a program gets JSON."""
+    """A person on a page gets a page; a model gets JSON."""
     if is_page(method, path):
         return page("That didn't work", message, f"Code {code}, trace {current_trace_id()}.", status=status)
     return JSONResponse(error_body(code, message, **detail), status_code=status)

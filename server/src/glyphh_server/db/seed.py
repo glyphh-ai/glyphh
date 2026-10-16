@@ -25,7 +25,7 @@ MODS: tuple[ModSeed, ...] = (
     ModSeed(
         "ada",
         "Ada",
-        "Ada models in your rrotor: a spec and a small program, deployed by commit, learning from their precedents",
+        "Ada models in your rrotor: a spec and a small model, deployed by commit, learning from their precedents",
     ),
 )
 

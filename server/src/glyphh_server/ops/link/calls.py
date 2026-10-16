@@ -13,7 +13,7 @@ from sqlalchemy import Row, delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict, NotFound, Unavailable
-from glyphh_server.models import Deployment, Program, ProgramVersion, Rrotor, Run
+from glyphh_server.models import Deployment, Model, ModelVersion, Rrotor, Run
 from glyphh_server.ops.auth.signin import lock
 from glyphh_server.ops.github_app import GitHubApp
 from glyphh_server.ops.github_installations import repo_token
@@ -65,22 +65,22 @@ async def deliver(hub: Hub, runtime: Row, message: Outbound) -> None:
     )
 
 
-async def _version(conn: AsyncConnection, runtime_id: uuid.UUID, program_id: uuid.UUID, version: int | None) -> Row:
-    """That version of the program, or, with none named, the one active on this runtime."""
+async def _version(conn: AsyncConnection, runtime_id: uuid.UUID, model_id: uuid.UUID, version: int | None) -> Row:
+    """That version of the model, or, with none named, the one active on this runtime."""
     found = (
-        select(ProgramVersion.id, ProgramVersion.version, Program.name)
-        .join(Program, Program.id == ProgramVersion.program_id)
-        .where(Program.id == program_id)
+        select(ModelVersion.id, ModelVersion.version, Model.name)
+        .join(Model, Model.id == ModelVersion.model_id)
+        .where(Model.id == model_id)
     )
     if version is None:
-        found = found.join(Deployment, Deployment.program_version_id == ProgramVersion.id).where(
+        found = found.join(Deployment, Deployment.model_version_id == ModelVersion.id).where(
             Deployment.rrotor_id == runtime_id, Deployment.active.is_(True)
         )
     else:
-        found = found.where(ProgramVersion.version == version)
+        found = found.where(ModelVersion.version == version)
     row = (await conn.execute(found)).first()
     if row is None:
-        raise NotFound("That program has no such version on this runtime.", program_id=str(program_id))
+        raise NotFound("That model has no such version on this runtime.", model_id=str(model_id))
     return row
 
 
@@ -88,7 +88,7 @@ async def send_call(
     conn: AsyncConnection,
     hub: Hub,
     runtime_id: uuid.UUID,
-    program_id: uuid.UUID,
+    model_id: uuid.UUID,
     version: int | None,
     function: str,
     inputs: dict[str, Any],
@@ -96,12 +96,12 @@ async def send_call(
 ) -> uuid.UUID:
     """Open a run: its row (running), then `call` down the runtime's link. Answers the run's id."""
     runtime = await _runtime(conn, runtime_id)
-    found = await _version(conn, runtime_id, program_id, version)
-    values = {"program_version_id": found.id, "rrotor_id": runtime_id, "function": function, "caller": caller}
+    found = await _version(conn, runtime_id, model_id, version)
+    values = {"model_version_id": found.id, "rrotor_id": runtime_id, "function": function, "caller": caller}
     run_id = (await conn.execute(insert(Run).values(**values, status=RUNNING).returning(Run.id))).scalar_one()
     await hold_run(conn, run_id)
     message = Call(
-        run_id=run_id, program=found.name, version=found.version, function=function, inputs=inputs, caller=caller
+        run_id=run_id, model=found.name, version=found.version, function=function, inputs=inputs, caller=caller
     )
     await deliver(hub, runtime, message)
     return run_id
@@ -140,26 +140,26 @@ async def send_deploy(
     version_id: uuid.UUID,
     action: DeployAction = "deploy",
 ) -> None:
-    """Deploy, activate or remove one version on a runtime. A program in git gets a one-hour token for its repo, to
+    """Deploy, activate or remove one version on a runtime. A model in git gets a one-hour token for its repo, to
     fetch exactly that commit; the rrotor answers `deployed`. Removing it drops its deployment here at once."""
     runtime = await _runtime(conn, runtime_id)
     found = (
-        select(ProgramVersion.version, ProgramVersion.commit_sha, Program.name, Program.repo, Program.user_id)
-        .join(Program, Program.id == ProgramVersion.program_id)
-        .where(ProgramVersion.id == version_id)
+        select(ModelVersion.version, ModelVersion.commit_sha, Model.name, Model.repo, Model.user_id)
+        .join(Model, Model.id == ModelVersion.model_id)
+        .where(ModelVersion.id == version_id)
     )
     row = (await conn.execute(found)).first()
     if row is None:
-        raise NotFound("You have no such program version.", version_id=str(version_id))
+        raise NotFound("You have no such model version.", version_id=str(version_id))
     token = None
     if row.repo and action != "remove":
         if github is None:
             raise Unavailable("GitHub isn't set up on this server.", reason="github_off")
         token = (await repo_token(conn, github, row.user_id, row.repo)).token
     if action == "remove":
-        gone = delete(Deployment).where(Deployment.rrotor_id == runtime_id, Deployment.program_version_id == version_id)
+        gone = delete(Deployment).where(Deployment.rrotor_id == runtime_id, Deployment.model_version_id == version_id)
         await conn.execute(gone)
     message = Deploy(
-        type=action, program=row.name, version=row.version, repo=row.repo, commit_sha=row.commit_sha, token=token
+        type=action, model=row.name, version=row.version, repo=row.repo, commit_sha=row.commit_sha, token=token
     )
     await deliver(hub, runtime, message)

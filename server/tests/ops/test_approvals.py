@@ -21,7 +21,7 @@ from tests.db.helpers import person
 
 async def test_asking_keeps_the_step_waiting_and_signals_the_persons_channel(engine: AsyncEngine, redis: Redis) -> None:
     ada = await person(engine)
-    run_id = await a_run(engine, ada, program="daily_sales")
+    run_id = await a_run(engine, ada, model="daily_sales")
     async with redis.pubsub() as pubsub:
         await pubsub.subscribe(channel(ada.user_id))
         async with engine.begin() as conn:
@@ -31,7 +31,7 @@ async def test_asking_keeps_the_step_waiting_and_signals_the_persons_channel(eng
         message = message or await pubsub.get_message(ignore_subscribe_messages=True, timeout=5)
     assert asked.watched is True
     view = asked.approval
-    assert (view.program, view.step, view.prompt) == ("daily_sales", "post", "Post the report to #sales?")
+    assert (view.model, view.step, view.prompt) == ("daily_sales", "post", "Post the report to #sales?")
     assert message is not None and json.loads(message["data"]) == {
         "event": "approval",
         "data": view.model_dump(mode="json"),

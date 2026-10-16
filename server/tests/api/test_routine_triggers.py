@@ -7,7 +7,7 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
-from glyphh_server.models import Program, RoutineTrigger
+from glyphh_server.models import Model, RoutineTrigger
 from glyphh_server.ops import vault
 from glyphh_server.ops.routine_triggers import sealed_for
 from tests.conftest import PROVIDER_SETTINGS, SECRETS_KEY, _client
@@ -17,10 +17,10 @@ FIRE: str = "https://api.anthropic.com/v1/claude_code/routines/trig_01ABCdef/fir
 TOKEN: str = "sk-ant-oat01-not-a-real-routine-token"
 
 
-async def _program(engine: AsyncEngine, who: Person) -> str:
+async def _model(engine: AsyncEngine, who: Person) -> str:
     async with engine.begin() as conn:
         values = {"user_id": who.user_id, "org_id": who.org_id, "name": "daily_sales"}
-        return str((await conn.execute(insert(Program).values(values).returning(Program.id))).scalar_one())
+        return str((await conn.execute(insert(Model).values(values).returning(Model.id))).scalar_one())
 
 
 def _new(**over: object) -> dict[str, object]:
@@ -31,19 +31,19 @@ async def test_a_trigger_is_kept_sealed_listed_without_its_token_and_deleted(
     engine: AsyncEngine, client: httpx.AsyncClient
 ) -> None:
     ada = await person(engine)
-    program_id = await _program(engine, ada)
-    made = await client.post("/v1/routine-triggers", json=_new(program_id=program_id), headers=ada.headers)
+    model_id = await _model(engine, ada)
+    made = await client.post("/v1/routine-triggers", json=_new(model_id=model_id), headers=ada.headers)
     assert made.status_code == 201, made.text
     view = made.json()
-    assert (view["name"], view["program_id"], view["status"], view["last_fired_at"]) == (
+    assert (view["name"], view["model_id"], view["status"], view["last_fired_at"]) == (
         "Daily sales",
-        program_id,
+        model_id,
         "ok",
         None,
     )
     bare = await client.post("/v1/routine-triggers", json=_new(name="  Any  "), headers=ada.headers)
     listed = await client.get("/v1/routine-triggers", headers=ada.headers)
-    assert [t["name"] for t in listed.json()] == ["Daily sales", "Any"] and bare.json()["program_id"] is None
+    assert [t["name"] for t in listed.json()] == ["Daily sales", "Any"] and bare.json()["model_id"] is None
     assert TOKEN not in made.text + bare.text + listed.text and "token" not in listed.json()[0]
     async with engine.connect() as conn:
         sealed = (await conn.execute(select(RoutineTrigger.token_enc).where(RoutineTrigger.id == view["id"]))).scalar()
@@ -55,7 +55,7 @@ async def test_a_trigger_is_kept_sealed_listed_without_its_token_and_deleted(
     assert [t["name"] for t in (await client.get("/v1/routine-triggers", headers=ada.headers)).json()] == ["Any"]
 
 
-async def test_only_anthropics_fire_address_and_ones_own_program_are_taken(
+async def test_only_anthropics_fire_address_and_ones_own_model_are_taken(
     engine: AsyncEngine, client: httpx.AsyncClient
 ) -> None:
     ada, eve = await person(engine), await person(engine)
@@ -67,12 +67,12 @@ async def test_only_anthropics_fire_address_and_ones_own_program_are_taken(
     ):
         res = await client.post("/v1/routine-triggers", json=_new(fire_url=url), headers=ada.headers)
         assert res.status_code == 422 and res.json()["error"]["code"] == "E_INVALID", url
-    for bad in (_new(name=" "), _new(token=""), _new(program_id="nope")):
+    for bad in (_new(name=" "), _new(token=""), _new(model_id="nope")):
         assert (await client.post("/v1/routine-triggers", json=bad, headers=ada.headers)).status_code == 422
-    theirs = await _program(engine, eve)
-    res = await client.post("/v1/routine-triggers", json=_new(program_id=theirs), headers=ada.headers)
+    theirs = await _model(engine, eve)
+    res = await client.post("/v1/routine-triggers", json=_new(model_id=theirs), headers=ada.headers)
     assert res.status_code == 404 and res.json()["error"]["code"] == "E_NOT_FOUND"
-    unknown = await client.post("/v1/routine-triggers", json=_new(program_id=str(uuid.uuid4())), headers=ada.headers)
+    unknown = await client.post("/v1/routine-triggers", json=_new(model_id=str(uuid.uuid4())), headers=ada.headers)
     assert unknown.status_code == 404
 
 

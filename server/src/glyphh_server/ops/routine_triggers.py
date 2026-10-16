@@ -1,5 +1,5 @@
 """The routine triggers a person gave Glyphh: a Claude routine's API trigger (its fire URL and token) that the Cloud
-fires on a program's events. The token is sealed at rest and never shown again; a list shows everything else."""
+fires on a model's events. The token is sealed at rest and never shown again; a list shows everything else."""
 
 import uuid
 from datetime import datetime
@@ -9,7 +9,7 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import NotFound
-from glyphh_server.models import Program, RoutineTrigger
+from glyphh_server.models import Model, RoutineTrigger
 from glyphh_server.ops import vault
 from glyphh_server.ops.auth.principal import Principal
 
@@ -21,7 +21,7 @@ class TriggerView(BaseModel):
     id: uuid.UUID
     name: str
     fire_url: str
-    program_id: uuid.UUID | None
+    model_id: uuid.UUID | None
     status: str
     last_fired_at: datetime | None
     created_at: datetime
@@ -31,7 +31,7 @@ _COLUMNS = (
     RoutineTrigger.id,
     RoutineTrigger.name,
     RoutineTrigger.fire_url,
-    RoutineTrigger.program_id,
+    RoutineTrigger.model_id,
     RoutineTrigger.status,
     RoutineTrigger.last_fired_at,
     RoutineTrigger.created_at,
@@ -57,14 +57,14 @@ async def create_trigger(
     name: str,
     fire_url: str,
     token: str,
-    program_id: uuid.UUID | None,
+    model_id: uuid.UUID | None,
 ) -> TriggerView:
     token_enc = vault.seal(key, token, sealed_for(who.user_id, fire_url))
-    if program_id is not None:
-        mine = select(Program.id).where(Program.id == program_id, Program.user_id == who.user_id)
+    if model_id is not None:
+        mine = select(Model.id).where(Model.id == model_id, Model.user_id == who.user_id)
         if (await conn.execute(mine)).first() is None:
-            raise NotFound("You have no such program.", program_id=str(program_id))
-    values = {"user_id": who.user_id, "program_id": program_id, "name": name, "fire_url": fire_url}
+            raise NotFound("You have no such model.", model_id=str(model_id))
+    values = {"user_id": who.user_id, "model_id": model_id, "name": name, "fire_url": fire_url}
     made = insert(RoutineTrigger).values(**values, token_enc=token_enc).returning(*_COLUMNS)
     return TriggerView(**(await conn.execute(made)).one()._mapping)
 

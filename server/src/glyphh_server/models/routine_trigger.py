@@ -18,7 +18,7 @@ class RoutineTrigger(Base):
 
     id: Mapped[uuid.UUID] = guid()
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    program_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("programs.id", ondelete="SET NULL"), index=True)
+    model_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("models.id", ondelete="SET NULL"), index=True)
     name: Mapped[str] = mapped_column(Text)
     fire_url: Mapped[str] = mapped_column(Text)
     token_enc: Mapped[str] = mapped_column(Text)

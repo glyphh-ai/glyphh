@@ -1,4 +1,4 @@
-"""A rrotor on the link, for the tests: runtimes and programs made straight in the database, a server reached by a
+"""A rrotor on the link, for the tests: runtimes and models made straight in the database, a server reached by a
 real WebSocket in-process, a hello said, and a process holding a runtime's link stood in for on its Redis channel."""
 
 import json
@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from glyphh_server.db import tenancy
-from glyphh_server.models import Deployment, Program, ProgramVersion, Rrotor
+from glyphh_server.models import Deployment, Model, ModelVersion, Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.link.hub import channel
@@ -65,27 +65,23 @@ async def hosted_runtime(engine: AsyncEngine, who: Person) -> Rt:
     return Rt(runtime_id, token, "hosted")
 
 
-async def a_program(
+async def a_model(
     engine: AsyncEngine, who: Person, name: str = "daily_sales", repo: str | None = None
 ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
-    """A program with two versions (two commits); answers the program's id and the two versions' ids."""
+    """A model with two versions (two commits); answers the model's id and the two versions' ids."""
     async with engine.begin() as conn:
         values = {"user_id": who.user_id, "org_id": who.org_id, "name": name, "repo": repo}
-        program_id = (await conn.execute(insert(Program).values(values).returning(Program.id))).scalar_one()
+        model_id = (await conn.execute(insert(Model).values(values).returning(Model.id))).scalar_one()
         ids = []
         for version, sha in ((1, SHA), (2, SHA2)):
-            values = {"program_id": program_id, "version": version, "commit_sha": sha, "manifest": {}}
-            ids.append(
-                (await conn.execute(insert(ProgramVersion).values(values).returning(ProgramVersion.id))).scalar()
-            )
-    return program_id, ids[0], ids[1]
+            values = {"model_id": model_id, "version": version, "commit_sha": sha, "manifest": {}}
+            ids.append((await conn.execute(insert(ModelVersion).values(values).returning(ModelVersion.id))).scalar())
+    return model_id, ids[0], ids[1]
 
 
 async def deploy(engine: AsyncEngine, runtime_id: uuid.UUID, version_id: uuid.UUID, active: bool = True) -> None:
     async with engine.begin() as conn:
-        await conn.execute(
-            insert(Deployment).values(rrotor_id=runtime_id, program_version_id=version_id, active=active)
-        )
+        await conn.execute(insert(Deployment).values(rrotor_id=runtime_id, model_version_id=version_id, active=active))
 
 
 async def runtime_row(engine: AsyncEngine, runtime_id: uuid.UUID):  # type: ignore[no-untyped-def]

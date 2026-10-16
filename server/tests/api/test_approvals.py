@@ -32,7 +32,7 @@ async def test_the_waiting_ones_are_listed_newest_first_and_only_ones_own(
 ) -> None:
     ada = await person(engine)
     grace, eve = await member(engine, ada.org_id), await person(engine)
-    run_id = await a_run(engine, ada, program="daily_sales")
+    run_id = await a_run(engine, ada, model="daily_sales")
     first, second = await _ask(engine, redis, run_id, "post"), await _ask(engine, redis, run_id, "send")
     for other in (grace, eve):
         await _ask(engine, redis, await a_run(engine, other))
@@ -43,7 +43,7 @@ async def test_the_waiting_ones_are_listed_newest_first_and_only_ones_own(
     listed = await client.get("/v1/approvals", headers=ada.headers)
     assert listed.status_code == 200
     assert listed.json() == [second.model_dump(mode="json"), first.model_dump(mode="json")]
-    assert [a["program"] for a in listed.json()] == ["daily_sales", "daily_sales"]
+    assert [a["model"] for a in listed.json()] == ["daily_sales", "daily_sales"]
     assert (await client.get("/v1/approvals")).json()["error"]["code"] == "E_UNAUTHORIZED"
 
 

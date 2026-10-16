@@ -32,7 +32,7 @@ async def list_approvals(caller: Caller, conn: Conn) -> list[ApprovalView]:
     responses={200: {"content": {"text/event-stream": {}}}},
 )
 async def stream_approvals(request: Request, creds: Bearer) -> StreamingResponse:
-    """Server-sent events while Claude is open: `approval` {id, program, step, prompt, asked_at} (the waiting ones
+    """Server-sent events while Claude is open: `approval` {id, model, step, prompt, asked_at} (the waiting ones
     first) and `answered` {id, answer}; a comment every 20 seconds. The token is checked once, in a transaction that
     ends before the stream starts, so an open stream holds no database connection."""
     state = request.app.state

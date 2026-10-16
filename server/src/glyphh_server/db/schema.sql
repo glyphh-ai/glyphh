@@ -218,8 +218,8 @@ CREATE TABLE IF NOT EXISTS installs (
 CREATE UNIQUE INDEX IF NOT EXISTS installs_user_machine ON installs (user_id, machine_id) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS ix_installs_user_id ON installs (user_id);
 
--- programs
-CREATE TABLE IF NOT EXISTS programs (
+-- models
+CREATE TABLE IF NOT EXISTS models (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID NOT NULL,
     org_id UUID NOT NULL,
@@ -230,8 +230,8 @@ CREATE TABLE IF NOT EXISTS programs (
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE RESTRICT
 );
-CREATE INDEX IF NOT EXISTS ix_programs_org_id ON programs (org_id);
-CREATE INDEX IF NOT EXISTS ix_programs_user_id ON programs (user_id);
+CREATE INDEX IF NOT EXISTS ix_models_org_id ON models (org_id);
+CREATE INDEX IF NOT EXISTS ix_models_user_id ON models (user_id);
 
 -- connector_tokens
 CREATE TABLE IF NOT EXISTS connector_tokens (
@@ -293,26 +293,26 @@ CREATE TABLE IF NOT EXISTS oauth_codes (
 CREATE INDEX IF NOT EXISTS ix_oauth_codes_client_id ON oauth_codes (client_id);
 CREATE INDEX IF NOT EXISTS ix_oauth_codes_user_id ON oauth_codes (user_id);
 
--- program_versions
-CREATE TABLE IF NOT EXISTS program_versions (
+-- model_versions
+CREATE TABLE IF NOT EXISTS model_versions (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
-    program_id UUID NOT NULL,
+    model_id UUID NOT NULL,
     version INTEGER NOT NULL,
     commit_sha TEXT NOT NULL,
     manifest JSON NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT program_versions_version UNIQUE (program_id, version),
-    CONSTRAINT program_versions_commit UNIQUE (program_id, commit_sha),
-    FOREIGN KEY(program_id) REFERENCES programs (id) ON DELETE CASCADE
+    CONSTRAINT model_versions_version UNIQUE (model_id, version),
+    CONSTRAINT model_versions_commit UNIQUE (model_id, commit_sha),
+    FOREIGN KEY(model_id) REFERENCES models (id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS ix_program_versions_program_id ON program_versions (program_id);
+CREATE INDEX IF NOT EXISTS ix_model_versions_model_id ON model_versions (model_id);
 
 -- routine_triggers
 CREATE TABLE IF NOT EXISTS routine_triggers (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID NOT NULL,
-    program_id UUID,
+    model_id UUID,
     name TEXT NOT NULL,
     fire_url TEXT NOT NULL,
     token_enc TEXT NOT NULL,
@@ -322,9 +322,9 @@ CREATE TABLE IF NOT EXISTS routine_triggers (
     PRIMARY KEY (id),
     CONSTRAINT routine_triggers_status CHECK (status IN ('ok', 'broken')),
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY(program_id) REFERENCES programs (id) ON DELETE SET NULL
+    FOREIGN KEY(model_id) REFERENCES models (id) ON DELETE SET NULL
 );
-CREATE INDEX IF NOT EXISTS ix_routine_triggers_program_id ON routine_triggers (program_id);
+CREATE INDEX IF NOT EXISTS ix_routine_triggers_model_id ON routine_triggers (model_id);
 CREATE INDEX IF NOT EXISTS ix_routine_triggers_user_id ON routine_triggers (user_id);
 
 -- rrotors
@@ -368,34 +368,34 @@ CREATE INDEX IF NOT EXISTS ix_tokens_install_id ON tokens (install_id);
 -- deployments
 CREATE TABLE IF NOT EXISTS deployments (
     rrotor_id UUID NOT NULL,
-    program_version_id UUID NOT NULL,
+    model_version_id UUID NOT NULL,
     deployed_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     active BOOLEAN DEFAULT true NOT NULL,
-    PRIMARY KEY (rrotor_id, program_version_id),
+    PRIMARY KEY (rrotor_id, model_version_id),
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE,
-    FOREIGN KEY(program_version_id) REFERENCES program_versions (id) ON DELETE CASCADE
+    FOREIGN KEY(model_version_id) REFERENCES model_versions (id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS ix_deployments_program_version_id ON deployments (program_version_id);
+CREATE INDEX IF NOT EXISTS ix_deployments_model_version_id ON deployments (model_version_id);
 
--- program_events
-CREATE TABLE IF NOT EXISTS program_events (
+-- model_events
+CREATE TABLE IF NOT EXISTS model_events (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
-    program_id UUID NOT NULL,
+    model_id UUID NOT NULL,
     routine_trigger_id UUID,
     kind TEXT NOT NULL,
     session_url TEXT,
     at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY(program_id) REFERENCES programs (id) ON DELETE CASCADE,
+    FOREIGN KEY(model_id) REFERENCES models (id) ON DELETE CASCADE,
     FOREIGN KEY(routine_trigger_id) REFERENCES routine_triggers (id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS ix_program_events_program_id ON program_events (program_id);
-CREATE INDEX IF NOT EXISTS ix_program_events_routine_trigger_id ON program_events (routine_trigger_id);
+CREATE INDEX IF NOT EXISTS ix_model_events_model_id ON model_events (model_id);
+CREATE INDEX IF NOT EXISTS ix_model_events_routine_trigger_id ON model_events (routine_trigger_id);
 
 -- runs
 CREATE TABLE IF NOT EXISTS runs (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
-    program_version_id UUID NOT NULL,
+    model_version_id UUID NOT NULL,
     rrotor_id UUID NOT NULL,
     function TEXT NOT NULL,
     caller TEXT NOT NULL,
@@ -405,10 +405,10 @@ CREATE TABLE IF NOT EXISTS runs (
     seconds INTEGER,
     PRIMARY KEY (id),
     CONSTRAINT runs_caller CHECK (caller IN ('routine', 'claude', 'panel', 'test')),
-    FOREIGN KEY(program_version_id) REFERENCES program_versions (id) ON DELETE CASCADE,
+    FOREIGN KEY(model_version_id) REFERENCES model_versions (id) ON DELETE CASCADE,
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS ix_runs_program_version_id ON runs (program_version_id);
+CREATE INDEX IF NOT EXISTS ix_runs_model_version_id ON runs (model_version_id);
 CREATE INDEX IF NOT EXISTS ix_runs_rrotor_id ON runs (rrotor_id);
 
 -- approvals
@@ -484,21 +484,21 @@ CREATE POLICY tenant ON github_installations USING (user_id IN (SELECT id FROM u
 ALTER TABLE routine_triggers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON routine_triggers;
 CREATE POLICY tenant ON routine_triggers USING (user_id IN (SELECT id FROM users));
-ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON programs;
-CREATE POLICY tenant ON programs USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE program_versions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON program_versions;
-CREATE POLICY tenant ON program_versions USING (program_id IN (SELECT id FROM programs));
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON models;
+CREATE POLICY tenant ON models USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE model_versions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON model_versions;
+CREATE POLICY tenant ON model_versions USING (model_id IN (SELECT id FROM models));
 ALTER TABLE deployments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON deployments;
-CREATE POLICY tenant ON deployments USING (program_version_id IN (SELECT id FROM program_versions));
+CREATE POLICY tenant ON deployments USING (model_version_id IN (SELECT id FROM model_versions));
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON runs;
-CREATE POLICY tenant ON runs USING (program_version_id IN (SELECT id FROM program_versions));
+CREATE POLICY tenant ON runs USING (model_version_id IN (SELECT id FROM model_versions));
 ALTER TABLE approvals ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON approvals;
 CREATE POLICY tenant ON approvals USING (run_id IN (SELECT id FROM runs));
-ALTER TABLE program_events ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON program_events;
-CREATE POLICY tenant ON program_events USING (program_id IN (SELECT id FROM programs));
+ALTER TABLE model_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON model_events;
+CREATE POLICY tenant ON model_events USING (model_id IN (SELECT id FROM models));

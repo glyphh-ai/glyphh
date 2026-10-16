@@ -46,7 +46,7 @@ class Message(BaseModel):
 
 
 class Version(BaseModel):
-    program: Name
+    model: Name
     version: int = Field(ge=1)
     commit_sha: Sha
 
@@ -90,10 +90,10 @@ class Deployed(Version, Message):
 class Event(Message):
     type: Literal["event"]
     seq: Seq
-    program: Name
+    model: Name
     kind: Name
     data: Any = None
-    trigger: uuid.UUID | None = None  # the routine trigger to fire, one of the program owner's
+    trigger: uuid.UUID | None = None  # the routine trigger to fire, one of the model owner's
 
 
 class Ping(Message):
@@ -129,7 +129,7 @@ class Welcome(Message):
 class Call(Message):
     type: Literal["call"] = "call"
     run_id: uuid.UUID
-    program: Name
+    model: Name
     version: int
     function: Name
     inputs: dict[str, Any]
@@ -151,7 +151,7 @@ class Deploy(Message):
     """deploy, activate or remove one version; the token reads that one repo for an hour (none without a repo)."""
 
     type: Literal["deploy", "activate", "remove"]
-    program: Name
+    model: Name
     version: int
     repo: str | None
     commit_sha: Sha
@@ -160,7 +160,7 @@ class Deploy(Message):
 
 class SecretSet(Message):
     type: Literal["secret_set"] = "secret_set"
-    program: Name
+    model: Name
     name: Name
     value: str  # encrypted to the rrotor's public key, base64
 

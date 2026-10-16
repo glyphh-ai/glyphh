@@ -1,4 +1,4 @@
-"""The connector's authorization server endpoints a program calls: registering a client (RFC 7591), the token
+"""The connector's authorization server endpoints a model calls: registering a client (RFC 7591), the token
 endpoint (authorization code with PKCE, refresh with rotation) and revocation (RFC 7009). Their refusals are OAuth's
 own shape, answered (not raised) so what a refusal revokes is kept."""
 
