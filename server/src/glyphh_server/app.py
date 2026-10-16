@@ -26,6 +26,7 @@ from glyphh_server.api import (
     plans,
     routine_triggers,
     runtime,
+    unlock,
 )
 from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
@@ -48,6 +49,7 @@ ROUTERS = (
     addons,
     billing,
     runtime,
+    unlock,
     routine_triggers,
     approvals,
     github,

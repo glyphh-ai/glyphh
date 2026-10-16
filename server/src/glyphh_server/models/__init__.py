@@ -22,6 +22,7 @@ from glyphh_server.models.routine_trigger import TRIGGER_STATUSES, RoutineTrigge
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
 from glyphh_server.models.token import Token
+from glyphh_server.models.unlock import UNLOCK_MODS, Unlock
 from glyphh_server.models.user import ROLES, User
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "SURFACES",
     "TOKEN_KINDS",
     "TRIGGER_STATUSES",
+    "UNLOCK_MODS",
     "Addon",
     "Approval",
     "Base",
@@ -61,5 +63,6 @@ __all__ = [
     "Rrotor",
     "Run",
     "Token",
+    "Unlock",
     "User",
 ]

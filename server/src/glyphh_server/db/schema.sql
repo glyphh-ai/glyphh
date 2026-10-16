@@ -426,6 +426,20 @@ CREATE TABLE IF NOT EXISTS approvals (
 );
 CREATE INDEX IF NOT EXISTS ix_approvals_run_id ON approvals (run_id);
 
+-- unlocks
+CREATE TABLE IF NOT EXISTS unlocks (
+    session_id TEXT NOT NULL,
+    mod TEXT NOT NULL,
+    install TEXT NOT NULL,
+    payment_intent_id TEXT,
+    paid_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    refunded_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (session_id),
+    CONSTRAINT unlocks_mod CHECK (mod IN ('drips', 'games')),
+    UNIQUE (payment_intent_id)
+);
+CREATE INDEX IF NOT EXISTS ix_unlocks_mod_install ON unlocks (mod, install);
+
 -- orgs.admin_user_id and users.org_id point at each other, so the org's admin is added once both tables exist.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_constraint WHERE conname = 'orgs_admin_user_id_fkey') THEN

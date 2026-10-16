@@ -9,10 +9,12 @@ The design of Glyphh as it stands: the [product](#product), the [architecture](#
 | Mod | What it is | Runs | Sold | State |
 |---|---|---|---|---|
 | `glyphh` | The account: sign in, the licence, and the account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan | Built |
+| `drips` | Visual effects with sound over Claude: confetti, fireworks, hearts, a matrix rain; your own recipes, played by name or by Claude | The person's Mac | Once, $8 per machine, no account | Built |
+| `games` | Games with sound over Claude: Missile Command, Chickn, Blocks, Rocks, Dash; your top score to beat | The person's Mac | Once, $8 per machine, no account | Built |
 | `ada` | Ada models in your rrotor: a typed spec and a precedent store, deployed by commit, run with no network, called by Claude and by Claude's routines | **rrotor**, an isolated runtime: local on every plan; hosted on Pro and Team | Add-on | Mod designed; rrotor built (local) |
 
-- **Every mod is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
-- **Everything is a subscription.** Nothing is bought one-off.
+- **Ada is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
+- **Drips and Games are bought once**, per machine, with no Glyphh account: a Stripe Payment Link, then a licence the server signs for that install, checked offline from then on (below, Bought once).
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page, the connector's sign-in and Allow page, and Stripe's.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts. **Functional first:** every screen works before design draws it.
@@ -27,6 +29,7 @@ flowchart TB
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh"]
             Ada["ada"]
+            Fun["drips, games"]
         end
         LocalRotor["rrotor, local<br/>models, parts"]
         Local[("~/.glyphh<br/>install, license")]
@@ -50,6 +53,7 @@ flowchart TB
 
     Base <-- "device flow, license" --> API
     Ada <-- "runtime token, models, approvals" --> API
+    Fun -- "the licence, once paid" --> API
     Routine -- "Glyphh connector (MCP)" --> API
     Rotor -- "outbound link" --> API
     LocalRotor -- "outbound link" --> API
@@ -63,7 +67,7 @@ flowchart TB
 |---|---|---|---|
 | **The server** | Accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), the runtime link and approvals | `glyphh-ai/server` | Built (the models and runs API designed) |
 | **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
-| **The Ada mod** | `ada`, carrying the shared sign-in and licence module (`shared/licence/`) | `glyphh-ai/mods` | Designed |
+| **The mods** | `glyphh` (the account), `drips` and `games` (bought once, on `shared/unlock/`), `ada` (designed, on `shared/licence/`) | `glyphh-ai/mods` | Built, but Ada |
 | **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Local built; hosted designed |
 | **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
 
@@ -72,7 +76,7 @@ flowchart TB
 - **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). A mod can ship its own MCP server, skills and commands. Mods are behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while the API is early access.
 - **Installed from the Glyphh marketplace** at the user scope, so it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
 - **Source and releases are apart.** The source repos hold tests, the shared modules and the release scripts; a release build writes only each mod's shipped files and the marketplace file, with the live server address and licence key swapped in.
-- **Each mod checks the licence** at start. A mod the licence does not include is closed with its offer ("Ada is an add-on ($4/month per seat on Pro). Add it in /ada.") and **Add it**.
+- **A mod sold once** (`drips`, `games`) keeps its own licence and checks it at start; `/<mod> unlock` buys it. **A mod on the account** checks the plan's licence at start. A mod the licence does not include is closed with its offer ("Ada is an add-on ($4/month per seat on Pro). Add it in /ada.") and **Add it**.
 
 ### Two kinds of panel
 
@@ -212,6 +216,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 | Account | `GET`/`PATCH /v1/me` (the plan with each mod's limits, and what is used where the server sees it: members, seats, installs), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key` |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods` (each mod, the plans that include it, and `addon`: the add-on it is sold as, `price_cents`, `per_seat`, `plans` and `free`, or `null`), `GET /v1/plans` (each plan's newest version: price, account limits, each mod and its limits), `POST /v1/billing/checkout`, `/plan`, `/seats`, `/portal`, `POST /v1/stripe/webhook` |
+| Bought once | `GET /v1/unlock/license?mod=&install=` (open: `paid` false until the mod's Payment Link checkout for that install is paid, then the licence); Stripe's webhook records `checkout.session.completed` in `payment` mode and `charge.refunded` (below, Bought once) |
 | Add-ons | `GET /v1/addons` (the catalog for the org's plan, with prices, and what the org has), `POST /v1/billing/checkout` with `addons`, `POST /v1/billing/addons/preview`, `POST /v1/billing/addons`, `DELETE /v1/billing/addons/{mod}` (below, Add-ons) |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted or local (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a call made on any process reaches it. The service functions other code calls: `send_call` (writes the run), `send_continue`, `send_cancel`, `send_deploy`. A runtime no process holds answers `E_UNAVAILABLE` with when it was last seen; waking a stopped hosted runtime on Fly is one seam, `wake_hosted`, not built |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
@@ -266,6 +271,14 @@ Every mod is an add-on to the plan: a line on the org's one Stripe subscription,
 - **Refusals** (stable codes): not the admin `E_FORBIDDEN`; no subscription `E_CONFLICT` `reason: not_subscribed` (subscribe with checkout); not allowed on the org's plan `E_CONFLICT` `reason: not_on_plan`; already added `E_CONFLICT` `reason: already_added`; not added `E_NOT_FOUND` `reason: not_added`; the subscription's last item `E_CONFLICT` `reason: last_item` (cancel in the billing portal); a mod with no add-on on sale `E_INVALID` `reason: no_addon`. Changing plan to one an added add-on isn't allowed on is `E_CONFLICT` `reason: not_on_plan`.
 - **Seats:** changing the seats changes every per-seat add-on's quantity with the plan's, in one prorated update.
 - **Stripe's webhook** keeps the org's add-ons true: on every subscription event it reads the subscription fresh and matches each item's price to an add-on version (the plan's item to a plan version); an item there is an add-on the org has (`active`, its item id and quantity), an add-on no longer there is `removed`; a subscription that ended removes them all. Replays and events out of order change nothing, as for the plan.
+
+### Bought once
+
+Drips and Games are sold once, per machine, with no Glyphh account. Each has a Stripe **Payment Link** (`PAYMENT_LINK` in the mod, set by the release build) whose metadata names the mod (`mod: drips`). `/<mod> unlock` opens it with the mod's own install id as `client_reference_id`, then asks `GET /v1/unlock/license?mod=<mod>&install=<id>` every few seconds.
+
+- **The webhook** records a `checkout.session.completed` in `payment` mode whose metadata names a mod sold once and whose `payment_status` is `paid`: one `unlocks` row per session (a replay changes nothing), with its payment intent. A `charge.refunded` marks the row of that payment intent refunded.
+- **The licence** is `base64url(payload) "." base64url(signature)`: the payload `{"v": 1, "mod", "install", "session", "issued"}` as compact JSON, the Ed25519 signature (the server's one key, `GET /v1/license/key`) over the first part's text. The mod checks it offline and keeps it; `/<mod> key <licence>` carries it to another machine. A refunded purchase is no longer handed out; a licence already on a machine keeps working, which an offline check cannot help.
+- **No account, no org, no row-level security:** the install id is the only key, the licence is for that install alone, and nothing else is learned from it.
 
 ### The connector
 
@@ -322,7 +335,8 @@ Each works before design draws it.
 | Sign in, account, org, plan, billing | `glyphh` | Mod | Built |
 | The sign-in card, in the chat | `glyphh`'s MCP server | MCP App | Built |
 | The account: who, plan, each mod's limits, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App | Built |
-| Not in your plan, with the add-on's offer and **Add it** | every mod | Mod | Built |
+| Not in your plan, with the add-on's offer and **Add it** | the mods on the account | Mod | Built |
+| Locked, with the price and **Unlock**; the Drips page and button; the games | `drips`, `games` | Mod | Built |
 | Models: list, versions, deploy, runs, needs you | `ada` | Mod | Designed |
 | The live panel: a run in rrotor, its steps, log and approvals | `ada` | MCP App | Designed |
 | Runtime: local on or off; hosted state, hours and storage used, grow storage | `ada` | Mod | Designed |
@@ -603,6 +617,14 @@ erDiagram
         text_array grant_types
         timestamp created_at
     }
+    UNLOCKS {
+        text session_id PK "Stripe's checkout session"
+        text mod "drips or games"
+        text install "the mod's own install id"
+        text payment_intent_id UK
+        timestamp paid_at
+        timestamp refunded_at
+    }
     OAUTH_CODES {
         text code_hash PK
         uuid client_id FK
@@ -656,6 +678,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 - **OAuth clients:** the MCP clients that registered (RFC 7591), each with its exact redirect URIs; a confidential one's secret only as a hash. They belong to no org.
 - **OAuth codes:** an authorization the person allowed, until its code is redeemed (once, within 2 minutes), with its PKCE challenge and the resource it is for; `grant_id` names the grant it went into, so a second use revokes it.
 - **Connector grants:** each client (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, one live per client, revocable one by one. **Connector tokens:** its access tokens (1 hour) and refresh tokens (30 days, rotated on use; a rotated one used again revokes the grant), kept only as hashes.
+- **Unlocks:** a mod bought once for one machine, from Stripe's finished Payment Link checkout, keyed by the session; its payment intent, so a refund finds it. No org and no user: outside row-level security.
 - **Orgs:** `renews_at` is when the subscription renews, from Stripe; empty when it isn't subscribed or ends at the period's end.
 
 ### In rrotor
@@ -664,7 +687,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ## Plans
 
-Every plan is a subscription, billed per seat, per month. A plan sets the account's limits and which add-ons it may have; it includes no mod. Installs, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month. A plan sets the account's limits and which add-ons it may have; it includes no mod. Drips and Games are outside the plans: $8 once, per machine, each. Installs, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
