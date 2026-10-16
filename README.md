@@ -401,7 +401,7 @@ plays video. The Glyphh desktop app's panel host (`panel-host.ts`,
 ## Where it goes next
 
 - A **standalone app** (Electron) needs no mod at all: real web views, the
-  layout grid, `.dip` and `.drip`, and Claude Code itself in a terminal cell
+  layout grid, `.dip`, and Claude Code itself in a terminal cell
   (xterm.js + node-pty) or headless (`claude -p --input-format stream-json
   --output-format stream-json`, which is how the Claude desktop app runs it).
   The CLI bridge removed from yo/app on 2026-09-28 is in its git history.
