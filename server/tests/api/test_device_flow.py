@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import DeviceCode
-from tests.api.browser import Browser, new_code, open_browser, sign_in, to_approve
+from tests.api.browser import Browser, decide, error_page, new_code, open_browser, sign_in, to_approve, went
 from tests.conftest import SETTINGS
 from tests.fakes import FakeStripe
 
@@ -40,13 +40,18 @@ async def test_signing_in_makes_an_install_with_a_free_org_and_hands_its_token_o
     assert code["verification_uri_complete"].endswith(f"?code={code['user_code']}")
     assert (code["interval"], code["expires_in"], len(code["user_code"])) == (5, 600, 9)
     page = await browser.http.get("/v1/device", params={"code": code["user_code"].lower().replace("-", "")})
-    assert (
-        code["user_code"] in page.text and "Continue with Google" in page.text and "Continue with GitHub" in page.text
-    )
+    assert went(page) == ("/device", {"code": code["user_code"]})
+    assert (await browser.http.get("/auth/providers")).json() == {"providers": ["google", "github"]}
     shown, consent = await to_approve(browser.http, code["user_code"])
-    assert "Ada&#x27;s Mac (cli)" in shown.text and browser.email in shown.text
-    done = await browser.http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
-    assert "Signed in. Go back to Claude." in done.text and 'glyphh_signin=""' in done.headers["set-cookie"]
+    assert shown == {
+        "kind": "device",
+        "code": code["user_code"],
+        "name": "Ada's Mac",
+        "surface": "cli",
+        "email": browser.email,
+    }
+    done = await decide(browser.http, consent, "approve")
+    assert went(done) == ("/device/done", {"result": "approved"}) and 'glyphh_signin=""' in done.headers["set-cookie"]
     token = (await _poll(browser.http, code["device_code"])).json()
     assert token["token_type"] == "Bearer" and token["install_id"]
     me = (await browser.http.get("/v1/me", headers={"authorization": f"Bearer {token['access_token']}"})).json()
@@ -74,19 +79,18 @@ async def test_polling_waits_and_too_fast_is_told_to_slow_down(browser: Browser,
 async def test_a_denied_sign_in_says_so_once(browser: Browser) -> None:
     code = await new_code(browser.http)
     _, consent = await to_approve(browser.http, code["user_code"])
-    done = await browser.http.post("/auth/approve", data={"consent": consent, "decision": "deny"})
-    assert "Nothing was signed in" in done.text
+    assert went(await decide(browser.http, consent, "deny")) == ("/device/done", {"result": "denied"})
     assert _code(await _poll(browser.http, code["device_code"])) == "access_denied"
     assert _code(await _poll(browser.http, code["device_code"])) == "expired_token"
-    again = await browser.http.post("/auth/approve", data={"consent": consent, "decision": "deny"})
-    assert again.status_code == 422 and "expired" in again.text
+    again = error_page(await decide(browser.http, consent, "deny"))
+    assert again["code"] == "E_INVALID" and "expired" in again["message"]
 
 
 async def test_an_expired_or_unknown_code_is_expired(browser: Browser, engine: AsyncEngine) -> None:
     code = await new_code(browser.http)
     await _age(engine, code["user_code"], expires_at=datetime.now(UTC) - timedelta(seconds=1))
-    page = await browser.http.get("/v1/device", params={"code": code["user_code"]})
-    assert page.status_code == 422 and "Start again in Claude" in page.text
+    page = error_page(await browser.http.get("/v1/device", params={"code": code["user_code"]}))
+    assert page["code"] == "E_INVALID" and "Start again in Claude" in page["message"]
     assert _code(await _poll(browser.http, code["device_code"])) == "expired_token"
     assert _code(await _poll(browser.http, "never-issued")) == "expired_token"
 
@@ -101,23 +105,22 @@ async def test_old_codes_are_cleared_when_a_new_one_starts(browser: Browser, eng
 
 
 async def test_the_page_asks_for_the_code_when_the_link_has_none(browser: Browser) -> None:
-    page = await browser.http.get("/v1/device")
-    assert page.status_code == 200 and '<input name="code"' in page.text
+    assert went(await browser.http.get("/v1/device")) == ("/device", {})
 
 
 async def test_without_providers_the_page_says_so(engine: AsyncEngine, stripe: FakeStripe) -> None:
     async for bare in open_browser(stripe, SETTINGS):
         code = await new_code(bare.http)
-        page = await bare.http.get("/v1/device", params={"code": code["user_code"]})
-        assert "No sign-in provider is set up" in page.text and "Continue with" not in page.text
+        assert went(await bare.http.get("/v1/device", params={"code": code["user_code"]}))[0] == "/device"
+        assert (await bare.http.get("/auth/providers")).json() == {"providers": []}
 
 
 async def test_an_install_past_the_plan_is_refused_and_the_code_keeps_waiting(browser: Browser) -> None:
     await sign_in(browser.http)
     code = await new_code(browser.http, "Second machine")
     _, consent = await to_approve(browser.http, code["user_code"])
-    refused = await browser.http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
-    assert refused.status_code == 403 and "allows 1 installs" in refused.text and "E_LIMIT" in refused.text
+    refused = error_page(await decide(browser.http, consent, "approve"))
+    assert refused["code"] == "E_LIMIT" and "allows 1 installs" in refused["message"]
     assert _code(await _poll(browser.http, code["device_code"])) == "authorization_pending"
 
 
@@ -133,21 +136,24 @@ async def test_steps_from_another_browser_or_a_crossed_provider_are_refused(
     code = await new_code(browser.http)
     started = await browser.http.get("/auth/google/start", params={"code": code["user_code"]})
     state = started.headers["location"].split("state=")[1].split("&")[0]
-    crossed = await browser.http.get("/auth/github/callback", params={"code": "c", "state": state})
-    assert crossed.status_code == 422 and "Start again" in crossed.text
-    cancelled = await browser.http.get("/auth/google/callback", params={"state": state, "error": "access_denied"})
-    assert cancelled.status_code == 403 and "cancelled" in cancelled.text
+    crossed = error_page(await browser.http.get("/auth/github/callback", params={"code": "c", "state": state}))
+    assert crossed["code"] == "E_INVALID" and "Start again" in crossed["message"]
+    cancelled = error_page(
+        await browser.http.get("/auth/google/callback", params={"state": state, "error": "access_denied"})
+    )
+    assert cancelled["code"] == "E_FORBIDDEN" and "cancelled" in cancelled["message"]
     _, consent = await to_approve(browser.http, code["user_code"])
     async for stranger in open_browser(stripe):
         for res in (
-            await stranger.http.post("/auth/approve", data={"consent": consent, "decision": "approve"}),
+            await decide(stranger.http, consent, "approve"),
             await stranger.http.get("/auth/google/callback", params={"code": "c", "state": state}),
         ):
-            assert res.status_code == 422 and "another browser" in res.text
+            assert "another browser" in error_page(res)["message"]
+        read = await stranger.http.get("/auth/consent", params={"consent": consent})
+        assert read.status_code == 422 and "another browser" in read.json()["error"]["message"]
     other = await new_code(browser.http)
     await to_approve(browser.http, other["user_code"])
-    stale = await browser.http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
-    assert stale.status_code == 422 and "another browser" in stale.text
+    assert "another browser" in error_page(await decide(browser.http, consent, "approve"))["message"]
 
 
 async def test_bad_steps_land_on_a_page_with_a_trace(browser: Browser, engine: AsyncEngine) -> None:
@@ -155,15 +161,14 @@ async def test_bad_steps_land_on_a_page_with_a_trace(browser: Browser, engine: A
     started = await browser.http.get("/auth/google/start", params={"code": code["user_code"]})
     state = started.headers["location"].split("state=")[1].split("&")[0]
     await _age(engine, code["user_code"], expires_at=datetime.now(UTC) - timedelta(seconds=1))
-    for path, status in (
-        (f"/auth/google/callback?code=c&state={state}", 422),
-        ("/auth/microsoft/start?code=x", 404),
-        ("/auth/google/start?code=BBBB-BBBB", 422),
-        ("/auth/google/callback?code=c&state=forged.0", 422),
-        ("/auth/google/start", 422),
+    for path, code_ in (
+        (f"/auth/google/callback?code=c&state={state}", "E_INVALID"),
+        ("/auth/microsoft/start?code=x", "E_NOT_FOUND"),
+        ("/auth/google/start?code=BBBB-BBBB", "E_INVALID"),
+        ("/auth/google/callback?code=c&state=forged.0", "E_INVALID"),
+        ("/auth/google/start", "E_INVALID"),
     ):
-        res = await browser.http.get(path)
-        assert res.status_code == status and "trace" in res.text and res.headers["x-request-id"] in res.text, path
+        assert error_page(await browser.http.get(path))["code"] == code_, path
 
 
 async def test_the_device_calls_check_their_input(browser: Browser) -> None:

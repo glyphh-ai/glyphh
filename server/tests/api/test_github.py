@@ -11,11 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from glyphh_server.models import Identity
+from tests.api.browser import error_page, went
 from tests.conftest import PROVIDER_SETTINGS, PUBLIC_URL, _client
 from tests.db.helpers import Person, person
 from tests.fakes import FakeGitHubApp, FakeStripe, fake_http
-
-INSTALLED: str = "GitHub App is installed on"
 
 
 def _id() -> int:
@@ -66,11 +65,10 @@ async def test_a_person_installs_the_app_on_their_account_and_again_later(
     github_app.install(first, account, "ada-gh")
     github_app.install(second, account, "ada-gh")
     done = await _back(client, await _to_github(client, ada.headers), first)
-    assert done.status_code == 200 and f"{INSTALLED} ada-gh" in done.text, done.text
-    assert 'glyphh_signin=""' in done.headers["set-cookie"]
+    assert went(done) == ("/github", {"installed": "ada-gh"}) and 'glyphh_signin=""' in done.headers["set-cookie"]
     listed = (await client.get("/v1/github/installations", headers=ada.headers)).json()
     assert [(i["installation_id"], i["account_login"], i["removed_at"]) for i in listed] == [(first, "ada-gh", None)]
-    assert INSTALLED in (await _back(client, await _to_github(client, ada.headers), second)).text
+    assert went(await _back(client, await _to_github(client, ada.headers), second))[1] == {"installed": "ada-gh"}
     listed = (await client.get("/v1/github/installations", headers=ada.headers)).json()
     assert [i["installation_id"] for i in listed] == [second]
     assert github_app.calls == [
@@ -86,18 +84,17 @@ async def test_someone_elses_installation_is_never_recorded(
     eve, eve_account = await _with_github(engine)
     hers = _id()
     github_app.install(hers, eve_account, "eve-gh")
-    res = await _back(client, await _to_github(client, ada.headers), hers)
-    assert res.status_code == 403 and "not on the GitHub account you sign in with" in res.text
+    res = error_page(await _back(client, await _to_github(client, ada.headers), hers))
+    assert res["code"] == "E_FORBIDDEN" and "not on the GitHub account you sign in with" in res["message"]
     state = await _to_github(client, ada.headers)
     async for stranger in _browser(stripe, github_app):
-        res = await _back(stranger, state, hers)
-        assert res.status_code == 422 and "another browser" in res.text
+        assert "another browser" in error_page(await _back(stranger, state, hers))["message"]
     eve_state = await _to_github(client, eve.headers)
-    assert INSTALLED in (await _back(client, eve_state, hers)).text
+    assert went(await _back(client, eve_state, hers))[1] == {"installed": "eve-gh"}
     assert (await client.get("/v1/github/installations", headers=ada.headers)).json() == []
     github_app.install(hers, account, "shared")  # GitHub now says it is Ada's: it is still Eve's on Glyphh
-    res = await _back(client, await _to_github(client, ada.headers), hers)
-    assert res.status_code == 409 and "another Glyphh account" in res.text
+    res = error_page(await _back(client, await _to_github(client, ada.headers), hers))
+    assert res["code"] == "E_CONFLICT" and "another Glyphh account" in res["message"]
 
 
 async def test_install_steps_that_are_not_right_are_refused(
@@ -112,12 +109,12 @@ async def test_install_steps_that_are_not_right_are_refused(
         await _back(client, link, _id()),
         await _back(client, state, None),
     ):
-        assert res.status_code == 422 and "trace" in res.text and res.headers["content-type"].startswith("text/html")
-    res = await _back(client, await _to_github(client, ada.headers), _id())
-    assert res.status_code == 404 and "no such installation" in res.text
+        assert error_page(res)["code"] == "E_INVALID"
+    res = error_page(await _back(client, await _to_github(client, ada.headers), _id()))
+    assert res["code"] == "E_NOT_FOUND" and "no such installation" in res["message"]
     github_app.fail = True
-    res = await _back(client, await _to_github(client, ada.headers), _id())
-    assert res.status_code == 503 and "answer. Try again" in res.text
+    res = error_page(await _back(client, await _to_github(client, ada.headers), _id()))
+    assert res["code"] == "E_UNAVAILABLE" and "answer. Try again" in res["message"]
 
 
 async def test_the_link_needs_github_linked_and_the_app_set_up(engine: AsyncEngine, client: httpx.AsyncClient) -> None:
@@ -132,5 +129,4 @@ async def test_the_link_needs_github_linked_and_the_app_set_up(engine: AsyncEngi
     async for bare in _client(create_app(off, http=fake_http())):
         res = await bare.post("/v1/github/install", headers=ada.headers)
         assert res.status_code == 503 and res.json()["error"]["code"] == "E_UNAVAILABLE"
-        page = await bare.get(link)
-        assert page.status_code == 503 and "set up on this server" in page.text
+        assert "set up on this server" in error_page(await bare.get(link))["message"]

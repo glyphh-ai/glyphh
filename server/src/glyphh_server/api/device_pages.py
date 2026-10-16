@@ -1,14 +1,15 @@
-"""The page the device flow's link opens: the code, Continue with Google or GitHub, then approve or deny this
-install. Each step after the first carries its purpose in a signed value and is tied to the browser that started it
-by a short-lived cookie."""
+"""The device sign-in and the shared provider steps, for a browser. Nothing is rendered: the browser is sent to the
+platform's pages, each step after the first carrying its purpose in a signed value tied to the browser that started
+it by a short-lived cookie.
+
+The device flow: the link opens `GET /v1/device?code=` → the platform's `/device` page (the code, Continue with a
+provider) → `GET /auth/{provider}/start?code=` → the provider → `GET /auth/{provider}/callback` → the platform's
+`/device/approve?consent=` page, which reads `GET /auth/consent` and answers with `GET /auth/approve`."""
 
 import uuid
-from html import escape
-from typing import Annotated
-from urllib.parse import urlencode
+from typing import Any
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Request
 from starlette.responses import RedirectResponse, Response
 
 from glyphh_server.api import link_pages, oauth_pages
@@ -23,35 +24,31 @@ from glyphh_server.api.browser_session import (
     forget_browser,
     new_browser,
 )
-from glyphh_server.api.pages import link, page
+from glyphh_server.api.pages import to_platform
 from glyphh_server.errors import Forbidden, Invalid
 from glyphh_server.ops import device_approval
 from glyphh_server.ops.auth import signed
 from glyphh_server.ops.auth.providers import available, provider
 from glyphh_server.ops.auth.signin import sign_in
-from glyphh_server.ops.identities import NAMES
 
 router = APIRouter()
-ASK_CODE: str = (
-    '<form method="get" action="/v1/device"><label>Code <input name="code" autocomplete="off"></label>'
-    ' <button type="submit">Continue</button></form>'
-)
+DEVICE: str = "device"
 
 
-@router.get("/v1/device", operation_id="deviceSignInPage", tags=["device flow"], response_class=HTMLResponse)
+@router.get("/v1/device", operation_id="deviceSignInPage", tags=["device flow"], response_class=RedirectResponse)
 async def device_page(request: Request, conn: Conn, code: str | None = None) -> Response:
-    """The page the sign-in link opens, in a browser: Continue with Google or GitHub, then approve this install."""
+    """The sign-in link, opened in a browser: on to the platform's `/device` page with the code (checked here: an
+    expired or unknown one is E_INVALID), or without one for the person to type it."""
     if not code:
-        return page("Sign in to Glyphh", "Enter the code Claude shows you.", raw=ASK_CODE)
+        return to_platform(cfg(request), "/device")
     found = await device_approval.waiting(conn, code)
-    query = urlencode({"code": found.user_code})
-    choices = [link(f"/auth/{p}/start?{query}", f"Continue with {NAMES[p]}") for p in available(cfg(request))]
-    return page(
-        "Sign in to Glyphh",
-        f"Code {found.user_code}: check it matches the one Claude shows.",
-        *([] if choices else ["No sign-in provider is set up on this server."]),
-        raw="".join(choices),
-    )
+    return to_platform(cfg(request), "/device", code=found.user_code)
+
+
+@router.get("/auth/providers", operation_id="signInProviders", tags=["device flow"])
+async def providers(request: Request) -> dict[str, list[str]]:
+    """The sign-in providers this server offers (google, github), for the platform's Continue buttons."""
+    return {"providers": list(available(cfg(request)))}
 
 
 @router.get("/auth/{name}/start", include_in_schema=False)
@@ -97,31 +94,39 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
     found = await device_approval.waiting(conn, st["c"])
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, name))
     user_id = await sign_in(conn, profile)
-    consent = signed.sign(settings.secret_key, {"c": found.user_code, "u": str(user_id), "n": st["n"]}, TTL)
-    form = (
-        f'<form method="post" action="/auth/approve"><input type="hidden" name="consent" value="{escape(consent)}">'
-        '<button type="submit" name="decision" value="approve">Approve</button> '
-        '<button type="submit" name="decision" value="deny">Deny</button></form>'
-    )
-    return page(
-        "Approve this sign-in",
-        f"{found.name} ({found.surface}) wants to sign in to Glyphh as {profile.email.lower()}.",
-        f"Code {found.user_code}.",
-        raw=form,
-    )
+    about = {"name": found.name, "surface": found.surface, "email": profile.email.lower()}
+    consent = {"k": DEVICE, "c": found.user_code, "u": str(user_id), "n": st["n"], "d": about}
+    return to_platform(settings, "/device/approve", consent=signed.sign(settings.secret_key, consent, TTL))
 
 
-@router.post("/auth/approve", include_in_schema=False)
-async def approve(
-    request: Request, conn: Conn, consent: Annotated[str, Form()], decision: Annotated[str, Form()]
-) -> Response:
+def consent_of(request: Request, consent: str) -> dict[str, Any]:
+    """A signed consent, checked and tied to this browser."""
     c = signed.verify(cfg(request).secret_key, consent)
-    if c["n"] != browser(request):
+    if c.get("k") not in (DEVICE, oauth_pages.ALLOW) or c.get("n") != browser(request):
+        raise Invalid(START_AGAIN)
+    return c
+
+
+@router.get("/auth/consent", include_in_schema=False)
+async def consent_view(request: Request, consent: str) -> dict[str, Any]:
+    """What a consent asks, for the platform's page: a device sign-in (the install's name and surface, the code,
+    the email signed in) or the connector's Allow (the client, where it returns to, the email)."""
+    c = consent_of(request, consent)
+    if c["k"] == DEVICE:
+        return {"kind": "device", "code": c["c"], **c["d"]}
+    return {"kind": "oauth", **oauth_pages.about(c)}
+
+
+@router.get("/auth/approve", include_in_schema=False)
+async def approve(request: Request, conn: Conn, consent: str, decision: str) -> Response:
+    """The person's answer to a device sign-in, from the platform's page: approve or deny, then on to the platform's
+    `/device/done`. A consent used again is refused (its code is no longer waiting)."""
+    c = consent_of(request, consent)
+    if c["k"] != DEVICE:
         raise Invalid(START_AGAIN)
     if decision == "approve":
         await device_approval.approve(conn, c["c"], uuid.UUID(c["u"]))
-        done = page("Signed in", "Signed in. Go back to Claude.")
     else:
         await device_approval.deny(conn, c["c"])
-        done = page("Sign-in denied", "Nothing was signed in. You can close this page.")
+    done = to_platform(cfg(request), "/device/done", result="approved" if decision == "approve" else "denied")
     return forget_browser(done)

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     version: str = "dev"
     log_level: str = "INFO"
     public_url: str = "http://localhost:8080"
+    # The platform, the one web app: every page a browser sees in a flow is there; the server renders nothing.
+    platform_url: str = "http://localhost:3000"
     # Signs the values the device sign-in pages carry; 32 characters or more.
     secret_key: str = ""
     # The license's Ed25519 private key: base64 of its raw 32 bytes. Without one outside prod, one is made at start.
@@ -55,6 +57,10 @@ class Settings(BaseSettings):
     @property
     def base_url(self) -> str:
         return self.public_url.rstrip("/")
+
+    @property
+    def platform_base(self) -> str:
+        return self.platform_url.rstrip("/")
 
     @property
     def github_app_configured(self) -> bool:

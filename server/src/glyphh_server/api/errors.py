@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
-from glyphh_server.api.pages import page
+from glyphh_server.api.pages import to_platform
+from glyphh_server.config import Settings
 from glyphh_server.errors import GlyphhError
 from glyphh_server.obs.context import current_trace_id
 from glyphh_server.obs.logs import fields
@@ -27,25 +28,35 @@ _HTTP_CODES: dict[int, str] = {
     409: "E_CONFLICT",
 }
 
-PAGES: tuple[str, ...] = ("/auth/", "/v1/device", "/billing/", "/oauth/authorize")
-# Pages on an address whose other methods are the API's.
-GET_PAGES: tuple[str, ...] = ("/v1/github/install", "/v1/github/callback")
+# Paths a browser is on, in a flow: a refusal there sends it to the platform's error page, with the code and trace.
+BROWSER: tuple[str, ...] = ("/auth/", "/v1/device", "/billing/")
+# Browser paths on an address whose other methods are the API's.
+GET_BROWSER: tuple[str, ...] = ("/v1/github/install", "/v1/github/callback")
+# Browser paths that answer JSON all the same: the platform reads them.
+JSON_STEPS: tuple[str, ...] = ("/v1/device/code", "/v1/device/token", "/auth/consent", "/auth/providers")
+
+
+def cfg(request: Request) -> Settings:
+    return request.app.state.settings
 
 
 def is_page(method: str, path: str) -> bool:
-    if method == "GET" and path in GET_PAGES:
+    if method == "GET" and path in GET_BROWSER:
         return True
-    return path.startswith(PAGES) and path not in ("/v1/device/code", "/v1/device/token")
+    return path.startswith(BROWSER) and path not in JSON_STEPS
 
 
 def error_body(code: str, message: str, **detail: Any) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "trace_id": current_trace_id(), **detail}}
 
 
-def refusal(method: str, path: str, code: str, message: str, status: int, /, **detail: Any) -> Response:
-    """A person on a page gets a page; a model gets JSON. The detail may carry its own `status` (a run's)."""
+def refusal(
+    settings: Settings, method: str, path: str, code: str, message: str, status: int, /, **detail: Any
+) -> Response:
+    """A browser in a flow is sent to the platform's error page; everything else gets JSON. The detail may carry its
+    own `status` (a run's)."""
     if is_page(method, path):
-        return page("That didn't work", message, f"Code {code}, trace {current_trace_id()}.", status=status)
+        return to_platform(settings, "/error", code=code, message=message, trace=current_trace_id())
     return JSONResponse(error_body(code, message, **detail), status_code=status)
 
 
@@ -56,14 +67,16 @@ async def _glyphh_error(request: Request, err: Exception) -> Response:
         "refused",
         extra=fields(code=err.code, status=err.status, reason=err.message),
     )
-    return refusal(request.method, request.url.path, err.code, err.message, err.status, **err.detail)
+    return refusal(cfg(request), request.method, request.url.path, err.code, err.message, err.status, **err.detail)
 
 
 async def _invalid(request: Request, err: Exception) -> Response:
     assert isinstance(err, RequestValidationError)
     problems = jsonable_encoder(err.errors())
     log.info("refused", extra=fields(code="E_INVALID", status=422, problems=problems))
-    return refusal(request.method, request.url.path, "E_INVALID", "The request is not valid.", 422, problems=problems)
+    return refusal(
+        cfg(request), request.method, request.url.path, "E_INVALID", "The request is not valid.", 422, problems=problems
+    )
 
 
 async def _http(request: Request, err: Exception) -> Response:

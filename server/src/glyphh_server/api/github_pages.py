@@ -11,7 +11,7 @@ from starlette.responses import RedirectResponse, Response
 
 from glyphh_server.api.auth import Conn
 from glyphh_server.api.browser_session import START_AGAIN, TTL, bind_browser, browser, cfg, forget_browser, new_browser
-from glyphh_server.api.pages import page
+from glyphh_server.api.pages import to_platform
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
 from glyphh_server.ops import github_installations
@@ -50,7 +50,8 @@ async def install_page(request: Request, link: str) -> Response:
 
 @router.get(f"{PATH}/callback", operation_id="gitHubInstallCallback", response_class=Response)
 async def callback(request: Request, conn: Conn, state: str, installation_id: int | None = None) -> Response:
-    """Where GitHub sends the browser back after installing: the installation is recorded for the person."""
+    """Where GitHub sends the browser back after installing: the installation is recorded for the person, and the
+    browser goes on to the platform's `/github?installed=<login>`."""
     app = _app(request)
     st = signed.verify(cfg(request).secret_key, state)
     if st.get("k") != STATE or st["n"] != browser(request):
@@ -58,5 +59,4 @@ async def callback(request: Request, conn: Conn, state: str, installation_id: in
     if installation_id is None:
         raise Invalid("GitHub didn't install the App. Start again in Claude.", reason="not_installed")
     login = await github_installations.record(conn, app, uuid.UUID(st["u"]), installation_id)
-    done = f"Glyphh's GitHub App is installed on {login}. Go back to Claude."
-    return forget_browser(page("GitHub App installed", done), PATH)
+    return forget_browser(to_platform(cfg(request), "/github", installed=login), PATH)

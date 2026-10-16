@@ -8,12 +8,12 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
-from tests.api.browser import new_code, open_browser, sign_in
+from tests.api.browser import error_page, new_code, open_browser, sign_in, went
 from tests.conftest import PROVIDER_SETTINGS, PUBLIC_URL, SETTINGS, _client
 from tests.db.helpers import an_email, person
 from tests.fakes import GITHUB_USER, GOOGLE_ME, FakeStripe, fake_http
 
-LINKED: str = "GitHub is now linked to your Glyphh account. Go back to Claude."
+LINKED: tuple[str, dict[str, str]] = ("/account", {"linked": "github"})
 
 
 def _gh_id() -> int:
@@ -62,7 +62,7 @@ async def test_a_person_links_github_then_either_signs_them_in_and_unlinks_one(
         url = await _link_url(b, by_google)
         assert url.startswith(f"{PUBLIC_URL}/auth/github/start?link=")
         done = await _follow(b, url)
-        assert done.status_code == 200 and LINKED in done.text and 'glyphh_signin=""' in done.headers["set-cookie"]
+        assert went(done) == LINKED and 'glyphh_signin=""' in done.headers["set-cookie"]
         assert await _providers(b, by_google) == ["github", "google"]
         again = await b.post("/v1/me/identities", json={"provider": "github"}, headers=by_google)
         assert again.status_code == 409 and again.json()["error"]["code"] == "E_CONFLICT"
@@ -84,8 +84,8 @@ async def test_linking_an_identity_the_person_already_has_says_linked(engine: As
     ada = await person(engine)
     async for b in _browser(stripe, _gh_id()):
         first, second = await _link_url(b, ada.headers), await _link_url(b, ada.headers)
-        assert LINKED in (await _follow(b, first)).text
-        assert LINKED in (await _follow(b, second)).text
+        assert went(await _follow(b, first)) == LINKED
+        assert went(await _follow(b, second)) == LINKED
         assert await _providers(b, ada.headers) == ["github"]
 
 
@@ -97,10 +97,9 @@ async def test_a_github_account_that_is_someone_elses_is_refused_and_nothing_cha
         await sign_in(owner, "github")
     ada = await person(engine)
     async for b in _browser(stripe, github_id):
-        res = await _follow(b, await _link_url(b, ada.headers))
-        assert res.status_code == 409 and "That GitHub account is already its own Glyphh account" in res.text
-        assert "delete that account first, or contact support" in res.text
-        assert "E_CONFLICT" in res.text and res.headers["x-request-id"] in res.text
+        res = error_page(await _follow(b, await _link_url(b, ada.headers)))
+        assert res["code"] == "E_CONFLICT" and "That GitHub account is already its own Glyphh account" in res["message"]
+        assert "delete that account first, or contact support" in res["message"]
         assert await _providers(b, ada.headers) == []
 
 
@@ -108,10 +107,10 @@ async def test_a_second_github_account_is_refused(engine: AsyncEngine, stripe: F
     ada = await person(engine)
     async for one in _browser(stripe, _gh_id()):
         first, second = await _link_url(one, ada.headers), await _link_url(one, ada.headers)
-        assert LINKED in (await _follow(one, first)).text
+        assert went(await _follow(one, first)) == LINKED
     async for two in _browser(stripe, _gh_id()):
-        res = await _follow(two, second)
-        assert res.status_code == 409 and "Another GitHub account is already linked" in res.text
+        res = error_page(await _follow(two, second))
+        assert res["code"] == "E_CONFLICT" and "Another GitHub account is already linked" in res["message"]
         assert await _providers(two, ada.headers) == ["github"]
 
 
@@ -125,11 +124,11 @@ async def test_link_steps_that_are_not_right_are_refused(
     device_state = _state(await client.get("/auth/google/start", params={"code": code["user_code"]}))
     for name, link in (("github", value), ("google", device_state), ("google", "forged.0")):
         res = await client.get(f"/auth/{name}/start", params={"link": link})
-        assert res.status_code == 422 and "trace" in res.text, (name, link)
+        assert error_page(res)["code"] == "E_INVALID", (name, link)
     state = _state(await client.get(url.removeprefix(PUBLIC_URL)))
     async for stranger in _browser(stripe, _gh_id()):
         res = await stranger.get("/auth/google/callback", params={"code": "c", "state": state})
-        assert res.status_code == 422 and "another browser" in res.text
+        assert "another browser" in error_page(res)["message"]
     bad = await client.post("/v1/me/identities", json={"provider": "microsoft"}, headers=ada.headers)
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "E_INVALID"
     assert (await client.post("/v1/me/identities", json={"provider": "google"})).status_code == 401

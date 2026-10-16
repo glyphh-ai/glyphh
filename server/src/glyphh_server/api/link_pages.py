@@ -1,6 +1,7 @@
 """Linking Google or GitHub to a signed-in person's account, in a browser. The link the API hands out carries a
-signed value naming the person and the provider; it goes through the same provider pages as the device sign-in
-(`/auth/{provider}/start` and `/callback`), tied to the browser that opened it by the same short-lived cookie."""
+signed value naming the person and the provider; it goes through the same provider steps as the device sign-in
+(`/auth/{provider}/start` and `/callback`), tied to the browser that opened it by the same short-lived cookie, and
+ends on the platform's `/account?linked=<provider>`."""
 
 import uuid
 from typing import Any
@@ -11,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from glyphh_server.api.browser_session import START_AGAIN, TTL, callback_url, cfg, forget_browser
-from glyphh_server.api.pages import page
+from glyphh_server.api.pages import to_platform
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
 from glyphh_server.ops import identities
@@ -45,5 +46,4 @@ async def finish(
     name = state["p"]
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, name))
     await identities.attach(conn, uuid.UUID(state["u"]), profile)
-    done = f"{identities.NAMES[name]} is now linked to your Glyphh account. Go back to Claude."
-    return forget_browser(page("Linked", done))
+    return forget_browser(to_platform(settings, "/account", linked=name))

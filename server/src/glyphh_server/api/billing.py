@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
 
 from glyphh_server.api.auth import Caller, Conn
-from glyphh_server.api.pages import page
+from glyphh_server.api.pages import to_platform
 from glyphh_server.ops.addons import AddonView
 from glyphh_server.ops.billing import addons, changes, checkout, signature, webhook
 from glyphh_server.ops.billing.addons import Action, AddonPreview
@@ -109,6 +109,6 @@ async def stripe_webhook(
 
 
 @router.get(checkout.RETURN_PATH, include_in_schema=False)
-async def billing_done() -> Response:
-    """Where Stripe's pages send the person back to."""
-    return page("Billing", "Done. Go back to Claude.")
+async def billing_done(request: Request) -> Response:
+    """Where Stripe's pages send the person back to: on to the platform's `/billing?done=1`."""
+    return to_platform(request.app.state.settings, "/billing", done="1")

@@ -4,9 +4,7 @@ its tokens made straight in the database. And /mcp called as a 2026-07-28 client
 
 import base64
 import hashlib
-import re
 import uuid
-from html import unescape
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -16,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import OAuthClient
 from glyphh_server.ops.connector import grants, tokens
+from tests.api.browser import went
 from tests.conftest import PUBLIC_URL
 from tests.db.helpers import Person
 
@@ -51,20 +50,26 @@ def ask(client: dict[str, Any], **over: Any) -> dict[str, Any]:
     return {k: v for k, v in {**params, **over}.items() if v is not None}
 
 
-async def to_allow(http: httpx.AsyncClient, params: dict[str, Any], provider: str = "google") -> tuple[str, str]:
-    """The authorization page, the provider, and back: the Allow page and its signed consent."""
-    page = await http.get("/oauth/authorize", params=params)
-    assert page.status_code == 200, page.text
-    found = re.search(rf'href="(/auth/{provider}/start\?[^"]+)"', page.text)
-    assert found, page.text
-    started = await http.get(unescape(found[1]))
+async def to_allow(
+    http: httpx.AsyncClient, params: dict[str, Any], provider: str = "google"
+) -> tuple[dict[str, Any], str]:
+    """The authorization request, the provider, and back: what the platform's Allow page shows (from /auth/consent)
+    and the signed consent it was sent."""
+    path, q = went(await http.get("/oauth/authorize", params=params))
+    assert path == "/authorize" and q["client"], q
+    started = await http.get(f"/auth/{provider}/start", params={"oauth": q["oauth"]})
     assert started.status_code == 302, started.text
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
     back = await http.get(f"/auth/{provider}/callback", params={"code": "c-1", "state": state})
-    assert back.status_code == 200, back.text
-    consent = re.search(r'name="consent" value="([^"]+)"', back.text)
-    assert consent
-    return back.text, consent[1]
+    path, q = went(back)
+    assert path == "/allow", path
+    shown = await http.get("/auth/consent", params={"consent": q["consent"]})
+    assert shown.status_code == 200, shown.text
+    return shown.json(), q["consent"]
+
+
+async def allow(http: httpx.AsyncClient, consent: str, decision: str) -> httpx.Response:
+    return await http.get("/auth/oauth/allow", params={"consent": consent, "decision": decision})
 
 
 def query(res: httpx.Response) -> dict[str, str]:
@@ -74,7 +79,7 @@ def query(res: httpx.Response) -> dict[str, str]:
 
 async def allowed_code(http: httpx.AsyncClient, client: dict[str, Any], **over: Any) -> str:
     _, consent = await to_allow(http, ask(client, **over))
-    back = query(await http.post("/auth/oauth/allow", data={"consent": consent, "decision": "allow"}))
+    back = query(await allow(http, consent, "allow"))
     assert back["state"] == "st-1" and back["iss"] == PUBLIC_URL
     return back["code"]
 

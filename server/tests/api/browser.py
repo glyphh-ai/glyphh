@@ -1,6 +1,5 @@
 """A person signing in through the device flow the way a browser and the mod do it."""
 
-import re
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -14,6 +13,23 @@ from glyphh_server.config import Settings
 from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.db.helpers import an_email
 from tests.fakes import GOOGLE_ME, FakeStripe, fake_http
+
+PLATFORM: str = "http://localhost:3000"
+
+
+def went(res: httpx.Response) -> tuple[str, dict[str, str]]:
+    """A redirect to the platform: the page's path and its query values."""
+    assert res.status_code == 302, res.text
+    parts = urlsplit(res.headers["location"])
+    assert f"{parts.scheme}://{parts.netloc}" == PLATFORM, res.headers["location"]
+    return parts.path, {k: v[0] for k, v in parse_qs(parts.query).items()}
+
+
+def error_page(res: httpx.Response) -> dict[str, str]:
+    """A refusal in a browser flow: the platform's error page's values (code, message, trace)."""
+    path, q = went(res)
+    assert path == "/error" and q["trace"] == res.headers["x-request-id"], q
+    return q
 
 
 @dataclass
@@ -40,23 +56,28 @@ async def new_code(
     return res.json()
 
 
-async def to_approve(http: httpx.AsyncClient, user_code: str, provider: str = "google") -> tuple[httpx.Response, str]:
-    """Open the link, continue with the provider, come back: the approve page and its signed consent."""
+async def to_approve(http: httpx.AsyncClient, user_code: str, provider: str = "google") -> tuple[dict[str, Any], str]:
+    """Open the link, continue with the provider, come back: what the platform's approve page shows (from
+    /auth/consent) and the signed consent it was sent."""
     started = await http.get(f"/auth/{provider}/start", params={"code": user_code})
     assert started.status_code == 302 and "glyphh_signin" in started.headers["set-cookie"], started.text
     state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
     back = await http.get(f"/auth/{provider}/callback", params={"code": "c-1", "state": state})
-    assert back.status_code == 200, back.text
-    found = re.search(r'name="consent" value="([^"]+)"', back.text)
-    assert found
-    return back, found[1]
+    path, q = went(back)
+    assert path == "/device/approve", path
+    shown = await http.get("/auth/consent", params={"consent": q["consent"]})
+    assert shown.status_code == 200, shown.text
+    return shown.json(), q["consent"]
+
+
+async def decide(http: httpx.AsyncClient, consent: str, decision: str) -> httpx.Response:
+    return await http.get("/auth/approve", params={"consent": consent, "decision": decision})
 
 
 async def sign_in(http: httpx.AsyncClient, provider: str = "google", machine_id: str | None = None) -> dict[str, str]:
     """The whole flow, approved: the install's Authorization header."""
     code = await new_code(http, machine_id=machine_id)
     _, consent = await to_approve(http, code["user_code"], provider)
-    done = await http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
-    assert "Go back to Claude" in done.text, done.text
+    assert went(await decide(http, consent, "approve")) == ("/device/done", {"result": "approved"})
     token = (await http.post("/v1/device/token", json={"device_code": code["device_code"]})).json()
     return {"authorization": f"Bearer {token['access_token']}"}

@@ -1,6 +1,7 @@
 import json
 import logging
 from collections.abc import AsyncIterator
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -129,10 +130,12 @@ async def test_every_request_is_logged_once_with_its_status_and_time(
     assert json.dumps(lines[0].fields)  # type: ignore[attr-defined]
 
 
-async def test_a_refusal_on_a_page_is_a_page(probe: httpx.AsyncClient) -> None:
+async def test_a_refusal_in_a_browser_flow_goes_to_the_platforms_error_page(probe: httpx.AsyncClient) -> None:
     res = await probe.get("/v1/device", params={"code": "NOPE-NOPE"})
-    assert res.status_code == 422 and res.headers["content-type"].startswith("text/html")
-    assert "expired" in res.text and res.headers["x-request-id"] in res.text
+    assert res.status_code == 302 and res.headers["location"].startswith("http://localhost:3000/error?")
+    query = {k: v[0] for k, v in parse_qs(urlsplit(res.headers["location"]).query).items()}
+    assert query["code"] == "E_INVALID" and "expired" in query["message"]
+    assert query["trace"] == res.headers["x-request-id"]
     bad = await probe.post("/v1/device/token", json={})
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "E_INVALID"
 

@@ -44,7 +44,8 @@ class TraceMiddleware:
             except Exception:
                 log.exception("crashed", extra=fields(method=scope["method"], path=scope["path"]))
                 if not state["started"]:
-                    response = refusal(scope["method"], scope["path"], "E_INTERNAL", INTERNAL_MESSAGE, 500)
+                    settings = scope["app"].state.settings
+                    response = refusal(settings, scope["method"], scope["path"], "E_INTERNAL", INTERNAL_MESSAGE, 500)
                     await response(scope, receive, send_traced)
                 else:
                     # The head is already sent: end the body where it stopped, so the connection closes cleanly.

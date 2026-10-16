@@ -1,20 +1,15 @@
-"""The few pages a browser sees: plain HTML, no styling (design comes later). Every value is escaped."""
+"""The server renders nothing: whenever a browser is in a flow (the device sign-in, the connector's Allow, a provider
+link, the GitHub App, Stripe's return), it is sent to the platform, which shows the page and calls back here. Every
+value in a redirect's query is URL-encoded; the platform's routes are listed in `glyphh-ai/platform`'s README."""
 
-from html import escape
+from urllib.parse import urlencode
 
-from starlette.responses import HTMLResponse
+from starlette.responses import RedirectResponse
 
-
-def page(title: str, *paragraphs: str, raw: str = "", status: int = 200) -> HTMLResponse:
-    """A page with a heading, escaped paragraphs, then `raw` markup the caller built from escaped values."""
-    body = "".join(f"<p>{escape(p)}</p>" for p in paragraphs)
-    html = (
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f"<title>{escape(title)}</title></head><body><h1>{escape(title)}</h1>{body}{raw}</body></html>"
-    )
-    return HTMLResponse(html, status_code=status)
+from glyphh_server.config import Settings
 
 
-def link(href: str, text: str) -> str:
-    return f'<p><a href="{escape(href)}">{escape(text)}</a></p>'
+def to_platform(settings: Settings, path: str, **params: str | None) -> RedirectResponse:
+    """The browser on to the platform's page, with these query values (a None is left out)."""
+    query = urlencode({k: v for k, v in params.items() if v is not None})
+    return RedirectResponse(f"{settings.platform_base}{path}" + (f"?{query}" if query else ""), status_code=302)

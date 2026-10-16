@@ -78,7 +78,7 @@ async def test_the_portal_needs_a_customer(client: httpx.AsyncClient, engine: As
     assert res.json() == {"url": "https://billing.stripe.test/p_1"}
     assert stripe.calls[-1][2] == {"customer": "cus_portal", "return_url": "http://localhost:8080/billing/done"}
     done = await client.get("/billing/done")
-    assert done.status_code == 200 and "Go back to Claude" in done.text
+    assert done.status_code == 302 and done.headers["location"] == "http://localhost:3000/billing?done=1"
 
 
 async def test_changing_plan_moves_to_the_newest_version_prorated(

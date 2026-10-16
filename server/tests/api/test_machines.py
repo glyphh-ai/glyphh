@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import DeviceCode, Install, Token, User
-from tests.api.browser import Browser, new_code, open_browser, sign_in, to_approve
+from tests.api.browser import Browser, decide, error_page, new_code, open_browser, sign_in, to_approve, went
 from tests.fakes import FakeStripe
 
 MAC: str = "c0ffee-hardware-uuid-hash_0123456789"
@@ -32,13 +32,13 @@ async def _installs(engine: AsyncEngine, email: str) -> list[tuple[str, str, str
 
 async def _approve(http: httpx.AsyncClient, code: dict[str, str]) -> httpx.Response:
     _, consent = await to_approve(http, code["user_code"])
-    return await http.post("/auth/approve", data={"consent": consent, "decision": "approve"})
+    return await decide(http, consent, "approve")
 
 
 async def test_signing_in_again_on_the_same_machine_reuses_its_install(browser: Browser, engine: AsyncEngine) -> None:
     first = await sign_in(browser.http, machine_id=MAC)
     again = await new_code(browser.http, "Ada's renamed Mac", machine_id=MAC)
-    assert "Signed in" in (await _approve(browser.http, again)).text
+    assert went(await _approve(browser.http, again))[1] == {"result": "approved"}
     assert (await browser.http.get("/v1/me", headers=first)).status_code == 401
     token = (await browser.http.post("/v1/device/token", json={"device_code": again["device_code"]})).json()
     headers = {"authorization": f"Bearer {token['access_token']}"}
@@ -58,12 +58,13 @@ async def test_a_new_machine_past_the_plan_is_refused_and_revoking_frees_the_slo
     mac = await sign_in(browser.http, machine_id=MAC)
     other = await new_code(browser.http, "Linux box", machine_id="linux-box-machine-id-0001")
     refused = await _approve(browser.http, other)
-    assert refused.status_code == 403 and "E_LIMIT" in refused.text and "allows 1 installs" in refused.text
+    refused = error_page(refused)
+    assert refused["code"] == "E_LIMIT" and "allows 1 installs" in refused["message"]
     installs = (await browser.http.get("/v1/installs", headers=mac)).json()
     assert (await browser.http.delete(f"/v1/installs/{installs[0]['id']}", headers=mac)).status_code == 204
-    assert "Signed in" in (await _approve(browser.http, other)).text
+    assert went(await _approve(browser.http, other))[1] == {"result": "approved"}
     back = await new_code(browser.http, machine_id=MAC)
-    assert (await _approve(browser.http, back)).status_code == 403
+    assert error_page(await _approve(browser.http, back))["code"] == "E_LIMIT"
 
 
 async def test_an_old_mod_without_a_machine_id_gets_one_made_up(browser: Browser, engine: AsyncEngine) -> None:
@@ -73,7 +74,7 @@ async def test_an_old_mod_without_a_machine_id_gets_one_made_up(browser: Browser
         made = select(DeviceCode.machine_id).where(DeviceCode.user_code == code["user_code"])
         machine_id = (await conn.execute(made)).scalar_one()
     assert 16 <= len(machine_id) <= 128
-    assert "Signed in" in (await _approve(browser.http, code)).text
+    assert went(await _approve(browser.http, code))[1] == {"result": "approved"}
     assert await _installs(engine, browser.email) == [(machine_id, "Old Mac", "0.0.9")]
 
 
