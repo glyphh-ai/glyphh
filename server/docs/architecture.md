@@ -1,47 +1,24 @@
 # Glyphh
 
-The one doc for the relaunch (Chris, 2026-10-13 and 14): the [product](#product), the [architecture](#architecture), the [data model](#data-model) and the [plans](#plans). It replaces the programs, rrotor and machines architecture of 2026-10-12; that version is in git history (`25c1288`).
+The design of Glyphh as it stands: the [product](#product), the [architecture](#architecture), the [data model](#data-model) and the [plans](#plans). Each part is marked **built** (working, in `glyphh-ai/server`, `glyphh-ai/mods`, `glyphh-ai/glyphh` or `glyphh-ai/rrotor`) or **designed** (decided, not built). How the parts call each other, step by step, is in rrotor's `docs/architecture.md`. Earlier versions of this doc are in git history.
 
 ## Product
 
-**Glyphh makes mods for Claude, as a business** (Chris, 2026-10-14). A mod is a Claude Code plugin that adds commands, tools and panels to Claude. Each mod is its own product, installed from one Glyphh marketplace; one Glyphh account and one subscription turn them on.
+**Glyphh makes mods for Claude, as a business.** A mod is a Claude Code plugin that adds commands, tools and panels to Claude. Each mod is its own product, installed from one Glyphh marketplace; one Glyphh account and one subscription turn them on.
 
-| Mod | What it is | Runs | Plans |
-|---|---|---|---|
-| `glyphh` | The account: sign in, license, account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan |
-| `glyphh-rpa` | A browser for Claude apart from yours, on your machine: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The person's machine only | Licensed: Pro, Team |
-| `glyphh-programs` | Programs: deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | The local runtime on every plan; a hosted runtime on Pro and Team | Every plan: local. Pro and Team: hosted, capped by hours and storage |
+| Mod | What it is | Runs | Sold | State |
+|---|---|---|---|---|
+| `glyphh` | The account: sign in, the licence, and the account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan | Built |
+| `programs` | Deterministic Python jobs, built with Claude, run by **rrotor**, an isolated runtime, called by Claude and by Claude's routines | rrotor, local on every plan; hosted on Pro and Team | Add-on | Mod built (starts rrotor, calls it); the server's programs and runs API designed |
+| `gateway` | Your own models and keys in your rrotor, served as OpenAI- and Anthropic-compatible endpoints to your programs and mods; never hosted by Glyphh | rrotor | Add-on | Designed |
+| `ada` | Ada models in your rrotor: a typed spec and a precedent store, deployed by commit like a program, no network | rrotor | Add-on | Designed |
+| `rpa` | A browser for Claude apart from yours: named profiles signed in only where you choose, tasks recorded once and run as tools, Claude watched live and stopped for your approval | The local rrotor only | Not in the catalog | Designed |
 
-- **Every mod is an add-on** to the plan (Decisions, 5, which replaces "Pro and Team include every mod").
+- **Every mod is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
+- **Everything is a subscription.** Nothing is bought one-off.
 - **Everything is in Claude.** Every screen is a panel Claude shows; there is no Glyphh app and no Glyphh web UI, only the device sign-in's page, the connector's sign-in and Allow page, and Stripe's.
-
-### Decisions (Chris, 2026-10-15)
-
-These come first where anything below says otherwise.
-
-1. **Everything is a subscription.** Nothing is bought one-off. Each plan (Free, Solo, Pro, Team) carries **per-mod limits**: for each mod it includes, a number per limit (`null` is unlimited); a mod a plan leaves out is not included. Each mod reads its limits from the license and adapts. The mods sold now are `programs` (limits `programs`, `runs_per_day`; added 2026-10-15, see 4 below), `gateway` and `ada`; a limit that is a switch is `0` (off) or `1` (on). The catalog holds exactly these; the earlier `glyphh-*` slugs are retired.
-2. **The server is headless.** A person manages their Glyphh account from Claude, or any MCP client, through the **Glyphh connector**: a remote MCP server at `/mcp` (Streamable HTTP), signed in with OAuth. Its tools are the account: who am I, the plan and each mod's limits, the plans, upgrade, billing, seats, installs, members and invites, and the connector's own grants. Where the client shows MCP App panels, the connector serves one, the account panel (`ui://glyphh/account/2`); every other client gets the same tools as text and structured content. The server's only pages are the device page and the connector's sign-in and Allow page, both generic (styled together later).
-3. **Programs, runs, the runtime and hours are not in scope now.** Their tables stay as drawn; their API and connector tools wait.
-4. **The mods that use rrotor** (Chris, 2026-10-15, later the same day; rrotor's `docs/architecture.md`, Decisions and sections 9 to 11, has the detail):
-    - The product is mods sold by subscription: **Programs**, **Gateway** and **Ada**, each needing rrotor. rrotor itself is not sold; it is the shared runtime those mods install into. The server stays accounts, plans with per-mod limits, Stripe and the Glyphh connector: nothing about compute or models.
-    - **Gateway is a mod, never hosted by Glyphh:** it runs in the person's rrotor; models and keys are added in its UI and stay in rrotor, encrypted; it serves OpenAI- and Anthropic-compatible endpoints to programs and mods. It never routes a Claude subscription nor offers a Claude login ([Anthropic's terms](#anthropics-terms)). Designed only.
-    - **Ada is a mod** on rrotor: an Ada model is a program (`spec.json` and a small program file, deployed by commit, no network, its precedent store in a per-program data folder outside git). Designed only.
-    - **A small base image and a part per mod** (Programs: Chromium and profiles; Gateway: its runtime; Ada: numpy and the kernel); Postgres with pgvector, MongoDB and Neo4j are parts, not the base. Parts are versioned, come from the mod's release, are verified, and are licensed by the plan's per-mod limits.
-    - **rrotor has no sign-in of its own:** the mod, signed in, asks `POST /v1/runtime/local` for the runtime token and hands it to rrotor; signing the install out cuts rrotor off. A hosted rrotor's token is made by the server at provisioning (designed).
-    - **Claude reaches rrotor** locally through the mods (their tools call rrotor's local API on 127.0.0.1 with a local token only the mod holds), remotely through the Glyphh connector, the server and the runtime link. rrotor serves no MCP to Claude; no plugin carries an MCP server.
-    - **Local runtimes:** Apple's `container` where present, else OrbStack, else Docker. Hosting on Fly is designed only.
-    - **`programs`** joins the catalog with the limits `programs` and `runs_per_day`, placeholders (TBD) in the seed. The `glyphh-*` rows in the tables below are the earlier naming; the mods are `programs` (and later `gateway`, `ada`).
-5. **Every mod is an add-on** (Chris, 2026-10-15). This comes first where 1 and 4 say otherwise.
-    - **The plans (Free, Pro, Team; Solo still unseeded) include no mod:** their `mod_limits` are empty; a plan sets the account's limits and which add-ons it may have.
-    - **Every mod is an add-on**, sold through Stripe: `programs`, `gateway` (limits `models`, `keys`) and `ada` (limits `models`, `precedents`). The catalog holds `programs`, `gateway` and `ada`.
-    - **One Stripe subscription per org:** the plan's item and one subscription item per add-on, on one invoice; adding or removing an add-on is prorated. An add-on is per seat (its quantity follows the seats) or flat (quantity 1), set per add-on; per seat until Chris decides.
-    - **An add-on needs a paid plan,** unless the catalog marks it allowed on Free (per add-on, off by default); a Free org then subscribes to the add-ons alone, through Checkout.
-    - **The add-on catalog is versioned like plan versions:** a used row never changes; a new Stripe price is a new version, and an org keeps the version it added.
-    - **Which add-ons an org has comes from its subscription's items,** read fresh from Stripe on every event, not from Stripe Entitlements: Entitlements carry no quantity and no subscription item, which per-seat quantities and removing an add-on need anyway; feature changes reach existing subscriptions only at their next period; and the org's add-ons would then follow two event streams instead of the one that already keeps its plan true.
-    - **The license's `mods`** is each add-on the org has, each with its limits on the org's plan.
-- **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login.
-- **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts.
-- **Functional first.** Every screen works before design draws it.
+- **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
+- **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts. **Functional first:** every screen works before design draws it.
 
 ## Architecture
 
@@ -52,12 +29,10 @@ flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh"]
-            RPA["glyphh-rpa"]
-            PR["glyphh-programs"]
+            PR["programs, gateway, ada"]
         end
-        LocalRotor["rrotor, local<br/>browser, profiles,<br/>sites, programs"]
+        LocalRotor["rrotor, local<br/>browser, profiles,<br/>programs, parts"]
         Local[("~/.glyphh<br/>install, license")]
-        RPA --> LocalRotor
         PR --> LocalRotor
         Base --> Local
     end
@@ -67,7 +42,7 @@ flowchart TB
     end
 
     subgraph Cloud["Glyphh cloud"]
-        API["Server<br/>accounts, license, programs,<br/>MCP connector, relay"]
+        API["Server<br/>accounts, license, billing,<br/>MCP connector, relay"]
         DB[("Postgres")]
         API --- DB
     end
@@ -77,19 +52,30 @@ flowchart TB
     end
 
     Base <-- "device flow, license" --> API
-    PR <-- "build, test, deploy, live panel" --> API
+    PR <-- "runtime token, programs, approvals" --> API
     Routine -- "Glyphh connector (MCP)" --> API
     Rotor -- "outbound link" --> API
+    LocalRotor -- "outbound link" --> API
 ```
 
-**What a person makes stays theirs:** RPA on their own machine; programs, their data and their sign-ins in their own rrotor. The server holds who they are, what they pay for, and the record of their programs and runs, never their content.
+**What a person makes stays theirs:** programs, their data and their sign-ins in their own rrotor. The server holds who they are, what they pay for, and the record of their programs and runs, never their content.
+
+### The parts
+
+| Part | What it is | Repo | State |
+|---|---|---|---|
+| **The server** | Accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), the runtime link and approvals | `glyphh-ai/server` | Built (programs and runs API designed) |
+| **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
+| **The other mods** | `programs` (built), `gateway` and `ada` (designed), each carrying the shared sign-in and licence module (`shared/licence/`) | `glyphh-ai/mods` | As each mod |
+| **rrotor** | The runtime the rrotor mods install into: a small base image and a part per mod | `glyphh-ai/rrotor` | Local built; hosted designed |
+| **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
 
 ### Mods and how they are installed
 
-- **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). Mods are on by default since Claude Code 2.1.287. A mod can ship its own MCP server, skills and commands.
-- **Installed from the marketplace**, in a terminal: `/plugin install glyphh-programs --marketplace glyphh-ai/releases`. Installed at the user scope it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
-- **Source and releases are apart.** `glyphh-ai/glyphh` (private): the source, one folder per mod, with tests. `glyphh-ai/releases` (public): the marketplace file and each mod as one built, minified module.
-- **Each mod checks the license** at start; a mod the license does not include shows only which plans include it.
+- **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). A mod can ship its own MCP server, skills and commands. Mods are behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while the API is early access.
+- **Installed from the Glyphh marketplace** at the user scope, so it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
+- **Source and releases are apart.** The source repos hold tests, the shared modules and the release scripts; a release build writes only each mod's shipped files and the marketplace file, with the live server address and licence key swapped in.
+- **Each mod checks the licence** at start. A mod the licence does not include is closed with its offer ("Programs is an add-on ($4/month per seat on Pro). Add it in /programs.") and **Add it**.
 
 ### Two kinds of panel
 
@@ -97,34 +83,26 @@ flowchart TB
 |---|---|---|
 | What | Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts that an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), shown in a frame |
 | Can | Forms, lists, actions, on desktop and CLI | Live pictures, take control, anything a page can do; the host passes its theme as CSS variables |
-| Used for | Account, org, plan, billing, programs, sequences | **The live panel:** a run streamed live, sign-ins, approvals |
+| Used for | Account, org, plan, billing, programs | **The live panel:** a run streamed live, sign-ins, approvals; the connector's account panel |
 
 Proved on 2026-10-12 (`glyphh-ai/server`, branch `proto/stream`): an MCP App panel in Claude showed a machine's screen live and took control of it. Its lessons hold: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
 
-### `glyphh`: the account
+### `glyphh`: the account (built)
 
-- **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub. One sign-in serves every mod on that machine.
-- **License:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
+- **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the person signs in with Google or GitHub. One sign-in serves every mod on that machine. Asking Claude "sign in to Glyphh" shows a sign-in card in the chat, from the mod's own MCP server.
+- **Licence:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
 - **Panels:** account, org, plan, billing.
-- **Starts the local rrotor** (Docker, OrbStack or Apple's `container`): the one place on the machine that holds the browser and its named profiles, RPA sites and programs (Chris, 2026-10-14). The other mods work through it.
 
-### `glyphh-rpa`: local only
+### `programs`: programs and rrotor
 
-A browser for Claude apart from the person's own, on their machine: it runs in the local rrotor, never the hosted one. Claude never works in the person's own browser: it works in a named profile holding only the sign-ins made in it.
+**A program is a deterministic Python job; rrotor runs it; Claude calls it.** rrotor runs exact programs, safely, and streams them live: no model, no agent loop, no scheduler, no CLI sign-ins, no UI of its own.
 
-- **Everything is an MCP tool** (the local rrotor's), and a skill teaches Claude the flow. The person says "Use Glyphh to post our weekly update to LinkedIn; ask me before it posts; work it out, then let's test it", and Claude opens the live panel, picks or makes a profile, asks the person to sign in (they take control; Claude sees nothing while they do), asks what to call the task, records the person or works it out, saves it as a sequence and test-runs it, stopping at every `ask` step.
-- **Tools:** `profile_list`, `profile_create`, `panel_open`, `ask_user` (`login`, `approve`, `choose`, `text`), `page_read`, `page_act`, `record_start`, `record_stop`, `site_save`, `sequence_save`, `run`, `sites_list`, `log_read`.
-- **Sites and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), each step `auto` or `ask`; saved sequences become tools (`<site>_<sequence>`).
-- **Runs on a schedule** through Claude's Desktop scheduled tasks (local routines), which run on the person's machine, if they load plugins (to prove).
-
-### `glyphh-programs`: programs and rrotor
-
-**A program is a deterministic Python job; rrotor runs it; Claude calls it.** rrotor is the 2026-10-12 machine without what made it hard: no model, no agent loop, no gateway, no scheduler, no CLI sign-ins, no UI of its own. It runs exact programs, safely, and streams them live.
+**Built:** the mod installs and starts the local rrotor, hands it the runtime token, and calls its local API; rrotor deploys a program by commit and runs it in its sandbox. **Designed:** the server's programs and runs API, the hosted runtime, the live panel and calls from routines.
 
 **A program** is a Python package with a manifest:
 
 ```python
-from glyphh import Ctx, Result
+from rrotor import Ctx, Result
 
 
 def load(ctx: Ctx) -> None: ...  # once per run: open the profile, read config
@@ -143,75 +121,86 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 | `needs_signin` | A site signed the program out | Opens the live panel for the person; unattended, stops and says so |
 | `failed` | Which step and why | Retries, tries another way, or reports |
 
-- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db.postgres`, `ctx.db.mongo`, `ctx.db.neo4j` (its own databases), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
-- **Folders exist only through the program** (Chris, 2026-10-14): a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; there is no folder access into rrotor from outside, and no program reaches another's.
-- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles and sites, the steps that need approval, and the Claude connectors its routine needs.
-- **Programs live in the runtime and in git** (Chris, 2026-10-14): each program is a repo in the person's own GitHub account. The runtime holds the checked-out code, its files, databases, browser profiles, secrets and run logs, where it is built, tested and run; a version is a commit. The server keeps only an index (each program's name, repo, versions as commit SHAs, where each is deployed) so Claude and routines can call it by name, and the run records. Glyphh's cloud never keeps a copy of the code.
-- **Git is required for hosted programs:** the person links GitHub (linking is built) and installs the Glyphh GitHub App on their account; deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
-- **Secrets are never committed:** they stay in the rrotor's vault; the programs mod's ignore rules and a pre-commit check keep them out.
+- **`ctx` is what the program was granted**, nothing else: `ctx.browser` (a named profile in rrotor), `ctx.http` (only the hosts the manifest declares), `ctx.db` (its own databases, from the database parts), `ctx.gateway` (with the Gateway part), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
+- **Folders exist only through the program:** a program sees its own folder (`ctx.files`, `/data/programs/<name>/files`) and nothing else; no program reaches another's.
+- **The manifest** declares the program's functions and their inputs, the hosts it reaches, its secrets, its databases, its browser profiles, the steps that need approval, and the Claude connectors its routine needs.
+- **Programs live in the runtime and in git:** each program is a repo in the person's own GitHub account; a version is a commit. The server keeps only an index (name, repo, versions as commit SHAs, where each is deployed) and the run records. Glyphh's cloud never keeps a copy of the code.
+- **Git is required for hosted programs:** the person installs the Glyphh GitHub App on their account (built); deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
+- **Secrets are never committed:** they stay in rrotor's vault.
 
-**Build time: in Claude, with the mod.** The SDK is part of `glyphh-programs`: its tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and **create its routine** (prompt, triggers, connectors). Whatever is missing, Claude asks for: connect a Claude connector, add a secret, or **sign in to a site**, which opens the live panel on the run in rrotor: the person takes control and signs in; the sign-in stays in that profile on rrotor; Claude sees nothing while they hold it.
+**Build time: in Claude, with the mod.** The mod's tools and skills let Claude, with the person, write the program, run it against their rrotor, read the result and fix it until it passes, then deploy it and create its routine. Whatever is missing, Claude asks for: a Claude connector, a secret, or a **sign-in to a site**, which opens the live panel on the run: the person takes control and signs in; the sign-in stays in that profile in rrotor; Claude sees nothing while they hold it.
 
-**Run time: Claude's routines are the runner.**
+**Run time: Claude's routines are the runner** (designed).
 
 1. A routine fires on its schedule, its API trigger or a GitHub event, on Anthropic's machines, on the person's own Claude subscription.
-2. Claude calls the **Glyphh connector** (a remote MCP server on the Glyphh server, added once at claude.ai/customize/connectors): `call(program, function, inputs)`, then `continue(run_id, answer)` as needed.
+2. Claude calls the **Glyphh connector**: `call(program, function, inputs)`, then `continue(run_id, answer)` as needed.
 3. The server wakes the person's hosted runtime and passes the call over its outbound link. (A local runtime is reached by Claude on that computer, so cloud routines call the hosted one; local scheduled tasks call the local one.)
-4. rrotor runs the step in its sandbox and answers the `Result`; Claude decides what is next: another connector, another program, an artifact.
+4. rrotor runs the step in its sandbox and answers the `Result`; Claude decides what is next.
 
-A routine can chain all of it in one run: read a connector, run a program, do something else, publish an artifact. Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the panel, a push, an email). Claude can also call programs directly, in any session.
+Routines run without approvals, so Glyphh's own rule is the brake: a step that `needs_approval` with nobody watching waits for the person (the band in Claude, a toast, an email). Claude can also call programs directly, in any session.
 
-**The live panel** streams a run: the program's browser, its steps, its log, approvals, take control. It is an MCP App panel, from the mod while building and from the connector where Claude shows panels; frames come from rrotor through the server's relay (WebRTC end to end where it connects).
+**The live panel** (designed) streams a run: the program's browser, its steps, its log, approvals, take control. It is an MCP App panel; frames come from rrotor through the server's relay.
 
-**rrotor: one isolated runtime per person, local and hosted** (Chris, 2026-10-14). A person never sees machines: they have a runtime where their programs live and run.
+### `gateway` and `ada` (designed)
 
-| | Local runtime | Hosted runtime |
+- **Gateway** runs in the person's own rrotor (local, or wherever they host it), never on Glyphh's machines. Models and keys are added in the mod and stay in rrotor, encrypted. It serves OpenAI- and Anthropic-compatible endpoints to programs and mods: third-party inference for them. It never routes a Claude subscription and never offers a Claude login.
+- **Ada** is a library, and an Ada model is a program: a repo with `spec.json` and a small program file whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`), deployed by commit, run with no network, its precedent store in the program's persistent data folder outside git.
+
+### `rpa` (designed, not in the catalog)
+
+A browser for Claude apart from the person's own, in the local rrotor only. Claude works in a named profile holding only the sign-ins made in it, never in the person's own browser.
+
+- **Everything is a tool**, and a skill teaches Claude the flow: open the live panel, pick or make a profile, ask the person to sign in (they take control; Claude sees nothing while they do), record the task or work it out, save it as a sequence and test-run it, stopping at every `ask` step.
+- **Tools:** `profile_list`, `profile_create`, `panel_open`, `ask_user` (`login`, `approve`, `choose`, `text`), `page_read`, `page_act`, `record_start`, `record_stop`, `site_save`, `sequence_save`, `run`, `sites_list`, `log_read`.
+- **Sites and sequences** keep `glyphh-ai/app`'s format (`src/shared/rpa.ts`), each step `auto` or `ask`; saved sequences become tools (`<site>_<sequence>`).
+- **Runs on a schedule** through Claude's Desktop scheduled tasks, which run on the person's machine, if they load plugins (to prove).
+
+### rrotor
+
+**One isolated runtime per person, local and hosted.** A person never sees machines: they have a runtime where their programs live and run.
+
+| | Local runtime (built) | Hosted runtime (designed) |
 |---|---|---|
 | Who | Every plan, Free included | Pro and Team |
-| Where | The person's own computer (Docker, OrbStack, or Apple's `container` on a Mac), started by the mod | One Fly machine and its volume per person, which Glyphh provisions on upgrade; nobody sees or manages it |
-| Up | While the computer is on | Stopped when idle, woken per call (Fly starts a stopped machine in seconds) |
-| Called by | Claude on that computer, and Claude's Desktop scheduled tasks (local routines) | Claude anywhere and Claude's routines, through the Glyphh connector |
+| Where | The person's own computer (Apple's `container`, else OrbStack, else Docker), installed and started by the first mod that needs it | One Fly machine and its volume per person, which Glyphh provisions on upgrade; nobody sees or manages it |
+| Up | While the computer is on | Stopped when idle, woken per call |
+| Called by | Claude on that computer, through the mods' local API | Claude anywhere and Claude's routines, through the Glyphh connector |
 | Caps | The computer's own | Runtime hours a month and storage, per plan |
 
 Both run the same image, the same programs and the same SDK; a program built locally deploys to the hosted runtime unchanged.
 
-**rrotor, locked down.**
-
-- One Linux image (`ghcr.io/glyphh-ai/rrotor`), **headless**: no UI, no desktop, nothing to log into. It carries what programs build on (Chris, 2026-10-14):
-    - **Python** (the runner and programs) and **Node**;
-    - **Postgres with pgvector**, **MongoDB** and **Neo4j**: each program its own database and role, so one program never reads another's data;
-    - **Chromium**, on a virtual screen per profile, for the live panel and take control.
-
-  The databases start when a program that declares them runs and stop after (Neo4j is a JVM that wants about a gigabyte).
-- **The hosted runtime** is one Fly machine per Pro and Team user, with a volume sized to the person's storage cap; Fly's daily volume snapshots back it up. On a downgrade or cancel it stops, its data is kept 30 days with a warning, then archived or deleted.
-- **No inbound ports**: it connects out to the server and takes calls over that link. Its own token, in a header.
-- **Each run sandboxed** (bubblewrap and Landlock, tested on 2026-10-12): only its program and `/data/<program>` mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
-- **Read-only system; one volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
+- **A small base image** (`ghcr.io/glyphh-ai/rrotor`): Python, Node, the program sandbox, the link client, the local API and the program runner. **Headless:** no UI, no desktop, nothing to log into.
+- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Programs' browser (Chromium and named profiles), Gateway's runtime, Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a program asks for.
+- **No sign-in of its own:** the mod, signed in, asks the server for the runtime token (`POST /v1/runtime/local`) and hands it to rrotor; signing the install out cuts rrotor off.
+- **No inbound ports from outside the machine:** the local API listens on loopback only, behind a token only the mod holds; rrotor connects out to the server and takes remote calls over that link.
+- **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its program and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
+- **One volume, `/data`:** program versions, secrets (encrypted), browser profiles, run logs and outputs.
 - **No Claude login, no model, no keys of Claude's** anywhere in it.
 
 ### On the machine: `~/.glyphh`
 
 Only what the mods need to start and sign in; nothing here goes to the cloud.
 
-| Path | Mod | What |
-|---|---|---|
-| `install.json` | `glyphh` | This install's id and token, mode 0600 |
-| `license.json` | `glyphh` | The signed license: plan, limits, mods, expiry |
+| Path | What |
+|---|---|
+| `install.json` | This install's id and token, mode 0600 |
+| `license.json` | The signed licence: plan, limits, mods, expiry |
 
 ### In rrotor: `/data`
 
-The same layout in the local and the hosted rrotor; RPA sites are only in the local one.
-
+The same layout in the local and the hosted rrotor; RPA sites, when RPA is built, only in the local one.
 
 | Path | What |
 |---|---|
 | `programs/<name>/<commit>/` | A deployed version: the checkout of that commit, its manifest and installed dependencies |
+| `programs/<name>/files/` | The program's own folder, the only folder it sees |
+| `programs/<name>/data/` | Data a program's mod keeps outside git (Ada's precedent store) |
 | `secrets/` | Each program's secrets, encrypted with rrotor's key |
 | `profiles/<name>/` | Named Chromium profiles: each holds only the sign-ins made in it |
-| `rpa/<slug>.json`, `rpa/log/` | RPA sites and sequences with their approval rules, and what ran (local rrotor) |
-| `programs/<name>/files/` | The program's own folder, the only folder it sees |
-| `db/` | Postgres (pgvector), MongoDB and Neo4j data: each program its own database |
+| `parts/<part>/` | The parts the mods installed |
+| `db/` | The database parts' data: each program its own database |
 | `runs/<run_id>/` | A run's log, checkpoints and outputs |
+| `rpa/<slug>.json`, `rpa/log/` | RPA sites and sequences, and what ran (designed) |
 
 ### The server
 
@@ -219,17 +208,15 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 
 - **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install, so the plan's installs count machines, not sign-ins.
 - **Org:** the first user is its admin and pays; one org per user; members by invite.
-- **Plans and seats:** per seat, through Stripe.
-- **Mods:** the catalog; a plan version includes the mods its `mod_limits` names (now none), each with its limits.
+- **Plans and seats:** per seat, through Stripe. A plan sets the account's limits; it includes no mod.
 - **Add-ons:** every mod, one Stripe subscription item each on the org's one subscription, prorated; per seat or flat; each add-on version names the plans it may be added to, whether Free may have it, and the mod's limits on each plan (below, Add-ons).
-- **License:** short-lived, signed, per install: plan, account limits, and each included mod, from the plan or an add-on, with its limits (below, The license).
-- **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content.
-- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (the person allows Claude once). Its tools now are the account's (below, The connector); `programs_list`, `call`, `continue`, `run_status` and the live panel come with programs.
-- **The relay:** rrotor's outbound link (a WebSocket, its own token); calls go down it, results and the live stream come back. A local runtime's token stops working when its install is revoked.
-- **Approvals, shown in Claude** (Chris, 2026-10-14): a step that needs approval is a row in `approvals` (the record, kept until answered) and a signal on **Redis** pub/sub to the server process holding the person's connection. The `glyphh` mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows a band above the prompt with Approve and Decline, a toast and a native notification, with no Claude turn; the first answer wins, the band clears in every open Claude, and an email goes out when no Claude is open (`notified_at`).
-- **Redis runs on the server's own Fly machine**, beside the server (Chris, 2026-10-14); in development it is a service in `compose.yaml`. It holds only what is live (pub/sub); Postgres holds everything kept.
-- **Hosting:** provisions each Pro and Team user's runtime on Fly on upgrade, wakes it per call, stops it when idle, counts its hours and bills its storage up to the person's cap.
-- **Limits are enforced here** where the server sees the use: members, seats and installs. Every mod limit the mod enforces from its license.
+- **Licence:** short-lived, signed, per install: plan, account limits, and each add-on the org has, with its limits (below, The license).
+- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools now are the account's; the programs tools come with programs.
+- **The runtime link:** rrotor's outbound WebSocket (its own token); calls go down it, results and events come back. A local runtime's token stops working when its install is signed out.
+- **Approvals, shown in Claude:** a step that needs approval is a row in `approvals` and a signal on **Redis** pub/sub to the server process holding the person's connection; the mod keeps one live connection while Claude is open (`/v1/approvals/stream`) and shows Approve and Decline; the first answer wins. Redis runs on the server's own Fly machine and holds only what is live; Postgres holds everything kept.
+- **Programs:** the record of each program, its versions and deployments, and of each run (who called it, status, times), never its content (designed).
+- **Hosting:** provisions each Pro and Team user's runtime on Fly, wakes it per call, stops it when idle, counts its hours and bills its storage (designed).
+- **Limits are enforced here** where the server sees the use: members, seats and installs. Every mod limit the mod enforces from its licence.
 
 ### API
 
@@ -284,7 +271,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the de
 
 (A Pro org with the Gateway and Programs add-ons.)
 
-- `mods` names each mod the org has, and only those: each add-on on its subscription, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
+- `mods` names each add-on the org has, and only those, with that add-on version's limits on the org's plan. A mod not in it is not included; a retired mod is in no license. `limits` holds every limit of that mod: a number, or `null` for unlimited; a switch is `0` or `1`.
 - `limits` at the top are the account's: `members` (per org) and `installs` (per user), `null` for unlimited.
 
 ### Add-ons
@@ -349,16 +336,15 @@ Each result is a short text and the same as structured content; a refusal is a t
 
 Each works before design draws it.
 
-| Panel | Mod | Kind |
-|---|---|---|
-| Sign in, account, org, plan, billing | `glyphh` | Mod |
-| The account: who, plan, each mod's limits and use, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App |
-| The local live panel: a profile's tab, steps, approvals, take control, record | `glyphh-rpa` | MCP App |
-| Sites and sequences: run, edit, delete | `glyphh-rpa` | Mod |
-| Programs: list, versions, deploy, runs, needs you | `glyphh-programs` | Mod |
-| The live panel: a run in rrotor, its browser, steps, approvals, take control, sign in | `glyphh-programs` | MCP App |
-| Runtime: local on or off; hosted state, hours and storage used, top up, grow storage | `glyphh-programs` | Mod |
-| Not in your plan | every mod | Mod |
+| Panel | Where | Kind | State |
+|---|---|---|---|
+| Sign in, account, org, plan, billing | `glyphh` | Mod | Built |
+| The sign-in card, in the chat | `glyphh`'s MCP server | MCP App | Built |
+| The account: who, plan, each mod's limits, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App | Built |
+| Not in your plan, with the add-on's offer and **Add it** | every mod | Mod | Built |
+| Programs: list, versions, deploy, runs, needs you | `programs` | Mod | Designed |
+| The live panel: a run in rrotor, its browser, steps, approvals, take control, sign in | `programs` | MCP App | Designed |
+| Runtime: local on or off; hosted state, hours and storage used, grow storage | `programs` | Mod | Designed |
 
 ### Anthropic's terms
 
@@ -368,15 +354,26 @@ From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 - **Glyphh never touches a Claude login:** Claude runs on the person's own subscription in Anthropic's own products (Claude Code, routines, scheduled tasks) and calls Glyphh's tools. rrotor has no Claude in it.
 - A routine's API token, if a person gives one to Glyphh to start their routine, starts that routine only; it is not a Claude login.
 
-### To prove first
+### Open
 
-- **The live panel from the mod's own MCP server** in the Code tab, on a run in rrotor, with take control and a sign-in.
+**To prove:**
+
+- **The live panel from a mod's own MCP server** in the Code tab, on a run in rrotor, with take control and a sign-in.
 - **The Glyphh connector in a routine:** a routine calling `call` and `continue` on a test program, end to end.
-- **Desktop scheduled tasks** (local routines) loading plugins and their local MCP servers, for `glyphh-rpa`.
 - **Waking the hosted runtime per call** fast enough for a tool call (Fly start, link up, answer).
-- **The local runtime** starting from the mod on a Mac (Apple's `container`, or Docker/OrbStack).
+- **Apple's `container`** running rrotor on macOS 26 (detected and started, not yet tested).
 - **Dependencies through the marketplace**, and **a built mod loading** as its source does.
 - **Google sign-in in Chromium under automation** ("This browser or app may not be secure").
+- **Desktop scheduled tasks** loading plugins, for RPA on a schedule.
+
+**To decide (Chris):**
+
+- Every add-on's price, per seat or flat, and its limits (placeholders in `db/seed_addons.py`).
+- Solo: its price and limits; it is not seeded until then.
+- The hosted runtime's hours per plan, and how more hours are bought (within the subscription: nothing is bought one-off).
+- Whether RPA joins the catalog, and as which add-on.
+- The marketplace's home: the release builds write `glyphh-ai/glyphh`, which also holds the `glyphh` mod's source.
+- Email for approvals when no Claude is open: the mail provider (`notified_at` stays empty until then).
 
 ## Data model
 
@@ -663,10 +660,10 @@ erDiagram
     }
 ```
 
-Every table and column is drawn, as the database has them; the tables from rrotors on are for programs. (The image above predates 2026-10-15: the Mermaid block is the current one.) Timestamps carry the time zone; ids are made by the database.
+Every table and column is drawn, as the database has them; the tables from rrotors on are for programs. Timestamps carry the time zone; ids are made by the database.
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
-- **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods the version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). A mod not named is not included; a retired mod (`active` false) is in no license. Changing a mod's limits is a new version, like any limit.
+- **Mods and their limits:** `mod_limits` is `{"<mod>": {"<limit>": number | null}}`: the mods a version includes, each with every one of its limits (`null` unlimited; a switch `0` or `1`). Every plan's is empty now, since every mod is an add-on. A retired mod (`active` false) is in no license.
 - **Add-ons** (`addons`): each mod, sold as a line on the org's subscription. A version never changes its price, flags or limits: a new Stripe price is a new version (as plan versions); `active` false takes it off sale, and an org keeps the version it added. `limits` is `{"<plan>" | "*": {"<limit>": number | null}}`: the mod's limits on that plan, `*` for every plan not named. `plans` names the paid plans it may be added to; `free` lets a Free org have it (off unless set).
 - **Org add-ons** (`org_addons`): one row per org and mod, written only from Stripe's subscription: the version it sells (`addon_id`), its subscription item and quantity, `active` while the item is on the subscription and `removed` after (the item id cleared). Row-level security on the org, as the rest.
 - **A limit left empty is unlimited.** `runtime_hours` is the hosted runtime's running time each month; `storage_cents_per_gb` the storage rate (every GB billed, none included); the person's cap is on their runtime. When the hours and any top-ups run out, calls are refused with `E_LIMIT`, unless auto top-up is on within the spend cap. Storage is billed per GB-month on the volume's size, which is the person's cap.
@@ -687,37 +684,34 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ![What lives in rrotor's /data](img/data-model-local.png)
 
-- **A site is one file** (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
+- **Programs** live under `programs/<name>/`: each deployed commit, the program's own folder and its persistent data.
 - **Named profiles** (`profiles/<name>/`) hold only the sign-ins made in them.
+- **RPA sites** (designed): one file each (`rpa/<slug>.json`): the URLs it matches, its profile, its commands and sequences, each step `auto` or `ask`; every run logged with who did each step.
 
 ## Plans
 
-Every plan is a subscription, billed per seat, per month (Chris, 2026-10-15). **Every mod is an add-on** (Decisions, 5). Installs, mod limits, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month. A plan sets the account's limits and which add-ons it may have; it includes no mod. Installs, runtime hours and storage are per user.
 
 | | Free | Solo | Pro | Team |
 |---|---|---|---|---|
-| Price per seat | $0 | ? | $8 | $16 |
+| Price per seat | $0 | To decide | $8 | $16 |
 | Members | 1 | 1 | 1 | Unlimited |
-| Installs | 1 | ? | 5 | 10 |
-| Add-ons (below) | Only those allowed on Free | ? | Every add-on | Every add-on |
+| Installs | 1 | To decide | 5 | 10 |
+| Add-ons | Only those allowed on Free (none now) | To decide | Every add-on | Every add-on |
 | Local runtime | Yes | Yes | Yes | Yes |
-| Hosted runtime (cloud) | No | No | Yes | Yes |
-| Runtime hours a month | — | — | ? | ? |
+| Hosted runtime | No | No | Yes | Yes |
+| Runtime hours a month | — | — | To decide | To decide |
 | Storage | — | — | $0.50 per GB-month, capped | $0.50 per GB-month, capped |
-
-- **The mod limits marked TBD are placeholders** in the seed until Chris sets them; Solo is not seeded until its price and limits are set.
 
 ### Add-ons
 
-Each a line on the org's subscription, prorated when added or removed; per seat (its quantity follows the seats) unless set flat. Each Stripe price comes from the environment (`GLYPHH_STRIPE_PRICE_<MOD>`), as the plans' do.
+Each a line on the org's subscription, prorated when added or removed; per seat (its quantity follows the seats) unless set flat. Each Stripe price comes from the environment (`GLYPHH_STRIPE_PRICE_<MOD>`), as the plans' do. Every price, the per-seat choice and every limit here is a placeholder in the seed (`db/seed_addons.py`) until Chris sets them.
 
 | Add-on | Price a month | Per seat | Plans | On Free | Limits on Pro | Limits on Team |
 |---|---|---|---|---|---|---|
-| `programs` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `programs` 25, `runs_per_day` 1000 (TBD) | Unlimited, unlimited (TBD) |
-| `gateway` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 5, `keys` 10 (TBD) | Unlimited, unlimited (TBD) |
-| `ada` | $4 (TBD) | Yes (TBD) | Pro, Team | No | `models` 3, `precedents` 10000 (TBD) | Unlimited, unlimited (TBD) |
+| `programs` | $4 | Yes | Pro, Team | No | `programs` 25, `runs_per_day` 1000 | Unlimited, unlimited |
+| `gateway` | $4 | Yes | Pro, Team | No | `models` 5, `keys` 10 | Unlimited, unlimited |
+| `ada` | $4 | Yes | Pro, Team | No | `models` 3, `precedents` 10000 | Unlimited, unlimited |
 
-- **Every price, the per-seat choice and every limit here is a placeholder** in the seed (`db/seed_addons.py`) until Chris sets them.
-- **Hours top-ups** (out of scope now): there are no one-off purchases (2026-10-15), so hours, when they come, come with the subscription.
-- **Storage is never included** (Chris, 2026-10-14): every GB is billed, at **$0.50 per GB-month** on what the runtime holds (its volume's size), prorated by the day on the monthly invoice. The person sets a cap (1 GB to start, up to 100 GB); the volume's size is the cap, so the bill can't pass it. Growing it is a click; it never shrinks.
-- To decide: the hours per plan and the top-up price. The hosted runtime costs Glyphh about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
+- **Storage is never included:** every GB is billed, at **$0.50 per GB-month** on what the runtime holds (its volume's size), prorated by the day on the monthly invoice. The person sets a cap (1 GB to start, up to 100 GB); the volume's size is the cap, so the bill can't pass it. Growing it is a click; it never shrinks.
+- **What the hosted runtime costs Glyphh:** about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.
