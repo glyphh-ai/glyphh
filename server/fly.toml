@@ -1,10 +1,10 @@
 # The Glyphh server on Fly: the app glyphh-ai-server, at https://api.glyphh.ai.
 # Deploy from this folder with:
 #   fly deploy --build-arg GLYPHH_VERSION=$(git rev-parse --short HEAD)
-# Secrets are the app's own (`fly secrets list`). The Stripe keys and Redis kept their old names
-# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, REDIS_URL); the start command below hands them to the server as its
-# GLYPHH_ settings unless a GLYPHH_ one is set. The database is GLYPHH_DATABASE_URL (`fly mpg attach`), and
-# GLYPHH_SECRET_KEY and GLYPHH_LICENSE_KEY are the server's own.
+# Secrets are the app's own (`fly secrets list`), all GLYPHH_ settings but one: Redis kept its old name, REDIS_URL,
+# which the start command below hands to the server as GLYPHH_REDIS_URL unless that is set. The database is
+# GLYPHH_DATABASE_URL (`fly mpg attach`); the rest are GLYPHH_SECRET_KEY, GLYPHH_LICENSE_KEY, GLYPHH_STRIPE_SECRET_KEY
+# and GLYPHH_STRIPE_WEBHOOK_SECRET.
 app = "glyphh-ai-server"
 primary_region = "iad"
 
@@ -20,8 +20,6 @@ primary_region = "iad"
 [processes]
   app = """sh -c ' \
     export GLYPHH_REDIS_URL="${GLYPHH_REDIS_URL:-$REDIS_URL}" \
-      GLYPHH_STRIPE_SECRET_KEY="${GLYPHH_STRIPE_SECRET_KEY:-$STRIPE_SECRET_KEY}" \
-      GLYPHH_STRIPE_WEBHOOK_SECRET="${GLYPHH_STRIPE_WEBHOOK_SECRET:-$STRIPE_WEBHOOK_SECRET}" \
     && python -m glyphh_server.db.schema \
     && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "*"'"""
 
