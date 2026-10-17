@@ -1,10 +1,8 @@
 # The Glyphh server on Fly: the app glyphh-ai-server, at https://api.glyphh.ai.
-# Deploy from this folder with:
-#   fly deploy --build-arg GLYPHH_VERSION=$(git rev-parse --short HEAD)
-# Secrets are the app's own (`fly secrets list`), all GLYPHH_ settings but one: Redis kept its old name, REDIS_URL,
-# which the start command below hands to the server as GLYPHH_REDIS_URL unless that is set. The database is
-# GLYPHH_DATABASE_URL (`fly mpg attach`); the rest are GLYPHH_SECRET_KEY, GLYPHH_LICENSE_KEY, GLYPHH_STRIPE_SECRET_KEY
-# and GLYPHH_STRIPE_WEBHOOK_SECRET.
+# Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own, every one a
+# GLYPHH_ setting (README, the settings table): GLYPHH_DATABASE_URL (`fly mpg attach`), GLYPHH_REDIS_URL,
+# GLYPHH_SECRET_KEY, GLYPHH_LICENSE_KEY, GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in
+# providers and Fly hosting ones as they are added.
 app = "glyphh-ai-server"
 primary_region = "iad"
 
@@ -17,19 +15,12 @@ primary_region = "iad"
   GLYPHH_PUBLIC_URL = "https://api.glyphh.ai"
   GLYPHH_PLATFORM_URL = "https://app.glyphh.ai"
 
-[processes]
-  app = """sh -c ' \
-    export GLYPHH_REDIS_URL="${GLYPHH_REDIS_URL:-$REDIS_URL}" \
-    && python -m glyphh_server.db.schema \
-    && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "*"'"""
-
 [http_service]
   internal_port = 8080
   force_https = true
   auto_stop_machines = "off"
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
 
   [[http_service.checks]]
     interval = "15s"

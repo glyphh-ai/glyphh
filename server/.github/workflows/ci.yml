@@ -9,6 +9,10 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -39,3 +43,24 @@ jobs:
           tags: |
             ghcr.io/glyphh-ai/server:${{ github.sha }}
             ghcr.io/glyphh-ai/server:main
+
+  # A merge to main deploys that commit to Fly (glyphh-ai-server, api.glyphh.ai) with the FLY_API_TOKEN secret: the
+  # only way the server reaches production. The image's own start command runs the schema step, then the server.
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: image
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - name: Deploy to glyphh-ai-server
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --build-arg GLYPHH_VERSION=${{ github.sha }} --wait-timeout 300
+      - name: The server answers, at this commit
+        run: |
+          curl -sf https://api.glyphh.ai/v1/health | tee health.json
+          python3 -c "import json,sys; h=json.load(open('health.json')); sys.exit(0 if h['version']=='${{ github.sha }}' and h['database'] and h['redis'] else 1)"
