@@ -110,7 +110,7 @@ def _situation(rng: random.Random) -> dict:
 
 def _weights(rng: random.Random) -> dict:
     return {
-        layer: {"*": rng.choice([0.5, 1.0]), **{seg: {"*": rng.choice([0.3, 1.0]), **{role: rng.choice([0.0, 0.2, 1.0]) for role in ("r1", "r2", "r3")}} for seg in ("s1", "s2")}}
+        layer: {"*": rng.choice([0.5, 1.0]), **{seg: {"*": rng.choice([0.0, 0.3, 1.0]), **{role: rng.choice([0.0, 0.2, 1.0]) for role in ("r1", "r2", "r3")}} for seg in ("s1", "s2")}}
         for layer in ("L1", "L2")
     }
 

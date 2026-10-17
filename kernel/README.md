@@ -454,7 +454,9 @@ probabilities. `output.ask` prices asking a person: set, `decide` answers
 `ask: true` whenever every outcome's expected cost is above it (the band
 where either answer is costly), with the best guess still named. Weighted queries score every precedent exactly as the fact
 tree does, in one pass over per-leaf glyph tables (`test_learned.py`
-proves the two equal).
+proves the two equal). A key whose subtree weighs nothing on either side is
+out of its parent's mean, not a zero in it: once learning has put a whole
+segment to 0 it stops counting, instead of dragging every score down.
 
 Specs are validated exactly: an unknown field or a value of the wrong kind
 raises `SpecError` naming where. `glyphh_nsm.py` is the spec every
