@@ -426,6 +426,28 @@ model.record(data)                     # data in the spec's shape; outcome optio
 model.facts(query, clearance=0.5)      # fact trees, cut to what the reader may see
 ```
 
+A spec can also be taught by its own cases, and decide by cost:
+
+```python
+spec = Spec.from_json(spec_json).learned(cases)   # cases: [(data, outcome), ...]
+model = Model(spec, k=15, min_sim=0.35)
+for data, outcome in cases:
+    model.record(data, outcome)
+model.calibrate(sample=800)              # fits the temperature on the store's own graded record
+model.probabilities(data)                # {outcome: P}, calibrated
+model.decide(data)                       # {outcome, expected_cost, probabilities}: least expected cost
+```
+
+`learned` sets every role's `similarity_weight` to its information gain
+about the outcome (scaled so the best weighs 1) and, per role, a
+`value_weights` table: how far each value moves the outcome from the base
+rate. Key parts and text roles are left alone. `output.costs`
+(`{decided: {true: cost}}`, default 0 for the same outcome and 1 for a
+different one) is the matrix `decide` minimises over the calibrated
+probabilities. Weighted queries score every precedent exactly as the fact
+tree does, in one pass over per-leaf glyph tables (`test_learned.py`
+proves the two equal).
+
 Specs are validated exactly: an unknown field or a value of the wrong kind
 raises `SpecError` naming where. `glyphh_nsm.py` is the spec every
 organization starts with: bare text taken down to the 64 NSM primes, plus
