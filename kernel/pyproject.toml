@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glyphh-kernel"
-version = "3.4.0"
+version = "3.5.0"
 description = "An algebra of thought for AI: compose, compare and abstract meanings, and build graded judgment on top."
 readme = "README.md"
 requires-python = ">=3.10"

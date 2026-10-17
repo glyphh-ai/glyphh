@@ -199,3 +199,153 @@ def test_refresh_every_follows_the_store_as_cases_arrive() -> None:
     out = model.refresh(sample=30)
     assert set(out) == {"learned", "tau"} and out["tau"] == model.space.tau
     assert len(model.space.graded()) == 100
+
+
+XSPEC = {
+    "name": "mixed",
+    "seed": 11,
+    "dimension": 2048,
+    "layers": [
+        {
+            "name": "l",
+            "segments": [
+                {
+                    "name": "s",
+                    "roles": [
+                        {"name": "a"},
+                        {"name": "b"},
+                        {"name": "c", "numeric_config": {"min_value": 0, "max_value": 10, "bin_width": 5}},
+                        {"name": "d"},
+                        {"name": "t", "text_encoding": "bag_of_words"},
+                    ],
+                }
+            ],
+        }
+    ],
+    "output": {"costs": {"good": {"bad": 5}, "bad": {"good": 1}}},
+}
+
+
+def xcases(n: int = 300) -> list[tuple[dict, str]]:
+    """b and c decide together (b=x with a low c, or b=y with a high c: good), a adds a little, d nothing."""
+    rng = random.Random(4)
+    out = []
+    for i in range(n):
+        a, b, c, d = rng.choice(["p", "q"]), rng.choice(["x", "y"]), rng.choice([2, 8]), rng.choice(["m", "n"])
+        good = (b == "x") == (c < 5)
+        if rng.random() < 0.1:
+            good = a == "p"
+        out.append(({"l": {"s": {"a": a, "b": b, "c": c, "d": d, "t": f"note {i}"}}}, "good" if good else "bad"))
+    return out
+
+
+def test_interactions_are_learned_from_pairs_that_tell_more_together_and_read_as_a_layer() -> None:
+    spec = Spec.from_json(XSPEC).learned(xcases())
+    assert [i.name for i in spec.interactions] == ["b_x_c"]
+    pair = spec.interactions[0]
+    assert pair.roles == ("l.s.b", "l.s.c") and pair.similarity_weight == 1.0  # the strongest signal there is
+    assert set(dict(pair.value_weights)) == {"x|0", "x|5", "y|0", "y|5"}
+    roles = {r["name"]: r["similarity_weight"] for l in spec.to_json()["layers"] for s in l["segments"] for r in s["roles"]}
+    assert roles["b"] < 0.1 and roles["c"] < 0.1 and roles["d"] < 0.05 and 0 < roles["a"] < 0.5
+    situation = spec.situation({"l": {"s": {"b": "x", "c": 7}}})
+    assert situation["interactions"] == {"pairs": {"b_x_c": "x|5"}}
+    assert "interactions" not in spec.situation({"l": {"s": {"b": "x", "t": "no c"}}})
+    w = spec.weights(1.0, situation)
+    assert w["interactions"]["pairs"]["b_x_c"] == pair.value_weight("x|5") and w["interactions"]["*"] == w["interactions"]["pairs"]["b_x_c"]
+    assert spec.weights(1.0, {"l": {"s": {"b": "x"}}})["interactions"]["*"] == 0.0  # none in the situation
+    again = Spec.from_json(spec.to_json())
+    assert again.to_json() == spec.to_json() and again.spec_id == spec.spec_id
+    assert "interactions" not in Spec.from_json(XSPEC).to_json()
+
+
+def test_interactions_are_validated() -> None:
+    with pytest.raises(SpecError, match="two different"):
+        Spec.from_json({**XSPEC, "interactions": [{"name": "aa", "roles": ["l.s.a", "l.s.a"]}]})
+    with pytest.raises(SpecError, match="roles"):
+        Spec.from_json({**XSPEC, "interactions": [{"name": "ab", "roles": ["l.s.a", "l.s.zz"]}]})
+    with pytest.raises(SpecError, match="must be a list"):
+        Spec.from_json({**XSPEC, "interactions": {}})
+    with pytest.raises(SpecError, match="the layer the spec adds"):
+        Spec.from_json({**XSPEC, "layers": [{"name": "interactions", "segments": XSPEC["layers"][0]["segments"]}]})
+    secured = {**XSPEC, "interactions": [{"name": "ab", "roles": ["l.s.a", "l.s.b"]}]}
+    secured["layers"] = [{"name": "l", "segments": [{"name": "s", "roles": [{"name": "a", "security_weight": 0.8}, {"name": "b"}]}]}]
+    spec = Spec.from_json(secured)
+    situation = spec.situation({"l": {"s": {"a": "p", "b": "x"}}})
+    assert situation["interactions"]["pairs"]["ab"] == "p|x"
+    assert spec.weights(1.0, situation)["interactions"]["pairs"]["ab"] == 1.0
+    assert spec.weights(0.5, situation)["interactions"]["pairs"]["ab"] == 0.0  # the stricter role's clearance
+    assert spec.report({"key": "", "children": [{"key": "interactions", "children": []}]})["children"] == []
+
+
+def test_a_model_that_learns_interactions_rewrites_its_store_and_the_pairs_decide(tmp_path) -> None:
+    path = str(tmp_path / "x.sqlite")
+    model = Model(Spec.from_json(XSPEC), k=15, min_sim=0.1, path=path)
+    for data, outcome in xcases():
+        model.record(data, outcome)
+    assert all("interactions" not in s for s in model.space._situations)
+    learned = model.learn()
+    assert [i["name"] for i in learned["~interactions"]] == ["b_x_c"]
+    assert all(s["interactions"]["pairs"]["b_x_c"] for s in model.space._situations)  # rewritten in place
+    assert model.calibrate(sample=100) in kernel.TAUS
+    right = sum(model.decide(data)["outcome"] == outcome for data, outcome in xcases()[:100])
+    assert right >= 85
+    model.space.close()
+    again = Model(Spec.from_json(XSPEC), k=15, min_sim=0.1, path=path)
+    assert [i.name for i in again.spec.interactions] == ["b_x_c"]
+    assert again.space._situations[0]["interactions"] == model.space._situations[0]["interactions"]
+    assert again.space.rewrite(again.spec.recross) == 0  # nothing to change
+    again.space.close()
+
+
+def test_calibrate_by_cost_picks_the_temperature_that_decides_best() -> None:
+    model = Model(Spec.from_json(XSPEC), k=15, min_sim=0.1)
+    for data, outcome in xcases(120):
+        model.record(data, outcome)
+    model.learn()
+    by_loss, by_cost = model.calibrate(sample=100, by="loss"), model.calibrate(sample=100, by="cost")
+    assert by_loss in kernel.TAUS and by_cost in kernel.TAUS
+    assert model.refresh(sample=50, by="cost")["tau"] == model.space.tau
+    with pytest.raises(SpecError, match="by"):
+        model.calibrate(by="accuracy")
+    space = model.space
+    seen: list[tuple[dict[str, float], str]] = []
+
+    def dear(p: dict[str, float], true: str) -> float:  # a cost of its own: the mass on the wrong outcomes, squared
+        seen.append((p, true))
+        return sum(q for o, q in p.items() if o != true) ** 2
+
+    chosen = space.calibrate(sample=50, cost=dear)
+    assert len(seen) == 50 * len(kernel.TAUS)
+    totals = {}
+    held = [i for i in range(space._n) if space._outcomes[i] is not None][-50:]
+    for tau in kernel.TAUS:
+        totals[tau] = sum(dear(space._probabilities(space._scores(space._situations[h], None, {}), tau, skip=h), space._outcomes[h]) for h in held)
+    assert totals[chosen] == min(totals.values())
+    flat = space.calibrate(sample=50, cost=lambda p, true: 0.0)  # all tied on cost: log-loss decides
+    assert flat == space.calibrate(sample=50)
+
+
+def test_rewrite_keeps_events_and_the_fast_score(tmp_path) -> None:
+    space = kernel.Space(dim=1024, k=5, min_sim=0.1, seed=3, path=str(tmp_path / "e.sqlite"))
+    ev = [kernel.symbol("e1", 3, 1024), kernel.symbol("e2", 3, 1024)]
+    space.record({"a": {"b": {"c": "one"}}}, "yes", events=ev, rid="r1")
+    space.record({"a": {"b": {"c": "two"}}}, "no", rid="r2")
+    before = space._glyphs[0].copy()
+    assert space.rewrite(lambda s: {**s, "z": {"y": {"x": s["a"]["b"]["c"] + "!"}}}) == 2
+    assert space._situations[1] == {"a": {"b": {"c": "two"}}, "z": {"y": {"x": "two!"}}}
+    assert kernel.sim(space._glyphs[0], before) > 0.3 and space._trajs[0] is not None
+    assert space.query({"a": {"b": {"c": "two"}}, "z": {"y": {"x": "two!"}}}, weights={"a": 1.0, "z": 0.5}).top == "no"
+    space.close()
+    again = kernel.Space(dim=1024, k=5, min_sim=0.1, seed=3, path=str(tmp_path / "e.sqlite"))
+    assert again._situations[1]["z"] == {"y": {"x": "two!"}} and again._trajs[0] is not None
+    bare = kernel.Space(dim=1024, k=5, min_sim=0.1, seed=3)
+    bare.record({"a": {"b": {"c": "one"}}}, "yes", events=ev)
+    assert bare.rewrite(lambda s: {**s, "q": {"r": {"s": "t"}}}) == 1 and bare._trajs[0] is not None
+    plain = kernel.Space(dim=1024, k=5, min_sim=0.1, seed=3)
+    plain.record({"a": {"b": {"c": "one"}}}, "yes")
+    plain.record({"a": {"b": {"c": "two"}}}, "no")
+    plain.rewrite(lambda s: {**s, "z": {"y": {"x": s["a"]["b"]["c"] + "!"}}})
+    q, w = {"a": {"b": {"c": "one"}}, "z": {"y": {"x": "one!"}}}, {"a": 1.0, "z": 0.5}
+    fast = plain._fast_scores(q, w)
+    exact = [plain._exact(i, q, None, w).score for i in range(2)]
+    assert np.abs(fast - np.array(exact)).max() < 1e-9 and fast[0] > 0.99  # the leaf tables were rebuilt

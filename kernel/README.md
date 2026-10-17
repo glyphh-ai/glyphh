@@ -450,11 +450,20 @@ about the outcome (scaled so the best weighs 1) and, per role, a
 rate. Key parts and text roles are left alone. `output.costs`
 (`{decided: {true: cost}}`, default 0 for the same outcome and 1 for a
 different one) is the matrix `decide` minimises over the calibrated
-probabilities. `output.ask` prices asking a person: set, `decide` answers
+probabilities. `model.calibrate(by="cost")` fits the temperature on
+what deciding by those costs would have cost over the held-out precedents,
+rather than on log-loss. `output.ask` prices asking a person: set, `decide` answers
 `ask: true` whenever every outcome's expected cost is above it (the band
 where either answer is costly), with the best guess still named. Weighted queries score every precedent exactly as the fact
 tree does, in one pass over per-leaf glyph tables (`test_learned.py`
-proves the two equal). A key whose subtree weighs nothing on either side is
+proves the two equal). `learn` also finds **interactions**: pairs of roles that tell more about the
+outcome together than the better of them alone (a bad checking account with a
+long loan). They go in the spec as `interactions: [{name, roles: [a, b],
+similarity_weight, value_weights}]` and the spec reads them as one more layer,
+`interactions.pairs.<name>`, whose value is the pair of the roles' values,
+added to every situation by `situation()` and to the stored ones by
+`Space.rewrite` when a model learns new pairs. Secured as the stricter of
+the two roles. A key whose subtree weighs nothing on either side is
 out of its parent's mean, not a zero in it: once learning has put a whole
 segment to 0 it stops counting, instead of dragging every score down.
 
