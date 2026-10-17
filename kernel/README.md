@@ -450,7 +450,13 @@ about the outcome (scaled so the best weighs 1) and, per role, a
 rate. Key parts and text roles are left alone. `output.costs`
 (`{decided: {true: cost}}`, default 0 for the same outcome and 1 for a
 different one) is the matrix `decide` minimises over the calibrated
-probabilities. `model.calibrate(by="cost")` fits the temperature on
+probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
+`word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
+`calibrate_by`, `calibrate_sample`, `refresh_every`), each checked by name
+and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
+kept with the store over the spec's; a learning lever moved relearns there
+and then. `model.settings.to_json(all=True)` reads them. The settings are not
+part of `spec_id`. `model.calibrate(by="cost")` fits the temperature on
 what deciding by those costs would have cost over the held-out precedents,
 rather than on log-loss. `output.ask` prices asking a person: set, `decide` answers
 `ask: true` whenever every outcome's expected cost is above it (the band

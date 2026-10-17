@@ -183,9 +183,9 @@ def test_refresh_every_follows_the_store_as_cases_arrive() -> None:
     model = Model(Spec.from_json(SPEC), k=15, min_sim=0.1, refresh_every=50)
     for data, outcome in cases()[:49]:
         model.record(data, outcome)
-    assert model.spec is model.given  # not yet
+    assert model.space.meta("learned") is None  # not yet
     model.record(*cases()[49])
-    assert model.spec is not model.given and model.space.meta("learned")["loan.ask.purpose"]["similarity_weight"] == 1.0
+    assert model.space.meta("learned")["loan.ask.purpose"]["similarity_weight"] == 1.0
     tau_50 = model.space.tau
     for data, outcome in cases()[50:100]:
         model.record(data, outcome)
@@ -414,3 +414,58 @@ def test_a_model_that_learns_words_rewrites_its_store_and_routes_better(tmp_path
     assert again.space.rewrite(again.spec.restate) == 0
     again.space.close()
     assert Spec.from_json(TSPEC).learned(tcases()).to_json() == Spec.from_json(TSPEC).with_weights(learned).to_json()
+
+
+def test_settings_are_the_specs_levers_checked_by_name_and_range() -> None:
+    from glyphh_spec import Settings
+
+    assert Settings().to_json() == {} and set(Settings().to_json(all=True)) == set(Settings.RANGES)
+    spec = Spec.from_json({**SPEC, "settings": {"k": 25, "min_sim": 0.3, "word_floor": 0.5, "refresh_every": 100}})
+    assert (spec.settings.k, spec.settings.min_sim, spec.settings.word_floor, spec.settings.refresh_every) == (25, 0.3, 0.5, 100)
+    assert spec.to_json()["settings"] == {"k": 25, "min_sim": 0.3, "word_floor": 0.5, "refresh_every": 100}
+    assert "settings" not in Spec.from_json(SPEC).to_json()
+    assert Spec.from_json(SPEC).spec_id == Spec.from_json({**SPEC, "settings": {"k": 3}}).spec_id  # levers are not the shape
+    for bad, why in (
+        ({"k": 0}, "from 1 to 1000"),
+        ({"k": 2.5}, "whole number"),
+        ({"min_sim": "high"}, "a number"),
+        ({"word_weights": 1}, "true or false"),
+        ({"calibrate_by": "accuracy"}, "one of loss, cost"),
+        ({"speed": 9}, "unknown field"),
+        ({"refresh_every": 5}, "from 10"),
+    ):
+        with pytest.raises(SpecError, match=why):
+            Spec.from_json({**SPEC, "settings": bad})
+    assert Settings().with_changes({"refresh_every": None}).refresh_every is None
+
+
+def test_a_model_takes_its_levers_from_the_spec_then_the_store_then_the_call_and_configure_keeps_them(tmp_path) -> None:
+    path = str(tmp_path / "s.sqlite")
+    spec = Spec.from_json({**XSPEC, "settings": {"k": 9, "min_sim": 0.2}})
+    model = Model(spec, path=path)
+    assert (model.space.k, model.space.min_sim, model.refresh_every) == (9, 0.2, None)
+    for data, outcome in xcases():
+        model.record(data, outcome)
+    model.learn()
+    assert [i.name for i in model.spec.interactions] == ["b_x_c"]
+    now = model.configure(k=20, refresh_every=50)
+    assert now["k"] == 20 and now["refresh_every"] == 50 and now["word_floor"] == 0.35 and model.space.k == 20
+    off = model.configure(interactions=False)  # a learning lever: relearned there and then, the store rewritten
+    assert off["interactions"] is False and model.spec.interactions == () and model.space.meta("learned")["~interactions"] == []
+    assert all("interactions" not in s for s in model.space._situations)
+    with pytest.raises(SpecError, match="no such setting"):
+        model.configure(speed=9)
+    assert model.settings.k == 20  # a bad change changes nothing
+    model.space.close()
+    again = Model(spec, path=path)  # the store's settings over the spec's
+    assert (again.space.k, again.space.min_sim, again.refresh_every, again.settings.interactions) == (20, 0.2, 50, False)
+    assert again.spec.interactions == ()
+    asked = Model(spec, path=path, k=3, min_sim=0.05)  # the call over both
+    assert (asked.space.k, asked.space.min_sim, asked.refresh_every) == (3, 0.05, 50)
+    assert asked.calibrate() in kernel.TAUS and asked.refresh()["tau"] in kernel.TAUS  # sample and by from the settings
+    again.space.close()
+    asked.space.close()
+    plain = Model(Spec.from_json({**TSPEC, "settings": {"word_weights": False}}))
+    for data, outcome in tcases(60):
+        plain.record(data, outcome)
+    assert "m.b.text" not in plain.learn() and isinstance(plain.space._situations[0]["m"]["b"]["text"][0], str)
