@@ -472,74 +472,88 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Tenant isolation. A request made with an install's token, or with a connector access token on /mcp, runs as
--- glyphh_tenant with its org in glyphh.org_id (db/tenancy.py), and each policy below shows it only that org's rows.
--- Sign-in, the connector's OAuth endpoints, Stripe's webhook and the few operations that cross orgs on purpose run as
--- the connecting role, which the policies don't bind.
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'glyphh_tenant') THEN CREATE ROLE glyphh_tenant NOLOGIN; END IF;
-END $$;
-GRANT glyphh_tenant TO CURRENT_USER;
-GRANT USAGE ON SCHEMA public TO glyphh_tenant;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO glyphh_tenant;
-
+-- Tenant isolation. A request made with an install's token, or with a connector access token on /mcp, has its org in
+-- glyphh.org_id for its transaction (db/tenancy.py), and each policy below shows it only that org's rows. With no org
+-- set (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step and the few operations that cross
+-- orgs on purpose) every row is seen. The policies bind the connecting role itself (FORCE), so no other role is
+-- needed; a superuser bypasses them, so the server connects as an ordinary role.
 ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orgs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON orgs;
-CREATE POLICY tenant ON orgs USING (id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+CREATE POLICY tenant ON orgs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON users;
-CREATE POLICY tenant ON users USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+CREATE POLICY tenant ON users USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invites FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON invites;
-CREATE POLICY tenant ON invites USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+CREATE POLICY tenant ON invites USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE org_addons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_addons FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON org_addons;
-CREATE POLICY tenant ON org_addons USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+CREATE POLICY tenant ON org_addons USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;
-CREATE POLICY tenant ON identities USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON identities USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE installs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE installs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON installs;
-CREATE POLICY tenant ON installs USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON installs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tokens FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON tokens;
-CREATE POLICY tenant ON tokens USING (install_id IN (SELECT id FROM installs));
+CREATE POLICY tenant ON tokens USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR install_id IN (SELECT id FROM installs));
 ALTER TABLE rrotors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rrotors FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON rrotors;
-CREATE POLICY tenant ON rrotors USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON rrotors USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;
-CREATE POLICY tenant ON connector_grants USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON connector_grants USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE connector_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connector_tokens FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_tokens;
-CREATE POLICY tenant ON connector_tokens USING (grant_id IN (SELECT id FROM connector_grants));
+CREATE POLICY tenant ON connector_tokens USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR grant_id IN (SELECT id FROM connector_grants));
 ALTER TABLE oauth_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE oauth_codes FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON oauth_codes;
-CREATE POLICY tenant ON oauth_codes USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON oauth_codes USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE github_installations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_installations FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON github_installations;
-CREATE POLICY tenant ON github_installations USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON github_installations USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE runtime_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_keys FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON runtime_keys;
-CREATE POLICY tenant ON runtime_keys USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON runtime_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE routine_triggers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE routine_triggers FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON routine_triggers;
-CREATE POLICY tenant ON routine_triggers USING (user_id IN (SELECT id FROM users));
+CREATE POLICY tenant ON routine_triggers USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+ALTER TABLE models FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON models;
-CREATE POLICY tenant ON models USING (org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+CREATE POLICY tenant ON models USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE model_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE model_versions FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON model_versions;
-CREATE POLICY tenant ON model_versions USING (model_id IN (SELECT id FROM models));
+CREATE POLICY tenant ON model_versions USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR model_id IN (SELECT id FROM models));
 ALTER TABLE deployments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deployments FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON deployments;
-CREATE POLICY tenant ON deployments USING (model_version_id IN (SELECT id FROM model_versions));
+CREATE POLICY tenant ON deployments USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR model_version_id IN (SELECT id FROM model_versions));
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON runs;
-CREATE POLICY tenant ON runs USING (model_version_id IN (SELECT id FROM model_versions));
+CREATE POLICY tenant ON runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR model_version_id IN (SELECT id FROM model_versions));
 ALTER TABLE approvals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE approvals FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON approvals;
-CREATE POLICY tenant ON approvals USING (run_id IN (SELECT id FROM runs));
+CREATE POLICY tenant ON approvals USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR run_id IN (SELECT id FROM runs));
 ALTER TABLE model_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE model_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON model_events;
-CREATE POLICY tenant ON model_events USING (model_id IN (SELECT id FROM models));
+CREATE POLICY tenant ON model_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR model_id IN (SELECT id FROM models));

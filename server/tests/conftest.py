@@ -20,9 +20,11 @@ from glyphh_server.db.schema import apply_schema
 from glyphh_server.db.signals import make_redis
 from tests.fakes import FakeGitHubApp, FakeStripe, fake_http
 
-DATABASE_URL: str = os.environ.get(
-    "GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test"
-)
+# The suite's database is made by the superuser in GLYPHH_DATABASE_URL and owned by an ordinary role the server
+# connects as: a superuser bypasses row-level security, so only an ordinary role proves the tenant policies hold.
+ADMIN_URL: str = os.environ.get("GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test")
+APP_ROLE: str = "glyphh_app"
+DATABASE_URL: str = make_url(ADMIN_URL).set(username=APP_ROLE, password=APP_ROLE).render_as_string(hide_password=False)
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
 # A real Redis: the test profile's own database on the compose service; pub/sub channels are per person.
 REDIS_URL: str = os.environ.get("GLYPHH_REDIS_URL", "redis://localhost:6379/1")
@@ -65,21 +67,23 @@ PROVIDER_SETTINGS: Settings = SETTINGS.model_copy(
 
 
 async def _fresh_database(url: str) -> None:
-    """The suite owns its database: dropped and made again each run, never the dev data."""
+    """The suite owns its database: dropped and made again each run, never the dev data, owned by the app's role."""
     target = make_url(url)
     admin = await asyncpg.connect(
         host=target.host, port=target.port, user=target.username, password=target.password, database="postgres"
     )
     try:
         await admin.execute(f'DROP DATABASE IF EXISTS "{target.database}" WITH (FORCE)')
-        await admin.execute(f'CREATE DATABASE "{target.database}"')
+        if not await admin.fetchval("SELECT 1 FROM pg_roles WHERE rolname = $1", APP_ROLE):
+            await admin.execute(f"CREATE ROLE {APP_ROLE} LOGIN PASSWORD '{APP_ROLE}'")
+        await admin.execute(f'CREATE DATABASE "{target.database}" OWNER {APP_ROLE}')
     finally:
         await admin.close()
 
 
 @pytest.fixture(scope="session")
 async def engine() -> AsyncIterator[AsyncEngine]:
-    await _fresh_database(DATABASE_URL)
+    await _fresh_database(ADMIN_URL)
     eng = make_engine(DATABASE_URL)
     await apply_schema(eng, SETTINGS)
     yield eng
