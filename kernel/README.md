@@ -456,7 +456,17 @@ rather than on log-loss. `output.ask` prices asking a person: set, `decide` answ
 `ask: true` whenever every outcome's expected cost is above it (the band
 where either answer is costly), with the best guess still named. Weighted queries score every precedent exactly as the fact
 tree does, in one pass over per-leaf glyph tables (`test_learned.py`
-proves the two equal). `learn` also finds **interactions**: pairs of roles that tell more about the
+proves the two equal). `learn` also weighs **words**: for a `bag_of_words` role it writes a
+`value_weights` table: how far each word's presence moves some outcome from
+its base rate, scaled from a floor of 0.35 (tells nothing) to 1 (the most
+telling word); the floor is high because a bag's glyph is a majority vote,
+and the many quiet words must still be heard beside the few loud ones. A situation then carries the bag as a
+weighted set, `[[word, weight], ...]`, which the kernel bundles by weight, so
+"stolen" outvotes "my" in every comparison, glyph, fact tree and fast path
+alike; a model that learns new word weights rewrites its store. A list of
+`[scalar, weight]` pairs with weights in 0..1 is a weighted set anywhere.
+
+`learn` also finds **interactions**: pairs of roles that tell more about the
 outcome together than the better of them alone (a bad checking account with a
 long loan). They go in the spec as `interactions: [{name, roles: [a, b],
 similarity_weight, value_weights}]` and the spec reads them as one more layer,

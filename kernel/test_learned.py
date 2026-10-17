@@ -349,3 +349,68 @@ def test_rewrite_keeps_events_and_the_fast_score(tmp_path) -> None:
     fast = plain._fast_scores(q, w)
     exact = [plain._exact(i, q, None, w).score for i in range(2)]
     assert np.abs(fast - np.array(exact)).max() < 1e-9 and fast[0] > 0.99  # the leaf tables were rebuilt
+
+
+TSPEC = {
+    "name": "notes",
+    "seed": 5,
+    "dimension": 2048,
+    "layers": [{"name": "m", "segments": [{"name": "b", "roles": [{"name": "text", "text_encoding": "bag_of_words"}, {"name": "id", "key_part": True, "similarity_weight": 0}]}]}],
+}
+
+
+def tcases(n: int = 200) -> list[tuple[dict, str]]:
+    """'stolen' or 'lost' says card_lost, 'rate' or 'exchange' says fx; the rest of the words are filler shared by all."""
+    rng = random.Random(8)
+    filler = ["my", "card", "please", "help", "i", "the", "what", "about", "can", "you"]
+    out = []
+    for i in range(n):
+        label = rng.choice(["card_lost", "fx"])
+        key = rng.choice(["stolen", "lost"]) if label == "card_lost" else rng.choice(["rate", "exchange"])
+        text = " ".join(rng.sample(filler, 4) + [key])
+        out.append(({"m": {"b": {"text": text, "id": f"t{i}"}}}, label))
+    return out
+
+
+def test_a_weighted_set_encodes_by_its_weights() -> None:
+    plain = kernel.encode(["a", "b"], seed=1, dim=1024)
+    assert np.array_equal(kernel.encode([["a", 1.0], ["b", 1.0]], seed=1, dim=1024), plain)  # equal weights: a set
+    heavy = kernel.encode([["a", 1.0], ["b", 0.02]], seed=1, dim=1024)
+    assert kernel.sim(heavy, kernel.symbol("val:a", 1, 1024)) > 0.95 > kernel.sim(plain, kernel.symbol("val:a", 1, 1024))
+    assert np.array_equal(kernel.encode([["a", 0.0], ["b", 0.0]], seed=1, dim=1024), plain)  # all voiceless: a set
+    pairs = kernel.encode([["a", 2], ["b", 3]], seed=1, dim=1024)  # weights over 1: a set of pairs, as before
+    assert not np.array_equal(pairs, plain) and kernel.sim(pairs, kernel.encode([["a", 2]], seed=1, dim=1024)) > 0.3
+
+
+def test_words_are_learned_and_the_bag_carries_them() -> None:
+    spec = Spec.from_json(TSPEC).learned(tcases())
+    role = spec.layers[0].segments[0].roles[0]
+    table = dict(role.value_weights)
+    assert {w for w, v in table.items() if v == 1.0} <= {"stolen", "lost", "rate", "exchange"} and 1.0 in table.values()
+    assert all(0.35 <= table[w] <= 0.6 for w in ("my", "card", "please", "help"))
+    assert role.similarity_weight == 1.0  # a text role's own weight is not learned
+    situation = spec.situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})
+    assert situation["m"]["b"]["text"] == [["card", table["card"]], ["my", table["my"]], ["stolen", table["stolen"]]] and table["stolen"] > 0.8
+    assert spec.situation({"m": {"b": {"text": "zebra", "id": "x"}}})["m"]["b"]["text"] == [["zebra", 0.35]]
+    assert Spec.from_json(TSPEC).situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})["m"]["b"]["text"] == ["card", "my", "stolen"]
+    assert Spec.from_json(spec.to_json()).to_json() == spec.to_json()
+    assert spec.key(situation) == Spec.from_json(TSPEC).key(situation)
+
+
+def test_a_model_that_learns_words_rewrites_its_store_and_routes_better(tmp_path) -> None:
+    path = str(tmp_path / "t.sqlite")
+    model = Model(Spec.from_json(TSPEC), k=15, min_sim=0.05, path=path)
+    for data, outcome in tcases():
+        model.record(data, outcome)
+    probe = [({"m": {"b": {"text": "help my card the stolen", "id": "p1"}}}, "card_lost"), ({"m": {"b": {"text": "what about the exchange", "id": "p2"}}}, "fx")]
+    before = [model.query(d).top == o for d, o in probe]
+    learned = model.learn()
+    assert "value_weights" in learned["m.b.text"] and "similarity_weight" not in learned["m.b.text"]
+    assert all(isinstance(s["m"]["b"]["text"][0], list) for s in model.space._situations)  # rewritten with weights
+    assert all(model.query(d).top == o for d, o in probe) and sum(before) <= 2
+    model.space.close()
+    again = Model(Spec.from_json(TSPEC), k=15, min_sim=0.05, path=path)
+    assert dict(again.spec.layers[0].segments[0].roles[0].value_weights) == learned["m.b.text"]["value_weights"]
+    assert again.space.rewrite(again.spec.restate) == 0
+    again.space.close()
+    assert Spec.from_json(TSPEC).learned(tcases()).to_json() == Spec.from_json(TSPEC).with_weights(learned).to_json()
