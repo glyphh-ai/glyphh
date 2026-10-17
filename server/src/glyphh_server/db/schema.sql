@@ -459,7 +459,7 @@ CREATE TABLE IF NOT EXISTS unlocks (
     paid_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     refunded_at TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (session_id),
-    CONSTRAINT unlocks_mod CHECK (mod IN ('drips', 'games')),
+    CONSTRAINT unlocks_mod CHECK (mod IN ('glyphh-drip')),
     UNIQUE (payment_intent_id)
 );
 CREATE INDEX IF NOT EXISTS ix_unlocks_mod_install ON unlocks (mod, install);

@@ -9,12 +9,11 @@ Glyphh as it is built: the [product](#product), the [architecture](#architecture
 | Mod | What it is | Runs | Sold | State |
 |---|---|---|---|---|
 | `glyphh` | The account: sign in, the licence, and the account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan | Built |
-| `drips` | Visual effects with sound over Claude: confetti, fireworks, hearts, a matrix rain; your own recipes, played by name or by Claude | The person's Mac | Once, $8 per machine, no account | Built |
-| `games` | Games with sound over Claude: Missile Command, Chickn, Blocks, Rocks, Dash; your top score to beat | The person's Mac | Once, $8 per machine, no account | Built |
+| `glyphh-drip` | Glyphh Drip: games and drips (visual effects with sound) over Claude: five arcade games, twenty drips, and the ones you make with Claude; your top score to beat | The person's Mac | Once, $4.99 per machine, no account | Built |
 | Ada | Ada models in your runtime: a typed spec and a precedent store, deployed by commit, run with no network, called by Claude and by any app at the runtime's own address | **rrotor**, an isolated runtime: local on every plan; hosted on every plan | Add-on | Built: the runtime, the `ada` plugin (a skill, in `mods`), the SDKs `@glyphh-ai/ada` and `glyphh-ada` (`glyphh-ai/ada`, public) |
 
 - **Ada is an add-on.** A plan (Free, Pro, Team) includes no mod: it sets the account's limits and which add-ons it may have. Each add-on is a line on the org's one Stripe subscription.
-- **Drips and Games are bought once**, per machine, with no Glyphh account: a Stripe Payment Link, then a licence the server signs for that install, checked offline from then on (below, Bought once).
+- **Glyphh Drip is bought once**, per machine, with no Glyphh account: a Stripe Payment Link, then a licence the server signs for that install, checked offline from then on (below, Bought once).
 - **The platform is the one door.** Sign-in, the runtime and its keys, approvals, billing and the org are pages on the platform; the server renders nothing. In Claude, the `glyphh` mod and the Glyphh connector show the account too.
 - **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
 - **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts. **Functional first:** every screen works before design draws it.
@@ -28,7 +27,7 @@ flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh"]
-            Fun["drips, games"]
+            Fun["glyphh-drip"]
         end
         LocalRotor["rrotor, local<br/>models, parts"]
         Local[("~/.glyphh<br/>install, license")]
@@ -70,7 +69,7 @@ flowchart TB
 | **The platform** | The one web app: sign in, the runtime and its keys, approvals, billing, the org, the models record; every browser step of every flow | `glyphh-ai/platform` | Routes specified below; pages to build to the design |
 | **The server** | The API and the authorization server: accounts, orgs, installs, the signed licence, plans and add-ons on Stripe, the Glyphh connector (`/mcp`), provisioning, the runtime link and approvals. Renders nothing | `glyphh-ai/server` | Built |
 | **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
-| **The mods** | `glyphh` (the account), `drips` and `games` (bought once, on `shared/unlock/`), `ada` (the skill: build, deploy and call models on the runtime's connector; no hooks) | `glyphh-ai/mods` | Built |
+| **The mods** | `glyphh` (the account), `glyphh-drip` (bought once, on `shared/unlock/`), `ada` (the skill: build, deploy and call models on the runtime's connector; no hooks) | `glyphh-ai/mods` | Built |
 | **The SDKs** | `@glyphh-ai/ada` (npm) and `glyphh-ada` (PyPI): a runtime's API for an app, with a runtime key; one contract (the Result, the Answer, the error) with fixtures taken live | `glyphh-ai/ada` (public, MIT) | Built; publishing on a `sdk-v*` tag |
 | **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Built, local and hosted |
 | **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
@@ -100,7 +99,7 @@ The pages that are the platform's own, from the API with the session's token: Ho
 - **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). A mod can ship its own MCP server, skills and commands. Mods are behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while the API is early access.
 - **Installed from the Glyphh marketplace** at the user scope, so it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
 - **Source and releases are apart.** The source repos hold tests, the shared modules and the release scripts; a release build writes only each mod's shipped files and the marketplace file, with the live server address and licence key swapped in.
-- **A mod sold once** (`drips`, `games`) keeps its own licence and checks it at start; `/<mod> unlock` buys it. **A mod on the account** checks the plan's licence at start.
+- **A mod sold once** (`glyphh-drip`) keeps its own licence and checks it at start; `/drip unlock` buys it. **A mod on the account** checks the plan's licence at start.
 
 ### Two kinds of panel
 
@@ -311,7 +310,7 @@ Every mod is an add-on to the plan: a line on the org's one Stripe subscription,
 
 ### Bought once
 
-Drips and Games are sold once, per machine, with no Glyphh account. Each has a Stripe **Payment Link** (`PAYMENT_LINK` in the mod, set by the release build) whose metadata names the mod (`mod: drips`). `/<mod> unlock` opens it with the mod's own install id as `client_reference_id`, then asks `GET /v1/unlock/license?mod=<mod>&install=<id>` every few seconds.
+Glyphh Drip is sold once, per machine, with no Glyphh account. It has a Stripe **Payment Link** (`PAYMENT_LINK` in the mod, set by the release build) whose metadata names the mod (`mod: glyphh-drip`). `/drip unlock` opens it with the mod's own install id as `client_reference_id`, then asks `GET /v1/unlock/license?mod=<mod>&install=<id>` every few seconds.
 
 - **The webhook** records a `checkout.session.completed` in `payment` mode whose metadata names a mod sold once and whose `payment_status` is `paid`: one `unlocks` row per session (a replay changes nothing), with its payment intent. A `charge.refunded` marks the row of that payment intent refunded.
 - **The licence** is `base64url(payload) "." base64url(signature)`: the payload `{"v": 1, "mod", "install", "session", "issued"}` as compact JSON, the Ed25519 signature (the server's one key, `GET /v1/license/key`) over the first part's text. The mod checks it offline and keeps it; `/<mod> key <licence>` carries it to another machine. A refunded purchase is no longer handed out; a licence already on a machine keeps working, which an offline check cannot help.
@@ -375,7 +374,7 @@ The panels in Claude; the platform's pages are above. Each works before design d
 | The sign-in card, in the chat | `glyphh`'s MCP server | MCP App | Built |
 | The account: who, plan, each mod's limits, add-ons (add, remove), upgrade, billing, installs, grants | The Glyphh connector | MCP App | Built |
 | Not in your plan, with the add-on's offer and **Add it** | the mods on the account | Mod | Built |
-| Locked, with the price and **Unlock**; the Drips page and button; the games | `drips`, `games` | Mod | Built |
+| Locked, with the price and **Unlock**; the Drips and Games tabs | `glyphh-drip` | Mod | Built |
 
 ### Anthropic's terms
 
@@ -637,7 +636,7 @@ erDiagram
     }
     UNLOCKS {
         text session_id PK "Stripe's checkout session"
-        text mod "drips or games"
+        text mod "glyphh-drip"
         text install "the mod's own install id"
         text payment_intent_id UK
         timestamp paid_at
@@ -705,7 +704,7 @@ Every table and column is drawn, as the database has them; the tables from rroto
 
 ## Plans
 
-Every plan is a subscription, billed per seat, per month. A plan sets the account's limits and which add-ons it may have; it includes no mod. Drips and Games are outside the plans: $8 once, per machine, each. Installs, runtime hours and storage are per user.
+Every plan is a subscription, billed per seat, per month. A plan sets the account's limits and which add-ons it may have; it includes no mod. Glyphh Drip is outside the plans: $4.99 once, per machine. Installs, runtime hours and storage are per user.
 
 | | Free | Pro | Team |
 |---|---|---|---|

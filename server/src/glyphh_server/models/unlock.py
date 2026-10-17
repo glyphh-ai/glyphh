@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at
 
-UNLOCK_MODS: tuple[str, ...] = ("drips", "games")
+UNLOCK_MODS: tuple[str, ...] = ("glyphh-drip",)
 
 
 class Unlock(Base):

@@ -1,4 +1,4 @@
-"""A mod bought once, per machine, with no Glyphh account: Drips and Games. The mod opens the mod's Stripe Payment
+"""A mod bought once, per machine, with no Glyphh account: Glyphh Drip. The mod opens the mod's Stripe Payment
 Link with its own install id as `client_reference_id`; Stripe's `checkout.session.completed` (the link's metadata
 naming the mod) records the purchase; the mod then fetches its licence by mod and install, and checks it offline
 with the server's public key (`GET /v1/license/key`) from then on.

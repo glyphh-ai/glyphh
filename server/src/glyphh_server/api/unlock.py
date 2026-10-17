@@ -1,4 +1,4 @@
-"""A mod bought once, per machine (Drips, Games): its licence, by the mod's own install id, once Stripe has said the
+"""A mod bought once, per machine (Glyphh Drip): its licence, by the mod's own install id, once Stripe has said the
 Payment Link's checkout is paid. Open: the install id is the only key, and the licence is for that install alone."""
 
 from typing import Annotated
