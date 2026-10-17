@@ -1,0 +1,99 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from './client';
+import type {
+  Addon,
+  AddonPreview,
+  Install,
+  Invite,
+  Me,
+  Member,
+  Model,
+  NewInvite,
+  NewRuntimeKey,
+  Org,
+  Plan,
+  Provider,
+  Runtime,
+  RuntimeKey,
+} from './types';
+
+/** One key per server resource, so a write can refresh exactly what it changed. */
+export const keys = {
+  me: ['me'] as const,
+  installs: ['installs'] as const,
+  runtime: ['runtime'] as const,
+  runtimeKeys: ['runtime', 'keys'] as const,
+  models: ['models'] as const,
+  plans: ['plans'] as const,
+  addons: ['addons'] as const,
+  org: ['org'] as const,
+  members: ['org', 'members'] as const,
+  invites: ['org', 'invites'] as const,
+};
+
+// Reads
+
+export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<Me>('/me') });
+export const useInstalls = () => useQuery({ queryKey: keys.installs, queryFn: () => api.get<Install[]>('/installs') });
+export const useRuntime = () => useQuery({ queryKey: keys.runtime, queryFn: () => api.get<Runtime>('/runtime') });
+export const useRuntimeKeys = () => useQuery({ queryKey: keys.runtimeKeys, queryFn: () => api.get<RuntimeKey[]>('/runtime/keys') });
+export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
+export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
+export const useAddons = () => useQuery({ queryKey: keys.addons, queryFn: () => api.get<Addon[]>('/addons') });
+export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
+export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
+export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });
+
+// Writes
+
+function useWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>, refresh: ReadonlyArray<readonly string[]>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => Promise.all(refresh.map((queryKey) => client.invalidateQueries({ queryKey }))),
+  });
+}
+
+export const useStartRuntime = () => useWrite(() => api.post<Runtime>('/runtime/start'), [keys.runtime]);
+export const useStopRuntime = () => useWrite(() => api.post<Runtime>('/runtime/stop'), [keys.runtime]);
+
+export const useCreateRuntimeKey = () =>
+  useWrite(
+    (body: { name: string; expires_in_days: number | null }) =>
+      api.post<NewRuntimeKey>('/runtime/keys', body.expires_in_days === null ? { name: body.name } : body),
+    [keys.runtimeKeys],
+  );
+export const useRevokeRuntimeKey = () =>
+  useWrite((id: string) => api.delete<RuntimeKey>(`/runtime/keys/${id}`), [keys.runtimeKeys]);
+
+export const useDeleteRuntimeKey = () => useWrite((id: string) => api.delete(`/runtime/keys/${id}/record`), [keys.runtimeKeys]);
+
+export const useDeleteModel = () => useWrite((id: string) => api.delete(`/models/${id}`), [keys.models]);
+
+export const useRenameMe = () => useWrite((name: string) => api.patch<Me>('/me', { name }), [keys.me]);
+export const useLinkProvider = () =>
+  useWrite((provider: Provider) => api.post<{ url: string }>('/me/identities', { provider }), []);
+export const useUnlinkProvider = () =>
+  useWrite((provider: Provider) => api.delete(`/me/identities/${provider}`), [keys.me]);
+export const useSignOutInstall = () => useWrite((id: string) => api.delete(`/installs/${id}`), [keys.installs, keys.me]);
+
+export const useRenameOrg = () => useWrite((name: string) => api.patch<Org>('/org', { name }), [keys.org, keys.me]);
+export const useInvite = () => useWrite((email: string) => api.post<NewInvite>('/org/invites', { email }), [keys.invites, keys.org]);
+export const useCancelInvite = () => useWrite((id: string) => api.delete(`/org/invites/${id}`), [keys.invites, keys.org]);
+export const useRemoveMember = () => useWrite((id: string) => api.delete(`/org/members/${id}`), [keys.members, keys.org]);
+
+export const useCheckout = () =>
+  useWrite((body: { plan: string; seats: number; addons: string[] }) => api.post<{ url: string }>('/billing/checkout', body), []);
+export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);
+export const useChangePlan = () => useWrite((plan: string) => api.post<Org>('/billing/plan', { plan }), [keys.org, keys.me, keys.addons]);
+export const useChangeSeats = () => useWrite((seats: number) => api.post<Org>('/billing/seats', { seats }), [keys.org, keys.me, keys.addons]);
+export const usePreviewAddon = () =>
+  useWrite((body: { mod: string; action: 'add' | 'remove' }) => api.post<AddonPreview>('/billing/addons/preview', body), []);
+export const useAddAddon = () =>
+  useWrite((body: { mod: string; proration_date: number }) => api.post<Addon[]>('/billing/addons', body), [keys.addons, keys.me]);
+export const useRemoveAddon = () =>
+  useWrite(
+    ({ mod, proration_date }: { mod: string; proration_date: number }) =>
+      api.delete<Addon[]>(`/billing/addons/${mod}?proration_date=${proration_date}`),
+    [keys.addons, keys.me],
+  );

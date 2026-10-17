@@ -1,0 +1,50 @@
+# The platform's checks on every push and pull request: types, the tests and the production image. A merge to main
+# then deploys that commit to Fly (glyphh-ai-app, app.glyphh.ai) with the FLY_API_TOKEN secret: the only way the
+# platform reaches production.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: The production image builds
+        run: docker build -t platform:ci .
+
+  deploy:
+    runs-on: ubuntu-24.04
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - name: Deploy to glyphh-ai-app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --wait-timeout 300
+      - name: The platform answers
+        run: curl -sf -o /dev/null https://app.glyphh.ai/

@@ -11,8 +11,8 @@ Three parts, kept simple:
 | **Server** | `glyphh-ai/server` | The API and the authorization server: accounts, plans, Stripe, licences, provisioning, the record. Renders nothing |
 | **Runtimes** | `glyphh-ai/rrotor` | One rrotor per person, reached directly at `https://<machine>.glyphh.app` (REST and MCP); nothing of Glyphh's on the data path |
 
-This repository is empty on purpose: the UI is built to Chris's design, by the build agent, on the stack it picks.
-The contract it builds to is the server's `docs/architecture.md` (the API table and the section **The platform**);
+The UI is built to Chris's design (the Glyphh Style canvas: ngrok's style, Glyphh's palette, light and dark in the
+platform, dark only on the sign-in pages). The contract it builds to is the server's `docs/architecture.md` (the API table and the section **The platform**);
 what is not built yet is the server's `docs/roadmap.md`.
 
 ## How a person gets in
@@ -72,6 +72,37 @@ browser.
 | `PLATFORM_URL` | This app's own address; the server's `GLYPHH_PLATFORM_URL` must be the same |
 | `PLATFORM_CLIENT_ID`, `PLATFORM_CLIENT_SECRET` | The platform's OAuth client at the server |
 | `SESSION_SECRET` | 32+ random bytes, base64: seals the session cookie |
+
+## Develop
+
+Node 22 or later.
+
+```bash
+npm install
+cp .env.example .env        # then fill it in, or use the fake server's values below
+npm run fake-server         # a stand-in Glyphh server on FAKE_SERVER_PORT (8090), with sample data
+npm run dev                 # the platform on PLATFORM_URL, with hot reload
+npm test                    # the route handlers, the API calls and every page, against fake servers
+npm run typecheck
+npm run build && npm start  # production: dist/client is served by the route handlers' server
+```
+
+With the fake server, `.env` is `GLYPHH_SERVER_URL=http://localhost:8090`, `PLATFORM_URL=http://localhost:3100`,
+any client id and secret, and `SESSION_SECRET` from `openssl rand -base64 32`. Logging in then runs the whole OAuth
+round trip and lands on Home.
+
+## How the code is laid out
+
+| Path | What |
+|---|---|
+| `server/` | The route handlers (Hono on Node): `/auth/login`, `/auth/callback`, `/auth/logout`, `/auth/session`, `/auth/providers` and `/api/v1/*`, which calls the server with the session's token, refreshing it when it runs out. `seal.ts` seals the cookie (AES-256-GCM); `oauth.ts` is the token endpoint |
+| `src/styles/` | `tokens.css`: every colour, size and font, one set per theme (`dark`, `light`, `dark-hc`, `light-hc`) on `[data-theme]`; `base.css`: document defaults and the thin scroll bar |
+| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
+| `src/layout/` | The app shell (sidebar, breadcrumb bar, phone drawer), the account menu with its themes, page headers, settings sections, and the sign-in card |
+| `src/api/` | The server's types, the client for `/api/v1`, and one TanStack Query hook per read and write |
+| `src/pages/` | One folder per page; Billing's parts live in `pages/settings/billing/` |
+| `src/routes/` | The route table, with each page's breadcrumb |
+| `dev/fake-server.ts` | A stand-in Glyphh server for working locally |
 
 ## Standards
 

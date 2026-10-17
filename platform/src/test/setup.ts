@@ -1,0 +1,23 @@
+import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
+import { server } from './server';
+
+// Requests the fake server doesn't know fail the test, so no page quietly calls something unexpected.
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+  localStorage.clear();
+  sessionStorage.clear();
+});
+afterAll(() => server.close());
+
+// jsdom has no matchMedia or modal dialog; user-event brings its own clipboard.
+window.matchMedia ??= ((query: string) =>
+  ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList) as typeof window.matchMedia;
+HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+  this.open = true;
+};
+HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+  this.open = false;
+};
