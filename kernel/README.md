@@ -438,13 +438,21 @@ model.probabilities(data)                # {outcome: P}, calibrated
 model.decide(data)                       # {outcome, expected_cost, probabilities}: least expected cost
 ```
 
+A model can learn from its own store instead: `model.learn()` fits the same
+weights from the graded precedents it holds and keeps them with the store
+(over the spec file's, until the next learn); `model.refresh()` is learn then
+calibrate, and `Model(..., refresh_every=100)` does it on its own every so
+many graded records, so the model follows its cases as they arrive.
+
 `learned` sets every role's `similarity_weight` to its information gain
 about the outcome (scaled so the best weighs 1) and, per role, a
 `value_weights` table: how far each value moves the outcome from the base
 rate. Key parts and text roles are left alone. `output.costs`
 (`{decided: {true: cost}}`, default 0 for the same outcome and 1 for a
 different one) is the matrix `decide` minimises over the calibrated
-probabilities. Weighted queries score every precedent exactly as the fact
+probabilities. `output.ask` prices asking a person: set, `decide` answers
+`ask: true` whenever every outcome's expected cost is above it (the band
+where either answer is costly), with the best guess still named. Weighted queries score every precedent exactly as the fact
 tree does, in one pass over per-leaf glyph tables (`test_learned.py`
 proves the two equal).
 

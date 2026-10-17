@@ -92,7 +92,7 @@ def test_costs_are_parsed_and_decide_picks_the_least_expected_cost() -> None:
     assert car["probabilities"]["bad"] > 0.9 and home["probabilities"]["good"] > 0.9
     assert car["expected_cost"] < 0.5
     empty = Model(spec, k=5, min_sim=0.1)
-    assert empty.decide(case(1, "car", 500)) == {"outcome": None, "expected_cost": None, "probabilities": {}}
+    assert empty.decide(case(1, "car", 500)) == {"outcome": None, "expected_cost": None, "probabilities": {}, "ask": True}
     with pytest.raises(SpecError, match="costs"):
         Spec.from_json({**SPEC, "output": {"costs": {"good": 5}}})
 
@@ -134,3 +134,68 @@ def test_the_fast_weighted_score_is_the_fact_trees_score() -> None:
         checked += 1
     answer = space.query(q, weights=w)
     assert answer.count >= 0 and len(answer.receipts) <= 10
+
+
+def test_ask_is_priced_and_decide_asks_where_every_answer_is_costly() -> None:
+    obj = {**SPEC, "output": {"costs": {"good": {"bad": 5}, "bad": {"good": 1}}, "ask": 0.5}}
+    spec = Spec.from_json(obj)
+    assert spec.output.ask == 0.5 and spec.to_json()["output"]["ask"] == 0.5
+    assert "ask" not in Spec.from_json(SPEC).to_json()["output"]
+    with pytest.raises(SpecError, match="output.ask"):
+        Spec.from_json({**SPEC, "output": {"ask": "cheap"}})
+    rng = random.Random(2)
+    model = Model(spec, k=15, min_sim=0.1)
+    for i in range(120):  # cars: a coin toss; homes: always good
+        purpose = rng.choice(["car", "home"])
+        model.record(case(i, purpose, 2500), rng.choice(["good", "bad"]) if purpose == "car" else "good")
+    model.calibrate(sample=100)
+    car, home = model.decide(case(900, "car", 2500)), model.decide(case(901, "home", 2500))
+    assert car["ask"] is True and car["outcome"] in ("good", "bad") and car["expected_cost"] > 0.5
+    assert home["ask"] is False and home["outcome"] == "good"
+    assert Model(Spec.from_json(SPEC), k=5, min_sim=0.1).decide(case(1, "car", 500))["ask"] is True  # nothing known
+
+
+def test_a_model_learns_from_its_own_store_and_keeps_it_with_the_store(tmp_path) -> None:
+    path = str(tmp_path / "p.sqlite")
+    spec = Spec.from_json(SPEC)
+    model = Model(spec, k=15, min_sim=0.1, path=path)
+    with pytest.raises(SpecError, match="at least 10"):
+        model.learn()
+    for data, outcome in cases()[:60]:
+        model.record(data, outcome)
+    learned = model.learn()
+    assert learned["loan.ask.purpose"]["similarity_weight"] == 1.0 and learned["loan.ask.amount"]["similarity_weight"] < 0.1
+    assert "loan.ask.id" not in learned and "loan.ask.notes" not in learned
+    assert model.spec.to_json() == spec.learned(cases()[:60]).to_json()  # the same as learning the cases by hand
+    assert model.given is spec
+    model.space.close()
+    again = Model(spec, k=15, min_sim=0.1, path=path)  # reopened: the learned weights come back from the store
+    assert again.spec.to_json() == model.spec.to_json() and again.space.meta("learned") == learned
+    assert again.decide(case(900, "car", 2500))["outcome"] == "bad"
+    again.space.close()
+    fresh = Model(spec, k=15, min_sim=0.1)
+    assert fresh.space.meta("learned") is None
+    fresh.space.set_meta("learned", learned)
+    assert fresh.space.meta("learned") == learned
+
+
+def test_refresh_every_follows_the_store_as_cases_arrive() -> None:
+    model = Model(Spec.from_json(SPEC), k=15, min_sim=0.1, refresh_every=50)
+    for data, outcome in cases()[:49]:
+        model.record(data, outcome)
+    assert model.spec is model.given  # not yet
+    model.record(*cases()[49])
+    assert model.spec is not model.given and model.space.meta("learned")["loan.ask.purpose"]["similarity_weight"] == 1.0
+    tau_50 = model.space.tau
+    for data, outcome in cases()[50:100]:
+        model.record(data, outcome)
+    assert model.space.meta("learned") == model.given.learn(model.space.graded())
+    assert model.space.tau in kernel.TAUS and tau_50 in kernel.TAUS
+    same = Model(Spec.from_json(SPEC), k=15, min_sim=0.1, refresh_every=10)
+    for i in range(20):
+        same.record(case(i, "car", 500), "bad")  # one outcome so far: nothing to learn, nothing refused
+    assert same.space.meta("learned") is None and len(same.space) == 20
+    model.record(case(500, "car", 500), None)  # an ungraded case counts for nothing
+    out = model.refresh(sample=30)
+    assert set(out) == {"learned", "tau"} and out["tau"] == model.space.tau
+    assert len(model.space.graded()) == 100
