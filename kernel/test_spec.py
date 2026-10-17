@@ -61,7 +61,7 @@ def test_data_takes_the_spec_shape_exactly():
     spec = Spec.from_json(TICKETS)
     s = spec.situation(ticket("K-1", "Pods crash on boot, pods!", "kubelet", 7))
     body = s["issue"]["body"]
-    assert body["title"] == ["boot", "crash", "on", "pods"]
+    assert body["title"] == [["boot", 1.0], ["crash", 1.0], ["on", 1.0], ["pods", 1.0]]  # a bag: a weighted set, read through the lexicon
     assert body["component"] == "kubelet", "a lexicon name lands on its role"
     assert body["severity"] == ["0", "1", "2", "3", "4", "5", "6", "7"]
     with pytest.raises(SpecError, match="issue.body.colour: no such role"):

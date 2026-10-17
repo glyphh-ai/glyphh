@@ -452,7 +452,7 @@ rate. Key parts and text roles are left alone. `output.costs`
 different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
 `word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
-`calibrate_by`, `calibrate_sample`, `refresh_every`), each checked by name
+`calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`), each checked by name
 and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
 kept with the store over the spec's; a learning lever moved relearns there
 and then. `model.settings.to_json(all=True)` reads them. The settings are not
@@ -471,6 +471,16 @@ weighted set, `[[word, weight], ...]`, which the kernel bundles by weight, so
 "stolen" outvotes "my" in every comparison, glyph, fact tree and fast path
 alike; a model that learns new word weights rewrites its store. A list of
 `[scalar, weight]` pairs with weights in 0..1 is a weighted set anywhere.
+
+Every text role reads through the **lexicon** the kernel ships (`glyphh_lexicon.py`,
+`lexicon/`): WordNet 3.0's 77,817 words with their synonyms, near words and
+parts of speech, and the Moby list's 192,960 word forms with their classes.
+A word's glyph is its own symbol tilted toward its neighbourhood (itself at
+1, its synonyms sharing 0.9, its near words 0.6, its classes 0.3), so
+"arrive" and "come" correlate and a word no seed knows is its symbol alone.
+The `lexicon` setting turns it off. `word_pairs` (off by default) makes
+`learn` also keep pairs of common words that tell more together than apart
+("top" + "up"), at most `max_word_pairs`, carried in the bag as "a+b".
 
 `learn` also finds **interactions**: pairs of roles that tell more about the
 outcome together than the better of them alone (a bad checking account with a

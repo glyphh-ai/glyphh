@@ -4,6 +4,7 @@ the calibrated decision, and the fast weighted score equal to the fact tree's.""
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -373,13 +374,60 @@ def tcases(n: int = 200) -> list[tuple[dict, str]]:
 
 
 def test_a_weighted_set_encodes_by_its_weights() -> None:
-    plain = kernel.encode(["a", "b"], seed=1, dim=1024)
-    assert np.array_equal(kernel.encode([["a", 1.0], ["b", 1.0]], seed=1, dim=1024), plain)  # equal weights: a set
-    heavy = kernel.encode([["a", 1.0], ["b", 0.02]], seed=1, dim=1024)
-    assert kernel.sim(heavy, kernel.symbol("val:a", 1, 1024)) > 0.95 > kernel.sim(plain, kernel.symbol("val:a", 1, 1024))
-    assert np.array_equal(kernel.encode([["a", 0.0], ["b", 0.0]], seed=1, dim=1024), plain)  # all voiceless: a set
-    pairs = kernel.encode([["a", 2], ["b", 3]], seed=1, dim=1024)  # weights over 1: a set of pairs, as before
-    assert not np.array_equal(pairs, plain) and kernel.sim(pairs, kernel.encode([["a", 2]], seed=1, dim=1024)) > 0.3
+    a, b = "zqxa", "zqxb"  # words no seed knows: their symbols alone
+    plain = kernel.encode([a, b], seed=1, dim=1024)
+    assert np.array_equal(kernel.encode([[a, 1.0], [b, 1.0]], seed=1, dim=1024), plain)  # equal weights: a set
+    heavy = kernel.encode([[a, 1.0], [b, 0.02]], seed=1, dim=1024)
+    assert kernel.sim(heavy, kernel.symbol(f"val:{a}", 1, 1024)) > 0.95 > kernel.sim(plain, kernel.symbol(f"val:{a}", 1, 1024))
+    assert np.array_equal(kernel.encode([[a, 0.0], [b, 0.0]], seed=1, dim=1024), plain)  # all voiceless: a set
+    pairs = kernel.encode([[a, 2], [b, 3]], seed=1, dim=1024)  # weights over 1: a set of pairs, as before
+    assert not np.array_equal(pairs, plain) and kernel.sim(pairs, kernel.encode([[a, 2]], seed=1, dim=1024)) > 0.3
+
+
+def test_the_lexicon_reads_a_word_through_its_seeds() -> None:
+    from glyphh_lexicon import LEXICON, Lexicon
+
+    assert LEXICON.available and LEXICON.size() == (77817, 192960)
+    synonyms, near, classes = LEXICON.entry("arrive")
+    assert "come" in synonyms and "arrival" in near and any("verb" in c for c in classes)
+    assert LEXICON.entry("zqxa") is None and LEXICON.entry("the")[2]  # a form the grammar alone knows
+    arrive, come, zebra = (kernel.encode([[w, 1.0]], seed=1, dim=4096) for w in ("arrive", "come", "zebra"))
+    assert kernel.sim(arrive, come) > 0.15 > abs(kernel.sim(arrive, zebra))  # related words correlate
+    assert kernel.sim(arrive, kernel.symbol("val:arrive", 1, 4096)) > 0.4  # and a word is still mostly itself
+    LEXICON.enabled = False
+    try:
+        assert np.array_equal(kernel.encode([["arrive", 1.0]], seed=1, dim=4096), kernel.symbol("val:arrive", 1, 4096))
+    finally:
+        LEXICON.enabled = True
+    bare = Lexicon(folder=Path("/nonexistent"))
+    assert not bare.available and np.array_equal(bare.glyph("arrive", 1, 4096), kernel.symbol("val:arrive", 1, 4096))
+    assert set(LEXICON.view()) == {"enabled", "available", "folder"}
+    LEXICON.forget()
+    assert LEXICON._glyphs == {}
+
+
+def test_word_pairs_are_learned_and_ride_in_the_bag() -> None:
+    rng = random.Random(9)
+    filler = ["my", "card", "please", "help", "i", "the", "what", "about"]
+    cases = []
+    for i in range(300):  # "top" and "up" together say topup; apart they say nothing
+        top, up = rng.random() < 0.5, rng.random() < 0.5
+        label = "topup" if (top and up) else rng.choice(["fx", "card_lost"])
+        words = rng.sample(filler, 3) + (["top"] if top else []) + (["up"] if up else [])
+        cases.append(({"m": {"b": {"text": " ".join(words), "id": f"p{i}"}}}, label))
+    spec = Spec.from_json({**TSPEC, "settings": {"word_pairs": True}}).learned(cases)
+    table = dict(spec.layers[0].segments[0].roles[0].value_weights)
+    assert "top+up" in table and table["top+up"] >= max(table["top"], table["up"])
+    assert table["top+up"] == max(v for k, v in table.items() if "+" in k)  # the pair that tells most
+    bag = spec.situation({"m": {"b": {"text": "top up my card", "id": "q"}}})["m"]["b"]["text"]
+    assert ["top+up", table["top+up"]] in bag and ["top", table["top"]] in bag and ["up", table["up"]] in bag
+    assert not any(x[0] == "top+up" for x in spec.situation({"m": {"b": {"text": "top my card", "id": "q"}}})["m"]["b"]["text"])
+    off = Spec.from_json(TSPEC).learned(cases)  # off by default
+    assert not any("+" in k for k, _ in off.layers[0].segments[0].roles[0].value_weights)
+    model = Model(spec, k=15, min_sim=0.05)
+    for data, outcome in cases:
+        model.record(data, outcome)
+    assert model.query({"m": {"b": {"text": "please top up", "id": "z"}}}).top == "topup"
 
 
 def test_words_are_learned_and_the_bag_carries_them() -> None:
@@ -392,7 +440,10 @@ def test_words_are_learned_and_the_bag_carries_them() -> None:
     situation = spec.situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})
     assert situation["m"]["b"]["text"] == [["card", table["card"]], ["my", table["my"]], ["stolen", table["stolen"]]] and table["stolen"] > 0.8
     assert spec.situation({"m": {"b": {"text": "zebra", "id": "x"}}})["m"]["b"]["text"] == [["zebra", 0.35]]
-    assert Spec.from_json(TSPEC).situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})["m"]["b"]["text"] == ["card", "my", "stolen"]
+    unlearned = Spec.from_json(TSPEC).situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})["m"]["b"]["text"]
+    assert unlearned == [["card", 1.0], ["my", 1.0], ["stolen", 1.0]]  # a weighted set: read through the lexicon
+    plain = Spec.from_json({**TSPEC, "settings": {"lexicon": False}})
+    assert plain.situation({"m": {"b": {"text": "my stolen card", "id": "x"}}})["m"]["b"]["text"] == ["card", "my", "stolen"]
     assert Spec.from_json(spec.to_json()).to_json() == spec.to_json()
     assert spec.key(situation) == Spec.from_json(TSPEC).key(situation)
 
@@ -468,4 +519,4 @@ def test_a_model_takes_its_levers_from_the_spec_then_the_store_then_the_call_and
     plain = Model(Spec.from_json({**TSPEC, "settings": {"word_weights": False}}))
     for data, outcome in tcases(60):
         plain.record(data, outcome)
-    assert "m.b.text" not in plain.learn() and isinstance(plain.space._situations[0]["m"]["b"]["text"][0], str)
+    assert "m.b.text" not in plain.learn() and plain.space._situations[0]["m"]["b"]["text"][0][1] == 1.0  # unweighted words
