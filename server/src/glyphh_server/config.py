@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +54,15 @@ class Settings(BaseSettings):
     fly_volume_gb: int = 3
     # A hosted runtime with no run for this long is stopped; a call starts it again.
     runtime_idle_minutes: int = 10
+
+    @field_validator("database_url")
+    @classmethod
+    def _asyncpg(cls, url: str) -> str:
+        """A plain Postgres URL, as Fly's Postgres writes it (`postgres://…?sslmode=…`), made the asyncpg driver's."""
+        for plain in ("postgres://", "postgresql://"):
+            if url.startswith(plain):
+                url = "postgresql+asyncpg://" + url.removeprefix(plain)
+        return url.replace("?sslmode=", "?ssl=").replace("&sslmode=", "&ssl=")
 
     @property
     def base_url(self) -> str:
