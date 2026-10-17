@@ -482,6 +482,15 @@ The `lexicon` setting turns it off. `word_pairs` (off by default) makes
 `learn` also keep pairs of common words that tell more together than apart
 ("top" + "up"), at most `max_word_pairs`, carried in the bag as "a+b".
 
+`learn` also keeps **evidence**: what each word says of each outcome (the
+counts), held with the store, not in the spec. At query time a text's words
+weigh on the vote by `word_evidence` (2 by default): each voter's weight is
+scaled by exp(word_evidence × the mean pointwise mutual information of the
+query's words with the voter's outcome), in `query`, `probabilities`,
+`decide` and the calibration alike; the similarity bar, support and receipts
+stay unbiased. This is the weight per word per outcome a classic text model
+has and a similarity lacks.
+
 `learn` also finds **interactions**: pairs of roles that tell more about the
 outcome together than the better of them alone (a bad checking account with a
 long loan). They go in the spec as `interactions: [{name, roles: [a, b],

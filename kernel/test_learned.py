@@ -520,3 +520,43 @@ def test_a_model_takes_its_levers_from_the_spec_then_the_store_then_the_call_and
     for data, outcome in tcases(60):
         plain.record(data, outcome)
     assert "m.b.text" not in plain.learn() and plain.space._situations[0]["m"]["b"]["text"][0][1] == 1.0  # unweighted words
+
+
+def test_word_evidence_weighs_the_vote_by_what_the_words_say_of_each_outcome() -> None:
+    rng = random.Random(12)
+    filler = ["my", "card", "please", "help", "i", "the", "what", "about", "can", "you", "now", "today"]
+    cases = []
+    for i in range(400):  # "stolen" says card_lost nine times in ten; the rest of the words say nothing
+        label = rng.choice(["card_lost", "fx", "topup"])
+        words = rng.sample(filler, 5)
+        if label == "card_lost" and rng.random() < 0.9:
+            words.append("stolen")
+        elif rng.random() < 0.05:
+            words.append("stolen")
+        cases.append(({"m": {"b": {"text": " ".join(words), "id": f"e{i}"}}}, label))
+    spec = Spec.from_json({**TSPEC, "settings": {"word_weights": False, "lexicon": False, "word_evidence": 0.0}})
+    model = Model(spec, k=15, min_sim=0.0)
+    for data, outcome in cases:
+        model.record(data, outcome)
+    learned = model.learn()
+    table = learned["~evidence"]["m.b.text"]
+    assert table["total"] == 400 and set(table["outcomes"]) == {"card_lost", "fx", "topup"} and "stolen" in table["words"]
+    assert model.bias({"m": {"b": {"text": [["stolen", 1.0]]}}}) is None  # the lever is 0: no bias
+    probe = {"m": {"b": {"text": "stolen", "id": "q"}}}  # one word, close to nothing in particular
+    off = model.query(probe)
+    model.configure(word_evidence=2.0)
+    bias = model.bias(model.spec.situation(probe))
+    assert bias is not None and bias("card_lost") > 1.0 > bias("fx") and bias("never_seen") == 1.0
+    on = model.query(probe)
+    assert on.top == "card_lost" and on.outcomes["card_lost"] > off.outcomes["card_lost"]
+    assert on.support == off.support and on.count == off.count  # the bar and the receipts are unbiased
+    p_on = model.probabilities(probe)
+    model.configure(word_evidence=0.0)
+    assert p_on["card_lost"] > model.probabilities(probe)["card_lost"]
+    model.configure(word_evidence=2.0)
+    assert model.calibrate(sample=100) in kernel.TAUS  # calibrated with the bias in
+    assert model.bias({"m": {"b": {"text": [["zzz", 1.0]]}}}) is None  # no known word: no bias
+    with pytest.raises(SpecError, match="from 0.0 to 5.0"):
+        model.configure(word_evidence=9)
+    space = kernel.Space(dim=1024, k=5, min_sim=0.1, seed=2)
+    assert space._probabilities(np.array([]), 0.1, bias=lambda o: 1.0) == {}
