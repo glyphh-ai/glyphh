@@ -8,6 +8,13 @@ const paths = {
       <rect x="3" y="13" width="18" height="7" rx="2" />
     </>
   ),
+  chip: (
+    <>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+      <path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5" />
+    </>
+  ),
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   key: (
     <>

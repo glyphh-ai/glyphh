@@ -11,7 +11,7 @@ import styles from './GettingStarted.module.css';
 type Where = 'hosted' | Deployment;
 
 const choices: ReadonlyArray<{ value: Where; title: string; text: string }> = [
-  { value: 'hosted', title: 'Glyphh hosted', text: 'Glyphh runs it for you. Start it and connect.' },
+  { value: 'hosted', title: 'Glyphh hosted', text: 'Glyphh runs it for you. Make a machine and connect.' },
   { value: 'compose', title: 'Docker Compose', text: 'One VM or your own machine.' },
   { value: 'helm', title: 'Helm', text: 'Your Kubernetes cluster: EKS, GKE or AKS.' },
   { value: 'terraform', title: 'Terraform', text: 'One VM on AWS or GCP.' },

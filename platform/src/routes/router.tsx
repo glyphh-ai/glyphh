@@ -3,6 +3,7 @@ import { RequireSession } from '@/components/RequireSession';
 import { GettingStartedPage } from '@/pages/getting-started/GettingStartedPage';
 import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
+import { MachinesPage } from '@/pages/machines/MachinesPage';
 import { ModelsPage } from '@/pages/models/ModelsPage';
 import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
@@ -39,6 +40,7 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { path: 'getting-started', element: <GettingStartedPage />, handle: { crumbs: [{ label: 'Getting started' }] } },
+      { path: 'machines', element: <MachinesPage />, handle: { crumbs: [{ label: 'Machines' }] } },
       { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Home' }] } },
       { path: 'keys', element: <KeysPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }] } },
       { path: 'models', element: <ModelsPage />, handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] } },

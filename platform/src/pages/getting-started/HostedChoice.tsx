@@ -1,44 +1,80 @@
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { useRuntime, useStartRuntime } from '@/api/queries';
+import { useCreateMachine, useMachines, useStartMachine } from '@/api/queries';
+import type { MachineSize } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { CreateMachineError, MachineFields } from '@/pages/machines/MachineFields';
+import { connectorUrl } from '@/pages/machines/sizes';
 import { Button, CopyField, LoadingCard } from '@/ui';
 import styles from './GettingStarted.module.css';
 
-/** Glyphh runs it: the same Start as Home, then the connector URL once it has an address. */
+/** Glyphh runs it: make a first machine (a name and a size), or start the first one; then the connector URL. */
 export function HostedChoice() {
-  const runtime = useRuntime();
-  const start = useStartRuntime();
-  const data = runtime.data;
+  const machines = useMachines();
 
-  if (runtime.isPending) return <LoadingCard lines={2} />;
-  if (runtime.error) return <ApiErrorNotice error={runtime.error} />;
+  if (machines.isPending) return <LoadingCard lines={2} />;
+  if (machines.error) return <ApiErrorNotice error={machines.error} />;
 
-  const running = data?.state === 'online' || data?.state === 'offline';
+  const first = machines.data[0];
+  if (!first) return <FirstMachine />;
+
+  const connector = connectorUrl(first);
   return (
     <div className={styles.part}>
-      {!running && (
-        <div className={styles.actions}>
-          <Button variant="primary" onClick={() => start.mutate()} loading={start.isPending} disabled={data?.paused}>
-            {data?.state === 'none' ? 'Start your runtime' : 'Start'}
-          </Button>
-        </div>
+      {first.state === 'stopped' && <StartMachine id={first.id} paused={first.paused} />}
+      {connector && (
+        <>
+          <h3 className={styles.subTitle}>Connect Claude to {first.name}</h3>
+          <CopyField value={connector} label="connector URL" />
+        </>
       )}
-      {data?.paused && (
+      <span className={styles.meta}>
+        {connector && 'Add it in Claude as a custom connector. You’ll be asked to allow it once. '}
+        <Link to="/machines">Machines</Link> shows each of yours, and makes more.
+      </span>
+    </div>
+  );
+}
+
+function FirstMachine() {
+  const create = useCreateMachine();
+  const [name, setName] = useState('Main');
+  const [size, setSize] = useState<MachineSize>('small');
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    create.mutate({ name: name.trim(), size });
+  };
+
+  return (
+    <form className={styles.form} onSubmit={submit} aria-label="Make your machine">
+      <MachineFields name={name} size={size} onName={setName} onSize={setSize} />
+      <span className={styles.meta}>It starts once it is made, at an address of its own.</span>
+      <div className={styles.actions}>
+        <Button variant="primary" type="submit" loading={create.isPending} disabled={!name.trim()}>
+          Make your machine
+        </Button>
+      </div>
+      <CreateMachineError error={create.error} />
+    </form>
+  );
+}
+
+function StartMachine({ id, paused }: { id: string; paused: boolean }) {
+  const start = useStartMachine();
+  return (
+    <>
+      <div className={styles.actions}>
+        <Button variant="primary" onClick={() => start.mutate(id)} loading={start.isPending} disabled={paused}>
+          Start
+        </Button>
+      </div>
+      {paused && (
         <span className={styles.meta}>
           Paused: this month’s hours are used up. See <Link to="/settings/billing">Billing</Link>.
         </span>
       )}
-      {data?.state === 'none' && <span className={styles.meta}>Starting it the first time makes it, at an address of its own.</span>}
       <ApiErrorNotice error={start.error} />
-      {data?.address && (
-        <>
-          <h3 className={styles.subTitle}>Connect Claude</h3>
-          <CopyField value={`${data.address}/mcp`} label="connector URL" />
-          <span className={styles.meta}>
-            Add it in Claude as a custom connector. You’ll be asked to allow it once. <Link to="/">Home</Link> shows the runtime.
-          </span>
-        </>
-      )}
-    </div>
+    </>
   );
 }

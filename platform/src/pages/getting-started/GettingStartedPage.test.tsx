@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react';
-import { runtime, selfRuntimes } from '@/test/fixtures';
+import type { Machine } from '@/api/types';
+import { machines, runtime, selfRuntimes } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
@@ -65,25 +66,53 @@ describe('Getting started', () => {
   });
 
   describe('Glyphh hosted', () => {
-    it('starts the runtime as Home does, then gives the connector URL', async () => {
-      let started = false;
+    it('makes a first machine with a name and a size, then gives its connector URL', async () => {
+      let rows: Machine[] = [];
+      let sent: unknown;
       server.use(
-        http.get(v1('/runtime'), () => HttpResponse.json(started ? runtime : noRuntime)),
-        http.post(v1('/runtime/start'), () => {
-          started = true;
-          return HttpResponse.json(runtime);
+        http.get(v1('/runtimes'), () => HttpResponse.json(rows)),
+        http.post(v1('/runtimes'), async ({ request }) => {
+          sent = await request.json();
+          rows = [{ ...machines[0]!, name: 'Work', size: 'medium' }];
+          return HttpResponse.json(rows[0], { status: 201 });
         }),
       );
       const { user } = renderApp('/getting-started');
       expect(await screen.findByRole('radio', { name: /^Glyphh hosted/ })).toBeChecked();
-      await user.click(await screen.findByRole('button', { name: 'Start your runtime' }));
+      const form = await screen.findByRole('form', { name: 'Make your machine' });
+      expect(within(form).getByLabelText('Name')).toHaveValue('Main');
+      expect(within(form).getByRole('radio', { name: /^Small/ })).toBeChecked();
+      await user.clear(within(form).getByLabelText('Name'));
+      await user.type(within(form).getByLabelText('Name'), 'Work');
+      await user.click(within(form).getByRole('radio', { name: /^Medium/ }));
+      await user.click(within(form).getByRole('button', { name: 'Make your machine' }));
       expect(await screen.findByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
-      expect(started).toBe(true);
+      expect(sent).toEqual({ name: 'Work', size: 'medium' });
+      expect(screen.getByRole('heading', { name: 'Connect Claude to Work' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Start/ })).not.toBeInTheDocument();
+      expect(within(screen.getByRole('main')).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
     });
 
-    it('starts a stopped runtime, and cannot while the month’s hours are used up', async () => {
-      server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'stopped', paused: true })));
+    it('starts the first machine when it is stopped', async () => {
+      let rows: Machine[] = [{ ...machines[1]! }];
+      let started = '';
+      server.use(
+        http.get(v1('/runtimes'), () => HttpResponse.json(rows)),
+        http.post(v1('/runtimes/:id/start'), ({ params }) => {
+          started = String(params.id);
+          rows = [{ ...rows[0]!, state: 'online' }];
+          return HttpResponse.json(rows[0]);
+        }),
+      );
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('button', { name: 'Start' }));
+      await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument());
+      expect(started).toBe('rt-2b8e41');
+      expect(screen.getByText('https://chris-2b8e.glyphh.app/mcp')).toBeInTheDocument();
+    });
+
+    it('cannot start while the month’s hours are used up', async () => {
+      server.use(http.get(v1('/runtimes'), () => HttpResponse.json([{ ...machines[1]!, paused: true }])));
       renderApp('/getting-started');
       expect(await screen.findByRole('button', { name: 'Start' })).toBeDisabled();
       expect(screen.getByText(/this month’s hours are used up/)).toBeInTheDocument();
@@ -91,18 +120,30 @@ describe('Getting started', () => {
 
     it('shows the server’s refusal when starting fails', async () => {
       server.use(
-        http.get(v1('/runtime'), () => HttpResponse.json(noRuntime)),
-        http.post(v1('/runtime/start'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off right now.')),
+        http.get(v1('/runtimes'), () => HttpResponse.json([machines[1]])),
+        http.post(v1('/runtimes/:id/start'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off right now.')),
       );
       const { user } = renderApp('/getting-started');
-      await user.click(await screen.findByRole('button', { name: 'Start your runtime' }));
+      await user.click(await screen.findByRole('button', { name: 'Start' }));
       expect(await screen.findByText('Hosting is off right now.')).toBeInTheDocument();
     });
 
-    it('says so when the runtime cannot be read', async () => {
-      server.use(http.get(v1('/runtime'), () => apiError(500, 'E_INTERNAL', 'The runtime could not be read.')));
+    it('sends a person at the plan’s limit to Billing', async () => {
+      server.use(
+        http.get(v1('/runtimes'), () => HttpResponse.json([])),
+        http.post(v1('/runtimes'), () => apiError(403, 'E_LIMIT', 'Free allows 1 machine.', { reason: 'machines' })),
+      );
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('button', { name: 'Make your machine' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Your plan has no room for another machine.');
+      expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+    });
+
+    it('says so when the machines cannot be read', async () => {
+      server.use(http.get(v1('/runtimes'), () => apiError(500, 'E_INTERNAL', 'The machines could not be read.')));
       renderApp('/getting-started');
-      expect(await screen.findByText('The runtime could not be read.')).toBeInTheDocument();
+      expect(await screen.findByText('The machines could not be read.')).toBeInTheDocument();
     });
   });
 

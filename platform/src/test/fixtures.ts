@@ -1,4 +1,4 @@
-import type { Addon, Install, Invite, Me, Member, Model, Org, Plan, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
+import type { Addon, Install, Invite, Machine, Me, Member, Model, Org, Plan, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
 
 /** One org's data in the server's shapes, shared by the page tests and the local fake server. */
 
@@ -43,6 +43,29 @@ export const runtime: Runtime = {
   hours_allowed: 50,
   paused: false,
 };
+
+export const machines: Machine[] = [
+  {
+    id: 'rt-7f3a9c',
+    name: 'Main',
+    size: 'small',
+    state: 'online',
+    address: 'https://chris-7f3a.glyphh.app',
+    month_seconds: 12 * 3600 + 1200,
+    paused: false,
+    created_at: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'rt-2b8e41',
+    name: 'Experiments',
+    size: 'large',
+    state: 'stopped',
+    address: 'https://chris-2b8e.glyphh.app',
+    month_seconds: 3 * 3600,
+    paused: false,
+    created_at: '2026-10-10T15:00:00Z',
+  },
+];
 
 export const runtimeKeys: RuntimeKey[] = [
   { id: 'k-1', name: 'Billing worker', created_at: '2026-10-02T09:00:00Z', expires_at: '2027-10-02T09:00:00Z', revoked_at: null, calls: 1284, last_used_at: '2026-10-16T13:55:00Z' },
