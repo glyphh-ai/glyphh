@@ -11,9 +11,9 @@ What is decided but not built, in one place; `architecture.md` holds only what w
 | Routines as the runner | A Claude routine (schedule, API trigger, GitHub event) calling the runtime's MCP; a `needs_approval` with nobody watching waits for the person: the platform's Approvals page, Claude's band, an email |
 | Approvals email | When no Claude and no platform page is open: a mail provider (`approvals.notified_at` stays empty until then) |
 | The live panel | A run as it happens (steps, log, approvals) as an MCP App served by the runtime's own MCP |
-| Hosted storage | `POST /v1/runtime/storage` (grow the volume); storage billed at $0.50 per GB-month on the volume's size, prorated, with a cap the person sets |
-| Hours beyond the plan | `GET /v1/hours` (balance and ledger), `POST /v1/hours/top-up` (Stripe Checkout), auto top-up and a spend cap on `PATCH /v1/org`; today a runtime past its hours is paused until the month turns |
-| Solo plan | Its price and limits; not seeded until decided |
+| Hosted storage | `POST /v1/runtime/storage` (grow the volume); every GB is metered already at Fly's volume rate with the plan's markup |
+| What Pro, Team and Enterprise are sold on | Precedent-store sync across instances (the licence's `sync`), background re-indexing, multi-node HA (`ha`), SSO/SAML, RBAC and audit logs (`sso`), an SLA: only the licence's flags ship ([pricing.md](pricing.md)) |
+| Reconciling hosting | Each month, what was metered against Fly's invoice for the runtimes app; a gap means a rate row is out of date |
 | Windows and Linux for the local runtime | WSL2 (rrotor ships as a WSL distribution) and Docker or Podman (rrotor's docs, section 11) |
 
 ## To prove
@@ -24,6 +24,5 @@ What is decided but not built, in one place; `architecture.md` holds only what w
 
 ## To decide (Chris)
 
-- Every add-on's price, per seat or flat (placeholders in `db/seed_addons.py`); Ada's limits are set (`models` 3 and `precedents` 10,000 on Free and Pro, unlimited on Team).
+- The hosted machines each plan allows and the markups on Fly's rates (placeholders marked TBD in `db/seed.py`).
 - The marketplace's home: the release builds write `glyphh-ai/glyphh`, which also holds the `glyphh` mod's source.
-- What the hosted runtime costs Glyphh, for pricing: about $0.019 an hour running on 2 GB ($0.035 on 4 GB) and $0.15 per GB-month of volume, held or not.

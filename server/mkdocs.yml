@@ -2,6 +2,7 @@ site_name: Glyphh
 docs_dir: docs
 nav:
   - Glyphh: architecture.md
+  - Pricing: pricing.md
 theme:
   name: material
   palette:
