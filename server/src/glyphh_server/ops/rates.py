@@ -43,12 +43,15 @@ async def in_force(conn: AsyncConnection, region: str, on: date) -> InForce | No
     return InForce({r.item: r.usd_per_30_days for r in rows}, latest.effective_from, latest.source)
 
 
-class SizeRate(BaseModel):
+class SizeSpec(BaseModel):
     size: str
     cpu_kind: str
     cpus: int
     memory_mb: int
-    volume_gb: int = Field(description="Its volume, billed always at volume_usd_per_gb_month")
+    volume_gb: int = Field(description="Its volume, billed always at the plan's volume_usd_per_gb_month")
+
+
+class SizeRate(SizeSpec):
     usd_per_month: float = Field(description="While started, a 30-day month; its volume is apart")
     usd_per_second: float
 
@@ -59,11 +62,12 @@ class PlanRates(BaseModel):
 
 
 class Rates(BaseModel):
+    """What people see: each size's machine, and what each self-serve paid plan is billed for it. Never Fly's own
+    rates, their source or the markup, from which the markup could be worked out."""
+
     effective_from: date
-    source: str
     region: str
-    sizes: list[SizeRate] = Field(description="Fly's own rates")
-    volume_usd_per_gb_month: float
+    sizes: list[SizeSpec] = Field(description="Each size's machine")
     plans: dict[str, PlanRates] = Field(description="What each self-serve paid plan is billed: its rates, all in")
 
 
@@ -89,9 +93,7 @@ async def public_rates(conn: AsyncConnection, region: str, on: date) -> Rates:
     plans = {r.name: _plan(rates, r.hosting_markup_pct) for r in await newest_versions(conn) if r.hosting_markup_pct}
     return Rates(
         effective_from=rates.effective_from,
-        source=rates.source,
         region=region,
-        sizes=_sizes(rates, Decimal(1)),
-        volume_usd_per_gb_month=float(rates.usd[VOLUME]),
+        sizes=[SizeSpec(size=name, **size.fields()) for name, size in SIZES.items()],
         plans=plans,
     )
