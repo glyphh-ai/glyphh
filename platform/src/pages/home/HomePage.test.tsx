@@ -4,15 +4,15 @@ import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
 describe('Home', () => {
-  it('shows the runtime: address, state, plan, connector URL and this month’s hours', async () => {
+  it('shows the runtime: address, state, plan, connector URL and its hosting cost this month', async () => {
     renderApp('/');
     expect(await screen.findByText('https://chris-7f3a.glyphh.app')).toBeInTheDocument();
     expect(screen.getByText('Running')).toBeInTheDocument();
     expect(await screen.findByText('Pro')).toBeInTheDocument();
     expect(screen.getByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('of 50 hours')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Runtime hours used this month' })).toHaveAttribute('aria-valuenow', '12');
+    expect(await screen.findByText('$4.12')).toBeInTheDocument();
+    expect(screen.getByText('hosting so far')).toBeInTheDocument();
+    expect(screen.queryByText(/hours/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
   });
 
@@ -59,11 +59,16 @@ describe('Home', () => {
     expect(within(alert).getByText('Trace trace-123')).toBeInTheDocument();
   });
 
-  it('says when the month’s hours are used up, and cannot start', async () => {
-    server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'stopped', paused: true })));
-    renderApp('/');
-    expect(await screen.findByText('Paused: this month’s hours are used up.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled();
+  it('says plainly when the plan has no room for the runtime to start, with the way to Billing', async () => {
+    server.use(
+      http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'stopped' })),
+      http.post(v1('/runtime/start'), () => apiError(403, 'E_LIMIT', 'Free has no hosted machines.', { reason: 'machines' })),
+    );
+    const { user } = renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Start' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Your plan has no room for this machine, so it stays stopped.');
+    expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
   });
 
   it('starts a runtime for the first time', async () => {
@@ -90,11 +95,11 @@ describe('Home', () => {
     expect(screen.queryByRole('button', { name: 'Copy connector URL' })).not.toBeInTheDocument();
   });
 
-  it('shows the hours without a bar when the plan has no limit', async () => {
-    server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, hours_allowed: null })));
+  it('shows a dash for the cost until the hosting is read', async () => {
+    server.use(http.get(v1('/me'), () => new Promise<never>(() => {})));
     renderApp('/');
-    expect(await screen.findByText('hours, no limit')).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(await screen.findByText('hosting so far')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('says so when Glyphh cannot be reached', async () => {

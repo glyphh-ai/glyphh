@@ -4,7 +4,7 @@ import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
 const meter = (name: string) => screen.getByText(name, { selector: 'div' }).parentElement!;
-const free = { ...me, plan: plans[0]!, precedents: { used: 0, limit: 0 }, hosting: { month_to_date_cents: 0, machines: [] } };
+const free = { ...me, plan: plans[0]!, precedents: { used: 0, limit: 0 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
 
 describe('Usage', () => {
   it('shows precedents against the plan’s managed bucket, and hosting this month so far', async () => {
@@ -26,7 +26,7 @@ describe('Usage', () => {
   });
 
   it('says there is no limit on a plan without one, and no machines this month', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 2_500_000, limit: null }, hosting: { month_to_date_cents: 0, machines: [] } })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
     renderApp('/settings/usage');
     expect(await screen.findByText('on hosted machines, no limit')).toBeInTheDocument();
     expect(screen.getByText('2,500,000')).toBeInTheDocument();

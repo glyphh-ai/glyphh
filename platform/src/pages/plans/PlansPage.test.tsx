@@ -138,19 +138,19 @@ describe('Choosing a plan', () => {
     expect(within(dialog).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
   });
 
-  it('moves an org without a subscription to Free without Stripe', async () => {
-    let chosen: unknown;
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, billing_status: 'canceled', renews_at: null } })),
-      http.post(v1('/billing/plan'), async ({ request }) => {
-        chosen = await request.json();
-        return HttpResponse.json({});
-      }),
-    );
-    const { user } = renderApp('/settings/plans');
-    await user.click(await screen.findByRole('button', { name: 'Switch to Free' }));
-    await user.click(within(screen.getByRole('dialog', { name: 'Switch to Free?' })).getByRole('button', { name: 'Switch plan' }));
-    await vi.waitFor(() => expect(chosen).toEqual({ plan: 'Free' }));
+  it('offers no move to Free without a subscription: there is nothing to cancel', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, billing_status: 'canceled', renews_at: null } })));
+    renderApp('/settings/plans');
+    expect(await within(await screen.findByRole('region', { name: 'Team' })).findByRole('button', { name: 'Upgrade to Team' })).toBeInTheDocument();
+    expect(within(card('Free')).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('on a plan by contract, offers no change here: talk to us', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], org: { ...me.org, plan_until: '2027-10-01T00:00:00Z' } })));
+    renderApp('/settings/plans');
+    expect(await screen.findByText(/Your plan is by contract\. To change it,/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+    expect(screen.queryByRole('button', { name: /Switch to|Upgrade to/ })).not.toBeInTheDocument();
   });
 
   it('sends an org without a subscription to Stripe’s checkout', async () => {

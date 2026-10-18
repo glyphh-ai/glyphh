@@ -90,7 +90,13 @@ const refuse = (status: number, code: string, message: string, reason: string) =
 const machine = (id: string) => state.machines.find((m) => m.id === id);
 const setMachine = (id: string, to: 'online' | 'stopped') => {
   const found = machine(id);
-  return found ? Response.json(Object.assign(found, { state: to })) : refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+  // A machine past what the plan allows stays stopped.
+  const allowed = state.me.plan.limits.machines;
+  if (to === 'online' && allowed !== null && state.machines.indexOf(found) >= allowed) {
+    return refuse(403, 'E_LIMIT', `${state.me.plan.name} allows ${allowed} machines.`, 'machines');
+  }
+  return Response.json(Object.assign(found, { state: to }));
 };
 app.get('/v1/runtimes', (c) => c.json(state.machines));
 app.post('/v1/runtimes', async (c) => {
@@ -101,7 +107,7 @@ app.post('/v1/runtimes', async (c) => {
     return refuse(403, 'E_LIMIT', message, 'machines');
   }
   const id = `rt-${nextMachine++}`;
-  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, paused: false, created_at: new Date().toISOString() };
+  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, created_at: new Date().toISOString() };
   state.machines.push(made);
   return c.json(made, 201);
 });
@@ -173,22 +179,34 @@ app.delete('/v1/org/invites/:id', (c) => {
   state.invites = state.invites.filter((i) => i.id !== c.req.param('id'));
   return c.body(null, 204);
 });
+app.get('/v1/billing', (c) => {
+  const { plan, org, precedents, hosting } = state.me;
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting });
+});
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
 // A change of plan applies at once; down to Free, the hosted machines must go first.
+const subscribed = () => !['none', 'canceled', 'incomplete_expired'].includes(state.me.org.billing_status);
 const setPlan = (name: string) => {
   const plan = data.plans.find((p) => p.name === name);
-  if (!plan || !plan.self_serve) return refuse(422, 'E_INVALID', 'That plan cannot be chosen here.', 'plan');
+  if (!plan) return refuse(422, 'E_INVALID', `${name} isn't sold through Stripe.`, 'not_sold');
+  if (!plan.self_serve) return refuse(422, 'E_INVALID', `${name} is by contract: talk to us at sales@glyphh.ai.`, 'not_self_serve');
+  if (!state.me.plan.self_serve) return refuse(409, 'E_CONFLICT', `Your ${state.me.plan.name} plan is by contract: talk to us at sales@glyphh.ai.`, 'contract');
   if (plan.limits.machines === 0 && state.machines.length > 0) return refuse(409, 'E_CONFLICT', 'Delete your hosted machines first.', 'machines');
   state.me.plan = plan;
   state.org.plan = plan;
   state.me.precedents.limit = plan.limits.precedents;
   return Response.json(state.org);
 };
-app.post('/v1/billing/plan', async (c) => setPlan((await c.req.json()).plan));
+app.post('/v1/billing/plan', async (c) =>
+  subscribed() ? setPlan((await c.req.json()).plan) : refuse(409, 'E_CONFLICT', 'Your org isn’t subscribed: start with checkout.', 'not_subscribed'),
+);
 // Checkout comes straight back as paid.
 app.post('/v1/billing/checkout', async (c) => {
+  if (subscribed()) return refuse(409, 'E_CONFLICT', 'Your org is already subscribed: change plan instead.', 'subscribed');
   const refused = setPlan((await c.req.json()).plan);
-  return refused.ok ? c.json({ url: `${platform}/billing?done=1` }) : refused;
+  if (!refused.ok) return refused;
+  state.me.org.billing_status = 'active';
+  return c.json({ url: `${platform}/billing?done=1` });
 });
 
 serve({ fetch: app.fetch, port }, () => console.log(`Fake Glyphh server on http://localhost:${port}`));

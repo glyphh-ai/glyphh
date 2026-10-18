@@ -45,11 +45,6 @@ export function ago(iso: string, now: Date = new Date()): string {
   return date(iso);
 }
 
-/** Seconds as whole hours, rounded down: 43200 → 12. */
-export function hours(seconds: number): number {
-  return Math.floor(seconds / 3600);
-}
-
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count.toLocaleString(locale)} ${count === 1 ? one : many}`;
 }

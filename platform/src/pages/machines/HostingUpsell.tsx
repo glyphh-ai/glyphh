@@ -19,6 +19,13 @@ export function usePlanRates(): SizeRate[] | 'contract' | undefined {
   return plan && rates.data?.plans[plan.name]?.sizes;
 }
 
+/** What a hosted machine has cost so far this month, from the org's hosting; undefined until it is read. */
+export function useMachineCents(id: string | null): number | undefined {
+  const me = useMe();
+  if (!me.data) return undefined;
+  return me.data.hosting.machines.find((machine) => machine.id === id)?.cents ?? 0;
+}
+
 /** Whether the person's plan has no hosting (Free); false until the plan is known. */
 export function useNoHosting(): boolean {
   const me = useMe();

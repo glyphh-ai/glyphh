@@ -149,11 +149,16 @@ describe('Getting started', () => {
       expect(screen.getByText('https://chris-2b8e.glyphh.app/mcp')).toBeInTheDocument();
     });
 
-    it('cannot start while the month’s hours are used up', async () => {
-      server.use(http.get(v1('/runtimes'), () => HttpResponse.json([{ ...machines[1]!, paused: true }])));
-      renderApp('/getting-started');
-      expect(await screen.findByRole('button', { name: 'Start' })).toBeDisabled();
-      expect(screen.getByText(/this month’s hours are used up/)).toBeInTheDocument();
+    it('says plainly when the plan has no room for the machine to start, with the way to Billing', async () => {
+      server.use(
+        http.get(v1('/runtimes'), () => HttpResponse.json([machines[1]])),
+        http.post(v1('/runtimes/:id/start'), () => apiError(403, 'E_LIMIT', 'Free has no hosted machines.', { reason: 'machines' })),
+      );
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('button', { name: 'Start' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Your plan has no room for this machine, so it stays stopped.');
+      expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
     });
 
     it('shows the server’s refusal when starting fails', async () => {

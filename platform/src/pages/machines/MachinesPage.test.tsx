@@ -49,7 +49,7 @@ describe('Machines', () => {
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Machines')).toHaveAttribute('aria-current', 'page');
   });
 
-  it('lists each machine: name, size, state, address, connector URL and this month’s hours', async () => {
+  it('lists each machine: name, size, state, address, connector URL and its hosting cost this month', async () => {
     const { user } = renderApp('/machines');
     const main = await card('Main');
     expect(within(main).getByRole('heading', { name: 'Main' })).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe('Machines', () => {
     expect(within(main).getByText('Small')).toBeInTheDocument();
     expect(within(main).getByText('https://chris-7f3a.glyphh.app')).toBeInTheDocument();
     expect(within(main).getByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
-    expect(within(main).getByText('12 hours this month · made 1 Aug 2026')).toBeInTheDocument();
+    expect(await within(main).findByText('$4.12 this month · made 1 Aug 2026')).toBeInTheDocument();
     await user.click(within(main).getByRole('button', { name: 'Copy address' }));
     expect(await navigator.clipboard.readText()).toBe('https://chris-7f3a.glyphh.app');
     await user.click(within(main).getByRole('button', { name: 'Copy connector URL' }));
@@ -82,13 +82,21 @@ describe('Machines', () => {
     expect(sent.map((s) => s.path)).toEqual(['/runtimes/rt-2b8e41/start', '/runtimes/rt-2b8e41/restart', '/runtimes/rt-2b8e41/stop']);
   });
 
-  it('cannot start a machine whose month’s hours are used up', async () => {
-    server.use(http.get(v1('/runtimes'), () => HttpResponse.json([{ ...machines[1]!, paused: true }])));
-    renderApp('/machines');
+  it('says plainly when a machine past the plan’s machines will not start, with the way to Billing', async () => {
+    server.use(http.post(v1('/runtimes/:id/start'), () => apiError(403, 'E_LIMIT', 'Free has no hosted machines.', { reason: 'machines' })));
+    const { user } = renderApp('/machines');
     const experiments = await card('Experiments');
-    expect(within(experiments).getByRole('button', { name: 'Start' })).toBeDisabled();
-    expect(within(experiments).getByText(/this month’s hours are used up/)).toBeInTheDocument();
-    expect(within(experiments).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+    await user.click(within(experiments).getByRole('button', { name: 'Start' }));
+    const alert = await within(experiments).findByRole('alert');
+    expect(alert).toHaveTextContent('Your plan has no room for this machine, so it stays stopped. Move to a bigger plan, or delete a machine.');
+    expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+  });
+
+  it('counts a machine the hosting does not list yet as nothing so far this month', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, hosting: { ...me.hosting, machines: [] } })));
+    renderApp('/machines');
+    const main = await card('Main');
+    expect(await within(main).findByText('$0 this month · made 1 Aug 2026')).toBeInTheDocument();
   });
 
   it('shows the server’s refusal on the machine it was for', async () => {

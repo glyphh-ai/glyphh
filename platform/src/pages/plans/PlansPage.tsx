@@ -51,9 +51,11 @@ export function PlansPage() {
     setSwitching(null);
   };
 
-  // Free needs no payment, so it is a plain change too.
+  const subscribed = me.data !== undefined && isSubscribed(me.data.org.billing_status);
+  // A plan by contract changes with Glyphh, not here.
+  const contract = current !== undefined && !current.self_serve;
   const choose = (plan: Plan) => {
-    if (isSubscribed(me.data!.org.billing_status) || plan.price_cents === 0) setSwitching(plan);
+    if (subscribed) setSwitching(plan);
     else checkout.mutate(plan.name, { onSuccess: ({ url }) => window.location.assign(url) });
   };
 
@@ -87,7 +89,8 @@ export function PlansPage() {
                 plan={plan}
                 isCurrent={index === at}
                 upgrade={index > at}
-                isAdmin={isAdmin}
+                // Without a subscription there is nothing to move down to Free from, and a contract plan moves with Glyphh.
+                canChoose={isAdmin && !contract && (subscribed || plan.price_cents !== 0)}
                 recommended={plan.name === recommended?.name}
                 pending={checkout.isPending && checkout.variables === plan.name}
                 onChoose={() => choose(plan)}
@@ -96,6 +99,11 @@ export function PlansPage() {
           </div>
         )}
         {me.data && !isAdmin && <p className={styles.note}>Only your org’s admin can change the plan.</p>}
+        {me.data && isAdmin && contract && (
+          <p className={styles.note}>
+            Your plan is by contract. To change it, <a href={salesUrl}>talk to us</a>.
+          </p>
+        )}
 
         {rates.data && hosting.length > 0 && (
           <section className={styles.rates} aria-labelledby="rates-title">
@@ -131,9 +139,9 @@ export function PlansPage() {
   );
 }
 
-type PlanOptionProps = { plan: Plan; isCurrent: boolean; upgrade: boolean; isAdmin: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
+type PlanOptionProps = { plan: Plan; isCurrent: boolean; upgrade: boolean; canChoose: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
 
-function PlanOption({ plan, isCurrent, upgrade, isAdmin, recommended, pending, onChoose }: PlanOptionProps) {
+function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
   const { amount, per } = priceParts(plan);
 
   return (
@@ -166,7 +174,7 @@ function PlanOption({ plan, isCurrent, upgrade, isAdmin, recommended, pending, o
           Talk to us
         </ButtonLink>
       ) : (
-        isAdmin && (
+        canChoose && (
           <Button className={styles.choose} variant={recommended ? 'primary' : 'secondary'} loading={pending} onClick={onChoose}>
             {upgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
           </Button>

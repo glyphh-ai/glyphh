@@ -3,7 +3,7 @@ import { me, plans, rates } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
-const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 }, hosting: { month_to_date_cents: 0, machines: [] } };
+const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
 const card = (name: string) => screen.findByRole('region', { name });
 
 describe('Billing', () => {
@@ -105,9 +105,14 @@ describe('Billing', () => {
   });
 
   it('on Enterprise, offers no plan above, and never shows a rate: the contract sets them', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 5, limit: null } })));
+    server.use(
+      http.get(v1('/me'), () =>
+        HttpResponse.json({ ...me, plan: plans[3], org: { ...me.org, renews_at: null, plan_until: '2027-10-01T00:00:00Z' }, precedents: { used: 5, limit: null } }),
+      ),
+    );
     renderApp('/settings/billing');
     expect(await screen.findByText('By contract')).toBeInTheDocument();
+    expect(screen.getByText('Until 1 Oct 2027')).toBeInTheDocument();
     expect(screen.getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
     expect(await screen.findByText('Enterprise’s rates: set in your contract.')).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();

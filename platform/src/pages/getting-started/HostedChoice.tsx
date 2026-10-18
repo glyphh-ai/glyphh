@@ -4,7 +4,7 @@ import { useCreateMachine, useMachines, useMe, useStartMachine } from '@/api/que
 import type { MachineSize } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { HostingUpsell, useNoHosting, usePlanRates } from '@/pages/machines/HostingUpsell';
-import { CreateMachineError, MachineFields } from '@/pages/machines/MachineFields';
+import { CreateMachineError, MachineFields, StartMachineError } from '@/pages/machines/MachineFields';
 import { connectorUrl } from '@/pages/machines/sizes';
 import { Button, CopyField, LoadingCard } from '@/ui';
 import styles from './GettingStarted.module.css';
@@ -26,7 +26,7 @@ export function HostedChoice() {
   const connector = connectorUrl(first);
   return (
     <div className={styles.part}>
-      {first.state === 'stopped' && <StartMachine id={first.id} paused={first.paused} />}
+      {first.state === 'stopped' && <StartMachine id={first.id} />}
       {connector && (
         <>
           <h3 className={styles.subTitle}>Connect Claude to {first.name}</h3>
@@ -83,21 +83,16 @@ function FirstMachine() {
   );
 }
 
-function StartMachine({ id, paused }: { id: string; paused: boolean }) {
+function StartMachine({ id }: { id: string }) {
   const start = useStartMachine();
   return (
     <>
       <div className={styles.actions}>
-        <Button variant="primary" onClick={() => start.mutate(id)} loading={start.isPending} disabled={paused}>
+        <Button variant="primary" onClick={() => start.mutate(id)} loading={start.isPending}>
           Start
         </Button>
       </div>
-      {paused && (
-        <span className={styles.meta}>
-          Paused: this month’s hours are used up. See <Link to="/settings/billing">Billing</Link>.
-        </span>
-      )}
-      <ApiErrorNotice error={start.error} />
+      <StartMachineError error={start.error} />
     </>
   );
 }

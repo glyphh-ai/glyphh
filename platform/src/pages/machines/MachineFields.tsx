@@ -44,6 +44,23 @@ export function MachineFields({ name, size, onName, onSize, rates }: MachineFiel
   );
 }
 
+/**
+ * Why a machine would not start. A machine past what the plan allows (after a move to a smaller plan) is stopped and
+ * refuses to start: the way to Billing, or to delete one.
+ */
+export function StartMachineError({ error }: { error: unknown }) {
+  if (error instanceof ApiError && error.code === 'E_LIMIT' && error.detail.reason === 'machines') {
+    return (
+      <ErrorNotice
+        message="Your plan has no room for this machine, so it stays stopped. Move to a bigger plan, or delete a machine."
+        traceId={error.traceId}
+        action={<Link to="/settings/billing">Billing</Link>}
+      />
+    );
+  }
+  return <ApiErrorNotice error={error} />;
+}
+
 /** Why a machine was not made; at the plan's limit, the way to a bigger plan. */
 export function CreateMachineError({ error }: { error: unknown }) {
   if (error instanceof ApiError && error.code === 'E_LIMIT' && error.detail.reason === 'machines') {

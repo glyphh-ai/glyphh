@@ -5,7 +5,7 @@ import type { Install, Invite, Machine, MachineSize, Me, Member, Model, Org, Pla
 const none = { sync: false, ha: false, offline: false, sso: false };
 
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, price_cents: 0, interval: 'month', self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, markup_hidden: true },
+  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, markup_hidden: true },
   { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, markup_hidden: true },
   { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, markup_hidden: true },
   {
@@ -28,10 +28,11 @@ export const me: Me = {
   name: 'Chris Timmerman',
   role: 'admin',
   providers: ['github', 'google'],
-  org: { id: 'o-1', name: 'Glyphh', billing_status: 'active', renews_at: '2026-11-16T00:00:00Z' },
+  org: { id: 'o-1', name: 'Glyphh', billing_status: 'active', renews_at: '2026-11-16T00:00:00Z', plan_until: null },
   plan: pro,
   precedents: { used: 18_240, limit: 100_000 },
   hosting: {
+    month: '2026-10',
     month_to_date_cents: 1217,
     machines: [
       { id: 'rt-7f3a9c', name: 'Main', size: 'small', cents: 412 },
@@ -76,8 +77,6 @@ export const runtime: Runtime = {
   image_version: '1.4.2',
   last_seen_at: '2026-10-16T13:58:00Z',
   seconds_used: 12 * 3600 + 1200,
-  hours_allowed: 50,
-  paused: false,
 };
 
 export const machines: Machine[] = [
@@ -88,7 +87,6 @@ export const machines: Machine[] = [
     state: 'online',
     address: 'https://chris-7f3a.glyphh.app',
     month_seconds: 12 * 3600 + 1200,
-    paused: false,
     created_at: '2026-08-01T09:00:00Z',
   },
   {
@@ -98,7 +96,6 @@ export const machines: Machine[] = [
     state: 'stopped',
     address: 'https://chris-2b8e.glyphh.app',
     month_seconds: 3 * 3600,
-    paused: false,
     created_at: '2026-10-10T15:00:00Z',
   },
 ];

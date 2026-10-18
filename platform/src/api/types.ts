@@ -12,6 +12,7 @@ export type Plan = {
   version: number;
   /** The flat price for each interval; null for a plan sold by contract. */
   price_cents: number | null;
+  /** Null on Free. */
   interval: 'month' | 'year' | null;
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
@@ -30,12 +31,13 @@ export type Me = {
   name: string | null;
   role: 'admin' | 'member';
   providers: string[];
-  org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null };
+  /** `plan_until`: when an Enterprise grant ends; null on any other plan. */
+  org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null; plan_until: IsoDate | null };
   plan: Plan;
   /** Precedents across the org's hosted runtimes, against the plan's managed bucket (null: unlimited). */
   precedents: { used: number; limit: number | null };
   /** Hosted machines this month so far. */
-  hosting: { month_to_date_cents: number; machines: MachineCost[] };
+  hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
 };
 
 export type Install = {
@@ -59,8 +61,6 @@ export type Runtime = {
   image_version: string | null;
   last_seen_at: IsoDate | null;
   seconds_used: number;
-  hours_allowed: number | null;
-  paused: boolean;
 };
 
 export type RuntimeKey = {
@@ -87,8 +87,6 @@ export type Machine = {
   address: string | null;
   /** Seconds it has run this month. */
   month_seconds: number;
-  /** This month's hours are used up; it cannot start until next month or a bigger plan. */
-  paused: boolean;
   created_at: IsoDate;
 };
 

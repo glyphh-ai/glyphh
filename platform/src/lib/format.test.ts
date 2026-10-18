@@ -1,4 +1,4 @@
-import { ago, date, hours, listText, money, plural, usd, usdPerSecond } from './format';
+import { ago, date, listText, money, plural, usd, usdPerSecond } from './format';
 
 describe('format', () => {
   it.each([
@@ -36,11 +36,6 @@ describe('format', () => {
     expect(ago('2026-10-15T12:00:00Z', now)).toBe('1 day ago');
     expect(ago('2026-10-10T12:00:00Z', now)).toBe('6 days ago');
     expect(ago('2026-08-01T12:00:00Z', now)).toBe('1 Aug 2026');
-  });
-
-  it('rounds hours down', () => {
-    expect(hours(43_199)).toBe(11);
-    expect(hours(43_200)).toBe(12);
   });
 
   it('pluralises', () => {

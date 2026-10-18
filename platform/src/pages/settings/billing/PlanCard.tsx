@@ -23,6 +23,7 @@ export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
       <div className={styles.titleLine}>
         <h3 className={styles.planName}>{plan.name}</h3>
         {status ? <Chip tone={status.tone}>{status.label}</Chip> : org.renews_at && <Chip tone="green">Renews {date(org.renews_at)}</Chip>}
+        {org.plan_until && <Chip>Until {date(org.plan_until)}</Chip>}
       </div>
       <div className={styles.chips}>
         {planFacts(plan).map((fact) => (
