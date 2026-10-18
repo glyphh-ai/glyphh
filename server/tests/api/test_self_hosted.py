@@ -197,7 +197,7 @@ async def test_the_tally_never_counts_it_and_a_call_to_it_offline_says_so(
     runtime = rt(await made(client, ada))
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == runtime.id).values(state="online", month_seconds=10**7))
-    await tend.tally(engine, 60, "iad")
+    await tend.tally(engine, "iad")
     row = await runtime_row(engine, runtime.id)
     assert (row.month, row.month_seconds) == (None, 10**7)
     away = SimpleNamespace(id=runtime.id, mode="self", last_seen_at=None)

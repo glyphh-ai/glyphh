@@ -73,15 +73,18 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 
 - The rates live in the `fly_rates` table, dated (`effective_from`) with their source. A change at Fly is a new row;
   the rate in force is the newest one not in the future. Per second = the 30-day rate ÷ 2,592,000.
-- **Metering:** every minute, each hosted machine's month gains a minute × its size's rate when its link was online,
-  and its volume's GB × a minute × the volume rate (online or not: the disk is kept either way). Cost is kept in
-  micro-dollars per machine per month.
-- **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly.
+- **Metering:** every minute, each hosted machine's month gains the seconds since it was last metered × its size's
+  rate when its link is online, and its volume's GB × those seconds × the volume rate (online or not: the disk is kept
+  either way). Cost is kept in micro-dollars per machine per month. Each machine keeps the instant it is metered up to
+  (`metered_at`), so a tick late, missed or run twice, or by two server processes, meters each second exactly once.
+- **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly. Every server process runs
+  it; a Postgres advisory lock held for the tick keeps two from running at once, a process finding it held skipping
+  that minute.
 - **Billing:** the marked-up amount, cost × (1 + markup), goes to Stripe as meter events on the Billing Meter
   `glyphh_hosting` (one unit, one US cent): once a day and as the billing period ends (ten minutes before the
   subscription renews), per org, only what has not been reported, the fraction of a cent carried; at once when the org
-  goes down to Free; and before every subscription event the webhook applies. Revoking or lapsing an Enterprise grant
-  reports nothing: the hosting since its last daily report is not billed. Each report is written before it is sent, its
+  goes down to Free; before every subscription event the webhook applies; and before an Enterprise grant is revoked or
+  lapses, to the deal's subscription. Each report is written before it is sent, its
   id the event's identifier, so a retry is counted once. The markup is the org's own when set (Enterprise's, from its
   grant), else its plan's; each minute's charge uses the markup in force that minute.
 - **What the org sees:** `GET /v1/billing` gives `hosting: {month, month_to_date_cents, machines: [{id, name, size,
@@ -108,7 +111,7 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
   machines."
 - **Held past the plan:** a plan's machines are the org's, all its people's together, its oldest first. When an org
   lands on a plan that allows fewer than it holds anyway (a cancel in Stripe's portal, a subscription that ended, an
-  Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left (from the webhook), its
+  Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left (from the webhook, `revoke` and the tick), its
   oldest machines up to the plan's keep running, and its newest beyond them are stopped: at once from the webhook and
   from `revoke`, and at the minute tick (which also stops any a request woke since). Starting or restarting one of
   those, or waking it for a deploy or an approval's answer, is 403 `E_LIMIT`, `reason: machines`, until the org is on a
@@ -163,9 +166,11 @@ Each Enterprise customer is on their own Stripe subscription, made by hand, and 
 
 **Renewing:** `grant` again with the new `--until` (a new `--markup` or `--subscription` if the deal changed: the new
 subscription replaces the old one on the org), and update Stripe to match. **Lapsing:** when the `--until` day has
-passed, the server's minute tick puts the org back on Free and holds its hosted machines. **A new markup
+passed, the server's minute tick reports the hosting due to the deal's subscription, then puts the org back on Free
+and holds its hosted machines. **A new markup
 mid-contract:** `grant` with it; it applies from then on. **Ending:** `python -m glyphh_server.ops.enterprise revoke
---org <org uuid>` puts the org back on Free, its hosted machines stopped and held (it prints how many it stopped);
+--org <org uuid>` reports the hosting due to the deal's subscription, then puts the org back on Free, its hosted
+machines stopped and held (it prints how many it stopped);
 cancel the subscription in Stripe. A deal's subscription that ends in Stripe also puts the org back on Free.
 Self-hosted runtimes keep running; offline licences run to their expiry and grace.
 

@@ -47,15 +47,14 @@ class NewKey(BaseModel):
 
 @router.get("", operation_id="hostedRuntime")
 async def hosted_runtime(caller: Caller, conn: Conn, request: Request) -> HostedRuntime:
-    """Your first hosted machine: its address, state, the online time used this month and the plan's hours."""
+    """Your first hosted machine: its address, state and its online time this month."""
     return await runtimes.hosted_view(conn, caller, request.app.state.settings.fly_public_domain)
 
 
 @router.post("/start", operation_id="startHostedRuntime")
 async def start_hosted_runtime(caller: Caller, conn: Conn, request: Request) -> HostedRuntime:
-    """Start your first hosted machine, made the first time (`default`, small; the plan's hours say how long your
-    machines run a month). It is `stopped` until its rrotor links, `online` then; a request to its address starts a
-    stopped one."""
+    """Start your first hosted machine, made the first time (`default`, small; metered per second, never paused). It
+    is `stopped` until its rrotor links, `online` then; a request to its address starts a stopped one."""
     await machines.start_first(conn, fly(request), caller)
     return await runtimes.hosted_view(conn, caller, request.app.state.settings.fly_public_domain)
 

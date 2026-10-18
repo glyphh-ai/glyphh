@@ -11,7 +11,7 @@ CALLERS: tuple[str, ...] = ("routine", "claude", "panel", "test")
 
 class Run(Base):
     """One call of a model's function on a hosted runtime: who called, the status, the times and the seconds rrotor
-    ran, for the log and the hours. Never inputs, outputs or content."""
+    ran, for the log. Never inputs, outputs or content."""
 
     __tablename__ = "runs"
     __table_args__ = (CheckConstraint(f"caller IN {CALLERS}", name="runs_caller"),)

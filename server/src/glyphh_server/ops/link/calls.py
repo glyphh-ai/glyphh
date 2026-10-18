@@ -3,9 +3,9 @@ down it: a runtime is called at its own address (docs, Reaching a runtime).
 
 Each runs in the caller's transaction, as the caller's org, so only the caller's own runtimes and runs are found. A
 run is held (hold_run) before its message goes down, so its result is applied only once the caller commits; a
-message that cannot go raises, and the caller's transaction rolls back. A local runtime no process holds answers
-E_UNAVAILABLE with when it was last seen; a hosted one is woken (its Fly machine started, by the hub's waker) and
-the message waits for its link, up to WAKE_WAIT."""
+message that cannot go raises, and the caller's transaction rolls back. A hosted runtime no process holds is woken
+(its Fly machine started, by the hub's waker) and the message waits for its link, up to WAKE_WAIT; one that never
+links, a local one or a self-hosted one answers E_UNAVAILABLE with when it was last seen, in its own words (AWAY)."""
 
 import uuid
 from typing import Any, Literal
@@ -26,6 +26,7 @@ DeployAction = Literal["deploy", "activate", "remove"]
 WAKE_WAIT: float = 45.0  # a stopped Fly machine starts in seconds; its rrotor links in a few more
 WAKE_EVERY: float = 0.5
 AWAY: dict[str, str] = {
+    "hosted": "Your hosted machine was started but did not connect in time. Try again in a minute.",
     "local": "Your local runtime is not connected. Start it from Claude, then try again.",
     "self": "Your self-hosted runtime is not connected. Check it is running and reaches Glyphh, then try again.",
 }
@@ -72,7 +73,7 @@ async def deliver(hub: Hub, runtime: Row, message: Outbound) -> None:
     if runtime.mode == "hosted" and await wake_hosted(hub, runtime, data):
         return
     raise Unavailable(
-        AWAY.get(runtime.mode, AWAY["local"]),
+        AWAY[runtime.mode],
         reason="runtime_offline",
         runtime_id=str(runtime.id),
         last_seen_at=_seen(runtime),

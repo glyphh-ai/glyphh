@@ -125,6 +125,7 @@ async def test_continue_needs_a_waiting_run_the_callers_own_and_a_link_or_keeps_
         async with engine.begin() as conn:
             await tenancy.enter(conn, ada.org_id)
             await send_continue(conn, hub, waiting, "yes")
+    assert refused.value.message == calls.AWAY["local"]
     assert refused.value.detail == {
         "reason": "runtime_offline",
         "runtime_id": str(runtime_id),
@@ -185,3 +186,5 @@ async def test_a_stopped_hosted_runtime_is_woken_for_an_approvals_answer(
                 await tenancy.enter(conn, ada.org_id)
                 await send_continue(conn, Hub(redis, waker=never if waker else None), run_id, "x")
         assert refused.value.detail["reason"] == reason
+        if waker:  # woken, never linked: said as a hosted machine, never as a local runtime
+            assert refused.value.message == calls.AWAY["hosted"]

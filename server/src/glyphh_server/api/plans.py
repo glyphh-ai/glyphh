@@ -19,7 +19,8 @@ async def list_plans(conn: Conn) -> list[PlanView]:
 
 @router.get("/rates", operation_id="listRates")
 async def list_rates(conn: Conn, request: Request) -> Rates:
-    """The hosted machines' rates in force: Fly's own, and what each self-serve paid plan is billed, a 30-day month and
-    a second of each size and a GB-month of volume. Enterprise's are set in each contract."""
+    """The hosted machines' rates in force: each size's machine, and what each self-serve paid plan is billed for it,
+    all in, a 30-day month and a second of each size and a GB-month of volume. Never Fly's own rates or the markup.
+    Enterprise's are set in each contract."""
     region = request.app.state.settings.fly_region
     return await public_rates(conn, region, datetime.now(UTC).date())

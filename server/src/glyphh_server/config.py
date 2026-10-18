@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
     mcp_origins: str = "https://claude.ai,https://claude.com"
     # Hosted runtimes on Fly: the deploy token, the one app the machines live in, their region, the hosted rrotor
-    # image (private: carries the Ada part), and each machine's size. Without a token and an app, hosting is off.
+    # image (private: carries the Ada part). Without all three of the token, the app and the image, hosting is off.
     fly_api_token: str = ""
     fly_app: str = ""
     fly_region: str = "iad"

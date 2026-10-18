@@ -3,9 +3,9 @@ stops, restarts and deletes them, up to the plan's machines). The runtime token 
 (nobody signs in on it); its licence and its keys come in its welcome. It is reached at its own address,
 `https://<machine>.<domain>`, through Fly's proxy: a request starts a stopped machine, and the doorman machine (one
 per app, made with the first runtime) replays a request that landed elsewhere. The server stops a machine that sat
-idle (ops/idle.py), tallies the person's online time across their machines against the plan's hours, and past them
-sends `pause` (rrotor answers 402) until the month turns (ops/hours.py); `state` is `stopped` until its hello,
-`online` while linked, `offline` after a link dropped."""
+idle (ops/idle.py) and those held past the plan (ops/held.py), and meters each machine per second at Fly's rates, its
+online time this month tallied (ops/metering.py, the minute tick in ops/tend.py); no plan has hours, so a machine is
+never paused. `state` is `stopped` until its hello, `online` while linked, `offline` after a link dropped."""
 
 import logging
 import uuid
