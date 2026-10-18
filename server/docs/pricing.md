@@ -73,14 +73,18 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 
 - The rates live in the `fly_rates` table, dated (`effective_from`) with their source. A change at Fly is a new row;
   the rate in force is the newest one not in the future. Per second = the 30-day rate ÷ 2,592,000.
-- **Metering:** every minute, each hosted machine's month gains its started seconds × its size's rate, and its
-  volume's GB × seconds × the volume rate (started or stopped: the disk is kept either way). Cost is kept in
-  micro-dollars per machine per month.
-- **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly.
+- **Metering:** every minute, each hosted machine's month gains the seconds since it was last metered: its started
+  seconds × its size's rate, and its volume's GB × seconds × the volume rate (started or stopped: the disk is kept
+  either way). Cost is kept in micro-dollars per machine per month. Each machine keeps the instant it is metered up
+  to, so a tick late, missed or run twice, or by two server processes, meters each second exactly once.
+- **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly. Every server process
+  runs it; a Postgres advisory lock held for the tick keeps two from running at once, a process finding it held
+  skipping that minute.
 - **Billing:** the marked-up amount, cost × (1 + markup), goes to Stripe as meter events on the Billing Meter
   `glyphh_hosting` (one unit, one US cent): once a day and as the billing period ends (ten minutes before the
   subscription renews), per org, only what has not been reported, the fraction of a cent carried; and at once when
-  the org goes down to Free. Each report is written before it is sent, its id the event's identifier, so a retry is
+  the org goes down to Free (a subscription ended or changed to Free, an Enterprise grant revoked or lapsed: what is
+  due is reported to the subscription the org is leaving). Each report is written before it is sent, its id the event's identifier, so a retry is
   counted once. The markup is the org's own when set (Enterprise's, from its grant), else its plan's; each minute's
   charge uses the markup in force that minute.
 - **What the org sees:** `GET /v1/billing` gives `hosting: {month, month_to_date_cents, machines: [{id, name, size,
@@ -158,9 +162,11 @@ Each Enterprise customer is on their own Stripe subscription, made by hand, and 
 
 **Renewing:** `grant` again with the new `--until` (a new `--markup` or `--subscription` if the deal changed: the new
 subscription replaces the old one on the org), and update Stripe to match. **Lapsing:** when the `--until` day has
-passed, the server's minute tick puts the org back on Free and holds its hosted machines. **A new markup
+passed, the server's minute tick reports the hosting due to the deal's subscription, then puts the org back on Free
+and holds its hosted machines. **A new markup
 mid-contract:** `grant` with it; it applies from then on. **Ending:** `python -m glyphh_server.ops.enterprise revoke
---org <org uuid>` puts the org back on Free, its hosted machines stopped and held (it prints how many it stopped);
+--org <org uuid>` reports the hosting due to the deal's subscription, then puts the org back on Free, its hosted
+machines stopped and held (it prints how many it stopped);
 cancel the subscription in Stripe. A deal's subscription that ends in Stripe also puts the org back on Free.
 Self-hosted runtimes keep running; offline licences run to their expiry and grace.
 
