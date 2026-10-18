@@ -310,6 +310,8 @@ CREATE TABLE IF NOT EXISTS rrotors (
     machine_hash TEXT,
     active_runs INTEGER,
     size TEXT,
+    precedents BIGINT,
+    precedents_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT rrotors_mode CHECK (mode IN ('hosted', 'local', 'self')),

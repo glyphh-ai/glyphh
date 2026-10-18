@@ -1,12 +1,13 @@
-"""What a runtime reports about itself, applied as its owner: the calls each runtime key let in, and the models it
-deployed, whether or not the server asked for the deploy. Never a call's inputs or outputs, never a key."""
+"""What a runtime reports about itself, applied as its owner: the calls each runtime key let in, its precedents (the
+total across its Ada models), and the models it deployed, whether or not the server asked for the deploy. Never a
+call's inputs or outputs, never a key."""
 
 import uuid
 
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import Model, ModelVersion, RuntimeKey
+from glyphh_server.models import Model, ModelVersion, Rrotor, RuntimeKey
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Deployed, Usage
 from glyphh_server.ops.runtime_keys import held_by
@@ -14,7 +15,10 @@ from glyphh_server.ops.runtime_keys import held_by
 
 async def apply_usage(conn: AsyncConnection, runtime: Runtime, message: Usage) -> None:
     """Each key's calls added to its count and its last use moved on; a key this runtime does not hold is passed
-    over (deleted since, or never its)."""
+    over (deleted since, or never its). Its precedents, when said, are its total now."""
+    if message.precedents is not None:
+        values = {"precedents": message.precedents, "precedents_at": func.now()}
+        await conn.execute(update(Rrotor).where(Rrotor.id == runtime.id).values(values))
     for use in message.keys:
         await conn.execute(
             update(RuntimeKey)
