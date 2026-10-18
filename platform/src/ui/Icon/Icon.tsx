@@ -8,6 +8,7 @@ const paths = {
       <rect x="3" y="13" width="18" height="7" rx="2" />
     </>
   ),
+  flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   key: (
     <>
       <circle cx="8" cy="15" r="4" />

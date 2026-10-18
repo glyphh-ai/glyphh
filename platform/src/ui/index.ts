@@ -2,6 +2,7 @@ export { Avatar } from './Avatar/Avatar';
 export { Button, ButtonLink, type ButtonVariant } from './Button/Button';
 export { Card, CardEyebrow } from './Card/Card';
 export { Chip, type ChipTone } from './Chip/Chip';
+export { CodeBlock } from './CodeBlock/CodeBlock';
 export { CopyButton, CopyField } from './CopyField/CopyField';
 export { Dialog } from './Dialog/Dialog';
 export { Icon, type IconName } from './Icon/Icon';

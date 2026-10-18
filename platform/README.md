@@ -97,7 +97,7 @@ round trip and lands on Home.
 |---|---|
 | `server/` | The route handlers (Hono on Node): `/auth/login`, `/auth/callback`, `/auth/logout`, `/auth/session`, `/auth/providers` and `/api/v1/*`, which calls the server with the session's token, refreshing it when it runs out. `seal.ts` seals the cookie (AES-256-GCM); `oauth.ts` is the token endpoint |
 | `src/styles/` | `tokens.css`: every colour, size and font, one set per theme (`dark`, `light`, `dark-hc`, `light-hc`) on `[data-theme]`; `base.css`: document defaults and the thin scroll bar |
-| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
+| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, CodeBlock, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
 | `src/layout/` | The app shell (sidebar, breadcrumb bar, phone drawer), the account menu with its themes, page headers, settings sections, and the sign-in card |
 | `src/api/` | The server's types, the client for `/api/v1`, and one TanStack Query hook per read and write |
 | `src/pages/` | One folder per page; Billing's parts live in `pages/settings/billing/` |
