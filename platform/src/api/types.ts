@@ -61,6 +61,23 @@ export type RuntimeKey = {
 };
 export type NewRuntimeKey = RuntimeKey & { key: string };
 
+/** A hosted machine's size: Fly's guest and the volume under it. */
+export type MachineSize = 'small' | 'medium' | 'large';
+
+/** One of a person's hosted machines, as `GET /v1/runtimes` lists them. */
+export type Machine = {
+  id: Uuid;
+  name: string;
+  size: MachineSize;
+  state: 'stopped' | 'online' | 'offline';
+  address: string | null;
+  /** Seconds it has run this month. */
+  month_seconds: number;
+  /** This month's hours are used up; it cannot start until next month or a bigger plan. */
+  paused: boolean;
+  created_at: IsoDate;
+};
+
 /** How a self-hosted rrotor last reported in: `stopped` until it first links. */
 export type SelfRuntimeState = 'stopped' | 'online' | 'offline';
 

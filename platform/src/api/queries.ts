@@ -4,6 +4,8 @@ import type {
   Addon,
   AddonPreview,
   Install,
+  Machine,
+  MachineSize,
   Invite,
   Me,
   Member,
@@ -26,6 +28,7 @@ export const keys = {
   installs: ['installs'] as const,
   runtime: ['runtime'] as const,
   runtimeKeys: ['runtime', 'keys'] as const,
+  machines: ['machines'] as const,
   selfRuntimes: ['runtimes', 'self'] as const,
   models: ['models'] as const,
   plans: ['plans'] as const,
@@ -41,6 +44,9 @@ export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<
 export const useInstalls = () => useQuery({ queryKey: keys.installs, queryFn: () => api.get<Install[]>('/installs') });
 export const useRuntime = () => useQuery({ queryKey: keys.runtime, queryFn: () => api.get<Runtime>('/runtime') });
 export const useRuntimeKeys = () => useQuery({ queryKey: keys.runtimeKeys, queryFn: () => api.get<RuntimeKey[]>('/runtime/keys') });
+export const useMachines = () => useQuery({ queryKey: keys.machines, queryFn: () => api.get<Machine[]>('/runtimes') });
+export const useMachine = (id: string) =>
+  useQuery({ queryKey: [...keys.machines, id], queryFn: () => api.get<Machine>(`/runtimes/${id}`) });
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
@@ -61,6 +67,16 @@ function useWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>, refresh
 
 export const useStartRuntime = () => useWrite(() => api.post<Runtime>('/runtime/start'), [keys.runtime]);
 export const useStopRuntime = () => useWrite(() => api.post<Runtime>('/runtime/stop'), [keys.runtime]);
+
+// A person's first machine is also the old /v1/runtime, which Home reads; a change to any machine refreshes both.
+const machineReads = [keys.machines, keys.runtime];
+export const useCreateMachine = () =>
+  useWrite((body: { name: string; size: MachineSize }) => api.post<Machine>('/runtimes', body), machineReads);
+export const useStartMachine = () => useWrite((id: string) => api.post<Machine>(`/runtimes/${id}/start`), machineReads);
+export const useStopMachine = () => useWrite((id: string) => api.post<Machine>(`/runtimes/${id}/stop`), machineReads);
+export const useRestartMachine = () => useWrite((id: string) => api.post<Machine>(`/runtimes/${id}/restart`), machineReads);
+export const useDeleteMachine = () =>
+  useWrite(({ id, confirm }: { id: string; confirm: string }) => api.delete(`/runtimes/${id}?confirm=${encodeURIComponent(confirm)}`), machineReads);
 
 export const useCreateRuntimeKey = () =>
   useWrite(

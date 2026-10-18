@@ -16,6 +16,7 @@ const app = new Hono();
 const state = structuredClone({ ...data });
 let nextKey = 10;
 let nextSelf = 10;
+let nextMachine = 10;
 const selfToken = () => `glyphh_rt_${crypto.randomUUID().replaceAll('-', '')}`;
 
 app.use('/auth/consent', cors({ origin: platform, credentials: true }));
@@ -83,6 +84,23 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
   state.runtimeKeys = state.runtimeKeys.filter((k) => k.id !== c.req.param('id'));
   return c.body(null, 204);
 });
+// Hosted machines; Pro allows 3. The old /v1/runtime above stands for the first.
+const refuse = (status: number, code: string, message: string, reason: string) =>
+  Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
+const machine = (id: string) => state.machines.find((m) => m.id === id);
+const setMachine = (id: string, to: 'online' | 'stopped') => {
+  const found = machine(id);
+  return found ? Response.json(Object.assign(found, { state: to })) : refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+};
+app.get('/v1/runtimes', (c) => c.json(state.machines));
+app.post('/v1/runtimes', async (c) => {
+  const { name, size } = await c.req.json();
+  if (state.machines.length >= 3) return refuse(403, 'E_LIMIT', 'Pro allows 3 machines. Upgrade to Team for more.', 'machines');
+  const id = `rt-${nextMachine++}`;
+  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, paused: false, created_at: new Date().toISOString() };
+  state.machines.push(made);
+  return c.json(made, 201);
+});
 app.get('/v1/runtimes/self', (c) => c.json(state.selfRuntimes));
 app.post('/v1/runtimes/self', async (c) => {
   const { name, public_url } = await c.req.json();
@@ -101,6 +119,20 @@ app.post('/v1/runtimes/self', async (c) => {
 app.post('/v1/runtimes/self/:id/token', (c) => c.json({ token: selfToken() }));
 app.delete('/v1/runtimes/self/:id', (c) => {
   state.selfRuntimes = state.selfRuntimes.filter((r) => r.id !== c.req.param('id'));
+  return c.body(null, 204);
+});
+app.get('/v1/runtimes/:id', (c) => {
+  const found = machine(c.req.param('id'));
+  return found ? c.json(found) : refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+});
+app.post('/v1/runtimes/:id/start', (c) => setMachine(c.req.param('id'), 'online'));
+app.post('/v1/runtimes/:id/stop', (c) => setMachine(c.req.param('id'), 'stopped'));
+app.post('/v1/runtimes/:id/restart', (c) => setMachine(c.req.param('id'), 'online'));
+app.delete('/v1/runtimes/:id', (c) => {
+  const found = machine(c.req.param('id'));
+  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+  if (c.req.query('confirm') !== found.name) return refuse(422, 'E_INVALID', 'Type the machine’s name to delete it.', 'confirm');
+  state.machines = state.machines.filter((m) => m !== found);
   return c.body(null, 204);
 });
 app.post('/v1/runtimes/:id/offline-licence', async (c) => {
