@@ -1,4 +1,4 @@
-import type { Addon, Install, Invite, Me, Member, Model, Org, Plan, Runtime, RuntimeKey } from '@/api/types';
+import type { Addon, Install, Invite, Me, Member, Model, Org, Plan, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
 
 /** One org's data in the server's shapes, shared by the page tests and the local fake server. */
 
@@ -48,6 +48,27 @@ export const runtimeKeys: RuntimeKey[] = [
   { id: 'k-1', name: 'Billing worker', created_at: '2026-10-02T09:00:00Z', expires_at: '2027-10-02T09:00:00Z', revoked_at: null, calls: 1284, last_used_at: '2026-10-16T13:55:00Z' },
   { id: 'k-2', name: 'Support bot', created_at: '2026-10-09T15:30:00Z', expires_at: '2026-10-12T15:30:00Z', revoked_at: null, calls: 1, last_used_at: '2026-10-10T08:00:00Z' },
   { id: 'k-3', name: 'Old script', created_at: '2026-09-12T11:00:00Z', expires_at: '2026-12-11T11:00:00Z', revoked_at: '2026-10-01T08:00:00Z', calls: 0, last_used_at: null },
+];
+
+export const selfRuntimes: SelfRuntime[] = [
+  {
+    id: 'rt-self-1',
+    name: 'Acme production',
+    public_url: 'https://rrotor.acme.com',
+    state: 'online',
+    version: '1.4.2',
+    last_seen_at: '2026-10-16T13:50:00Z',
+    last_heartbeat_at: '2026-10-16T06:00:00Z',
+  },
+  {
+    id: 'rt-self-2',
+    name: 'Lab',
+    public_url: 'https://rrotor.lab.acme.com',
+    state: 'pending',
+    version: null,
+    last_seen_at: null,
+    last_heartbeat_at: null,
+  },
 ];
 
 export const models: Model[] = [
