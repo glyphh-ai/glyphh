@@ -73,29 +73,32 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 
 - The rates live in the `fly_rates` table, dated (`effective_from`) with their source. A change at Fly is a new row;
   the rate in force is the newest one not in the future. Per second = the 30-day rate ÷ 2,592,000.
-- **Metering:** every minute, each hosted machine's month gains its started seconds × its size's rate, and its
-  volume's GB × seconds × the volume rate (started or stopped: the disk is kept either way). Cost is kept in
+- **Metering:** every minute, each hosted machine's month gains a minute × its size's rate when its link was online,
+  and its volume's GB × a minute × the volume rate (online or not: the disk is kept either way). Cost is kept in
   micro-dollars per machine per month.
 - **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly.
 - **Billing:** the marked-up amount, cost × (1 + markup), goes to Stripe as meter events on the Billing Meter
   `glyphh_hosting` (one unit, one US cent): once a day and as the billing period ends (ten minutes before the
-  subscription renews), per org, only what has not been reported, the fraction of a cent carried; and at once when
-  the org goes down to Free. Each report is written before it is sent, its id the event's identifier, so a retry is
-  counted once. The markup is the org's own when set (Enterprise's, from its grant), else its plan's; each minute's
-  charge uses the markup in force that minute.
+  subscription renews), per org, only what has not been reported, the fraction of a cent carried; at once when the org
+  goes down to Free; and before every subscription event the webhook applies. Revoking or lapsing an Enterprise grant
+  reports nothing: the hosting since its last daily report is not billed. Each report is written before it is sent, its
+  id the event's identifier, so a retry is counted once. The markup is the org's own when set (Enterprise's, from its
+  grant), else its plan's; each minute's charge uses the markup in force that minute.
 - **What the org sees:** `GET /v1/billing` gives `hosting: {month, month_to_date_cents, machines: [{id, name, size,
   cents}]}`, all in, a machine deleted this month included; the connector's `usage` tool says the same.
-- **Published rates:** `GET /v1/rates` gives each size's machine and each self-serve plan's rate (Fly's × (1 +
-  markup), to the cent a month and per second). Never Fly's own rates, their source or the markup itself, so the markup
-  cannot be worked out from it; never an Enterprise rate. The site's `/pricing` and the platform read it.
-- **Reconciling** (a process, not built): each month, compare what Glyphh metered (`machine_months.cost_micros`)
-  with Fly's invoice for the runtimes app (`GLYPHH_FLY_APP`, `glyphh-runtimes`); a gap means a rate row is out of
-  date.
+- **Published rates:** `GET /v1/rates` gives each size's machine and each plan's rate where its newest version has a
+  markup, Pro and Team (Fly's × (1 + markup), to the cent a month and per second). Never Fly's own rates, their source
+  or the markup itself, so the markup cannot be worked out from it; never an Enterprise rate. The site's `/pricing` and
+  the platform read it.
+- **Reconciling** (a process, not built): each month, compare what Glyphh metered (`machine_months.cost_micros`) with
+  Fly's invoice for the runtimes app (`GLYPHH_FLY_APP`; in production `glyphh-ai-runtime`); a gap means a rate row is
+  out of date.
 
 ## Changing plan
 
-- Free to Pro or Team: `POST /v1/billing/checkout {plan}`, Stripe Checkout (the flat price and the metered hosting
-  price on one subscription). Enterprise is never checked out: 422 `E_INVALID`, `reason: not_self_serve`.
+- Free to Pro or Team: `POST /v1/billing/checkout {plan}`, Stripe Checkout (the flat price and the metered hosting price
+  on one subscription). Enterprise is never checked out: 422 `E_INVALID`, `reason: not_self_serve`. Pro or Team on a
+  server without their Stripe prices: 422 `E_INVALID`, `reason: not_sold`.
 - Between Pro and Team: `POST /v1/billing/plan {plan}`; Stripe prorates.
 - Down to Free: `POST /v1/billing/plan {"plan": "Free"}`, refused while the org has hosted machines (409
   `E_CONFLICT`, `reason: machines`, "Delete your hosted machines first."); otherwise the hosting due is reported and
@@ -105,14 +108,15 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
   machines."
 - **Held past the plan:** a plan's machines are the org's, all its people's together, its oldest first. When an org
   lands on a plan that allows fewer than it holds anyway (a cancel in Stripe's portal, a subscription that ended, an
-  Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left, its oldest machines
-  up to the plan's keep running, and its newest beyond them are stopped: at once from the webhook and from `revoke`,
-  and at the minute tick (which also stops any a request woke since). Starting, restarting or waking one of those is
-  403 `E_LIMIT`, `reason: machines`, until the org is on a plan that allows them or deletes enough (deleting one lets
-  the next oldest start). They keep their disks; on Free their disks' cost is metered and nothing is charged.
+  Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left (from the webhook), its
+  oldest machines up to the plan's keep running, and its newest beyond them are stopped: at once from the webhook and
+  from `revoke`, and at the minute tick (which also stops any a request woke since). Starting or restarting one of
+  those, or waking it for a deploy or an approval's answer, is 403 `E_LIMIT`, `reason: machines`, until the org is on a
+  plan that allows them or deletes enough (deleting one lets the next oldest start). They keep their disks; on Free
+  their disks' cost is metered and nothing is charged. A request at a held machine's own address wakes it through Fly's
+  proxy; the next tick stops it again.
 - An Enterprise org changes its plan with Glyphh, not here: 409 `E_CONFLICT`, `reason: contract`.
 - Making a machine past the plan's count, the org's together (Free has none): 403 `E_LIMIT`, `reason: machines`.
-- No plan pauses or limits by hours any more.
 
 ## Stripe: once per account
 
@@ -120,15 +124,16 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 STRIPE_SECRET_KEY=sk_test_… uv run python scripts/stripe-setup.py
 ```
 
-Run in the server's repo with the account's secret key (test mode, then live). Idempotent: the products have
-Glyphh's own ids (`glyphh_pro`, `glyphh_team`, `glyphh_hosting`), the prices are found by lookup key
-(`glyphh_pro_month_9900`, `glyphh_team_month_29900`, `glyphh_hosting_cent`) and the meter by its event name, so a
-second run makes nothing. It makes the Pro and Team flat monthly prices (from `db/seed.py`), the Billing Meter
-`glyphh_hosting` (summed; the customer from the event's `stripe_customer_id`, the cents from its `value`) and its
-metered price (a cent a unit, monthly), and prints the server's settings, `GLYPHH_STRIPE_PRICE_PRO`,
-`GLYPHH_STRIPE_PRICE_TEAM`, `GLYPHH_STRIPE_PRICE_HOSTING` and `GLYPHH_STRIPE_METER_HOSTING` (`glyphh_hosting`), with
-the `fly secrets set` line for `glyphh-ai-server`. `GLYPHH_STRIPE_WEBHOOK_SECRET` comes from the webhook endpoint
-(`{server}/v1/stripe/webhook`). A plan's new amount in the seed is a new price under a new lookup key.
+Run in the server's repo with the account's secret key (test mode, then live). Idempotent: the products have Glyphh's
+own ids (`glyphh_pro`, `glyphh_team`, `glyphh_hosting`), the prices are found by lookup key (`glyphh_pro_month_9900`,
+`glyphh_team_month_29900`, `glyphh_hosting_cent`) and the meter by its event name, so a second run makes nothing. It
+makes the Pro and Team flat monthly prices (from `db/seed.py`), the Billing Meter `glyphh_hosting` (summed; the customer
+from the event's `stripe_customer_id`, the cents from its `value`) and its metered price (a cent a unit, monthly), and
+prints the server's settings, `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM`, `GLYPHH_STRIPE_PRICE_HOSTING` and
+`GLYPHH_STRIPE_METER_HOSTING` (`glyphh_hosting`), with a `fly secrets set` line (no app named: run it in this repo,
+whose `fly.toml` names `glyphh-ai-server`). It takes the key as `STRIPE_SECRET_KEY` or `GLYPHH_STRIPE_SECRET_KEY`.
+`GLYPHH_STRIPE_WEBHOOK_SECRET` comes from the webhook endpoint (`{server}/v1/stripe/webhook`). A plan's new amount in
+the seed is a new price under a new lookup key.
 
 ## Enterprise: setting up a customer
 
@@ -152,7 +157,7 @@ Each Enterprise customer is on their own Stripe subscription, made by hand, and 
    The org is on Enterprise through the end of the `--until` day (UTC); its hosting is metered at `--markup` (a
    percent, 0 or more) and reported to that subscription's customer; its licences carry Enterprise's limits and
    features from their next renewal (within 24 hours, or at once on a runtime's next link). It prints what it
-   recorded, or `Refused: …` and exits non-zero.
+   recorded, or `Refused: …` and exits 1; a bad argument (a negative `--markup`, say) is a usage error, exit 2.
 4. **Air-gapped:** they register each self-hosted runtime on the platform and issue its offline licence there (up
    to 365 days, 14 days' grace).
 
