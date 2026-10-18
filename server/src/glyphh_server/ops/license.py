@@ -1,7 +1,7 @@
-"""The license: what an install's plan allows (the account's limits, and each mod the org has, from its plan or an
-add-on, with that mod's limits), signed with Ed25519 so the mod can check it offline with the public key, and
-short-lived so a change of plan or add-ons reaches the machine within a day. docs/architecture.md (The license) shows
-the payload.
+"""The license: what an org's plan allows (its hosted machines, its features, and every active mod with its limits:
+Ada's managed precedents on a hosted runtime, unlimited anywhere else), signed with Ed25519 so the mod can check it
+offline with the public key, and short-lived so a change of plan reaches the machine within a day.
+docs/architecture.md (The license) shows the payload.
 
 The signature is over the payload's canonical JSON: keys sorted, no spaces, ASCII only (json.dumps with
 sort_keys=True, separators=(",", ":")). That is what the mod rebuilds from `payload` to verify it.
@@ -23,13 +23,21 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
-from glyphh_server.ops.addons import licensed
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.plans import Limits, ModLimits, org_plan
+from glyphh_server.ops.plans import Features, active_mods, features, org_version
 
 LICENSE_TTL: timedelta = timedelta(hours=24)
 GRACE_DAYS: int = 14  # a self-hosted runtime's licence: live this long past expires_at
 LINK, HEARTBEAT, OFFLINE = "link", "heartbeat", "offline"
+ADA: str = "ada"
+
+
+class AccountLimits(BaseModel):
+    machines: int | None = Field(description="Hosted machines, the org's together: null = unlimited, 0 = none")
+
+
+class ModLimits(BaseModel):
+    limits: dict[str, int | None] = Field(description="Each of the mod's limits: null = unlimited")
 
 
 def _absent(value: object) -> bool:
@@ -41,7 +49,8 @@ class LicensePayload(BaseModel):
     user_id: uuid.UUID
     org_id: uuid.UUID
     plan: str
-    limits: Limits
+    limits: AccountLimits
+    features: Features
     mods: dict[str, ModLimits]
     expires_at: datetime
     runtime_id: uuid.UUID | None = Field(None, exclude_if=_absent)  # a runtime's licence: which
@@ -52,12 +61,14 @@ class LicensePayload(BaseModel):
 
 @dataclass(frozen=True, slots=True)
 class Stamp:
-    """What a runtime's licence says of itself: the runtime, how it came, its grace and how long it lasts."""
+    """What a runtime's licence says of itself: the runtime, how it came, its grace and how long it lasts; whether it
+    is hosted, where the plan's managed precedents are its cap."""
 
     runtime_id: uuid.UUID
     kind: str
     grace_days: int | None = None
     ttl: timedelta = LICENSE_TTL
+    hosted: bool = False
 
 
 class License(BaseModel):
@@ -95,8 +106,11 @@ async def sign_license(
     install_id: uuid.UUID | None,
     stamp: Stamp | None = None,
 ) -> License:
-    plan = await org_plan(conn, org_id)
-    mods = plan.mods | await licensed(conn, org_id, plan.name)
+    plan = await org_version(conn, org_id)
+    precedents = plan.precedents if stamp is not None and stamp.hosted else None
+    mods = {
+        slug: ModLimits(limits={"precedents": precedents} if slug == ADA else {}) for slug in await active_mods(conn)
+    }
     own: dict[str, Any] = {}
     if stamp is not None:
         own = {
@@ -110,7 +124,8 @@ async def sign_license(
         user_id=user_id,
         org_id=org_id,
         plan=plan.name,
-        limits=plan.limits,
+        limits=AccountLimits(machines=plan.max_machines),
+        features=features(plan),
         mods=dict(sorted(mods.items())),
         expires_at=datetime.now(UTC).replace(microsecond=0) + (stamp.ttl if stamp else LICENSE_TTL),
         **own,

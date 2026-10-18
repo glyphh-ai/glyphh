@@ -24,8 +24,8 @@ class Org(Base):
 
     __tablename__ = "orgs"
     __table_args__ = (
-        CheckConstraint("seats > 0", name="orgs_seats"),
         CheckConstraint(f"billing_status IN {BILLING_STATUSES}", name="orgs_billing_status"),
+        CheckConstraint("coalesce(markup_pct, 0) >= 0", name="orgs_markup"),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -37,8 +37,11 @@ class Org(Base):
     )
     stripe_customer_id: Mapped[str | None] = mapped_column(Text, unique=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, unique=True)
-    seats: Mapped[int] = mapped_column(server_default="1")
     billing_status: Mapped[str] = mapped_column(Text, server_default="none")
     # When the subscription renews, from Stripe; empty when not subscribed or ending at the period's end.
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Its own markup on Fly's rates (an Enterprise customer's, by contract): over its plan's when set. Never shown.
+    markup_pct: Mapped[int | None]
+    # An Enterprise grant's end: past it, the org is back on Free (ops/enterprise.py).
+    plan_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()

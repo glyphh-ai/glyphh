@@ -1,5 +1,4 @@
-"""The mods catalog: each mod in the plans whose newest version names it in mod_limits, or sold as an add-on; a retired
-mod in none, and a mod no longer seeded retired."""
+"""The mods catalog: every active mod, in every plan; a retired mod in none, and a mod no longer seeded retired."""
 
 import httpx
 from sqlalchemy import delete, insert, select, update
@@ -8,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.db.schema import apply_schema
 from glyphh_server.models import Mod
 from tests.conftest import SETTINGS
-from tests.db.helpers import person, with_addon
+from tests.db.helpers import person
 
 
 async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: httpx.AsyncClient) -> None:
@@ -16,12 +15,9 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     assert res.status_code == 200
     mods = res.json()
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
-        ("ada", "Ada", []),
+        ("ada", "Ada", ["Free", "Pro", "Team", "Enterprise"]),
     ]
-    assert all(m["description"] for m in mods)
-    assert [m["addon"] for m in mods] == [
-        {"price_cents": cents, "per_seat": True, "plans": ["Free", "Pro", "Team"], "free": True} for cents in (400,)
-    ]
+    assert all(m["description"] for m in mods) and "addon" not in mods[0]
 
 
 async def test_seeding_again_keeps_the_catalog(engine: AsyncEngine) -> None:
@@ -36,7 +32,6 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     pro = await person(engine, "Pro")
-    await with_addon(engine, pro.org_id, "ada")
     async with engine.begin() as conn:
         await conn.execute(insert(Mod).values(slug="glyphh-old", name="Old", description="Gone", sort=9))
         await conn.execute(update(Mod).where(Mod.slug == "ada").values(active=False))
@@ -46,7 +41,7 @@ async def test_a_retired_mod_leaves_every_plan_and_a_mod_no_longer_seeded_is_ret
         assert list(lic["mods"]) == []
         slugs = [m["slug"] for m in (await client.get("/v1/mods")).json()]
         assert slugs == []
-        assert "ada" not in [a["mod"] for a in (await client.get("/v1/addons", headers=pro.headers)).json()]
+        assert (await client.get("/v1/addons", headers=pro.headers)).status_code == 404  # no add-ons any more
         async with engine.connect() as conn:
             assert (await conn.execute(select(Mod.active).where(Mod.slug == "glyphh-old"))).scalar_one() is False
     finally:

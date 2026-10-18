@@ -1,4 +1,4 @@
-"""Stripe's webhook keeps orgs true: plan version, seats, status, Stripe ids. Unsigned events are refused."""
+"""Stripe's webhook keeps orgs true: plan version, status, Stripe ids. Unsigned events are refused."""
 
 import json
 import time
@@ -27,20 +27,21 @@ def _event(kind: str, obj: dict[str, Any]) -> dict[str, Any]:
     return {"id": "evt_1", "type": kind, "data": {"object": obj}}
 
 
-async def _plan(engine: AsyncEngine, org_id: Any) -> tuple[str, int, str, str | None]:
+async def _plan(engine: AsyncEngine, org_id: Any) -> tuple[str, str, str | None]:
     from glyphh_server.ops.plans import org_version
 
     row = await org_row(engine, org_id)
     async with engine.connect() as conn:
         name = (await org_version(conn, org_id)).name
-    return name, row.seats, row.billing_status, row.stripe_subscription_id
+    return name, row.billing_status, row.stripe_subscription_id
 
 
-async def test_a_finished_checkout_puts_the_org_on_its_plan_and_seats(
+async def test_a_finished_checkout_puts_the_org_on_its_plan_its_metered_item_passing(
     client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
 ) -> None:
     ada = await person(engine)
-    stripe.sub("sub_new", "cus_new", "price_test_team", 4)["items"]["data"][0]["current_period_end"] = 1_800_000_000
+    stripe.sub("sub_new", "cus_new", "price_test_team", 1)["items"]["data"][0]["current_period_end"] = 1_800_000_000
+    stripe.add_item("sub_new", "price_test_hosting")
     obj = {
         "mode": "subscription",
         "client_reference_id": str(ada.org_id),
@@ -48,7 +49,7 @@ async def test_a_finished_checkout_puts_the_org_on_its_plan_and_seats(
         "subscription": "sub_new",
     }
     assert (await _send(client, _event("checkout.session.completed", obj))).status_code == 204
-    assert await _plan(engine, ada.org_id) == ("Team", 4, "active", "sub_new")
+    assert await _plan(engine, ada.org_id) == ("Team", "active", "sub_new")
     org = await org_row(engine, ada.org_id)
     assert org.stripe_customer_id == "cus_new"
     assert org.renews_at == datetime.fromtimestamp(1_800_000_000, UTC)
@@ -57,17 +58,17 @@ async def test_a_finished_checkout_puts_the_org_on_its_plan_and_seats(
 async def test_subscription_changes_are_read_fresh_and_a_deleted_one_returns_the_org_to_free(
     client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
 ) -> None:
-    ada = await person(engine, "Team", seats=3)
+    ada = await person(engine, "Team")
     await subscribed(engine, ada.org_id, "sub_live", "cus_live")
     ending = stripe.sub("sub_live", "cus_live", "price_test_pro", 1, "past_due")
     ending.update(current_period_end=1_800_000_000, cancel_at_period_end=True)
     stale = {"id": "sub_live", "customer": "cus_live", "metadata": {}, "status": "active"}
     assert (await _send(client, _event("customer.subscription.updated", stale))).status_code == 204
-    assert await _plan(engine, ada.org_id) == ("Pro", 1, "past_due", "sub_live")
+    assert await _plan(engine, ada.org_id) == ("Pro", "past_due", "sub_live")
     assert (await org_row(engine, ada.org_id)).renews_at is None
     stripe.sub("sub_live", "cus_live", "price_test_pro", 1, "canceled")
     await _send(client, _event("customer.subscription.deleted", stale))
-    assert await _plan(engine, ada.org_id) == ("Free", 1, "canceled", None)
+    assert await _plan(engine, ada.org_id) == ("Free", "canceled", None)
 
 
 async def test_the_org_is_found_by_metadata_when_stripe_has_no_customer_of_ours(
@@ -77,7 +78,7 @@ async def test_the_org_is_found_by_metadata_when_stripe_has_no_customer_of_ours(
     stripe.sub("sub_meta", "cus_meta", "price_unknown", 2, "weird_status")
     obj = {"id": "sub_meta", "customer": "cus_meta", "metadata": {"org_id": str(ada.org_id)}}
     await _send(client, _event("customer.subscription.created", obj))
-    assert await _plan(engine, ada.org_id) == ("Free", 1, "none", "sub_meta")
+    assert await _plan(engine, ada.org_id) == ("Free", "none", "sub_meta")
 
 
 async def test_events_for_no_org_another_subscription_or_of_no_interest_change_nothing(
@@ -101,7 +102,7 @@ async def test_events_for_no_org_another_subscription_or_of_no_interest_change_n
         {"type": "ping"},
     ):
         assert (await _send(client, event)).status_code == 204, event
-    assert await _plan(engine, ada.org_id) == ("Pro", 1, "active", "sub_current")
+    assert await _plan(engine, ada.org_id) == ("Pro", "active", "sub_current")
 
 
 async def test_an_unsigned_wrongly_signed_or_old_event_is_refused(client: httpx.AsyncClient) -> None:

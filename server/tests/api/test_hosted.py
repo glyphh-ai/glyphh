@@ -16,8 +16,9 @@ from glyphh_server import app as app_module
 from glyphh_server.app import create_app
 from glyphh_server.errors import Conflict, Unavailable
 from glyphh_server.models import Rrotor, Run, RuntimeKey
-from glyphh_server.ops import hours
+from glyphh_server.ops import tend as tending
 from glyphh_server.ops.auth.secrets import hash_secret
+from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import idle_hosted, stop_idle, waker
 from glyphh_server.ops.runtime_keys import key_hash
@@ -40,7 +41,7 @@ async def test_a_persons_runtime_is_made_on_first_start_then_started_stopped_sho
     engine: AsyncEngine,
 ) -> None:
     fly = FakeFly()
-    ada = await person(engine)  # Free: a runtime too, 5 hours a month
+    ada = await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
         res = await client.get("/v1/runtime", headers=ada.headers)
         assert res.status_code == 200, res.text
@@ -49,13 +50,8 @@ async def test_a_persons_runtime_is_made_on_first_start_then_started_stopped_sho
         res = await client.post("/v1/runtime/start", headers=ada.headers)
         assert res.status_code == 200, res.text
         view = res.json()
-        assert (view["state"], view["region"], view["seconds_used"], view["hours_allowed"], view["paused"]) == (
-            "stopped",
-            "iad",
-            0,
-            5,
-            False,
-        )
+        assert (view["state"], view["region"], view["seconds_used"]) == ("stopped", "iad", 0)
+        assert "paused" not in view and "hours_allowed" not in view
         row = await _row(engine, view["runtime_id"])
         assert (row.mode, row.fly_machine_id, row.fly_volume_id, row.install_id) == ("hosted", "m_2", "vol_1", None)
         assert view["address"] == "https://m_2.glyphh.app"
@@ -149,7 +145,7 @@ async def test_hosting_needs_the_server_set_up_and_fly_answering(engine: AsyncEn
 
 
 async def _hosted(engine: AsyncEngine, who: Person, state: str, seen: datetime, machine: str) -> uuid.UUID:
-    rt = await hosted_runtime(engine, who)
+    rt = await hosted_runtime(engine, who, machine)
     async with engine.begin() as conn:
         values = {"state": state, "last_seen_at": seen, "fly_machine_id": machine}
         await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(**values))
@@ -211,13 +207,14 @@ async def test_the_app_stops_idle_runtimes_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def tend(engine: AsyncEngine, fly: Fly, hub: Any, idle: timedelta, step: int) -> None:
+    async def tend(engine: AsyncEngine, hub: Any, cfg: Any, step: int, fly: Any, stripe: Any) -> None:
+        assert fly is not None and stripe is not None and stripe.meter == "glyphh_hosting"
         ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("fly hiccup")
         stopped.set()
 
-    monkeypatch.setattr(hours, "tend", tend)
+    monkeypatch.setattr(tending, "tend", tend)
     app = create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))
     async for _ in _client(app):
         assert app.state.hub.waker is not None
@@ -230,7 +227,7 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
 ) -> None:
     fly = FakeFly()
     fly.machines["m_0"] = {"id": "m_0", "name": "other", "state": "stopped"}  # not the doorman: looked past
-    ada, eve = await person(engine), await person(engine)
+    ada, eve = await person(engine, "Pro"), await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
         runtime_id = (await client.post("/v1/runtime/start", headers=ada.headers)).json()["runtime_id"]
         made = await client.post(
@@ -269,41 +266,29 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
         )
 
 
-async def test_the_tally_counts_online_time_pauses_past_the_plans_hours_and_resumes_with_the_month(
+async def test_the_tally_counts_online_time_starts_again_with_the_month_and_never_pauses(
     engine: AsyncEngine, redis: Any
 ) -> None:
-    fly = FakeFly()
-    for name in ("m_free", "m_pro"):
-        fly.machines[name] = {"id": name, "state": "started"}
-    free, pro = await person(engine), await person(engine, "Pro")
-    now = datetime.now(UTC)
-    month = now.strftime("%Y-%m")
-    free_id = await _hosted(engine, free, "online", now, "m_free")
-    pro_id = await _hosted(engine, pro, "online", now, "m_pro")
-    async with engine.begin() as conn:
-        await conn.execute(update(Rrotor).where(Rrotor.id == free_id).values(month=month, month_seconds=5 * 3600 - 60))
-        await conn.execute(
-            update(Rrotor).where(Rrotor.id == pro_id).values(month="2020-01", month_seconds=10**6, paused_at=now)
-        )
-    client = Fly(fake_http(fly=fly), FLY_SETTINGS)
     from glyphh_server.ops.link.hub import Hub
 
-    hub = Hub(redis)
-    async with holding(redis, free_id) as free_sent, holding(redis, pro_id) as pro_sent:
-        assert await hours.tally(engine, client, hub, 60) == [free_id]
-        assert (await free_sent())["type"] == "pause"
-        assert (await pro_sent())["type"] == "resume"
-    free_row, pro_row = await _row(engine, str(free_id)), await _row(engine, str(pro_id))
-    assert (free_row.month_seconds, free_row.paused_at is not None, free_row.state) == (5 * 3600, True, "stopped")
-    assert fly.machines["m_free"]["state"] == "stopped"
-    assert (pro_row.month, pro_row.month_seconds, pro_row.paused_at) == (month, 60, None)
-    async for http in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        shown = (await http.get("/v1/runtime", headers=free.headers)).json()
-        assert (shown["paused"], shown["seconds_used"], shown["state"]) == (True, 5 * 3600, "stopped")
-    assert await hours.tally(engine, client, hub, 60) == []  # paused already: counted no further, not paused twice
-    assert (await _row(engine, str(free_id))).month_seconds == 5 * 3600
-    del fly.machines["m_pro"]
+    pro, team = await person(engine, "Pro"), await person(engine, "Team")
+    now = datetime.now(UTC)
+    month = now.strftime("%Y-%m")
+    online = await _hosted(engine, pro, "online", now, "m_on")
+    turned = await _hosted(engine, team, "online", now, "m_turned")
+    stopped = await _hosted(engine, team, "stopped", now, "m_off")
     async with engine.begin() as conn:
-        await conn.execute(update(Rrotor).where(Rrotor.id == pro_id).values(month_seconds=50 * 3600))
-    assert await hours.tally(engine, client, hub, 60) == [pro_id]  # Fly lost the machine: paused all the same, logged
-    await hours.tend(engine, client, hub, timedelta(minutes=10), 60)
+        await conn.execute(update(Rrotor).where(Rrotor.id == online).values(month=month, month_seconds=10**7))
+        await conn.execute(update(Rrotor).where(Rrotor.id == turned).values(month="2020-01", month_seconds=10**6))
+    await tending.tally(engine, 60, "iad")
+    rows = [await _row(engine, str(i)) for i in (online, turned, stopped)]
+    assert [(r.month, r.month_seconds, r.state) for r in rows] == [
+        (month, 10**7 + 60, "online"),  # far past any hours there were: never paused
+        (month, 60, "online"),
+        (month, 0, "stopped"),
+    ]
+    fly = FakeFly()
+    await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, Fly(fake_http(fly=fly), FLY_SETTINGS), None)
+    assert (await _row(engine, str(online))).month_seconds == 10**7 + 120
+    meter = StripeClient(fake_http(), "sk_test", "glyphh_hosting")  # with Stripe, the hosting due is reported too
+    await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, None, meter)  # hosting off: the rest of the tick runs

@@ -1,6 +1,7 @@
-"""A person's hosted machines: as many as their plan's machines, each named, of one size (small, medium or large),
-made and started, stopped, restarted and deleted, each only by its owner. Deleting one destroys its machine and its
-volume: nothing is kept past Fly's daily snapshots (5 days). The routes made for one runtime act on the first."""
+"""A person's hosted machines: as many as the org's plan allows, all its people's together, each named, of one size
+(small, medium or large), made and started, stopped, restarted and deleted, each only by its owner. Deleting one
+destroys its machine and its volume: nothing is kept past Fly's daily snapshots (5 days). The routes made for one
+runtime act on the first."""
 
 import uuid
 from datetime import UTC, datetime
@@ -15,6 +16,7 @@ from glyphh_server.models.rrotor import SizeName
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.held import check_start
 from glyphh_server.ops.hosted import provision
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.plans import org_version
@@ -31,7 +33,6 @@ class Machine(BaseModel):
     state: str = Field(description="stopped, online or offline")
     address: str | None = Field(description="Where it is called: https://<machine>.<domain>, REST and /mcp")
     month_seconds: int = Field(description="Its online time this calendar month")
-    paused: bool = Field(description="The month's hours are spent: calls answer 402 until the month turns")
     created_at: datetime
 
 
@@ -47,7 +48,6 @@ def _view(row: Row, domain: str) -> Machine:
         state=row.state,
         address=f"https://{row.fly_machine_id}.{domain}" if row.fly_machine_id else None,
         month_seconds=row.month_seconds if this_month else 0,
-        paused=row.paused_at is not None and this_month,
         created_at=row.created_at,
     )
 
@@ -71,8 +71,8 @@ async def machine(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID, 
 async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, size: SizeName) -> Machine:
     """A new machine, made and started (the app's doorman with the first one); past the plan's machines, or
     with a name the person has given another, refused."""
-    await limits.lock_user(conn, who.user_id)
-    await limits.check(conn, "machines", await limits.machines(conn, who.user_id), await org_version(conn, who.org_id))
+    await limits.lock_org(conn, who.org_id)
+    await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), await org_version(conn, who.org_id))
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)
     if (await conn.execute(taken)).first() is not None:
         raise Conflict("You have a machine of that name already.", reason="name", name=name)
@@ -83,8 +83,10 @@ async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, siz
 
 
 async def start(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
-    """Its machine started, unless it is online already. It is `stopped` until its rrotor links."""
+    """Its machine started, unless it is online already. It is `stopped` until its rrotor links. Refused for a machine
+    past the plan's, the org's newest beyond it."""
     row = await _row(conn, who, runtime_id)
+    await check_start(conn, runtime_id, who.org_id)
     if row.state != ONLINE:
         await fly.start(str(row.fly_machine_id))
     return _view(row, fly.settings.fly_public_domain)
@@ -102,8 +104,10 @@ async def stop(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid
 
 
 async def restart(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
-    """Its machine restarted: its link drops and it links again, `stopped` until then."""
-    await fly.restart(str((await _row(conn, who, runtime_id)).fly_machine_id))
+    """Its machine restarted: its link drops and it links again, `stopped` until then. Refused as starting is."""
+    row = await _row(conn, who, runtime_id)
+    await check_start(conn, runtime_id, who.org_id)
+    await fly.restart(str(row.fly_machine_id))
     return await _stopped(conn, fly, who, runtime_id)
 
 
@@ -132,7 +136,7 @@ async def first(conn: AsyncConnection, who: Principal) -> uuid.UUID:
 
 async def start_first(conn: AsyncConnection, fly: Fly, who: Principal) -> None:
     """The first machine started; with none, one made (`default`, small)."""
-    await limits.lock_user(conn, who.user_id)
+    await limits.lock_org(conn, who.org_id)
     try:
         runtime_id = await first(conn, who)
     except NotFound:

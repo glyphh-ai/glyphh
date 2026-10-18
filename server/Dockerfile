@@ -11,6 +11,7 @@ FROM deps AS test
 RUN uv sync --frozen --no-install-project
 COPY src ./src
 COPY tests ./tests
+COPY scripts ./scripts
 RUN uv sync --frozen
 CMD ["pytest"]
 

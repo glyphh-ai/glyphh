@@ -1,5 +1,5 @@
-"""What a runtime reports over its link: each key's calls, counted once, and every model it deployed, recorded when
-the server had not seen it."""
+"""What a runtime reports over its link: each key's calls, counted once, its precedents, and every model it deployed,
+recorded when the server had not seen it."""
 
 import uuid
 from datetime import UTC, datetime
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.models import Deployment, Model, ModelVersion, RuntimeKey
 from glyphh_server.ops.runtime_keys import key_hash
 from tests.db.helpers import person
-from tests.link import SHA, SHA2, WAIT, a_model, connect, hello, hosted_runtime, linked, receive, server
+from tests.link import SHA, SHA2, WAIT, a_model, connect, hello, hosted_runtime, linked, receive, runtime_row, server
 
 SHA3: str = "c" * 40
 
@@ -58,6 +58,20 @@ async def test_usage_adds_each_keys_calls_once(engine: AsyncEngine) -> None:
         "bot": (1, datetime(2026, 10, 16, 10, 0, tzinfo=UTC)),
     }
     assert await _keys(engine, theirs.id) == {"eve": (0, None)}  # another runtime's key is never this one's
+
+
+async def test_usage_keeps_the_runtimes_precedents_as_it_last_said_them(engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    rt = await hosted_runtime(engine, ada)
+    async with server() as srv, linked(srv, rt) as ws:
+        await _send(ws, {"type": "usage", "id": "p1", "seq": 1, "keys": [], "precedents": 1_200})
+        row = await runtime_row(engine, rt.id)
+        assert (row.precedents, row.precedents_at is not None) == (1_200, True)
+        await _send(ws, _usage("p2", 2))  # no reading yet: the last one stands
+        await _send(ws, {"type": "usage", "id": "p3", "seq": 3, "precedents": 900})
+        await ws.send_json({"type": "usage", "id": "p4", "seq": 4, "precedents": -1})  # unreadable: skipped
+        await _send(ws, {"type": "usage", "id": "p5", "seq": 5, "keys": [], "precedents": 950})
+    assert (await runtime_row(engine, rt.id)).precedents == 950
 
 
 async def _models(engine: AsyncEngine, user_id: uuid.UUID) -> list[tuple[str, str | None, int, str, dict[str, Any]]]:

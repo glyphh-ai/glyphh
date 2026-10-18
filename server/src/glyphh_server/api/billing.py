@@ -1,94 +1,72 @@
-"""Subscribing, changing plan or seats, adding or removing add-ons, Stripe's portal, and Stripe's webhook. Writes are
-the admin's."""
+"""The org's billing and use; subscribing, changing plan, Stripe's portal, and Stripe's webhook. Writes are the
+admin's."""
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.pages import to_platform
-from glyphh_server.ops.addons import AddonView
-from glyphh_server.ops.billing import addons, changes, checkout, signature, webhook
-from glyphh_server.ops.billing.addons import Action, AddonPreview
+from glyphh_server.models import Org
+from glyphh_server.ops.billing import changes, checkout, signature, webhook
 from glyphh_server.ops.billing.checkout import StripePage
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.org import OrgView
+from glyphh_server.ops.usage import Usage, usage
 
 router = APIRouter(tags=["plans and billing"])
 
 
 def stripe_client(request: Request) -> StripeClient:
-    return StripeClient(request.app.state.http, request.app.state.settings.stripe_secret_key)
+    settings = request.app.state.settings
+    return StripeClient(request.app.state.http, settings.stripe_secret_key, settings.stripe_meter_hosting)
 
 
 Stripe = Annotated[StripeClient, Depends(stripe_client)]
 
 
-Mod = Annotated[str, Field(min_length=1, max_length=40)]
+PlanName = Annotated[str, Field(min_length=1, max_length=40, description="The plan's name, as /v1/plans lists it")]
 
 
 class CheckoutIn(BaseModel):
-    plan: str = Field(min_length=1, max_length=40)
-    seats: int = Field(ge=1, le=10_000)
-    addons: list[Mod] = Field(default_factory=list, max_length=20, description="Mods to add on, each its own line")
-
-
-class PreviewIn(BaseModel):
-    mod: Mod
-    action: Action
-
-
-class AddonIn(BaseModel):
-    mod: Mod
-    proration_date: int | None = Field(default=None, description="The preview's, to be charged exactly what it said")
+    plan: PlanName
 
 
 class PlanIn(BaseModel):
-    plan: str = Field(min_length=1, max_length=40)
+    plan: PlanName
 
 
-class SeatsIn(BaseModel):
-    seats: int = Field(ge=1, le=10_000)
+class BillingView(Usage):
+    billing_status: str
+    renews_at: datetime | None = Field(description="When the subscription renews; null when not subscribed or ending")
+    plan_until: datetime | None = Field(description="When an Enterprise grant ends; null on any other plan")
+
+
+@router.get("/v1/billing", operation_id="billing")
+async def get_billing(caller: Caller, conn: Conn) -> BillingView:
+    """The org's billing: its plan and price, the precedents its hosted runtimes hold of the plan's managed bucket,
+    and its hosting this month, all in, machine by machine."""
+    row = (
+        await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
+    ).one()
+    return BillingView(**(await usage(conn, caller.org_id)).model_dump(), **row._mapping)
 
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")
 async def start_checkout(body: CheckoutIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
-    """Stripe Checkout's address for a per-seat subscription and its add-ons, to open in the browser pane."""
-    settings = request.app.state.settings
-    return await checkout.checkout(conn, caller, stripe, settings, body.plan, body.seats, body.addons)
+    """Stripe Checkout's address for a self-serve plan (Pro or Team), to open in the browser pane."""
+    return await checkout.checkout(conn, caller, stripe, request.app.state.settings, body.plan)
 
 
 @router.post("/v1/billing/plan", operation_id="changePlan")
 async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe) -> OrgView:
-    """Change plan: the newest version of it, prorated."""
+    """Change plan: the newest version of another self-serve plan, prorated; or Free, which cancels the subscription
+    now once the org has no hosted machines."""
     return await changes.change_plan(conn, caller, stripe, body.plan)
-
-
-@router.post("/v1/billing/seats", operation_id="changeSeats")
-async def change_seats(body: SeatsIn, caller: Caller, conn: Conn, stripe: Stripe) -> OrgView:
-    """Change the seats, prorated; never fewer than the members and open invites."""
-    return await changes.change_seats(conn, caller, stripe, body.seats)
-
-
-@router.post("/v1/billing/addons/preview", operation_id="previewAddon")
-async def preview_addon(body: PreviewIn, caller: Caller, conn: Conn, stripe: Stripe) -> AddonPreview:
-    """What adding or removing an add-on costs now, prorated, from Stripe's preview invoice; nothing changes."""
-    return await addons.preview(conn, caller, stripe, body.mod, body.action)
-
-
-@router.post("/v1/billing/addons", operation_id="addAddon")
-async def add_addon(body: AddonIn, caller: Caller, conn: Conn, stripe: Stripe) -> list[AddonView]:
-    """Add an add-on to the subscription, prorated."""
-    return await addons.change(conn, caller, stripe, body.mod, "add", body.proration_date)
-
-
-@router.delete("/v1/billing/addons/{mod}", operation_id="removeAddon")
-async def remove_addon(
-    mod: str, caller: Caller, conn: Conn, stripe: Stripe, proration_date: int | None = None
-) -> list[AddonView]:
-    """Remove an add-on from the subscription, prorated (a credit)."""
-    return await addons.change(conn, caller, stripe, mod, "remove", proration_date)
 
 
 @router.post("/v1/billing/portal", operation_id="openBillingPortal")
@@ -101,10 +79,12 @@ async def open_portal(caller: Caller, conn: Conn, stripe: Stripe, request: Reque
 async def stripe_webhook(
     request: Request, conn: Conn, stripe_signature: Annotated[str | None, Header()] = None
 ) -> Response:
-    """Stripe's events keep orgs true: plan version, seats, status. Signed by Stripe, or refused."""
+    """Stripe's events keep orgs true: plan version and status. Signed by Stripe, or refused."""
     secret = request.app.state.settings.stripe_webhook_secret
     event = signature.verified_event(secret, await request.body(), stripe_signature)
-    await webhook.handle_event(conn, stripe_client(request), event)
+    settings = request.app.state.settings
+    fly = Fly(request.app.state.http, settings) if settings.fly_configured else None
+    await webhook.handle_event(conn, stripe_client(request), event, fly)
     return Response(status_code=204)
 
 

@@ -12,9 +12,9 @@ from tests.db.helpers import member, person
 
 
 async def test_a_tenant_sees_only_its_own_org(engine: AsyncEngine, client: httpx.AsyncClient) -> None:
-    ada = await person(engine, "Team", seats=3)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
-    eve = await person(engine, "Team", seats=3)
+    eve = await person(engine, "Team")
     for who in (ada, eve):
         await client.post("/v1/org/invites", json={"email": "x@tenancy.test"}, headers=who.headers)
     async with engine.begin() as conn:
@@ -37,21 +37,3 @@ async def test_a_tenant_cannot_write_a_row_into_another_org(engine: AsyncEngine)
         async with engine.begin() as conn:
             await tenancy.enter(conn, ada.org_id)
             await conn.execute(update(User).where(User.id == ada.user_id).values(org_id=eve.org_id))
-
-
-async def test_a_tenant_sees_and_writes_only_its_own_orgs_addons(engine: AsyncEngine) -> None:
-    from glyphh_server.models import OrgAddon
-    from tests.db.helpers import with_addon
-
-    ada, eve = await person(engine, "Pro"), await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "ada")
-    await with_addon(engine, eve.org_id, "ada")
-    async with engine.begin() as conn:
-        await tenancy.enter(conn, ada.org_id)
-        assert set((await conn.execute(select(OrgAddon.org_id))).scalars()) == {ada.org_id}
-        gone = await conn.execute(update(OrgAddon).where(OrgAddon.org_id == eve.org_id).values(quantity=9))
-        assert gone.rowcount == 0
-    with pytest.raises(DBAPIError, match="row-level security"):
-        async with engine.begin() as conn:
-            await tenancy.enter(conn, ada.org_id)
-            await conn.execute(update(OrgAddon).where(OrgAddon.org_id == ada.org_id).values(org_id=eve.org_id))

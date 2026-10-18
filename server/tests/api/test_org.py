@@ -1,4 +1,4 @@
-"""The org, its members and its invites; writes are the admin's, and invites stop at the plan's limits."""
+"""The org, its members and its invites; writes are the admin's, and members are unlimited on every plan."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -13,16 +13,11 @@ from tests.db.helpers import member, person
 async def test_the_org_is_read_by_anyone_in_it_and_renamed_by_its_admin(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
     org = (await client.get("/v1/org", headers=bob.headers)).json()
-    assert (org["name"], org["admin_user_id"], org["plan"]["name"], org["seats"]) == (
-        "Ada Lovelace's org",
-        str(ada.user_id),
-        "Team",
-        2,
-    )
-    assert (org["members"], org["seats_taken"], org["billing_status"]) == (2, 2, "none")
+    assert (org["name"], org["admin_user_id"], org["plan"]["name"]) == ("Ada Lovelace's org", str(ada.user_id), "Team")
+    assert (org["members"], org["billing_status"], "seats" in org) == (2, "none", False)
     refused = await client.patch("/v1/org", json={"name": "Bob's"}, headers=bob.headers)
     assert refused.status_code == 403 and refused.json()["error"]["code"] == "E_FORBIDDEN"
     assert (await client.patch("/v1/org", json={"name": " Engines "}, headers=ada.headers)).json()["name"] == "Engines"
@@ -31,7 +26,7 @@ async def test_the_org_is_read_by_anyone_in_it_and_renamed_by_its_admin(
 async def test_members_are_listed_and_a_removed_one_lands_in_an_org_of_their_own(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
     listed = (await client.get("/v1/org/members", headers=bob.headers)).json()
     assert [(m["id"], m["role"]) for m in listed] == [(str(ada.user_id), "admin"), (str(bob.user_id), "member")]
@@ -53,7 +48,7 @@ async def test_the_admin_is_never_removed_and_strangers_are_not_found(
 
 
 async def test_invites_are_made_listed_and_revoked_by_the_admin(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=3)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
     made = await client.post("/v1/org/invites", json={"email": "New@People.Test"}, headers=ada.headers)
     assert made.status_code == 201
@@ -73,7 +68,7 @@ async def test_invites_are_made_listed_and_revoked_by_the_admin(client: httpx.As
 async def test_an_invite_for_a_member_or_twice_for_one_email_clashes(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=5)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
     taken = await client.post("/v1/org/invites", json={"email": bob.email.upper()}, headers=ada.headers)
     assert taken.status_code == 409 and "already in your org" in taken.json()["error"]["message"]
@@ -87,7 +82,7 @@ async def test_an_invite_for_a_member_or_twice_for_one_email_clashes(
 async def test_an_expired_invite_holds_no_seat_and_can_be_sent_again(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     await client.post("/v1/org/invites", json={"email": "late@people.test"}, headers=ada.headers)
     async with engine.begin() as conn:
         await conn.execute(
@@ -100,21 +95,12 @@ async def test_an_expired_invite_holds_no_seat_and_can_be_sent_again(
         assert len((await conn.execute(select(Invite.id).where(Invite.org_id == ada.org_id))).all()) == 1
 
 
-async def test_an_invite_past_the_plans_members_names_team(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
+async def test_invites_are_never_limited_on_any_plan(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     for plan in ("Free", "Pro"):
         ada = await person(engine, plan)
-        res = await client.post("/v1/org/invites", json={"email": "friend@people.test"}, headers=ada.headers)
-        err = res.json()["error"]
-        assert res.status_code == 403
-        assert (err["code"], err["limit"], err["used"], err["max"], err["plan"]) == ("E_LIMIT", "members", 1, 1, "Team")
-
-
-async def test_an_invite_past_the_seats_bought_is_refused(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=2)
-    assert (await client.post("/v1/org/invites", json={"email": "a@p.test"}, headers=ada.headers)).status_code == 201
-    res = await client.post("/v1/org/invites", json={"email": "b@p.test"}, headers=ada.headers)
-    err = res.json()["error"]
-    assert (err["code"], err["limit"], err["used"], err["max"], err["plan"]) == ("E_LIMIT", "seats", 2, 2, "Team")
+        for n in range(3):
+            res = await client.post("/v1/org/invites", json={"email": f"friend{n}@people.test"}, headers=ada.headers)
+            assert res.status_code == 201, plan
 
 
 async def test_a_new_person_signing_in_with_an_invited_email_joins_as_a_member(
@@ -122,7 +108,7 @@ async def test_a_new_person_signing_in_with_an_invited_email_joins_as_a_member(
 ) -> None:
     from tests.api.browser import open_browser, sign_in
 
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     async for browser in open_browser(stripe):
         await client.post("/v1/org/invites", json={"email": browser.email}, headers=ada.headers)
         me = (await browser.http.get("/v1/me", headers=await sign_in(browser.http))).json()

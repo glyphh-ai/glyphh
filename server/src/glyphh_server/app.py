@@ -2,14 +2,12 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from datetime import timedelta
 
 import httpx
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.api import (
-    addons,
     approvals,
     billing,
     connector,
@@ -41,7 +39,8 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, hours, vault
+from glyphh_server.ops import github_app, tend, vault
+from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
@@ -56,7 +55,6 @@ ROUTERS = (
     org,
     mods,
     plans,
-    addons,
     billing,
     runtime,
     self_hosted,
@@ -78,15 +76,25 @@ ROUTERS = (
 IDLE_EVERY: float = 60.0
 
 
-async def tend_forever(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta) -> None:
-    """Every minute, tally the hosted runtimes' hours (pausing those past their plan's) and stop the idle ones; a
-    failure is logged and the next minute comes."""
+async def tend_forever(
+    engine: AsyncEngine, hub: Hub, cfg: Settings, fly: Fly | None, stripe: StripeClient | None
+) -> None:
+    """Every minute, the server's tick (ops/tend.py); a failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await hours.tend(engine, fly, hub, idle, int(IDLE_EVERY))
+            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), fly, stripe)
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
+
+
+def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
+    """The minute tick, always; with hosting on, Fly and the hub's waker; with billing set up, Stripe's meter."""
+    fly = Fly(app.state.http, cfg) if cfg.fly_configured else None
+    if fly is not None:
+        app.state.hub.waker = waker(engine, fly)
+    meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting)
+    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None))
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -100,17 +108,11 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.http = http or httpx.AsyncClient(timeout=10)
-        idle: asyncio.Task[None] | None = None
-        if cfg.fly_configured:
-            fly = Fly(app.state.http, cfg)
-            app.state.hub.waker = waker(engine, fly)
-            minutes = timedelta(minutes=cfg.runtime_idle_minutes)
-            idle = asyncio.create_task(tend_forever(engine, fly, app.state.hub, minutes))
+        idle = _tending(app, cfg, engine)
         yield
-        if idle is not None:
-            idle.cancel()
-            with suppress(asyncio.CancelledError):
-                await idle
+        idle.cancel()
+        with suppress(asyncio.CancelledError):
+            await idle
         await app.state.hub.close_all()
         await app.state.http.aclose()
         await redis.aclose()

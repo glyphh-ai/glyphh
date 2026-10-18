@@ -63,7 +63,7 @@ async def list_invites(caller: Caller, conn: Conn) -> list[InviteView]:
 
 @router.post("/org/invites", operation_id="createInvite", status_code=201)
 async def create_invite(body: NewInvite, request: Request, caller: Caller, conn: Conn) -> CreatedInvite:
-    """Invite by email; refused past the plan's members or the seats bought."""
+    """Invite by email: members are unlimited on every plan."""
     view, token = await invites.create_invite(conn, caller, body.email)
     return CreatedInvite(invite=view, link=f"{request.app.state.settings.invite_base}?invite={token}")
 

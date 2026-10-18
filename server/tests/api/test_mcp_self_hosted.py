@@ -22,7 +22,7 @@ async def named(client: Any, auth: dict[str, str], tool_name: str, **arguments: 
 async def test_a_self_hosted_runtime_is_registered_listed_keyed_and_licensed_from_claude(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine)
+    ada = await person(engine, "Enterprise")
     _, auth = await granted(engine, ada)
     none = await tool(client, auth, "self_runtimes")
     assert none["content"][0]["text"] == "No self-hosted runtimes yet: register_self_runtime adds one."

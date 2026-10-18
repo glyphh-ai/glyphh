@@ -7,10 +7,8 @@ import json
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import Org, PlanVersion
 from glyphh_server.ops.auth import tokens
 from glyphh_server.ops.license import canonical
 from glyphh_server.ops.link import hello as hello_step
@@ -37,7 +35,7 @@ async def test_a_hello_is_welcomed_and_the_runtime_is_online_until_it_hangs_up(e
             await ws.send_json(hello(rt, version="1.4.0"))
             welcome = await ws.receive_json(timeout=WAIT)
             assert welcome["type"] == "welcome" and welcome["accepted"] is True
-            assert welcome["limits"] == {"runtime_hours": None} and welcome["id"]
+            assert "limits" not in welcome and welcome["licence"] is None and welcome["id"]
             row = await runtime_row(engine, rt.id)
             assert (row.state, row.image_version) == ("online", "1.4.0") and row.last_seen_at is not None
             seen = row.last_seen_at
@@ -45,26 +43,24 @@ async def test_a_hello_is_welcomed_and_the_runtime_is_online_until_it_hangs_up(e
     assert (await runtime_row(engine, rt.id)).last_seen_at >= seen
 
 
-async def test_a_hosted_runtime_is_welcomed_with_its_plans_hours(engine: AsyncEngine) -> None:
+async def test_a_hosted_runtime_is_welcomed_with_the_plans_managed_precedents(engine: AsyncEngine) -> None:
     ada = await person(engine, "Pro")
     rt = await hosted_runtime(engine, ada)
-    async with engine.connect() as conn:
-        found = select(PlanVersion.runtime_hours).join(Org, Org.plan_version_id == PlanVersion.id)
-        hours = (await conn.execute(found.where(Org.id == ada.org_id))).scalar_one()
     async with server() as srv, connect(srv, rt.token) as ws:
         await ws.send_json(hello(rt))
         welcome = await ws.receive_json(timeout=WAIT)
-        assert welcome["limits"] == {"runtime_hours": hours}
+        assert "limits" not in welcome
         key = (await srv.http.get("/v1/license/key", headers=ada.headers)).json()
     assert welcome["keys"] == []
     payload = welcome["licence"]["payload"]
     assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
     assert (payload["kind"], payload["runtime_id"], "grace_days" in payload) == ("link", str(rt.id), False)
+    assert payload["mods"] == {"ada": {"limits": {"precedents": 100_000}}} and payload["limits"] == {"machines": 3}
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
     public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
     ctx = session.Context(engine, None, None, None, None)  # type: ignore[arg-type]
-    runtime = Runtime(rt.id, ada.user_id, ada.org_id, "hosted", hours)
-    assert (await session._welcome(ctx, runtime)).licence is None  # no key to sign with: hours, no licence
+    runtime = Runtime(rt.id, ada.user_id, ada.org_id, "hosted")
+    assert (await session._welcome(ctx, runtime)).licence is None  # no key to sign with: no licence
 
 
 async def test_a_link_without_a_good_token_is_refused_with_its_reason(engine: AsyncEngine) -> None:

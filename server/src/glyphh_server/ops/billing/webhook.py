@@ -1,6 +1,7 @@
 """Stripe's events, keeping orgs true: a finished checkout, and every change to a subscription; and the one-time
 unlocks (a Payment Link's finished checkout, a refund), which have no org. The subscription
-is read fresh from Stripe, so events arriving late or out of order can't leave an org behind."""
+is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. The hosting due is
+reported first; an org left on a plan that allows fewer machines than it holds has them stopped at once."""
 
 import logging
 import uuid
@@ -12,8 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.models import Org
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops import unlock
+from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import sync_subscription
+from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.held import hold
 
 log = logging.getLogger("glyphh.billing")
 
@@ -22,7 +26,9 @@ SUBSCRIPTION_EVENTS: frozenset[str] = frozenset(
 )
 
 
-async def handle_event(conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any]) -> None:
+async def handle_event(
+    conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any], fly: Fly | None = None
+) -> None:
     kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
     if kind == "checkout.session.completed" and obj.get("mode") == "payment":
         await unlock.record_checkout(conn, obj)
@@ -42,7 +48,10 @@ async def handle_event(conn: AsyncConnection, stripe: StripeClient, event: dict[
     if org_id is None or not sub_id:
         log.warning("stripe event for no org", extra=fields(type=kind, customer=obj.get("customer")))
         return
+    await report(conn.engine, stripe, only=org_id)  # what is due, on the subscription as it was
     await sync_subscription(conn, org_id, await stripe.subscription(sub_id))
+    if fly is not None:
+        await hold(conn, fly, org_id)  # a plan that allows fewer machines: those held past it stopped now
 
 
 async def _org(conn: AsyncConnection, given: str | None, customer: str | None) -> uuid.UUID | None:

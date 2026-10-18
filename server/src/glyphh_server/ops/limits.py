@@ -1,59 +1,45 @@
-"""Plan limits, checked at the moment they would be crossed. A refusal is E_LIMIT naming the limit, what is used,
-the most allowed and the plan that would lift it. Callers lock the row the count belongs to first, so requests at
+"""The one plan limit the server sees used: the org's hosted machines, all its people's together (plans are flat per
+org), checked when one more would be made, and when one is started (past the plan, only the org's oldest machines
+up to it start: ops/held.py). A
+refusal is E_LIMIT naming the limit, what is used, the most allowed and the plan that would lift it. Members,
+installs and models are unlimited on every plan. Callers lock the row the count belongs to first, so requests at
 the same moment are taken one after another."""
 
 import uuid
-from collections.abc import Callable
 
 from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import LimitReached
-from glyphh_server.models import Install, Invite, Org, Rrotor, User
+from glyphh_server.models import Org, Rrotor, User
 from glyphh_server.ops.plans import newest_versions
 
-# Each limit the server sees used, and the plan version's column that holds it.
-ALLOWED: dict[str, Callable[[Row], int | None]] = {
-    "members": lambda row: row.max_members,
-    "installs": lambda row: row.max_installs,
-    "machines": lambda row: row.max_machines,
-}
+MACHINES: str = "machines"
 
 
-async def lifting_plan(conn: AsyncConnection, limit: str, used: int) -> str | None:
-    """The first plan (in the plans' order) whose newest version allows one more."""
-    for row in await newest_versions(conn):
-        allowed = ALLOWED[limit](row)
-        if allowed is None or allowed > used:
-            return row.name
-    return None
+async def lifting_plan(conn: AsyncConnection, used: int) -> str | None:
+    """The first self-serve plan (in the plans' order) whose newest version allows one more machine, else the first
+    that does."""
+    roomy = [r for r in await newest_versions(conn) if r.max_machines is None or r.max_machines > used]
+    return next((r.name for r in roomy if r.self_serve), roomy[0].name if roomy else None)
 
 
-async def check(conn: AsyncConnection, limit: str, used: int, version: Row) -> None:
-    allowed = ALLOWED[limit](version)
-    if allowed is None or used < allowed:
+async def check_machines(conn: AsyncConnection, used: int, version: Row, more: int = 1) -> None:
+    """`more` machines on top of the `used` ones fit the plan: one more to make one, none to start one of those held."""
+    allowed = version.max_machines
+    if allowed is None or used + more <= allowed:
         return
-    lift = await lifting_plan(conn, limit, used)
+    lift = await lifting_plan(conn, used + more - 1)
     then = f" {lift} allows more." if lift else " Remove one first."
+    said = "no hosted machines" if allowed == 0 else f"{allowed} hosted machines"
     raise LimitReached(
-        f"Your {version.name} plan allows {allowed} {limit}.{then}",
-        reason=limit,
-        limit=limit,
+        f"Your {version.name} plan allows {said}.{then}",
+        reason=MACHINES,
+        limit=MACHINES,
         used=used,
         max=allowed,
         plan=lift,
     )
-
-
-def check_seats(used: int, seats: int, version: Row) -> None:
-    if used >= seats:
-        raise LimitReached(
-            f"All {seats} of your seats are taken. Add seats, or revoke an invite.",
-            limit="seats",
-            used=used,
-            max=seats,
-            plan=version.name,
-        )
 
 
 async def lock_org(conn: AsyncConnection, org_id: uuid.UUID) -> None:
@@ -72,20 +58,7 @@ async def members(conn: AsyncConnection, org_id: uuid.UUID) -> int:
     return await _count(conn, User.org_id == org_id)
 
 
-async def open_invites(conn: AsyncConnection, org_id: uuid.UUID) -> int:
-    return await _count(conn, Invite.org_id == org_id, Invite.accepted_at.is_(None), Invite.expires_at > func.now())
-
-
-async def seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
-    """Members, and the open invites that each hold a seat."""
-    return await members(conn, org_id) + await open_invites(conn, org_id)
-
-
-async def installs(conn: AsyncConnection, user_id: uuid.UUID) -> int:
-    """Active installs: the person's machines, since a machine has at most one."""
-    return await _count(conn, Install.user_id == user_id, Install.revoked_at.is_(None))
-
-
-async def machines(conn: AsyncConnection, user_id: uuid.UUID) -> int:
-    """The person's hosted machines; self-hosted runtimes are not counted."""
-    return await _count(conn, Rrotor.user_id == user_id, Rrotor.mode == "hosted")
+async def org_machines(conn: AsyncConnection, org_id: uuid.UUID) -> int:
+    """Every hosted machine of the org's people; self-hosted runtimes are not counted."""
+    people = select(User.id).where(User.org_id == org_id)
+    return await _count(conn, Rrotor.user_id.in_(people), Rrotor.mode == "hosted")

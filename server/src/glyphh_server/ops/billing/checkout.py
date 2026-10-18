@@ -1,18 +1,16 @@
-"""Subscribing (Stripe Checkout: the plan per seat and each add-on as its own line) and Stripe's own portal for the
-card, invoices and cancelling."""
+"""Subscribing (Stripe Checkout: the plan's flat monthly price and the metered hosting price) and Stripe's own portal
+for the card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by contract."""
 
 import uuid
-from typing import Any
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Row, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
-from glyphh_server.errors import Conflict, Invalid
+from glyphh_server.db.seed import SALES
+from glyphh_server.errors import Conflict, Invalid, Unavailable
 from glyphh_server.models import Org, User
-from glyphh_server.ops import limits
-from glyphh_server.ops.addons import allowed, quantity, sold_addon
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.guards import require_admin
@@ -30,56 +28,34 @@ def return_url(settings: Settings) -> str:
 
 
 async def billing_row(conn: AsyncConnection, org_id: uuid.UUID) -> Row:
-    return (
-        await conn.execute(
-            select(Org.id, Org.name, Org.stripe_customer_id, Org.stripe_subscription_id, Org.seats).where(
-                Org.id == org_id
-            )
+    columns = (Org.id, Org.name, Org.stripe_customer_id, Org.stripe_subscription_id)
+    return (await conn.execute(select(*columns).where(Org.id == org_id))).one()
+
+
+def sold(version: Row) -> str:
+    """The Stripe price a plan is bought on; refused for a plan that is by contract, or not sold through Stripe."""
+    if not version.self_serve:
+        raise Invalid(
+            f"{version.name} is by contract: talk to us at {SALES}.", reason="not_self_serve", plan=version.name
         )
-    ).one()
-
-
-async def check_seats(conn: AsyncConnection, org_id: uuid.UUID, version: Row, seats: int) -> None:
-    """Never fewer seats than are taken, nor more than the plan has members for."""
-    taken = await limits.seats_taken(conn, org_id)
-    if seats < taken:
-        raise Conflict(f"{taken} seats are taken by members and open invites.", used=taken, seats=seats)
-    if version.max_members is not None and seats > version.max_members:
-        raise Invalid(f"{version.name} has room for {version.max_members} members.", plan=version.name)
-
-
-async def lines(conn: AsyncConnection, version: Row, seats: int, addons: list[str]) -> list[dict[str, Any]]:
-    """Checkout's lines: the plan's (when it is sold through Stripe) and each add-on's, each allowed on the plan."""
-    sold = [await sold_addon(conn, mod) for mod in addons]
-    if len({row.mod for row in sold}) != len(sold):
-        raise Invalid("Name each add-on once.", reason="duplicate_addon")
-    for row in sold:
-        if not allowed(row, version.name):
-            raise Conflict(f"{row.name} isn't sold with {version.name}.", reason="not_on_plan", mod=row.mod)
-    if version.stripe_price_id is None and not sold:
-        raise Invalid(f"{version.name} isn't sold through Stripe.", plan=version.name)
-    plan = [{"price": version.stripe_price_id, "quantity": seats}] if version.stripe_price_id else []
-    return plan + [{"price": row.stripe_price_id, "quantity": quantity(row, seats)} for row in sold]
+    if version.stripe_price_id is None:
+        raise Invalid(f"{version.name} isn't sold through Stripe.", reason="not_sold", plan=version.name)
+    return str(version.stripe_price_id)
 
 
 async def checkout(
-    conn: AsyncConnection,
-    who: Principal,
-    stripe: StripeClient,
-    settings: Settings,
-    plan: str,
-    seats: int,
-    addons: list[str] | None = None,
+    conn: AsyncConnection, who: Principal, stripe: StripeClient, settings: Settings, plan: str
 ) -> StripePage:
     require_admin(who)
-    version = await newest_version(conn, plan)
-    items = await lines(conn, version, seats, addons or [])
+    price = sold(await newest_version(conn, plan))
+    if not settings.stripe_price_hosting:
+        raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
     org = await billing_row(conn, who.org_id)
     if org.stripe_subscription_id is not None:
-        raise Conflict("Your org is already subscribed: change plan or seats instead.", reason="subscribed")
-    await check_seats(conn, who.org_id, version, seats)
+        raise Conflict("Your org is already subscribed: change plan instead.", reason="subscribed")
     customer = org.stripe_customer_id or await _customer(conn, who, stripe, org.name)
-    url = await stripe.checkout(customer, items, str(who.org_id), return_url(settings))
+    lines = [{"price": price, "quantity": 1}, {"price": settings.stripe_price_hosting}]
+    url = await stripe.checkout(customer, lines, str(who.org_id), return_url(settings))
     return StripePage(url=url)
 
 

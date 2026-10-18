@@ -31,7 +31,7 @@ class Context:
     license_key: Ed25519PrivateKey
 
     def stripe(self) -> StripeClient:
-        return StripeClient(self.http, self.settings.stripe_secret_key)
+        return StripeClient(self.http, self.settings.stripe_secret_key, self.settings.stripe_meter_hosting)
 
 
 @dataclass(frozen=True, slots=True)

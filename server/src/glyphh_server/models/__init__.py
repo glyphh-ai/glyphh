@@ -1,16 +1,18 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
-from glyphh_server.models.addon import ADDON_STATUSES, Addon, OrgAddon
 from glyphh_server.models.approval import Approval
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
 from glyphh_server.models.deployment import Deployment
 from glyphh_server.models.device_code import DeviceCode
+from glyphh_server.models.fly_rate import RATE_ITEMS, FlyRate
 from glyphh_server.models.github_installation import GitHubInstallation
 from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
+from glyphh_server.models.machine_month import MachineMonth
+from glyphh_server.models.meter_event import MeterEvent
 from glyphh_server.models.mod import Mod
 from glyphh_server.models.model import Model, ModelVersion
 from glyphh_server.models.model_event import ModelEvent
@@ -27,29 +29,31 @@ from glyphh_server.models.unlock import UNLOCK_MODS, Unlock
 from glyphh_server.models.user import ROLES, User
 
 __all__ = [
-    "ADDON_STATUSES",
     "AUTH_METHODS",
     "BILLING_STATUSES",
     "CALLERS",
     "MACHINE_ID",
     "MODES",
     "PROVIDERS",
+    "RATE_ITEMS",
     "ROLES",
     "SURFACES",
     "TOKEN_KINDS",
     "TRIGGER_STATUSES",
     "UNLOCK_MODS",
-    "Addon",
     "Approval",
     "Base",
     "ConnectorGrant",
     "ConnectorToken",
     "Deployment",
     "DeviceCode",
+    "FlyRate",
     "GitHubInstallation",
     "Identity",
     "Install",
     "Invite",
+    "MachineMonth",
+    "MeterEvent",
     "Mod",
     "Model",
     "ModelEvent",
@@ -57,7 +61,6 @@ __all__ = [
     "OAuthClient",
     "OAuthCode",
     "Org",
-    "OrgAddon",
     "Plan",
     "PlanVersion",
     "RoutineTrigger",

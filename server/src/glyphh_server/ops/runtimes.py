@@ -4,7 +4,7 @@ A local rrotor gets its runtime token from the install that starts it: one local
 shown once and kept only as a hash; asking again rotates it. A new token starts the link's sequence numbers again:
 the mod asks for one when it starts a rrotor whose /data holds none, a fresh volume.
 
-A hosted rrotor is a Fly machine and its volume, as many per person as the plan's machines (ops/machines.py makes,
+A hosted rrotor is a Fly machine and its volume, as many in an org as the plan's machines (ops/machines.py makes,
 starts, stops, restarts and deletes them); here is how the person's first one is shown to the routes made for one,
 and which runtime a call or a deploy goes to."""
 
@@ -20,7 +20,6 @@ from glyphh_server.errors import Invalid, NotFound
 from glyphh_server.models import Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
-from glyphh_server.ops.plans import org_version
 
 NOT_LINKED: str = "stopped"
 FIRST = (Rrotor.created_at, Rrotor.id)  # a person's machines in the order they were made: the first is the oldest
@@ -39,8 +38,6 @@ class HostedRuntime(BaseModel):
     image_version: str | None
     last_seen_at: datetime | None
     seconds_used: int = Field(description="Online time this calendar month")
-    hours_allowed: int | None = Field(description="The plan's hosted hours a month, all machines; null is unlimited")
-    paused: bool = Field(description="The month's hours are spent: calls answer 402 until the month turns")
 
 
 async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
@@ -83,7 +80,6 @@ def month_of(now: datetime) -> str:
 
 async def hosted_view(conn: AsyncConnection, who: Principal, domain: str) -> HostedRuntime:
     """The person's first hosted machine, as the routes made for one runtime show it."""
-    version = await org_version(conn, who.org_id)
     mine = select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted").order_by(*FIRST).limit(1)
     row = (await conn.execute(mine)).first()
     if row is None:
@@ -95,8 +91,6 @@ async def hosted_view(conn: AsyncConnection, who: Principal, domain: str) -> Hos
             image_version=None,
             last_seen_at=None,
             seconds_used=0,
-            hours_allowed=version.runtime_hours,
-            paused=False,
         )
     this_month = row.month == month_of(datetime.now(UTC))
     return HostedRuntime(
@@ -107,6 +101,4 @@ async def hosted_view(conn: AsyncConnection, who: Principal, domain: str) -> Hos
         image_version=row.image_version,
         last_seen_at=row.last_seen_at,
         seconds_used=row.month_seconds if this_month else 0,
-        hours_allowed=version.runtime_hours,
-        paused=row.paused_at is not None and this_month,
     )

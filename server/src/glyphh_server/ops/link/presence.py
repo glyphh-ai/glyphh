@@ -11,7 +11,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.db import tenancy
-from glyphh_server.models import Install, Org, PlanVersion, Rrotor, User
+from glyphh_server.models import Install, Rrotor, User
 from glyphh_server.ops.auth.secrets import hash_secret
 
 ONLINE: str = "online"
@@ -24,7 +24,6 @@ class Runtime:
     user_id: uuid.UUID
     org_id: uuid.UUID
     mode: str
-    runtime_hours: int | None  # the plan's hosted hours a month
     fly_machine_id: str | None = None  # hosted: the machine it is, its address's name
     public_url: str | None = None  # self-hosted: https://<host>
 
@@ -52,11 +51,9 @@ async def runtime_for(engine: AsyncEngine, token: str | None) -> Runtime:
     if not token:
         raise Refused("Send the runtime's token: Authorization: Bearer <runtime token>.")
     found = (
-        select(Rrotor.id, Rrotor.user_id, Rrotor.mode, User.org_id, Install.revoked_at, PlanVersion.runtime_hours)
+        select(Rrotor.id, Rrotor.user_id, Rrotor.mode, User.org_id, Install.revoked_at)
         .add_columns(Rrotor.fly_machine_id, Rrotor.public_url)
         .join(User, User.id == Rrotor.user_id)
-        .join(Org, Org.id == User.org_id)
-        .join(PlanVersion, PlanVersion.id == Org.plan_version_id)
         .outerjoin(Install, Install.id == Rrotor.install_id)
         .where(Rrotor.token_hash == hash_secret(token))
     )
@@ -66,7 +63,7 @@ async def runtime_for(engine: AsyncEngine, token: str | None) -> Runtime:
         raise Refused("This runtime token is not valid. Ask for a new one.")
     if row.mode == "local" and row.revoked_at is not None:
         raise Refused("This runtime's install was signed out. Sign in again in Claude.")
-    return Runtime(row.id, row.user_id, row.org_id, row.mode, row.runtime_hours, row.fly_machine_id, row.public_url)
+    return Runtime(row.id, row.user_id, row.org_id, row.mode, row.fly_machine_id, row.public_url)
 
 
 async def mark(engine: AsyncEngine, runtime: Runtime, state: str, image_version: str | None = None) -> None:

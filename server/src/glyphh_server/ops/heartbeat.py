@@ -4,8 +4,9 @@ are in progress, never an address, a prompt or anything of a model's. The answer
 14 days' grace). The server keeps only when it beat, the version, the runs and the machine hash; the caller's address
 is never kept or logged (obs/logs.py drops the server's access line for this path).
 
-Air-gapped, it has no link and no heartbeat: the person issues it an offline licence of 1 to 365 days, as one token
-(base64url of the licence's JSON) for its environment or its `/data/licence.token`, checked with no network."""
+Air-gapped, it has no link and no heartbeat: on Enterprise, the person issues it an offline licence of 1 to 365
+days, as one token (base64url of the licence's JSON) for its environment or its `/data/licence.token`, checked with
+no network."""
 
 import logging
 import uuid
@@ -17,13 +18,15 @@ from sqlalchemy import func, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.db import tenancy
-from glyphh_server.errors import Forbidden
+from glyphh_server.db.seed import SALES
+from glyphh_server.errors import Forbidden, NotInPlan
 from glyphh_server.models import Rrotor
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops import self_hosted
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.license import GRACE_DAYS, HEARTBEAT, OFFLINE, License, Stamp, as_token, sign_license
 from glyphh_server.ops.link.presence import runtime_for
+from glyphh_server.ops.plans import org_version
 
 log = logging.getLogger("glyphh.runtime")
 
@@ -74,8 +77,14 @@ async def beat(engine: AsyncEngine, key: Ed25519PrivateKey, token: str | None, b
 async def offline(
     conn: AsyncConnection, key: Ed25519PrivateKey, who: Principal, runtime_id: uuid.UUID, days: int
 ) -> Offline:
-    """A long-lived licence for one of the person's self-hosted runtimes, as one token."""
+    """A long-lived licence for one of the person's self-hosted runtimes, as one token: on a plan with offline
+    licences (Enterprise) only."""
     await self_hosted.mine(conn, who, runtime_id)
+    plan = await org_version(conn, who.org_id)
+    if not plan.offline:
+        raise NotInPlan(
+            f"Offline licences are on Enterprise, not {plan.name}: talk to us at {SALES}.", reason="offline"
+        )
     stamp = Stamp(runtime_id, OFFLINE, GRACE_DAYS, timedelta(days=days))
     licence = await sign_license(conn, key, who.user_id, who.org_id, None, stamp)
     log.info(

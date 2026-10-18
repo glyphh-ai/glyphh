@@ -19,7 +19,7 @@ async def _invite(client: httpx.AsyncClient, admin: Person, email: str) -> str:
 async def test_a_solo_person_accepts_and_their_own_org_is_removed(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     bob = await person(engine)
     token = await _invite(client, ada, bob.email)
     joined = await client.post("/v1/invites/accept", json={"token": token}, headers=bob.headers)
@@ -33,7 +33,7 @@ async def test_a_solo_person_accepts_and_their_own_org_is_removed(
 
 
 async def test_only_the_invited_email_may_accept(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
     eve = await person(engine)
     token = await _invite(client, ada, "someone-else@people.test")
     res = await client.post("/v1/invites/accept", json={"token": token}, headers=eve.headers)
@@ -43,8 +43,8 @@ async def test_only_the_invited_email_may_accept(client: httpx.AsyncClient, engi
 async def test_an_org_with_others_or_a_paid_one_cannot_be_left_this_way(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine, "Team", seats=3)
-    crowded = await person(engine, "Team", seats=2)
+    ada = await person(engine, "Team")
+    crowded = await person(engine, "Team")
     await member(engine, crowded.org_id)
     paid = await person(engine, "Pro")
     await subscribed(engine, paid.org_id, "sub_paid_solo", "cus_paid_solo")
@@ -56,7 +56,7 @@ async def test_an_org_with_others_or_a_paid_one_cannot_be_left_this_way(
 
 
 async def test_an_invite_into_your_own_org_is_already_yours(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=3)
+    ada = await person(engine, "Team")
     bob = await member(engine, ada.org_id)
     async with engine.begin() as conn:
         from datetime import UTC, datetime, timedelta

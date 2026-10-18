@@ -1,5 +1,5 @@
-"""Inviting people into an org by email. An invite's link carries a token (only its hash is kept) and expires; an
-open invite holds a seat, so one is refused past the plan's members or the seats bought. A new person signing in
+"""Inviting people into an org by email. An invite's link carries a token (only its hash is kept) and expires; members
+are unlimited on every plan. A new person signing in
 with the invite's email joins; someone already using Glyphh accepts with the token."""
 
 import uuid
@@ -10,12 +10,10 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Conflict, NotFound
-from glyphh_server.models import Invite, Org, User
-from glyphh_server.ops import limits
+from glyphh_server.models import Invite, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.guards import require_admin, taken
-from glyphh_server.ops.plans import org_version
 
 INVITE_TTL: timedelta = timedelta(days=7)
 
@@ -38,7 +36,6 @@ async def create_invite(conn: AsyncConnection, who: Principal, email: str) -> tu
     member = select(User.id).where(User.org_id == who.org_id, func.lower(User.email) == email)
     if (await conn.execute(member)).first() is not None:
         raise Conflict("That person is already in your org.", email=email)
-    await limits.lock_org(conn, who.org_id)
     await conn.execute(
         delete(Invite).where(
             Invite.org_id == who.org_id,
@@ -47,7 +44,6 @@ async def create_invite(conn: AsyncConnection, who: Principal, email: str) -> tu
             Invite.expires_at <= func.now(),
         )
     )
-    await _room(conn, who.org_id)
     token = make_secret()
     with taken("That email already has an open invite.", email=email):
         row = (
@@ -63,15 +59,6 @@ async def create_invite(conn: AsyncConnection, who: Principal, email: str) -> tu
             )
         ).one()
     return InviteView(**row._mapping), token
-
-
-async def _room(conn: AsyncConnection, org_id: uuid.UUID) -> None:
-    """One more invite fits the plan's members and the seats bought."""
-    version = await org_version(conn, org_id)
-    used = await limits.seats_taken(conn, org_id)
-    await limits.check(conn, "members", used, version)
-    seats = (await conn.execute(select(Org.seats).where(Org.id == org_id))).scalar_one()
-    limits.check_seats(used, seats, version)
 
 
 async def list_invites(conn: AsyncConnection, who: Principal) -> list[InviteView]:

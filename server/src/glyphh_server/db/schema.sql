@@ -29,6 +29,18 @@ CREATE TABLE IF NOT EXISTS oauth_clients (
     CONSTRAINT oauth_clients_redirect_uris CHECK (cardinality(redirect_uris) > 0)
 );
 
+-- fly_rates
+CREATE TABLE IF NOT EXISTS fly_rates (
+    item TEXT NOT NULL,
+    region TEXT NOT NULL,
+    usd_per_30_days NUMERIC(12, 4) NOT NULL,
+    effective_from DATE NOT NULL,
+    source TEXT NOT NULL,
+    PRIMARY KEY (item, region, effective_from),
+    CONSTRAINT fly_rates_item CHECK (item IN ('small', 'medium', 'large', 'volume')),
+    CONSTRAINT fly_rates_rate CHECK (usd_per_30_days >= 0)
+);
+
 -- plans
 CREATE TABLE IF NOT EXISTS plans (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -39,47 +51,29 @@ CREATE TABLE IF NOT EXISTS plans (
     UNIQUE (name)
 );
 
--- addons
-CREATE TABLE IF NOT EXISTS addons (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    mod TEXT NOT NULL,
-    version INTEGER NOT NULL,
-    stripe_price_id TEXT,
-    price_cents INTEGER NOT NULL,
-    per_seat BOOLEAN DEFAULT true NOT NULL,
-    plans TEXT[] DEFAULT '{}' NOT NULL,
-    free BOOLEAN DEFAULT false NOT NULL,
-    limits JSONB DEFAULT '{}' NOT NULL,
-    active BOOLEAN DEFAULT true NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT addons_version UNIQUE (mod, version),
-    CONSTRAINT addons_price CHECK (price_cents >= 0),
-    CONSTRAINT addons_limits CHECK (jsonb_typeof(limits) = 'object'),
-    FOREIGN KEY(mod) REFERENCES mods (slug) ON DELETE RESTRICT,
-    UNIQUE (stripe_price_id)
-);
-CREATE INDEX IF NOT EXISTS ix_addons_mod ON addons (mod);
-
 -- plan_versions
 CREATE TABLE IF NOT EXISTS plan_versions (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     plan_id UUID NOT NULL,
     version INTEGER NOT NULL,
     stripe_price_id TEXT,
-    seat_price_cents INTEGER NOT NULL,
-    max_members INTEGER,
-    max_installs INTEGER,
+    price_cents INTEGER,
+    billing_interval TEXT,
+    self_serve BOOLEAN DEFAULT true NOT NULL,
     max_machines INTEGER,
-    runtime_hours INTEGER,
-    storage_cents_per_gb INTEGER,
-    mod_limits JSONB DEFAULT '{}' NOT NULL,
+    precedents INTEGER,
+    sync BOOLEAN DEFAULT false NOT NULL,
+    ha BOOLEAN DEFAULT false NOT NULL,
+    offline BOOLEAN DEFAULT false NOT NULL,
+    sso BOOLEAN DEFAULT false NOT NULL,
+    hosting_markup_pct INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT plan_versions_version UNIQUE (plan_id, version),
-    CONSTRAINT plan_versions_price CHECK (seat_price_cents >= 0),
-    CONSTRAINT plan_versions_limits CHECK (coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0 AND coalesce(max_machines, 1) > 0),
-    CONSTRAINT plan_versions_mod_limits CHECK (jsonb_typeof(mod_limits) = 'object'),
+    CONSTRAINT plan_versions_price CHECK (coalesce(price_cents, 0) >= 0),
+    CONSTRAINT plan_versions_interval CHECK (billing_interval IN ('month', 'year')),
+    CONSTRAINT plan_versions_limits CHECK (coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0),
+    CONSTRAINT plan_versions_markup CHECK (coalesce(hosting_markup_pct, 0) >= 0),
     FOREIGN KEY(plan_id) REFERENCES plans (id) ON DELETE RESTRICT,
     UNIQUE (stripe_price_id)
 );
@@ -93,12 +87,13 @@ CREATE TABLE IF NOT EXISTS orgs (
     admin_user_id UUID,
     stripe_customer_id TEXT,
     stripe_subscription_id TEXT,
-    seats INTEGER DEFAULT 1 NOT NULL,
     billing_status TEXT DEFAULT 'none' NOT NULL,
     renews_at TIMESTAMP WITH TIME ZONE,
+    markup_pct INTEGER,
+    plan_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT orgs_seats CHECK (seats > 0),
+    CONSTRAINT orgs_markup CHECK (coalesce(markup_pct, 0) >= 0),
     CONSTRAINT orgs_billing_status CHECK (billing_status IN ('none', 'active', 'trialing', 'past_due', 'unpaid', 'canceled', 'incomplete', 'incomplete_expired', 'paused')),
     FOREIGN KEY(plan_version_id) REFERENCES plan_versions (id) ON DELETE RESTRICT,
     UNIQUE (stripe_customer_id),
@@ -122,25 +117,35 @@ CREATE TABLE IF NOT EXISTS invites (
 CREATE UNIQUE INDEX IF NOT EXISTS invites_one_open ON invites (org_id, lower(email)) WHERE accepted_at IS NULL;
 CREATE INDEX IF NOT EXISTS ix_invites_org_id ON invites (org_id);
 
--- org_addons
-CREATE TABLE IF NOT EXISTS org_addons (
+-- machine_months
+CREATE TABLE IF NOT EXISTS machine_months (
+    rrotor_id UUID NOT NULL,
+    month TEXT NOT NULL,
     org_id UUID NOT NULL,
-    mod TEXT NOT NULL,
-    addon_id UUID NOT NULL,
-    stripe_item_id TEXT,
-    quantity INTEGER DEFAULT 1 NOT NULL,
-    status TEXT DEFAULT 'active' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    name TEXT NOT NULL,
+    size TEXT NOT NULL,
+    cost_micros BIGINT DEFAULT 0 NOT NULL,
+    charge_micros BIGINT DEFAULT 0 NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (org_id, mod),
-    CONSTRAINT org_addons_quantity CHECK (quantity > 0),
-    CONSTRAINT org_addons_status CHECK (status IN ('active', 'removed')),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(mod) REFERENCES mods (slug) ON DELETE RESTRICT,
-    FOREIGN KEY(addon_id) REFERENCES addons (id) ON DELETE RESTRICT,
-    UNIQUE (stripe_item_id)
+    PRIMARY KEY (rrotor_id, month),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS ix_org_addons_addon_id ON org_addons (addon_id);
+CREATE INDEX IF NOT EXISTS ix_machine_months_org_id ON machine_months (org_id);
+
+-- meter_events
+CREATE TABLE IF NOT EXISTS meter_events (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    customer TEXT NOT NULL,
+    cents INTEGER NOT NULL,
+    at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    CONSTRAINT meter_events_cents CHECK (cents > 0),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_meter_events_org_id ON meter_events (org_id);
 
 -- users
 CREATE TABLE IF NOT EXISTS users (
@@ -338,7 +343,6 @@ CREATE TABLE IF NOT EXISTS rrotors (
     fly_volume_id TEXT,
     month TEXT,
     month_seconds INTEGER DEFAULT 0 NOT NULL,
-    paused_at TIMESTAMP WITH TIME ZONE,
     region TEXT,
     image_version TEXT,
     state TEXT NOT NULL,
@@ -351,6 +355,8 @@ CREATE TABLE IF NOT EXISTS rrotors (
     machine_hash TEXT,
     active_runs INTEGER,
     size TEXT,
+    precedents BIGINT,
+    precedents_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT rrotors_mode CHECK (mode IN ('hosted', 'local', 'self')),
@@ -502,10 +508,14 @@ ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invites FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON invites;
 CREATE POLICY tenant ON invites USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE org_addons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE org_addons FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON org_addons;
-CREATE POLICY tenant ON org_addons USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE machine_months ENABLE ROW LEVEL SECURITY;
+ALTER TABLE machine_months FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON machine_months;
+CREATE POLICY tenant ON machine_months USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE meter_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meter_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON meter_events;
+CREATE POLICY tenant ON meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
-from glyphh_server.models import Addon, Install, Org, OrgAddon, User
+from glyphh_server.models import Install, Org, User
 from glyphh_server.ops.auth import tokens
 from glyphh_server.ops.orgs import new_person
 from glyphh_server.ops.plans import newest_version
@@ -43,14 +43,14 @@ async def _signed_in(conn: AsyncConnection, user_id: uuid.UUID, email: str) -> P
     return Person(user_id, org_id, install_id, email, {"authorization": f"Bearer {token}"})
 
 
-async def person(engine: AsyncEngine, plan: str = "Free", seats: int = 1, email: str | None = None) -> Person:
+async def person(engine: AsyncEngine, plan: str = "Free", email: str | None = None) -> Person:
     """A new person, admin of their own org on this plan's newest version, signed in on one install."""
     email = email or an_email()
     async with engine.begin() as conn:
         user_id = await new_person(conn, email, "Ada Lovelace")
         who = await _signed_in(conn, user_id, email)
         version = await newest_version(conn, plan)
-        await conn.execute(update(Org).where(Org.id == who.org_id).values(plan_version_id=version.id, seats=seats))
+        await conn.execute(update(Org).where(Org.id == who.org_id).values(plan_version_id=version.id))
     return who
 
 
@@ -81,16 +81,3 @@ async def subscribed(engine: AsyncEngine, org_id: uuid.UUID, sub_id: str, custom
 async def org_row(engine: AsyncEngine, org_id: uuid.UUID):  # type: ignore[no-untyped-def]
     async with engine.connect() as conn:
         return (await conn.execute(select(Org).where(Org.id == org_id))).one()
-
-
-async def with_addon(engine: AsyncEngine, org_id: uuid.UUID, mod: str, quantity: int = 1) -> str:
-    """The org has this add-on (its newest version) on its subscription, as the webhook would have recorded it: the
-    item's id."""
-    item = f"si_{org_id.hex}_{mod}"
-    async with engine.begin() as conn:
-        addon_id = (
-            await conn.execute(select(Addon.id).where(Addon.mod == mod).order_by(Addon.version.desc()).limit(1))
-        ).scalar_one()
-        values = {"org_id": org_id, "mod": mod, "addon_id": addon_id, "stripe_item_id": item, "quantity": quantity}
-        await conn.execute(insert(OrgAddon).values(values))
-    return item

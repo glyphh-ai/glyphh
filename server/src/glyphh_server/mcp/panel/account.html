@@ -21,12 +21,10 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-pri
 </style></head>
 <body>
 <section><h1 id="who">Glyphh</h1><p class="sub" id="org"></p></section>
-<section><h2>Plan</h2><p id="plan">Loading…</p><ul id="mods"></ul>
+<section><h2>Plan</h2><p id="plan">Loading…</p><ul id="limits"></ul>
   <div class="row"><select id="plans" aria-label="Plan"></select><button id="upgrade">Upgrade</button>
   <button id="billing">Manage billing</button></div></section>
-<section><h2>Add-ons</h2><ul id="addons"></ul>
-  <div class="row" id="confirm" hidden><span id="confirm-text"></span><button id="confirm-yes">Confirm</button>
-  <button id="confirm-no">Cancel</button></div></section>
+<section><h2>Usage</h2><p id="usage">Loading…</p><ul id="hosting"></ul></section>
 <section><h2>Installs</h2><ul id="installs"></ul></section>
 <section><h2>Connector grants</h2><ul id="grants"></ul></section>
 <p class="bad" id="error" hidden></p>
@@ -68,40 +66,25 @@ function showWho(w) {
 function showPlan(d) {
   const p = d.plan, o = d.org;
   const renews = o.renews_at ? `, renews ${o.renews_at.slice(0, 10)}` : "";
-  $("plan").textContent = `${p.name}: ${o.seats} seats, billing ${o.billing_status}${renews}. ` +
-    `Installs ${d.used.installs} of ${amount(p.limits.installs)}.`;
-  $("mods").replaceChildren(...Object.entries(p.mods).map(([slug, m]) => item(`${slug}: ` +
-    Object.entries(m.limits).map(([k, v]) => `${k} ${amount(v)}`).join(", "))));
+  $("plan").textContent = `${p.name}, billing ${o.billing_status}${renews}. Members and installs are unlimited.`;
+  const on = Object.entries(p.features).filter(([, v]) => v).map(([k]) => k).join(", ") || "none";
+  $("limits").replaceChildren(item(`Hosted machines: ${amount(p.limits.machines)}`),
+    item(`Managed precedents: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
 }
 
-const money = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(2)}`;
-let pending = null;
+const dollars = (c) => `$${(c / 100).toFixed(2)}`;
 
-function showAddons(list) {
-  $("addons").replaceChildren(...list.map((a) => item(
-    `${a.name}: ${money(a.price_cents)}${a.per_seat ? " per seat" : ""} a month` +
-      (a.added ? ` (added, ${money(a.monthly_cents)} a month)` : a.allowed ? "" : " (not sold with your plan)"),
-    a.added ? "Remove" : a.allowed ? "Add" : null,
-    () => ask(a.added ? "remove_mod" : "add_mod", a))));
+function showUsage(u) {
+  $("usage").textContent = `Managed precedents ${u.precedents.used} of ${amount(u.precedents.limit)}. ` +
+    `Hosting this month: ${dollars(u.hosting.month_to_date_cents)}.`;
+  $("hosting").replaceChildren(...u.hosting.machines.map((m) => item(`${m.name} (${m.size}): ${dollars(m.cents)}`)));
 }
-
-async function ask(name, a) {
-  try {
-    const d = await call(name, { mod: a.mod });
-    const p = d.preview;
-    pending = { name, args: { mod: a.mod, confirm: true, proration_date: p.proration_date } };
-    $("confirm-text").textContent = `${name === "add_mod" ? "Add" : "Remove"} ${a.name}: ${money(p.prorated_cents)} now, prorated; ${money(p.monthly_cents)} a month.`;
-    $("confirm").hidden = false; failed("");
-  } catch (e) { failed(e.message); }
-}
-
-function settle() { pending = null; $("confirm").hidden = true; }
 
 async function refresh() {
   try {
-    const [w, p, plans, i, g, a] = await Promise.all([call("whoami"), call("plan"), call("plans"), call("installs"), call("connector_grants"), call("addons")]);
-    showWho(w); showPlan(p); showAddons(a.addons);
-    $("plans").replaceChildren(...plans.plans.filter((x) => x.name !== p.plan.name).map((x) => new Option(x.name, x.name)));
+    const [w, p, u, plans, i, g] = await Promise.all([call("whoami"), call("plan"), call("usage"), call("plans"), call("installs"), call("connector_grants")]);
+    showWho(w); showPlan(p); showUsage(u);
+    $("plans").replaceChildren(...plans.plans.filter((x) => x.self_serve && x.name !== p.plan.name).map((x) => new Option(x.name, x.name)));
     $("installs").replaceChildren(...i.installs.map((x) => item(`${x.name} (${x.surface})`, "Sign out", () => act("sign_out_install", { install_id: x.id }))));
     $("grants").replaceChildren(...g.grants.map((x) => item(`${x.client}${x.current ? " (this one)" : ""}`, "Revoke", () => act("revoke_grant", { grant_id: x.id }))));
     failed("");
@@ -117,8 +100,6 @@ async function open(name, args) {
 
 $("upgrade").onclick = () => open("upgrade", { plan: $("plans").value });
 $("billing").onclick = () => open("billing_portal");
-$("confirm-yes").onclick = () => { const go = pending; settle(); if (go) act(go.name, go.args); };
-$("confirm-no").onclick = settle;
 app.ontoolresult = () => refresh();
 app.onhostcontextchanged = theme;
 app.connect().then(() => { theme(app.getHostContext()); return refresh(); }).catch((e) => failed("The panel could not connect: " + (e?.message || e)));

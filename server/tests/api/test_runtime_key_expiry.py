@@ -27,7 +27,7 @@ async def _started(client: Any, headers: dict[str, str]) -> str:
 
 
 async def test_a_key_lasts_up_to_a_year_or_never(engine: AsyncEngine) -> None:
-    ada = await person(engine)
+    ada = await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         runtime_id = uuid.UUID(await _started(client, ada.headers))
         for days in (0, 366):
@@ -46,7 +46,7 @@ async def test_a_key_lasts_up_to_a_year_or_never(engine: AsyncEngine) -> None:
 
 
 async def test_a_key_is_made_with_its_expiry_and_listed_with_it(engine: AsyncEngine) -> None:
-    ada = await person(engine)
+    ada = await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         await _started(client, ada.headers)
         before = datetime.now(UTC)
@@ -66,7 +66,7 @@ async def _expire(engine: AsyncEngine, key_id: str, ago: timedelta) -> None:
 
 
 async def test_an_expired_key_leaves_the_list_and_the_tick_sends_it(engine: AsyncEngine, redis: Any) -> None:
-    ada = await person(engine)
+    ada = await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         runtime_id = uuid.UUID(await _started(client, ada.headers))
         keys = []
@@ -86,7 +86,7 @@ async def test_an_expired_key_leaves_the_list_and_the_tick_sends_it(engine: Asyn
 
 
 async def test_the_connector_makes_a_key_that_expires_or_never_does(engine: AsyncEngine) -> None:
-    ada = await person(engine)
+    ada = await person(engine, "Pro")
     _, auth = await granted(engine, ada)
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         await _started(client, ada.headers)
@@ -96,7 +96,7 @@ async def test_the_connector_makes_a_key_that_expires_or_never_does(engine: Asyn
 
 
 async def test_only_a_revoked_or_expired_key_is_deleted_and_only_ones_own(engine: AsyncEngine) -> None:
-    ada, eve = await person(engine), await person(engine)
+    ada, eve = await person(engine, "Pro"), await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         await _started(client, ada.headers)
         made = []

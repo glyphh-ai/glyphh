@@ -35,13 +35,13 @@ async def test_machines_are_made_sized_listed_started_stopped_restarted_and_dele
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
         assert (await client.get("/v1/runtimes", headers=pro.headers)).json() == []
         made = await _made(client, pro, " research ", "medium")
-        assert (made["name"], made["size"], made["state"], made["month_seconds"], made["paused"]) == (
+        assert (made["name"], made["size"], made["state"], made["month_seconds"]) == (
             "research",
             "medium",
             "stopped",
             0,
-            False,
         )
+        assert "paused" not in made
         assert made["address"] == "https://m_2.glyphh.app" and made["created_at"]
         machine, volume = fly.machines["m_2"], fly.volumes["vol_1"]
         assert machine["config"]["guest"] == {"cpu_kind": "shared", "cpus": 2, "memory_mb": 4096}
@@ -94,17 +94,19 @@ async def test_names_sizes_and_the_plans_machines_are_checked(engine: AsyncEngin
     fly = FakeFly()
     free, pro = await person(engine), await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        await _made(client, free, "one")
-        res = await client.post("/v1/runtimes", json={"name": "two", "size": "small"}, headers=free.headers)
+        res = await client.post("/v1/runtimes", json={"name": "one", "size": "small"}, headers=free.headers)
         full = _error(res, 403)
         assert (full["code"], full["reason"], full["limit"], full["used"], full["max"], full["plan"]) == (
             "E_LIMIT",
             "machines",
             "machines",
-            1,
-            1,
+            0,
+            0,
             "Pro",
         )
+        assert full["message"] == "Your Free plan allows no hosted machines. Pro allows more."
+        first = await client.post("/v1/runtime/start", headers=free.headers)
+        assert _error(first, 403)["reason"] == "machines"
         await _made(client, pro, "a")
         taken = await client.post("/v1/runtimes", json={"name": "a", "size": "large"}, headers=pro.headers)
         assert (_error(taken, 409)["reason"], _error(taken, 409)["name"]) == ("name", "a")

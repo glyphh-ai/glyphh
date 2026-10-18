@@ -43,10 +43,10 @@ async def test_machines_are_made_driven_and_deleted_from_claude(engine: AsyncEng
         assert restarted["structuredContent"]["state"] == "stopped" and fly.calls[-1][1] == "/machines/m_2/restart"
         async with engine.begin() as conn:
             now = datetime.now(UTC)
-            values = {"paused_at": now, "month": now.strftime("%Y-%m")}
+            values = {"month_seconds": 5400, "month": now.strftime("%Y-%m")}
             await conn.execute(update(Rrotor).where(Rrotor.id == uuid.UUID(machine["id"])).values(**values))
-        paused = (await tool(client, auth, "runtimes"))["content"][0]["text"]
-        assert ", paused: the month's hours are spent, id " in paused
+        counted = (await tool(client, auth, "runtimes"))["content"][0]["text"]
+        assert ", 1.5 h this month, id " in counted
         _refused(await tool(client, auth, "delete_runtime", id=machine["id"], confirm="Research"), "E_INVALID")
         gone = await tool(client, auth, "delete_runtime", id=machine["id"], confirm="research")
         assert gone["content"][0]["text"] == "research is deleted: its machine and its disk are gone."

@@ -31,15 +31,18 @@ def form(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
 
 
 class StripeClient:
-    def __init__(self, http: httpx.AsyncClient, secret_key: str) -> None:
+    def __init__(self, http: httpx.AsyncClient, secret_key: str, meter: str = "") -> None:
+        """meter: the hosting Billing Meter's event name; empty, nothing is reported to it."""
         if not secret_key:
             raise Unavailable("Billing isn't set up on this server.", reason="billing_off")
-        self.http, self.secret_key = http, secret_key
+        self.http, self.secret_key, self.meter = http, secret_key, meter
 
     async def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+        """A call to Stripe; a DELETE's parameters ride the query, as Stripe reads them."""
+        sent = {"params" if method == "DELETE" else "data": form(data or {})}
         try:
             res = await self.http.request(
-                method, f"{API}{path}", data=form(data or {}), headers={"authorization": f"Bearer {self.secret_key}"}
+                method, f"{API}{path}", **sent, headers={"authorization": f"Bearer {self.secret_key}"}
             )
             res.raise_for_status()
             return res.json()
@@ -52,7 +55,7 @@ class StripeClient:
         return str(made["id"])
 
     async def checkout(self, customer: str, lines: list[dict[str, Any]], org_id: str, return_url: str) -> str:
-        """Checkout for a subscription of these lines (each a price and quantity): the plan's and each add-on's."""
+        """Checkout for a subscription of these lines: the plan's flat price, and the metered hosting price."""
         session = await self.call(
             "POST",
             "/checkout/sessions",
@@ -71,21 +74,24 @@ class StripeClient:
     async def subscription(self, subscription_id: str) -> dict[str, Any]:
         return await self.call("GET", f"/subscriptions/{subscription_id}")
 
-    async def change(
-        self, subscription_id: str, items: list[dict[str, Any]], proration_date: int | None = None
-    ) -> dict[str, Any]:
-        """Change the subscription's items (an item's price or quantity, a new item, an item deleted), prorated; at
-        proration_date when given, so the change costs exactly what its preview said."""
-        body: dict[str, Any] = {"items": items, "proration_behavior": "create_prorations"}
-        if proration_date is not None:
-            body["proration_date"] = proration_date
+    async def change(self, subscription_id: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        """Change the subscription's items (an item's price, a new item), prorated."""
+        body = {"items": items, "proration_behavior": "create_prorations"}
         return await self.call("POST", f"/subscriptions/{subscription_id}", body)
 
-    async def preview(self, subscription_id: str, items: list[dict[str, Any]], proration_date: int) -> dict[str, Any]:
-        """The next invoice if these items changed at proration_date, prorated: nothing is changed."""
-        details = {"items": items, "proration_behavior": "create_prorations", "proration_date": proration_date}
-        body = {"subscription": subscription_id, "subscription_details": details}
-        return await self.call("POST", "/invoices/create_preview", body)
+    async def cancel(self, subscription_id: str) -> dict[str, Any]:
+        """Cancel the subscription now: what is owed (the unused time credited) invoiced at once."""
+        return await self.call("DELETE", f"/subscriptions/{subscription_id}", {"invoice_now": True, "prorate": True})
+
+    async def meter_event(self, customer: str, cents: int, identifier: str, at: int) -> None:
+        """Hosting cents for a customer on the Billing Meter; Stripe counts an identifier once."""
+        body = {
+            "event_name": self.meter,
+            "identifier": identifier,
+            "timestamp": at,
+            "payload": {"stripe_customer_id": customer, "value": cents},
+        }
+        await self.call("POST", "/billing/meter_events", body)
 
     async def portal(self, customer: str, return_url: str) -> str:
         session = await self.call("POST", "/billing_portal/sessions", {"customer": customer, "return_url": return_url})
