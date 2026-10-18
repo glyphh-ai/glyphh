@@ -51,6 +51,13 @@ async def test_a_grant_puts_the_org_on_enterprise_at_its_markup_on_its_subscript
     async with engine.begin() as conn:
         await sync_subscription(conn, ada.org_id, stripe.subs[sub])  # its custom price is no plan's
     assert await _plan(engine, ada.org_id) == "Enterprise"
+    renewed = f"sub_renewed_{ada.org_id.hex}"
+    stripe.sub(renewed, customer, "price_deal_acme_2", 1)
+    argv = ["grant", "--org", str(ada.org_id), "--until", "2028-10-31", "--markup", "12", "--subscription", renewed]
+    await enterprise.run(argv, SETTINGS, fake_http(stripe))  # renewed on a new subscription: no need to cancel first
+    org = await org_row(engine, ada.org_id)
+    assert (org.stripe_subscription_id, org.markup_pct, org.plan_until.year) == (renewed, 12, 2028)
+    sub = renewed
     stripe.subs[sub]["status"] = "canceled"
     async with engine.begin() as conn:
         await sync_subscription(conn, ada.org_id, stripe.subs[sub])  # the deal's subscription ended

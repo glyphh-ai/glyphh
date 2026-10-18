@@ -33,7 +33,8 @@ CLEARED: dict[str, Any] = {"plan_until": None, "markup_pct": None, "stripe_subsc
 
 
 async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
-    found = select(Org.id, Org.name, Org.stripe_subscription_id).where(Org.id == org_id).with_for_update()
+    found = select(Org.id, Org.name, Org.stripe_subscription_id, Org.plan_until).where(Org.id == org_id)
+    found = found.with_for_update()
     org = (await conn.execute(found)).first()
     if org is None:
         raise NotFound("There is no such org.", org_id=str(org_id))
@@ -43,11 +44,12 @@ async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
 async def grant(
     engine: AsyncEngine, stripe: StripeClient, org_id: uuid.UUID, until: date, markup: int, subscription: str
 ) -> str:
-    """The org on Enterprise through the end of `until` (UTC), at this markup, billed on this subscription."""
+    """The org on Enterprise through the end of `until` (UTC), at this markup, billed on this subscription. Granted
+    again, a deal renewed or changed (a new subscription too); a self-serve subscription is cancelled first."""
     sub = await stripe.subscription(subscription)
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
-        if org.stripe_subscription_id not in (None, subscription):
+        if org.plan_until is None and org.stripe_subscription_id not in (None, subscription):
             raise Conflict(f"Cancel the org's subscription {org.stripe_subscription_id} first.", reason="subscribed")
         values = {
             "plan_version_id": (await newest_version(conn, ENTERPRISE)).id,
