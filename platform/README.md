@@ -22,7 +22,7 @@ what is not built yet is the server's `docs/roadmap.md`.
    `/oauth/authorize`, which sends the browser straight back to this platform's `/authorize` page (below) to pick
    Google or GitHub; the tokens come back to `{PLATFORM_URL}/auth/callback` and live in a sealed, HttpOnly cookie.
    The browser never holds a token.
-2. **Connect Claude once, to the runtime.** Home shows the one connector URL, `https://<machine>.glyphh.app/mcp`.
+2. **Connect Claude once, to the runtime.** Getting started walks a new account through it. Home shows the one connector URL, `https://<machine>.glyphh.app/mcp`.
    Adding it in Claude runs OAuth against the same server, which lands on `/authorize` here; signed in already,
    that is one Allow click.
 3. **Apps** use a runtime key (made on Keys, shown once) as the bearer at the runtime's address.
@@ -56,6 +56,7 @@ browser.
 
 | Page | Server calls | Does |
 |---|---|---|
+| Getting started | `GET /v1/runtime`, `GET /v1/runtimes/self` (each self-hosted runtime's state, version, last heartbeat) | The SDKs and the Claude plugin to copy; where rrotor runs: Glyphh hosted (Start, as Home), or Docker Compose, Helm or Terraform (AWS, GCP): register (`POST /v1/runtimes/self {name, public_url}`; the token is shown once), then the option's settings filled in from the answer's `env` and the connector URL `https://<host>/mcp`. Rotate a token (`POST /v1/runtimes/self/{id}/token`, shown once), delete (`DELETE /v1/runtimes/self/{id}`), issue an offline licence for an air-gapped runtime (`POST /v1/runtimes/{id}/offline-licence {days}`, set as `RROTOR_LICENCE`) |
 | Home | `GET /v1/runtime` (address, state, this month's hours, `paused`), `GET /v1/me` | Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`), copy the connector URL `{address}/mcp` |
 | Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name}`; the key is shown once), revoke (`DELETE /v1/runtime/keys/{id}`) |
 | Approvals | `GET /v1/approvals`, live from `GET /v1/approvals/stream` (server-sent events `approval`, `answered`) | Approve or decline (`POST /v1/approvals/{id} {answer}`) |
