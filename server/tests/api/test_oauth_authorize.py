@@ -14,7 +14,7 @@ from glyphh_server.ops.auth import signed
 from glyphh_server.ops.auth.secrets import hash_secret
 from tests.api.browser import Browser, error_page, open_browser, went
 from tests.conftest import PUBLIC_URL, SECRET_KEY, SETTINGS
-from tests.connector import allow, ask, query, register, to_allow
+from tests.connector import allow, ask, exchange, query, register, to_allow
 from tests.fakes import FakeStripe
 
 
@@ -55,6 +55,24 @@ async def test_any_other_refusal_goes_back_to_the_client(browser: Browser, over:
     assert (back["error"], back["iss"], back["keep"]) == (error, PUBLIC_URL, "1")
     assert back["error_description"]
     assert back.get("state") == (None if "state" in over else "st-1")
+
+
+async def test_a_hosted_runtimes_address_is_a_resource_too_bound_to_its_mcp(browser: Browser) -> None:
+    claude = await register(browser.http)
+    shown, consent = await to_allow(browser.http, ask(claude, resource="https://m1a2b3c4d5.glyphh.app"))
+    assert shown["resource"] == "https://m1a2b3c4d5.glyphh.app/mcp"
+    back = query(await allow(browser.http, consent, "allow"))
+    res = await exchange(browser.http, claude, back["code"], resource="https://m1a2b3c4d5.glyphh.app/mcp")
+    assert res.status_code == 200, res.text
+    for bad in (
+        "https://m1a2b3c4d5.glyphh.app/other",
+        "http://m1a2b3c4d5.glyphh.app/mcp",
+        "https://m1a2b3c4d5.evil.app/mcp",
+        "https://no.glyphh.app/mcp",
+        "https://m1a2b3c4d5.glyphh.app/mcp?x=1",
+    ):
+        back = query(await browser.http.get("/oauth/authorize", params=ask(claude, resource=bad)))
+        assert back["error"] == "invalid_target", bad
 
 
 async def test_a_client_that_registered_only_for_refresh_is_unauthorized(browser: Browser) -> None:

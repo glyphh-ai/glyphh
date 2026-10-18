@@ -20,6 +20,16 @@ REFRESH_TTL: timedelta = timedelta(days=30)
 SEEN_EVERY: timedelta = timedelta(minutes=1)
 
 
+class Introspection(BaseModel):
+    """RFC 7662's shape: whether a token is live for a resource, and for whom."""
+
+    active: bool
+    sub: str | None = None
+    org: str | None = None
+    scope: str | None = None
+    exp: int | None = None
+
+
 class TokenAnswer(BaseModel):
     access_token: str
     token_type: str = "Bearer"
@@ -89,12 +99,13 @@ async def revoke(conn: AsyncConnection, client_id: uuid.UUID, token: str) -> Non
         await conn.execute(update(ConnectorToken).where(ConnectorToken.id == held.id).values(revoked_at=func.now()))
 
 
-async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Principal | None:
-    """Who an access token on /mcp belongs to: issued for this resource, unexpired, not revoked, its grant live.
-    A good one marks its grant used."""
+async def _live(conn: AsyncConnection, token: str, resource: str) -> Row | None:
+    """An access token issued for this resource, unexpired, not revoked, its grant live: who holds it. A good one
+    marks its grant used."""
     row = (
         await conn.execute(
-            select(ConnectorToken.grant_id, User.id, User.org_id, User.role)
+            select(ConnectorToken.grant_id, User.id, User.org_id, User.role, ConnectorGrant.scope)
+            .add_columns(ConnectorToken.expires_at)
             .join(ConnectorGrant, ConnectorGrant.id == ConnectorToken.grant_id)
             .join(User, User.id == ConnectorGrant.user_id)
             .where(
@@ -117,4 +128,22 @@ async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Pri
         )
         .values(last_used_at=func.now())
     )
+    return row
+
+
+async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Principal | None:
+    """Who an access token on /mcp belongs to."""
+    row = await _live(conn, token, resource)
+    if row is None:
+        return None
     return Principal(user_id=row.id, org_id=row.org_id, role=row.role, grant_id=row.grant_id)
+
+
+async def introspect(conn: AsyncConnection, token: str, resource: str) -> Introspection:
+    """For a hosted runtime asking about a bearer it was shown: live for the runtime's own address, and whose."""
+    row = await _live(conn, token, resource)
+    if row is None:
+        return Introspection(active=False)
+    return Introspection(
+        active=True, sub=str(row.id), org=str(row.org_id), scope=row.scope, exp=int(row.expires_at.timestamp())
+    )

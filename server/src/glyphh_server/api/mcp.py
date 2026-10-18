@@ -69,7 +69,8 @@ async def mcp(request: Request, conn: Conn) -> Response:
         return rpc_refusal(err)
     if call.id is None:
         return Response(status_code=202)
-    ctx = Context(conn, who, request.app.state.settings, request.app.state.http, request.app.state.hub)
+    state = request.app.state
+    ctx = Context(conn, who, state.settings, state.http, state.hub, state.license_key)
     try:
         result: dict[str, Any] = await server.handle(ctx, call)
     except RpcError as err:

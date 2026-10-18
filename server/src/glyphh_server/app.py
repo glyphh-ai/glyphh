@@ -31,6 +31,7 @@ from glyphh_server.api import (
     plans,
     routine_triggers,
     runtime,
+    self_hosted,
     unlock,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
@@ -56,6 +57,7 @@ ROUTERS = (
     addons,
     billing,
     runtime,
+    self_hosted,
     models,
     unlock,
     routine_triggers,

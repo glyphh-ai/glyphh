@@ -25,6 +25,10 @@ from glyphh_server.ops.link.protocol import RUNNING, WAITING, Continue, Deploy, 
 DeployAction = Literal["deploy", "activate", "remove"]
 WAKE_WAIT: float = 45.0  # a stopped Fly machine starts in seconds; its rrotor links in a few more
 WAKE_EVERY: float = 0.5
+AWAY: dict[str, str] = {
+    "local": "Your local runtime is not connected. Start it from Claude, then try again.",
+    "self": "Your self-hosted runtime is not connected. Check it is running and reaches Glyphh, then try again.",
+}
 
 
 async def hold_run(conn: AsyncConnection, run_id: uuid.UUID) -> None:
@@ -68,7 +72,7 @@ async def deliver(hub: Hub, runtime: Row, message: Outbound) -> None:
     if runtime.mode == "hosted" and await wake_hosted(hub, runtime, data):
         return
     raise Unavailable(
-        "Your local runtime is not connected. Start it from Claude, then try again.",
+        AWAY.get(runtime.mode, AWAY["local"]),
         reason="runtime_offline",
         runtime_id=str(runtime.id),
         last_seen_at=_seen(runtime),

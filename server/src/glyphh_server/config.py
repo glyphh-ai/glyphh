@@ -10,6 +10,9 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
+    # Drop every table and make the schema again on each deploy (db/reset.py, Fly's release command): while nothing
+    # in the database is kept. Off by default; on only where fly.toml sets GLYPHH_RESET_DATABASE=1.
+    reset_database: bool = False
     # Live signals only (pub/sub): in production Redis runs on the server's own Fly machine, beside the server.
     redis_url: str = "redis://localhost:6379/0"
     version: str = "dev"

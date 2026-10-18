@@ -8,7 +8,6 @@ What is decided but not built, in one place; `architecture.md` holds only what w
 | Area | What |
 |---|---|
 | The platform's pages | To the design: Home, Keys, Approvals, Models, Billing, Org, Account, and the flow pages the server sends a browser to (architecture.md, The platform) |
-| One OAuth for a runtime | rrotor's `/mcp` as an OAuth protected resource: `GET /.well-known/oauth-protected-resource` on the machine naming the server as its authorization server; the server issues tokens bound to `https://<machine>.glyphh.app/mcp` and answers `POST /v1/runtime/introspect` for the runtime (its own token as auth), cached a minute by rrotor. Then Claude's connectors UI adds a runtime with one Allow click and no key. Started in rrotor (`api/oauth.py`), not wired |
 | Routines as the runner | A Claude routine (schedule, API trigger, GitHub event) calling the runtime's MCP; a `needs_approval` with nobody watching waits for the person: the platform's Approvals page, Claude's band, an email |
 | Approvals email | When no Claude and no platform page is open: a mail provider (`approvals.notified_at` stays empty until then) |
 | The live panel | A run as it happens (steps, log, approvals) as an MCP App served by the runtime's own MCP |

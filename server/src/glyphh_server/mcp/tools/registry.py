@@ -10,11 +10,20 @@ from glyphh_server.api.errors import error_body
 from glyphh_server.errors import GlyphhError, Invalid
 from glyphh_server.mcp import panel
 from glyphh_server.mcp.protocol import INVALID_PARAMS, RpcError
-from glyphh_server.mcp.tools import account, addons, billing, grants, people, runtime
+from glyphh_server.mcp.tools import account, addons, billing, grants, people, runtime, self_hosted
 from glyphh_server.mcp.tools.base import Context, Tool
 
 TOOLS: dict[str, Tool] = {
-    t.name: t for t in (*account.TOOLS, *addons.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *runtime.TOOLS)
+    t.name: t
+    for t in (
+        *account.TOOLS,
+        *addons.TOOLS,
+        *billing.TOOLS,
+        *people.TOOLS,
+        *grants.TOOLS,
+        *runtime.TOOLS,
+        *self_hosted.TOOLS,
+    )
 }
 
 

@@ -65,6 +65,15 @@ async def hosted_runtime(engine: AsyncEngine, who: Person) -> Rt:
     return Rt(runtime_id, token, "hosted")
 
 
+async def self_runtime(engine: AsyncEngine, who: Person, public_url: str = "https://rrotor.acme.test") -> Rt:
+    token = make_secret()
+    async with engine.begin() as conn:
+        values = {"user_id": who.user_id, "mode": "self", "name": "Acme", "public_url": public_url, "state": "stopped"}
+        made = insert(Rrotor).values(**values, token_hash=hash_secret(token)).returning(Rrotor.id)
+        runtime_id = (await conn.execute(made)).scalar_one()
+    return Rt(runtime_id, token, "self")
+
+
 async def a_model(
     engine: AsyncEngine, who: Person, name: str = "daily_sales", repo: str | None = None
 ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:

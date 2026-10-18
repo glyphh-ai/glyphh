@@ -21,7 +21,7 @@ from starlette.websockets import WebSocket
 from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops.license import sign_license
+from glyphh_server.ops.license import GRACE_DAYS, LINK, Stamp, sign_license
 from glyphh_server.ops.link import inbound, reports
 from glyphh_server.ops.link.hello import next_text, read_hello
 from glyphh_server.ops.link.hub import Hub, Link
@@ -58,7 +58,7 @@ class Context:
     hub: Hub
     routines: Routines
     secrets_key: bytes | None
-    license_key: Ed25519PrivateKey | None = None  # signs the licence a hosted runtime's welcome carries
+    license_key: Ed25519PrivateKey | None = None  # signs the licence a hosted or self-hosted runtime's welcome carries
 
 
 @dataclass(slots=True)
@@ -109,16 +109,19 @@ async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
 
 async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
     """A local runtime's welcome has no limits (the computer's own) and no licence (its mod hands one in); a hosted
-    one's carries the plan's hours and its licence."""
-    if runtime.mode != "hosted":
+    one's carries the plan's hours, its keys and its licence; a self-hosted one's the same with no hours (they never
+    apply) and the licence's grace."""
+    if runtime.mode == "local":
         return Welcome(limits=Limits(runtime_hours=None))
+    hosted = runtime.mode == "hosted"
+    stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS)
     licence = None
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         keys = await hashes_for(conn, runtime.id)
         if ctx.license_key is not None:
-            licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None)
-    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours), licence=licence, keys=keys)
+            licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None, stamp)
+    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours if hosted else None), licence=licence, keys=keys)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:

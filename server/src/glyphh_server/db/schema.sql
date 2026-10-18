@@ -344,9 +344,15 @@ CREATE TABLE IF NOT EXISTS rrotors (
     token_hash TEXT NOT NULL,
     last_seen_at TIMESTAMP WITH TIME ZONE,
     seq BIGINT DEFAULT 0 NOT NULL,
+    name TEXT,
+    public_url TEXT,
+    last_heartbeat_at TIMESTAMP WITH TIME ZONE,
+    machine_hash TEXT,
+    active_runs INTEGER,
     PRIMARY KEY (id),
-    CONSTRAINT rrotors_mode CHECK (mode IN ('hosted', 'local')),
+    CONSTRAINT rrotors_mode CHECK (mode IN ('hosted', 'local', 'self')),
     CONSTRAINT rrotors_local_install CHECK ((mode = 'local') = (install_id IS NOT NULL)),
+    CONSTRAINT rrotors_self_address CHECK ((mode = 'self') = (public_url IS NOT NULL AND name IS NOT NULL)),
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
     UNIQUE (install_id),
     FOREIGN KEY(install_id) REFERENCES installs (id) ON DELETE CASCADE,
@@ -374,6 +380,8 @@ CREATE TABLE IF NOT EXISTS runtime_keys (
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS rrotors_one_hosted ON rrotors (user_id) WHERE mode = 'hosted';
+CREATE UNIQUE INDEX IF NOT EXISTS rrotors_self_url ON rrotors (user_id, public_url) WHERE mode = 'self';
+CREATE INDEX IF NOT EXISTS rrotors_self_host ON rrotors (public_url) WHERE mode = 'self';
 
 -- tokens
 CREATE TABLE IF NOT EXISTS tokens (
