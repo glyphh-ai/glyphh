@@ -85,9 +85,9 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
   charge uses the markup in force that minute.
 - **What the org sees:** `GET /v1/billing` gives `hosting: {month, month_to_date_cents, machines: [{id, name, size,
   cents}]}`, all in, a machine deleted this month included; the connector's `usage` tool says the same.
-- **Published rates:** `GET /v1/rates` gives Fly's rates and each self-serve plan's rate (Fly's × (1 + markup), to the
-  cent a month and per second), never the markup itself and never an Enterprise rate. The site's `/pricing` and the
-  platform read it.
+- **Published rates:** `GET /v1/rates` gives each size's machine and each self-serve plan's rate (Fly's × (1 +
+  markup), to the cent a month and per second). Never Fly's own rates, their source or the markup itself, so the markup
+  cannot be worked out from it; never an Enterprise rate. The site's `/pricing` and the platform read it.
 - **Reconciling** (a process, not built): each month, compare what Glyphh metered (`machine_months.cost_micros`)
   with Fly's invoice for the runtimes app (`GLYPHH_FLY_APP`, `glyphh-runtimes`); a gap means a rate row is out of
   date.

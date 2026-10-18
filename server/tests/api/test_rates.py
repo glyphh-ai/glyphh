@@ -15,45 +15,17 @@ from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.fakes import fake_http
 
 
-async def test_the_rates_are_flys_and_each_paid_plans_all_in(client: httpx.AsyncClient) -> None:
+async def test_the_rates_are_each_paid_plans_all_in_and_never_flys_own(client: httpx.AsyncClient) -> None:
     res = await client.get("/v1/rates")
     assert res.status_code == 200, res.text
     rates = res.json()
-    assert (rates["effective_from"], rates["source"], rates["region"]) == (
-        "2026-10-18",
-        "https://docs.fly.io/about/pricing",
-        "iad",
-    )
+    assert (rates["effective_from"], rates["region"]) == ("2026-10-18", "iad")
+    assert set(rates) == {"effective_from", "region", "sizes", "plans"}  # no source, no Fly rate: no markup to work out
     assert rates["sizes"] == [
-        {
-            "size": "small",
-            "cpu_kind": "shared",
-            "cpus": 1,
-            "memory_mb": 1024,
-            "volume_gb": 3,
-            "usd_per_month": 6.7,
-            "usd_per_second": 0.0000025849,
-        },
-        {
-            "size": "medium",
-            "cpu_kind": "shared",
-            "cpus": 2,
-            "memory_mb": 4096,
-            "volume_gb": 10,
-            "usd_per_month": 25.39,
-            "usd_per_second": 0.0000097955,
-        },
-        {
-            "size": "large",
-            "cpu_kind": "performance",
-            "cpus": 2,
-            "memory_mb": 8192,
-            "volume_gb": 20,
-            "usd_per_month": 90.0,
-            "usd_per_second": 0.0000347222,
-        },
+        {"size": "small", "cpu_kind": "shared", "cpus": 1, "memory_mb": 1024, "volume_gb": 3},
+        {"size": "medium", "cpu_kind": "shared", "cpus": 2, "memory_mb": 4096, "volume_gb": 10},
+        {"size": "large", "cpu_kind": "performance", "cpus": 2, "memory_mb": 8192, "volume_gb": 20},
     ]
-    assert rates["volume_usd_per_gb_month"] == 0.15
     assert sorted(rates["plans"]) == ["Pro", "Team"]  # Free has no hosting; Enterprise's is in its contract
     pro = rates["plans"]["Pro"]
     assert [(s["size"], s["usd_per_month"], s["usd_per_second"]) for s in pro["sizes"]] == [
