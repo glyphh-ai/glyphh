@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useInstalls, useMe, useSignOutInstall } from '@/api/queries';
+import { useInstalls, useSignOutInstall } from '@/api/queries';
 import type { Install } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -11,19 +11,15 @@ import { SettingsTitle } from './SettingsTitle';
 
 export function InstallsPage() {
   const installs = useInstalls();
-  const me = useMe();
   const signOut = useSignOutInstall();
   const [ending, setEnding] = useState<Install | null>(null);
-  const limit = me.data?.plan.limits.installs;
 
   return (
     <>
       <SettingsTitle title="Installs">Where Glyphh is signed in as you, such as Claude Code on a machine.</SettingsTitle>
       <SettingsSection
         title="Signed in"
-        description={
-          me.data && (limit === null ? `${me.data.used.installs} in use.` : `${me.data.used.installs} of ${limit} on ${me.data.plan.name}.`)
-        }
+        description={installs.data && `${installs.data.length} in use. Installs are unlimited on every plan.`}
       >
         {installs.isPending && <LoadingCard />}
         {installs.error && <ApiErrorNotice error={installs.error} />}

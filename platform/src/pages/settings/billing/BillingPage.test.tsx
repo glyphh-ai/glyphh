@@ -1,68 +1,81 @@
-import { fireEvent, screen, within } from '@testing-library/react';
-import { addons, me, plans } from '@/test/fixtures';
+import { screen, within } from '@testing-library/react';
+import { me, plans, rates } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
+const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 }, hosting: { month_to_date_cents: 0, machines: [] } };
+const card = (name: string) => screen.findByRole('region', { name });
+
 describe('Billing', () => {
-  it('shows the plan, seats, renewal and runtime hours', async () => {
+  it('shows the plan: its flat price, renewal, what it includes and hosting this month', async () => {
     renderApp('/settings/billing');
-    expect(await screen.findByText('$8 / seat / month · 1 seat')).toBeInTheDocument();
+    expect(await screen.findByText('$99 / month')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('Renews 16 Nov 2026')).toBeInTheDocument();
-    expect(await screen.findByRole('progressbar', { name: 'Runtime hours used this month' })).toHaveAttribute('aria-valuemax', '50');
+    expect(screen.getAllByText('3 hosted machines')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('100,000 precedents on hosted machines')[0]).toBeInTheDocument();
+    expect(screen.getByText('Hosting this month')).toBeInTheDocument();
+    expect(screen.getByText('$12.17')).toBeInTheDocument();
+    expect(screen.getByText(/Members and installs are unlimited on every plan/)).toBeInTheDocument();
+    expect(screen.queryByText(/seat/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/add-on/i)).not.toBeInTheDocument();
   });
 
-  it('shows each add-on with its price, limits on this plan and whether it is on', async () => {
+  it('offers the plans above this one: Upgrade for Team, Talk to us for Enterprise', async () => {
+    const { user, router } = renderApp('/settings/billing');
+    const team = await card('Team');
+    expect(within(team).getByText('$299 / month')).toBeInTheDocument();
+    expect(within(team).getByText('10 hosted machines')).toBeInTheDocument();
+    expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
+    const enterprise = await card('Enterprise');
+    expect(within(enterprise).getByText('From $10,000 / year')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
+    expect(within(enterprise).getByText('SSO and SAML, roles and audit logs')).toBeInTheDocument();
+    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+    expect(screen.queryByRole('region', { name: 'Free' })).not.toBeInTheDocument();
+    await user.click(within(team).getByRole('button', { name: 'Upgrade' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('shows the hosted machine rates of the plan in force, a month and a second', async () => {
     renderApp('/settings/billing');
-    expect(await screen.findByText('$4 / seat / month')).toBeInTheDocument();
-    expect(screen.getByText('3 models · 10,000 precedents on Pro')).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Ada add-on' })).toBeChecked();
+    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro']);
+    const small = within(table).getByRole('row', { name: /^Small/ });
+    expect(within(small).getByText('$8.71 / month')).toBeInTheDocument();
+    expect(within(small).getByText('$0.0000034 / second')).toBeInTheDocument();
+    expect(within(table).getByText('$117 / month')).toBeInTheDocument();
+    expect(within(table).getByText('$0.20 / GB / month')).toBeInTheDocument();
+    expect(await screen.findByText('Pro’s rates.')).toBeInTheDocument();
+    expect(screen.getByText(/billed by the second while it runs/)).toBeInTheDocument();
+    // Fly's own rates are never shown.
+    expect(within(table).queryByText('$6.70 / month')).not.toBeInTheDocument();
   });
 
-  it('offers the plans above this one', async () => {
+  it('on Free, offers every paid plan, shows Pro and Team’s rates, and says hosting is on them', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/settings/billing');
-    expect(await screen.findByText('$16 / seat / month')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Team' })).toBeInTheDocument();
-    expect(screen.getByText('Unlimited members')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Free' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    expect(screen.getAllByText('Free')).toHaveLength(2);
+    expect(screen.getByText('No hosted machines')).toBeInTheDocument();
+    expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
+    expect(await card('Pro')).toBeInTheDocument();
+    expect(await screen.findByText('Hosting is on Pro and Team. Running rrotor yourself is free.')).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
   });
 
-  it('quotes the prorated amount before removing an add-on, then removes it at that date', async () => {
-    let removed = '';
-    server.use(
-      http.post(v1('/billing/addons/preview'), async ({ request }) => {
-        expect(await request.json()).toEqual({ mod: 'ada', action: 'remove' });
-        return HttpResponse.json({ mod: 'ada', action: 'remove', prorated_cents: -207, currency: 'usd', monthly_cents: 0, proration_date: 1792000000 });
-      }),
-      http.delete(v1('/billing/addons/:mod'), ({ request, params }) => {
-        removed = `${params.mod}@${new URL(request.url).searchParams.get('proration_date')}`;
-        return HttpResponse.json([{ ...addons[0], added: false }]);
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
-    await user.click(await screen.findByRole('switch', { name: 'Ada add-on' }));
-    const dialog = screen.getByRole('dialog', { name: 'Remove Ada' });
-    expect(await within(dialog).findByText('$2.07 credit')).toBeInTheDocument();
-    expect(within(dialog).getByText('$0 a month')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
-    await vi.waitFor(() => expect(removed).toBe('ada@1792000000'));
-  });
-
-  it('opens the plans from Manage, and from an Upgrade card', async () => {
+  it('opens the plans from Manage', async () => {
     const { user, router } = renderApp('/settings/billing');
     await user.click(await screen.findByRole('button', { name: 'Manage' }));
     await user.click(screen.getByRole('menuitem', { name: 'Change plan' }));
     expect(router.state.location.pathname).toBe('/settings/plans');
-    await router.navigate('/settings/billing');
-    await user.click(await screen.findByRole('button', { name: 'Upgrade' }));
-    expect(router.state.location.pathname).toBe('/settings/plans');
   });
 
   it('offers only Change plan in Manage on Free, without a subscription', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0], org: { ...me.org, billing_status: 'none', renews_at: null } })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     const { user } = renderApp('/settings/billing');
-    expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    expect(screen.getAllByText('Free')).toHaveLength(2);
     await user.click(await screen.findByRole('button', { name: 'Manage' }));
     const menu = screen.getByRole('menu', { name: 'Manage billing' });
     expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Change plan']);
@@ -81,36 +94,35 @@ describe('Billing', () => {
     }
   });
 
-  it('changes seats, never below those taken', async () => {
-    let seats: unknown;
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, seats: 3 }, used: { ...me.used, seats: 2 } })),
-      http.post(v1('/billing/seats'), async ({ request }) => {
-        seats = await request.json();
-        return HttpResponse.json({});
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
-    await user.click(await screen.findByRole('button', { name: 'Manage' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Change seats' }));
-    const dialog = screen.getByRole('dialog', { name: 'Change seats' });
-    const field = within(dialog).getByLabelText('Seats');
-    await user.clear(field);
-    await user.type(field, '1');
-    expect(within(dialog).getByText('At least 2, the seats already taken.')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled();
-    await user.clear(field);
-    await user.type(field, '5');
-    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
-    await vi.waitFor(() => expect(seats).toEqual({ seats: 5 }));
-  });
-
-  it('is read-only for members who are not the admin', async () => {
+  it('is read-only for members who are not the admin, but anyone can talk to sales', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })));
     renderApp('/settings/billing');
     expect(await screen.findByText('Only your org’s admin can change this.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage' })).not.toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Ada add-on' })).toBeDisabled();
+    expect(await screen.findByRole('link', { name: 'Talk to us' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+  });
+
+  it('on Enterprise, offers no plan above, and shows its own rates', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 5, limit: null } })));
+    renderApp('/settings/billing');
+    expect(await screen.findByText('From $10,000 / year')).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getByText('$8.04 / month')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Team' })).not.toBeInTheDocument();
+  });
+
+  it('offers every plan when the org’s plan is not among those listed, and a dash for a size without a rate', async () => {
+    server.use(
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[1], name: 'Legacy', price_cents: null, interval: null } })),
+      http.get(v1('/rates'), () => HttpResponse.json({ ...rates, plans: { Legacy: { sizes: [rates.plans.Pro!.sizes[0]], volume_usd_per_gb_month: '0.20' } } })),
+    );
+    renderApp('/settings/billing');
+    expect(await screen.findByText('By contract')).toBeInTheDocument();
+    expect(await card('Free')).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+    expect(within(table).getByText('$0.20 / GB / month')).toBeInTheDocument();
   });
 
   it('says so when Stripe sends the person back', async () => {
@@ -119,9 +131,13 @@ describe('Billing', () => {
   });
 
   it('shows a refusal from the server', async () => {
-    server.use(http.get(v1('/addons'), () => apiError(503, 'E_UNAVAILABLE', 'Billing is off.')));
+    server.use(
+      http.get(v1('/plans'), () => apiError(503, 'E_UNAVAILABLE', 'Billing is off.')),
+      http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Rates are unavailable.')),
+    );
     renderApp('/settings/billing');
     expect(await screen.findByText('Billing is off.')).toBeInTheDocument();
+    expect(await screen.findByText('Rates are unavailable.')).toBeInTheDocument();
   });
 
   it('shows a payment that needs attention in place of the renewal', async () => {
@@ -129,99 +145,5 @@ describe('Billing', () => {
     renderApp('/settings/billing');
     expect(await screen.findByText('Payment due')).toBeInTheDocument();
     expect(screen.queryByText(/^Renews/)).not.toBeInTheDocument();
-  });
-
-  it('describes each add-on’s price and limits as the server gives them', async () => {
-    server.use(
-      http.get(v1('/addons'), () =>
-        HttpResponse.json([
-          { ...addons[0], mod: 'ada', name: 'Ada', limits: { models: null, precedents: 10000 } },
-          { ...addons[0], mod: 'drip', name: 'Drip', per_seat: false, price_cents: 200, limits: null, added: false },
-          { ...addons[0], mod: 'games', name: 'Games', limits: {}, added: false, allowed: false },
-        ]),
-      ),
-    );
-    renderApp('/settings/billing');
-    expect(await screen.findByText('unlimited models · 10,000 precedents on Pro')).toBeInTheDocument();
-    expect(screen.getByText('$2 / month')).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Drip add-on' })).toBeEnabled();
-    expect(screen.getByText('Not available on Pro')).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Games add-on' })).toBeDisabled();
-    expect(screen.getAllByText(/ on Pro$/)).toHaveLength(2);
-  });
-
-  it('quotes the prorated amount before adding an add-on, then adds it at that date', async () => {
-    let added: unknown;
-    server.use(
-      http.get(v1('/addons'), () => HttpResponse.json([{ ...addons[0], added: false }])),
-      http.post(v1('/billing/addons/preview'), async ({ request }) => {
-        expect(await request.json()).toEqual({ mod: 'ada', action: 'add' });
-        return HttpResponse.json({ mod: 'ada', action: 'add', prorated_cents: 207, currency: 'usd', monthly_cents: 400, proration_date: 1792000000 });
-      }),
-      http.post(v1('/billing/addons'), async ({ request }) => {
-        added = await request.json();
-        return HttpResponse.json([{ ...addons[0], added: true }]);
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
-    await user.click(await screen.findByRole('switch', { name: 'Ada add-on' }));
-    const dialog = screen.getByRole('dialog', { name: 'Add Ada' });
-    expect(await within(dialog).findByText('$2.07')).toBeInTheDocument();
-    expect(within(dialog).getByText('$4 a month')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Add' }));
-    await vi.waitFor(() => expect(added).toEqual({ mod: 'ada', proration_date: 1792000000 }));
-    await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  });
-
-  it('sends an org without a subscription to Stripe’s checkout to add an add-on', async () => {
-    const location = stubLocation();
-    let body: unknown;
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, billing_status: 'canceled', seats: 0 } })),
-      http.get(v1('/addons'), () => HttpResponse.json([{ ...addons[0], added: false }])),
-      http.post(v1('/billing/checkout'), async ({ request }) => {
-        body = await request.json();
-        return HttpResponse.json({ url: 'https://checkout.stripe.test/c/2' });
-      }),
-    );
-    try {
-      const { user } = renderApp('/settings/billing');
-      await user.click(await screen.findByRole('switch', { name: 'Ada add-on' }));
-      const dialog = screen.getByRole('dialog', { name: 'Add Ada' });
-      expect(within(dialog).queryByText('Now')).not.toBeInTheDocument();
-      await user.click(within(dialog).getByRole('button', { name: 'Continue to Stripe' }));
-      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/c/2'));
-      expect(body).toEqual({ plan: 'Pro', seats: 1, addons: ['ada'] });
-    } finally {
-      location.restore();
-    }
-  });
-
-  it('closes the add-on dialog on Cancel without changing anything', async () => {
-    server.use(http.post(v1('/billing/addons/preview'), () => HttpResponse.json({ mod: 'ada', action: 'remove', prorated_cents: -207, currency: 'usd', monthly_cents: 0, proration_date: 1 })));
-    const { user } = renderApp('/settings/billing');
-    await user.click(await screen.findByRole('switch', { name: 'Ada add-on' }));
-    await user.click(within(screen.getByRole('dialog', { name: 'Remove Ada' })).getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('does not send too few seats, even if the form is submitted', async () => {
-    let sent = false;
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, seats: 3 }, used: { ...me.used, seats: 2 } })),
-      http.post(v1('/billing/seats'), () => {
-        sent = true;
-        return HttpResponse.json({});
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
-    await user.click(await screen.findByRole('button', { name: 'Manage' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Change seats' }));
-    const field = within(screen.getByRole('dialog', { name: 'Change seats' })).getByLabelText('Seats');
-    await user.clear(field);
-    await user.type(field, '1');
-    fireEvent.submit(field.closest('form')!);
-    expect(screen.getByRole('dialog', { name: 'Change seats' })).toBeInTheDocument();
-    expect(sent).toBe(false);
   });
 });

@@ -12,38 +12,68 @@ describe('Choosing a plan', () => {
     expect(screen.queryByRole('complementary', { name: 'Main' })).not.toBeInTheDocument();
     expect(await screen.findByText('chris@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.getByText(/unlimited members, installs and self-hosted runtimes, with Ada included\. Never priced per seat\./)).toBeInTheDocument();
 
     const pro = await screen.findByRole('region', { name: 'Pro' });
     expect(within(pro).getByText('Current plan', { selector: 'span' })).toBeInTheDocument();
     expect(within(pro).getByRole('button', { name: 'Current plan' })).toBeDisabled();
-    expect(within(pro).getByText('$8')).toBeInTheDocument();
-    expect(within(pro).getByText('per seat / month')).toBeInTheDocument();
-    expect(within(pro).getByText('1 member')).toBeInTheDocument();
-    expect(within(pro).getByText('Up to 5 installs per person')).toBeInTheDocument();
-    expect(within(pro).getByText('Ada: 3 models, 10,000 precedents')).toBeInTheDocument();
+    expect(within(pro).getByText('$99')).toBeInTheDocument();
+    expect(within(pro).getByText('per month')).toBeInTheDocument();
+    expect(within(pro).getByText('3 hosted machines')).toBeInTheDocument();
+    expect(within(pro).getByText('100,000 precedents on hosted machines')).toBeInTheDocument();
+    expect(within(pro).getByText('Sync across runtimes')).toBeInTheDocument();
 
-    expect(within(card('Free')).getByText('per month')).toBeInTheDocument();
-    expect(within(card('Free')).getByText('Up to 1 install per person')).toBeInTheDocument();
-    expect(within(card('Free')).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
+    const free = card('Free');
+    expect(within(free).getByText('$0')).toBeInTheDocument();
+    expect(within(free).getByText('No hosted machines')).toBeInTheDocument();
+    expect(within(free).queryByText(/precedents/)).not.toBeInTheDocument();
+    expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
     const team = card('Team');
     expect(within(team).getByText('Recommended')).toBeInTheDocument();
-    expect(within(team).getByText('Unlimited members')).toBeInTheDocument();
-    expect(within(team).getByText('Ada: unlimited models, unlimited precedents')).toBeInTheDocument();
+    expect(within(team).getByText('$299')).toBeInTheDocument();
+    expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
     expect(within(team).getByRole('button', { name: 'Upgrade to Team' })).toBeInTheDocument();
+
+    const enterprise = card('Enterprise');
+    expect(within(enterprise).getByText('From $10,000')).toBeInTheDocument();
+    expect(within(enterprise).getByText('per year')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited precedents on hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
+    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+    expect(within(enterprise).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('names a mod with no limits, and unlimited installs', async () => {
+  it('shows the hosted machine rates of each plan with hosting, never Fly’s own', async () => {
+    renderApp('/settings/plans');
+    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team', 'Enterprise']);
+    const medium = within(table).getByRole('row', { name: /^Medium/ });
+    expect(within(medium).getAllByText('$33.01 / month')).toHaveLength(2);
+    expect(within(medium).getByText('$30.47 / month')).toBeInTheDocument();
+    expect(within(table).queryByText('$25.39 / month')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hosted machines' })).toBeInTheDocument();
+  });
+
+  it('shows a plan sold by contract with no price, and a yearly self-serve plan', async () => {
     server.use(
       http.get(v1('/plans'), () =>
-        HttpResponse.json([...plans.slice(0, 2), { ...plans[2], limits: { members: 5, installs: null }, mods: { ada: { limits: {} } } }]),
+        HttpResponse.json([...plans.slice(0, 2), { ...plans[2], interval: 'year' }, { ...plans[3], price_cents: null, interval: null }]),
       ),
     );
     renderApp('/settings/plans');
-    const team = await screen.findByRole('region', { name: 'Team' });
-    expect(within(team).getByText('5 members')).toBeInTheDocument();
-    expect(within(team).getByText('Unlimited installs per person')).toBeInTheDocument();
-    expect(within(team).getByText('Ada')).toBeInTheDocument();
+    expect(within(await screen.findByRole('region', { name: 'Team' })).getByText('per year')).toBeInTheDocument();
+    const enterprise = card('Enterprise');
+    expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
+    expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
+  });
+
+  it('shows the server’s refusal when the rates cannot be read, and the plans still', async () => {
+    server.use(http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Rates are unavailable.')));
+    renderApp('/settings/plans');
+    expect(await screen.findByText('Rates are unavailable.')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Team' })).toBeInTheDocument();
   });
 
   it('closes with the X, and with Escape, back to billing', async () => {
@@ -97,12 +127,37 @@ describe('Choosing a plan', () => {
     expect(within(dialog).queryByText('That plan cannot be chosen now.')).not.toBeInTheDocument();
   });
 
+  it('down to Free with hosted machines, says to delete them first, with the way to Machines', async () => {
+    server.use(http.post(v1('/billing/plan'), () => apiError(409, 'E_CONFLICT', 'Delete your hosted machines first.', { reason: 'machines' })));
+    const { user } = renderApp('/settings/plans');
+    await user.click(await screen.findByRole('button', { name: 'Switch to Free' }));
+    const dialog = screen.getByRole('dialog', { name: 'Switch to Free?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Switch plan' }));
+    expect(await within(dialog).findByText('Delete your hosted machines first.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
+  });
+
+  it('moves an org without a subscription to Free without Stripe', async () => {
+    let chosen: unknown;
+    server.use(
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, org: { ...me.org, billing_status: 'canceled', renews_at: null } })),
+      http.post(v1('/billing/plan'), async ({ request }) => {
+        chosen = await request.json();
+        return HttpResponse.json({});
+      }),
+    );
+    const { user } = renderApp('/settings/plans');
+    await user.click(await screen.findByRole('button', { name: 'Switch to Free' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Switch to Free?' })).getByRole('button', { name: 'Switch plan' }));
+    await vi.waitFor(() => expect(chosen).toEqual({ plan: 'Free' }));
+  });
+
   it('sends an org without a subscription to Stripe’s checkout', async () => {
     const location = stubLocation();
     let body: unknown;
     server.use(
       http.get(v1('/me'), () =>
-        HttpResponse.json({ ...me, plan: plans[0], org: { ...me.org, billing_status: 'none', renews_at: null }, used: { ...me.used, seats: 0 } }),
+        HttpResponse.json({ ...me, plan: plans[0], org: { ...me.org, billing_status: 'none', renews_at: null } }),
       ),
       http.post(v1('/billing/checkout'), async ({ request }) => {
         body = await request.json();
@@ -116,7 +171,7 @@ describe('Choosing a plan', () => {
       expect(within(card('Team')).queryByText('Recommended')).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Upgrade to Pro' }));
       await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/c/1'));
-      expect(body).toEqual({ plan: 'Pro', seats: 1, addons: [] });
+      expect(body).toEqual({ plan: 'Pro' });
     } finally {
       location.restore();
     }

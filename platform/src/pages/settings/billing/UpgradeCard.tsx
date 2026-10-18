@@ -1,28 +1,27 @@
 import type { Plan } from '@/api/types';
-import { money } from '@/lib/format';
-import { Button, Card, CardEyebrow, Chip } from '@/ui';
+import { salesUrl } from '@/lib/links';
+import { Button, ButtonLink, Card, CardEyebrow, Chip } from '@/ui';
+import { planFacts, priceText } from './plans';
 import styles from './billing.module.css';
 
-export function membersText(plan: Plan): string {
-  const members = plan.limits.members;
-  return members === null ? 'Unlimited members' : members === 1 ? '1 member' : `${members} members`;
-}
-
+/** A plan above this one: its price and what it adds. Upgrade for a self-serve plan, Talk to us for one by contract. */
 export function UpgradeCard({ plan, isAdmin, onUpgrade }: { plan: Plan; isAdmin: boolean; onUpgrade: () => void }) {
-  const installs = plan.limits.installs;
   return (
-    <Card>
+    <Card aria-label={plan.name}>
       <div className={styles.headLine}>
         <div className={styles.headText}>
-          <CardEyebrow>{money(plan.seat_price_cents)} / seat / month</CardEyebrow>
+          <CardEyebrow>{priceText(plan)}</CardEyebrow>
           <h3 className={styles.itemName}>{plan.name}</h3>
         </div>
-        {isAdmin && <Button onClick={onUpgrade}>Upgrade</Button>}
+        {plan.self_serve ? isAdmin && <Button onClick={onUpgrade}>Upgrade</Button> : <ButtonLink href={salesUrl}>Talk to us</ButtonLink>}
       </div>
       <div className={styles.chips}>
-        <Chip tone="violet">{membersText(plan)}</Chip>
+        {planFacts(plan).map((fact) => (
+          <Chip key={fact.text} tone={fact.icon === 'check' ? 'violet' : 'neutral'}>
+            {fact.text}
+          </Chip>
+        ))}
       </div>
-      {installs !== null && <p className={styles.description}>Up to {installs} installs, and every add-on.</p>}
     </Card>
   );
 }

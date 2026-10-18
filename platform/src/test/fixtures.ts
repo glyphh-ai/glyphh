@@ -1,11 +1,23 @@
-import type { Addon, Install, Invite, Machine, Me, Member, Model, Org, Plan, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
+import type { Install, Invite, Machine, MachineSize, Me, Member, Model, Org, Plan, Rates, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
 
 /** One org's data in the server's shapes, shared by the page tests and the local fake server. */
 
+const none = { sync: false, ha: false, offline: false, sso: false };
+
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, seat_price_cents: 0, limits: { members: 1, installs: 1 }, mods: { ada: { limits: { models: 3, precedents: 10000 } } } },
-  { name: 'Pro', version: 1, seat_price_cents: 800, limits: { members: 1, installs: 5 }, mods: { ada: { limits: { models: 3, precedents: 10000 } } } },
-  { name: 'Team', version: 1, seat_price_cents: 1600, limits: { members: null, installs: 10 }, mods: { ada: { limits: { models: null, precedents: null } } } },
+  { name: 'Free', version: 1, price_cents: 0, interval: 'month', self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, markup_hidden: true },
+  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, markup_hidden: true },
+  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, markup_hidden: true },
+  {
+    name: 'Enterprise',
+    version: 1,
+    price_cents: 1_000_000,
+    interval: 'year',
+    self_serve: false,
+    limits: { machines: null, precedents: null },
+    features: { sync: true, ha: true, offline: true, sso: true },
+    markup_hidden: true,
+  },
 ];
 
 const pro = plans[1]!;
@@ -16,9 +28,35 @@ export const me: Me = {
   name: 'Chris Timmerman',
   role: 'admin',
   providers: ['github', 'google'],
-  org: { id: 'o-1', name: 'Glyphh', seats: 1, billing_status: 'active', renews_at: '2026-11-16T00:00:00Z' },
+  org: { id: 'o-1', name: 'Glyphh', billing_status: 'active', renews_at: '2026-11-16T00:00:00Z' },
   plan: pro,
-  used: { members: 1, seats: 1, installs: 2 },
+  precedents: { used: 18_240, limit: 100_000 },
+  hosting: {
+    month_to_date_cents: 1217,
+    machines: [
+      { id: 'rt-7f3a9c', name: 'Main', size: 'small', cents: 412 },
+      { id: 'rt-2b8e41', name: 'Experiments', size: 'large', cents: 805 },
+    ],
+  },
+};
+
+/** Per second is the month's rate over a 30-day month. */
+const rate = (size: MachineSize, usd_per_month: number) => ({ size, usd_per_month, usd_per_second: usd_per_month / 2_592_000 });
+
+export const rates: Rates = {
+  effective_from: '2026-10-18',
+  source: 'https://docs.fly.io/about/pricing',
+  sizes: [
+    { ...rate('small', 6.7), cpu_kind: 'shared', cpus: 1, memory_mb: 1024, volume_gb: 3 },
+    { ...rate('medium', 25.39), cpu_kind: 'shared', cpus: 2, memory_mb: 4096, volume_gb: 10 },
+    { ...rate('large', 90), cpu_kind: 'performance', cpus: 2, memory_mb: 8192, volume_gb: 20 },
+  ],
+  volume_usd_per_gb_month: 0.15,
+  plans: {
+    Pro: { sizes: [rate('small', 8.71), rate('medium', 33.01), rate('large', 117)], volume_usd_per_gb_month: 0.2 },
+    Team: { sizes: [rate('small', 8.71), rate('medium', 33.01), rate('large', 117)], volume_usd_per_gb_month: 0.2 },
+    Enterprise: { sizes: [rate('small', 8.04), rate('medium', 30.47), rate('large', 108)], volume_usd_per_gb_month: 0.18 },
+  },
 };
 
 export const org: Org = {
@@ -26,8 +64,6 @@ export const org: Org = {
   name: 'Glyphh',
   admin_user_id: 'u-chris',
   plan: pro,
-  seats: 1,
-  seats_taken: 1,
   members: 1,
   billing_status: 'active',
 };
@@ -104,24 +140,6 @@ export const models: Model[] = [
       { id: 'v-1', version: 1, commit_sha: '3f9c2ab71d', created_at: '2026-09-20T10:00:00Z', active_on: [] },
       { id: 'v-2', version: 2, commit_sha: '8be41c0f2a', created_at: '2026-10-11T16:20:00Z', active_on: ['rt-7f3a9c'] },
     ],
-  },
-];
-
-export const addons: Addon[] = [
-  {
-    mod: 'ada',
-    name: 'Ada',
-    description: 'Ada models in your runtime, deployed by commit and called by Claude or any app.',
-    version: 1,
-    price_cents: 400,
-    per_seat: true,
-    monthly_cents: 400,
-    plans: ['Free', 'Pro', 'Team'],
-    free: true,
-    allowed: true,
-    limits: { models: 3, precedents: 10000 },
-    added: true,
-    quantity: 1,
   },
 ];
 

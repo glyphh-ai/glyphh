@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { me, org } from '@/test/fixtures';
+import { me, org, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
@@ -43,18 +43,13 @@ describe('Settings', () => {
   });
 
   describe('Members', () => {
-    // A plan for several members: the list and the invites. A plan for one shows the upgrade instead (below).
-    beforeEach(() => {
-      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, plan: { ...org.plan, name: 'Team', limits: { members: 5, installs: 10 } } })));
-    });
-
-    it('lists members with the admin marked, and the plan’s member limit', async () => {
+    it('lists members with the admin marked, and says they are unlimited', async () => {
       renderApp('/settings/members');
       const list = await screen.findByRole('list', { name: 'Members' });
       expect(within(list).getByText('Chris Timmerman')).toBeInTheDocument();
       expect(within(list).getByText('Admin')).toBeInTheDocument();
       expect(within(list).queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
-      expect(await screen.findByText('1 of 5 on Team.')).toBeInTheDocument();
+      expect(await screen.findByText('1 member. Members are unlimited on every plan.')).toBeInTheDocument();
     });
 
     it('makes an invite and shows its link once', async () => {
@@ -73,13 +68,13 @@ describe('Settings', () => {
       expect(within(dialog).getByText('https://glyphh.ai/join?invite=tok')).toBeInTheDocument();
     });
 
-    it('explains a plan limit and points to the plans', async () => {
-      server.use(http.post(v1('/org/invites'), () => apiError(403, 'E_LIMIT', 'Team allows 5 members.', { limit: 'members' })));
+    it('shows the server’s refusal of an invite, with no way to a bigger plan', async () => {
+      server.use(http.post(v1('/org/invites'), () => apiError(409, 'E_CONFLICT', 'sam@example.com is already a member.')));
       const { user } = renderApp('/settings/members');
       await user.type(await screen.findByLabelText('Email'), 'sam@example.com');
       await user.click(screen.getByRole('button', { name: 'Invite' }));
-      expect(await screen.findByText('Team allows 5 members.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/settings/billing');
+      expect(await screen.findByText('sam@example.com is already a member.')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'See plans' })).not.toBeInTheDocument();
     });
 
     it('lets the admin remove a member and cancel an invite', async () => {
@@ -162,7 +157,7 @@ describe('Settings', () => {
   });
 
   describe('Installs', () => {
-    it('lists installs with the plan’s limit, and signs one out', async () => {
+    it('lists installs, unlimited on every plan, and signs one out', async () => {
       let ended = '';
       server.use(
         http.delete(v1('/installs/:id'), ({ params }) => {
@@ -173,7 +168,7 @@ describe('Settings', () => {
       const { user } = renderApp('/settings/installs');
       const list = await screen.findByRole('list', { name: 'Installs' });
       expect(within(list).getByText('studio-mac')).toBeInTheDocument();
-      expect(screen.getByText('2 of 5 on Pro.')).toBeInTheDocument();
+      expect(screen.getByText('2 in use. Installs are unlimited on every plan.')).toBeInTheDocument();
       await user.click(within(list).getAllByRole('button', { name: 'Sign out' })[0]!);
       await user.click(within(screen.getByRole('dialog', { name: 'Sign out this install?' })).getByRole('button', { name: 'Sign out' }));
       await vi.waitFor(() => expect(ended).toBe('i-1'));
@@ -189,15 +184,10 @@ describe('Settings, more', () => {
   });
 
   describe('Members', () => {
-    // A plan for several members: the list and the invites. A plan for one shows the upgrade instead (below).
-    beforeEach(() => {
-      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, plan: { ...org.plan, name: 'Team', limits: { members: 5, installs: 10 } } })));
-    });
-
-    it('counts members without a limit on a plan that has none', async () => {
-      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 4, plan: { ...org.plan, name: 'Team', limits: { members: null, installs: 10 } } })));
+    it('counts the members on any plan, Free too', async () => {
+      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 4, plan: plans[0] })));
       renderApp('/settings/members');
-      expect(await screen.findByText('4 on Team.')).toBeInTheDocument();
+      expect(await screen.findByText('4 members. Members are unlimited on every plan.')).toBeInTheDocument();
     });
 
     it('shows the server’s refusal when the members cannot be read', async () => {
@@ -312,9 +302,8 @@ describe('Settings, more', () => {
   });
 
   describe('Installs', () => {
-    it('counts installs without a limit, and marks this one', async () => {
+    it('counts the installs, and marks this one', async () => {
       server.use(
-        http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...me.plan, limits: { members: null, installs: null } } })),
         http.get(v1('/installs'), () =>
           HttpResponse.json([
             { id: 'i-3', machine_id: 'mac-3', name: 'new-mac', surface: 'Claude Code', mod_version: null, last_seen_at: null, created_at: '2026-10-16T09:00:00Z', current: true },
@@ -322,7 +311,7 @@ describe('Settings, more', () => {
         ),
       );
       renderApp('/settings/installs');
-      expect(await screen.findByText('2 in use.')).toBeInTheDocument();
+      expect(await screen.findByText('1 in use. Installs are unlimited on every plan.')).toBeInTheDocument();
       const list = await screen.findByRole('list', { name: 'Installs' });
       expect(within(list).getByText('This one')).toBeInTheDocument();
       expect(within(list).getByText('Claude Code · not seen yet')).toBeInTheDocument();
@@ -360,43 +349,20 @@ describe('Settings, more', () => {
   });
 });
 
-describe('Members on a plan for one', () => {
-  it('tells the admin which plan adds members, and Upgrade opens the plans', async () => {
-    const { user, router } = renderApp('/settings/members');
-    const upgrade = await screen.findByRole('region', { name: 'Members' });
-    expect(within(upgrade).getByRole('heading', { name: 'Members' })).toBeInTheDocument();
-    expect(await within(upgrade).findByText('Upgrade to the Team plan to add members.')).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Members' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
-    await user.click(within(upgrade).getByRole('button', { name: 'Upgrade' }));
-    expect(router.state.location.pathname).toBe('/settings/plans');
-  });
-
-  it('asks a member to ask their admin, with no Upgrade', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })));
-    renderApp('/settings/members');
-    expect(await screen.findByText('Ask your admin to upgrade to the Team plan to add members.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
-  });
-
-  it('says to upgrade the plan when the plans cannot be read', async () => {
-    server.use(http.get(v1('/plans'), () => apiError(503, 'E_UNAVAILABLE', 'Plans are unavailable.')));
-    renderApp('/settings/members');
-    expect(await screen.findByText('Upgrade your plan to add members.')).toBeInTheDocument();
-  });
-
-  it('still lists the members when an org has more than its plan allows', async () => {
-    server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 2 })));
+describe('Members on every plan', () => {
+  it('lists the members and the invite form on Free: no plan limits them', async () => {
+    server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, plan: plans[0] })));
     renderApp('/settings/members');
     expect(await screen.findByRole('list', { name: 'Members' })).toBeInTheDocument();
-    expect(await screen.findByText('2 of 1 on Pro.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
   });
 
   it('lists the members without a count when the org cannot be read', async () => {
     server.use(http.get(v1('/org'), () => apiError(503, 'E_UNAVAILABLE', 'The org is unavailable.')));
     renderApp('/settings/members');
     expect(await screen.findByRole('list', { name: 'Members' })).toBeInTheDocument();
-    expect(screen.queryByText(/ on Pro\./)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unlimited on every plan/)).not.toBeInTheDocument();
   });
 
   it('shows the members loading while the org is known and the list is not yet', async () => {
@@ -405,7 +371,7 @@ describe('Members on a plan for one', () => {
       http.get(v1('/org/members'), () => new Promise<never>(() => {})),
     );
     renderApp('/settings/members');
-    expect(await screen.findByText('2 of 1 on Pro.')).toBeInTheDocument();
+    expect(await screen.findByText('2 members. Members are unlimited on every plan.')).toBeInTheDocument();
     expect(screen.getByLabelText('Loading')).toBeInTheDocument();
   });
 });

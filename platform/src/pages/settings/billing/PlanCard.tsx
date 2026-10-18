@@ -1,44 +1,38 @@
 import { useNavigate } from 'react-router';
 import { usePortal } from '@/api/queries';
-import type { Me, Runtime } from '@/api/types';
+import type { Me } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { date, hours, money, plural } from '@/lib/format';
-import { Button, Card, CardEyebrow, Chip, Menu, MenuItem, ProgressBar } from '@/ui';
+import { date, money } from '@/lib/format';
+import { Button, Card, CardEyebrow, Chip, Menu, MenuItem } from '@/ui';
 import { isSubscribed, statusChip } from './billingStatus';
+import { hasHosting, planFacts, priceText } from './plans';
 import styles from './billing.module.css';
 
-type PlanCardProps = {
-  me: Me;
-  runtime: Runtime | undefined;
-  isAdmin: boolean;
-  onChangeSeats: () => void;
-};
-
-export function PlanCard({ me, runtime, isAdmin, onChangeSeats }: PlanCardProps) {
+/** The org's plan: its price, renewal, what it includes, hosting so far this month, and the ways to change it. */
+export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
   const portal = usePortal();
   const navigate = useNavigate();
   const { plan, org } = me;
   const subscribed = isSubscribed(org.billing_status);
   const status = statusChip(org.billing_status);
-  const price = plan.seat_price_cents > 0 ? `${money(plan.seat_price_cents)} / seat / month · ${plural(org.seats, 'seat')}` : 'Free';
 
   return (
     <Card>
-      <CardEyebrow>{price}</CardEyebrow>
+      <CardEyebrow>{priceText(plan)}</CardEyebrow>
       <div className={styles.titleLine}>
         <h3 className={styles.planName}>{plan.name}</h3>
         {status ? <Chip tone={status.tone}>{status.label}</Chip> : org.renews_at && <Chip tone="green">Renews {date(org.renews_at)}</Chip>}
       </div>
+      <div className={styles.chips}>
+        {planFacts(plan).map((fact) => (
+          <Chip key={fact.text}>{fact.text}</Chip>
+        ))}
+      </div>
 
-      {runtime && runtime.hours_allowed !== null && (
-        <div className={styles.usage}>
-          <div className={styles.usageLine}>
-            <span>Runtime hours</span>
-            <span>
-              {hours(runtime.seconds_used)} <span className={styles.muted}>of</span> {runtime.hours_allowed}
-            </span>
-          </div>
-          <ProgressBar value={hours(runtime.seconds_used)} max={runtime.hours_allowed} label="Runtime hours used this month" />
+      {hasHosting(plan) && (
+        <div className={styles.usageLine}>
+          <span>Hosting this month</span>
+          <span>{money(me.hosting.month_to_date_cents)}</span>
         </div>
       )}
 
@@ -57,11 +51,6 @@ export function PlanCard({ me, runtime, isAdmin, onChangeSeats }: PlanCardProps)
             <MenuItem icon="card" onSelect={() => navigate('/settings/plans')}>
               Change plan
             </MenuItem>
-            {subscribed && (
-              <MenuItem icon="team" onSelect={onChangeSeats}>
-                Change seats
-              </MenuItem>
-            )}
             {subscribed && (
               <MenuItem icon="external" onSelect={() => portal.mutate(undefined, { onSuccess: ({ url }) => window.location.assign(url) })}>
                 Invoices and payment

@@ -1,4 +1,4 @@
-import { ago, date, hours, money, plural } from './format';
+import { ago, date, hours, listText, money, plural, usd, usdPerSecond } from './format';
 
 describe('format', () => {
   it.each([
@@ -11,6 +11,21 @@ describe('format', () => {
   it('writes dates as 16 Nov 2026, the same in every time zone', () => {
     expect(date('2026-11-16T00:00:00Z')).toBe('16 Nov 2026');
     expect(date('2026-09-20T23:30:00Z')).toBe('20 Sep 2026');
+  });
+
+  it('writes rates in dollars: to the cent a month, to two figures a second, from numbers or strings', () => {
+    expect(usd(8.71)).toBe('$8.71');
+    expect(usd('117.00')).toBe('$117');
+    expect(usd(0.195)).toBe('$0.20');
+    expect(usdPerSecond(8.71 / 2_592_000)).toBe('$0.0000034');
+    expect(usdPerSecond('0.0000451')).toBe('$0.000045');
+  });
+
+  it('lists names as a sentence', () => {
+    expect(listText([])).toBe('');
+    expect(listText(['Pro'])).toBe('Pro');
+    expect(listText(['Pro', 'Team'])).toBe('Pro and Team');
+    expect(listText(['Pro', 'Team', 'Enterprise'])).toBe('Pro, Team and Enterprise');
   });
 
   it('says how long ago, then the date after a month', () => {
@@ -29,8 +44,8 @@ describe('format', () => {
   });
 
   it('pluralises', () => {
-    expect(plural(1, 'seat')).toBe('1 seat');
-    expect(plural(3, 'seat')).toBe('3 seats');
+    expect(plural(1, 'machine')).toBe('1 machine');
+    expect(plural(3, 'machine')).toBe('3 machines');
     expect(plural(10_000, 'precedent')).toBe('10,000 precedents');
   });
 });

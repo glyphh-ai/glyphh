@@ -1,22 +1,67 @@
 import { screen, within } from '@testing-library/react';
-import { me, runtime } from '@/test/fixtures';
+import { me, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
 const meter = (name: string) => screen.getByText(name, { selector: 'div' }).parentElement!;
+const free = { ...me, plan: plans[0]!, precedents: { used: 0, limit: 0 }, hosting: { month_to_date_cents: 0, machines: [] } };
 
 describe('Usage', () => {
-  it('shows this month’s runtime hours, installs and models against the plan', async () => {
+  it('shows precedents against the plan’s managed bucket, and hosting this month so far', async () => {
     renderApp('/settings/usage');
     expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
     expect(await screen.findByText('On Pro.')).toBeInTheDocument();
-    await vi.waitFor(() => expect(within(meter('Runtime hours')).getByText('of 50 hours')).toBeInTheDocument());
-    expect(within(meter('Runtime hours')).getByText('12')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Runtime hours used' })).toHaveAttribute('aria-valuemax', '50');
-    expect(within(meter('Installs')).getByText('of 5 installs')).toBeInTheDocument();
-    expect(within(meter('Installs')).getByText('2')).toBeInTheDocument();
-    await vi.waitFor(() => expect(within(meter('Models')).getByText('of 3 models')).toBeInTheDocument());
-    expect(within(meter('Models')).getByText('1')).toBeInTheDocument();
+    expect(within(meter('Precedents')).getByText('18,240')).toBeInTheDocument();
+    expect(within(meter('Precedents')).getByText('of 100,000 on hosted machines')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Precedents used' })).toHaveAttribute('aria-valuemax', '100000');
+    expect(within(meter('Hosting')).getByText('$12.17')).toBeInTheDocument();
+    expect(within(meter('Hosting')).getByText('this month so far')).toBeInTheDocument();
+  });
+
+  it('lists each hosted machine’s cost this month, most first', async () => {
+    renderApp('/settings/usage');
+    const list = await screen.findByRole('list', { name: 'Hosting by machine' });
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual(['ExperimentsLarge$8.05', 'MainSmall$4.12']);
+  });
+
+  it('says there is no limit on a plan without one, and no machines this month', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 2_500_000, limit: null }, hosting: { month_to_date_cents: 0, machines: [] } })));
+    renderApp('/settings/usage');
+    expect(await screen.findByText('on hosted machines, no limit')).toBeInTheDocument();
+    expect(screen.getByText('2,500,000')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.getByText('No hosted machines this month')).toBeInTheDocument();
+  });
+
+  it('on Free, says precedents on your own runtimes have no limit and hosting is on Pro and Team', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
+    renderApp('/settings/usage');
+    expect(await screen.findByText('On Free.')).toBeInTheDocument();
+    expect(within(meter('Precedents')).getByText('No limit on your own runtimes.')).toBeInTheDocument();
+    expect(await within(meter('Hosting')).findByText(/Hosting is on Pro and Team\./)).toBeInTheDocument();
+    expect(within(meter('Hosting')).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+    expect(screen.queryByRole('list', { name: 'Hosting by machine' })).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal when the usage cannot be read', async () => {
+    server.use(
+      http.get(v1('/me'), () => apiError(503, 'E_UNAVAILABLE', 'Usage is unavailable.')),
+      http.get(v1('/runtime/keys'), () => apiError(503, 'E_UNAVAILABLE', 'Keys are unavailable.')),
+    );
+    renderApp('/settings/usage');
+    expect(await screen.findByText('Usage is unavailable.')).toBeInTheDocument();
+    expect(await screen.findByText('Keys are unavailable.')).toBeInTheDocument();
+  });
+
+  it('shows the usage loading until it is known, and no keys yet', async () => {
+    server.use(
+      http.get(v1('/me'), () => new Promise<never>(() => {})),
+      http.get(v1('/runtime/keys'), () => HttpResponse.json([])),
+    );
+    renderApp('/settings/usage');
+    expect(await screen.findByText('No API keys yet')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Loading').length).toBeGreaterThan(0);
   });
 
   it('lists each API key’s calls, most first, with revoked and unused keys marked', async () => {
@@ -29,38 +74,6 @@ describe('Usage', () => {
     expect(within(rows[0]!).getByText(/^Last used /)).toBeInTheDocument();
   });
 
-  it('says there is no limit where the plan sets none', async () => {
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...me.plan, limits: { members: null, installs: null }, mods: {} } })),
-      http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, hours_allowed: null })),
-    );
-    renderApp('/settings/usage');
-    await vi.waitFor(() => expect(within(meter('Runtime hours')).getByText('hours, no limit')).toBeInTheDocument());
-    expect(within(meter('Installs')).getByText('installs, no limit')).toBeInTheDocument();
-    await vi.waitFor(() => expect(within(meter('Models')).getByText('models, no limit')).toBeInTheDocument());
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-  });
-
-  it('says a count is unavailable when it cannot be read, and shows the refusal', async () => {
-    server.use(
-      http.get(v1('/runtime'), () => apiError(503, 'E_UNAVAILABLE', 'The runtime is unavailable.')),
-      http.get(v1('/runtime/keys'), () => apiError(503, 'E_UNAVAILABLE', 'Keys are unavailable.')),
-    );
-    renderApp('/settings/usage');
-    expect(await screen.findByText('The runtime is unavailable.')).toBeInTheDocument();
-    expect(within(meter('Runtime hours')).getByText('Unavailable')).toBeInTheDocument();
-    expect(await screen.findByText('Keys are unavailable.')).toBeInTheDocument();
-  });
-
-  it('shows each count loading until it is known, and no keys yet', async () => {
-    server.use(
-      http.get(v1('/models'), () => new Promise<never>(() => {})),
-      http.get(v1('/runtime/keys'), () => HttpResponse.json([])),
-    );
-    renderApp('/settings/usage');
-    expect(await screen.findByText('No API keys yet')).toBeInTheDocument();
-    expect(within(meter('Models')).getByText('Loading')).toHaveAttribute('aria-busy', 'true');
-  });
 });
 
 describe('Usage from Billing and the settings rail', () => {
