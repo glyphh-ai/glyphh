@@ -38,6 +38,7 @@ class PlanSeed:
     seat_price_cents: int
     max_members: int | None
     max_installs: int | None
+    max_machines: int | None
     runtime_hours: int | None
     storage_cents_per_gb: int | None
     mod_limits: ModLimits
@@ -46,12 +47,13 @@ class PlanSeed:
 FREE: str = "Free"
 
 
-# Every plan has a hosted runtime; its hours a month are the plan's (Chris, 2026-10-16: Free 5, Pro and Team 50;
-# storage is still to price). No plan includes a mod: every mod is an add-on.
+# Every plan has hosted machines; its hours a month are the plan's, across all of a person's machines (Chris,
+# 2026-10-16: Free 5, Pro and Team 50; storage is still to price). TBD (Chris): the machines each plan allows (Free 1,
+# Pro 3, Team 10) are placeholders until set. No plan includes a mod: every mod is an add-on.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 5, None, {}),
-    PlanSeed("Pro", 800, 1, 5, 50, 50, {}),
-    PlanSeed("Team", 1_600, None, 10, 50, 50, {}),
+    PlanSeed(FREE, 0, 1, 1, 1, 5, None, {}),
+    PlanSeed("Pro", 800, 1, 5, 3, 50, 50, {}),
+    PlanSeed("Team", 1_600, None, 10, 10, 50, 50, {}),
 )
 
 
@@ -99,6 +101,7 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             seat_price_cents=seed.seat_price_cents,
             max_members=seed.max_members,
             max_installs=seed.max_installs,
+            max_machines=seed.max_machines,
             runtime_hours=seed.runtime_hours,
             storage_cents_per_gb=seed.storage_cents_per_gb,
             mod_limits=seed.mod_limits,

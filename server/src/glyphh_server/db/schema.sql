@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     seat_price_cents INTEGER NOT NULL,
     max_members INTEGER,
     max_installs INTEGER,
+    max_machines INTEGER,
     runtime_hours INTEGER,
     storage_cents_per_gb INTEGER,
     mod_limits JSONB DEFAULT '{}' NOT NULL,
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     PRIMARY KEY (id),
     CONSTRAINT plan_versions_version UNIQUE (plan_id, version),
     CONSTRAINT plan_versions_price CHECK (seat_price_cents >= 0),
-    CONSTRAINT plan_versions_limits CHECK (coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0),
+    CONSTRAINT plan_versions_limits CHECK (coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0 AND coalesce(max_machines, 1) > 0),
     CONSTRAINT plan_versions_mod_limits CHECK (jsonb_typeof(mod_limits) = 'object'),
     FOREIGN KEY(plan_id) REFERENCES plans (id) ON DELETE RESTRICT,
     UNIQUE (stripe_price_id)
@@ -349,10 +350,14 @@ CREATE TABLE IF NOT EXISTS rrotors (
     last_heartbeat_at TIMESTAMP WITH TIME ZONE,
     machine_hash TEXT,
     active_runs INTEGER,
+    size TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT rrotors_mode CHECK (mode IN ('hosted', 'local', 'self')),
     CONSTRAINT rrotors_local_install CHECK ((mode = 'local') = (install_id IS NOT NULL)),
     CONSTRAINT rrotors_self_address CHECK ((mode = 'self') = (public_url IS NOT NULL AND name IS NOT NULL)),
+    CONSTRAINT rrotors_hosted_machine CHECK ((mode = 'hosted') = (size IS NOT NULL AND name IS NOT NULL)),
+    CONSTRAINT rrotors_size CHECK (size IN ('small', 'medium', 'large')),
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
     UNIQUE (install_id),
     FOREIGN KEY(install_id) REFERENCES installs (id) ON DELETE CASCADE,
@@ -363,7 +368,7 @@ CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
 -- runtime_keys
 CREATE TABLE IF NOT EXISTS runtime_keys (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
-    rrotor_id UUID NOT NULL,
+    rrotor_id UUID,
     user_id UUID NOT NULL,
     name TEXT NOT NULL,
     key_hash TEXT NOT NULL,
@@ -379,7 +384,7 @@ CREATE TABLE IF NOT EXISTS runtime_keys (
 );
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);
-CREATE UNIQUE INDEX IF NOT EXISTS rrotors_one_hosted ON rrotors (user_id) WHERE mode = 'hosted';
+CREATE UNIQUE INDEX IF NOT EXISTS rrotors_hosted_name ON rrotors (user_id, name) WHERE mode = 'hosted';
 CREATE UNIQUE INDEX IF NOT EXISTS rrotors_self_url ON rrotors (user_id, public_url) WHERE mode = 'self';
 CREATE INDEX IF NOT EXISTS rrotors_self_host ON rrotors (public_url) WHERE mode = 'self';
 

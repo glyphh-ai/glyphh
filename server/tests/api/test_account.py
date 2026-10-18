@@ -27,7 +27,7 @@ async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.As
         "name": "Team",
         "version": 1,
         "seat_price_cents": 1600,
-        "limits": {"members": None, "installs": 10},
+        "limits": {"members": None, "installs": 10, "machines": 10},
         "mods": {},
     }
     assert me["used"] == {"members": 2, "seats": 3, "installs": 1}

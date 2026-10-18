@@ -1,5 +1,6 @@
-"""The person's runtimes: a local rrotor's runtime token, for the install that starts it; the hosted one (Pro and
-Team), made on first start, started and stopped; and the link every rrotor holds to the Cloud."""
+"""The person's runtimes: a local rrotor's runtime token, for the install that starts it; their first hosted machine
+(made on first start, started, stopped and destroyed: the routes from before a person had several, kept for the
+clients made then; /v1/runtimes has them all), the keys; and the link every rrotor holds to the Cloud."""
 
 import uuid
 
@@ -10,7 +11,7 @@ from pydantic import BaseModel, Field
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Unauthorized, Unavailable
-from glyphh_server.ops import hosted, runtime_keys, runtimes
+from glyphh_server.ops import machines, runtime_keys, runtimes
 from glyphh_server.ops.connector import tokens
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.link import session
@@ -39,38 +40,45 @@ def fly(request: Request) -> Fly:
 class NewKey(BaseModel):
     name: str = Field(min_length=1, max_length=80, pattern=r"\S", description="What the key is for")
     expires_in_days: int | None = Field(None, description="Days until the key expires, 1 to 365; left out, never")
-    runtime_id: uuid.UUID | None = Field(None, description="A self-hosted runtime of yours; left out, your hosted one")
+    runtime_id: uuid.UUID | None = Field(
+        None, description="A hosted machine or self-hosted runtime of yours; left out, every hosted machine of yours"
+    )
 
 
 @router.get("", operation_id="hostedRuntime")
 async def hosted_runtime(caller: Caller, conn: Conn, request: Request) -> HostedRuntime:
-    """Your hosted runtime: its address, state, the online time used this month and the plan's hours."""
+    """Your first hosted machine: its address, state, the online time used this month and the plan's hours."""
     return await runtimes.hosted_view(conn, caller, request.app.state.settings.fly_public_domain)
 
 
 @router.post("/start", operation_id="startHostedRuntime")
 async def start_hosted_runtime(caller: Caller, conn: Conn, request: Request) -> HostedRuntime:
-    """Start your hosted runtime, made the first time (on any plan; the plan's hours say how long it runs a month).
-    It is `stopped` until its rrotor links, `online` then; a request to its address starts a stopped one."""
-    return await hosted.start_hosted(conn, fly(request), request.app.state.settings, caller)
+    """Start your first hosted machine, made the first time (`default`, small; the plan's hours say how long your
+    machines run a month). It is `stopped` until its rrotor links, `online` then; a request to its address starts a
+    stopped one."""
+    await machines.start_first(conn, fly(request), caller)
+    return await runtimes.hosted_view(conn, caller, request.app.state.settings.fly_public_domain)
 
 
 @router.post("/stop", operation_id="stopHostedRuntime")
 async def stop_hosted_runtime(caller: Caller, conn: Conn, request: Request) -> HostedRuntime:
-    """Stop your hosted runtime's machine now (it stops by itself when idle)."""
-    return await hosted.stop_hosted(conn, fly(request), caller, request.app.state.settings.fly_public_domain)
+    """Stop your first hosted machine now (it stops by itself when idle)."""
+    client = fly(request)
+    await machines.stop(conn, client, caller, await machines.first(conn, caller))
+    return await runtimes.hosted_view(conn, caller, request.app.state.settings.fly_public_domain)
 
 
 @router.get("/keys", operation_id="listRuntimeKeys")
 async def list_runtime_keys(caller: Caller, conn: Conn) -> list[KeyView]:
-    """The keys that call your runtime at its address, live and revoked; never the keys themselves."""
+    """The keys that call your runtimes at their addresses, live and revoked; never the keys themselves."""
     return await runtime_keys.list_keys(conn, caller)
 
 
 @router.post("/keys", operation_id="createRuntimeKey", status_code=201)
 async def create_runtime_key(body: NewKey, caller: Caller, conn: Conn, request: Request) -> MadeKey:
-    """A new key, shown once: the bearer for your runtime's REST API and its /mcp, expiring 1 to 365 days on, or
-    never. rrotor gets its hash at once when linked, else in its next welcome."""
+    """A new key, shown once: the bearer for your runtime's REST API and its /mcp (the one named, or every hosted
+    machine of yours), expiring 1 to 365 days on, or never. rrotor gets its hash at once when linked, else in its next
+    welcome."""
     hub = request.app.state.hub
     return await runtime_keys.create_key(conn, hub, caller, body.name.strip(), body.expires_in_days, body.runtime_id)
 
@@ -90,8 +98,9 @@ async def delete_runtime_key(key_id: uuid.UUID, caller: Caller, conn: Conn) -> R
 
 @router.delete("", operation_id="destroyHostedRuntime", status_code=204)
 async def destroy_hosted_runtime(caller: Caller, conn: Conn, request: Request) -> Response:
-    """Destroy your hosted runtime: the machine, its volume and every model's data on it. Not undone."""
-    await hosted.destroy_hosted(conn, fly(request), caller)
+    """Destroy your first hosted machine: the machine, its volume and every model's data on it. Not undone."""
+    client = fly(request)
+    await machines.destroy(conn, client, caller, await machines.first(conn, caller))
     return Response(status_code=204)
 
 

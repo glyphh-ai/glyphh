@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.models import Model, ModelVersion, RuntimeKey
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Deployed, Usage
+from glyphh_server.ops.runtime_keys import held_by
 
 
 async def apply_usage(conn: AsyncConnection, runtime: Runtime, message: Usage) -> None:
@@ -17,7 +18,7 @@ async def apply_usage(conn: AsyncConnection, runtime: Runtime, message: Usage) -
     for use in message.keys:
         await conn.execute(
             update(RuntimeKey)
-            .where(RuntimeKey.rrotor_id == runtime.id, RuntimeKey.key_hash == use.key_sha256)
+            .where(held_by(runtime.id), RuntimeKey.key_hash == use.key_sha256)
             .values(
                 calls=RuntimeKey.calls + use.calls,
                 last_used_at=func.greatest(func.coalesce(RuntimeKey.last_used_at, use.last_used_at), use.last_used_at),

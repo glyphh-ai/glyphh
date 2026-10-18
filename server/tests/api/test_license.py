@@ -35,7 +35,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     assert (p["install_id"], p["user_id"], p["org_id"]) == (str(ada.install_id), str(ada.user_id), str(ada.org_id))
     assert (p["plan"], p["limits"], p["mods"]) == (
         "Pro",
-        {"members": 1, "installs": 5},
+        {"members": 1, "installs": 5, "machines": 3},
         {
             "ada": {"limits": {"models": 3, "precedents": 10000}},
         },

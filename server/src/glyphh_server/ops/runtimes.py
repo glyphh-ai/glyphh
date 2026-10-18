@@ -4,8 +4,9 @@ A local rrotor gets its runtime token from the install that starts it: one local
 shown once and kept only as a hash; asking again rotates it. A new token starts the link's sequence numbers again:
 the mod asks for one when it starts a rrotor whose /data holds none, a fresh volume.
 
-A hosted rrotor (Pro and Team) is one Fly machine and one volume per person (ops/hosted.py makes, starts and stops
-it); here is how it is shown, and which runtime a call or a deploy goes to."""
+A hosted rrotor is a Fly machine and its volume, as many per person as the plan's machines (ops/machines.py makes,
+starts, stops, restarts and deletes them); here is how the person's first one is shown to the routes made for one,
+and which runtime a call or a deploy goes to."""
 
 import uuid
 from datetime import UTC, datetime
@@ -22,6 +23,7 @@ from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.plans import org_version
 
 NOT_LINKED: str = "stopped"
+FIRST = (Rrotor.created_at, Rrotor.id)  # a person's machines in the order they were made: the first is the oldest
 
 
 class LocalRuntime(BaseModel):
@@ -37,7 +39,7 @@ class HostedRuntime(BaseModel):
     image_version: str | None
     last_seen_at: datetime | None
     seconds_used: int = Field(description="Online time this calendar month")
-    hours_allowed: int | None = Field(description="The plan's hosted hours a month; null is unlimited")
+    hours_allowed: int | None = Field(description="The plan's hosted hours a month, all machines; null is unlimited")
     paused: bool = Field(description="The month's hours are spent: calls answer 402 until the month turns")
 
 
@@ -57,7 +59,7 @@ async def issue_local(conn: AsyncConnection, who: Principal) -> LocalRuntime:
 
 async def runtime_for(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID:
     """The runtime a deploy goes to: the one named, when it is the person's; else the local one of the install
-    calling; else the person's hosted one."""
+    calling; else the person's first hosted machine."""
     mine = select(Rrotor.id).where(Rrotor.user_id == who.user_id)
     if runtime_id is not None:
         found = (await conn.execute(mine.where(Rrotor.id == runtime_id))).scalar()
@@ -65,7 +67,7 @@ async def runtime_for(conn: AsyncConnection, who: Principal, runtime_id: uuid.UU
             raise NotFound("You have no such runtime.", runtime_id=str(runtime_id))
         return found
     local = mine.where(Rrotor.install_id == who.install_id) if who.install_id else mine.where(False)
-    hosted = mine.where(Rrotor.mode == "hosted")
+    hosted = mine.where(Rrotor.mode == "hosted").order_by(*FIRST).limit(1)
     found = (await conn.execute(local)).scalar() or (await conn.execute(hosted)).scalar()
     if found is None:
         raise NotFound("You have no runtime. Start one from Claude.", reason="no_runtime")
@@ -80,8 +82,9 @@ def month_of(now: datetime) -> str:
 
 
 async def hosted_view(conn: AsyncConnection, who: Principal, domain: str) -> HostedRuntime:
+    """The person's first hosted machine, as the routes made for one runtime show it."""
     version = await org_version(conn, who.org_id)
-    mine = select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
+    mine = select(Rrotor).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted").order_by(*FIRST).limit(1)
     row = (await conn.execute(mine)).first()
     if row is None:
         return HostedRuntime(

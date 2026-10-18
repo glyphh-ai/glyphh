@@ -20,6 +20,7 @@ from glyphh_server.api import (
     github_pages,
     health,
     license,
+    machines,
     mcp,
     me,
     models,
@@ -40,8 +41,9 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, hosted, hours, vault
+from glyphh_server.ops import github_app, hours, vault
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
 from glyphh_server.ops.link.hub import Hub
 
@@ -58,6 +60,7 @@ ROUTERS = (
     billing,
     runtime,
     self_hosted,
+    machines,  # after self_hosted: /v1/runtimes/self is not a machine's id
     models,
     unlock,
     routine_triggers,
@@ -100,7 +103,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
         idle: asyncio.Task[None] | None = None
         if cfg.fly_configured:
             fly = Fly(app.state.http, cfg)
-            app.state.hub.waker = hosted.waker(engine, fly)
+            app.state.hub.waker = waker(engine, fly)
             minutes = timedelta(minutes=cfg.runtime_idle_minutes)
             idle = asyncio.create_task(tend_forever(engine, fly, app.state.hub, minutes))
         yield
