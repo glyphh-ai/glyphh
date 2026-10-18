@@ -40,11 +40,11 @@ async def tend(
     engine: AsyncEngine, hub: Hub, settings: Settings, step: int, fly: Fly | None, stripe: StripeClient | None
 ) -> None:
     """One tick: the month tallied and metered, the keys that expired since the last tick (with a tick to spare)
-    taken off their runtimes, the Enterprise grants past their date ended; with hosting on, the idle machines stopped
-    and those held past their plan stopped; with Stripe, the hosting due reported to its meter."""
+    taken off their runtimes, the Enterprise grants past their date ended (with Stripe, their hosting due reported
+    first); with hosting on, the idle machines stopped and those held past their plan stopped; with Stripe, the hosting due reported to its meter."""
     await tally(engine, step, settings.fly_region)
     await push_expired(engine, hub, timedelta(seconds=2 * step))
-    await expire(engine)
+    await expire(engine, stripe)
     if fly is not None:
         await stop_idle(engine, fly, timedelta(minutes=settings.runtime_idle_minutes))
         async with engine.begin() as conn:  # the connecting role: every org's

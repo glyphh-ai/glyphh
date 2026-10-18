@@ -1,7 +1,8 @@
 """Enterprise, granted by Glyphh's staff, never bought: the org's plan becomes Enterprise until a date, its markup on
 Fly's rates and its own Stripe subscription (the deal's annual price, invoiced, and the metered hosting price) recorded,
 so its hosting is reported to that subscription's customer. Revoking it, or the date passing, puts the org back on
-Free, its hosted machines stopped and held (ops/held.py). Run on the server's machine (`fly ssh console`):
+Free, its hosted machines stopped and held (ops/held.py), the hosting due reported first to the subscription it is
+leaving (ops/billing/meter.py), as a subscription's own change is. Run on the server's machine (`fly ssh console`):
 
     python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --markup <pct> --subscription <sub_…>
     python -m glyphh_server.ops.enterprise revoke --org <uuid>"""
@@ -23,6 +24,7 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.seed import ENTERPRISE, FREE
 from glyphh_server.errors import Conflict, GlyphhError, NotFound
 from glyphh_server.models import BILLING_STATUSES, Org
+from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.held import hold
@@ -70,9 +72,11 @@ async def back_to_free(conn: AsyncConnection, org_id: uuid.UUID) -> None:
     await conn.execute(update(Org).where(Org.id == org_id).values(**values))
 
 
-async def revoke(engine: AsyncEngine, org_id: uuid.UUID, fly: Fly | None) -> str:
-    """The org back on Free; its hosted machines stopped and held there (with hosting on), kept until deleted. Its
-    Stripe subscription is cancelled in Stripe."""
+async def revoke(engine: AsyncEngine, org_id: uuid.UUID, fly: Fly | None, stripe: StripeClient | None = None) -> str:
+    """The org back on Free; with Stripe, the hosting due reported first to its subscription; its hosted machines
+    stopped and held there (with hosting on), kept until deleted. Its Stripe subscription is cancelled in Stripe."""
+    if stripe is not None:
+        await report(engine, stripe, only=org_id)
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
         await back_to_free(conn, org_id)
@@ -80,10 +84,16 @@ async def revoke(engine: AsyncEngine, org_id: uuid.UUID, fly: Fly | None) -> str
     return f"{org.name} is on Free, {len(stopped)} hosted machines stopped. Cancel its subscription in Stripe."
 
 
-async def expire(engine: AsyncEngine) -> list[uuid.UUID]:
-    """Every grant whose date has passed: the org back on Free (the tick then holds its machines)."""
-    async with engine.begin() as conn:  # the connecting role: every org's
-        ended = select(Org.id).where(Org.plan_until <= datetime.now(UTC)).with_for_update()
+async def expire(engine: AsyncEngine, stripe: StripeClient | None = None) -> list[uuid.UUID]:
+    """Every grant whose date has passed: with Stripe, the hosting due reported first to its subscription; then the
+    org back on Free (the tick then holds its machines)."""
+    async with engine.connect() as conn:  # the connecting role: every org's
+        lapsed = list((await conn.execute(select(Org.id).where(Org.plan_until <= datetime.now(UTC)))).scalars())
+    if stripe is not None:
+        for org_id in lapsed:
+            await report(engine, stripe, only=org_id)  # its own transactions: it locks the org's row itself
+    async with engine.begin() as conn:
+        ended = select(Org.id).where(Org.id.in_(lapsed), Org.plan_until <= datetime.now(UTC)).with_for_update()
         orgs = list((await conn.execute(ended)).scalars())
         for org_id in orgs:
             await back_to_free(conn, org_id)
@@ -114,7 +124,11 @@ async def run(argv: list[str], settings: Settings, http: httpx.AsyncClient | Non
     client = http or httpx.AsyncClient(timeout=10)
     try:
         if args.command == "revoke":
-            return await revoke(engine, args.org, Fly(client, settings) if settings.fly_configured else None)
+            fly = Fly(client, settings) if settings.fly_configured else None
+            meter = settings.stripe_secret_key and StripeClient(
+                client, settings.stripe_secret_key, settings.stripe_meter_hosting
+            )
+            return await revoke(engine, args.org, fly, meter or None)
         stripe = StripeClient(client, settings.stripe_secret_key)
         return await grant(engine, stripe, args.org, args.until, args.markup, args.subscription)
     finally:
