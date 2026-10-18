@@ -2,6 +2,7 @@
 what the org uses: its hosted runtimes' precedents of the plan's bucket and its hosting month to date, machine by
 machine, deleted ones too; in the API, /v1/me and the connector's usage tool."""
 
+from datetime import UTC, datetime, time, timedelta
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 
@@ -10,11 +11,20 @@ import pytest
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_server.db.seed_rates import READ
 from glyphh_server.models import MachineMonth, Org, Rrotor
 from glyphh_server.ops import tend
 from tests.connector import granted, tool
 from tests.db.helpers import Person, member, person
 from tests.link import hosted_runtime, local_runtime, self_runtime
+
+
+def metered_from() -> datetime:
+    """An instant the meter's ticks from here, ten hours of them, stay within this month, Fly's rates in force and
+    no later than now: eleven hours ago, else the month's start, else the day the rates were read."""
+    now = datetime.now(UTC)
+    first = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return max(now - timedelta(hours=11), first, datetime.combine(READ, time(), UTC))
 
 
 def micros(usd_per_month: str, seconds: int, factor: str = "1") -> int:
@@ -24,7 +34,9 @@ def micros(usd_per_month: str, seconds: int, factor: str = "1") -> int:
 
 
 async def _machine(engine: AsyncEngine, who: Person, name: str, size: str, state: str, **values: Any) -> Any:
+    """A hosted machine, metered up to the month's start."""
     rt = await hosted_runtime(engine, who, name, size)
+    values.setdefault("metered_at", metered_from())
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(state=state, **values))
     return rt
@@ -50,8 +62,10 @@ async def test_each_minute_meters_started_seconds_and_the_volume_always_with_the
     theirs = await _machine(engine, deal, "big", "large", "online")
     at_cost = await _machine(engine, free, "left", "small", "stopped")  # held on Free: its disk's cost, no charge
     lost = await _machine(engine, pro, "lost", "small", "online", region="nowhere")
-    await tend.tally(engine, 60, "iad")
-    await tend.tally(engine, 60, "iad")
+    start = metered_from()
+    await tend.tally(engine, "iad", start + timedelta(seconds=60.4))
+    await tend.tally(engine, "iad", start + timedelta(seconds=120.2))  # 0.4 s carried: 60 more, never 59
+    await tend.tally(engine, "iad", start + timedelta(seconds=120.9))  # under a second since: nothing yet
     run = "7.15"  # small's $6.70 started, and its 3 GB at $0.15 always
     assert await _months(engine, small.id, medium.id, theirs.id, at_cost.id, lost.id) == [
         (2 * micros(run, 60), 2 * micros(run, 60, "1.3")),
@@ -77,8 +91,8 @@ async def test_usage_is_the_orgs_precedents_and_hosting_month_to_date(
             await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(precedents=10**6))
     empty = (await client.get("/v1/billing", headers=ada.headers)).json()
     assert empty["precedents"] == {"used": 1_500, "limit": 100_000} and empty["hosting"]["machines"] == []
-    for _ in range(10):  # ten hours, an hour at a time
-        await tend.tally(engine, 3600, "iad")
+    for hour in range(1, 11):  # ten hours, an hour at a time
+        await tend.tally(engine, "iad", metered_from() + timedelta(hours=hour))
     async with engine.begin() as conn:
         await conn.execute(delete(Rrotor).where(Rrotor.id == b.id))  # deleted: its days still billed
     billing = (await client.get("/v1/billing", headers=ada.headers)).json()

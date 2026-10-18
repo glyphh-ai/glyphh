@@ -343,6 +343,7 @@ CREATE TABLE IF NOT EXISTS rrotors (
     fly_volume_id TEXT,
     month TEXT,
     month_seconds INTEGER DEFAULT 0 NOT NULL,
+    metered_at TIMESTAMP WITH TIME ZONE,
     region TEXT,
     image_version TEXT,
     state TEXT NOT NULL,

@@ -42,11 +42,12 @@ class Rrotor(Base):
     """A person's runtime: any number of hosted ones up to the plan's machines (each a Fly machine and its volume,
     named, of one size, `created_at` ordering them: the first is the oldest), one local per install that started one,
     keyed by that install, and any self-hosted ones (`self`, on the person's own infrastructure: named, at its public
-    address `https://<host>`). Its token (only the hash is kept) signs its outbound link. Region and Fly machine are a
-    hosted one's; image_version is what any one last said it runs; a local one has none until it links. A self-hosted
-    one's heartbeat leaves its time, the runs in progress and its machine's hash, never its caller's address. Any one
-    reports its precedents, its total across its Ada models, in its link's usage. seq is
-    the last result or event sequence number applied from its link, so a replay is applied once."""
+    address `https://<host>`). Its token (only the hash is kept) signs its outbound link. Region, Fly machine and
+    metered_at (the instant its time is metered up to, ops/metering.py) are a hosted one's; image_version is what any
+    one last said it runs; a local one has none until it links. A self-hosted one's heartbeat leaves its time, the runs
+    in progress and its machine's hash, never its caller's address. Any one reports its precedents, its total across
+    its Ada models, in its link's usage. seq is the last result or event sequence number applied from its link, so a
+    replay is applied once."""
 
     __tablename__ = "rrotors"
     __table_args__ = (
@@ -68,6 +69,7 @@ class Rrotor(Base):
     fly_volume_id: Mapped[str | None] = mapped_column(Text)
     month: Mapped[str | None] = mapped_column(Text)  # the month the tally is of, YYYY-MM
     month_seconds: Mapped[int] = mapped_column(Integer, server_default="0")  # online seconds that month
+    metered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # hosted: metered up to this
     region: Mapped[str | None] = mapped_column(Text)
     image_version: Mapped[str | None] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)

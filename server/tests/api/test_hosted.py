@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 import pytest
-from sqlalchemy import insert, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server import app as app_module
@@ -266,6 +266,12 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
         )
 
 
+async def _metered_ago(conn: Any, *ids: uuid.UUID) -> None:
+    """Each machine last metered a minute ago by the database's clock: the next tick meters 60 s."""
+    ago = func.now() - timedelta(seconds=60)
+    await conn.execute(update(Rrotor).where(Rrotor.id.in_(ids)).values(metered_at=ago))
+
+
 async def test_the_tally_counts_online_time_starts_again_with_the_month_and_never_pauses(
     engine: AsyncEngine, redis: Any
 ) -> None:
@@ -280,7 +286,8 @@ async def test_the_tally_counts_online_time_starts_again_with_the_month_and_neve
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == online).values(month=month, month_seconds=10**7))
         await conn.execute(update(Rrotor).where(Rrotor.id == turned).values(month="2020-01", month_seconds=10**6))
-    await tending.tally(engine, 60, "iad")
+        await _metered_ago(conn, online, turned, stopped)
+    await tending.tally(engine, "iad")  # by the database's clock
     rows = [await _row(engine, str(i)) for i in (online, turned, stopped)]
     assert [(r.month, r.month_seconds, r.state) for r in rows] == [
         (month, 10**7 + 60, "online"),  # far past any hours there were: never paused
@@ -288,7 +295,9 @@ async def test_the_tally_counts_online_time_starts_again_with_the_month_and_neve
         (month, 0, "stopped"),
     ]
     fly = FakeFly()
-    await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, Fly(fake_http(fly=fly), FLY_SETTINGS), None)
-    assert (await _row(engine, str(online))).month_seconds == 10**7 + 120
+    async with engine.begin() as conn:
+        await _metered_ago(conn, online)
+    ran = await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, Fly(fake_http(fly=fly), FLY_SETTINGS), None)
+    assert ran and (await _row(engine, str(online))).month_seconds == 10**7 + 120
     meter = StripeClient(fake_http(), "sk_test", "glyphh_hosting")  # with Stripe, the hosting due is reported too
     await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, None, meter)  # hosting off: the rest of the tick runs
