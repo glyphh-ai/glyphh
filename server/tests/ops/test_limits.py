@@ -14,5 +14,5 @@ async def test_past_teams_installs_nothing_lifts_it(engine: AsyncEngine) -> None
         await limits.check(conn, "installs", 9, team)
         with pytest.raises(LimitReached) as refused:
             await limits.check(conn, "installs", 10, team)
-    assert refused.value.detail == {"limit": "installs", "used": 10, "max": 10, "plan": None}
+    assert refused.value.detail == {"reason": "installs", "limit": "installs", "used": 10, "max": 10, "plan": None}
     assert "Remove one first" in refused.value.message

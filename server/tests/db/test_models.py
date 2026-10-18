@@ -45,6 +45,8 @@ def _hosted(who: Person) -> dict[str, object]:
     return {
         "user_id": who.user_id,
         "mode": "hosted",
+        "name": "default",
+        "size": "small",
         "region": "iad",
         "image_version": "1",
         "state": "stopped",
@@ -94,13 +96,18 @@ async def _refused(engine: AsyncEngine, constraint: str, table: type, **values: 
             await conn.execute(insert(table).values(**values))
 
 
-async def test_one_hosted_runtime_per_user_and_one_local_per_install(engine: AsyncEngine) -> None:
+async def test_hosted_machines_named_once_per_user_and_sized_and_one_local_per_install(engine: AsyncEngine) -> None:
     ada = await person(engine, "Team")
     await _models_of(engine, ada)
-    await _refused(engine, "rrotors_one_hosted", Rrotor, **_hosted(ada) | {"token_hash": "another"})
+    await _refused(engine, "rrotors_hosted_name", Rrotor, **_hosted(ada) | {"token_hash": "another"})
+    await _refused(engine, "rrotors_hosted_machine", Rrotor, **_hosted(ada) | {"token_hash": "t2", "size": None})
+    await _refused(engine, "rrotors_size", Rrotor, **_hosted(ada) | {"token_hash": "t3", "name": "b", "size": "huge"})
+    async with engine.begin() as conn:  # a second machine, named otherwise
+        await conn.execute(insert(Rrotor).values(**_hosted(ada) | {"token_hash": "t4", "name": "b", "size": "large"}))
     await _refused(engine, "rrotors_local_install", Rrotor, **_hosted(ada) | {"install_id": ada.install_id})
     await _refused(engine, "rrotors_local_install", Rrotor, **_local(ada, ada.install_id) | {"install_id": None})
-    await _refused(engine, "rrotors_mode", Rrotor, **_hosted(ada) | {"mode": "cloud", "token_hash": "cloud"})
+    cloud = {"mode": "cloud", "token_hash": "cloud", "size": None}
+    await _refused(engine, "rrotors_mode", Rrotor, **_hosted(ada) | cloud)
     linux, _ = await another_install(engine, ada.user_id)
     async with engine.begin() as conn:
         await conn.execute(insert(Rrotor).values(**_local(ada, ada.install_id)))

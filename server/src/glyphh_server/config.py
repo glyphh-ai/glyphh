@@ -52,9 +52,6 @@ class Settings(BaseSettings):
     fly_image: str = ""
     # The runtimes' public addresses: <machine>.<domain>, a wildcard certificate and DNS record on the app.
     fly_public_domain: str = "glyphh.app"
-    fly_cpus: int = 1
-    fly_memory_mb: int = 1024
-    fly_volume_gb: int = 3
     # A hosted runtime with no run for this long is stopped; a call starts it again.
     runtime_idle_minutes: int = 10
 

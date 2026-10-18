@@ -15,6 +15,7 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 class Limits(BaseModel):
     members: int | None = Field(description="null = unlimited")
     installs: int | None = Field(description="null = unlimited; per user")
+    machines: int | None = Field(description="Hosted machines: null = unlimited; per user")
 
 
 class ModLimits(BaseModel):
@@ -39,6 +40,7 @@ COLUMNS = (
     PlanVersion.seat_price_cents,
     PlanVersion.max_members,
     PlanVersion.max_installs,
+    PlanVersion.max_machines,
     PlanVersion.runtime_hours,
     PlanVersion.mod_limits,
 )
@@ -63,7 +65,7 @@ def view(row: Row, mods: list[str]) -> PlanView:
         name=row.name,
         version=row.version,
         seat_price_cents=row.seat_price_cents,
-        limits=Limits(members=row.max_members, installs=row.max_installs),
+        limits=Limits(members=row.max_members, installs=row.max_installs, machines=row.max_machines),
         mods=included(row, mods),
     )
 

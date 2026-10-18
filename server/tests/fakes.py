@@ -223,7 +223,7 @@ class FakeFly:
                 return httpx.Response(200, json={"ok": True})
             if len(parts) == 2:
                 return httpx.Response(200, json=machine)
-            machine["state"] = "started" if parts[2] == "start" else "stopped"
+            machine["state"] = "stopped" if parts[2] == "stop" else "started"  # start, restart
             return httpx.Response(200, json={"ok": True})
         if parts[0] == "volumes" and len(parts) == 2 and request.method == "DELETE":
             self.volumes.pop(parts[1], None)

@@ -19,19 +19,21 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.models import Rrotor, User
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
-from glyphh_server.ops.runtimes import NOT_LINKED
+from glyphh_server.ops.machines import DEFAULT_NAME, DEFAULT_SIZE
+from glyphh_server.ops.runtimes import FIRST, NOT_LINKED
 
 
 async def hosted_runtime(conn: AsyncConnection, email: str) -> tuple[uuid.UUID, str]:
-    """The person's hosted runtime (made, or its token rotated): its id and a token shown once."""
+    """The person's first hosted machine (made, or its token rotated): its id and a token shown once."""
     user_id = (await conn.execute(select(User.id).where(User.email == email))).scalar()
     if user_id is None:
         raise SystemExit(f"nobody signed in as {email}")
     token = make_secret()
-    mine = select(Rrotor.id).where(Rrotor.user_id == user_id, Rrotor.mode == "hosted")
+    mine = select(Rrotor.id).where(Rrotor.user_id == user_id, Rrotor.mode == "hosted").order_by(*FIRST).limit(1)
     runtime_id = (await conn.execute(mine)).scalar()
     if runtime_id is None:
         values = {"user_id": user_id, "mode": "hosted", "state": NOT_LINKED, "region": "local"}
+        values |= {"name": DEFAULT_NAME, "size": DEFAULT_SIZE}
         made = insert(Rrotor).values(**values, token_hash=hash_secret(token)).returning(Rrotor.id)
         runtime_id = (await conn.execute(made)).scalar_one()
     else:

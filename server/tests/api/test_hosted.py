@@ -16,9 +16,10 @@ from glyphh_server import app as app_module
 from glyphh_server.app import create_app
 from glyphh_server.errors import Conflict, Unavailable
 from glyphh_server.models import Rrotor, Run, RuntimeKey
-from glyphh_server.ops import hosted, hours
+from glyphh_server.ops import hours
 from glyphh_server.ops.auth.secrets import hash_secret
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.idle import idle_hosted, stop_idle, waker
 from glyphh_server.ops.runtime_keys import key_hash
 from tests.conftest import PROVIDER_SETTINGS, _client
 from tests.db.helpers import Person, person
@@ -177,14 +178,14 @@ async def test_idle_runtimes_are_stopped_busy_recent_and_stopped_ones_left(engin
             _, v1, _ = await a_model(engine, who)
             values = {"model_version_id": v1, "rrotor_id": runtime_id, "function": "start", "caller": "test"}
             await conn.execute(insert(Run).values(**values, status=status, started_at=long_ago, ended_at=ended))
-    found = {r[0] for r in await hosted.idle_hosted(engine, timedelta(minutes=10))}
+    found = {r[0] for r in await idle_hosted(engine, timedelta(minutes=10))}
     assert found == {idle_id, down}
     del fly.machines["m_down"]  # Fly lost it: stopping fails, is logged, the rest go on
     client = Fly(fake_http(fly=fly), FLY_SETTINGS)
-    assert await hosted.stop_idle(engine, client, timedelta(minutes=10)) == 1
+    assert await stop_idle(engine, client, timedelta(minutes=10)) == 1
     assert fly.machines["m_idle"]["state"] == "stopped" and fly.machines["m_busy"]["state"] == "started"
     assert (await _row(engine, str(idle_id))).state == "stopped" and (await _row(engine, str(down))).state == "online"
-    assert await hosted.stop_idle(engine, client, timedelta(minutes=10)) == 0
+    assert await stop_idle(engine, client, timedelta(minutes=10)) == 0
 
 
 async def test_the_waker_starts_a_machine_that_is_not_online(engine: AsyncEngine) -> None:
@@ -192,7 +193,7 @@ async def test_the_waker_starts_a_machine_that_is_not_online(engine: AsyncEngine
     fly.machines["m_1"] = {"id": "m_1", "state": "stopped"}
     ada = await person(engine, "Pro")
     runtime_id = await _hosted(engine, ada, "offline", datetime.now(UTC), "m_1")
-    wake = hosted.waker(engine, Fly(fake_http(fly=fly), FLY_SETTINGS))
+    wake = waker(engine, Fly(fake_http(fly=fly), FLY_SETTINGS))
     await wake(runtime_id)
     assert fly.machines["m_1"]["state"] == "started"
     async with engine.begin() as conn:
@@ -231,8 +232,6 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
     fly.machines["m_0"] = {"id": "m_0", "name": "other", "state": "stopped"}  # not the doorman: looked past
     ada, eve = await person(engine), await person(engine)
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        res = await client.post("/v1/runtime/keys", json={"name": "Claude", "expires_in_days": 30}, headers=ada.headers)
-        assert (res.status_code, res.json()["error"]["reason"]) == (404, "no_runtime")
         runtime_id = (await client.post("/v1/runtime/start", headers=ada.headers)).json()["runtime_id"]
         made = await client.post(
             "/v1/runtime/keys", json={"name": " Claude ", "expires_in_days": 30}, headers=ada.headers
@@ -242,7 +241,8 @@ async def test_runtime_keys_are_made_shown_once_pushed_down_the_link_and_revoked
         assert key["key"].startswith("glyphh_rk_") and key["name"] == "Claude" and key["revoked_at"] is None
         async with engine.connect() as conn:
             row = (await conn.execute(select(RuntimeKey).where(RuntimeKey.id == uuid.UUID(key["id"])))).one()
-        assert row.key_hash == key_hash(key["key"]) and str(row.rrotor_id) == runtime_id
+        assert row.key_hash == key_hash(key["key"]) and row.rrotor_id is None  # every hosted machine of hers
+        assert key["runtime_id"] is None
         async with holding(redis, uuid.UUID(runtime_id)) as sent:
             second = (
                 await client.post(

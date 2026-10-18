@@ -9,13 +9,14 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import LimitReached
-from glyphh_server.models import Install, Invite, Org, User
+from glyphh_server.models import Install, Invite, Org, Rrotor, User
 from glyphh_server.ops.plans import newest_versions
 
 # Each limit the server sees used, and the plan version's column that holds it.
 ALLOWED: dict[str, Callable[[Row], int | None]] = {
     "members": lambda row: row.max_members,
     "installs": lambda row: row.max_installs,
+    "machines": lambda row: row.max_machines,
 }
 
 
@@ -35,7 +36,12 @@ async def check(conn: AsyncConnection, limit: str, used: int, version: Row) -> N
     lift = await lifting_plan(conn, limit, used)
     then = f" {lift} allows more." if lift else " Remove one first."
     raise LimitReached(
-        f"Your {version.name} plan allows {allowed} {limit}.{then}", limit=limit, used=used, max=allowed, plan=lift
+        f"Your {version.name} plan allows {allowed} {limit}.{then}",
+        reason=limit,
+        limit=limit,
+        used=used,
+        max=allowed,
+        plan=lift,
     )
 
 
@@ -78,3 +84,8 @@ async def seats_taken(conn: AsyncConnection, org_id: uuid.UUID) -> int:
 async def installs(conn: AsyncConnection, user_id: uuid.UUID) -> int:
     """Active installs: the person's machines, since a machine has at most one."""
     return await _count(conn, Install.user_id == user_id, Install.revoked_at.is_(None))
+
+
+async def machines(conn: AsyncConnection, user_id: uuid.UUID) -> int:
+    """The person's hosted machines; self-hosted runtimes are not counted."""
+    return await _count(conn, Rrotor.user_id == user_id, Rrotor.mode == "hosted")

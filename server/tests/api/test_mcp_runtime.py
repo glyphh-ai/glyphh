@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from tests.api.test_hosted import FLY_SETTINGS
-from tests.api.test_mcp_tools import _refused
 from tests.conftest import _client
 from tests.connector import granted, rpc, tool
 from tests.db.helpers import person
@@ -24,7 +23,6 @@ async def test_the_runtime_is_started_shown_keyed_and_stopped_from_claude(engine
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))):
         none = await tool(client, auth, "runtime")
         assert none["content"][0]["text"] == "You have no hosted runtime yet: start_runtime makes one."
-        _refused(await key_tool(client, auth, name="Claude", expires_in_days=30), "E_NOT_FOUND")
         started = await tool(client, auth, "start_runtime")
         text = started["content"][0]["text"]
         assert text.startswith("Your runtime is stopped at https://m_2.glyphh.app, 0.0 h of 5 this month.")

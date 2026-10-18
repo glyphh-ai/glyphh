@@ -1,8 +1,9 @@
-"""Runtime keys: what calls a person's hosted runtime at `https://<machine>.glyphh.app`, or a self-hosted one at its
-own address (REST and its MCP). Made here, shown once, kept as a SHA-256; the live list of hashes reaches rrotor in
-its `welcome` and, when it changes, as `keys` down the link (best effort: a runtime that is stopped gets the list when
-it next links). A key expires 1 to 365 days after it is made, or never; an expired one leaves the list, sent down the
-link by the server's minute tick."""
+"""Runtime keys: what calls a person's hosted machines at `https://<machine>.glyphh.app`, or a self-hosted runtime at
+its own address (REST and its MCP). A key names one machine or self-hosted runtime, or none: then it is good on every
+hosted machine of the person's, those made later too. Made here, shown once, kept as a SHA-256; the live list of hashes
+reaches rrotor in its `welcome` and, when it changes, as `keys` down the link (best effort: a runtime that is stopped
+gets the list when it next links). A key expires 1 to 365 days after it is made, or never; an expired one leaves the
+list, sent down the link by the server's minute tick."""
 
 import hashlib
 import logging
@@ -10,7 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, insert, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.db import tenancy
@@ -31,7 +32,7 @@ MAX_DAYS: int = 365
 
 class KeyView(BaseModel):
     id: uuid.UUID
-    runtime_id: uuid.UUID = Field(description="The runtime it calls")
+    runtime_id: uuid.UUID | None = Field(description="The runtime it calls; null: every hosted machine of yours")
     name: str
     created_at: datetime
     expires_at: datetime | None = Field(description="When the key stops working; null never expires")
@@ -63,23 +64,34 @@ def key_hash(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
+def held_by(runtime_id: uuid.UUID) -> ColumnElement[bool]:
+    """The keys a runtime holds: those naming it, and, for a hosted machine, its owner's that name none."""
+    owner = select(Rrotor.user_id).where(Rrotor.id == runtime_id, Rrotor.mode == "hosted").scalar_subquery()
+    return or_(RuntimeKey.rrotor_id == runtime_id, and_(RuntimeKey.rrotor_id.is_(None), RuntimeKey.user_id == owner))
+
+
 async def hashes_for(conn: AsyncConnection, runtime_id: uuid.UUID) -> list[str]:
     """The live keys' hashes, as rrotor is to hold them: neither revoked nor expired."""
-    live = select(RuntimeKey.key_hash).where(
-        RuntimeKey.rrotor_id == runtime_id, RuntimeKey.revoked_at.is_(None), _unexpired
-    )
+    live = select(RuntimeKey.key_hash).where(held_by(runtime_id), RuntimeKey.revoked_at.is_(None), _unexpired)
     return list((await conn.execute(live.order_by(RuntimeKey.created_at))).scalars())
 
 
-async def _target(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID:
-    """The runtime a new key calls: the self-hosted one named, else the person's hosted one."""
-    if runtime_id is not None:
-        return await self_hosted.mine(conn, who, runtime_id)
-    mine = select(Rrotor.id).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
-    runtime_id = (await conn.execute(mine)).scalar()
+async def _target(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID | None:
+    """The runtime a new key calls: the hosted machine or self-hosted runtime named, else none (every hosted one)."""
     if runtime_id is None:
-        raise NotFound("You have no hosted runtime yet. Start it first.", reason="no_runtime")
-    return runtime_id
+        return None
+    mine = select(Rrotor.id).where(Rrotor.id == runtime_id, Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
+    if (await conn.execute(mine)).first() is not None:
+        return runtime_id
+    return await self_hosted.mine(conn, who, runtime_id)
+
+
+async def holders(conn: AsyncConnection, user_id: uuid.UUID, runtime_id: uuid.UUID | None) -> list[uuid.UUID]:
+    """The runtimes a key is on: the one it names, else every hosted machine of its owner's."""
+    if runtime_id is not None:
+        return [runtime_id]
+    hosted = select(Rrotor.id).where(Rrotor.user_id == user_id, Rrotor.mode == "hosted")
+    return list((await conn.execute(hosted)).scalars())
 
 
 async def push_keys(conn: AsyncConnection, hub: Hub, runtime_id: uuid.UUID) -> bool:
@@ -88,6 +100,11 @@ async def push_keys(conn: AsyncConnection, hub: Hub, runtime_id: uuid.UUID) -> b
     if not sent:
         log.info("keys wait for the runtime's next welcome", extra=fields(runtime=str(runtime_id)))
     return sent
+
+
+async def _push_all(conn: AsyncConnection, hub: Hub, user_id: uuid.UUID, runtime_id: uuid.UUID | None) -> None:
+    for held in await holders(conn, user_id, runtime_id):
+        await push_keys(conn, hub, held)
 
 
 async def list_keys(conn: AsyncConnection, who: Principal) -> list[KeyView]:
@@ -115,7 +132,7 @@ async def create_key(
     values = {"rrotor_id": runtime_id, "user_id": who.user_id, "name": name, "key_hash": key_hash(key)}
     values |= {"expires_at": expires_at}
     row = (await conn.execute(insert(RuntimeKey).values(**values).returning(*_COLUMNS))).one()
-    await push_keys(conn, hub, runtime_id)
+    await _push_all(conn, hub, who.user_id, runtime_id)
     return MadeKey(**row._mapping, key=key)
 
 
@@ -129,7 +146,7 @@ async def revoke_key(conn: AsyncConnection, hub: Hub, who: Principal, key_id: uu
     row = (await conn.execute(mine)).first()
     if row is None:
         raise NotFound("You have no such live runtime key.", key_id=str(key_id))
-    await push_keys(conn, hub, row.runtime_id)
+    await _push_all(conn, hub, who.user_id, row.runtime_id)
     return KeyView.model_validate(row._mapping, from_attributes=False)
 
 
@@ -146,7 +163,7 @@ async def delete_key(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -
 
 
 EXPIRED = (
-    select(RuntimeKey.rrotor_id, User.org_id)
+    select(RuntimeKey.rrotor_id, RuntimeKey.user_id, User.org_id)
     .join(User, User.id == RuntimeKey.user_id)
     .where(RuntimeKey.revoked_at.is_(None), RuntimeKey.expires_at <= func.now())
     .distinct()
@@ -157,8 +174,12 @@ async def push_expired(engine: AsyncEngine, hub: Hub, since: timedelta) -> list[
     """The runtimes with a key that expired in the last `since`, each sent its live list; answers which."""
     async with engine.connect() as conn:  # the connecting role: every org's keys
         rows = list(await conn.execute(EXPIRED.where(RuntimeKey.expires_at > func.now() - since)))
+    pushed: list[uuid.UUID] = []
     for row in rows:
         async with engine.begin() as conn:
             await tenancy.enter(conn, row.org_id)
-            await push_keys(conn, hub, row.rrotor_id)
-    return [row.rrotor_id for row in rows]
+            for held in await holders(conn, row.user_id, row.rrotor_id):
+                if held not in pushed:
+                    await push_keys(conn, hub, held)
+                    pushed.append(held)
+    return pushed

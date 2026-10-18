@@ -57,10 +57,11 @@ async def local_runtime(engine: AsyncEngine, who: Person) -> Rt:
     return Rt(made.runtime_id, made.token, "local")
 
 
-async def hosted_runtime(engine: AsyncEngine, who: Person) -> Rt:
+async def hosted_runtime(engine: AsyncEngine, who: Person, name: str = "default", size: str = "small") -> Rt:
     token = make_secret()
     async with engine.begin() as conn:
         values = {"user_id": who.user_id, "mode": "hosted", "state": "stopped", "token_hash": hash_secret(token)}
+        values |= {"name": name, "size": size}
         runtime_id = (await conn.execute(insert(Rrotor).values(values).returning(Rrotor.id))).scalar_one()
     return Rt(runtime_id, token, "hosted")
 

@@ -1,13 +1,14 @@
-"""The connector's runtime tools: the person's hosted runtime (its address, state and the month's hours), starting
-and stopping it, and the keys that call it. Calling a model is not here: that is the runtime's own MCP, at its
-address, with one of these keys."""
+"""The connector's runtime tools: the person's first hosted machine (its address, state and the month's hours), starting
+and stopping it or another machine named by id, and the keys that call them. Calling a model is not here: that is the
+runtime's own MCP, at its address, with one of these keys."""
 
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
-from glyphh_server.ops import hosted, runtime_keys, runtimes
+from glyphh_server.mcp.tools.machines import line
+from glyphh_server.ops import machines, runtime_keys, runtimes
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.runtimes import HostedRuntime
 
@@ -17,7 +18,16 @@ class KeyName(BaseModel):
 
     name: str = Field(min_length=1, max_length=80, description="What the key is for: 'Claude', 'the CRM'")
     expires_in_days: int | None = Field(None, ge=1, le=365, description="Days until the key expires; left out, never")
-    runtime_id: uuid.UUID | None = Field(None, description="A self-hosted runtime (self_runtimes); left out, hosted")
+    runtime_id: uuid.UUID | None = Field(
+        None,
+        description="A hosted machine (runtimes) or self-hosted runtime (self_runtimes); left out, every hosted one",
+    )
+
+
+class MaybeMachine(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: uuid.UUID | None = Field(None, description="A machine's id (runtimes); left out, your first machine")
 
 
 class KeyId(BaseModel):
@@ -40,13 +50,23 @@ async def runtime(ctx: Context, _: NoArgs) -> Done:
     return Done(_line(view), dump(view))
 
 
-async def start_runtime(ctx: Context, _: NoArgs) -> Done:
-    view = await hosted.start_hosted(ctx.conn, Fly(ctx.http, ctx.settings), ctx.settings, ctx.who)
-    return Done(_line(view) + " Add it to Claude as a connector: its /mcp, with a runtime key.", dump(view))
+async def start_runtime(ctx: Context, args: MaybeMachine) -> Done:
+    fly, connect = Fly(ctx.http, ctx.settings), " Add it to Claude as a connector: its /mcp, with a runtime key."
+    if args.id is not None:
+        started = await machines.start(ctx.conn, fly, ctx.who, args.id)
+        return Done(line(started) + "." + connect, dump(started))
+    await machines.start_first(ctx.conn, fly, ctx.who)
+    view = await runtimes.hosted_view(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
+    return Done(_line(view) + connect, dump(view))
 
 
-async def stop_runtime(ctx: Context, _: NoArgs) -> Done:
-    view = await hosted.stop_hosted(ctx.conn, Fly(ctx.http, ctx.settings), ctx.who, ctx.settings.fly_public_domain)
+async def stop_runtime(ctx: Context, args: MaybeMachine) -> Done:
+    fly = Fly(ctx.http, ctx.settings)
+    if args.id is not None:
+        stopped = await machines.stop(ctx.conn, fly, ctx.who, args.id)
+        return Done(line(stopped) + ".", dump(stopped))
+    await machines.stop(ctx.conn, fly, ctx.who, await machines.first(ctx.conn, ctx.who))
+    view = await runtimes.hosted_view(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
     return Done(_line(view), dump(view))
 
 
@@ -77,27 +97,35 @@ async def revoke_key(ctx: Context, args: KeyId) -> Done:
 
 
 TOOLS: tuple[Tool, ...] = (
-    Tool("runtime", "Runtime", "Your hosted runtime: its address, state and the month's hours.", NoArgs, runtime, True),
+    Tool(
+        "runtime",
+        "Runtime",
+        "Your first hosted machine: its address, state and the month's hours.",
+        NoArgs,
+        runtime,
+        True,
+    ),
     Tool(
         "start_runtime",
         "Start the runtime",
-        "Start your hosted runtime (made the first time). Its models are then called at its own address.",
-        NoArgs,
+        "Start a hosted machine by id, or your first (made the first time). Its models are then called at its own"
+        " address.",
+        MaybeMachine,
         start_runtime,
     ),
     Tool(
         "stop_runtime",
         "Stop the runtime",
-        "Stop your hosted runtime now; a call starts it again.",
-        NoArgs,
+        "Stop a hosted machine by id, or your first, now; a call starts it again.",
+        MaybeMachine,
         stop_runtime,
     ),
     Tool("runtime_keys", "Runtime keys", "The keys that call your runtime, live and revoked.", NoArgs, list_keys, True),
     Tool(
         "create_runtime_key",
         "Create a runtime key",
-        "A new key for your runtime's address (REST and MCP), hosted or a self-hosted one, shown once; it expires"
-        " after the days given, or never.",
+        "A new key for a runtime's address (REST and MCP): one hosted machine or self-hosted runtime, or every"
+        " hosted machine of yours; shown once, it expires after the days given, or never.",
         KeyName,
         create_key,
     ),

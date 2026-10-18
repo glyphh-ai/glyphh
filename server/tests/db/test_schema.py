@@ -51,7 +51,7 @@ async def test_a_plan_seeded_without_a_price_gets_one_as_a_new_version(engine: A
         )
     from glyphh_server.db import seed
 
-    trial = seed.PlanSeed("Trial", 0, 1, 1, 0, None, {})
+    trial = seed.PlanSeed("Trial", 0, 1, 1, 1, 0, None, {})
     async with engine.begin() as conn:
         await seed._seed_version(conn, trial, "price_test_trial")
     assert await _versions(engine, "Trial") == [(1, None), (2, "price_test_trial")]

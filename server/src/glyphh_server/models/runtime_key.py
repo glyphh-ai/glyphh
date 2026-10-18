@@ -8,14 +8,15 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class RuntimeKey(Base):
-    """A key that calls the person's hosted runtime at its own address. Only its SHA-256 is kept; rrotor holds the
+    """A key that calls one of the person's runtimes at its own address: the hosted machine or self-hosted runtime
+    it names, or, naming none, every hosted machine of theirs. Only its SHA-256 is kept; rrotor holds the
     same and checks the bearer itself. A key may expire; an expired one leaves what rrotor holds. Revoking one keeps
     the row (named in the list, dated) and drops its hash from what rrotor holds."""
 
     __tablename__ = "runtime_keys"
 
     id: Mapped[uuid.UUID] = guid()
-    rrotor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rrotors.id", ondelete="CASCADE"), index=True)
+    rrotor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="CASCADE"), index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(Text)
     key_hash: Mapped[str] = mapped_column(Text, unique=True)

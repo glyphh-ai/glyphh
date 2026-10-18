@@ -11,9 +11,9 @@ async def test_the_plans_are_free_pro_and_team(client: httpx.AsyncClient) -> Non
     plans = (await client.get("/v1/plans")).json()
     assert [(p["name"], p["seat_price_cents"]) for p in plans] == [("Free", 0), ("Pro", 800), ("Team", 1600)]
     assert [p["limits"] for p in plans] == [
-        {"members": 1, "installs": 1},
-        {"members": 1, "installs": 5},
-        {"members": None, "installs": 10},
+        {"members": 1, "installs": 1, "machines": 1},
+        {"members": 1, "installs": 5, "machines": 3},
+        {"members": None, "installs": 10, "machines": 10},
     ]
     assert [p["mods"] for p in plans] == [{}, {}, {}]
 
