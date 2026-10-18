@@ -12,7 +12,7 @@ import styles from './GettingStarted.module.css';
 const stateChip: Record<SelfRuntime['state'], { label: string; tone: ChipTone }> = {
   online: { label: 'Running', tone: 'green' },
   offline: { label: 'Offline', tone: 'amber' },
-  pending: { label: 'Not seen yet', tone: 'neutral' },
+  stopped: { label: 'Not seen yet', tone: 'neutral' },
 };
 
 function meta(runtime: SelfRuntime): string {

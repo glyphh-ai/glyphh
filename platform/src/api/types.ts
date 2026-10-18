@@ -61,8 +61,8 @@ export type RuntimeKey = {
 };
 export type NewRuntimeKey = RuntimeKey & { key: string };
 
-/** How a self-hosted rrotor last reported in: `pending` until it first links or sends a heartbeat. */
-export type SelfRuntimeState = 'pending' | 'online' | 'offline';
+/** How a self-hosted rrotor last reported in: `stopped` until it first links. */
+export type SelfRuntimeState = 'stopped' | 'online' | 'offline';
 
 /** A runtime someone runs themselves (Docker Compose, Helm, Terraform), registered with the server. */
 export type SelfRuntime = {

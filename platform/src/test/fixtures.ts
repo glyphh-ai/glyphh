@@ -64,7 +64,7 @@ export const selfRuntimes: SelfRuntime[] = [
     id: 'rt-self-2',
     name: 'Lab',
     public_url: 'https://rrotor.lab.acme.com',
-    state: 'pending',
+    state: 'stopped',
     version: null,
     last_seen_at: null,
     last_heartbeat_at: null,

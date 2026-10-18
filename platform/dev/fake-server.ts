@@ -86,7 +86,7 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
 app.get('/v1/runtimes/self', (c) => c.json(state.selfRuntimes));
 app.post('/v1/runtimes/self', async (c) => {
   const { name, public_url } = await c.req.json();
-  const runtime = { id: `rt-self-${nextSelf++}`, name, public_url, state: 'pending' as const, version: null, last_seen_at: null, last_heartbeat_at: null };
+  const runtime = { id: `rt-self-${nextSelf++}`, name, public_url, state: 'stopped' as const, version: null, last_seen_at: null, last_heartbeat_at: null };
   state.selfRuntimes.push(runtime);
   const token = selfToken();
   const env = {
