@@ -1,8 +1,7 @@
-"""Changing a subscribed org's plan: to the newest version of another self-serve plan, prorated by Stripe; or down
-to Free, which cancels the subscription now (invoiced now, prorated). Either is refused while one of the org's people
-holds more hosted machines than the new plan allows. An org on a
-plan by contract (Enterprise) changes it with Glyphh, not here. The org is
-synced from Stripe's answer at once; the webhook keeps it true after."""
+"""Changing a subscribed org's plan: to the newest version of another self-serve plan, prorated by Stripe; or down to
+Free, which cancels the subscription now (invoiced now, prorated). Either is refused while the org holds more hosted
+machines than the new plan allows. An org on a plan by contract (Enterprise) changes it with Glyphh, not here. The
+org is synced from Stripe's answer at once; the webhook keeps it true after."""
 
 from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -31,11 +30,11 @@ async def subscribed(conn: AsyncConnection, who: Principal) -> Row:
 
 
 async def room_for(conn: AsyncConnection, who: Principal, version: Row) -> None:
-    """The plan allows the machines each of the org's people holds, or the change is refused."""
-    held, allowed = await limits.most_held(conn, who.org_id), version.max_machines
+    """The plan allows the machines the org holds, all its people's together, or the change is refused."""
+    held, allowed = await limits.org_machines(conn, who.org_id), version.max_machines
     if allowed is None or held <= allowed:
         return
-    said = "" if allowed == 0 else f" {version.name} allows {allowed} for each person."
+    said = "" if allowed == 0 else f" {version.name} allows {allowed} hosted machines."
     raise Conflict(f"Delete your hosted machines first.{said}", reason="machines", held=held, max=allowed)
 
 

@@ -15,7 +15,7 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 
 class Limits(BaseModel):
-    machines: int | None = Field(description="Hosted machines per person: null = unlimited, 0 = none")
+    machines: int | None = Field(description="Hosted machines, the org's together: null = unlimited, 0 = none")
     precedents: int | None = Field(
         description="Managed precedents: what a hosted runtime may hold; null = unlimited. Local and self-hosted "
         "runtimes are unlimited on every plan"

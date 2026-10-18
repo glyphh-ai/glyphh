@@ -1,6 +1,7 @@
-"""Hosted machines held past the plan: an org that lands on a plan allowing fewer machines than one of its people
-holds has every such person's machines stopped and none started (E_LIMIT machines) until a plan allows them; they
-may still be deleted. A plan change that would leave machines past it is refused."""
+"""Hosted machines held past the plan, the org's together: an org that lands on a plan allowing fewer machines than
+it holds has its newest beyond the plan's stopped and never started (E_LIMIT machines), its oldest up to the plan's
+running, until a plan allows them; they may still be deleted. A plan change that would leave machines past it is
+refused."""
 
 import json
 import time
@@ -66,6 +67,28 @@ async def test_machines_past_the_plan_start_never_and_are_deleted_still(engine: 
         assert (await client.post(f"/v1/runtimes/{a.id}/start", headers=ada.headers)).status_code == 200
 
 
+async def test_past_the_plan_the_orgs_oldest_machines_start_and_its_newest_never(engine: AsyncEngine) -> None:
+    from tests.db.helpers import member
+
+    fly = FakeFly()
+    ada = await person(engine, "Team")
+    bob = await member(engine, ada.org_id)
+    made = [
+        await _machine(engine, fly, who, name, "stopped")
+        for who, name in ((ada, "1"), (bob, "2"), (ada, "3"), (bob, "4"))
+    ]
+    await _on(engine, ada, "Pro")  # three, the org's together: bob's second, the newest, is past it
+    async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
+        for who, (rt, _) in zip((ada, bob, ada), made[:3], strict=True):
+            assert (await client.post(f"/v1/runtimes/{rt.id}/start", headers=who.headers)).status_code == 200
+        error = _limit(await client.post(f"/v1/runtimes/{made[3][0].id}/start", headers=bob.headers))
+        assert (error["used"], error["max"]) == (4, 3)
+        made_more = await client.post("/v1/runtimes", json={"name": "5", "size": "small"}, headers=ada.headers)
+        assert _limit(made_more)["used"] == 4
+        assert (await client.delete(f"/v1/runtimes/{made[1][0].id}?confirm=2", headers=bob.headers)).status_code == 204
+        assert (await client.post(f"/v1/runtimes/{made[3][0].id}/start", headers=bob.headers)).status_code == 200
+
+
 async def test_hold_stops_every_machine_past_the_plan_that_is_not_stopped(
     engine: AsyncEngine, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -103,15 +126,18 @@ async def test_a_subscription_ending_stops_the_orgs_machines_at_once(engine: Asy
     assert fly.machines[machine]["state"] == "stopped"
 
 
-async def test_a_plan_with_fewer_machines_than_held_is_refused(
+async def test_a_plan_with_fewer_machines_than_the_org_holds_is_refused(
     client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
 ) -> None:
+    from tests.db.helpers import member
+
     fly = FakeFly()
     ada = await person(engine, "Team")
+    bob = await member(engine, ada.org_id)
     stripe.sub("sub_four", "cus_four", "price_test_team", 1)
     await subscribed(engine, ada.org_id, "sub_four", "cus_four")
-    for name in ("a", "b", "c", "d"):
-        await _machine(engine, fly, ada, name)
+    for who, name in ((ada, "a"), (ada, "b"), (bob, "c"), (bob, "d")):  # two each: four, the org's together
+        await _machine(engine, fly, who, name)
     res = await client.post("/v1/billing/plan", json={"plan": "Pro"}, headers=ada.headers)
     error = res.json()["error"]
     assert (res.status_code, error["code"], error["reason"], error["held"], error["max"]) == (
@@ -121,4 +147,4 @@ async def test_a_plan_with_fewer_machines_than_held_is_refused(
         4,
         3,
     )
-    assert error["message"] == "Delete your hosted machines first. Pro allows 3 for each person."
+    assert error["message"] == "Delete your hosted machines first. Pro allows 3 hosted machines."

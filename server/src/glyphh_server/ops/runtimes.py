@@ -4,7 +4,7 @@ A local rrotor gets its runtime token from the install that starts it: one local
 shown once and kept only as a hash; asking again rotates it. A new token starts the link's sequence numbers again:
 the mod asks for one when it starts a rrotor whose /data holds none, a fresh volume.
 
-A hosted rrotor is a Fly machine and its volume, as many per person as the plan's machines (ops/machines.py makes,
+A hosted rrotor is a Fly machine and its volume, as many in an org as the plan's machines (ops/machines.py makes,
 starts, stops, restarts and deletes them); here is how the person's first one is shown to the routes made for one,
 and which runtime a call or a deploy goes to."""
 

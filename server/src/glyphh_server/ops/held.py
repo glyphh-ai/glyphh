@@ -1,8 +1,10 @@
-"""Hosted machines held past the plan: when an org lands on a plan that allows fewer machines than one of its people
-holds (its subscription cancelled or ended, an Enterprise grant revoked or lapsed), every machine of each such person
-is stopped and none of them starts (E_LIMIT, reason machines) until the org is on a plan that allows them. They keep
-their disks, and may be deleted. The minute tick stops any that woke since (a request at its address wakes it on
-Fly's proxy) and is the backstop for every path; a change the server makes itself holds them at once."""
+"""Hosted machines held past the plan. A plan's machines are the org's, all its people's together, its oldest first:
+when an org lands on a plan that allows fewer than it holds (its subscription cancelled or ended, an Enterprise grant
+revoked or lapsed), its newest machines beyond the plan's are stopped and none of them starts (E_LIMIT, reason
+machines) until the org is on a plan that allows them; its oldest, up to the plan's, run as before. Held machines keep
+their disks, and may be deleted (which lets the next oldest start). The minute tick stops any that woke since (a
+request at its address wakes it on Fly's proxy) and is the backstop for every path; a change the server makes itself
+holds them at once."""
 
 import logging
 import uuid
@@ -15,42 +17,42 @@ from glyphh_server.obs.logs import fields
 from glyphh_server.ops import limits
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.plans import org_version
-from glyphh_server.ops.runtimes import NOT_LINKED
+from glyphh_server.ops.runtimes import FIRST, NOT_LINKED
 
 log = logging.getLogger("glyphh.runtime")
 
 
-async def check_start(conn: AsyncConnection, user_id: uuid.UUID, org_id: uuid.UUID) -> None:
-    """Refused (E_LIMIT, reason machines) while the person holds more machines than the org's plan allows."""
-    await limits.check_machines(conn, await limits.machines(conn, user_id), await org_version(conn, org_id), more=0)
-
-
-def _past_the_plan():  # type: ignore[no-untyped-def]
-    """The people holding more hosted machines than their org's plan allows."""
-    held = (
-        select(Rrotor.user_id, func.count().label("n"))
-        .where(Rrotor.mode == "hosted")
-        .group_by(Rrotor.user_id)
-        .subquery()
-    )
+def _ranked():  # type: ignore[no-untyped-def]
+    """Every hosted machine with its org, its org's plan's machines and its place among the org's, oldest first."""
+    place = func.row_number().over(partition_by=User.org_id, order_by=FIRST).label("place")
     return (
-        select(held.c.user_id)
-        .join(User, User.id == held.c.user_id)
+        select(Rrotor.id, Rrotor.fly_machine_id, Rrotor.state, User.org_id, PlanVersion.max_machines, place)
+        .join(User, User.id == Rrotor.user_id)
         .join(Org, Org.id == User.org_id)
         .join(PlanVersion, PlanVersion.id == Org.plan_version_id)
-        .where(PlanVersion.max_machines.is_not(None), held.c.n > PlanVersion.max_machines)
+        .where(Rrotor.mode == "hosted")
+        .subquery()
     )
+
+
+async def check_start(conn: AsyncConnection, runtime_id: uuid.UUID, org_id: uuid.UUID) -> None:
+    """Refused (E_LIMIT, reason machines) for a machine past the plan's: one of the org's newest beyond it."""
+    ranked = _ranked()
+    row = (await conn.execute(select(ranked.c.place, ranked.c.max_machines).where(ranked.c.id == runtime_id))).one()
+    if row.max_machines is not None and row.place > row.max_machines:
+        used = await limits.org_machines(conn, org_id)
+        await limits.check_machines(conn, used, await org_version(conn, org_id), more=0)
 
 
 async def hold(conn: AsyncConnection, fly: Fly, org_id: uuid.UUID | None = None) -> list[uuid.UUID]:
-    """Every machine of the people past their plan (the org's, or every org's) that is not stopped, stopped: the
-    machines stopped. A stop Fly refuses is logged and tried again at the next tick."""
-    people = _past_the_plan()
-    if org_id is not None:
-        people = people.where(Org.id == org_id)
-    found = select(Rrotor.id, Rrotor.fly_machine_id).where(
-        Rrotor.mode == "hosted", Rrotor.user_id.in_(people), Rrotor.state != NOT_LINKED
+    """Every machine past its org's plan (the org's, or every org's) that is not stopped, stopped: the machines
+    stopped. A stop Fly refuses is logged and tried again at the next tick."""
+    ranked = _ranked()
+    found = select(ranked.c.id, ranked.c.fly_machine_id).where(
+        ranked.c.max_machines.is_not(None), ranked.c.place > ranked.c.max_machines, ranked.c.state != NOT_LINKED
     )
+    if org_id is not None:
+        found = found.where(ranked.c.org_id == org_id)
     stopped: list[uuid.UUID] = []
     for row in list(await conn.execute(found)):
         if await _stop(fly, row):

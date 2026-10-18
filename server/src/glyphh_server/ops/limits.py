@@ -1,5 +1,6 @@
-"""The one plan limit the server sees used: a person's hosted machines, checked when one more would be made, and
-when one is started (a person holding more than their org's plan allows starts none: ops/held.py). A
+"""The one plan limit the server sees used: the org's hosted machines, all its people's together (plans are flat per
+org), checked when one more would be made, and when one is started (past the plan, only the org's oldest machines
+up to it start: ops/held.py). A
 refusal is E_LIMIT naming the limit, what is used, the most allowed and the plan that would lift it. Members,
 installs and models are unlimited on every plan. Callers lock the row the count belongs to first, so requests at
 the same moment are taken one after another."""
@@ -57,18 +58,7 @@ async def members(conn: AsyncConnection, org_id: uuid.UUID) -> int:
     return await _count(conn, User.org_id == org_id)
 
 
-async def machines(conn: AsyncConnection, user_id: uuid.UUID) -> int:
-    """The person's hosted machines; self-hosted runtimes are not counted."""
-    return await _count(conn, Rrotor.user_id == user_id, Rrotor.mode == "hosted")
-
-
-async def most_held(conn: AsyncConnection, org_id: uuid.UUID) -> int:
-    """The most hosted machines any one of the org's people holds."""
+async def org_machines(conn: AsyncConnection, org_id: uuid.UUID) -> int:
+    """Every hosted machine of the org's people; self-hosted runtimes are not counted."""
     people = select(User.id).where(User.org_id == org_id)
-    each = (
-        select(func.count().label("n"))
-        .where(Rrotor.user_id.in_(people), Rrotor.mode == "hosted")
-        .group_by(Rrotor.user_id)
-        .subquery()
-    )
-    return int((await conn.execute(select(func.coalesce(func.max(each.c.n), 0)))).scalar_one())
+    return await _count(conn, Rrotor.user_id.in_(people), Rrotor.mode == "hosted")

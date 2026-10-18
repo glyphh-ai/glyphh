@@ -33,7 +33,7 @@ ADA: str = "ada"
 
 
 class AccountLimits(BaseModel):
-    machines: int | None = Field(description="Hosted machines per person: null = unlimited, 0 = none")
+    machines: int | None = Field(description="Hosted machines, the org's together: null = unlimited, 0 = none")
 
 
 class ModLimits(BaseModel):

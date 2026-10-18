@@ -24,10 +24,10 @@ class PlanVersion(Base):
     """A plan's price, limits and features at one moment. Never changed: a new price is a new version with its own
     Stripe price. A null limit is unlimited. price_cents is a month's or a year's (billing_interval, null when free),
     null when set per customer; self_serve plans are bought through Stripe Checkout, the others by contract.
-    max_machines is how many hosted machines a person may have (0: none); precedents the managed bucket, what a
-    hosted runtime may hold. The features are signed into the licence. hosting_markup_pct is added to Fly's rates for
-    the hosted machines and is never shown; null where there is no hosting or it is set per customer (an org's own
-    markup_pct overrides it)."""
+    max_machines is how many hosted machines the org may have, its people's together (0: none); precedents the
+    managed bucket, what a hosted runtime may hold. The features are signed into the licence. hosting_markup_pct is
+    added to Fly's rates for the hosted machines and is never shown; null where there is no hosting or it is set per
+    customer (an org's own markup_pct overrides it)."""
 
     __tablename__ = "plan_versions"
     __table_args__ = (

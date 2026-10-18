@@ -29,14 +29,14 @@ def waker(engine: AsyncEngine, fly: Fly) -> Callable[[uuid.UUID], Awaitable[None
     async def wake(runtime_id: uuid.UUID) -> None:
         async with engine.connect() as conn:
             found = (
-                select(Rrotor.fly_machine_id, Rrotor.state, Rrotor.user_id, User.org_id)
+                select(Rrotor.fly_machine_id, Rrotor.state, User.org_id)
                 .join(User, User.id == Rrotor.user_id)
                 .where(Rrotor.id == runtime_id, Rrotor.mode == "hosted")
             )
             row = (await conn.execute(found)).first()
             if row is None or row.fly_machine_id is None:
                 raise Conflict("This runtime has no machine to wake.", runtime_id=str(runtime_id))
-            await check_start(conn, row.user_id, row.org_id)
+            await check_start(conn, runtime_id, row.org_id)
         if row.state != ONLINE:
             log.info("waking hosted runtime", extra=fields(runtime=str(runtime_id), machine=row.fly_machine_id))
             await fly.start(str(row.fly_machine_id))
