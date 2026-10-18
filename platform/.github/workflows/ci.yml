@@ -1,5 +1,5 @@
 # The platform's checks on every push and pull request: types, the tests and the production image. A merge to main
-# then deploys that commit to Fly (glyphh-ai-app, app.glyphh.ai) with the FLY_API_TOKEN secret: the only way the
+# then deploys that commit to Fly (glyphh-ai-app, platform.glyphh.ai) with the FLY_API_TOKEN secret: the only way the
 # platform reaches production.
 name: ci
 
@@ -47,4 +47,4 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --remote-only --wait-timeout 300
       - name: The platform answers
-        run: curl -sf -o /dev/null https://app.glyphh.ai/
+        run: curl -sf -o /dev/null https://platform.glyphh.ai/

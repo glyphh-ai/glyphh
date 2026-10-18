@@ -139,7 +139,7 @@ describe('/allow', () => {
   it('allows the platform’s own log-in without asking', async () => {
     const location = stubLocation();
     rememberLogin('github');
-    server.use(consent({ kind: 'oauth', client: 'Glyphh', returns_to: 'app.glyphh.ai', resource: 'x', email: 'chris@example.com' }));
+    server.use(consent({ kind: 'oauth', client: 'Glyphh', returns_to: 'platform.glyphh.ai', resource: 'x', email: 'chris@example.com' }));
     try {
       renderApp('/allow?consent=c1');
       await vi.waitFor(() => expect(location.replace).toHaveBeenCalledWith(`${serverUrl}/auth/oauth/allow?consent=c1&decision=allow`));

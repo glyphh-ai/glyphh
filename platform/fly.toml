@@ -1,4 +1,4 @@
-# The platform on Fly: the app glyphh-ai-app, at https://app.glyphh.ai (the server's GLYPHH_PLATFORM_URL).
+# The platform on Fly: the app glyphh-ai-app, at https://platform.glyphh.ai (the server's GLYPHH_PLATFORM_URL).
 # Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own:
 # PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET (its OAuth client at the server) and SESSION_SECRET.
 app = "glyphh-ai-app"
@@ -9,7 +9,7 @@ primary_region = "iad"
 
 [env]
   GLYPHH_SERVER_URL = "https://api.glyphh.ai"
-  PLATFORM_URL = "https://app.glyphh.ai"
+  PLATFORM_URL = "https://platform.glyphh.ai"
   PORT = "3000"
 
 [http_service]
