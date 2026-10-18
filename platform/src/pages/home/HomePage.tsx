@@ -51,6 +51,7 @@ export function HomePage() {
         description={
           <>
             Your runtime and how to reach it. Claude connects to its address; your apps call it with an <Link to="/keys">API key</Link>.
+            Run more than one? <Link to="/machines">Machines</Link> lists them all.
           </>
         }
         actions={actions}

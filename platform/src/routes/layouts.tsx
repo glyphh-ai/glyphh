@@ -25,6 +25,9 @@ export function MainLayout() {
           <NavItem to="/getting-started" icon="flag">
             Getting started
           </NavItem>
+          <NavItem to="/machines" icon="chip">
+            Machines
+          </NavItem>
           <NavGroup label="Runtime">
             <NavItem to="/" end icon="home">
               Home
