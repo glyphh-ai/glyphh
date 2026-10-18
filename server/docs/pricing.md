@@ -76,6 +76,7 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 - **Metering:** every minute, each hosted machine's month gains its started seconds × its size's rate, and its
   volume's GB × seconds × the volume rate (started or stopped: the disk is kept either way). Cost is kept in
   micro-dollars per machine per month.
+- **The minute tick** runs whether or not hosting is on; only stopping machines needs Fly.
 - **Billing:** the marked-up amount, cost × (1 + markup), goes to Stripe as meter events on the Billing Meter
   `glyphh_hosting` (one unit, one US cent): once a day and as the billing period ends (ten minutes before the
   subscription renews), per org, only what has not been reported, the fraction of a cent carried; and at once when
@@ -99,6 +100,14 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 - Down to Free: `POST /v1/billing/plan {"plan": "Free"}`, refused while the org has hosted machines (409
   `E_CONFLICT`, `reason: machines`, "Delete your hosted machines first."); otherwise the hosting due is reported and
   the subscription cancelled at once, invoiced now and prorated.
+- Down to a plan with fewer machines than one of the org's people holds (Team to Pro with four): 409 `E_CONFLICT`,
+  `reason: machines`, `held` and `max` named, "Delete your hosted machines first. Pro allows 3 for each person."
+- **Held past the plan:** when an org lands on such a plan anyway (a cancel in Stripe's portal, a subscription that
+  ended, an Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left, and every
+  machine of each person past the plan is stopped: at once from the webhook and from `revoke`, and at the minute tick
+  (which also stops any a request woke since). Starting, restarting or waking one is 403 `E_LIMIT`, `reason:
+  machines`, until the org is on a plan that allows them. They keep their disks, and may be deleted; on Free their
+  disks' cost is metered and nothing is charged.
 - An Enterprise org changes its plan with Glyphh, not here: 409 `E_CONFLICT`, `reason: contract`.
 - Making a machine past the plan's count (Free has none): 403 `E_LIMIT`, `reason: machines`.
 - No plan pauses or limits by hours any more.
@@ -147,11 +156,11 @@ Each Enterprise customer is on their own Stripe subscription, made by hand, and 
 
 **Renewing:** `grant` again with the new `--until` (a new `--markup` or `--subscription` if the deal changed: the new
 subscription replaces the old one on the org), and update Stripe to match. **Lapsing:** when the `--until` day has
-passed, the server's minute tick puts the org back on Free (hosted machines left are logged for staff). **A new markup
+passed, the server's minute tick puts the org back on Free and holds its hosted machines. **A new markup
 mid-contract:** `grant` with it; it applies from then on. **Ending:** `python -m glyphh_server.ops.enterprise revoke
---org <org uuid>` puts the org back on Free (refused while it has hosted machines: `Refused: Its hosted machines are
-deleted first.`); cancel the subscription in Stripe. A deal's subscription that ends in Stripe also puts the org back
-on Free. Self-hosted runtimes keep running; offline licences run to their expiry and grace.
+--org <org uuid>` puts the org back on Free, its hosted machines stopped and held (it prints how many it stopped);
+cancel the subscription in Stripe. A deal's subscription that ends in Stripe also puts the org back on Free.
+Self-hosted runtimes keep running; offline licences run to their expiry and grace.
 
 ## Not built yet
 
