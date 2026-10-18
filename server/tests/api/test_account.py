@@ -19,6 +19,7 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "name": "Ada Lovelace's org",
         "billing_status": "none",
         "renews_at": None,
+        "plan_until": None,
     }
     assert me["plan"] == {
         "name": "Team",

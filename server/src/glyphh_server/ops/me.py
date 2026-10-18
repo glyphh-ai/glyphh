@@ -18,6 +18,7 @@ class MeOrg(BaseModel):
     name: str
     billing_status: str
     renews_at: datetime | None = Field(description="When the subscription renews; null when not subscribed or ending")
+    plan_until: datetime | None = Field(description="When an Enterprise grant ends; null on any other plan")
 
 
 class Me(BaseModel):
@@ -34,7 +35,7 @@ class Me(BaseModel):
 
 async def me(conn: AsyncConnection, who: Principal) -> Me:
     person = (await conn.execute(select(User.email, User.name, User.role).where(User.id == who.user_id))).one()
-    columns = (Org.id, Org.name, Org.billing_status, Org.renews_at)
+    columns = (Org.id, Org.name, Org.billing_status, Org.renews_at, Org.plan_until)
     org = (await conn.execute(select(*columns).where(Org.id == who.org_id))).one()
     providers = await conn.execute(
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)

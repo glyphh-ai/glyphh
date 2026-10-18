@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS orgs (
     billing_status TEXT DEFAULT 'none' NOT NULL,
     renews_at TIMESTAMP WITH TIME ZONE,
     markup_pct INTEGER,
+    plan_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT orgs_markup CHECK (coalesce(markup_pct, 0) >= 0),

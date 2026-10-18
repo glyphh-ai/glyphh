@@ -1,5 +1,5 @@
 """Keeping the org true to its Stripe subscription: the plan version its plan item sells and its status. A
-subscription that has ended puts the org back on Free."""
+subscription that has ended puts the org back on Free; an Enterprise deal's has no plan item, so its plan stays."""
 
 import logging
 import uuid
@@ -38,6 +38,7 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
     if status in ENDED:
         free = await newest_version(conn, FREE)
         values: dict[str, Any] = {"plan_version_id": free.id, "stripe_subscription_id": None, "renews_at": None}
+        values |= {"plan_until": None, "markup_pct": None}  # an Enterprise deal's subscription ended: so has the deal
     else:
         found = await classify(conn, org_id, sub)
         values = {"stripe_subscription_id": sub["id"], "renews_at": renews_at(sub)}

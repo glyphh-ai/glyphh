@@ -42,4 +42,6 @@ class Org(Base):
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Its own markup on Fly's rates (an Enterprise customer's, by contract): over its plan's when set. Never shown.
     markup_pct: Mapped[int | None]
+    # An Enterprise grant's end: past it, the org is back on Free (ops/enterprise.py).
+    plan_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()

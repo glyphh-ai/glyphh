@@ -42,13 +42,16 @@ class PlanIn(BaseModel):
 class BillingView(Usage):
     billing_status: str
     renews_at: datetime | None = Field(description="When the subscription renews; null when not subscribed or ending")
+    plan_until: datetime | None = Field(description="When an Enterprise grant ends; null on any other plan")
 
 
 @router.get("/v1/billing", operation_id="billing")
 async def get_billing(caller: Caller, conn: Conn) -> BillingView:
     """The org's billing: its plan and price, the precedents its hosted runtimes hold of the plan's managed bucket,
     and its hosting this month, all in, machine by machine."""
-    row = (await conn.execute(select(Org.billing_status, Org.renews_at).where(Org.id == caller.org_id))).one()
+    row = (
+        await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
+    ).one()
     return BillingView(**(await usage(conn, caller.org_id)).model_dump(), **row._mapping)
 
 
