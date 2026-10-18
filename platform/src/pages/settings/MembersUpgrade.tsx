@@ -22,7 +22,7 @@ export function MembersUpgrade({ isAdmin }: { isAdmin: boolean }) {
       <p className={styles.text}>{isAdmin ? upgrade : `${upgrade.replace('Upgrade', 'Ask your admin to upgrade')}`}</p>
       {isAdmin && (
         <div className={styles.actions}>
-          <Button variant="primary" onClick={() => navigate('/settings/billing')}>
+          <Button variant="primary" onClick={() => navigate('/settings/plans')}>
             Upgrade
           </Button>
         </div>

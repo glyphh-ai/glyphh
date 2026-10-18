@@ -3,6 +3,7 @@ import { RequireSession } from '@/components/RequireSession';
 import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { ModelsPage } from '@/pages/models/ModelsPage';
+import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
 import { AuthorizePage } from '@/pages/flows/AuthorizePage';
 import { DeviceApprovePage } from '@/pages/flows/DeviceApprovePage';
@@ -55,6 +56,15 @@ export const routes: RouteObject[] = [
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
     ],
+  },
+  // Choosing a plan: over the whole window, no sidebar.
+  {
+    path: 'settings/plans',
+    element: (
+      <RequireSession>
+        <PlansPage />
+      </RequireSession>
+    ),
   },
   { path: 'account', element: <Moved to="/settings/profile" /> },
   { path: 'billing', element: <Moved to="/settings/billing" /> },

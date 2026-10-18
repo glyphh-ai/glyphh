@@ -361,7 +361,7 @@ describe('Settings, more', () => {
 });
 
 describe('Members on a plan for one', () => {
-  it('tells the admin which plan adds members, and Upgrade goes to billing', async () => {
+  it('tells the admin which plan adds members, and Upgrade opens the plans', async () => {
     const { user, router } = renderApp('/settings/members');
     const upgrade = await screen.findByRole('region', { name: 'Members' });
     expect(within(upgrade).getByRole('heading', { name: 'Members' })).toBeInTheDocument();
@@ -369,7 +369,7 @@ describe('Members on a plan for one', () => {
     expect(screen.queryByRole('list', { name: 'Members' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
     await user.click(within(upgrade).getByRole('button', { name: 'Upgrade' }));
-    expect(router.state.location.pathname).toBe('/settings/billing');
+    expect(router.state.location.pathname).toBe('/settings/plans');
   });
 
   it('asks a member to ask their admin, with no Upgrade', async () => {
