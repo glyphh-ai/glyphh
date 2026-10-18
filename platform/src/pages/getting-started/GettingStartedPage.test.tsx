@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import type { Machine } from '@/api/types';
-import { machines, runtime, selfRuntimes } from '@/test/fixtures';
+import { machines, me, plans, runtime, selfRuntimes } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
@@ -91,6 +91,44 @@ describe('Getting started', () => {
       expect(screen.getByRole('heading', { name: 'Connect Claude to Work' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Start/ })).not.toBeInTheDocument();
       expect(within(screen.getByRole('main')).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
+    });
+
+    it('says hosting is on Pro and Team, and running it yourself is free', async () => {
+      renderApp('/getting-started');
+      expect(await screen.findByRole('radio', { name: /^Glyphh hosted.*On Pro and Team\./ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Docker Compose.*Free\./ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Helm.*Free\./ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Terraform.*Free\./ })).toBeInTheDocument();
+      expect(screen.getByText(/Running it yourself is free on every plan/)).toBeInTheDocument();
+    });
+
+    it('shows the plan’s rate on each size of the first machine, and Enterprise’s as set in the contract', async () => {
+      server.use(http.get(v1('/runtimes'), () => HttpResponse.json([])));
+      const { client } = renderApp('/getting-started');
+      const form = await screen.findByRole('form', { name: 'Make your machine' });
+      expect(await within(form).findByText('$8.71 / month')).toBeInTheDocument();
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })));
+      await client.invalidateQueries({ queryKey: ['me'] });
+      expect(await within(form).findAllByText('Set in your contract.')).toHaveLength(3);
+      expect(within(form).queryByText(/\/ month/)).not.toBeInTheDocument();
+    });
+
+    it('on Free, says hosting is on Pro and Team, with their rates and Upgrade', async () => {
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
+      const { user, router } = renderApp('/getting-started');
+      expect(await screen.findByText(/Glyphh hosts machines on Pro and Team\./)).toBeInTheDocument();
+      expect(screen.queryByRole('form', { name: 'Make your machine' })).not.toBeInTheDocument();
+      const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
+      expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
+      await user.click(screen.getByRole('button', { name: 'Upgrade' }));
+      expect(router.state.location.pathname).toBe('/settings/plans');
+    });
+
+    it('on Free, asks a member to ask their admin', async () => {
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member', plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
+      renderApp('/getting-started');
+      expect(await screen.findByText(/Ask your admin to upgrade\./)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
     });
 
     it('starts the first machine when it is stopped', async () => {
@@ -290,16 +328,18 @@ describe('Getting started', () => {
       expect(within(list).getByText('Acme production')).toBeInTheDocument();
     });
 
-    it('issues an offline licence for a year by default, and says where it goes', async () => {
+    it('issues an offline licence on Enterprise, for a year by default, and says where it goes', async () => {
       let sent: unknown;
       server.use(
+        http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })),
         http.post(v1('/runtimes/:id/offline-licence'), async ({ request }) => {
           sent = await request.json();
           return HttpResponse.json({ token: 'eyJwYXlsb2FkIjp7fX0', expires_at: '2027-10-18T00:00:00Z' });
         }),
       );
-      const { user } = renderApp('/getting-started');
+      const { user, client } = renderApp('/getting-started');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
       await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
       const dialog = screen.getByRole('dialog', { name: 'Issue an offline licence' });
       expect(within(dialog).getByLabelText('Days')).toHaveValue(365);
@@ -315,8 +355,12 @@ describe('Getting started', () => {
     });
 
     it('takes from 1 to 365 days, and shows a refusal', async () => {
-      server.use(http.post(v1('/runtimes/:id/offline-licence'), () => apiError(403, 'E_NOT_IN_PLAN', 'Offline licences need the Team plan.')));
-      const { user } = renderApp('/getting-started');
+      server.use(
+        http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })),
+        http.post(v1('/runtimes/:id/offline-licence'), () => apiError(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', { reason: 'offline' })),
+      );
+      const { user, client } = renderApp('/getting-started');
+      await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[1]!);
       const dialog = screen.getByRole('dialog', { name: 'Issue an offline licence' });
@@ -328,9 +372,21 @@ describe('Getting started', () => {
       await user.clear(days);
       await user.type(days, '30');
       await user.click(within(dialog).getByRole('button', { name: 'Issue licence' }));
-      expect(await within(dialog).findByText('Offline licences need the Team plan.')).toBeInTheDocument();
+      expect(await within(dialog).findByText('Offline licences are on Enterprise.')).toBeInTheDocument();
       await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByRole('dialog', { name: 'Issue an offline licence' })).not.toBeInTheDocument();
+    });
+
+    it('says offline licences are on Enterprise on other plans, with Talk to us', async () => {
+      const { user, client } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
+      await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
+      const dialog = screen.getByRole('dialog', { name: 'Offline licences are on Enterprise' });
+      expect(within(dialog).queryByLabelText('Days')).not.toBeInTheDocument();
+      expect(within(dialog).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+      await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });
