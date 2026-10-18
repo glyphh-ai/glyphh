@@ -10,11 +10,14 @@ import type {
   Model,
   NewInvite,
   NewRuntimeKey,
+  NewSelfRuntime,
+  OfflineLicence,
   Org,
   Plan,
   Provider,
   Runtime,
   RuntimeKey,
+  SelfRuntime,
 } from './types';
 
 /** One key per server resource, so a write can refresh exactly what it changed. */
@@ -23,6 +26,7 @@ export const keys = {
   installs: ['installs'] as const,
   runtime: ['runtime'] as const,
   runtimeKeys: ['runtime', 'keys'] as const,
+  selfRuntimes: ['runtimes', 'self'] as const,
   models: ['models'] as const,
   plans: ['plans'] as const,
   addons: ['addons'] as const,
@@ -37,6 +41,7 @@ export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<
 export const useInstalls = () => useQuery({ queryKey: keys.installs, queryFn: () => api.get<Install[]>('/installs') });
 export const useRuntime = () => useQuery({ queryKey: keys.runtime, queryFn: () => api.get<Runtime>('/runtime') });
 export const useRuntimeKeys = () => useQuery({ queryKey: keys.runtimeKeys, queryFn: () => api.get<RuntimeKey[]>('/runtime/keys') });
+export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
 export const useAddons = () => useQuery({ queryKey: keys.addons, queryFn: () => api.get<Addon[]>('/addons') });
@@ -67,6 +72,14 @@ export const useRevokeRuntimeKey = () =>
   useWrite((id: string) => api.delete<RuntimeKey>(`/runtime/keys/${id}`), [keys.runtimeKeys]);
 
 export const useDeleteRuntimeKey = () => useWrite((id: string) => api.delete(`/runtime/keys/${id}/record`), [keys.runtimeKeys]);
+
+export const useRegisterSelfRuntime = () =>
+  useWrite((body: { name: string; public_url: string }) => api.post<NewSelfRuntime>('/runtimes/self', body), [keys.selfRuntimes]);
+export const useRotateSelfRuntimeToken = () =>
+  useWrite((id: string) => api.post<{ token: string }>(`/runtimes/self/${id}/token`), [keys.selfRuntimes]);
+export const useDeleteSelfRuntime = () => useWrite((id: string) => api.delete(`/runtimes/self/${id}`), [keys.selfRuntimes]);
+export const useIssueOfflineLicence = () =>
+  useWrite(({ id, days }: { id: string; days: number }) => api.post<OfflineLicence>(`/runtimes/${id}/offline-licence`, { days }), []);
 
 export const useDeleteModel = () => useWrite((id: string) => api.delete(`/models/${id}`), [keys.models]);
 

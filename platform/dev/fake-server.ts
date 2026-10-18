@@ -15,6 +15,8 @@ const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
 const app = new Hono();
 const state = structuredClone({ ...data });
 let nextKey = 10;
+let nextSelf = 10;
+const selfToken = () => `glyphh_rt_${crypto.randomUUID().replaceAll('-', '')}`;
 
 app.use('/auth/consent', cors({ origin: platform, credentials: true }));
 
@@ -80,6 +82,33 @@ app.delete('/v1/runtime/keys/:id', (c) => {
 app.delete('/v1/runtime/keys/:id/record', (c) => {
   state.runtimeKeys = state.runtimeKeys.filter((k) => k.id !== c.req.param('id'));
   return c.body(null, 204);
+});
+app.get('/v1/runtimes/self', (c) => c.json(state.selfRuntimes));
+app.post('/v1/runtimes/self', async (c) => {
+  const { name, public_url } = await c.req.json();
+  const runtime = { id: `rt-self-${nextSelf++}`, name, public_url, state: 'stopped' as const, version: null, last_seen_at: null, last_heartbeat_at: null };
+  state.selfRuntimes.push(runtime);
+  const token = selfToken();
+  const env = {
+    RROTOR_MODE: 'self',
+    RROTOR_SERVER: `http://localhost:${port}`,
+    RROTOR_RUNTIME_ID: runtime.id,
+    RROTOR_RUNTIME_TOKEN: token,
+    RROTOR_PUBLIC_HOST: new URL(public_url).host,
+  };
+  return c.json({ id: runtime.id, name, public_url, token, env }, 201);
+});
+app.post('/v1/runtimes/self/:id/token', (c) => c.json({ token: selfToken() }));
+app.delete('/v1/runtimes/self/:id', (c) => {
+  state.selfRuntimes = state.selfRuntimes.filter((r) => r.id !== c.req.param('id'));
+  return c.body(null, 204);
+});
+app.post('/v1/runtimes/:id/offline-licence', async (c) => {
+  const { days } = await c.req.json();
+  const expires_at = new Date(Date.now() + days * 86_400_000).toISOString();
+  const payload = { runtime_id: c.req.param('id'), licence_id: crypto.randomUUID(), kind: 'offline', expires_at, grace_days: 14 };
+  const token = Buffer.from(JSON.stringify({ payload, signature: 'dev-signature' })).toString('base64url');
+  return c.json({ token, expires_at });
 });
 app.get('/v1/models', (c) => c.json(state.models));
 app.delete('/v1/models/:id', (c) => {

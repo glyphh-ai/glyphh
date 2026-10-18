@@ -1,0 +1,295 @@
+import { screen, within } from '@testing-library/react';
+import { runtime, selfRuntimes } from '@/test/fixtures';
+import { renderApp } from '@/test/render';
+import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+
+const noRuntime = { ...runtime, state: 'none', address: null, runtime_id: null };
+
+const registration = {
+  id: 'rt-self-9',
+  name: 'Acme production',
+  public_url: 'https://rrotor.acme.com',
+  token: 'glyphh_rt_secret',
+  env: {
+    RROTOR_MODE: 'self',
+    RROTOR_SERVER: 'https://api.glyphh.ai',
+    RROTOR_RUNTIME_ID: 'rt-self-9',
+    RROTOR_RUNTIME_TOKEN: 'glyphh_rt_secret',
+    RROTOR_PUBLIC_HOST: 'rrotor.acme.com',
+  },
+};
+
+/** Registers through the form, as a person would; returns what was sent. */
+async function register(user: ReturnType<typeof renderApp>['user'], choice: string) {
+  const sent: unknown[] = [];
+  server.use(
+    http.post(v1('/runtimes/self'), async ({ request }) => {
+      sent.push(await request.json());
+      return HttpResponse.json(registration, { status: 201 });
+    }),
+  );
+  await user.click(await screen.findByRole('radio', { name: new RegExp(`^${choice}`) }));
+  const form = screen.getByRole('form', { name: 'Register a runtime' });
+  await user.type(within(form).getByLabelText('Name'), 'Acme production');
+  await user.type(within(form).getByLabelText('Public host'), 'https://rrotor.acme.com/');
+  await user.click(within(form).getByRole('button', { name: 'Register runtime' }));
+  await screen.findByText('Runtime token for Acme production');
+  return sent;
+}
+
+describe('Getting started', () => {
+  it('is the first item in the sidebar, with its breadcrumb', async () => {
+    renderApp('/getting-started');
+    expect(await screen.findByRole('heading', { name: 'Getting started', level: 1 })).toBeInTheDocument();
+    const sidebar = screen.getByRole('complementary', { name: 'Main' });
+    expect(within(sidebar).getAllByRole('link')[0]).toHaveAccessibleName('Getting started');
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Getting started')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getAllByRole('link', { name: 'self-hosting docs' })[0]).toHaveAttribute('href', 'https://github.com/glyphh-ai/rrotor/tree/main/docs/self-hosting');
+  });
+
+  it('gives the SDKs and the Claude plugin to copy', async () => {
+    const { user } = renderApp('/getting-started');
+    expect(await screen.findByText('pip install glyphh-ada')).toBeInTheDocument();
+    expect(screen.getByText('npm i @glyphh-ai/ada')).toBeInTheDocument();
+    expect(screen.getByText('/plugin marketplace add glyphh-ai/glyphh')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copy plugin command' }));
+    expect(await navigator.clipboard.readText()).toBe('/plugin install ada@glyphh');
+  });
+
+  it('is reached from Home when there is no runtime yet', async () => {
+    server.use(http.get(v1('/runtime'), () => HttpResponse.json(noRuntime)));
+    const { user } = renderApp('/');
+    await screen.findByText('No runtime yet');
+    await user.click(within(screen.getByRole('main')).getByRole('link', { name: 'Getting started' }));
+    expect(await screen.findByRole('heading', { name: 'Getting started', level: 1 })).toBeInTheDocument();
+  });
+
+  describe('Glyphh hosted', () => {
+    it('starts the runtime as Home does, then gives the connector URL', async () => {
+      let started = false;
+      server.use(
+        http.get(v1('/runtime'), () => HttpResponse.json(started ? runtime : noRuntime)),
+        http.post(v1('/runtime/start'), () => {
+          started = true;
+          return HttpResponse.json(runtime);
+        }),
+      );
+      const { user } = renderApp('/getting-started');
+      expect(await screen.findByRole('radio', { name: /^Glyphh hosted/ })).toBeChecked();
+      await user.click(await screen.findByRole('button', { name: 'Start your runtime' }));
+      expect(await screen.findByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
+      expect(started).toBe(true);
+      expect(screen.queryByRole('button', { name: /^Start/ })).not.toBeInTheDocument();
+    });
+
+    it('starts a stopped runtime, and cannot while the month’s hours are used up', async () => {
+      server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'stopped', paused: true })));
+      renderApp('/getting-started');
+      expect(await screen.findByRole('button', { name: 'Start' })).toBeDisabled();
+      expect(screen.getByText(/this month’s hours are used up/)).toBeInTheDocument();
+    });
+
+    it('shows the server’s refusal when starting fails', async () => {
+      server.use(
+        http.get(v1('/runtime'), () => HttpResponse.json(noRuntime)),
+        http.post(v1('/runtime/start'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off right now.')),
+      );
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('button', { name: 'Start your runtime' }));
+      expect(await screen.findByText('Hosting is off right now.')).toBeInTheDocument();
+    });
+
+    it('says so when the runtime cannot be read', async () => {
+      server.use(http.get(v1('/runtime'), () => apiError(500, 'E_INTERNAL', 'The runtime could not be read.')));
+      renderApp('/getting-started');
+      expect(await screen.findByText('The runtime could not be read.')).toBeInTheDocument();
+    });
+  });
+
+  describe('self-hosted', () => {
+    it('registers with the host alone, shows the token once and the Compose env filled in', async () => {
+      const { user } = renderApp('/getting-started');
+      const sent = await register(user, 'Docker Compose');
+      expect(sent).toEqual([{ name: 'Acme production', public_url: 'https://rrotor.acme.com' }]);
+      expect(screen.getByText('glyphh_rt_secret')).toBeInTheDocument();
+      expect(screen.getByText(/RROTOR_RUNTIME_TOKEN=glyphh_rt_secret/)).toBeInTheDocument();
+      expect(screen.getByText(/docker compose up -d/)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Copy .env' }));
+      expect(await navigator.clipboard.readText()).toContain('RROTOR_PUBLIC_HOST=rrotor.acme.com');
+      expect(screen.getByText('https://rrotor.acme.com/mcp')).toBeInTheDocument();
+    });
+
+    it('keeps the registration on changing option: Helm with its values, then Terraform for AWS and GCP', async () => {
+      const { user } = renderApp('/getting-started');
+      await register(user, 'Docker Compose');
+
+      await user.click(screen.getByRole('radio', { name: /^Helm/ }));
+      await user.selectOptions(screen.getByLabelText('Size'), 'Large');
+      await user.clear(screen.getByLabelText('Ingress class'));
+      await user.type(screen.getByLabelText('Ingress class'), 'traefik');
+      const helm = screen.getByText(/helm install rrotor/);
+      expect(helm).toHaveTextContent('--set runtime.token=glyphh_rt_secret');
+      expect(helm).toHaveTextContent('--set size=large');
+      expect(helm).toHaveTextContent('--set ingress.className=traefik');
+
+      await user.click(screen.getByRole('radio', { name: /^Terraform/ }));
+      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('//deploy/terraform/aws');
+      await user.selectOptions(screen.getByLabelText('Cloud'), 'GCP');
+      await user.type(screen.getByLabelText('Project'), 'acme-prod');
+      const gcp = screen.getByText(/module "rrotor"/);
+      expect(gcp).toHaveTextContent('//deploy/terraform/gcp');
+      expect(gcp).toHaveTextContent('project = "acme-prod"');
+      expect(gcp).toHaveTextContent('region = "europe-west2"');
+      await user.clear(screen.getByLabelText('Region'));
+      await user.type(screen.getByLabelText('Region'), 'us-east1');
+      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('region = "us-east1"');
+
+      await user.click(screen.getByRole('button', { name: 'Register another' }));
+      expect(screen.getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
+      expect(screen.queryByText('glyphh_rt_secret')).not.toBeInTheDocument();
+    });
+
+    it('asks for a host it can use before registering', async () => {
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('radio', { name: /^Helm/ }));
+      const button = screen.getByRole('button', { name: 'Register runtime' });
+      await user.type(screen.getByLabelText('Name'), 'Lab');
+      await user.type(screen.getByLabelText('Public host'), 'localhost');
+      expect(screen.getByText('Use the host alone, such as rrotor.acme.com.')).toBeInTheDocument();
+      expect(button).toBeDisabled();
+    });
+
+    it('shows why a runtime could not be registered', async () => {
+      server.use(http.post(v1('/runtimes/self'), () => apiError(403, 'E_NOT_IN_PLAN', 'Self-hosting needs the Team plan.')));
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('radio', { name: /^Terraform/ }));
+      await user.type(screen.getByLabelText('Name'), 'Lab');
+      await user.type(screen.getByLabelText('Public host'), 'rrotor.lab.acme.com');
+      await user.click(screen.getByRole('button', { name: 'Register runtime' }));
+      expect(await screen.findByText('Self-hosting needs the Team plan.')).toBeInTheDocument();
+    });
+  });
+
+  describe('the self-hosted runtimes', () => {
+    it('lists each with its state, version and last heartbeat', async () => {
+      renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      const [acme, lab] = within(list).getAllByRole('listitem');
+      expect(within(acme!).getByText('Acme production')).toBeInTheDocument();
+      expect(within(acme!).getByText('Running')).toBeInTheDocument();
+      expect(within(acme!).getByText(/^rrotor\.acme\.com · 1\.4\.2 · last heartbeat /)).toBeInTheDocument();
+      expect(within(lab!).getByText('Not seen yet')).toBeInTheDocument();
+      expect(within(lab!).getByText('rrotor.lab.acme.com · no heartbeat yet')).toBeInTheDocument();
+    });
+
+    it('shows nothing when there are none', async () => {
+      server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
+      renderApp('/getting-started');
+      await screen.findByText('pip install glyphh-ada');
+      expect(screen.queryByText('Your self-hosted runtimes')).not.toBeInTheDocument();
+    });
+
+    it('says so when the list cannot be read', async () => {
+      server.use(http.get(v1('/runtimes/self'), () => apiError(500, 'E_INTERNAL', 'The runtimes could not be read.')));
+      renderApp('/getting-started');
+      expect(await screen.findByText('The runtimes could not be read.')).toBeInTheDocument();
+    });
+
+    it('rotates a token after asking and shows the new one once', async () => {
+      let rotated = '';
+      server.use(
+        http.post(v1('/runtimes/self/:id/token'), ({ params }) => {
+          rotated = String(params.id);
+          return HttpResponse.json({ token: 'glyphh_rt_new' });
+        }),
+      );
+      const { user } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await user.click(within(list).getAllByRole('button', { name: 'Rotate token' })[0]!);
+      const confirm = screen.getByRole('dialog', { name: 'Rotate this runtime’s token?' });
+      await user.click(within(confirm).getByRole('button', { name: 'Rotate' }));
+      const shown = await screen.findByRole('dialog', { name: 'The new runtime token' });
+      expect(rotated).toBe('rt-self-1');
+      expect(within(shown).getByText('glyphh_rt_new')).toBeInTheDocument();
+      expect(within(shown).getByText(/set it as RROTOR_RUNTIME_TOKEN for Acme production/)).toBeInTheDocument();
+      await user.click(within(shown).getByRole('button', { name: 'Done' }));
+      expect(screen.queryByText('glyphh_rt_new')).not.toBeInTheDocument();
+    });
+
+    it('shows why a token could not be rotated, and forgets it on cancel', async () => {
+      server.use(http.post(v1('/runtimes/self/:id/token'), () => apiError(404, 'E_NOT_FOUND', 'No such runtime.')));
+      const { user } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await user.click(within(list).getAllByRole('button', { name: 'Rotate token' })[0]!);
+      const confirm = screen.getByRole('dialog', { name: 'Rotate this runtime’s token?' });
+      await user.click(within(confirm).getByRole('button', { name: 'Rotate' }));
+      expect(await within(confirm).findByText('No such runtime.')).toBeInTheDocument();
+      await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByText('No such runtime.')).not.toBeInTheDocument();
+    });
+
+    it('deletes a runtime after asking', async () => {
+      let rows = selfRuntimes;
+      server.use(
+        http.get(v1('/runtimes/self'), () => HttpResponse.json(rows)),
+        http.delete(v1('/runtimes/self/:id'), ({ params }) => {
+          rows = rows.filter((r) => r.id !== params.id);
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      const { user } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await user.click(within(list).getAllByRole('button', { name: 'Delete' })[1]!);
+      const confirm = screen.getByRole('dialog', { name: 'Delete this runtime?' });
+      expect(within(confirm).getByText('Lab')).toBeInTheDocument();
+      await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+      await vi.waitFor(() => expect(within(list).queryByText('Lab')).not.toBeInTheDocument());
+      await user.click(within(list).getByRole('button', { name: 'Delete' }));
+      await user.click(within(screen.getByRole('dialog', { name: 'Delete this runtime?' })).getByRole('button', { name: 'Cancel' }));
+      expect(within(list).getByText('Acme production')).toBeInTheDocument();
+    });
+
+    it('issues an offline licence for a year by default, and says where it goes', async () => {
+      let sent: unknown;
+      server.use(
+        http.post(v1('/runtimes/:id/offline-licence'), async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json({ token: 'eyJwYXlsb2FkIjp7fX0', expires_at: '2027-10-18T00:00:00Z' });
+        }),
+      );
+      const { user } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
+      const dialog = screen.getByRole('dialog', { name: 'Issue an offline licence' });
+      expect(within(dialog).getByLabelText('Days')).toHaveValue(365);
+      await user.click(within(dialog).getByRole('button', { name: 'Issue licence' }));
+      const shown = await screen.findByRole('dialog', { name: 'The offline licence' });
+      expect(sent).toEqual({ days: 365 });
+      expect(within(shown).getByText('eyJwYXlsb2FkIjp7fX0')).toBeInTheDocument();
+      expect(within(shown).getByText(/Set it as RROTOR_LICENCE for Acme production.*It expires 18 Oct 2027\./)).toBeInTheDocument();
+      await user.click(within(shown).getByRole('button', { name: 'Copy licence' }));
+      expect(await navigator.clipboard.readText()).toBe('eyJwYXlsb2FkIjp7fX0');
+      await user.click(within(shown).getByRole('button', { name: 'Done' }));
+      expect(screen.queryByRole('dialog', { name: 'The offline licence' })).not.toBeInTheDocument();
+    });
+
+    it('takes from 1 to 365 days, and shows a refusal', async () => {
+      server.use(http.post(v1('/runtimes/:id/offline-licence'), () => apiError(403, 'E_NOT_IN_PLAN', 'Offline licences need the Team plan.')));
+      const { user } = renderApp('/getting-started');
+      const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+      await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[1]!);
+      const dialog = screen.getByRole('dialog', { name: 'Issue an offline licence' });
+      const days = within(dialog).getByLabelText('Days');
+      await user.clear(days);
+      await user.type(days, '400');
+      expect(within(dialog).getByText('From 1 to 365 days.')).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Issue licence' })).toBeDisabled();
+      await user.clear(days);
+      await user.type(days, '30');
+      await user.click(within(dialog).getByRole('button', { name: 'Issue licence' }));
+      expect(await within(dialog).findByText('Offline licences need the Team plan.')).toBeInTheDocument();
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('dialog', { name: 'Issue an offline licence' })).not.toBeInTheDocument();
+    });
+  });
+});

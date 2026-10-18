@@ -61,6 +61,27 @@ export type RuntimeKey = {
 };
 export type NewRuntimeKey = RuntimeKey & { key: string };
 
+/** How a self-hosted rrotor last reported in: `stopped` until it first links. */
+export type SelfRuntimeState = 'stopped' | 'online' | 'offline';
+
+/** A runtime someone runs themselves (Docker Compose, Helm, Terraform), registered with the server. */
+export type SelfRuntime = {
+  id: Uuid;
+  name: string;
+  /** Where it answers, such as `https://rrotor.acme.com`. */
+  public_url: string;
+  state: SelfRuntimeState;
+  version: string | null;
+  last_seen_at: IsoDate | null;
+  last_heartbeat_at: IsoDate | null;
+};
+
+/** A registration as the server answers it once: the token, and the env rrotor runs with, filled in. */
+export type NewSelfRuntime = Pick<SelfRuntime, 'id' | 'name' | 'public_url'> & { token: string; env: Record<string, string> };
+
+/** A long-lived licence for an air-gapped runtime, set as RROTOR_LICENCE. */
+export type OfflineLicence = { token: string; expires_at: IsoDate };
+
 export type ModelVersion = { id: Uuid; version: number; commit_sha: string; created_at: IsoDate; active_on: Uuid[] };
 export type Model = { id: Uuid; name: string; repo: string | null; created_at: IsoDate; versions: ModelVersion[] };
 

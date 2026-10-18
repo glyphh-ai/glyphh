@@ -22,6 +22,9 @@ export function MainLayout() {
       crumbs={useCrumbs()}
       sidebar={
         <Sidebar footer={<UserMenu />}>
+          <NavItem to="/getting-started" icon="flag">
+            Getting started
+          </NavItem>
           <NavGroup label="Runtime">
             <NavItem to="/" end icon="home">
               Home

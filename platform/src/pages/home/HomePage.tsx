@@ -72,7 +72,8 @@ export function HomePage() {
               </Button>
             }
           >
-            Starting it the first time makes it, at an address of its own.
+            Starting it the first time makes it, at an address of its own. New here, or running it yourself?{' '}
+            <Link to="/getting-started">Getting started</Link> walks you through it.
           </EmptyState>
         )}
 

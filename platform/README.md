@@ -22,7 +22,7 @@ what is not built yet is the server's `docs/roadmap.md`.
    `/oauth/authorize`, which sends the browser straight back to this platform's `/authorize` page (below) to pick
    Google or GitHub; the tokens come back to `{PLATFORM_URL}/auth/callback` and live in a sealed, HttpOnly cookie.
    The browser never holds a token.
-2. **Connect Claude once, to the runtime.** Home shows the one connector URL, `https://<machine>.glyphh.app/mcp`.
+2. **Connect Claude once, to the runtime.** Getting started walks a new account through it. Home shows the one connector URL, `https://<machine>.glyphh.app/mcp`.
    Adding it in Claude runs OAuth against the same server, which lands on `/authorize` here; signed in already,
    that is one Allow click.
 3. **Apps** use a runtime key (made on Keys, shown once) as the bearer at the runtime's address.
@@ -56,6 +56,7 @@ browser.
 
 | Page | Server calls | Does |
 |---|---|---|
+| Getting started | `GET /v1/runtime`, `GET /v1/runtimes/self` (each self-hosted runtime's state, version, last heartbeat) | The SDKs and the Claude plugin to copy; where rrotor runs: Glyphh hosted (Start, as Home), or Docker Compose, Helm or Terraform (AWS, GCP): register (`POST /v1/runtimes/self {name, public_url}`; the token is shown once), then the option's settings filled in from the answer's `env` and the connector URL `https://<host>/mcp`. Rotate a token (`POST /v1/runtimes/self/{id}/token`, shown once), delete (`DELETE /v1/runtimes/self/{id}`), issue an offline licence for an air-gapped runtime (`POST /v1/runtimes/{id}/offline-licence {days}`, set as `RROTOR_LICENCE`) |
 | Home | `GET /v1/runtime` (address, state, this month's hours, `paused`), `GET /v1/me` | Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`), copy the connector URL `{address}/mcp` |
 | Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name}`; the key is shown once), revoke (`DELETE /v1/runtime/keys/{id}`) |
 | Approvals | `GET /v1/approvals`, live from `GET /v1/approvals/stream` (server-sent events `approval`, `answered`) | Approve or decline (`POST /v1/approvals/{id} {answer}`) |
@@ -97,7 +98,7 @@ round trip and lands on Home.
 |---|---|
 | `server/` | The route handlers (Hono on Node): `/auth/login`, `/auth/callback`, `/auth/logout`, `/auth/session`, `/auth/providers` and `/api/v1/*`, which calls the server with the session's token, refreshing it when it runs out. `seal.ts` seals the cookie (AES-256-GCM); `oauth.ts` is the token endpoint |
 | `src/styles/` | `tokens.css`: every colour, size and font, one set per theme (`dark`, `light`, `dark-hc`, `light-hc`) on `[data-theme]`; `base.css`: document defaults and the thin scroll bar |
-| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
+| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, CodeBlock, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
 | `src/layout/` | The app shell (sidebar, breadcrumb bar, phone drawer), the account menu with its themes, page headers, settings sections, and the sign-in card |
 | `src/api/` | The server's types, the client for `/api/v1`, and one TanStack Query hook per read and write |
 | `src/pages/` | One folder per page; Billing's parts live in `pages/settings/billing/` |
