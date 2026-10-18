@@ -30,6 +30,7 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "features": {"sync": True, "ha": False, "offline": False, "sso": False},
         "markup_hidden": True,
     }
+    assert me["precedents"] == {"used": 0, "limit": 1_000_000} and me["hosting"]["machines"] == []
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

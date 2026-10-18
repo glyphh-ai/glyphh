@@ -1,4 +1,4 @@
-"""Who am I: the person, their org and role, and the plan version their org is on."""
+"""Who am I: the person, their org and role, the plan version their org is on, and what the org uses of it."""
 
 import uuid
 from datetime import datetime
@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.models import Identity, Org, User
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.plans import PlanView, org_plan
+from glyphh_server.ops.plans import PlanView
+from glyphh_server.ops.usage import Hosting, Precedents, usage
 
 
 class MeOrg(BaseModel):
@@ -27,6 +28,8 @@ class Me(BaseModel):
     providers: list[str]
     org: MeOrg
     plan: PlanView
+    precedents: Precedents
+    hosting: Hosting
 
 
 async def me(conn: AsyncConnection, who: Principal) -> Me:
@@ -36,6 +39,7 @@ async def me(conn: AsyncConnection, who: Principal) -> Me:
     providers = await conn.execute(
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)
     )
+    used = await usage(conn, who.org_id)
     return Me(
         id=who.user_id,
         email=person.email,
@@ -43,7 +47,9 @@ async def me(conn: AsyncConnection, who: Principal) -> Me:
         role=person.role,
         providers=list(providers.scalars()),
         org=MeOrg(**org._mapping),
-        plan=await org_plan(conn, who.org_id),
+        plan=used.plan,
+        precedents=used.precedents,
+        hosting=used.hosting,
     )
 
 

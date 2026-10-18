@@ -24,6 +24,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-pri
 <section><h2>Plan</h2><p id="plan">Loading…</p><ul id="limits"></ul>
   <div class="row"><select id="plans" aria-label="Plan"></select><button id="upgrade">Upgrade</button>
   <button id="billing">Manage billing</button></div></section>
+<section><h2>Usage</h2><p id="usage">Loading…</p><ul id="hosting"></ul></section>
 <section><h2>Installs</h2><ul id="installs"></ul></section>
 <section><h2>Connector grants</h2><ul id="grants"></ul></section>
 <p class="bad" id="error" hidden></p>
@@ -71,10 +72,18 @@ function showPlan(d) {
     item(`Managed precedents: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
 }
 
+const dollars = (c) => `$${(c / 100).toFixed(2)}`;
+
+function showUsage(u) {
+  $("usage").textContent = `Managed precedents ${u.precedents.used} of ${amount(u.precedents.limit)}. ` +
+    `Hosting this month: ${dollars(u.hosting.month_to_date_cents)}.`;
+  $("hosting").replaceChildren(...u.hosting.machines.map((m) => item(`${m.name} (${m.size}): ${dollars(m.cents)}`)));
+}
+
 async function refresh() {
   try {
-    const [w, p, plans, i, g] = await Promise.all([call("whoami"), call("plan"), call("plans"), call("installs"), call("connector_grants")]);
-    showWho(w); showPlan(p);
+    const [w, p, u, plans, i, g] = await Promise.all([call("whoami"), call("plan"), call("usage"), call("plans"), call("installs"), call("connector_grants")]);
+    showWho(w); showPlan(p); showUsage(u);
     $("plans").replaceChildren(...plans.plans.filter((x) => x.self_serve && x.name !== p.plan.name).map((x) => new Option(x.name, x.name)));
     $("installs").replaceChildren(...i.installs.map((x) => item(`${x.name} (${x.surface})`, "Sign out", () => act("sign_out_install", { install_id: x.id }))));
     $("grants").replaceChildren(...g.grants.map((x) => item(`${x.client}${x.current ? " (this one)" : ""}`, "Revoke", () => act("revoke_grant", { grant_id: x.id }))));

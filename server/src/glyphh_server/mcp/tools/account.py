@@ -1,8 +1,8 @@
-"""Who am I, my plan with its limits and features, and what each plan costs and includes."""
+"""Who am I, my plan with its limits and features, what the org uses of it, and what each plan costs and includes."""
 
 from glyphh_server.db.seed import SALES
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, amount, dump
-from glyphh_server.ops import me, plans
+from glyphh_server.ops import me, plans, usage
 from glyphh_server.ops.plans import PlanView
 
 
@@ -45,6 +45,21 @@ async def plan(ctx: Context, _: NoArgs) -> Done:
     return Done("\n".join(lines), {"plan": dump(p), "org": dump(org)})
 
 
+def dollars(cents: int) -> str:
+    return f"${cents / 100:,.2f}"
+
+
+async def show_usage(ctx: Context, _: NoArgs) -> Done:
+    found = await usage.usage(ctx.conn, ctx.who.org_id)
+    held, hosting = found.precedents, found.hosting
+    lines = [
+        f"Managed precedents: {held.used:,} of {amount(held.limit)}, on your hosted runtimes.",
+        f"Hosting {hosting.month} so far: {dollars(hosting.month_to_date_cents)}.",
+        *(f"{m.name} ({m.size}): {dollars(m.cents)}" for m in hosting.machines),
+    ]
+    return Done("\n".join(lines), dump(found))
+
+
 async def list_plans(ctx: Context, _: NoArgs) -> Done:
     found = await plans.list_plans(ctx.conn)
     lines = [f"{p.name}: {price(p)}; {includes(p)}" for p in found]
@@ -60,6 +75,16 @@ TOOLS: tuple[Tool, ...] = (
         "when it renews.",
         NoArgs,
         plan,
+        True,
+        True,
+    ),
+    Tool(
+        "usage",
+        "Usage",
+        "What the org uses of its plan: the precedents its hosted runtimes hold of the managed bucket, and hosting "
+        "this month so far, machine by machine, at the plan's rates.",
+        NoArgs,
+        show_usage,
         True,
         True,
     ),

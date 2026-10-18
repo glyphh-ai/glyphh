@@ -11,6 +11,7 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.drift import refuse_drift
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.seed import seed_mods, seed_plans
+from glyphh_server.db.seed_rates import seed_rates
 
 SCHEMA: Path = Path(__file__).with_name("schema.sql")
 _LOCK: int = 0x67_6C_79_70  # one schema run at a time across processes booting together
@@ -29,6 +30,7 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await conn.run_sync(refuse_drift)
         await seed_mods(conn)
         await seed_plans(conn, settings)
+        await seed_rates(conn)
 
 
 async def main() -> None:

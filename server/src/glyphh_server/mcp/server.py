@@ -10,9 +10,9 @@ from glyphh_server.mcp.tools.base import Context
 
 CAPABILITIES: dict[str, Any] = {"tools": {}, "resources": {}}
 INSTRUCTIONS: str = (
-    "Glyphh's account, from Claude: who you are (whoami), your plan (plan), what each plan costs and includes (plans), "
-    "upgrading (upgrade) and billing (billing_portal), your installs, your org's members and invites, your runtimes, "
-    "and the apps allowed to use this connector (connector_grants)."
+    "Glyphh's account, from Claude: who you are (whoami), your plan (plan) and what you use of it (usage), what each "
+    "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
+    "members and invites, your runtimes, and the apps allowed to use this connector (connector_grants)."
 )
 
 

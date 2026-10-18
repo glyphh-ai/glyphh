@@ -6,10 +6,12 @@ from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
 from glyphh_server.models.deployment import Deployment
 from glyphh_server.models.device_code import DeviceCode
+from glyphh_server.models.fly_rate import RATE_ITEMS, FlyRate
 from glyphh_server.models.github_installation import GitHubInstallation
 from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
+from glyphh_server.models.machine_month import MachineMonth
 from glyphh_server.models.mod import Mod
 from glyphh_server.models.model import Model, ModelVersion
 from glyphh_server.models.model_event import ModelEvent
@@ -32,6 +34,7 @@ __all__ = [
     "MACHINE_ID",
     "MODES",
     "PROVIDERS",
+    "RATE_ITEMS",
     "ROLES",
     "SURFACES",
     "TOKEN_KINDS",
@@ -43,10 +46,12 @@ __all__ = [
     "ConnectorToken",
     "Deployment",
     "DeviceCode",
+    "FlyRate",
     "GitHubInstallation",
     "Identity",
     "Install",
     "Invite",
+    "MachineMonth",
     "Mod",
     "Model",
     "ModelEvent",

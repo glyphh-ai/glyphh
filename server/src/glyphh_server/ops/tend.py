@@ -1,5 +1,6 @@
-"""The server's minute tick for hosted runtimes: every online machine's month counts the minute, the idle ones are
-stopped, and the keys that expired are taken off their runtimes. No plan has hosted hours: a machine is never paused."""
+"""The server's minute tick for hosted runtimes: every online machine's month counts the minute, every machine is
+metered at Fly's rates (ops/metering.py), the idle ones are stopped, and the keys that expired are taken off their
+runtimes. No plan has hosted hours: a machine is never paused."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -11,11 +12,12 @@ from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import stop_idle
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.presence import ONLINE
+from glyphh_server.ops.metering import meter
 from glyphh_server.ops.runtime_keys import push_expired
 from glyphh_server.ops.runtimes import month_of
 
 
-async def tally(engine: AsyncEngine, step: int) -> None:
+async def tally(engine: AsyncEngine, step: int, region: str) -> None:
     """Every hosted machine's month brought up to now: `step` more seconds while online, from 0 once it turned."""
     month = month_of(datetime.now(UTC))
     online = case((Rrotor.state == ONLINE, step), else_=0)
@@ -25,11 +27,12 @@ async def tally(engine: AsyncEngine, step: int) -> None:
         await conn.execute(
             update(Rrotor).where(Rrotor.id.in_(hosted)).values(month=month, month_seconds=since + online)
         )
+        await meter(conn, step, region)
 
 
 async def tend(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, step: int) -> None:
-    """One tick of the server's care of hosted runtimes: the month tallied, the idle ones stopped, and the keys that
-    expired since the last tick (with a tick to spare) taken off their runtimes."""
-    await tally(engine, step)
+    """One tick of the server's care of hosted runtimes: the month tallied and metered, the idle ones stopped, and the
+    keys that expired since the last tick (with a tick to spare) taken off their runtimes."""
+    await tally(engine, step, fly.settings.fly_region)
     await stop_idle(engine, fly, idle)
     await push_expired(engine, hub, timedelta(seconds=2 * step))

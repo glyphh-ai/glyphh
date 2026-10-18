@@ -135,6 +135,7 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
     assert set(tools) == {
         "whoami",
         "plan",
+        "usage",
         "plans",
         "upgrade",
         "billing_portal",
@@ -158,7 +159,7 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "register_self_runtime",
         "offline_licence",
     }
-    assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan"}
+    assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan", "usage"}
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}
     assert tools["upgrade"]["inputSchema"]["required"] == ["plan"] and tools["whoami"]["annotations"]["readOnlyHint"]
     assert tools["plans"]["annotations"]["readOnlyHint"] and not tools["upgrade"]["annotations"]["readOnlyHint"]

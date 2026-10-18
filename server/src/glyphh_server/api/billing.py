@@ -1,16 +1,21 @@
-"""Subscribing, changing plan, Stripe's portal, and Stripe's webhook. Writes are the admin's."""
+"""The org's billing and use; subscribing, changing plan, Stripe's portal, and Stripe's webhook. Writes are the
+admin's."""
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.pages import to_platform
+from glyphh_server.models import Org
 from glyphh_server.ops.billing import changes, checkout, signature, webhook
 from glyphh_server.ops.billing.checkout import StripePage
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.org import OrgView
+from glyphh_server.ops.usage import Usage, usage
 
 router = APIRouter(tags=["plans and billing"])
 
@@ -31,6 +36,19 @@ class CheckoutIn(BaseModel):
 
 class PlanIn(BaseModel):
     plan: PlanName
+
+
+class BillingView(Usage):
+    billing_status: str
+    renews_at: datetime | None = Field(description="When the subscription renews; null when not subscribed or ending")
+
+
+@router.get("/v1/billing", operation_id="billing")
+async def get_billing(caller: Caller, conn: Conn) -> BillingView:
+    """The org's billing: its plan and price, the precedents its hosted runtimes hold of the plan's managed bucket,
+    and its hosting this month, all in, machine by machine."""
+    row = (await conn.execute(select(Org.billing_status, Org.renews_at).where(Org.id == caller.org_id))).one()
+    return BillingView(**(await usage(conn, caller.org_id)).model_dump(), **row._mapping)
 
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")

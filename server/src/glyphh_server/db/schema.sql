@@ -29,6 +29,18 @@ CREATE TABLE IF NOT EXISTS oauth_clients (
     CONSTRAINT oauth_clients_redirect_uris CHECK (cardinality(redirect_uris) > 0)
 );
 
+-- fly_rates
+CREATE TABLE IF NOT EXISTS fly_rates (
+    item TEXT NOT NULL,
+    region TEXT NOT NULL,
+    usd_per_30_days NUMERIC(12, 4) NOT NULL,
+    effective_from DATE NOT NULL,
+    source TEXT NOT NULL,
+    PRIMARY KEY (item, region, effective_from),
+    CONSTRAINT fly_rates_item CHECK (item IN ('small', 'medium', 'large', 'volume')),
+    CONSTRAINT fly_rates_rate CHECK (usd_per_30_days >= 0)
+);
+
 -- plans
 CREATE TABLE IF NOT EXISTS plans (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -77,8 +89,10 @@ CREATE TABLE IF NOT EXISTS orgs (
     stripe_subscription_id TEXT,
     billing_status TEXT DEFAULT 'none' NOT NULL,
     renews_at TIMESTAMP WITH TIME ZONE,
+    markup_pct INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
+    CONSTRAINT orgs_markup CHECK (coalesce(markup_pct, 0) >= 0),
     CONSTRAINT orgs_billing_status CHECK (billing_status IN ('none', 'active', 'trialing', 'past_due', 'unpaid', 'canceled', 'incomplete', 'incomplete_expired', 'paused')),
     FOREIGN KEY(plan_version_id) REFERENCES plan_versions (id) ON DELETE RESTRICT,
     UNIQUE (stripe_customer_id),
@@ -101,6 +115,21 @@ CREATE TABLE IF NOT EXISTS invites (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS invites_one_open ON invites (org_id, lower(email)) WHERE accepted_at IS NULL;
 CREATE INDEX IF NOT EXISTS ix_invites_org_id ON invites (org_id);
+
+-- machine_months
+CREATE TABLE IF NOT EXISTS machine_months (
+    rrotor_id UUID NOT NULL,
+    month TEXT NOT NULL,
+    org_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    size TEXT NOT NULL,
+    cost_micros BIGINT DEFAULT 0 NOT NULL,
+    charge_micros BIGINT DEFAULT 0 NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (rrotor_id, month),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_machine_months_org_id ON machine_months (org_id);
 
 -- users
 CREATE TABLE IF NOT EXISTS users (
@@ -463,6 +492,10 @@ ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invites FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON invites;
 CREATE POLICY tenant ON invites USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE machine_months ENABLE ROW LEVEL SECURITY;
+ALTER TABLE machine_months FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON machine_months;
+CREATE POLICY tenant ON machine_months USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;

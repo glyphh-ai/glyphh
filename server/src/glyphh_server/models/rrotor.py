@@ -20,6 +20,9 @@ class Size:
     memory_mb: int
     volume_gb: int
 
+    def fields(self) -> dict[str, str | int]:
+        return {"cpu_kind": self.cpu_kind, "cpus": self.cpus, "memory_mb": self.memory_mb, "volume_gb": self.volume_gb}
+
     def said(self) -> str:
         return f"{self.cpu_kind} {self.cpus} CPU, {self.memory_mb // 1024} GB memory, {self.volume_gb} GB disk"
 

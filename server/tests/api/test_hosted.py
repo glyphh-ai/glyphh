@@ -278,7 +278,7 @@ async def test_the_tally_counts_online_time_starts_again_with_the_month_and_neve
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == online).values(month=month, month_seconds=10**7))
         await conn.execute(update(Rrotor).where(Rrotor.id == turned).values(month="2020-01", month_seconds=10**6))
-    await tending.tally(engine, 60)
+    await tending.tally(engine, 60, "iad")
     rows = [await _row(engine, str(i)) for i in (online, turned, stopped)]
     assert [(r.month, r.month_seconds, r.state) for r in rows] == [
         (month, 10**7 + 60, "online"),  # far past any hours there were: never paused
