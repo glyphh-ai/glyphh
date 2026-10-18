@@ -31,9 +31,8 @@ class DeleteMachine(MachineId):
 
 
 def line(m: Machine) -> str:
-    paused = ", paused: the month's hours are spent" if m.paused else ""
     hours = f"{m.month_seconds / 3600:.1f} h this month"
-    return f"{m.name} ({m.size}) is {m.state} at {m.address}, {hours}{paused}, id {m.id}"
+    return f"{m.name} ({m.size}) is {m.state} at {m.address}, {hours}, id {m.id}"
 
 
 async def list_machines(ctx: Context, _: NoArgs) -> Done:

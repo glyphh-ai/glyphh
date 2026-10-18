@@ -53,12 +53,11 @@ def _items(body: dict[str, str], prefix: str = "items") -> list[dict[str, str]]:
 
 class FakeStripe:
     """Stripe's few endpoints billing uses, remembering every call and every subscription: items changed, added and
-    deleted as Stripe does, and preview invoices whose proration lines are half a month of each item changed."""
+    deleted as Stripe does, and a subscription cancelled."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, dict[str, str]]] = []
         self.subs: dict[str, dict[str, Any]] = {}
-        self.prices: dict[str, int] = {}
         self.fail: bool = False
 
     def sub(self, sub_id: str, customer: str, price: str, quantity: int, status: str = "active") -> dict[str, Any]:
@@ -71,8 +70,9 @@ class FakeStripe:
         }
         return self.subs[sub_id]
 
-    def add_item(self, sub_id: str, price: str, quantity: int) -> dict[str, Any]:
-        item = {"id": f"si_{sub_id}_{price}", "price": {"id": price}, "quantity": quantity}
+    def add_item(self, sub_id: str, price: str) -> dict[str, Any]:
+        """A metered item, as the hosting price is: it has no quantity."""
+        item = {"id": f"si_{sub_id}_{price}", "price": {"id": price, "recurring": {"usage_type": "metered"}}}
         self.subs[sub_id]["items"]["data"].append(item)
         return item
 
@@ -93,28 +93,10 @@ class FakeStripe:
                 item["quantity"] = int(change["quantity"])
         return sub
 
-    def _preview(self, body: dict[str, str]) -> dict[str, Any]:
-        """A new item's half month is a new-style proration line, a deleted one's credit an old-style one; the next
-        month's own line is no proration."""
-        sub = self.subs[body["subscription"]]
-        lines: list[dict[str, Any]] = [
-            {"amount": 999_999, "parent": {"subscription_item_details": {"proration": False}}}
-        ]
-        for change in _items(body, "subscription_details[items]"):
-            if "id" in change:
-                item = next(i for i in sub["items"]["data"] if i["id"] == change["id"])
-                lines.append(
-                    {"amount": -self.prices.get(item["price"]["id"], 0) * item["quantity"] // 2, "proration": True}
-                )
-            else:
-                half = self.prices.get(change["price"], 0) * int(change["quantity"]) // 2
-                lines.append({"amount": half, "parent": {"subscription_item_details": {"proration": True}}})
-        return {"object": "invoice", "currency": "usd", "lines": {"data": lines}}
-
     def handle(self, request: httpx.Request) -> httpx.Response:
         if self.fail:
             return httpx.Response(500, json={"error": {"message": "down"}})
-        body = dict(parse_qsl(request.content.decode()))
+        body = dict(parse_qsl(request.content.decode() or request.url.query.decode()))
         path = request.url.path.removeprefix("/v1")
         self.calls.append((request.method, path, body))
         if path == "/customers":
@@ -123,9 +105,9 @@ class FakeStripe:
             return answer({"id": "cs_1", "url": "https://checkout.stripe.test/cs_1"})
         if path == "/billing_portal/sessions":
             return answer({"url": "https://billing.stripe.test/p_1"})
-        if path == "/invoices/create_preview":
-            return answer(self._preview(body))
         sub = self.subs[path.removeprefix("/subscriptions/")]
+        if request.method == "DELETE":
+            sub["status"] = "canceled"
         return answer(self._change(sub, body) if request.method == "POST" else sub)
 
 

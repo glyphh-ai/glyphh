@@ -1,9 +1,8 @@
-"""Who am I, my plan with each mod's limits, its add-ons and what is used, and what each plan includes."""
+"""Who am I, my plan with its limits and features, and what each plan costs and includes."""
 
-from typing import Any
-
+from glyphh_server.db.seed import SALES
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, amount, dump
-from glyphh_server.ops import addons, me, plans
+from glyphh_server.ops import me, plans
 from glyphh_server.ops.plans import PlanView
 
 
@@ -19,40 +18,36 @@ async def whoami(ctx: Context, _: NoArgs) -> Done:
     return Done(f"{found.name or found.email} ({found.email}), {found.role} of {found.org.name}.", data)
 
 
-def mod_lines(plan: PlanView) -> list[str]:
-    return [
-        f"{slug}: {', '.join(f'{limit} {amount(allowed)}' for limit, allowed in mod.limits.items())}"
-        for slug, mod in plan.mods.items()
-    ]
-
-
 def price(plan: PlanView) -> str:
-    return f"${plan.seat_price_cents / 100:g} per seat a month"
+    if plan.price_cents is None:
+        return f"by contract, a {plan.interval}: talk to us at {SALES}"
+    if plan.interval is None:
+        return "free"
+    return f"${plan.price_cents / 100:,.0f} a {plan.interval}"
+
+
+def includes(plan: PlanView) -> str:
+    on = [name for name, yes in plan.features.model_dump().items() if yes]
+    return (
+        f"hosted machines {amount(plan.limits.machines)}, managed precedents {amount(plan.limits.precedents)}; "
+        f"features: {', '.join(on) or 'none'}"
+    )
 
 
 async def plan(ctx: Context, _: NoArgs) -> Done:
     found = await me.me(ctx.conn, ctx.who)
-    org, used, p = found.org, found.used, found.plan
-    added = [a for a in await addons.list_addons(ctx.conn, ctx.who.org_id) if a.added]
+    org, p = found.org, found.plan
     renews = f", renews {org.renews_at:%Y-%m-%d}" if org.renews_at else ""
     lines = [
-        f"{p.name} (version {p.version}), {price(p)}: {org.seats} seats, billing {org.billing_status}{renews}.",
-        f"Members {used.members} of {amount(p.limits.members)}; "
-        f"installs {used.installs} of {amount(p.limits.installs)}.",
-        *mod_lines(p),
-        "Add-ons: " + (", ".join(f"{a.mod} ({a.quantity})" for a in added) or "none") + ".",
+        f"{p.name} (version {p.version}), {price(p)}: billing {org.billing_status}{renews}.",
+        f"It includes {includes(p)}. Members, installs and local or self-hosted precedents are unlimited.",
     ]
-    data: dict[str, Any] = {"plan": dump(p), "used": dump(used), "org": dump(org), "addons": [dump(a) for a in added]}
-    return Done("\n".join(lines), data)
+    return Done("\n".join(lines), {"plan": dump(p), "org": dump(org)})
 
 
 async def list_plans(ctx: Context, _: NoArgs) -> Done:
     found = await plans.list_plans(ctx.conn)
-    lines = [
-        f"{p.name}: {price(p)}; members {amount(p.limits.members)}, installs {amount(p.limits.installs)}; "
-        + "; ".join(mod_lines(p))
-        for p in found
-    ]
+    lines = [f"{p.name}: {price(p)}; {includes(p)}" for p in found]
     return Done("\n".join(lines), {"plans": [dump(p) for p in found]})
 
 
@@ -61,8 +56,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "plan",
         "My plan",
-        "The org's Glyphh plan: each mod it includes with that mod's limits and what is used, its add-ons, the "
-        "seats, billing status and when it renews.",
+        "The org's Glyphh plan: its price, hosted machines, managed precedents and features, its billing status and "
+        "when it renews.",
         NoArgs,
         plan,
         True,
@@ -71,7 +66,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "plans",
         "Glyphh plans",
-        "What each Glyphh plan costs per seat and includes: account limits, each mod and its limits.",
+        "What each Glyphh plan costs and includes: hosted machines, managed precedents and features. Never per seat, "
+        "per model or per install.",
         NoArgs,
         list_plans,
         True,

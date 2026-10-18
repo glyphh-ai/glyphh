@@ -1,6 +1,6 @@
 """The person's side of the device flow: the sign-in waiting for them by its code, then approve or deny. Approving
-on a machine the person already has reuses its install (its old tokens revoked, no limit to check); a new machine
-is a new install, refused past the plan's max_installs."""
+on a machine the person already has reuses its install (its old tokens revoked); a new machine is a new install,
+never limited."""
 
 import uuid
 
@@ -9,11 +9,10 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Invalid
-from glyphh_server.models import DeviceCode, Install, User
+from glyphh_server.models import DeviceCode, Install
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.tokens import revoke_tokens
 from glyphh_server.ops.device import normalize
-from glyphh_server.ops.plans import org_version
 
 GONE: str = "This code has expired, was used, or is not right. Start again in Claude."
 
@@ -80,9 +79,7 @@ async def _reuse(conn: AsyncConnection, user_id: uuid.UUID, found: DeviceCode) -
 
 
 async def _new_install(conn: AsyncConnection, user_id: uuid.UUID, found: DeviceCode) -> uuid.UUID:
-    """A machine the person has not signed in on: a new install, if the plan has room for one more."""
-    org_id = (await conn.execute(select(User.org_id).where(User.id == user_id))).scalar_one()
-    await limits.check(conn, "installs", await limits.installs(conn, user_id), await org_version(conn, org_id))
+    """A machine the person has not signed in on: a new install. Installs are unlimited on every plan."""
     values = {
         "user_id": user_id,
         "machine_id": found.machine_id,

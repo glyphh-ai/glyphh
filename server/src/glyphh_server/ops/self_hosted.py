@@ -1,7 +1,7 @@
 """Self-hosted runtimes: a rrotor the person runs on their own infrastructure (Docker Compose, a Helm chart,
 Terraform), registered here by name and the public address it answers at, `https://<host>`. Its token is shown once
 and kept only as a hash; rotating it, or deleting the runtime, closes its link. It links like any rrotor, but nothing
-here runs it: it is never provisioned, woken or stopped, and never tallied by hours or paused. Its licence comes in
+here runs it: it is never provisioned, woken or stopped, and never tallied. Its licence comes in
 its welcome, from its daily heartbeat, or, air-gapped, as an offline licence (ops/heartbeat.py)."""
 
 import re

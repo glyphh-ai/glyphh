@@ -42,10 +42,17 @@ class Conflict(GlyphhError):
 
 
 class LimitReached(GlyphhError):
-    """The plan allows no more: members, seats or installs. The detail names the limit, what is used,
-    the most allowed, and the plan that would lift it."""
+    """The plan allows no more hosted machines. The detail names the limit, what is used, the most allowed, and the
+    plan that would lift it."""
 
     code = "E_LIMIT"
+    status = 403
+
+
+class NotInPlan(GlyphhError):
+    """The org's plan has no such feature (the detail's `reason` names it): Enterprise does."""
+
+    code = "E_NOT_IN_PLAN"
     status = 403
 
 

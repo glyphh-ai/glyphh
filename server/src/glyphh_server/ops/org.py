@@ -1,4 +1,4 @@
-"""The caller's org: its name, its plan version, its seats and what Stripe says of its billing."""
+"""The caller's org: its name, its plan version, its members and what Stripe says of its billing."""
 
 import uuid
 
@@ -18,22 +18,17 @@ class OrgView(BaseModel):
     name: str
     admin_user_id: uuid.UUID | None
     plan: PlanView
-    seats: int
-    seats_taken: int
     members: int
     billing_status: str
 
 
 async def org_view(conn: AsyncConnection, org_id: uuid.UUID) -> OrgView:
     row = (
-        await conn.execute(
-            select(Org.id, Org.name, Org.admin_user_id, Org.seats, Org.billing_status).where(Org.id == org_id)
-        )
+        await conn.execute(select(Org.id, Org.name, Org.admin_user_id, Org.billing_status).where(Org.id == org_id))
     ).one()
     return OrgView(
         **row._mapping,
         plan=await org_plan(conn, org_id),
-        seats_taken=await limits.seats_taken(conn, org_id),
         members=await limits.members(conn, org_id),
     )
 

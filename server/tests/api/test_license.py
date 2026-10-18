@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.ops.license import load_key
 from tests.conftest import SETTINGS
-from tests.db.helpers import person, with_addon
+from tests.db.helpers import person
 
 
 def _verify(key: dict, lic: dict) -> None:
@@ -26,36 +26,28 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "ada")
     lic = (await client.get("/v1/license", headers=ada.headers)).json()
     key = (await client.get("/v1/license/key", headers=ada.headers)).json()
     assert key["alg"] == "Ed25519"
     _verify(key, lic)
     p = lic["payload"]
     assert (p["install_id"], p["user_id"], p["org_id"]) == (str(ada.install_id), str(ada.user_id), str(ada.org_id))
-    assert (p["plan"], p["limits"], p["mods"]) == (
-        "Pro",
-        {"members": 1, "installs": 5, "machines": 3},
-        {
-            "ada": {"limits": {"models": 3, "precedents": 10000}},
-        },
-    )
-    assert list(p["mods"]) == ["ada"]
-    assert sorted(p) == ["expires_at", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
+    assert (p["plan"], p["limits"], p["mods"]) == ("Pro", {"machines": 3}, {"ada": {"limits": {"precedents": None}}})
+    assert p["features"] == {"sync": True, "ha": False, "offline": False, "sso": False}
+    assert sorted(p) == ["expires_at", "features", "install_id", "limits", "mods", "org_id", "plan", "user_id"]
     assert p["expires_at"].endswith("Z")
     left = datetime.fromisoformat(p["expires_at"]) - datetime.now(UTC)
     assert timedelta(hours=23, minutes=59) < left <= timedelta(hours=24)
-    lic["payload"]["mods"]["ada"]["limits"]["models"] = None
+    lic["payload"]["mods"]["ada"]["limits"]["precedents"] = 10**9
     with pytest.raises(InvalidSignature):
         _verify(key, lic)
 
 
-async def test_free_carries_free_limits_and_the_license_needs_a_token(
-    client: httpx.AsyncClient, engine: AsyncEngine
-) -> None:
+async def test_free_includes_ada_and_the_license_needs_a_token(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await person(engine)
-    mods = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]["mods"]
-    assert mods == {}
+    p = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]
+    assert (p["mods"], p["limits"]) == ({"ada": {"limits": {"precedents": None}}}, {"machines": 0})
+    assert not any(p["features"].values())
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401
 

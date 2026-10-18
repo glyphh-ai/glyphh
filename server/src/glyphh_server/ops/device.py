@@ -1,6 +1,7 @@
 """Signing an install in by device flow (RFC 8628). The mod asks for a code; the person opens the link, signs in
 and approves; the mod, polling, gets the install's token, once. The install is the machine: approving on a machine
-the person already has reuses its install; a new machine is refused past the plan's max_installs."""
+the person already has reuses its install; a new machine is a new install,
+never limited."""
 
 import secrets
 from datetime import UTC, datetime, timedelta

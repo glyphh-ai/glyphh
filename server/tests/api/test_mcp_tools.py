@@ -22,7 +22,7 @@ def _refused(result: dict, code: str) -> dict:
     return error
 
 
-async def test_whoami_and_plan_show_the_account_each_mods_limits_and_what_is_used(
+async def test_whoami_and_plan_show_the_account_its_limits_and_features(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine)
@@ -34,20 +34,25 @@ async def test_whoami_and_plan_show_the_account_each_mods_limits_and_what_is_use
     assert who["isError"] is False and who["structuredContent"]["email"] == ada.email
     assert who["content"] == [{"type": "text", "text": f"Ada Lovelace ({ada.email}), admin of Ada Lovelace's org."}]
     plan = await tool(client, auth, "plan")
-    text = plan["content"][0]["text"]
-    assert "Free (version 1), $0 per seat a month: 1 seats, billing none, renews 2026-11-15." in text
-    assert "Members 1 of 1; installs 1 of 1.\nAdd-ons: none." in text
+    assert plan["content"][0]["text"] == (
+        "Free (version 1), free: billing none, renews 2026-11-15.\nIt includes hosted machines 0, managed precedents "
+        "0; features: none. Members, installs and local or self-hosted precedents are unlimited."
+    )
     data = plan["structuredContent"]
-    assert data["used"] == {"members": 1, "seats": 1, "installs": 1}
-    assert data["org"]["renews_at"].startswith("2026-11-15")
-    assert data["plan"]["mods"] == {} and data["addons"] == []
+    assert data["org"]["renews_at"].startswith("2026-11-15") and data["plan"]["limits"]["machines"] == 0
 
 
-async def test_plans_lists_what_each_plan_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
+async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     _, auth = await granted(engine, await person(engine))
     plans = await tool(client, auth, "plans")
-    assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Pro", "Team"]
-    assert "Team: $16 per seat a month; members unlimited, installs 10;" in plans["content"][0]["text"]
+    assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Pro", "Team", "Enterprise"]
+    assert plans["content"][0]["text"].splitlines() == [
+        "Free: free; hosted machines 0, managed precedents 0; features: none",
+        "Pro: $99 a month; hosted machines 3, managed precedents 100000; features: sync",
+        "Team: $299 a month; hosted machines 10, managed precedents 1000000; features: sync",
+        "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; hosted machines unlimited, managed precedents "
+        "unlimited; features: sync, ha, offline, sso",
+    ]
 
 
 async def test_upgrade_opens_checkout_then_changes_plan_once_subscribed(
@@ -67,8 +72,6 @@ async def test_upgrade_opens_checkout_then_changes_plan_once_subscribed(
     changed = await tool(client, auth, "upgrade", plan="Team")
     assert changed["structuredContent"]["org"]["plan"]["name"] == "Team"
     assert changed["content"][0]["text"] == "Your org is on Team now, prorated."
-    seats = await tool(client, auth, "seats", seats=3)
-    assert seats["structuredContent"]["org"]["seats"] == 3 and "3 seats now, 1 taken" in seats["content"][0]["text"]
     portal = await tool(client, auth, "billing_portal")
     assert portal["structuredContent"] == {"url": "https://billing.stripe.test/p_1"}
 
@@ -78,12 +81,12 @@ async def test_billing_refusals_are_tool_errors(client: httpx.AsyncClient, engin
     _, auth = await granted(engine, ada)
     _refused(await tool(client, auth, "billing_portal"), "E_CONFLICT")
     _refused(await tool(client, auth, "upgrade", plan="Platinum"), "E_INVALID")
-    _refused(await tool(client, auth, "seats", seats=2), "E_CONFLICT")
+    _refused(await tool(client, auth, "upgrade", plan="Enterprise"), "E_INVALID")
     grace = await member(engine, ada.org_id)
     _, theirs = await granted(engine, grace)
     _refused(await tool(client, theirs, "upgrade", plan="Pro"), "E_FORBIDDEN")
-    problems = _refused(await tool(client, auth, "seats", seats=0), "E_INVALID")["problems"]
-    assert problems[0]["loc"] == ["seats"]
+    problems = _refused(await tool(client, auth, "upgrade", plan=""), "E_INVALID")["problems"]
+    assert problems[0]["loc"] == ["plan"]
     _refused(await tool(client, auth, "whoami", extra=1), "E_INVALID")
     assert (await org_row(engine, ada.org_id)).stripe_customer_id is None
 
@@ -111,7 +114,7 @@ async def test_installs_are_listed_and_one_signed_out(client: httpx.AsyncClient,
 
 
 async def test_members_and_invites_and_only_the_admin_invites(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=3)
+    ada = await person(engine, "Team")
     _, auth = await granted(engine, ada)
     made = await tool(client, auth, "invite", email="New@People.test")
     assert made["structuredContent"]["link"].startswith("http://localhost:8080/join?invite=")

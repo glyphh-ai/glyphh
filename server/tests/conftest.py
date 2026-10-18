@@ -50,7 +50,6 @@ SETTINGS: Settings = Settings(
     stripe_webhook_secret=WEBHOOK_SECRET,
     stripe_price_pro="price_test_pro",
     stripe_price_team="price_test_team",
-    stripe_price_ada="price_test_ada",
     secrets_key=SECRETS_KEY,
     github_app_id=GITHUB_APP_ID,
     github_app_private_key=GITHUB_APP_PEM,

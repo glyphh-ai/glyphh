@@ -7,30 +7,29 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import Install, Token
-from tests.db.helpers import another_install, member, person
+from tests.db.helpers import another_install, person
 
 
-async def test_me_has_the_org_role_plan_limits_and_what_is_used(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team", seats=3)
-    await member(engine, ada.org_id)
-    await client.post("/v1/org/invites", json={"email": "new@people.test"}, headers=ada.headers)
+async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
+    ada = await person(engine, "Team")
     me = (await client.get("/v1/me", headers=ada.headers)).json()
     assert (me["email"], me["name"], me["role"], me["providers"]) == (ada.email, "Ada Lovelace", "admin", [])
     assert me["org"] == {
         "id": str(ada.org_id),
         "name": "Ada Lovelace's org",
-        "seats": 3,
         "billing_status": "none",
         "renews_at": None,
     }
     assert me["plan"] == {
         "name": "Team",
         "version": 1,
-        "seat_price_cents": 1600,
-        "limits": {"members": None, "installs": 10, "machines": 10},
-        "mods": {},
+        "price_cents": 29_900,
+        "interval": "month",
+        "self_serve": True,
+        "limits": {"machines": 10, "precedents": 1_000_000},
+        "features": {"sync": True, "ha": False, "offline": False, "sso": False},
+        "markup_hidden": True,
     }
-    assert me["used"] == {"members": 2, "seats": 3, "installs": 1}
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

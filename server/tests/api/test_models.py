@@ -1,5 +1,6 @@
-"""Models: made within Ada's limit (none without Ada), named once each, versioned one commit at a time, listed with
-where each version is active, deployed to the caller's own runtime down its link, and deleted with everything theirs."""
+"""Models: never limited, on every plan (Ada is in all of them), named once each, versioned one commit at a time,
+listed with where each version is active, deployed to the caller's own runtime down its link, and deleted with
+everything theirs."""
 
 import uuid
 
@@ -9,15 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from tests.conftest import PROVIDER_SETTINGS, _client
-from tests.db.helpers import Person, person, with_addon
+from tests.db.helpers import Person, person
 from tests.fakes import fake_http
 from tests.link import SHA, SHA2, deploy, holding, hosted_runtime, local_runtime
 
 
 async def with_ada(engine: AsyncEngine) -> Person:
-    ada = await person(engine, "Pro")
-    await with_addon(engine, ada.org_id, "ada")
-    return ada
+    return await person(engine, "Pro")
 
 
 def _error(res: httpx.Response, status: int, code: str) -> dict:
@@ -27,23 +26,17 @@ def _error(res: httpx.Response, status: int, code: str) -> dict:
     return error
 
 
-async def test_models_are_made_within_adas_limit_and_none_without_ada(
-    client: httpx.AsyncClient, engine: AsyncEngine
-) -> None:
+async def test_models_are_never_limited_on_any_plan(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await with_ada(engine)
-    for name in ("leads", "tickets", "sales"):
+    for name in ("leads", "tickets", "sales", "more"):
         made = await client.post("/v1/models", json={"name": name}, headers=ada.headers)
         assert made.status_code == 201, made.text
         assert (made.json()["name"], made.json()["repo"], made.json()["versions"]) == (name, None, [])
-    full = _error(await client.post("/v1/models", json={"name": "more"}, headers=ada.headers), 403, "E_LIMIT")
-    assert (full["limit"], full["used"], full["max"], full["plan"]) == ("models", 3, 3, None)
-    assert full["message"] == "Ada allows you 3 models. Remove one first."
     free = await person(engine)
-    none = _error(await client.post("/v1/models", json={"name": "leads"}, headers=free.headers), 403, "E_FORBIDDEN")
-    assert none["reason"] == "no_ada"
-    listed = await client.get("/v1/models", headers=ada.headers)
-    assert [m["name"] for m in listed.json()] == ["leads", "tickets", "sales"]
     assert (await client.get("/v1/models", headers=free.headers)).json() == []
+    assert (await client.post("/v1/models", json={"name": "leads"}, headers=free.headers)).status_code == 201
+    listed = await client.get("/v1/models", headers=ada.headers)
+    assert [m["name"] for m in listed.json()] == ["leads", "tickets", "sales", "more"]
     bad = await client.post("/v1/models", json={"name": "leads", "repo": "not a repo"}, headers=ada.headers)
     assert bad.status_code == 422
 

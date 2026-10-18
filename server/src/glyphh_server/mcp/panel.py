@@ -8,7 +8,7 @@ from typing import Any
 
 from glyphh_server.mcp.protocol import Call
 
-URI: str = "ui://glyphh/account/2"
+URI: str = "ui://glyphh/account/3"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {

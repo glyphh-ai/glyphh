@@ -1,17 +1,17 @@
-"""Changing a subscribed org's plan (to the newest version of the other plan, prorated) or its seats (never fewer
-than are taken; every per-seat add-on's quantity with the plan's). The org is synced from Stripe's answer at once; the
-webhook keeps it true after."""
-
-from typing import Any
+"""Changing a subscribed org's plan: to the newest version of another self-serve plan, prorated by Stripe; or down
+to Free, which cancels the subscription now (invoiced now, prorated) once the org has no hosted machines. An org on a
+plan by contract (Enterprise) changes it with Glyphh, not here. The org is
+synced from Stripe's answer at once; the webhook keeps it true after."""
 
 from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import Conflict, Invalid
-from glyphh_server.ops.addons import check_allowed
+from glyphh_server.db.seed import FREE, SALES
+from glyphh_server.errors import Conflict
+from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.billing.checkout import billing_row, check_seats
-from glyphh_server.ops.billing.items import Items, classify
+from glyphh_server.ops.billing.checkout import billing_row, sold
+from glyphh_server.ops.billing.items import classify
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import sync_subscription
 from glyphh_server.ops.guards import require_admin
@@ -28,42 +28,25 @@ async def subscribed(conn: AsyncConnection, who: Principal) -> Row:
     return org
 
 
-async def items_now(conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row) -> Items:
-    return await classify(conn, who.org_id, await stripe.subscription(org.stripe_subscription_id))
-
-
-async def apply(
-    conn: AsyncConnection,
-    who: Principal,
-    stripe: StripeClient,
-    org: Row,
-    items: list[dict[str, Any]],
-    proration_date: int | None = None,
-) -> None:
-    changed = await stripe.change(org.stripe_subscription_id, items, proration_date)
-    await sync_subscription(conn, who.org_id, changed)
+async def to_free(conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row) -> None:
+    """The subscription cancelled now, once no hosted machine is left to bill."""
+    if await limits.org_machines(conn, who.org_id):
+        raise Conflict("Delete your hosted machines first.", reason="machines")
+    await sync_subscription(conn, who.org_id, await stripe.cancel(org.stripe_subscription_id))
 
 
 async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClient, plan: str) -> OrgView:
     org = await subscribed(conn, who)
+    current = await org_version(conn, who.org_id)
+    if not current.self_serve:
+        raise Conflict(f"Your {current.name} plan is by contract: talk to us at {SALES}.", reason="contract")
     version = await newest_version(conn, plan)
-    if version.stripe_price_id is None:
-        raise Invalid(f"{version.name} isn't sold through Stripe: cancel in the billing portal.", plan=version.name)
-    if version.id != (await org_version(conn, who.org_id)).id:
-        await check_seats(conn, who.org_id, version, org.seats)
-        await check_allowed(conn, who.org_id, version.name)
-        found = await items_now(conn, who, stripe, org)
-        # A new price resets an item's quantity to 1 unless the quantity is sent with it.
-        item = {"price": version.stripe_price_id, "quantity": org.seats}
-        await apply(conn, who, stripe, org, [item | ({"id": found.plan["id"]} if found.plan else {})])
-    return await org_view(conn, who.org_id)
-
-
-async def change_seats(conn: AsyncConnection, who: Principal, stripe: StripeClient, seats: int) -> OrgView:
-    org = await subscribed(conn, who)
-    await check_seats(conn, who.org_id, await org_version(conn, who.org_id), seats)
-    found = await items_now(conn, who, stripe, org)
-    items = [{"id": found.plan["id"], "quantity": seats}] if found.plan else []
-    items += [{"id": on.item["id"], "quantity": seats} for on in found.addons.values() if on.addon.per_seat]
-    await apply(conn, who, stripe, org, items)
+    if version.name == FREE:
+        await to_free(conn, who, stripe, org)
+        return await org_view(conn, who.org_id)
+    price = sold(version)
+    if version.id != current.id:
+        found = await classify(conn, who.org_id, await stripe.subscription(org.stripe_subscription_id))
+        item = {"price": price, "quantity": 1} | ({"id": found.plan["id"]} if found.plan else {})
+        await sync_subscription(conn, who.org_id, await stripe.change(org.stripe_subscription_id, [item]))
     return await org_view(conn, who.org_id)

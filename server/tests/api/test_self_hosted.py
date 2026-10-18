@@ -1,6 +1,6 @@
 """Self-hosted runtimes: registered by name and public address (the token shown once, the environment filled in),
 listed, their token rotated (the old one refused, its link closed, here or on another process), deleted; linked,
-welcomed with a licence that carries its grace and no hours; keys made for one; never tallied by hours."""
+welcomed with a licence that carries its grace and unlimited precedents; keys made for one; never tallied."""
 
 import base64
 import json
@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.errors import Unavailable
 from glyphh_server.models import Rrotor
-from glyphh_server.ops import hours
+from glyphh_server.ops import tend
 from glyphh_server.ops.link import calls
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.protocol import Keys
@@ -117,7 +117,7 @@ async def test_glyphhs_own_addresses_and_a_blank_name_are_refused(
     assert res.status_code == 422
 
 
-async def test_it_links_and_its_welcome_carries_a_licence_with_grace_and_no_hours(
+async def test_it_links_and_its_welcome_carries_a_licence_with_grace_and_unlimited_precedents(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine, "Pro")
@@ -125,11 +125,12 @@ async def test_it_links_and_its_welcome_carries_a_licence_with_grace_and_no_hour
     async with server() as srv, connect(srv, runtime.token) as ws:
         await ws.send_json(hello(runtime, version="2.0.0"))
         welcome = await ws.receive_json(timeout=5)
-        assert (welcome["accepted"], welcome["limits"], welcome["keys"]) == (True, {"runtime_hours": None}, [])
+        assert (welcome["accepted"], welcome["keys"], "limits" in welcome) == (True, [], False)
         verifies((await srv.http.get("/v1/license/key", headers=ada.headers)).json(), welcome["licence"])
         p = welcome["licence"]["payload"]
         assert (p["runtime_id"], p["kind"], p["grace_days"], p["install_id"]) == (str(runtime.id), "link", 14, None)
         assert uuid.UUID(p["licence_id"]) and p["plan"] == "Pro"
+        assert p["mods"] == {"ada": {"limits": {"precedents": None}}} and p["features"]["sync"] is True
         listed = (await client.get("/v1/runtimes/self", headers=ada.headers)).json()[0]
         assert (listed["state"], listed["version"]) == ("online", "2.0.0") and listed["last_seen_at"]
 
@@ -189,16 +190,16 @@ async def test_a_key_is_made_for_a_self_hosted_runtime_and_reaches_it(
     assert [k["runtime_id"] for k in listed] == [str(runtime.id)]
 
 
-async def test_hours_never_count_it_and_a_call_to_it_offline_says_so(
+async def test_the_tally_never_counts_it_and_a_call_to_it_offline_says_so(
     client: httpx.AsyncClient, engine: AsyncEngine, redis: Redis
 ) -> None:
-    ada = await person(engine)  # Free: 5 hosted hours
+    ada = await person(engine)
     runtime = rt(await made(client, ada))
     async with engine.begin() as conn:
         await conn.execute(update(Rrotor).where(Rrotor.id == runtime.id).values(state="online", month_seconds=10**7))
-    assert runtime.id not in await hours.tally(engine, None, Hub(redis), 60)  # type: ignore[arg-type]
+    await tend.tally(engine, 60)
     row = await runtime_row(engine, runtime.id)
-    assert (row.month, row.paused_at, row.month_seconds) == (None, None, 10**7)
+    assert (row.month, row.month_seconds) == (None, 10**7)
     away = SimpleNamespace(id=runtime.id, mode="self", last_seen_at=None)
     with pytest.raises(Unavailable) as refused:
         await calls.deliver(Hub(redis), away, Keys(hashes=[]))  # type: ignore[arg-type]

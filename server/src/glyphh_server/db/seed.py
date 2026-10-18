@@ -1,10 +1,9 @@
 """The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
-versions). A mod no longer seeded is retired, never deleted. The plans include no mod; every mod is an add-on
-(db/seed_addons.py)."""
+versions). A mod no longer seeded is retired, never deleted. Every plan includes every active mod: Ada is in all of
+them."""
 
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import asdict, dataclass
 
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as upsert
@@ -29,37 +28,51 @@ MODS: tuple[ModSeed, ...] = (
     ),
 )
 
-ModLimits = dict[str, dict[str, Any]]
+
+@dataclass(frozen=True, slots=True)
+class Features:
+    """What the licence lets a runtime do beyond running models: sync its precedents across instances, run highly
+    available, run offline (air-gapped), sign in with SSO."""
+
+    sync: bool = False
+    ha: bool = False
+    offline: bool = False
+    sso: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class PlanSeed:
     name: str
-    seat_price_cents: int
-    max_members: int | None
-    max_installs: int | None
+    price_cents: int | None
+    interval: str | None
+    self_serve: bool
     max_machines: int | None
-    runtime_hours: int | None
-    storage_cents_per_gb: int | None
-    mod_limits: ModLimits
+    precedents: int | None
+    features: Features
+    hosting_markup_pct: int | None
 
 
 FREE: str = "Free"
+ENTERPRISE: str = "Enterprise"
+SALES: str = "sales@glyphh.ai"
 
 
-# Every plan has hosted machines; its hours a month are the plan's, across all of a person's machines (Chris,
-# 2026-10-16: Free 5, Pro and Team 50; storage is still to price). TBD (Chris): the machines each plan allows (Free 1,
-# Pro 3, Team 10) are placeholders until set. No plan includes a mod: every mod is an add-on.
+# Never per seat, per model or per install: a plan sells managed precedents and hosted machines (Chris, 2026-10-18).
+# Local and self-hosted runtimes hold any number of precedents on every plan; `precedents` is the managed bucket, what
+# a hosted runtime may hold. Enterprise is by contract, its price and its markup each
+# customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): the machines each plan allows
+# and the markups on Fly's rates are placeholders until set.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, 1, 1, 1, 5, None, {}),
-    PlanSeed("Pro", 800, 1, 5, 3, 50, 50, {}),
-    PlanSeed("Team", 1_600, None, 10, 10, 50, 50, {}),
+    PlanSeed(FREE, 0, None, True, 0, 0, Features(), None),
+    PlanSeed("Pro", 9_900, "month", True, 3, 100_000, Features(sync=True), 30),
+    PlanSeed("Team", 29_900, "month", True, 10, 1_000_000, Features(sync=True), 30),
+    PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True), None),
 )
 
 
 def stripe_prices(settings: Settings) -> dict[str, str | None]:
-    """Which Stripe price each paid plan sells on: per environment, so read from settings."""
-    return {FREE: None, "Pro": settings.stripe_price_pro, "Team": settings.stripe_price_team}
+    """Which Stripe price each self-serve paid plan sells on: per environment, so read from settings."""
+    return {FREE: None, "Pro": settings.stripe_price_pro, "Team": settings.stripe_price_team, ENTERPRISE: None}
 
 
 async def seed_mods(conn: AsyncConnection) -> None:
@@ -98,12 +111,12 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             plan_id=plan_id,
             version=1 if newest is None else newest.version + 1,
             stripe_price_id=price,
-            seat_price_cents=seed.seat_price_cents,
-            max_members=seed.max_members,
-            max_installs=seed.max_installs,
+            price_cents=seed.price_cents,
+            billing_interval=seed.interval,
+            self_serve=seed.self_serve,
             max_machines=seed.max_machines,
-            runtime_hours=seed.runtime_hours,
-            storage_cents_per_gb=seed.storage_cents_per_gb,
-            mod_limits=seed.mod_limits,
+            precedents=seed.precedents,
+            hosting_markup_pct=seed.hosting_markup_pct,
+            **asdict(seed.features),
         )
     )

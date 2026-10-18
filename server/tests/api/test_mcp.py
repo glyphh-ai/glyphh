@@ -17,7 +17,7 @@ from glyphh_server.ops.connector import grants
 from tests.connector import MODERN, UI, granted, modern, modern_headers, rpc
 from tests.db.helpers import person
 
-PANEL: str = "ui://glyphh/account/2"
+PANEL: str = "ui://glyphh/account/3"
 
 
 async def _auth(engine: AsyncEngine) -> dict[str, str]:
@@ -136,12 +136,8 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "whoami",
         "plan",
         "plans",
-        "addons",
-        "add_mod",
-        "remove_mod",
         "upgrade",
         "billing_portal",
-        "seats",
         "installs",
         "sign_out_install",
         "members",
@@ -165,7 +161,7 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
     assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan"}
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}
     assert tools["upgrade"]["inputSchema"]["required"] == ["plan"] and tools["whoami"]["annotations"]["readOnlyHint"]
-    assert tools["add_mod"]["inputSchema"]["required"] == ["mod"] and tools["addons"]["annotations"]["readOnlyHint"]
+    assert tools["plans"]["annotations"]["readOnlyHint"] and not tools["upgrade"]["annotations"]["readOnlyHint"]
     for caps in ({}, {"extensions": []}, {"extensions": {"io.modelcontextprotocol/ui": {"mimeTypes": ["text/html"]}}}):
         body = modern("tools/list", caps=caps)
         listed = (await client.post("/mcp", json=body, headers=modern_headers(body, auth))).json()["result"]["tools"]

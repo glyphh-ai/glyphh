@@ -1,4 +1,5 @@
-"""An install is a machine: signing in again on the same machine reuses its install; a new machine counts."""
+"""An install is a machine: signing in again on the same machine reuses its install; a new machine is a new one,
+never limited."""
 
 from collections.abc import AsyncIterator
 
@@ -8,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import DeviceCode, Install, Token, User
-from tests.api.browser import Browser, decide, error_page, new_code, open_browser, sign_in, to_approve, went
+from tests.api.browser import Browser, decide, new_code, open_browser, sign_in, to_approve, went
 from tests.fakes import FakeStripe
 
 MAC: str = "c0ffee-hardware-uuid-hash_0123456789"
@@ -43,7 +44,7 @@ async def test_signing_in_again_on_the_same_machine_reuses_its_install(browser: 
     token = (await browser.http.post("/v1/device/token", json={"device_code": again["device_code"]})).json()
     headers = {"authorization": f"Bearer {token['access_token']}"}
     me = (await browser.http.get("/v1/me", headers=headers)).json()
-    assert me["used"]["installs"] == 1 and me["plan"]["limits"]["installs"] == 1
+    assert me["email"] == browser.email
     listed = (await browser.http.get("/v1/installs", headers=headers)).json()
     assert [(i["id"], i["machine_id"], i["name"], i["current"]) for i in listed] == [
         (token["install_id"], MAC, "Ada's renamed Mac", True)
@@ -54,17 +55,14 @@ async def test_signing_in_again_on_the_same_machine_reuses_its_install(browser: 
         assert (await conn.execute(held)).scalar_one() == 1
 
 
-async def test_a_new_machine_past_the_plan_is_refused_and_revoking_frees_the_slot(browser: Browser) -> None:
+async def test_new_machines_are_new_installs_any_number_of_them(browser: Browser, engine: AsyncEngine) -> None:
     mac = await sign_in(browser.http, machine_id=MAC)
-    other = await new_code(browser.http, "Linux box", machine_id="linux-box-machine-id-0001")
-    refused = await _approve(browser.http, other)
-    refused = error_page(refused)
-    assert refused["code"] == "E_LIMIT" and "allows 1 installs" in refused["message"]
+    for n in range(3):
+        other = await new_code(browser.http, f"Linux box {n}", machine_id=f"linux-box-machine-id-000{n}")
+        assert went(await _approve(browser.http, other))[1] == {"result": "approved"}
+    assert len(await _installs(engine, browser.email)) == 4
     installs = (await browser.http.get("/v1/installs", headers=mac)).json()
-    assert (await browser.http.delete(f"/v1/installs/{installs[0]['id']}", headers=mac)).status_code == 204
-    assert went(await _approve(browser.http, other))[1] == {"result": "approved"}
-    back = await new_code(browser.http, machine_id=MAC)
-    assert error_page(await _approve(browser.http, back))["code"] == "E_LIMIT"
+    assert len(installs) == 4
 
 
 async def test_an_old_mod_without_a_machine_id_gets_one_made_up(browser: Browser, engine: AsyncEngine) -> None:

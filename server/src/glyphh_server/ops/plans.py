@@ -1,7 +1,9 @@
-"""Plans as callers see them: each plan's newest version, and the version an org is pinned to, with the mods each
-includes and each mod's limits: the active mods its mod_limits names."""
+"""Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
+(hosted machines and the managed precedents) and its features. The markup on Fly's rates is a version's own and is
+never shown."""
 
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Row, select
@@ -13,23 +15,29 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 
 class Limits(BaseModel):
-    members: int | None = Field(description="null = unlimited")
-    installs: int | None = Field(description="null = unlimited; per user")
-    machines: int | None = Field(description="Hosted machines: null = unlimited; per user")
-
-
-class ModLimits(BaseModel):
-    limits: dict[str, int | None] = Field(
-        description="Each of the mod's limits, per user: null = unlimited; a switch is 0 or 1"
+    machines: int | None = Field(description="Hosted machines per person: null = unlimited, 0 = none")
+    precedents: int | None = Field(
+        description="Managed precedents: what a hosted runtime may hold; null = unlimited. Local and self-hosted "
+        "runtimes are unlimited on every plan"
     )
+
+
+class Features(BaseModel):
+    sync: bool = Field(description="Sync the precedent store across instances")
+    ha: bool = Field(description="Highly available runtimes")
+    offline: bool = Field(description="Offline (air-gapped) licences")
+    sso: bool = Field(description="SSO and SAML, roles and audit logs")
 
 
 class PlanView(BaseModel):
     name: str
     version: int
-    seat_price_cents: int
+    price_cents: int | None = Field(description="A month's or a year's, as interval says; null: set in the contract")
+    interval: Literal["month", "year"] | None = Field(description="null: free")
+    self_serve: bool = Field(description="Bought with Stripe Checkout; else talk to sales@glyphh.ai")
     limits: Limits
-    mods: dict[str, ModLimits] = Field(description="The mods this version includes, by slug; a mod not here is not")
+    features: Features
+    markup_hidden: Literal[True] = Field(True, description="The hosted rates already carry the plan's markup")
 
 
 COLUMNS = (
@@ -37,42 +45,43 @@ COLUMNS = (
     PlanVersion.id,
     PlanVersion.version,
     PlanVersion.stripe_price_id,
-    PlanVersion.seat_price_cents,
-    PlanVersion.max_members,
-    PlanVersion.max_installs,
+    PlanVersion.price_cents,
+    PlanVersion.billing_interval,
+    PlanVersion.self_serve,
     PlanVersion.max_machines,
-    PlanVersion.runtime_hours,
-    PlanVersion.mod_limits,
+    PlanVersion.precedents,
+    PlanVersion.sync,
+    PlanVersion.ha,
+    PlanVersion.offline,
+    PlanVersion.sso,
+    PlanVersion.hosting_markup_pct,
 )
 
 
 async def active_mods(conn: AsyncConnection) -> list[str]:
-    """Every active mod's slug, in the catalog's order."""
+    """Every active mod's slug, in the catalog's order: every plan includes each."""
     return list((await conn.execute(select(Mod.slug).where(Mod.active).order_by(Mod.sort, Mod.slug))).scalars())
 
 
-def included(row: Row, mods: list[str]) -> dict[str, ModLimits]:
-    """The active mods a version includes, by slug, each with its limits, both sorted by name."""
-    return {
-        slug: ModLimits(limits=dict(sorted(row.mod_limits[slug].items())))
-        for slug in sorted(row.mod_limits)
-        if slug in mods
-    }
+def features(row: Row) -> Features:
+    return Features(sync=row.sync, ha=row.ha, offline=row.offline, sso=row.sso)
 
 
-def view(row: Row, mods: list[str]) -> PlanView:
+def view(row: Row) -> PlanView:
     return PlanView(
         name=row.name,
         version=row.version,
-        seat_price_cents=row.seat_price_cents,
-        limits=Limits(members=row.max_members, installs=row.max_installs, machines=row.max_machines),
-        mods=included(row, mods),
+        price_cents=row.price_cents,
+        interval=row.billing_interval,
+        self_serve=row.self_serve,
+        limits=Limits(machines=row.max_machines, precedents=row.precedents),
+        features=features(row),
     )
 
 
 async def org_plan(conn: AsyncConnection, org_id: uuid.UUID) -> PlanView:
     """The org's pinned version as callers see it."""
-    return view(await org_version(conn, org_id), await active_mods(conn))
+    return view(await org_version(conn, org_id))
 
 
 def _newest():  # type: ignore[no-untyped-def]
@@ -96,8 +105,7 @@ async def newest_versions(conn: AsyncConnection) -> list[Row]:
 
 
 async def list_plans(conn: AsyncConnection) -> list[PlanView]:
-    mods = await active_mods(conn)
-    return [view(r, mods) for r in await newest_versions(conn)]
+    return [view(r) for r in await newest_versions(conn)]
 
 
 async def newest_version(conn: AsyncConnection, name: str) -> Row:
@@ -108,7 +116,7 @@ async def newest_version(conn: AsyncConnection, name: str) -> Row:
 
 
 async def org_version(conn: AsyncConnection, org_id: uuid.UUID) -> Row:
-    """The version the org is pinned to (it moves only when its admin changes plan)."""
+    """The version the org is pinned to (it moves only when its plan changes)."""
     return (
         await conn.execute(
             select(*COLUMNS)

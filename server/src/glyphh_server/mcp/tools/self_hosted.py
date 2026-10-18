@@ -71,7 +71,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "offline_licence",
         "Issue an offline licence",
-        "A licence of 1 to 365 days for an air-gapped self-hosted runtime (self_runtimes lists their ids).",
+        "A licence of 1 to 365 days for an air-gapped self-hosted runtime (self_runtimes lists their ids): on "
+        "Enterprise only.",
         OfflineFor,
         offline_licence,
     ),

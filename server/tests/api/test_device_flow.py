@@ -115,13 +115,14 @@ async def test_without_providers_the_page_says_so(engine: AsyncEngine, stripe: F
         assert (await bare.http.get("/auth/providers")).json() == {"providers": []}
 
 
-async def test_an_install_past_the_plan_is_refused_and_the_code_keeps_waiting(browser: Browser) -> None:
+async def test_installs_are_never_limited_a_second_machine_is_a_second_install(browser: Browser) -> None:
     await sign_in(browser.http)
     code = await new_code(browser.http, "Second machine")
     _, consent = await to_approve(browser.http, code["user_code"])
-    refused = error_page(await decide(browser.http, consent, "approve"))
-    assert refused["code"] == "E_LIMIT" and "allows 1 installs" in refused["message"]
-    assert _code(await _poll(browser.http, code["device_code"])) == "authorization_pending"
+    await decide(browser.http, consent, "approve")
+    token = (await _poll(browser.http, code["device_code"])).json()["access_token"]
+    installs = (await browser.http.get("/v1/installs", headers={"authorization": f"Bearer {token}"})).json()
+    assert "Second machine" in [i["name"] for i in installs] and len(installs) == 2
 
 
 async def test_github_signs_in_the_same_way(browser: Browser) -> None:

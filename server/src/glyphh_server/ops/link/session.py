@@ -35,7 +35,6 @@ from glyphh_server.ops.link.protocol import (
     Deployed,
     Event,
     Inbound,
-    Limits,
     Ping,
     Pong,
     Result,
@@ -108,20 +107,20 @@ async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
 
 
 async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
-    """A local runtime's welcome has no limits (the computer's own) and no licence (its mod hands one in); a hosted
-    one's carries the plan's hours, its keys and its licence; a self-hosted one's the same with no hours (they never
-    apply) and the licence's grace."""
+    """A local runtime's welcome has no licence (its mod hands one in); a hosted one's carries its keys and its licence,
+    the plan's managed precedents its cap; a self-hosted one's the same with its precedents unlimited and the
+    licence's grace."""
     if runtime.mode == "local":
-        return Welcome(limits=Limits(runtime_hours=None))
+        return Welcome()
     hosted = runtime.mode == "hosted"
-    stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS)
+    stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS, hosted=hosted)
     licence = None
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         keys = await hashes_for(conn, runtime.id)
         if ctx.license_key is not None:
             licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None, stamp)
-    return Welcome(limits=Limits(runtime_hours=runtime.runtime_hours if hosted else None), licence=licence, keys=keys)
+    return Welcome(licence=licence, keys=keys)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:

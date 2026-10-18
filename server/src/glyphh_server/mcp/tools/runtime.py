@@ -1,6 +1,6 @@
-"""The connector's runtime tools: the person's first hosted machine (its address, state and the month's hours), starting
-and stopping it or another machine named by id, and the keys that call them. Calling a model is not here: that is the
-runtime's own MCP, at its address, with one of these keys."""
+"""The connector's runtime tools: the person's first hosted machine (its address, state and the month's online
+time), starting and stopping it or another machine named by id, and the keys that call them. Calling a model is not
+here: that is the runtime's own MCP, at its address, with one of these keys."""
 
 import uuid
 
@@ -39,10 +39,8 @@ class KeyId(BaseModel):
 def _line(view: HostedRuntime) -> str:
     if view.runtime_id is None:
         return "You have no hosted runtime yet: start_runtime makes one."
-    allowed = "unlimited" if view.hours_allowed is None else f"of {view.hours_allowed}"
-    hours = f"{view.seconds_used / 3600:.1f} h {allowed} this month"
-    paused = "; paused: the month's hours are spent" if view.paused else ""
-    return f"Your runtime is {view.state} at {view.address}, {hours}{paused}."
+    hours = f"{view.seconds_used / 3600:.1f} h this month"
+    return f"Your runtime is {view.state} at {view.address}, {hours}."
 
 
 async def runtime(ctx: Context, _: NoArgs) -> Done:
@@ -100,7 +98,7 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "runtime",
         "Runtime",
-        "Your first hosted machine: its address, state and the month's hours.",
+        "Your first hosted machine: its address, state and the month's online time.",
         NoArgs,
         runtime,
         True,

@@ -1,6 +1,5 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
-from glyphh_server.models.addon import ADDON_STATUSES, Addon, OrgAddon
 from glyphh_server.models.approval import Approval
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
@@ -27,7 +26,6 @@ from glyphh_server.models.unlock import UNLOCK_MODS, Unlock
 from glyphh_server.models.user import ROLES, User
 
 __all__ = [
-    "ADDON_STATUSES",
     "AUTH_METHODS",
     "BILLING_STATUSES",
     "CALLERS",
@@ -39,7 +37,6 @@ __all__ = [
     "TOKEN_KINDS",
     "TRIGGER_STATUSES",
     "UNLOCK_MODS",
-    "Addon",
     "Approval",
     "Base",
     "ConnectorGrant",
@@ -57,7 +54,6 @@ __all__ = [
     "OAuthClient",
     "OAuthCode",
     "Org",
-    "OrgAddon",
     "Plan",
     "PlanVersion",
     "RoutineTrigger",

@@ -1,16 +1,16 @@
 import uuid
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
 
+INTERVALS: tuple[str, ...] = ("month", "year")
+
 
 class Plan(Base):
-    """A plan an org can be on: Free, Pro, Team. Retired with active=false, never deleted."""
+    """A plan an org can be on: Free, Pro, Team, Enterprise. Retired with active=false, never deleted."""
 
     __tablename__ = "plans"
 
@@ -21,32 +21,35 @@ class Plan(Base):
 
 
 class PlanVersion(Base):
-    """A plan's price and limits at one moment. Never changed: a new price or limit is a new version with its own
-    Stripe price. A null limit is unlimited. max_machines is how many hosted machines a person may have,
-    runtime_hours their running time each month, all of them together (0: none); storage_cents_per_gb its storage
-    rate, every GB billed. mod_limits names the mods the version includes, each with every one of its limits:
-    {"<mod>": {"<limit>": number | null}}; a mod not named is not included."""
+    """A plan's price, limits and features at one moment. Never changed: a new price is a new version with its own
+    Stripe price. A null limit is unlimited. price_cents is a month's or a year's (billing_interval, null when free),
+    null when set per customer; self_serve plans are bought through Stripe Checkout, the others by contract.
+    max_machines is how many hosted machines a person may have (0: none); precedents the managed bucket, what a
+    hosted runtime may hold. The features are signed into the licence. hosting_markup_pct is added to Fly's rates for
+    the hosted machines and is never shown; null where there is no hosting or it is set per customer (an org's own
+    markup_pct overrides it)."""
 
     __tablename__ = "plan_versions"
     __table_args__ = (
         UniqueConstraint("plan_id", "version", name="plan_versions_version"),
-        CheckConstraint("seat_price_cents >= 0", name="plan_versions_price"),
-        CheckConstraint(
-            "coalesce(max_members, 1) > 0 AND coalesce(max_installs, 1) > 0 AND coalesce(max_machines, 1) > 0",
-            name="plan_versions_limits",
-        ),
-        CheckConstraint("jsonb_typeof(mod_limits) = 'object'", name="plan_versions_mod_limits"),
+        CheckConstraint("coalesce(price_cents, 0) >= 0", name="plan_versions_price"),
+        CheckConstraint(f"billing_interval IN {INTERVALS}", name="plan_versions_interval"),
+        CheckConstraint("coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0", name="plan_versions_limits"),
+        CheckConstraint("coalesce(hosting_markup_pct, 0) >= 0", name="plan_versions_markup"),
     )
 
     id: Mapped[uuid.UUID] = guid()
     plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"), index=True)
     version: Mapped[int]
     stripe_price_id: Mapped[str | None] = mapped_column(Text, unique=True)
-    seat_price_cents: Mapped[int]
-    max_members: Mapped[int | None]
-    max_installs: Mapped[int | None]
+    price_cents: Mapped[int | None]
+    billing_interval: Mapped[str | None] = mapped_column(Text)
+    self_serve: Mapped[bool] = mapped_column(server_default="true")
     max_machines: Mapped[int | None]
-    runtime_hours: Mapped[int | None]
-    storage_cents_per_gb: Mapped[int | None]
-    mod_limits: Mapped[dict[str, dict[str, Any]]] = mapped_column(JSONB, server_default="{}")
+    precedents: Mapped[int | None]
+    sync: Mapped[bool] = mapped_column(server_default="false")
+    ha: Mapped[bool] = mapped_column(server_default="false")
+    offline: Mapped[bool] = mapped_column(server_default="false")
+    sso: Mapped[bool] = mapped_column(server_default="false")
+    hosting_markup_pct: Mapped[int | None]
     created_at: Mapped[datetime] = created_at()

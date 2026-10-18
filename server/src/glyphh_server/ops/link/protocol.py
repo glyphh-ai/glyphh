@@ -100,11 +100,13 @@ class KeyUse(BaseModel):
 
 
 class Usage(Message):
-    """The runtime keys' calls since the last report: one entry per key that let a request in."""
+    """The runtime keys' calls since the last report, one entry per key that let a request in; and the runtime's
+    precedents, its total across its Ada models now, once rrotor has read it."""
 
     type: Literal["usage"]
     seq: Seq
-    keys: list[KeyUse] = Field(min_length=1)
+    keys: list[KeyUse] = []
+    precedents: int | None = Field(None, ge=0)
 
 
 class Event(Message):
@@ -136,14 +138,9 @@ INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
 # Cloud → rrotor
 
 
-class Limits(BaseModel):
-    runtime_hours: int | None  # the plan's hosted hours a month; a local runtime's are the computer's own (null)
-
-
 class Welcome(Message):
     type: Literal["welcome"] = "welcome"
     accepted: bool = True
-    limits: Limits
     licence: License | None = None  # a hosted runtime's plan licence: it has no mod to hand one in
     keys: list[str] | None = None  # a hosted runtime's live runtime keys, as SHA-256s: what it checks bearers against
 
@@ -153,17 +150,6 @@ class Keys(Message):
 
     type: Literal["keys"] = "keys"
     hashes: list[str]
-
-
-class Pause(Message):
-    """The plan's hosted hours are spent: rrotor answers 402 to every call until `resume`."""
-
-    type: Literal["pause"] = "pause"
-    reason: str = "runtime_hours"
-
-
-class Resume(Message):
-    type: Literal["resume"] = "resume"
 
 
 class Continue(Message):
@@ -190,4 +176,4 @@ class SecretSet(Message):
     value: str  # encrypted to the rrotor's public key, base64
 
 
-Outbound = Welcome | Continue | Deploy | Keys | Pause | Resume | SecretSet | Ping | Pong | Ack
+Outbound = Welcome | Continue | Deploy | Keys | SecretSet | Ping | Pong | Ack

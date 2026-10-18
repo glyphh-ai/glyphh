@@ -9,5 +9,6 @@ router = APIRouter(prefix="/v1", tags=["plans and billing"])
 
 @router.get("/plans", operation_id="listPlans")
 async def list_plans(conn: Conn) -> list[PlanView]:
-    """Each plan's newest version: price per seat, the account's limits, and each mod it includes with its limits."""
+    """Each plan's newest version: its price, its limits (hosted machines, managed precedents) and its features;
+    never the markup on hosting."""
     return await plans.list_plans(conn)

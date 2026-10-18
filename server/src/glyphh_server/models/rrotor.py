@@ -64,7 +64,6 @@ class Rrotor(Base):
     fly_volume_id: Mapped[str | None] = mapped_column(Text)
     month: Mapped[str | None] = mapped_column(Text)  # the month the tally is of, YYYY-MM
     month_seconds: Mapped[int] = mapped_column(Integer, server_default="0")  # online seconds that month
-    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the month's hours spent
     region: Mapped[str | None] = mapped_column(Text)
     image_version: Mapped[str | None] = mapped_column(Text)
     state: Mapped[str] = mapped_column(Text)

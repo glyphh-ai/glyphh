@@ -22,7 +22,7 @@ class _HungUp:
 
 
 async def test_a_rrotor_gone_before_its_hello_is_let_go() -> None:
-    runtime = Runtime(uuid.uuid4(), uuid.uuid4(), uuid.uuid4(), "local", None)
+    runtime = Runtime(uuid.uuid4(), uuid.uuid4(), uuid.uuid4(), "local")
     assert await hello_step.read_hello(_HungUp(), runtime) is None  # type: ignore[arg-type]
 
 

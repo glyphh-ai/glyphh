@@ -1,5 +1,5 @@
-"""Keeping the org true to its Stripe subscription: the plan version its plan item sells, its seats, its status, and
-the add-ons its other items sell. A subscription that has ended puts the org back on Free, with no add-ons."""
+"""Keeping the org true to its Stripe subscription: the plan version its plan item sells and its status. A
+subscription that has ended puts the org back on Free."""
 
 import logging
 import uuid
@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.db.seed import FREE
 from glyphh_server.models import BILLING_STATUSES, Org
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops.billing.items import classify, sync_addons
+from glyphh_server.ops.billing.items import classify
 from glyphh_server.ops.plans import newest_version
 
 log = logging.getLogger("glyphh.billing")
@@ -37,19 +37,12 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
     status = sub["status"] if sub["status"] in BILLING_STATUSES else "none"
     if status in ENDED:
         free = await newest_version(conn, FREE)
-        values: dict[str, Any] = {
-            "plan_version_id": free.id,
-            "seats": 1,
-            "stripe_subscription_id": None,
-            "renews_at": None,
-        }
-        await sync_addons(conn, org_id, {})
+        values: dict[str, Any] = {"plan_version_id": free.id, "stripe_subscription_id": None, "renews_at": None}
     else:
         found = await classify(conn, org_id, sub)
         values = {"stripe_subscription_id": sub["id"], "renews_at": renews_at(sub)}
         if found.plan is not None:
-            values |= {"seats": max(1, int(found.plan["quantity"])), "plan_version_id": found.plan_version_id}
-        await sync_addons(conn, org_id, found.addons)
+            values["plan_version_id"] = found.plan_version_id
     await conn.execute(
         update(Org).where(Org.id == org_id).values(**values, billing_status=status, stripe_customer_id=sub["customer"])
     )

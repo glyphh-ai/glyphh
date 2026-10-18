@@ -1,6 +1,5 @@
-"""Keys and hours across a person's machines: a key names one machine (or a self-hosted runtime) or none, and one
-naming none is held by every hosted machine of theirs, never by a self-hosted one; the plan's hours are spent by all of
-their machines together, and past them each one is paused."""
+"""Keys across a person's machines: a key names one machine (or a self-hosted runtime) or none, and one naming none
+is held by every hosted machine of theirs, never by a self-hosted one."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -10,9 +9,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
-from glyphh_server.models import Rrotor, RuntimeKey
-from glyphh_server.ops import hours
-from glyphh_server.ops.fly import Fly
+from glyphh_server.models import RuntimeKey
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.presence import runtime_for
 from glyphh_server.ops.link.protocol import Usage
@@ -81,30 +78,3 @@ async def test_keys_made_for_a_machine_or_every_one_reach_those_machines(engine:
             assert (await a_sent())["hashes"] == [] and (await b_sent())["hashes"] == [key_hash(only_b["key"])]
         res = await client.post("/v1/runtime/keys", json={"name": "x", "runtime_id": b["id"]}, headers=eve.headers)
         assert res.status_code == 404
-
-
-async def test_the_plans_hours_are_spent_by_all_of_a_persons_machines_together(engine: AsyncEngine, redis: Any) -> None:
-    fly = FakeFly()
-    pro = await person(engine, "Pro")  # 50 hours a month, all machines
-    month = datetime.now(UTC).strftime("%Y-%m")
-    ids = []
-    for name, seconds in (("a", 30 * 3600), ("b", 20 * 3600 - 120), ("c", 0)):
-        rt = await hosted_runtime(engine, pro, name)
-        fly.machines[f"m_{name}"] = {"id": f"m_{name}", "state": "started"}
-        async with engine.begin() as conn:
-            values = {"state": "online" if name != "c" else "stopped", "month": month, "month_seconds": seconds}
-            await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(**values, fly_machine_id=f"m_{name}"))
-        ids.append(rt.id)
-    client, hub = Fly(fake_http(fly=fly), FLY_SETTINGS), Hub(redis)
-
-    async def paused() -> list[uuid.UUID]:  # the tally is of every org's machines: this person's
-        return sorted(i for i in await hours.tally(engine, client, hub, 30) if i in ids)
-
-    assert await paused() == []  # 30 + 20 h less 120 s, plus 30 s each online: not yet
-    assert await paused() == sorted(ids)  # 50 h together: every one paused
-    assert {m["state"] for m in fly.machines.values()} == {"stopped"}
-    rt = await hosted_runtime(engine, pro, "d")  # made while the hours are spent
-    async with engine.begin() as conn:
-        await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(month=month))
-    ids.append(rt.id)
-    assert await paused() == [rt.id]  # paused at the next tick, the others not twice

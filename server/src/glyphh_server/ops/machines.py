@@ -31,7 +31,6 @@ class Machine(BaseModel):
     state: str = Field(description="stopped, online or offline")
     address: str | None = Field(description="Where it is called: https://<machine>.<domain>, REST and /mcp")
     month_seconds: int = Field(description="Its online time this calendar month")
-    paused: bool = Field(description="The month's hours are spent: calls answer 402 until the month turns")
     created_at: datetime
 
 
@@ -47,7 +46,6 @@ def _view(row: Row, domain: str) -> Machine:
         state=row.state,
         address=f"https://{row.fly_machine_id}.{domain}" if row.fly_machine_id else None,
         month_seconds=row.month_seconds if this_month else 0,
-        paused=row.paused_at is not None and this_month,
         created_at=row.created_at,
     )
 
@@ -72,7 +70,7 @@ async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, siz
     """A new machine, made and started (the app's doorman with the first one); past the plan's machines, or
     with a name the person has given another, refused."""
     await limits.lock_user(conn, who.user_id)
-    await limits.check(conn, "machines", await limits.machines(conn, who.user_id), await org_version(conn, who.org_id))
+    await limits.check_machines(conn, await limits.machines(conn, who.user_id), await org_version(conn, who.org_id))
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)
     if (await conn.execute(taken)).first() is not None:
         raise Conflict("You have a machine of that name already.", reason="name", name=name)

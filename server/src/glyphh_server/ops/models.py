@@ -2,7 +2,7 @@
 one commit, numbered as it is added; a deploy puts a version on a runtime, which answers `deployed` on its link, and
 that version is the active one there. The code, its data and its secrets stay in the repo and the rrotor.
 
-Ada's `models` limit, from the plan or the add-on, is checked when a model is made; without Ada, none may be."""
+Ada is on every plan, and models are never limited: never per model."""
 
 import uuid
 from datetime import datetime
@@ -12,18 +12,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Row, delete, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import Conflict, Forbidden, LimitReached, NotFound
+from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Deployment, Model, ModelVersion
-from glyphh_server.ops.addons import licensed
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.github_app import GitHubApp
 from glyphh_server.ops.limits import lock_user
 from glyphh_server.ops.link.calls import DeployAction, send_deploy
 from glyphh_server.ops.link.hub import Hub
-from glyphh_server.ops.plans import org_plan
 from glyphh_server.ops.runtimes import runtime_for
-
-ADA: str = "ada"
 
 
 class VersionView(BaseModel):
@@ -50,15 +46,6 @@ class Deployed(BaseModel):
 
 
 _VERSION = (ModelVersion.id, ModelVersion.model_id, ModelVersion.version, ModelVersion.commit_sha)
-
-
-async def models_allowed(conn: AsyncConnection, who: Principal) -> int | None:
-    """How many models Ada allows the person (None: no limit); E_FORBIDDEN when the org has no Ada."""
-    plan = await org_plan(conn, who.org_id)
-    mods = plan.mods | await licensed(conn, who.org_id, plan.name)
-    if ADA not in mods:
-        raise Forbidden("Ada is not on your plan. Add it as an add-on first.", reason="no_ada")
-    return mods[ADA].limits.get("models")
 
 
 async def _views(conn: AsyncConnection, where: Any) -> list[ModelView]:
@@ -95,14 +82,8 @@ async def get_model(conn: AsyncConnection, who: Principal, model_id: uuid.UUID) 
 
 
 async def create_model(conn: AsyncConnection, who: Principal, name: str, repo: str | None) -> ModelView:
-    """A new model, within Ada's models limit, its name new to the person; no versions yet."""
+    """A new model, its name new to the person; no versions yet."""
     await lock_user(conn, who.user_id)
-    allowed = await models_allowed(conn, who)
-    used = int((await conn.execute(select(func.count()).where(Model.user_id == who.user_id))).scalar_one())
-    if allowed is not None and used >= allowed:
-        raise LimitReached(
-            f"Ada allows you {allowed} models. Remove one first.", limit="models", used=used, max=allowed, plan=None
-        )
     taken = select(Model.id).where(Model.user_id == who.user_id, Model.name == name)
     if (await conn.execute(taken)).first() is not None:
         raise Conflict("You already have a model of that name.", reason="name_taken", model=name)

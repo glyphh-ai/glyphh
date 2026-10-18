@@ -5,7 +5,7 @@ from glyphh_server.models.base import Base
 
 
 class Mod(Base):
-    """A mod Glyphh ships for Claude. A plan version includes the mods its mod_limits names; a retired mod is in no
+    """A mod Glyphh ships for Claude. Every plan includes every active mod; a retired mod is in no
     license. Retired with active=false, never deleted."""
 
     __tablename__ = "mods"

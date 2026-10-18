@@ -9,7 +9,6 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.api import (
-    addons,
     approvals,
     billing,
     connector,
@@ -41,7 +40,7 @@ from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, hours, vault
+from glyphh_server.ops import github_app, tend, vault
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
@@ -56,7 +55,6 @@ ROUTERS = (
     org,
     mods,
     plans,
-    addons,
     billing,
     runtime,
     self_hosted,
@@ -79,12 +77,12 @@ IDLE_EVERY: float = 60.0
 
 
 async def tend_forever(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta) -> None:
-    """Every minute, tally the hosted runtimes' hours (pausing those past their plan's) and stop the idle ones; a
-    failure is logged and the next minute comes."""
+    """Every minute, tally the hosted runtimes' month and stop the idle ones; a failure is logged and the next minute
+    comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await hours.tend(engine, fly, hub, idle, int(IDLE_EVERY))
+            await tend.tend(engine, fly, hub, idle, int(IDLE_EVERY))
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
 

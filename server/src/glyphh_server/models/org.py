@@ -23,10 +23,7 @@ class Org(Base):
     """A team: its plan version, its admin (who handles all billing), and what Stripe says it pays for."""
 
     __tablename__ = "orgs"
-    __table_args__ = (
-        CheckConstraint("seats > 0", name="orgs_seats"),
-        CheckConstraint(f"billing_status IN {BILLING_STATUSES}", name="orgs_billing_status"),
-    )
+    __table_args__ = (CheckConstraint(f"billing_status IN {BILLING_STATUSES}", name="orgs_billing_status"),)
 
     id: Mapped[uuid.UUID] = guid()
     name: Mapped[str] = mapped_column(Text)
@@ -37,7 +34,6 @@ class Org(Base):
     )
     stripe_customer_id: Mapped[str | None] = mapped_column(Text, unique=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, unique=True)
-    seats: Mapped[int] = mapped_column(server_default="1")
     billing_status: Mapped[str] = mapped_column(Text, server_default="none")
     # When the subscription renews, from Stripe; empty when not subscribed or ending at the period's end.
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

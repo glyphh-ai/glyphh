@@ -33,8 +33,7 @@ class LinkOut(BaseModel):
 
 @router.get("/me", operation_id="me")
 async def get_me(caller: Caller, conn: Conn) -> Me:
-    """The user, their org and role, the plan version with the account's and each mod's limits, and what is used
-    where the server sees it (members, seats, installs)."""
+    """The user, their org and role, and the plan version with its limits and features."""
     return await me.me(conn, caller)
 
 
