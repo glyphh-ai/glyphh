@@ -105,3 +105,22 @@
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
+
+.sizeRate {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* On a plan without hosting: what it is on, and the rates. */
+.upsell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.upsellText {
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
