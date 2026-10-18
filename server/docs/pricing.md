@@ -27,7 +27,7 @@ holds the rules they follow.
 | Price | $0, forever | $99 a month, flat | $299 a month, flat | From $10k a year, flat, by contract |
 | How | Sign up | Stripe Checkout | Stripe Checkout | Talk to us (`sales@glyphh.ai`) |
 | Managed precedents | none (local and self-hosted unlimited) | 100,000 | 1,000,000 | Unlimited |
-| Hosted machines | 0 | 3 | 10 | Unlimited |
+| Hosted machines (the org's together) | 0 | 3 | 10 | Unlimited |
 | Hosting markup | n/a | 30% | 30% | Per contract |
 | Precedent-store sync across instances | No | Yes | Yes | Yes |
 | Offline (air-gapped) licences, HA, SSO/SAML, RBAC, audit logs | No | No | No | Yes |
@@ -100,16 +100,18 @@ Every licence carries the plan's `features`, signed: `sync`, `ha`, `offline`, `s
 - Down to Free: `POST /v1/billing/plan {"plan": "Free"}`, refused while the org has hosted machines (409
   `E_CONFLICT`, `reason: machines`, "Delete your hosted machines first."); otherwise the hosting due is reported and
   the subscription cancelled at once, invoiced now and prorated.
-- Down to a plan with fewer machines than one of the org's people holds (Team to Pro with four): 409 `E_CONFLICT`,
-  `reason: machines`, `held` and `max` named, "Delete your hosted machines first. Pro allows 3 for each person."
-- **Held past the plan:** when an org lands on such a plan anyway (a cancel in Stripe's portal, a subscription that
-  ended, an Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left, and every
-  machine of each person past the plan is stopped: at once from the webhook and from `revoke`, and at the minute tick
-  (which also stops any a request woke since). Starting, restarting or waking one is 403 `E_LIMIT`, `reason:
-  machines`, until the org is on a plan that allows them. They keep their disks, and may be deleted; on Free their
-  disks' cost is metered and nothing is charged.
+- Down to a plan with fewer machines than the org holds, all its people's together (Team to Pro with four): 409
+  `E_CONFLICT`, `reason: machines`, `held` and `max` named, "Delete your hosted machines first. Pro allows 3 hosted
+  machines."
+- **Held past the plan:** a plan's machines are the org's, all its people's together, its oldest first. When an org
+  lands on a plan that allows fewer than it holds anyway (a cancel in Stripe's portal, a subscription that ended, an
+  Enterprise grant revoked or lapsed), the hosting due is reported where a subscription is left, its oldest machines
+  up to the plan's keep running, and its newest beyond them are stopped: at once from the webhook and from `revoke`,
+  and at the minute tick (which also stops any a request woke since). Starting, restarting or waking one of those is
+  403 `E_LIMIT`, `reason: machines`, until the org is on a plan that allows them or deletes enough (deleting one lets
+  the next oldest start). They keep their disks; on Free their disks' cost is metered and nothing is charged.
 - An Enterprise org changes its plan with Glyphh, not here: 409 `E_CONFLICT`, `reason: contract`.
-- Making a machine past the plan's count (Free has none): 403 `E_LIMIT`, `reason: machines`.
+- Making a machine past the plan's count, the org's together (Free has none): 403 `E_LIMIT`, `reason: machines`.
 - No plan pauses or limits by hours any more.
 
 ## Stripe: once per account
