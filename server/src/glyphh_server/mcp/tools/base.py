@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -27,6 +28,7 @@ class Context:
     settings: Settings
     http: httpx.AsyncClient
     hub: Hub
+    license_key: Ed25519PrivateKey
 
     def stripe(self) -> StripeClient:
         return StripeClient(self.http, self.settings.stripe_secret_key)
