@@ -1,7 +1,8 @@
-"""Runtime keys: what calls a person's hosted runtime at `https://<machine>.glyphh.app` (REST and its MCP). Made
-here, shown once, kept as a SHA-256; the live list of hashes reaches rrotor in its `welcome` and, when it changes,
-as `keys` down the link (best effort: a runtime that is stopped gets the list when it next links). A key expires 1 to
-365 days after it is made, or never; an expired one leaves the list, sent down the link by the server's minute tick."""
+"""Runtime keys: what calls a person's hosted runtime at `https://<machine>.glyphh.app`, or a self-hosted one at its
+own address (REST and its MCP). Made here, shown once, kept as a SHA-256; the live list of hashes reaches rrotor in
+its `welcome` and, when it changes, as `keys` down the link (best effort: a runtime that is stopped gets the list when
+it next links). A key expires 1 to 365 days after it is made, or never; an expired one leaves the list, sent down the
+link by the server's minute tick."""
 
 import hashlib
 import logging
@@ -16,6 +17,7 @@ from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Rrotor, RuntimeKey, User
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops import self_hosted
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import make_secret
 from glyphh_server.ops.link.hub import Hub
@@ -29,6 +31,7 @@ MAX_DAYS: int = 365
 
 class KeyView(BaseModel):
     id: uuid.UUID
+    runtime_id: uuid.UUID = Field(description="The runtime it calls")
     name: str
     created_at: datetime
     expires_at: datetime | None = Field(description="When the key stops working; null never expires")
@@ -43,6 +46,7 @@ class MadeKey(KeyView):
 
 _COLUMNS = (
     RuntimeKey.id,
+    RuntimeKey.rrotor_id.label("runtime_id"),
     RuntimeKey.name,
     RuntimeKey.created_at,
     RuntimeKey.expires_at,
@@ -67,7 +71,10 @@ async def hashes_for(conn: AsyncConnection, runtime_id: uuid.UUID) -> list[str]:
     return list((await conn.execute(live.order_by(RuntimeKey.created_at))).scalars())
 
 
-async def _hosted(conn: AsyncConnection, who: Principal) -> uuid.UUID:
+async def _target(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID | None) -> uuid.UUID:
+    """The runtime a new key calls: the self-hosted one named, else the person's hosted one."""
+    if runtime_id is not None:
+        return await self_hosted.mine(conn, who, runtime_id)
     mine = select(Rrotor.id).where(Rrotor.user_id == who.user_id, Rrotor.mode == "hosted")
     runtime_id = (await conn.execute(mine)).scalar()
     if runtime_id is None:
@@ -99,9 +106,11 @@ def expiry(days: int | None) -> datetime | None:
     return datetime.now(UTC) + timedelta(days=days)
 
 
-async def create_key(conn: AsyncConnection, hub: Hub, who: Principal, name: str, days: int | None) -> MadeKey:
+async def create_key(
+    conn: AsyncConnection, hub: Hub, who: Principal, name: str, days: int | None, runtime_id: uuid.UUID | None = None
+) -> MadeKey:
     expires_at = expiry(days)
-    runtime_id = await _hosted(conn, who)
+    runtime_id = await _target(conn, who, runtime_id)
     key = PREFIX + make_secret()
     values = {"rrotor_id": runtime_id, "user_id": who.user_id, "name": name, "key_hash": key_hash(key)}
     values |= {"expires_at": expires_at}
@@ -115,12 +124,12 @@ async def revoke_key(conn: AsyncConnection, hub: Hub, who: Principal, key_id: uu
         update(RuntimeKey)
         .where(RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id, RuntimeKey.revoked_at.is_(None))
         .values(revoked_at=func.now())
-        .returning(*_COLUMNS, RuntimeKey.rrotor_id)
+        .returning(*_COLUMNS)
     )
     row = (await conn.execute(mine)).first()
     if row is None:
         raise NotFound("You have no such live runtime key.", key_id=str(key_id))
-    await push_keys(conn, hub, row.rrotor_id)
+    await push_keys(conn, hub, row.runtime_id)
     return KeyView.model_validate(row._mapping, from_attributes=False)
 
 

@@ -59,6 +59,7 @@ async def test_a_hosted_runtime_is_welcomed_with_its_plans_hours(engine: AsyncEn
     assert welcome["keys"] == []
     payload = welcome["licence"]["payload"]
     assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
+    assert (payload["kind"], payload["runtime_id"], "grace_days" in payload) == ("link", str(rt.id), False)
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
     public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
     ctx = session.Context(engine, None, None, None, None)  # type: ignore[arg-type]

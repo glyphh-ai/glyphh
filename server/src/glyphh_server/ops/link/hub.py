@@ -3,8 +3,9 @@
 Each process keeps its own links in memory, one per runtime. A message for a runtime held here goes straight down
 its link; otherwise it is published on the runtime's Redis channel, `runtime:{id}`, which the process holding that
 link listens on, and nobody hearing it means the runtime is not connected. A newer link of the same runtime takes
-over: here at once, elsewhere by a `takeover` on the channel, and the older link is closed (4409). Frames never cross
-processes: they stay with the process holding the link, best effort."""
+over: here at once, elsewhere by a `takeover` on the channel, and the older link is closed (4409). A runtime whose
+token is gone (rotated, or the runtime deleted) is dropped the same way, by a `drop`, and closed 4401. Frames never
+cross processes: they stay with the process holding the link, best effort."""
 
 import json
 import logging
@@ -20,7 +21,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from glyphh_server.db.signals import publish
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops.link.protocol import REPLACED, RESTART
+from glyphh_server.ops.link.protocol import REFUSED, REPLACED, RESTART
 
 log = logging.getLogger("glyphh.link")
 
@@ -83,6 +84,14 @@ class Hub:
             return await link.send(message)
         return await publish(self.redis, channel(runtime_id), "send", message) > 0
 
+    async def drop(self, runtime_id: uuid.UUID, reason: str) -> None:
+        """Close the runtime's link wherever it is held: its token no longer stands."""
+        link = self.links.get(runtime_id)
+        if link is not None:
+            await link.close(REFUSED, reason)
+            return
+        await publish(self.redis, channel(runtime_id), "drop", {"reason": reason})
+
     @asynccontextmanager
     async def listening(self, link: Link) -> AsyncIterator[PubSub]:
         """Subscribed to the runtime's channel for the link's life; the Redis connection goes back after."""
@@ -103,6 +112,9 @@ class Hub:
             signal = json.loads(heard["data"])
             if signal["event"] == "send":
                 await link.send(signal["data"])
+            elif signal["event"] == "drop":
+                await link.close(REFUSED, signal["data"]["reason"])
+                return
             elif signal["data"]["link"] != str(link.id):
                 log.info("link taken over", extra=fields(runtime=str(link.runtime_id)))
                 await link.replace()

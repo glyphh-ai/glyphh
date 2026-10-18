@@ -6,16 +6,19 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
+from glyphh_server.models import Rrotor
 from glyphh_server.ops.connector import clients
 from glyphh_server.ops.connector.errors import AuthorizeRefused
 
 SCOPE: str = "account"
 PKCE: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._~-]{43,128}$")
 MACHINE: re.Pattern[str] = re.compile(r"^[0-9a-z]{6,32}$")
+NOT_OURS: str = "Glyphh issues tokens for its own connector and for a runtime: hosted, or self-hosted and registered."
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,35 +42,44 @@ def canonical(uri: str) -> str:
     return f"{parts.scheme.lower()}://{parts.netloc.lower()}{path}" + (f"?{parts.query}" if parts.query else "")
 
 
-def runtime_resource(settings: Settings, asked: str) -> str | None:
-    """A hosted runtime's address as a resource, `https://<machine>.<domain>` with or without `/mcp`: the token is
-    bound to its `/mcp`. The machine need not exist yet; the runtime that introspects the token is the one that
-    says whether it is its own."""
+def runtime_host(asked: str) -> str | None:
+    """The host of an address asked for as a runtime: `https://<host>`, with or without `/mcp`, and nothing else."""
     parts = urlsplit(asked.strip())
-    host = parts.netloc.lower()
+    if parts.scheme.lower() != "https" or parts.path.rstrip("/") not in ("", "/mcp") or parts.query or parts.fragment:
+        return None
+    return parts.netloc.lower() or None
+
+
+def is_hosted(settings: Settings, host: str) -> bool:
+    """`<machine>.<domain>`: a hosted runtime's address. The machine need not exist yet; the runtime that
+    introspects the token is the one that says whether it is its own."""
     label, dot, rest = host.partition(".")
-    if (
-        parts.scheme.lower() == "https"
-        and dot
-        and rest == settings.fly_public_domain.lower()
-        and MACHINE.match(label)
-        and parts.path.rstrip("/") in ("", "/mcp")
-        and not parts.query
-        and not parts.fragment
-    ):
-        return f"https://{host}/mcp"
-    return None
+    return bool(dot) and rest == settings.fly_public_domain.lower() and MACHINE.match(label) is not None
 
 
-def resource_for(settings: Settings, asked: str | None) -> str:
-    """The resource a token will be bound to: the connector, named as itself or as the server, or a hosted runtime's
+async def runtime_resource(conn: AsyncConnection, settings: Settings, asked: str) -> str | None:
+    """A runtime's address as a resource, hosted or a registered self-hosted one's: the token is bound to its
+    `/mcp`. Looked up before anyone is known, so across every org."""
+    host = runtime_host(asked)
+    if host is None:
+        return None
+    address = f"https://{host}"
+    if not is_hosted(settings, host):
+        registered = select(Rrotor.id).where(Rrotor.mode == "self", Rrotor.public_url == address).limit(1)
+        if (await conn.execute(registered)).first() is None:
+            return None
+    return f"{address}/mcp"
+
+
+async def resource_for(conn: AsyncConnection, settings: Settings, asked: str | None) -> str:
+    """The resource a token will be bound to: the connector, named as itself or as the server, or a runtime's
     address."""
     if asked is None or canonical(asked) in (canonical(settings.mcp_resource), canonical(settings.base_url)):
         return settings.mcp_resource
-    runtime = runtime_resource(settings, asked)
+    runtime = await runtime_resource(conn, settings, asked)
     if runtime is not None:
         return runtime
-    raise AuthorizeRefused("invalid_target", "Glyphh issues tokens for its own connector and for a hosted runtime.")
+    raise AuthorizeRefused("invalid_target", NOT_OURS)
 
 
 def scope_for(asked: str | None) -> str:
@@ -107,5 +119,5 @@ async def check(conn: AsyncConnection, settings: Settings, q: dict[str, str]) ->
         state=q["state"],
         challenge=q["code_challenge"],
         scope=scope_for(q.get("scope")),
-        resource=resource_for(settings, q.get("resource")),
+        resource=await resource_for(conn, settings, q.get("resource")),
     )

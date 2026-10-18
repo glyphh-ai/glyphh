@@ -39,6 +39,7 @@ def fly(request: Request) -> Fly:
 class NewKey(BaseModel):
     name: str = Field(min_length=1, max_length=80, pattern=r"\S", description="What the key is for")
     expires_in_days: int | None = Field(None, description="Days until the key expires, 1 to 365; left out, never")
+    runtime_id: uuid.UUID | None = Field(None, description="A self-hosted runtime of yours; left out, your hosted one")
 
 
 @router.get("", operation_id="hostedRuntime")
@@ -71,7 +72,7 @@ async def create_runtime_key(body: NewKey, caller: Caller, conn: Conn, request: 
     """A new key, shown once: the bearer for your runtime's REST API and its /mcp, expiring 1 to 365 days on, or
     never. rrotor gets its hash at once when linked, else in its next welcome."""
     hub = request.app.state.hub
-    return await runtime_keys.create_key(conn, hub, caller, body.name.strip(), body.expires_in_days)
+    return await runtime_keys.create_key(conn, hub, caller, body.name.strip(), body.expires_in_days, body.runtime_id)
 
 
 @router.delete("/keys/{key_id}", operation_id="revokeRuntimeKey")
@@ -100,17 +101,18 @@ class Introspect(BaseModel):
 
 @router.post("/introspect", operation_id="introspectRuntimeSignIn", response_model=tokens.Introspection)
 async def introspect_sign_in(body: Introspect, request: Request) -> Response:
-    """For a hosted rrotor, its runtime token as auth: whether a bearer it was shown is a live Glyphh sign-in for its
-    own address (`https://<machine>.<domain>/mcp`, the resource the token was issued for), and whose (RFC 7662's
-    shape). Anything else, a local runtime's ask included, is `active: false`."""
+    """For a hosted or self-hosted rrotor, its runtime token as auth: whether a bearer it was shown is a live Glyphh
+    sign-in for its own address (`https://<machine>.<domain>/mcp`, or `https://<public host>/mcp`: the resource the
+    token was issued for), and whose (RFC 7662's shape). Anything else, a local runtime's ask included, is
+    `active: false`."""
     state = request.app.state
     try:
         runtime = await runtime_for(state.engine, bearer(request.headers.get("authorization")))
     except Refused as err:
         raise Unauthorized(str(err)) from None
     answer = tokens.Introspection(active=False)
-    if runtime.mode == "hosted" and runtime.fly_machine_id:
-        resource = f"https://{runtime.fly_machine_id}.{state.settings.fly_public_domain}/mcp"
+    resource = runtime.resource(state.settings.fly_public_domain)
+    if resource is not None:
         async with state.engine.begin() as conn:
             await tenancy.enter(conn, runtime.org_id)
             answer = await tokens.introspect(conn, body.token, resource)
