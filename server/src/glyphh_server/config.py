@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     public_url: str = "http://localhost:8080"
     # The platform, the one web app: every page a browser sees in a flow is there; the server renders nothing.
     platform_url: str = "http://localhost:3000"
+    # The platform's own OAuth client, made at every start from these (db/seed_clients.py), so the database's reset
+    # on deploy never loses it: the same id and secret as the platform's PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET.
+    platform_client_id: str = ""
+    platform_client_secret: str = ""
     # Signs the values the device sign-in pages carry; 32 characters or more.
     secret_key: str = ""
     # The license's Ed25519 private key: base64 of its raw 32 bytes. Without one outside prod, one is made at start.
