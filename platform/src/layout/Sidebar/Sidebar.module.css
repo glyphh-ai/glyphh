@@ -47,7 +47,10 @@
   color: var(--text);
 }
 
+/* With no logo above it (settings), the way back sits level with the 56px breadcrumb bar: its 36px row centred
+   28px down (the shell gives the sidebar no top padding). */
 .back {
+  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 10px;

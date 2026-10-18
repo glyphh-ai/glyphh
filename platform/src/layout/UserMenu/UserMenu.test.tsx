@@ -56,6 +56,13 @@ describe('the account menu', () => {
     submit.mockRestore();
   });
 
+  it('opens settings', async () => {
+    const { user, router } = renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Settings' }));
+    expect(router.state.location.pathname).toBe('/settings/general');
+  });
+
   it('goes to the person’s account', async () => {
     const { user, router } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));

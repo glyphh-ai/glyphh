@@ -35,17 +35,6 @@ export function MainLayout() {
               Models
             </NavItem>
           </NavGroup>
-          <NavGroup label="Organisation">
-            <NavItem to="/settings/billing" icon="card">
-              Billing
-            </NavItem>
-            <NavItem to="/settings/members" icon="team">
-              Members
-            </NavItem>
-            <NavItem to="/settings/general" icon="settings">
-              Settings
-            </NavItem>
-          </NavGroup>
         </Sidebar>
       }
     >
@@ -58,6 +47,7 @@ export function SettingsLayout() {
   return (
     <AppShell
       crumbs={useCrumbs()}
+      logo={false}
       sidebar={
         <Sidebar heading={<SidebarBack to="/">Settings</SidebarBack>} footer={<UserMenu />}>
           <NavGroup label="Organisation">

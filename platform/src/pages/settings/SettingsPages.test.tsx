@@ -9,6 +9,7 @@ describe('Settings', () => {
     expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
     const main = screen.getByRole('complementary', { name: 'Main' });
     expect(within(main).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/');
+    expect(within(main).queryByRole('img', { name: 'Glyphh' })).not.toBeInTheDocument();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByText('General')).toHaveAttribute('aria-current', 'page');
   });

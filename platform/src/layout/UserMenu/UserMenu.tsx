@@ -13,7 +13,7 @@ const themes: Array<{ choice: ThemeChoice; label: string; icon: IconName }> = [
   { choice: 'dark-hc', label: 'Dark high contrast', icon: 'moonFilled' },
 ];
 
-/** The person at the bottom of the sidebar: their account, billing, theme and log out. */
+/** The person at the bottom of the sidebar: their account, billing, settings, theme and log out. */
 export function UserMenu() {
   const { data: me } = useMe();
   const { choice, setChoice } = useTheme();
@@ -40,6 +40,9 @@ export function UserMenu() {
         </MenuItem>
         <MenuItem icon="card" onSelect={() => navigate('/settings/billing')}>
           Billing
+        </MenuItem>
+        <MenuItem icon="settings" onSelect={() => navigate('/settings/general')}>
+          Settings
         </MenuItem>
         <MenuSeparator />
         <MenuSubmenu icon="sun" label="Theme">
