@@ -9,7 +9,7 @@ Three parts, kept simple:
 |---|---|---|
 | **Platform** | `glyphh-ai/platform` (this) | The one web app: every page a person sees |
 | **Server** | `glyphh-ai/server` | The API and the authorization server: accounts, plans, Stripe, licences, provisioning, the record. Renders nothing |
-| **Runtimes** | `glyphh-ai/rrotor` | One rrotor per person, reached directly at `https://<machine>.glyphh.app` (REST and MCP); nothing of Glyphh's on the data path |
+| **Runtimes** | `glyphh-ai/rrotor` | A person's rrotors (hosted machines, one or more, or ones they run themselves), each reached directly at `https://<machine>.glyphh.app` (REST and MCP); nothing of Glyphh's on the data path |
 
 The UI is built to Chris's design (the Glyphh Style canvas: ngrok's style, Glyphh's palette, light and dark in the
 platform, dark only on the sign-in pages). The contract it builds to is the server's `docs/architecture.md` (the API table and the section **The platform**);
@@ -56,8 +56,9 @@ browser.
 
 | Page | Server calls | Does |
 |---|---|---|
-| Getting started | `GET /v1/runtime`, `GET /v1/runtimes/self` (each self-hosted runtime's state, version, last heartbeat) | The SDKs and the Claude plugin to copy; where rrotor runs: Glyphh hosted (Start, as Home), or Docker Compose, Helm or Terraform (AWS, GCP): register (`POST /v1/runtimes/self {name, public_url}`; the token is shown once), then the option's settings filled in from the answer's `env` and the connector URL `https://<host>/mcp`. Rotate a token (`POST /v1/runtimes/self/{id}/token`, shown once), delete (`DELETE /v1/runtimes/self/{id}`), issue an offline licence for an air-gapped runtime (`POST /v1/runtimes/{id}/offline-licence {days}`, set as `RROTOR_LICENCE`) |
-| Home | `GET /v1/runtime` (address, state, this month's hours, `paused`), `GET /v1/me` | Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`), copy the connector URL `{address}/mcp` |
+| Getting started | `GET /v1/runtimes`, `GET /v1/runtimes/self` (each self-hosted runtime's state, version, last heartbeat) | The SDKs and the Claude plugin to copy; where rrotor runs: Glyphh hosted (make a first machine, `POST /v1/runtimes {name, size}`, or start the first one), or Docker Compose, Helm or Terraform (AWS, GCP): register (`POST /v1/runtimes/self {name, public_url}`; the token is shown once), then the option's settings filled in from the answer's `env` and the connector URL `https://<host>/mcp`. Rotate a token (`POST /v1/runtimes/self/{id}/token`, shown once), delete (`DELETE /v1/runtimes/self/{id}`), issue an offline licence for an air-gapped runtime (`POST /v1/runtimes/{id}/offline-licence {days}`, set as `RROTOR_LICENCE`) |
+| Machines | `GET /v1/runtimes` (each hosted machine's name, size, state, address, this month's hours, `paused`) | Make one (`POST /v1/runtimes {name, size}`; small, medium or large), start, stop or restart it (`POST /v1/runtimes/{id}/start`, `stop`, `restart`), copy its address and connector URL `{address}/mcp`, delete it after typing its name (`DELETE /v1/runtimes/{id}?confirm=<name>`; the disk goes with it). At the plan's limit (`E_LIMIT`, `reason: machines`), the way to Billing |
+| Home | `GET /v1/runtime` (the first machine: address, state, this month's hours, `paused`), `GET /v1/me` | Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`), copy the connector URL `{address}/mcp`; links to Machines |
 | Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name}`; the key is shown once), revoke (`DELETE /v1/runtime/keys/{id}`) |
 | Approvals | `GET /v1/approvals`, live from `GET /v1/approvals/stream` (server-sent events `approval`, `answered`) | Approve or decline (`POST /v1/approvals/{id} {answer}`) |
 | Models | `GET /v1/models` (versions by commit, where each is active) | Delete (`DELETE /v1/models/{id}`) |
