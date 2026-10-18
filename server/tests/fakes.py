@@ -53,12 +53,13 @@ def _items(body: dict[str, str], prefix: str = "items") -> list[dict[str, str]]:
 
 class FakeStripe:
     """Stripe's few endpoints billing uses, remembering every call and every subscription: items changed, added and
-    deleted as Stripe does, and a subscription cancelled."""
+    deleted as Stripe does, a subscription cancelled, and the hosting meter's events."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, dict[str, str]]] = []
         self.subs: dict[str, dict[str, Any]] = {}
         self.fail: bool = False
+        self.meter_down: bool = False  # only the meter refuses
 
     def sub(self, sub_id: str, customer: str, price: str, quantity: int, status: str = "active") -> dict[str, Any]:
         self.subs[sub_id] = {
@@ -103,6 +104,8 @@ class FakeStripe:
             return answer({"id": f"cus_{uuid.uuid4().hex}"})
         if path == "/checkout/sessions":
             return answer({"id": "cs_1", "url": "https://checkout.stripe.test/cs_1"})
+        if path == "/billing/meter_events":
+            return httpx.Response(500, json={}) if self.meter_down else answer({"object": "billing.meter_event"})
         if path == "/billing_portal/sessions":
             return answer({"url": "https://billing.stripe.test/p_1"})
         sub = self.subs[path.removeprefix("/subscriptions/")]

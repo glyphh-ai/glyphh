@@ -1,6 +1,7 @@
 """The server's minute tick for hosted runtimes: every online machine's month counts the minute, every machine is
-metered at Fly's rates (ops/metering.py), the idle ones are stopped, and the keys that expired are taken off their
-runtimes. No plan has hosted hours: a machine is never paused."""
+metered at Fly's rates (ops/metering.py), the idle ones are stopped, the keys that expired are taken off their
+runtimes, and the hosting due is reported to Stripe's meter (ops/billing/meter.py). No plan has hosted hours: a
+machine is never paused."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -8,6 +9,8 @@ from sqlalchemy import case, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import Rrotor
+from glyphh_server.ops.billing.meter import report
+from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import stop_idle
 from glyphh_server.ops.link.hub import Hub
@@ -30,9 +33,14 @@ async def tally(engine: AsyncEngine, step: int, region: str) -> None:
         await meter(conn, step, region)
 
 
-async def tend(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, step: int) -> None:
-    """One tick of the server's care of hosted runtimes: the month tallied and metered, the idle ones stopped, and the
-    keys that expired since the last tick (with a tick to spare) taken off their runtimes."""
+async def tend(
+    engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, step: int, stripe: StripeClient | None = None
+) -> None:
+    """One tick of the server's care of hosted runtimes: the month tallied and metered, the idle ones stopped, the
+    keys that expired since the last tick (with a tick to spare) taken off their runtimes, and, with Stripe, the
+    hosting due reported to its meter."""
     await tally(engine, step, fly.settings.fly_region)
     await stop_idle(engine, fly, idle)
     await push_expired(engine, hub, timedelta(seconds=2 * step))
+    if stripe is not None:
+        await report(engine, stripe)

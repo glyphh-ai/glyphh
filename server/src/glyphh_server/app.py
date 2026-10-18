@@ -41,6 +41,7 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops import github_app, tend, vault
+from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
@@ -76,15 +77,26 @@ ROUTERS = (
 IDLE_EVERY: float = 60.0
 
 
-async def tend_forever(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta) -> None:
-    """Every minute, tally the hosted runtimes' month and stop the idle ones; a failure is logged and the next minute
-    comes."""
+async def tend_forever(engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, stripe: StripeClient | None) -> None:
+    """Every minute, tally and meter the hosted runtimes' month, stop the idle ones and report the hosting due to
+    Stripe; a failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await tend.tend(engine, fly, hub, idle, int(IDLE_EVERY))
+            await tend.tend(engine, fly, hub, idle, int(IDLE_EVERY), stripe)
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
+
+
+def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None] | None:
+    """With hosting on, the hub's waker and the minute tick (and Stripe's meter, when billing is set up)."""
+    if not cfg.fly_configured:
+        return None
+    fly = Fly(app.state.http, cfg)
+    app.state.hub.waker = waker(engine, fly)
+    minutes = timedelta(minutes=cfg.runtime_idle_minutes)
+    meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting)
+    return asyncio.create_task(tend_forever(engine, fly, app.state.hub, minutes, meter or None))
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -98,12 +110,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.http = http or httpx.AsyncClient(timeout=10)
-        idle: asyncio.Task[None] | None = None
-        if cfg.fly_configured:
-            fly = Fly(app.state.http, cfg)
-            app.state.hub.waker = waker(engine, fly)
-            minutes = timedelta(minutes=cfg.runtime_idle_minutes)
-            idle = asyncio.create_task(tend_forever(engine, fly, app.state.hub, minutes))
+        idle = _tending(app, cfg, engine)
         yield
         if idle is not None:
             idle.cancel()

@@ -131,6 +131,21 @@ CREATE TABLE IF NOT EXISTS machine_months (
 );
 CREATE INDEX IF NOT EXISTS ix_machine_months_org_id ON machine_months (org_id);
 
+-- meter_events
+CREATE TABLE IF NOT EXISTS meter_events (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    customer TEXT NOT NULL,
+    cents INTEGER NOT NULL,
+    at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    CONSTRAINT meter_events_cents CHECK (cents > 0),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_meter_events_org_id ON meter_events (org_id);
+
 -- users
 CREATE TABLE IF NOT EXISTS users (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -496,6 +511,10 @@ ALTER TABLE machine_months ENABLE ROW LEVEL SECURITY;
 ALTER TABLE machine_months FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON machine_months;
 CREATE POLICY tenant ON machine_months USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE meter_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meter_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON meter_events;
+CREATE POLICY tenant ON meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;

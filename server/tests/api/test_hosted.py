@@ -18,6 +18,7 @@ from glyphh_server.errors import Conflict, Unavailable
 from glyphh_server.models import Rrotor, Run, RuntimeKey
 from glyphh_server.ops import tend as tending
 from glyphh_server.ops.auth.secrets import hash_secret
+from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import idle_hosted, stop_idle, waker
 from glyphh_server.ops.runtime_keys import key_hash
@@ -206,7 +207,8 @@ async def test_the_app_stops_idle_runtimes_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def tend(engine: AsyncEngine, fly: Fly, hub: Any, idle: timedelta, step: int) -> None:
+    async def tend(engine: AsyncEngine, fly: Fly, hub: Any, idle: timedelta, step: int, stripe: Any) -> None:
+        assert stripe is not None and stripe.meter == "glyphh_hosting"
         ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("fly hiccup")
@@ -288,3 +290,5 @@ async def test_the_tally_counts_online_time_starts_again_with_the_month_and_neve
     fly = FakeFly()
     await tending.tend(engine, Fly(fake_http(fly=fly), FLY_SETTINGS), Hub(redis), timedelta(minutes=10), 60)
     assert (await _row(engine, str(online))).month_seconds == 10**7 + 120
+    meter = StripeClient(fake_http(), "sk_test", "glyphh_hosting")  # with Stripe, the hosting due is reported too
+    await tending.tend(engine, Fly(fake_http(fly=fly), FLY_SETTINGS), Hub(redis), timedelta(minutes=10), 60, meter)

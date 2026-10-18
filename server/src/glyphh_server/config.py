@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
+    # Hosting, metered: the price on the Billing Meter (a unit is a US cent), second on every paid subscription, and the
+    # meter's event name (glyphh_hosting). Without the price, Checkout answers E_UNAVAILABLE; without the name, nothing
+    # is reported to the meter. scripts/stripe-setup.py makes them and prints these.
+    stripe_price_hosting: str | None = None
+    stripe_meter_hosting: str = ""
     # The Glyphh GitHub App: its id, its private key (PEM) and its slug (its install page is under the slug).
     github_app_id: str = ""
     github_app_private_key: str = ""

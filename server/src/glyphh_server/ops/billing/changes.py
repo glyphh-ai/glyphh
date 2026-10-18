@@ -12,6 +12,7 @@ from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.billing.checkout import billing_row, sold
 from glyphh_server.ops.billing.items import classify
+from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import sync_subscription
 from glyphh_server.ops.guards import require_admin
@@ -29,9 +30,11 @@ async def subscribed(conn: AsyncConnection, who: Principal) -> Row:
 
 
 async def to_free(conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row) -> None:
-    """The subscription cancelled now, once no hosted machine is left to bill."""
+    """The subscription cancelled now, once no hosted machine is left to bill and the hosting due is reported, so
+    the last invoice carries it."""
     if await limits.org_machines(conn, who.org_id):
         raise Conflict("Delete your hosted machines first.", reason="machines")
+    await report(conn.engine, stripe, only=who.org_id)
     await sync_subscription(conn, who.org_id, await stripe.cancel(org.stripe_subscription_id))
 
 

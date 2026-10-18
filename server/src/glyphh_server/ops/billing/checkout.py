@@ -1,5 +1,5 @@
-"""Subscribing (Stripe Checkout: the plan's flat monthly price) and Stripe's own portal for the card, invoices and
-cancelling. Only self-serve plans are bought here; Enterprise is by contract."""
+"""Subscribing (Stripe Checkout: the plan's flat monthly price and the metered hosting price) and Stripe's own portal
+for the card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by contract."""
 
 import uuid
 
@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.db.seed import SALES
-from glyphh_server.errors import Conflict, Invalid
+from glyphh_server.errors import Conflict, Invalid, Unavailable
 from glyphh_server.models import Org, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.billing.stripe import StripeClient
@@ -48,11 +48,14 @@ async def checkout(
 ) -> StripePage:
     require_admin(who)
     price = sold(await newest_version(conn, plan))
+    if not settings.stripe_price_hosting:
+        raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
     org = await billing_row(conn, who.org_id)
     if org.stripe_subscription_id is not None:
         raise Conflict("Your org is already subscribed: change plan instead.", reason="subscribed")
     customer = org.stripe_customer_id or await _customer(conn, who, stripe, org.name)
-    url = await stripe.checkout(customer, [{"price": price, "quantity": 1}], str(who.org_id), return_url(settings))
+    lines = [{"price": price, "quantity": 1}, {"price": settings.stripe_price_hosting}]
+    url = await stripe.checkout(customer, lines, str(who.org_id), return_url(settings))
     return StripePage(url=url)
 
 

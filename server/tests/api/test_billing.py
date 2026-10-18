@@ -48,6 +48,7 @@ async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(
     assert path == "/customers" and customer["email"] == ada.email and customer["metadata[org_id]"] == str(ada.org_id)
     assert session["mode"] == "subscription" and session["line_items[0][price]"] == "price_test_team"
     assert (session["line_items[0][quantity]"], session["client_reference_id"]) == ("1", str(ada.org_id))
+    assert session["line_items[1][price]"] == "price_test_hosting" and "line_items[1][quantity]" not in session
     assert session["success_url"] == "http://localhost:8080/billing/done"
     customer = (await org_row(engine, ada.org_id)).stripe_customer_id
     assert customer.startswith("cus_")
@@ -72,6 +73,18 @@ async def test_checkout_refuses_what_it_cannot_sell(client: httpx.AsyncClient, e
     await subscribed(engine, ada.org_id, "sub_solo", "cus_solo")
     res = await client.post("/v1/billing/checkout", json={"plan": "Pro"}, headers=ada.headers)
     assert res.status_code == 409 and res.json()["error"]["reason"] == "subscribed"
+
+
+async def test_checkout_needs_the_hosting_price(engine: AsyncEngine) -> None:
+    from glyphh_server.app import create_app
+    from tests.conftest import SETTINGS, _client
+    from tests.fakes import fake_http
+
+    ada = await person(engine)
+    unpriced = SETTINGS.model_copy(update={"stripe_price_hosting": None})
+    async for client in _client(create_app(unpriced, http=fake_http())):
+        res = await client.post("/v1/billing/checkout", json={"plan": "Pro"}, headers=ada.headers)
+        assert (res.status_code, res.json()["error"]["reason"]) == (503, "billing_off")
 
 
 async def test_billing_is_the_admins(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

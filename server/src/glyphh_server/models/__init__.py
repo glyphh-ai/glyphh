@@ -12,6 +12,7 @@ from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
 from glyphh_server.models.machine_month import MachineMonth
+from glyphh_server.models.meter_event import MeterEvent
 from glyphh_server.models.mod import Mod
 from glyphh_server.models.model import Model, ModelVersion
 from glyphh_server.models.model_event import ModelEvent
@@ -52,6 +53,7 @@ __all__ = [
     "Install",
     "Invite",
     "MachineMonth",
+    "MeterEvent",
     "Mod",
     "Model",
     "ModelEvent",

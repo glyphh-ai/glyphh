@@ -31,10 +31,11 @@ def form(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
 
 
 class StripeClient:
-    def __init__(self, http: httpx.AsyncClient, secret_key: str) -> None:
+    def __init__(self, http: httpx.AsyncClient, secret_key: str, meter: str = "") -> None:
+        """meter: the hosting Billing Meter's event name; empty, nothing is reported to it."""
         if not secret_key:
             raise Unavailable("Billing isn't set up on this server.", reason="billing_off")
-        self.http, self.secret_key = http, secret_key
+        self.http, self.secret_key, self.meter = http, secret_key, meter
 
     async def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
         """A call to Stripe; a DELETE's parameters ride the query, as Stripe reads them."""
@@ -81,6 +82,16 @@ class StripeClient:
     async def cancel(self, subscription_id: str) -> dict[str, Any]:
         """Cancel the subscription now: what is owed (the unused time credited) invoiced at once."""
         return await self.call("DELETE", f"/subscriptions/{subscription_id}", {"invoice_now": True, "prorate": True})
+
+    async def meter_event(self, customer: str, cents: int, identifier: str, at: int) -> None:
+        """Hosting cents for a customer on the Billing Meter; Stripe counts an identifier once."""
+        body = {
+            "event_name": self.meter,
+            "identifier": identifier,
+            "timestamp": at,
+            "payload": {"stripe_customer_id": customer, "value": cents},
+        }
+        await self.call("POST", "/billing/meter_events", body)
 
     async def portal(self, customer: str, return_url: str) -> str:
         session = await self.call("POST", "/billing_portal/sessions", {"customer": customer, "return_url": return_url})

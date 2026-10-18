@@ -21,7 +21,8 @@ router = APIRouter(tags=["plans and billing"])
 
 
 def stripe_client(request: Request) -> StripeClient:
-    return StripeClient(request.app.state.http, request.app.state.settings.stripe_secret_key)
+    settings = request.app.state.settings
+    return StripeClient(request.app.state.http, settings.stripe_secret_key, settings.stripe_meter_hosting)
 
 
 Stripe = Annotated[StripeClient, Depends(stripe_client)]
