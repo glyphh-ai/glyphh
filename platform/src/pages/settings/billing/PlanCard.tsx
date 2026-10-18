@@ -44,6 +44,7 @@ export function PlanCard({ me, runtime, isAdmin, onChangeSeats }: PlanCardProps)
 
       {isAdmin && (
         <div className={styles.actions}>
+          <Button onClick={() => navigate('/settings/usage')}>Usage</Button>
           <Menu
             label="Manage billing"
             placement="bottom-end"
