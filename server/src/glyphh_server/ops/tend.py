@@ -1,18 +1,20 @@
-"""The server's minute tick for hosted runtimes: every online machine's month counts the minute, every machine is
-metered at Fly's rates (ops/metering.py), the idle ones are stopped, the keys that expired are taken off their
-runtimes, the Enterprise grants past their date are ended, and the hosting due is reported to Stripe's meter
-(ops/billing/meter.py). No plan has hosted hours: a machine is never paused."""
+"""The server's minute tick, with or without hosting on: every online machine's month counts the minute, every machine
+is metered at Fly's rates (ops/metering.py), the idle ones and those held past their plan are stopped, the keys that
+expired are taken off their runtimes, the Enterprise grants past their date are ended, and the hosting due is
+reported to Stripe's meter (ops/billing/meter.py). No plan has hosted hours: a machine is never paused."""
 
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import case, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_server.config import Settings
 from glyphh_server.models import Rrotor
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.enterprise import expire
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.held import hold
 from glyphh_server.ops.idle import stop_idle
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.presence import ONLINE
@@ -35,14 +37,17 @@ async def tally(engine: AsyncEngine, step: int, region: str) -> None:
 
 
 async def tend(
-    engine: AsyncEngine, fly: Fly, hub: Hub, idle: timedelta, step: int, stripe: StripeClient | None = None
+    engine: AsyncEngine, hub: Hub, settings: Settings, step: int, fly: Fly | None, stripe: StripeClient | None
 ) -> None:
-    """One tick of the server's care of hosted runtimes: the month tallied and metered, the idle ones stopped, the
-    keys that expired since the last tick (with a tick to spare) taken off their runtimes, the Enterprise grants past
-    their date ended, and, with Stripe, the hosting due reported to its meter."""
-    await tally(engine, step, fly.settings.fly_region)
-    await stop_idle(engine, fly, idle)
+    """One tick: the month tallied and metered, the keys that expired since the last tick (with a tick to spare)
+    taken off their runtimes, the Enterprise grants past their date ended; with hosting on, the idle machines stopped
+    and those held past their plan stopped; with Stripe, the hosting due reported to its meter."""
+    await tally(engine, step, settings.fly_region)
     await push_expired(engine, hub, timedelta(seconds=2 * step))
     await expire(engine)
+    if fly is not None:
+        await stop_idle(engine, fly, timedelta(minutes=settings.runtime_idle_minutes))
+        async with engine.begin() as conn:  # the connecting role: every org's
+            await hold(conn, fly)
     if stripe is not None:
         await report(engine, stripe)

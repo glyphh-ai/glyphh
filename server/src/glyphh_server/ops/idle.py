@@ -14,6 +14,7 @@ from glyphh_server.errors import Conflict
 from glyphh_server.models import Rrotor, Run, User
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.held import check_start
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.link.protocol import RUNNING, WAITING
 from glyphh_server.ops.runtimes import NOT_LINKED
@@ -23,14 +24,19 @@ log = logging.getLogger("glyphh.runtime")
 
 def waker(engine: AsyncEngine, fly: Fly) -> Callable[[uuid.UUID], Awaitable[None]]:
     """The hub's waker: start the hosted runtime's machine when it is not online. Fly's start of a running machine
-    is a no-op, so a stale `offline` costs nothing."""
+    is a no-op, so a stale `offline` costs nothing. A machine held past the plan is not woken (E_LIMIT)."""
 
     async def wake(runtime_id: uuid.UUID) -> None:
         async with engine.connect() as conn:
-            found = select(Rrotor.fly_machine_id, Rrotor.state).where(Rrotor.id == runtime_id, Rrotor.mode == "hosted")
+            found = (
+                select(Rrotor.fly_machine_id, Rrotor.state, Rrotor.user_id, User.org_id)
+                .join(User, User.id == Rrotor.user_id)
+                .where(Rrotor.id == runtime_id, Rrotor.mode == "hosted")
+            )
             row = (await conn.execute(found)).first()
-        if row is None or row.fly_machine_id is None:
-            raise Conflict("This runtime has no machine to wake.", runtime_id=str(runtime_id))
+            if row is None or row.fly_machine_id is None:
+                raise Conflict("This runtime has no machine to wake.", runtime_id=str(runtime_id))
+            await check_start(conn, row.user_id, row.org_id)
         if row.state != ONLINE:
             log.info("waking hosted runtime", extra=fields(runtime=str(runtime_id), machine=row.fly_machine_id))
             await fly.start(str(row.fly_machine_id))

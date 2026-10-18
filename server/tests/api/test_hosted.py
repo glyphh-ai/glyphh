@@ -207,8 +207,8 @@ async def test_the_app_stops_idle_runtimes_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def tend(engine: AsyncEngine, fly: Fly, hub: Any, idle: timedelta, step: int, stripe: Any) -> None:
-        assert stripe is not None and stripe.meter == "glyphh_hosting"
+    async def tend(engine: AsyncEngine, hub: Any, cfg: Any, step: int, fly: Any, stripe: Any) -> None:
+        assert fly is not None and stripe is not None and stripe.meter == "glyphh_hosting"
         ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("fly hiccup")
@@ -288,7 +288,7 @@ async def test_the_tally_counts_online_time_starts_again_with_the_month_and_neve
         (month, 0, "stopped"),
     ]
     fly = FakeFly()
-    await tending.tend(engine, Fly(fake_http(fly=fly), FLY_SETTINGS), Hub(redis), timedelta(minutes=10), 60)
+    await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, Fly(fake_http(fly=fly), FLY_SETTINGS), None)
     assert (await _row(engine, str(online))).month_seconds == 10**7 + 120
     meter = StripeClient(fake_http(), "sk_test", "glyphh_hosting")  # with Stripe, the hosting due is reported too
-    await tending.tend(engine, Fly(fake_http(fly=fly), FLY_SETTINGS), Hub(redis), timedelta(minutes=10), 60, meter)
+    await tending.tend(engine, Hub(redis), FLY_SETTINGS, 60, None, meter)  # hosting off: the rest of the tick runs

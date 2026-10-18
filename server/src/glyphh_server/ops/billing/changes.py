@@ -1,5 +1,6 @@
 """Changing a subscribed org's plan: to the newest version of another self-serve plan, prorated by Stripe; or down
-to Free, which cancels the subscription now (invoiced now, prorated) once the org has no hosted machines. An org on a
+to Free, which cancels the subscription now (invoiced now, prorated). Either is refused while one of the org's people
+holds more hosted machines than the new plan allows. An org on a
 plan by contract (Enterprise) changes it with Glyphh, not here. The org is
 synced from Stripe's answer at once; the webhook keeps it true after."""
 
@@ -29,11 +30,17 @@ async def subscribed(conn: AsyncConnection, who: Principal) -> Row:
     return org
 
 
+async def room_for(conn: AsyncConnection, who: Principal, version: Row) -> None:
+    """The plan allows the machines each of the org's people holds, or the change is refused."""
+    held, allowed = await limits.most_held(conn, who.org_id), version.max_machines
+    if allowed is None or held <= allowed:
+        return
+    said = "" if allowed == 0 else f" {version.name} allows {allowed} for each person."
+    raise Conflict(f"Delete your hosted machines first.{said}", reason="machines", held=held, max=allowed)
+
+
 async def to_free(conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row) -> None:
-    """The subscription cancelled now, once no hosted machine is left to bill and the hosting due is reported, so
-    the last invoice carries it."""
-    if await limits.org_machines(conn, who.org_id):
-        raise Conflict("Delete your hosted machines first.", reason="machines")
+    """The subscription cancelled now, once the hosting due is reported, so the last invoice carries it."""
     await report(conn.engine, stripe, only=who.org_id)
     await sync_subscription(conn, who.org_id, await stripe.cancel(org.stripe_subscription_id))
 
@@ -44,6 +51,7 @@ async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClien
     if not current.self_serve:
         raise Conflict(f"Your {current.name} plan is by contract: talk to us at {SALES}.", reason="contract")
     version = await newest_version(conn, plan)
+    await room_for(conn, who, version)
     if version.name == FREE:
         await to_free(conn, who, stripe, org)
         return await org_view(conn, who.org_id)

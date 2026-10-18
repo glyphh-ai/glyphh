@@ -15,6 +15,7 @@ from glyphh_server.models.rrotor import SizeName
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.held import check_start
 from glyphh_server.ops.hosted import provision
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.plans import org_version
@@ -81,8 +82,10 @@ async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, siz
 
 
 async def start(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
-    """Its machine started, unless it is online already. It is `stopped` until its rrotor links."""
+    """Its machine started, unless it is online already. It is `stopped` until its rrotor links. Refused while the
+    person holds more machines than the plan allows."""
     row = await _row(conn, who, runtime_id)
+    await check_start(conn, who.user_id, who.org_id)
     if row.state != ONLINE:
         await fly.start(str(row.fly_machine_id))
     return _view(row, fly.settings.fly_public_domain)
@@ -100,7 +103,8 @@ async def stop(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid
 
 
 async def restart(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
-    """Its machine restarted: its link drops and it links again, `stopped` until then."""
+    """Its machine restarted: its link drops and it links again, `stopped` until then. Refused as starting is."""
+    await check_start(conn, who.user_id, who.org_id)
     await fly.restart(str((await _row(conn, who, runtime_id)).fly_machine_id))
     return await _stopped(conn, fly, who, runtime_id)
 

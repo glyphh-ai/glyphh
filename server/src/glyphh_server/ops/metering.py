@@ -1,7 +1,8 @@
 """Hosted machines metered per second at Fly's rates. Each minute every hosted machine's month adds its size's rate for
 the seconds it was started and its volume's GB for every second, started or stopped: the cost, in micro-dollars; and
-the charge, the cost with the org's markup (its own, else its plan's). A region with no rates is logged and costs
-nothing that minute."""
+the charge, the cost with the org's markup (its own, else its plan's; none on a plan with no hosting, Free, where the
+cost of machines held past the plan, their disks, is kept and nothing charged). A region with no rates is logged and
+costs nothing that minute."""
 
 import logging
 from datetime import UTC, datetime
@@ -41,7 +42,9 @@ def priced(row: Row, rates: InForce, step: int) -> tuple[int, int]:
     started = step if row.state == ONLINE else 0
     usd = rates.usd[row.size] * started + rates.usd[VOLUME] * SIZES[row.size].volume_gb * step
     cost = usd / SECONDS_PER_MONTH
-    return micros(cost), micros(cost * (1 + Decimal(row.markup_pct or 0) / 100))
+    if row.markup_pct is None:  # a plan with no hosting (Free): the cost is kept, nothing is charged
+        return micros(cost), 0
+    return micros(cost), micros(cost * (1 + Decimal(row.markup_pct) / 100))
 
 
 async def meter(conn: AsyncConnection, step: int, region: str) -> None:

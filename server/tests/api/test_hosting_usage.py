@@ -48,7 +48,7 @@ async def test_each_minute_meters_started_seconds_and_the_volume_always_with_the
     small = await _machine(engine, pro, "small", "small", "online")
     medium = await _machine(engine, pro, "medium", "medium", "stopped", region="iad")
     theirs = await _machine(engine, deal, "big", "large", "online")
-    at_cost = await _machine(engine, free, "left", "small", "stopped")  # Free has no markup: at cost
+    at_cost = await _machine(engine, free, "left", "small", "stopped")  # held on Free: its disk's cost, no charge
     lost = await _machine(engine, pro, "lost", "small", "online", region="nowhere")
     await tend.tally(engine, 60, "iad")
     await tend.tally(engine, 60, "iad")
@@ -57,7 +57,7 @@ async def test_each_minute_meters_started_seconds_and_the_volume_always_with_the
         (2 * micros(run, 60), 2 * micros(run, 60, "1.3")),
         (2 * micros("1.50", 60), 2 * micros("1.50", 60, "1.3")),  # medium stopped: its 10 GB only
         (2 * micros("93.00", 60), 2 * micros("93.00", 60, "1.25")),  # large and 20 GB, the org's own markup
-        (2 * micros("0.45", 60), 2 * micros("0.45", 60)),
+        (2 * micros("0.45", 60), 0),
         (0, 0),
     ]
     assert "no fly rates: machine not metered" in caplog.text

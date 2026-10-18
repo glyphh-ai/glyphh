@@ -14,6 +14,7 @@ from glyphh_server.models import Org
 from glyphh_server.ops.billing import changes, checkout, signature, webhook
 from glyphh_server.ops.billing.checkout import StripePage
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.org import OrgView
 from glyphh_server.ops.usage import Usage, usage
 
@@ -81,7 +82,9 @@ async def stripe_webhook(
     """Stripe's events keep orgs true: plan version and status. Signed by Stripe, or refused."""
     secret = request.app.state.settings.stripe_webhook_secret
     event = signature.verified_event(secret, await request.body(), stripe_signature)
-    await webhook.handle_event(conn, stripe_client(request), event)
+    settings = request.app.state.settings
+    fly = Fly(request.app.state.http, settings) if settings.fly_configured else None
+    await webhook.handle_event(conn, stripe_client(request), event, fly)
     return Response(status_code=204)
 
 

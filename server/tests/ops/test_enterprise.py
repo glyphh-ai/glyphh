@@ -1,5 +1,5 @@
 """Enterprise, granted by staff: the org on Enterprise until a date at its own markup, billed on its own subscription;
-revoked back to Free once its machines are gone; ended by the tick when the date passes, and when the deal's
+revoked back to Free, its machines stopped and held; ended by the tick when the date passes, and when the deal's
 subscription ends; the command refuses what it cannot do."""
 
 import runpy
@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.errors import Conflict, NotFound
@@ -86,23 +86,33 @@ def _stripe(stripe: FakeStripe):  # type: ignore[no-untyped-def]
     return StripeClient(fake_http(stripe), "sk_test")
 
 
-async def test_revoking_waits_for_the_machines_then_puts_the_org_on_free(engine: AsyncEngine) -> None:
+async def test_revoking_puts_the_org_on_free_its_machines_stopped_and_held(engine: AsyncEngine) -> None:
+    from tests.api.test_hosted import FLY_SETTINGS
+    from tests.fakes import FakeFly
+
     ada = await person(engine, "Enterprise")
     async with engine.begin() as conn:
         values = {"markup_pct": 10, "plan_until": datetime(2030, 1, 1, tzinfo=UTC)}
         await conn.execute(update(Org).where(Org.id == ada.org_id).values(**values))
-    machine = await hosted_runtime(engine, ada)
-    with pytest.raises(Conflict, match="hosted machines are deleted first"):
-        await enterprise.run(["revoke", "--org", str(ada.org_id)], SETTINGS)
+    machine = await hosted_runtime(engine, ada, f"m_{ada.org_id.hex[:8]}")
     async with engine.begin() as conn:
-        await conn.execute(delete(Rrotor).where(Rrotor.id == machine.id))
-    said = await enterprise.run(["revoke", "--org", str(ada.org_id)], SETTINGS)
-    assert said == "Ada Lovelace's org is on Free. Cancel its subscription in Stripe."
+        await conn.execute(update(Rrotor).where(Rrotor.id == machine.id).values(state="online", fly_machine_id="m_x"))
+    fly = FakeFly()
+    fly.machines["m_x"] = {"id": "m_x", "state": "started"}
+    said = await enterprise.run(
+        ["revoke", "--org", str(ada.org_id)],
+        FLY_SETTINGS.model_copy(update={"database_url": SETTINGS.database_url}),
+        fake_http(fly=fly),
+    )
+    assert said == "Ada Lovelace's org is on Free, 1 hosted machines stopped. Cancel its subscription in Stripe."
+    assert fly.machines["m_x"]["state"] == "stopped"
     org = await org_row(engine, ada.org_id)
     assert (await _plan(engine, ada.org_id), org.plan_until, org.markup_pct) == ("Free", None, None)
+    said = await enterprise.run(["revoke", "--org", str(ada.org_id)], SETTINGS)  # hosting off: the plan only
+    assert said == "Ada Lovelace's org is on Free, 0 hosted machines stopped. Cancel its subscription in Stripe."
 
 
-async def test_a_grant_past_its_date_ends_at_the_tick(engine: AsyncEngine, caplog: pytest.LogCaptureFixture) -> None:
+async def test_a_grant_past_its_date_ends_at_the_tick(engine: AsyncEngine) -> None:
     ended, kept, left = [await person(engine, "Enterprise") for _ in range(3)]
     async with engine.begin() as conn:
         for who, until in ((ended, -1), (kept, 30), (left, -1)):
@@ -111,7 +121,6 @@ async def test_a_grant_past_its_date_ends_at_the_tick(engine: AsyncEngine, caplo
     await hosted_runtime(engine, left)
     assert set(await enterprise.expire(engine)) >= {ended.org_id, left.org_id}
     assert [await _plan(engine, w.org_id) for w in (ended, kept, left)] == ["Free", "Enterprise", "Free"]
-    assert "enterprise ended with hosted machines" in caplog.text
 
 
 def test_the_command_runs_as_a_module_and_says_what_it_refused(monkeypatch: pytest.MonkeyPatch) -> None:
