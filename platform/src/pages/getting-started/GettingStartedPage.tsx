@@ -42,16 +42,16 @@ export function GettingStartedPage() {
           <Step number={1}>Install</Step>
           <div className={styles.grid}>
             <Install title="Python">
-              <CopyField value="pip install glyphh-ada" label="pip command" />
+              <CopyField value="pip install glyphh" label="pip command" />
             </Install>
             <Install title="Node">
-              <CopyField value="npm i @glyphh-ai/ada" label="npm command" />
+              <CopyField value="npm i @glyphh-ai/glyphh" label="npm command" />
             </Install>
           </div>
           <Install title="Claude plugin">
-            <span className={styles.meta}>In Claude Code, add the Glyphh marketplace, then the Ada plugin:</span>
+            <span className={styles.meta}>In Claude Code, add the Glyphh marketplace, then the Glyphh plugin (Ada is a skill in it):</span>
             <CopyField value="/plugin marketplace add glyphh-ai/glyphh" label="marketplace command" />
-            <CopyField value="/plugin install ada@glyphh" label="plugin command" />
+            <CopyField value="/plugin install glyphh@glyphh" label="plugin command" />
           </Install>
         </Card>
 

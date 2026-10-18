@@ -50,11 +50,11 @@ describe('Getting started', () => {
 
   it('gives the SDKs and the Claude plugin to copy', async () => {
     const { user } = renderApp('/getting-started');
-    expect(await screen.findByText('pip install glyphh-ada')).toBeInTheDocument();
-    expect(screen.getByText('npm i @glyphh-ai/ada')).toBeInTheDocument();
+    expect(await screen.findByText('pip install glyphh')).toBeInTheDocument();
+    expect(screen.getByText('npm i @glyphh-ai/glyphh')).toBeInTheDocument();
     expect(screen.getByText('/plugin marketplace add glyphh-ai/glyphh')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Copy plugin command' }));
-    expect(await navigator.clipboard.readText()).toBe('/plugin install ada@glyphh');
+    expect(await navigator.clipboard.readText()).toBe('/plugin install glyphh@glyphh');
   });
 
   it('is reached from Home when there is no runtime yet', async () => {
@@ -269,7 +269,7 @@ describe('Getting started', () => {
     it('shows nothing when there are none', async () => {
       server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
       renderApp('/getting-started');
-      await screen.findByText('pip install glyphh-ada');
+      await screen.findByText('pip install glyphh');
       expect(screen.queryByText('Your self-hosted runtimes')).not.toBeInTheDocument();
     });
 
