@@ -48,42 +48,24 @@ describe('Billing', () => {
     await vi.waitFor(() => expect(removed).toBe('ada@1792000000'));
   });
 
-  it('changes plan at once with a subscription', async () => {
-    let chosen: unknown;
-    server.use(
-      http.post(v1('/billing/plan'), async ({ request }) => {
-        chosen = await request.json();
-        return HttpResponse.json({});
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
+  it('opens the plans from Manage, and from an Upgrade card', async () => {
+    const { user, router } = renderApp('/settings/billing');
+    await user.click(await screen.findByRole('button', { name: 'Manage' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Change plan' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+    await router.navigate('/settings/billing');
     await user.click(await screen.findByRole('button', { name: 'Upgrade' }));
-    const dialog = screen.getByRole('dialog', { name: 'Change plan' });
-    expect(within(dialog).getByRole('radio', { name: /Team/ })).toBeChecked();
-    await user.click(within(dialog).getByRole('button', { name: 'Change plan' }));
-    await vi.waitFor(() => expect(chosen).toEqual({ plan: 'Team' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
   });
 
-  it('sends a Free org to Stripe’s checkout to upgrade', async () => {
-    const location = stubLocation();
-    let body: unknown;
-    server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...me.plan, name: 'Free', seat_price_cents: 0 }, org: { ...me.org, billing_status: 'none', renews_at: null } })),
-      http.post(v1('/billing/checkout'), async ({ request }) => {
-        body = await request.json();
-        return HttpResponse.json({ url: 'https://checkout.stripe.test/c/1' });
-      }),
-    );
-    try {
-      const { user } = renderApp('/settings/billing');
-      expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
-      await user.click(screen.getAllByRole('button', { name: 'Upgrade' })[0]!);
-      await user.click(within(screen.getByRole('dialog', { name: 'Change plan' })).getByRole('button', { name: 'Continue to Stripe' }));
-      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/c/1'));
-      expect(body).toEqual({ plan: 'Pro', seats: 1, addons: [] });
-    } finally {
-      location.restore();
-    }
+  it('offers only Change plan in Manage on Free, without a subscription', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0], org: { ...me.org, billing_status: 'none', renews_at: null } })));
+    const { user } = renderApp('/settings/billing');
+    expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    expect(screen.getAllByText('Free')).toHaveLength(2);
+    await user.click(await screen.findByRole('button', { name: 'Manage' }));
+    const menu = screen.getByRole('menu', { name: 'Manage billing' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Change plan']);
   });
 
   it('opens the billing portal from Manage', async () => {
@@ -127,7 +109,7 @@ describe('Billing', () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })));
     renderApp('/settings/billing');
     expect(await screen.findByText('Only your org’s admin can change this.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Change plan' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage' })).not.toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Ada add-on' })).toBeDisabled();
   });
 
@@ -221,37 +203,6 @@ describe('Billing', () => {
     await user.click(await screen.findByRole('switch', { name: 'Ada add-on' }));
     await user.click(within(screen.getByRole('dialog', { name: 'Remove Ada' })).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('changes plan from the plan card, starting on the current plan', async () => {
-    let chosen: unknown;
-    server.use(
-      http.get(v1('/plans'), () => HttpResponse.json([...plans.slice(0, 2), { ...plans[2], limits: { members: 5, installs: 10 } }])),
-      http.post(v1('/billing/plan'), async ({ request }) => {
-        chosen = await request.json();
-        return HttpResponse.json({});
-      }),
-    );
-    const { user } = renderApp('/settings/billing');
-    expect(await screen.findByText('5 members')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Change plan' }));
-    const dialog = screen.getByRole('dialog', { name: 'Change plan' });
-    expect(within(dialog).getByRole('radio', { name: /^Pro\s*· your plan/ })).toBeChecked();
-    expect(within(dialog).getByRole('button', { name: 'Change plan' })).toBeDisabled();
-    await user.click(within(dialog).getByRole('radio', { name: /^Free/ }));
-    await user.click(within(dialog).getByRole('button', { name: 'Change plan' }));
-    await vi.waitFor(() => expect(chosen).toEqual({ plan: 'Free' }));
-    await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  });
-
-  it('cannot change plan while the plans cannot be read', async () => {
-    server.use(http.get(v1('/plans'), () => apiError(503, 'E_UNAVAILABLE', 'Plans are unavailable.')));
-    const { user } = renderApp('/settings/billing');
-    expect(await screen.findByText('Plans are unavailable.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Change plan' }));
-    const dialog = screen.getByRole('dialog', { name: 'Change plan' });
-    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Change plan' })).toBeDisabled();
   });
 
   it('does not send too few seats, even if the form is submitted', async () => {

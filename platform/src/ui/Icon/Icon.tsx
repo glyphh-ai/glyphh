@@ -77,6 +77,7 @@ const paths = {
   arrowLeft: <path d="M19 12H5M11 18l-6-6 6-6" />,
   logOut: <path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4M10 16l4-4-4-4M14 12H4" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
   sidebar: (
     <>

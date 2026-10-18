@@ -1,0 +1,41 @@
+/* Centred in the page, as the other one-plan empty states: a tinted icon tile, the title, a line on what the page is
+   for, the plan that unlocks it, and Upgrade. */
+.upgrade {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: 440px;
+  margin: 18vh auto 0;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border: 1px solid var(--violet-line);
+  border-radius: 16px;
+  background: var(--violet-bg);
+  color: var(--violet-text);
+}
+
+.title {
+  margin-top: var(--space-2);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

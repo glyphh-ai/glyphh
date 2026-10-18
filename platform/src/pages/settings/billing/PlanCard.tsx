@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { usePortal } from '@/api/queries';
 import type { Me, Runtime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
@@ -10,12 +11,12 @@ type PlanCardProps = {
   me: Me;
   runtime: Runtime | undefined;
   isAdmin: boolean;
-  onChangePlan: () => void;
   onChangeSeats: () => void;
 };
 
-export function PlanCard({ me, runtime, isAdmin, onChangePlan, onChangeSeats }: PlanCardProps) {
+export function PlanCard({ me, runtime, isAdmin, onChangeSeats }: PlanCardProps) {
   const portal = usePortal();
+  const navigate = useNavigate();
   const { plan, org } = me;
   const subscribed = isSubscribed(org.billing_status);
   const status = statusChip(org.billing_status);
@@ -43,25 +44,30 @@ export function PlanCard({ me, runtime, isAdmin, onChangePlan, onChangeSeats }: 
 
       {isAdmin && (
         <div className={styles.actions}>
-          <Button onClick={onChangePlan}>Change plan</Button>
-          {subscribed && (
-            <Menu
-              label="Manage billing"
-              placement="bottom-end"
-              trigger={({ open, toggle, id }) => (
-                <Button iconEnd="chevronDown" onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} loading={portal.isPending}>
-                  Manage
-                </Button>
-              )}
-            >
+          <Button onClick={() => navigate('/settings/usage')}>Usage</Button>
+          <Menu
+            label="Manage billing"
+            placement="bottom-end"
+            trigger={({ open, toggle, id }) => (
+              <Button iconEnd="chevronDown" onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} loading={portal.isPending}>
+                Manage
+              </Button>
+            )}
+          >
+            <MenuItem icon="card" onSelect={() => navigate('/settings/plans')}>
+              Change plan
+            </MenuItem>
+            {subscribed && (
               <MenuItem icon="team" onSelect={onChangeSeats}>
                 Change seats
               </MenuItem>
+            )}
+            {subscribed && (
               <MenuItem icon="external" onSelect={() => portal.mutate(undefined, { onSuccess: ({ url }) => window.location.assign(url) })}>
                 Invoices and payment
               </MenuItem>
-            </Menu>
-          )}
+            )}
+          </Menu>
         </div>
       )}
       <ApiErrorNotice error={portal.error} />

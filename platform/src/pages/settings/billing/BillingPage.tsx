@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { keys, useAddons, useMe, usePlans, useRuntime } from '@/api/queries';
-import type { Addon, Plan } from '@/api/types';
+import type { Addon } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { LoadingCard, useToast } from '@/ui';
@@ -10,12 +10,11 @@ import { AdminOnlyNote, SettingsTitle } from '../SettingsTitle';
 import settings from '../settings.module.css';
 import { AddonCard } from './AddonCard';
 import { AddonDialog } from './AddonDialog';
-import { ChangePlanDialog } from './ChangePlanDialog';
 import { PlanCard } from './PlanCard';
 import { SeatsDialog } from './SeatsDialog';
 import { UpgradeCard } from './UpgradeCard';
 
-type Open = { kind: 'plan'; plan?: Plan } | { kind: 'seats' } | { kind: 'addon'; addon: Addon } | null;
+type Open = { kind: 'seats' } | { kind: 'addon'; addon: Addon } | null;
 
 export function BillingPage() {
   const me = useMe();
@@ -26,6 +25,7 @@ export function BillingPage() {
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [open, setOpen] = useState<Open>(null);
+  const navigate = useNavigate();
 
   // Stripe's checkout and portal send the browser back with ?done=1: read everything afresh.
   const done = params.get('done');
@@ -52,23 +52,19 @@ export function BillingPage() {
               me={me.data}
               runtime={runtime.data}
               isAdmin={isAdmin}
-              onChangePlan={() => setOpen({ kind: 'plan' })}
               onChangeSeats={() => setOpen({ kind: 'seats' })}
             />
             {addons.data?.map((addon) => (
               <AddonCard key={addon.mod} addon={addon} planName={me.data.plan.name} isAdmin={isAdmin} onToggle={() => setOpen({ kind: 'addon', addon })} />
             ))}
             {upgrades.map((plan) => (
-              <UpgradeCard key={plan.name} plan={plan} isAdmin={isAdmin} onUpgrade={() => setOpen({ kind: 'plan', plan })} />
+              <UpgradeCard key={plan.name} plan={plan} isAdmin={isAdmin} onUpgrade={() => navigate('/settings/plans')} />
             ))}
             <AdminOnlyNote isAdmin={isAdmin} />
           </div>
         )}
       </SettingsSection>
 
-      {me.data && open?.kind === 'plan' && (
-        <ChangePlanDialog me={me.data} plans={plans.data ?? []} initial={open.plan} onClose={() => setOpen(null)} />
-      )}
       {me.data && open?.kind === 'seats' && <SeatsDialog me={me.data} onClose={() => setOpen(null)} />}
       {me.data && open?.kind === 'addon' && <AddonDialog me={me.data} addon={open.addon} onClose={() => setOpen(null)} />}
     </>

@@ -9,6 +9,7 @@ import { List, Row } from '@/components/List';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { date } from '@/lib/format';
 import { Avatar, Button, Chip, CopyField, Dialog, LoadingCard, TextField } from '@/ui';
+import { MembersUpgrade } from './MembersUpgrade';
 import { AdminOnlyNote, SettingsTitle } from './SettingsTitle';
 import styles from './settings.module.css';
 
@@ -25,6 +26,11 @@ export function MembersPage() {
   const cancel = useCancelInvite();
 
   const limit = org.data?.plan.limits.members;
+  // A plan for one, with no one else here yet: nothing to list or invite, so the page says how to get members.
+  const solo = org.data !== undefined && limit !== null && limit !== undefined && limit <= 1 && org.data.members <= 1;
+
+  if (org.isPending) return <LoadingCard />;
+  if (solo) return <MembersUpgrade isAdmin={isAdmin} />;
 
   return (
     <>

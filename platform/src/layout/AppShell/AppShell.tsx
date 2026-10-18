@@ -7,11 +7,13 @@ import styles from './AppShell.module.css';
 type AppShellProps = {
   sidebar: ReactNode;
   crumbs: Crumb[];
+  /** The logo at the top of the sidebar; settings has none, its way back sits there instead. */
+  logo?: boolean;
   children: ReactNode;
 };
 
 /** The signed-in frame: the sidebar, the breadcrumb bar, and the page. */
-export function AppShell({ sidebar, crumbs, children }: AppShellProps) {
+export function AppShell({ sidebar, crumbs, logo = true, children }: AppShellProps) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
@@ -21,9 +23,11 @@ export function AppShell({ sidebar, crumbs, children }: AppShellProps) {
   return (
     <div className={styles.shell} data-sidebar={open ? 'open' : 'closed'}>
       <aside className={styles.sidebar} aria-label="Main">
-        <div className={styles.logo}>
-          <Logo />
-        </div>
+        {logo && (
+          <div className={styles.logo}>
+            <Logo />
+          </div>
+        )}
         {sidebar}
       </aside>
       {open && <button type="button" className={styles.scrim} aria-label="Close menu" onClick={() => setOpen(false)} />}

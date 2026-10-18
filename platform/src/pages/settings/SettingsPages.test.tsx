@@ -9,6 +9,7 @@ describe('Settings', () => {
     expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
     const main = screen.getByRole('complementary', { name: 'Main' });
     expect(within(main).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/');
+    expect(within(main).queryByRole('img', { name: 'Glyphh' })).not.toBeInTheDocument();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByText('General')).toHaveAttribute('aria-current', 'page');
   });
@@ -42,13 +43,18 @@ describe('Settings', () => {
   });
 
   describe('Members', () => {
+    // A plan for several members: the list and the invites. A plan for one shows the upgrade instead (below).
+    beforeEach(() => {
+      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, plan: { ...org.plan, name: 'Team', limits: { members: 5, installs: 10 } } })));
+    });
+
     it('lists members with the admin marked, and the plan’s member limit', async () => {
       renderApp('/settings/members');
       const list = await screen.findByRole('list', { name: 'Members' });
       expect(within(list).getByText('Chris Timmerman')).toBeInTheDocument();
       expect(within(list).getByText('Admin')).toBeInTheDocument();
       expect(within(list).queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
-      expect(await screen.findByText('1 of 1 on Pro.')).toBeInTheDocument();
+      expect(await screen.findByText('1 of 5 on Team.')).toBeInTheDocument();
     });
 
     it('makes an invite and shows its link once', async () => {
@@ -68,11 +74,11 @@ describe('Settings', () => {
     });
 
     it('explains a plan limit and points to the plans', async () => {
-      server.use(http.post(v1('/org/invites'), () => apiError(403, 'E_LIMIT', 'Pro allows 1 member.', { limit: 'members' })));
+      server.use(http.post(v1('/org/invites'), () => apiError(403, 'E_LIMIT', 'Team allows 5 members.', { limit: 'members' })));
       const { user } = renderApp('/settings/members');
       await user.type(await screen.findByLabelText('Email'), 'sam@example.com');
       await user.click(screen.getByRole('button', { name: 'Invite' }));
-      expect(await screen.findByText('Pro allows 1 member.')).toBeInTheDocument();
+      expect(await screen.findByText('Team allows 5 members.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/settings/billing');
     });
 
@@ -183,6 +189,11 @@ describe('Settings, more', () => {
   });
 
   describe('Members', () => {
+    // A plan for several members: the list and the invites. A plan for one shows the upgrade instead (below).
+    beforeEach(() => {
+      server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, plan: { ...org.plan, name: 'Team', limits: { members: 5, installs: 10 } } })));
+    });
+
     it('counts members without a limit on a plan that has none', async () => {
       server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 4, plan: { ...org.plan, name: 'Team', limits: { members: null, installs: 10 } } })));
       renderApp('/settings/members');
@@ -346,5 +357,55 @@ describe('Settings, more', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(ended).toBe(false);
     });
+  });
+});
+
+describe('Members on a plan for one', () => {
+  it('tells the admin which plan adds members, and Upgrade opens the plans', async () => {
+    const { user, router } = renderApp('/settings/members');
+    const upgrade = await screen.findByRole('region', { name: 'Members' });
+    expect(within(upgrade).getByRole('heading', { name: 'Members' })).toBeInTheDocument();
+    expect(await within(upgrade).findByText('Upgrade to the Team plan to add members.')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Members' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
+    await user.click(within(upgrade).getByRole('button', { name: 'Upgrade' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('asks a member to ask their admin, with no Upgrade', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })));
+    renderApp('/settings/members');
+    expect(await screen.findByText('Ask your admin to upgrade to the Team plan to add members.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+  });
+
+  it('says to upgrade the plan when the plans cannot be read', async () => {
+    server.use(http.get(v1('/plans'), () => apiError(503, 'E_UNAVAILABLE', 'Plans are unavailable.')));
+    renderApp('/settings/members');
+    expect(await screen.findByText('Upgrade your plan to add members.')).toBeInTheDocument();
+  });
+
+  it('still lists the members when an org has more than its plan allows', async () => {
+    server.use(http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 2 })));
+    renderApp('/settings/members');
+    expect(await screen.findByRole('list', { name: 'Members' })).toBeInTheDocument();
+    expect(await screen.findByText('2 of 1 on Pro.')).toBeInTheDocument();
+  });
+
+  it('lists the members without a count when the org cannot be read', async () => {
+    server.use(http.get(v1('/org'), () => apiError(503, 'E_UNAVAILABLE', 'The org is unavailable.')));
+    renderApp('/settings/members');
+    expect(await screen.findByRole('list', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.queryByText(/ on Pro\./)).not.toBeInTheDocument();
+  });
+
+  it('shows the members loading while the org is known and the list is not yet', async () => {
+    server.use(
+      http.get(v1('/org'), () => HttpResponse.json({ ...org, members: 2 })),
+      http.get(v1('/org/members'), () => new Promise<never>(() => {})),
+    );
+    renderApp('/settings/members');
+    expect(await screen.findByText('2 of 1 on Pro.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
 
 const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentElement!;
@@ -27,5 +27,16 @@ describe('the sidebar on a phone', () => {
     await user.click(screen.getByRole('link', { name: 'API Keys' }));
     expect(await screen.findByRole('heading', { name: 'API Keys' })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-sidebar', 'closed');
+  });
+});
+
+describe('the main sidebar', () => {
+  it('has the logo, the runtime and Ada, and no organisation group: settings is in the account menu', async () => {
+    renderApp('/');
+    const main = await screen.findByRole('complementary', { name: 'Main' });
+    expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
+    for (const name of ['Home', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
+    expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
+    for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
   });
 });

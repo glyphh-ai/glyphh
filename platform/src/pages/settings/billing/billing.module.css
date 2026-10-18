@@ -64,6 +64,7 @@
   color: var(--text-muted);
 }
 
+/* Manage keeps the right edge, whatever sits to its left. */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -72,44 +73,8 @@
   margin-top: var(--space-2);
 }
 
-.choices {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.choice {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.choice:has(input:checked) {
-  border-color: var(--accent);
-  background: var(--menu-selected);
-}
-
-.choice input {
-  margin-top: 3px;
-  accent-color: var(--accent);
-}
-
-.choiceText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--text-md);
-}
-
-.choiceName {
-  font-weight: 600;
+.actions > :last-child {
+  margin-left: auto;
 }
 
 .quote {

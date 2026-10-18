@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { MachinesPage } from '@/pages/machines/MachinesPage';
 import { ModelsPage } from '@/pages/models/ModelsPage';
+import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
 import { AuthorizePage } from '@/pages/flows/AuthorizePage';
 import { DeviceApprovePage } from '@/pages/flows/DeviceApprovePage';
@@ -16,6 +17,7 @@ import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
 import { MembersPage } from '@/pages/settings/MembersPage';
 import { ProfilePage } from '@/pages/settings/ProfilePage';
+import { UsagePage } from '@/pages/settings/UsagePage';
 import { MainLayout, SettingsLayout, type RouteHandle } from './layouts';
 
 const crumbs = (...labels: string[]): RouteHandle => ({
@@ -55,10 +57,20 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="general" replace /> },
       { path: 'general', element: <GeneralPage />, handle: crumbs('Settings', 'General') },
       { path: 'billing', element: <BillingPage />, handle: crumbs('Settings', 'Billing') },
+      { path: 'usage', element: <UsagePage />, handle: crumbs('Settings', 'Usage') },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
     ],
+  },
+  // Choosing a plan: over the whole window, no sidebar.
+  {
+    path: 'settings/plans',
+    element: (
+      <RequireSession>
+        <PlansPage />
+      </RequireSession>
+    ),
   },
   { path: 'account', element: <Moved to="/settings/profile" /> },
   { path: 'billing', element: <Moved to="/settings/billing" /> },
