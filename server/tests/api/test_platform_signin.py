@@ -96,7 +96,7 @@ async def test_no_other_origin_or_path_gets_cors(client: httpx.AsyncClient) -> N
 def test_the_signin_cookie_is_lax_on_one_site_and_none_across_sites() -> None:
     assert same_site(SETTINGS) == "lax"
     same = PROVIDER_SETTINGS.model_copy(
-        update={"public_url": "https://api.glyphh.ai", "platform_url": "https://app.glyphh.ai"}
+        update={"public_url": "https://api.glyphh.ai", "platform_url": "https://platform.glyphh.ai"}
     )
     assert same_site(same) == "lax"
     across = same.model_copy(update={"platform_url": "http://localhost:5173"})

@@ -20,7 +20,7 @@ Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed
 | `GLYPHH_DATABASE_URL` | Postgres (`postgresql+asyncpg://…`) |
 | `GLYPHH_REDIS_URL` | Redis, for live signals only (`redis://…`); in production on the server's own Fly machine |
 | `GLYPHH_PUBLIC_URL` | The server's own address: the device flow's link and the provider callbacks (`/auth/{google,github}/callback`) |
-| `GLYPHH_PLATFORM_URL` | The platform, the one web app (`https://app.glyphh.ai`; `http://localhost:3000` by default): where every browser step of a flow is sent. The server renders nothing |
+| `GLYPHH_PLATFORM_URL` | The platform, the one web app (`https://platform.glyphh.ai`; `http://localhost:3000` by default): where every browser step of a flow is sent. The server renders nothing |
 | `GLYPHH_SECRET_KEY` | 32+ characters; signs the steps of the device sign-in page and of linking a provider |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | Sign-in providers; a provider without both is not offered |
 | `GLYPHH_LICENSE_KEY` | Base64 of a raw 32-byte Ed25519 private key that signs licenses. Required in prod; without it in dev and test a key is made at start (licenses then don't survive a restart) |
