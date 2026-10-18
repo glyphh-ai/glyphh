@@ -13,7 +13,7 @@ primary_region = "iad"
 [env]
   GLYPHH_ENV = "prod"
   GLYPHH_PUBLIC_URL = "https://api.glyphh.ai"
-  GLYPHH_PLATFORM_URL = "https://app.glyphh.ai"
+  GLYPHH_PLATFORM_URL = "https://platform.glyphh.ai"
 
 [http_service]
   internal_port = 8080
