@@ -36,8 +36,8 @@ describe('Choosing a plan', () => {
     expect(within(team).getByRole('button', { name: 'Upgrade to Team' })).toBeInTheDocument();
 
     const enterprise = card('Enterprise');
-    expect(within(enterprise).getByText('From $10,000')).toBeInTheDocument();
-    expect(within(enterprise).getByText('per year')).toBeInTheDocument();
+    expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
+    expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited precedents on hosted machines')).toBeInTheDocument();
     expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
@@ -45,28 +45,29 @@ describe('Choosing a plan', () => {
     expect(within(enterprise).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('shows the hosted machine rates of each plan with hosting, never Fly’s own', async () => {
+  it('shows the hosted machine rates of each plan with hosting, never Fly’s own, and Enterprise’s as set in the contract', async () => {
     renderApp('/settings/plans');
     const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team', 'Enterprise']);
     const medium = within(table).getByRole('row', { name: /^Medium/ });
     expect(within(medium).getAllByText('$33.01 / month')).toHaveLength(2);
-    expect(within(medium).getByText('$30.47 / month')).toBeInTheDocument();
+    expect(within(medium).getByText('Set in your contract.')).toBeInTheDocument();
+    expect(within(table).getAllByText('Set in your contract.')).toHaveLength(4);
     expect(within(table).queryByText('$25.39 / month')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hosted machines' })).toBeInTheDocument();
   });
 
-  it('shows a plan sold by contract with no price, and a yearly self-serve plan', async () => {
+  it('shows a contract plan with a floor price as from that price a year, and a yearly self-serve plan', async () => {
     server.use(
       http.get(v1('/plans'), () =>
-        HttpResponse.json([...plans.slice(0, 2), { ...plans[2], interval: 'year' }, { ...plans[3], price_cents: null, interval: null }]),
+        HttpResponse.json([...plans.slice(0, 2), { ...plans[2], interval: 'year' }, { ...plans[3], price_cents: 1_000_000, interval: 'year' }]),
       ),
     );
     renderApp('/settings/plans');
     expect(within(await screen.findByRole('region', { name: 'Team' })).getByText('per year')).toBeInTheDocument();
     const enterprise = card('Enterprise');
-    expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
-    expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
+    expect(within(enterprise).getByText('From $10,000')).toBeInTheDocument();
+    expect(within(enterprise).getByText('per year')).toBeInTheDocument();
   });
 
   it('shows the server’s refusal when the rates cannot be read, and the plans still', async () => {

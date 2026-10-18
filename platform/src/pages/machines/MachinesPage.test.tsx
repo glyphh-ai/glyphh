@@ -128,6 +128,16 @@ describe('Machines', () => {
     expect(dialog).toHaveAccessibleDescription(/billed by the second while it runs/);
   });
 
+  it('on Enterprise, each size card says its rate is set in the contract', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })));
+    const { user, client } = renderApp('/machines');
+    await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
+    await user.click(await screen.findByRole('button', { name: 'New machine' }));
+    const dialog = screen.getByRole('dialog', { name: 'New machine' });
+    expect(within(dialog).getAllByText('Set in your contract.')).toHaveLength(3);
+    expect(within(dialog).queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
   it('on Free, New machine says hosting is on Pro and Team, with their rates and Upgrade', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
     const { user, router, client } = renderApp('/machines');

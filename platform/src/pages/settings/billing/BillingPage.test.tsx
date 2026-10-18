@@ -28,7 +28,8 @@ describe('Billing', () => {
     expect(within(team).getByText('10 hosted machines')).toBeInTheDocument();
     expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
     const enterprise = await card('Enterprise');
-    expect(within(enterprise).getByText('From $10,000 / year')).toBeInTheDocument();
+    expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
     expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
     expect(within(enterprise).getByText('SSO and SAML, roles and audit logs')).toBeInTheDocument();
@@ -103,22 +104,24 @@ describe('Billing', () => {
     expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
   });
 
-  it('on Enterprise, offers no plan above, and shows its own rates', async () => {
+  it('on Enterprise, offers no plan above, and never shows a rate: the contract sets them', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 5, limit: null } })));
     renderApp('/settings/billing');
-    expect(await screen.findByText('From $10,000 / year')).toBeInTheDocument();
-    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
-    expect(within(table).getByText('$8.04 / month')).toBeInTheDocument();
+    expect(await screen.findByText('By contract')).toBeInTheDocument();
+    expect(screen.getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
+    expect(await screen.findByText('Enterprise’s rates: set in your contract.')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\/ month/)).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Team' })).not.toBeInTheDocument();
   });
 
   it('offers every plan when the org’s plan is not among those listed, and a dash for a size without a rate', async () => {
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[1], name: 'Legacy', price_cents: null, interval: null } })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[1], name: 'Legacy', interval: 'year' } })),
       http.get(v1('/rates'), () => HttpResponse.json({ ...rates, plans: { Legacy: { sizes: [rates.plans.Pro!.sizes[0]], volume_usd_per_gb_month: '0.20' } } })),
     );
     renderApp('/settings/billing');
-    expect(await screen.findByText('By contract')).toBeInTheDocument();
+    expect(await screen.findByText('$99 / year')).toBeInTheDocument();
     expect(await card('Free')).toBeInTheDocument();
     const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByText('—')).toHaveLength(2);

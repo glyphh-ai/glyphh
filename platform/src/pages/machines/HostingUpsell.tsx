@@ -7,11 +7,15 @@ import { hasHosting, hostingPlansText } from '@/pages/settings/billing/plans';
 import { LoadingCard } from '@/ui';
 import styles from './Machines.module.css';
 
-/** The size rates of the person's own plan, once both are read; none on a plan without hosting. */
-export function usePlanRates(): SizeRate[] | undefined {
+/**
+ * The size rates of the person's own plan, once both are read; none on a plan without hosting. A plan sold by
+ * contract has its rates in the contract, so it is `contract` and has no rates here.
+ */
+export function usePlanRates(): SizeRate[] | 'contract' | undefined {
   const me = useMe();
   const rates = useRates();
   const plan = me.data?.plan;
+  if (plan && !plan.self_serve) return 'contract';
   return plan && rates.data?.plans[plan.name]?.sizes;
 }
 
@@ -25,7 +29,7 @@ export function useNoHosting(): boolean {
 export function HostingUpsell({ isAdmin }: { isAdmin: boolean }) {
   const plans = usePlans();
   const rates = useRates();
-  const names = (plans.data ?? []).filter((plan) => plan.self_serve && hasHosting(plan)).map((plan) => plan.name);
+  const offered = (plans.data ?? []).filter((plan) => plan.self_serve && hasHosting(plan));
 
   return (
     <div className={styles.upsell}>
@@ -35,7 +39,7 @@ export function HostingUpsell({ isAdmin }: { isAdmin: boolean }) {
       </p>
       {(plans.isPending || rates.isPending) && <LoadingCard lines={3} />}
       <ApiErrorNotice error={plans.error ?? rates.error} />
-      {rates.data && names.length > 0 && <HostingRates rates={rates.data} plans={names} />}
+      {rates.data && offered.length > 0 && <HostingRates rates={rates.data} plans={offered} />}
       <span className={styles.meta}>{ratesNote}</span>
     </div>
   );

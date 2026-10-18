@@ -7,7 +7,7 @@ import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { LoadingCard, useToast } from '@/ui';
 import { AdminOnlyNote, SettingsTitle } from '../SettingsTitle';
 import settings from '../settings.module.css';
-import { HostingRates, ratesNote } from './HostingRates';
+import { contractRates, HostingRates, ratesNote } from './HostingRates';
 import { PlanCard } from './PlanCard';
 import { hasHosting, hostingPlansText } from './plans';
 import { UpgradeCard } from './UpgradeCard';
@@ -37,8 +37,10 @@ export function BillingPage() {
   const at = list.findIndex((plan) => plan.name === current?.name);
   // The plans after this one in the server's order; all of them when this one is not listed.
   const upgrades = current ? list.slice(at + 1) : [];
-  // The rates of the plan in force, or, on a plan without hosting, of the self-serve plans that have it.
-  const ratePlans = current && hasHosting(current) ? [current.name] : list.filter((plan) => plan.self_serve && hasHosting(plan)).map((plan) => plan.name);
+  // The rates of the plan in force, or, on a plan without hosting, of the self-serve plans that have it. A plan sold
+  // by contract has its rates in the contract.
+  const contract = current !== undefined && !current.self_serve;
+  const ratePlans = current && hasHosting(current) ? [current] : list.filter((plan) => plan.self_serve && hasHosting(plan));
 
   return (
     <>
@@ -60,12 +62,17 @@ export function BillingPage() {
       <SettingsSection
         title="Hosted machines"
         description={
-          current && (hasHosting(current) ? `${current.name}’s rates.` : `Hosting is on ${hostingPlansText(plans.data)}. Running rrotor yourself is free.`)
+          current &&
+          (contract
+            ? `${current.name}’s rates: ${contractRates.toLowerCase()}`
+            : hasHosting(current)
+              ? `${current.name}’s rates.`
+              : `Hosting is on ${hostingPlansText(plans.data)}. Running rrotor yourself is free.`)
         }
       >
-        {rates.isPending && <LoadingCard lines={3} />}
-        <ApiErrorNotice error={rates.error} />
-        {rates.data && ratePlans.length > 0 && (
+        {!contract && rates.isPending && <LoadingCard lines={3} />}
+        {!contract && <ApiErrorNotice error={rates.error} />}
+        {!contract && rates.data && ratePlans.length > 0 && (
           <>
             <HostingRates rates={rates.data} plans={ratePlans} />
             <p className={styles.note}>{ratesNote}</p>

@@ -6,6 +6,7 @@ import { date, money } from '@/lib/format';
 import { Button, Card, CardEyebrow, Chip, Menu, MenuItem } from '@/ui';
 import { isSubscribed, statusChip } from './billingStatus';
 import { hasHosting, planFacts, priceText } from './plans';
+import { contractRates } from './HostingRates';
 import styles from './billing.module.css';
 
 /** The org's plan: its price, renewal, what it includes, hosting so far this month, and the ways to change it. */
@@ -28,6 +29,7 @@ export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
           <Chip key={fact.text}>{fact.text}</Chip>
         ))}
       </div>
+      {!plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
 
       {hasHosting(plan) && (
         <div className={styles.usageLine}>

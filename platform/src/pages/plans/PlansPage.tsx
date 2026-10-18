@@ -43,7 +43,7 @@ export function PlansPage() {
   const at = list.findIndex((plan) => plan.name === current?.name);
   // The next self-serve plan up is the one recommended.
   const recommended = list.find((plan, index) => index > at && plan.self_serve);
-  const hosting = list.filter(hasHosting).map((plan) => plan.name);
+  const hosting = list.filter(hasHosting);
   const machinesInTheWay = change.error instanceof ApiError && change.error.code === 'E_CONFLICT' && change.error.detail.reason === 'machines';
 
   const closeConfirm = () => {

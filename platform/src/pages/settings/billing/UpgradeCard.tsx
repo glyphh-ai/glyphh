@@ -2,6 +2,7 @@ import type { Plan } from '@/api/types';
 import { salesUrl } from '@/lib/links';
 import { Button, ButtonLink, Card, CardEyebrow, Chip } from '@/ui';
 import { planFacts, priceText } from './plans';
+import { contractRates } from './HostingRates';
 import styles from './billing.module.css';
 
 /** A plan above this one: its price and what it adds. Upgrade for a self-serve plan, Talk to us for one by contract. */
@@ -22,6 +23,7 @@ export function UpgradeCard({ plan, isAdmin, onUpgrade }: { plan: Plan; isAdmin:
           </Chip>
         ))}
       </div>
+      {!plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
     </Card>
   );
 }

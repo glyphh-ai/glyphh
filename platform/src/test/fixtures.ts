@@ -11,8 +11,8 @@ export const plans: Plan[] = [
   {
     name: 'Enterprise',
     version: 1,
-    price_cents: 1_000_000,
-    interval: 'year',
+    price_cents: null,
+    interval: null,
     self_serve: false,
     limits: { machines: null, precedents: null },
     features: { sync: true, ha: true, offline: true, sso: true },
@@ -52,10 +52,10 @@ export const rates: Rates = {
     { ...rate('large', 90), cpu_kind: 'performance', cpus: 2, memory_mb: 8192, volume_gb: 20 },
   ],
   volume_usd_per_gb_month: 0.15,
+  // Enterprise's rates are set in each customer's contract, so it has none here.
   plans: {
     Pro: { sizes: [rate('small', 8.71), rate('medium', 33.01), rate('large', 117)], volume_usd_per_gb_month: 0.2 },
     Team: { sizes: [rate('small', 8.71), rate('medium', 33.01), rate('large', 117)], volume_usd_per_gb_month: 0.2 },
-    Enterprise: { sizes: [rate('small', 8.04), rate('medium', 30.47), rate('large', 108)], volume_usd_per_gb_month: 0.18 },
   },
 };
 
