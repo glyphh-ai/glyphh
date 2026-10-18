@@ -29,7 +29,9 @@ class NewVersion(BaseModel):
 class DeployBody(BaseModel):
     version: int = Field(ge=1)
     runtime_id: uuid.UUID | None = Field(
-        None, description="One of your runtimes; default this install's, else the latest seen"
+        None,
+        description="One of your runtimes; left out, this install's local runtime, else your first hosted machine "
+        "(E_NOT_FOUND no_runtime when you have neither)",
     )
     action: DeployAction = "deploy"
 
@@ -50,7 +52,7 @@ async def list_models(caller: Caller, conn: Conn) -> list[ModelView]:
 
 @router.post("", operation_id="createModel", status_code=201)
 async def create_model(body: NewModel, caller: Caller, conn: Conn) -> ModelView:
-    """A new model (within Ada's models limit, E_LIMIT past it; E_FORBIDDEN without Ada)."""
+    """A new model, its name new to you (E_CONFLICT name_taken); models are unlimited on every plan."""
     return await models.create_model(conn, caller, body.name, body.repo)
 
 

@@ -15,8 +15,7 @@ RESOURCE: dict[str, str] = {
     "uri": URI,
     "name": "account",
     "title": "Glyphh account",
-    "description": "Your Glyphh account: plan, each mod's limits and use, add-ons, upgrade, billing, installs and "
-    "grants.",
+    "description": "Your Glyphh account: plan, each mod's limits and use, upgrade, billing, installs and grants.",
     "mimeType": MIME,
 }
 

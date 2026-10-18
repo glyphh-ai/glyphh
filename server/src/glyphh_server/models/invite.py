@@ -8,8 +8,8 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class Invite(Base):
-    """An invitation into an org, by email. Its link carries a token (only the hash is kept). An open invite holds
-    a seat; one open invite per email per org. Revoking one deletes it."""
+    """An invitation into an org, by email. Its link carries a token (only the hash is kept). One open invite per
+    email per org; members are unlimited on every plan. Revoking one deletes it."""
 
     __tablename__ = "invites"
     __table_args__ = (
