@@ -1,15 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
-import { ApiError } from '@/api/client';
 import { useCancelInvite, useInvite, useInvites, useMe, useMembers, useOrg, useRemoveMember } from '@/api/queries';
 import type { Invite, Member, NewInvite } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
-import { date } from '@/lib/format';
+import { date, plural } from '@/lib/format';
 import { Avatar, Button, Chip, CopyField, Dialog, LoadingCard, TextField } from '@/ui';
-import { MembersUpgrade } from './MembersUpgrade';
 import { AdminOnlyNote, SettingsTitle } from './SettingsTitle';
 import styles from './settings.module.css';
 
@@ -25,20 +22,13 @@ export function MembersPage() {
   const remove = useRemoveMember();
   const cancel = useCancelInvite();
 
-  const limit = org.data?.plan.limits.members;
-  // A plan for one, with no one else here yet: nothing to list or invite, so the page says how to get members.
-  const solo = org.data !== undefined && limit !== null && limit !== undefined && limit <= 1 && org.data.members <= 1;
-
-  if (org.isPending) return <LoadingCard />;
-  if (solo) return <MembersUpgrade isAdmin={isAdmin} />;
-
   return (
     <>
       <SettingsTitle title="Members">Who is in your organisation, and who is invited.</SettingsTitle>
 
       <SettingsSection
         title="Members"
-        description={org.data && (limit === null ? `${org.data.members} on ${org.data.plan.name}.` : `${org.data.members} of ${limit} on ${org.data.plan.name}.`)}
+        description={org.data && `${plural(org.data.members, 'member')}. Members are unlimited on every plan.`}
       >
         {members.isPending && <LoadingCard />}
         {members.error && <ApiErrorNotice error={members.error} />}
@@ -135,7 +125,6 @@ function InviteForm() {
   const invite = useInvite();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState<NewInvite | null>(null);
-  const atLimit = invite.error instanceof ApiError && invite.error.code === 'E_LIMIT';
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -156,7 +145,7 @@ function InviteForm() {
             Invite
           </Button>
         </div>
-        <ApiErrorNotice error={invite.error} action={atLimit ? <Link to="/settings/billing">See plans</Link> : undefined} />
+        <ApiErrorNotice error={invite.error} />
       </form>
 
       <Dialog

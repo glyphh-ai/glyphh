@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { useDeleteSelfRuntime, useIssueOfflineLicence, useRotateSelfRuntimeToken, useSelfRuntimes } from '@/api/queries';
+import { useDeleteSelfRuntime, useIssueOfflineLicence, useMe, useRotateSelfRuntimeToken, useSelfRuntimes } from '@/api/queries';
 import type { OfflineLicence, SelfRuntime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
 import { ago, date } from '@/lib/format';
-import { Button, Chip, CopyField, Dialog, TextField, type ChipTone } from '@/ui';
+import { salesUrl } from '@/lib/links';
+import { Button, ButtonLink, Chip, CopyField, Dialog, TextField, type ChipTone } from '@/ui';
 import { hostOf } from './snippets';
 import styles from './GettingStarted.module.css';
 
@@ -131,8 +132,35 @@ export function SelfRuntimes() {
   );
 }
 
-/** For a runtime that cannot reach Glyphh: a licence it checks with no network at all. */
+/** For a runtime that cannot reach Glyphh: a licence it checks with no network at all. On Enterprise only. */
 function OfflineLicenceDialog({ runtime, onClose }: { runtime: SelfRuntime; onClose: () => void }) {
+  const me = useMe();
+  if (me.data && !me.data.plan.features.offline) return <OfflineNotInPlan onClose={onClose} />;
+  return <IssueOfflineLicence runtime={runtime} onClose={onClose} />;
+}
+
+function OfflineNotInPlan({ onClose }: { onClose: () => void }) {
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title="Offline licences are on Enterprise"
+      description="A runtime that can reach Glyphh needs none: it links, or checks in once a day, on every plan."
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+          <ButtonLink variant="primary" href={salesUrl}>
+            Talk to us
+          </ButtonLink>
+        </>
+      }
+    />
+  );
+}
+
+function IssueOfflineLicence({ runtime, onClose }: { runtime: SelfRuntime; onClose: () => void }) {
   const issue = useIssueOfflineLicence();
   const [days, setDays] = useState('365');
   const [licence, setLicence] = useState<OfflineLicence | null>(null);

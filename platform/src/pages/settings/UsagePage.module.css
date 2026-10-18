@@ -1,4 +1,4 @@
-/* Three counts side by side, each against its limit; one per row on a phone. */
+/* The counts side by side, each against its limit; one per row on a phone. */
 .meters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

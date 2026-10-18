@@ -3,7 +3,7 @@ import type { ChipTone } from '@/ui';
 /** Stripe's subscription states, as the server keeps them on the org. */
 export type BillingStatus = 'none' | 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'paused';
 
-/** Whether the org has a live Stripe subscription that plan, seat and add-on changes apply to. */
+/** Whether the org has a live Stripe subscription that a change of plan applies to. */
 export function isSubscribed(status: string): boolean {
   return !['none', 'canceled', 'incomplete_expired'].includes(status);
 }

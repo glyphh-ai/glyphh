@@ -84,20 +84,30 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
   state.runtimeKeys = state.runtimeKeys.filter((k) => k.id !== c.req.param('id'));
   return c.body(null, 204);
 });
-// Hosted machines; Pro allows 3. The old /v1/runtime above stands for the first.
+// Hosted machines, as many as the plan allows (none on Free). The old /v1/runtime above stands for the first.
 const refuse = (status: number, code: string, message: string, reason: string) =>
   Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
 const machine = (id: string) => state.machines.find((m) => m.id === id);
 const setMachine = (id: string, to: 'online' | 'stopped') => {
   const found = machine(id);
-  return found ? Response.json(Object.assign(found, { state: to })) : refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
+  // A machine past what the plan allows stays stopped.
+  const allowed = state.me.plan.limits.machines;
+  if (to === 'online' && allowed !== null && state.machines.indexOf(found) >= allowed) {
+    return refuse(403, 'E_LIMIT', `${state.me.plan.name} allows ${allowed} machines.`, 'machines');
+  }
+  return Response.json(Object.assign(found, { state: to }));
 };
 app.get('/v1/runtimes', (c) => c.json(state.machines));
 app.post('/v1/runtimes', async (c) => {
   const { name, size } = await c.req.json();
-  if (state.machines.length >= 3) return refuse(403, 'E_LIMIT', 'Pro allows 3 machines. Upgrade to Team for more.', 'machines');
+  const { name: plan, limits } = state.me.plan;
+  if (limits.machines !== null && state.machines.length >= limits.machines) {
+    const message = limits.machines === 0 ? 'Hosted machines are on Pro and Team.' : `${plan} allows ${limits.machines} machines.`;
+    return refuse(403, 'E_LIMIT', message, 'machines');
+  }
   const id = `rt-${nextMachine++}`;
-  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, paused: false, created_at: new Date().toISOString() };
+  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, created_at: new Date().toISOString() };
   state.machines.push(made);
   return c.json(made, 201);
 });
@@ -136,6 +146,7 @@ app.delete('/v1/runtimes/:id', (c) => {
   return c.body(null, 204);
 });
 app.post('/v1/runtimes/:id/offline-licence', async (c) => {
+  if (!state.me.plan.features.offline) return refuse(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', 'offline');
   const { days } = await c.req.json();
   const expires_at = new Date(Date.now() + days * 86_400_000).toISOString();
   const payload = { runtime_id: c.req.param('id'), licence_id: crypto.randomUUID(), kind: 'offline', expires_at, grace_days: 14 };
@@ -148,7 +159,7 @@ app.delete('/v1/models/:id', (c) => {
   return c.body(null, 204);
 });
 app.get('/v1/plans', (c) => c.json(data.plans));
-app.get('/v1/addons', (c) => c.json(state.addons));
+app.get('/v1/rates', (c) => c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));
 app.patch('/v1/org', async (c) => {
   const name = (await c.req.json()).name;
@@ -157,25 +168,45 @@ app.patch('/v1/org', async (c) => {
 });
 app.get('/v1/org/members', (c) => c.json(state.members));
 app.get('/v1/org/invites', (c) => c.json(state.invites));
-app.post('/v1/org/invites', () =>
-  Response.json(
-    { error: { code: 'E_LIMIT', message: 'Pro allows 1 member. Upgrade to Team to invite more.', trace_id: 'dev-trace', limit: 'members', used: 1, max: 1, plan: 'Team' } },
-    { status: 403 },
-  ),
-);
-app.post('/v1/billing/addons/preview', async (c) => {
-  const { mod, action } = await c.req.json();
-  return c.json({ mod, action, prorated_cents: action === 'add' ? 207 : -207, currency: 'usd', monthly_cents: 400, proration_date: Math.floor(Date.now() / 1000) });
+// Members are unlimited on every plan.
+app.post('/v1/org/invites', async (c) => {
+  const created = new Date();
+  const invite = { id: crypto.randomUUID(), email: (await c.req.json()).email, expires_at: new Date(created.getTime() + 7 * 86_400_000).toISOString(), created_at: created.toISOString() };
+  state.invites.push(invite);
+  return c.json({ invite, link: `${platform}/join?invite=${invite.id}` }, 201);
 });
-app.post('/v1/billing/addons', (c) => c.json(state.addons.map((a) => Object.assign(a, { added: true }))));
-app.delete('/v1/billing/addons/:mod', (c) => c.json(state.addons.map((a) => Object.assign(a, { added: false }))));
+app.delete('/v1/org/invites/:id', (c) => {
+  state.invites = state.invites.filter((i) => i.id !== c.req.param('id'));
+  return c.body(null, 204);
+});
+app.get('/v1/billing', (c) => {
+  const { plan, org, precedents, hosting } = state.me;
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting });
+});
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
-app.post('/v1/billing/plan', (c) => c.json(state.org));
-app.post('/v1/billing/seats', async (c) => {
-  const seats = (await c.req.json()).seats;
-  state.me.org.seats = seats;
-  return c.json(Object.assign(state.org, { seats }));
+// A change of plan applies at once; down to Free, the hosted machines must go first.
+const subscribed = () => !['none', 'canceled', 'incomplete_expired'].includes(state.me.org.billing_status);
+const setPlan = (name: string) => {
+  const plan = data.plans.find((p) => p.name === name);
+  if (!plan) return refuse(422, 'E_INVALID', `${name} isn't sold through Stripe.`, 'not_sold');
+  if (!plan.self_serve) return refuse(422, 'E_INVALID', `${name} is by contract: talk to us at sales@glyphh.ai.`, 'not_self_serve');
+  if (!state.me.plan.self_serve) return refuse(409, 'E_CONFLICT', `Your ${state.me.plan.name} plan is by contract: talk to us at sales@glyphh.ai.`, 'contract');
+  if (plan.limits.machines === 0 && state.machines.length > 0) return refuse(409, 'E_CONFLICT', 'Delete your hosted machines first.', 'machines');
+  state.me.plan = plan;
+  state.org.plan = plan;
+  state.me.precedents.limit = plan.limits.precedents;
+  return Response.json(state.org);
+};
+app.post('/v1/billing/plan', async (c) =>
+  subscribed() ? setPlan((await c.req.json()).plan) : refuse(409, 'E_CONFLICT', 'Your org isn’t subscribed: start with checkout.', 'not_subscribed'),
+);
+// Checkout comes straight back as paid.
+app.post('/v1/billing/checkout', async (c) => {
+  if (subscribed()) return refuse(409, 'E_CONFLICT', 'Your org is already subscribed: change plan instead.', 'subscribed');
+  const refused = setPlan((await c.req.json()).plan);
+  if (!refused.ok) return refused;
+  state.me.org.billing_status = 'active';
+  return c.json({ url: `${platform}/billing?done=1` });
 });
-app.post('/v1/billing/checkout', (c) => c.json({ url: `${platform}/billing?done=1` }));
 
 serve({ fetch: app.fetch, port }, () => console.log(`Fake Glyphh server on http://localhost:${port}`));

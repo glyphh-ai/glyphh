@@ -11,6 +11,21 @@ export function money(cents: number, currency = 'usd'): string {
   }).format(value);
 }
 
+/** A rate in dollars, to the cent: $8.71. The server may send a decimal as a string. */
+export function usd(dollars: number | string): string {
+  return money(Math.round(Number(dollars) * 100));
+}
+
+/** A per-second rate, to two significant figures: $0.0000034. */
+export function usdPerSecond(dollars: number | string): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol', maximumSignificantDigits: 2 }).format(Number(dollars));
+}
+
+/** Names as a sentence: "Pro", "Pro and Team", "Pro, Team and Enterprise". */
+export function listText(names: string[]): string {
+  return names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** 16 Nov 2026, in UTC so a date reads the same everywhere. */
@@ -28,11 +43,6 @@ export function ago(iso: string, now: Date = new Date()): string {
   const days = Math.floor(seconds / 86400);
   if (days < 31) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
   return date(iso);
-}
-
-/** Seconds as whole hours, rounded down: 43200 → 12. */
-export function hours(seconds: number): number {
-  return Math.floor(seconds / 3600);
 }
 
 export function plural(count: number, one: string, many = `${one}s`): string {

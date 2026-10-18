@@ -1,40 +1,57 @@
-import { useMe, useModels, useRuntime, useRuntimeKeys } from '@/api/queries';
+import { Link } from 'react-router';
+import { useMe, usePlans, useRuntimeKeys } from '@/api/queries';
+import type { Me } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
-import { ago, hours } from '@/lib/format';
-import { Card, Chip, EmptyState, Icon, LoadingCard, ProgressBar, type IconName } from '@/ui';
+import { ago, money } from '@/lib/format';
+import { sizeLabel } from '@/pages/machines/sizes';
+import { Card, Chip, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
+import { hasHosting, hostingPlansText } from './billing/plans';
 import { SettingsTitle } from './SettingsTitle';
 import styles from './UsagePage.module.css';
 
-/** What you use against what your plan allows: this month's runtime hours, installs, models, and each API key's calls. */
+/** What you use this month: precedents against the plan's managed bucket, hosting so far, and each API key's calls. */
 export function UsagePage() {
   const me = useMe();
-  const runtime = useRuntime();
-  const models = useModels();
   const keys = useRuntimeKeys();
   const plan = me.data?.plan;
-  const modelLimit = plan?.mods.ada?.limits.models;
 
   return (
     <>
       <SettingsTitle title="Usage">What you use, against what your plan allows.</SettingsTitle>
 
       <SettingsSection title="This month" description={plan && `On ${plan.name}.`}>
-        <ApiErrorNotice error={me.error ?? runtime.error ?? models.error} />
-        <div className={styles.meters}>
-          <Meter
-            icon="monitor"
-            label="Runtime hours"
-            used={runtime.data && hours(runtime.data.seconds_used)}
-            limit={runtime.data?.hours_allowed}
-            unit="hours"
-            failed={runtime.isError || me.isError}
-          />
-          <Meter icon="laptop" label="Installs" used={me.data?.used.installs} limit={plan?.limits.installs} unit="installs" failed={me.isError} />
-          <Meter icon="model" label="Models" used={models.data?.length} limit={plan && (modelLimit === undefined ? null : modelLimit)} unit="models" failed={models.isError || me.isError} />
-        </div>
+        {me.isPending && <LoadingCard lines={3} />}
+        <ApiErrorNotice error={me.error} />
+        {me.data && (
+          <div className={styles.meters}>
+            <Precedents me={me.data} />
+            <Hosting me={me.data} />
+          </div>
+        )}
       </SettingsSection>
+
+      {me.data && hasHosting(me.data.plan) && (
+        <SettingsSection title="Hosted machines" description="What each machine has cost so far this month, as billed.">
+          {me.data.hosting.machines.length === 0 ? (
+            <EmptyState icon="chip" title="No hosted machines this month" />
+          ) : (
+            <List label="Hosting by machine">
+              {[...me.data.hosting.machines]
+                .sort((a, b) => b.cents - a.cents)
+                .map((machine) => (
+                  <Row
+                    key={machine.id}
+                    title={machine.name}
+                    badges={<Chip>{sizeLabel(machine.size)}</Chip>}
+                    actions={<span className={styles.calls}>{money(machine.cents)}</span>}
+                  />
+                ))}
+            </List>
+          )}
+        </SettingsSection>
+      )}
 
       <SettingsSection title="API keys" description="Calls each key let into your runtime, as the runtime reports them.">
         {keys.isPending && <LoadingCard />}
@@ -60,30 +77,47 @@ export function UsagePage() {
   );
 }
 
-type MeterProps = { icon: IconName; label: string; used: number | undefined; limit: number | null | undefined; unit: string; failed: boolean };
-
-/** One count against its limit; no bar when the plan sets none. Loading until both are known, unless a read failed. */
-function Meter({ icon, label, used, limit, unit, failed }: MeterProps) {
-  const known = used !== undefined && limit !== undefined;
+/** Precedents on the org's hosted runtimes against the plan's bucket. Those on your own runtimes never count. */
+function Precedents({ me }: { me: Me }) {
+  const { used, limit } = me.precedents;
   return (
     <Card>
       <div className={styles.meterHead}>
-        <Icon name={icon} />
-        {label}
+        <Icon name="model" />
+        Precedents
       </div>
-      {known ? (
+      {hasHosting(me.plan) ? (
         <>
           <div className={styles.value}>
-            <span className={styles.used}>{used.toLocaleString()}</span>
-            <span className={styles.of}>{limit === null ? `${unit}, no limit` : `of ${limit.toLocaleString()} ${unit}`}</span>
+            <span className={styles.used}>{used.toLocaleString('en-GB')}</span>
+            <span className={styles.of}>{limit === null ? 'on hosted machines, no limit' : `of ${limit.toLocaleString('en-GB')} on hosted machines`}</span>
           </div>
-          {limit !== null && <ProgressBar value={used} max={limit} label={`${label} used`} />}
+          {limit !== null && <ProgressBar value={used} max={limit} label="Precedents used" />}
         </>
-      ) : failed ? (
-        <span className={styles.of}>Unavailable</span>
       ) : (
-        <span className={styles.of} aria-busy="true">
-          Loading
+        <span className={styles.of}>No limit on your own runtimes.</span>
+      )}
+    </Card>
+  );
+}
+
+/** Hosting this month so far: the total billed, marked up as the plan's rates are. */
+function Hosting({ me }: { me: Me }) {
+  const plans = usePlans();
+  return (
+    <Card>
+      <div className={styles.meterHead}>
+        <Icon name="chip" />
+        Hosting
+      </div>
+      {hasHosting(me.plan) ? (
+        <div className={styles.value}>
+          <span className={styles.used}>{money(me.hosting.month_to_date_cents)}</span>
+          <span className={styles.of}>this month so far</span>
+        </div>
+      ) : (
+        <span className={styles.of}>
+          Hosting is on {hostingPlansText(plans.data)}. See <Link to="/settings/billing">Billing</Link>.
         </span>
       )}
     </Card>

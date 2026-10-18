@@ -3,15 +3,27 @@
 export type Uuid = string;
 export type IsoDate = string;
 
-export type Limits = Record<string, number | null>;
+/** What a plan turns on, as each runtime's licence carries it. */
+export type PlanFeatures = { sync: boolean; ha: boolean; offline: boolean; sso: boolean };
 
+/** A plan as `GET /v1/plans` lists it. Members, installs, self-hosted runtimes and Ada are unlimited on every plan. */
 export type Plan = {
   name: string;
   version: number;
-  seat_price_cents: number;
-  limits: { members: number | null; installs: number | null };
-  mods: Record<string, { limits: Limits }>;
+  /** The flat price for each interval; null for a plan sold by contract. */
+  price_cents: number | null;
+  /** Null on Free. */
+  interval: 'month' | 'year' | null;
+  /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
+  self_serve: boolean;
+  /** Hosted machines, and the precedents managed on them; null is unlimited. */
+  limits: { machines: number | null; precedents: number | null };
+  features: PlanFeatures;
+  markup_hidden: true;
 };
+
+/** One hosted machine's cost this month, in cents, as billed. */
+export type MachineCost = { id: Uuid; name: string; size: MachineSize; cents: number };
 
 export type Me = {
   id: Uuid;
@@ -19,9 +31,13 @@ export type Me = {
   name: string | null;
   role: 'admin' | 'member';
   providers: string[];
-  org: { id: Uuid; name: string; seats: number; billing_status: string; renews_at: IsoDate | null };
+  /** `plan_until`: when an Enterprise grant ends; null on any other plan. */
+  org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null; plan_until: IsoDate | null };
   plan: Plan;
-  used: { members: number; seats: number; installs: number };
+  /** Precedents across the org's hosted runtimes, against the plan's managed bucket (null: unlimited). */
+  precedents: { used: number; limit: number | null };
+  /** Hosted machines this month so far. */
+  hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
 };
 
 export type Install = {
@@ -45,8 +61,6 @@ export type Runtime = {
   image_version: string | null;
   last_seen_at: IsoDate | null;
   seconds_used: number;
-  hours_allowed: number | null;
-  paused: boolean;
 };
 
 export type RuntimeKey = {
@@ -73,8 +87,6 @@ export type Machine = {
   address: string | null;
   /** Seconds it has run this month. */
   month_seconds: number;
-  /** This month's hours are used up; it cannot start until next month or a bigger plan. */
-  paused: boolean;
   created_at: IsoDate;
 };
 
@@ -102,29 +114,19 @@ export type OfflineLicence = { token: string; expires_at: IsoDate };
 export type ModelVersion = { id: Uuid; version: number; commit_sha: string; created_at: IsoDate; active_on: Uuid[] };
 export type Model = { id: Uuid; name: string; repo: string | null; created_at: IsoDate; versions: ModelVersion[] };
 
-export type Addon = {
-  mod: string;
-  name: string;
-  description: string;
-  version: number;
-  price_cents: number;
-  per_seat: boolean;
-  monthly_cents: number;
-  plans: string[];
-  free: boolean;
-  allowed: boolean;
-  limits: Limits | null;
-  added: boolean;
-  quantity: number | null;
-};
+/** One size at a plan's rates: what it costs a month and a second while it runs. */
+export type SizeRate = { size: MachineSize; usd_per_month: number; usd_per_second: number };
 
-export type AddonPreview = {
-  mod: string;
-  action: 'add' | 'remove';
-  prorated_cents: number;
-  currency: string;
-  monthly_cents: number;
-  proration_date: number;
+/**
+ * `GET /v1/rates`: the hosted machine rates for each plan with hosting. The top-level `sizes` are Fly's own; the pages
+ * show only a plan's.
+ */
+export type Rates = {
+  effective_from: IsoDate;
+  source: string;
+  sizes: Array<SizeRate & { cpu_kind: string; cpus: number; memory_mb: number; volume_gb: number }>;
+  volume_usd_per_gb_month: number;
+  plans: Record<string, { sizes: SizeRate[]; volume_usd_per_gb_month: number }>;
 };
 
 export type Org = {
@@ -132,8 +134,6 @@ export type Org = {
   name: string;
   admin_user_id: Uuid | null;
   plan: Plan;
-  seats: number;
-  seats_taken: number;
   members: number;
   billing_status: string;
 };

@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import type { Machine } from '@/api/types';
-import { machines } from '@/test/fixtures';
+import { me, machines, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
 
@@ -49,7 +49,7 @@ describe('Machines', () => {
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Machines')).toHaveAttribute('aria-current', 'page');
   });
 
-  it('lists each machine: name, size, state, address, connector URL and this month’s hours', async () => {
+  it('lists each machine: name, size, state, address, connector URL and its hosting cost this month', async () => {
     const { user } = renderApp('/machines');
     const main = await card('Main');
     expect(within(main).getByRole('heading', { name: 'Main' })).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe('Machines', () => {
     expect(within(main).getByText('Small')).toBeInTheDocument();
     expect(within(main).getByText('https://chris-7f3a.glyphh.app')).toBeInTheDocument();
     expect(within(main).getByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
-    expect(within(main).getByText('12 hours this month · made 1 Aug 2026')).toBeInTheDocument();
+    expect(await within(main).findByText('$4.12 this month · made 1 Aug 2026')).toBeInTheDocument();
     await user.click(within(main).getByRole('button', { name: 'Copy address' }));
     expect(await navigator.clipboard.readText()).toBe('https://chris-7f3a.glyphh.app');
     await user.click(within(main).getByRole('button', { name: 'Copy connector URL' }));
@@ -82,13 +82,21 @@ describe('Machines', () => {
     expect(sent.map((s) => s.path)).toEqual(['/runtimes/rt-2b8e41/start', '/runtimes/rt-2b8e41/restart', '/runtimes/rt-2b8e41/stop']);
   });
 
-  it('cannot start a machine whose month’s hours are used up', async () => {
-    server.use(http.get(v1('/runtimes'), () => HttpResponse.json([{ ...machines[1]!, paused: true }])));
-    renderApp('/machines');
+  it('says plainly when a machine past the plan’s machines will not start, with the way to Billing', async () => {
+    server.use(http.post(v1('/runtimes/:id/start'), () => apiError(403, 'E_LIMIT', 'Free has no hosted machines.', { reason: 'machines' })));
+    const { user } = renderApp('/machines');
     const experiments = await card('Experiments');
-    expect(within(experiments).getByRole('button', { name: 'Start' })).toBeDisabled();
-    expect(within(experiments).getByText(/this month’s hours are used up/)).toBeInTheDocument();
-    expect(within(experiments).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+    await user.click(within(experiments).getByRole('button', { name: 'Start' }));
+    const alert = await within(experiments).findByRole('alert');
+    expect(alert).toHaveTextContent('Your plan has no room for this machine, so it stays stopped. Move to a bigger plan, or delete a machine.');
+    expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+  });
+
+  it('counts a machine the hosting does not list yet as nothing so far this month', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, hosting: { ...me.hosting, machines: [] } })));
+    renderApp('/machines');
+    const main = await card('Main');
+    expect(await within(main).findByText('$0 this month · made 1 Aug 2026')).toBeInTheDocument();
   });
 
   it('shows the server’s refusal on the machine it was for', async () => {
@@ -116,6 +124,58 @@ describe('Machines', () => {
     expect(await card('Staging')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'New machine' })).not.toBeInTheDocument();
     expect(sent).toEqual([{ method: 'POST', path: '/runtimes', body: { name: 'Staging', size: 'medium' } }]);
+  });
+
+  it('shows the plan’s rate on each size card', async () => {
+    const { user } = renderApp('/machines');
+    await user.click(await screen.findByRole('button', { name: 'New machine' }));
+    const dialog = screen.getByRole('dialog', { name: 'New machine' });
+    expect(await within(dialog).findByText('$8.71 / month')).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: /^Medium/ })).toHaveAccessibleName(/\$33\.01 \/ month/);
+    expect(within(dialog).getByRole('radio', { name: /^Large/ })).toHaveAccessibleName(/\$117 \/ month/);
+    expect(dialog).toHaveAccessibleDescription(/billed by the second while it runs/);
+  });
+
+  it('on Enterprise, each size card says its rate is set in the contract', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })));
+    const { user, client } = renderApp('/machines');
+    await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
+    await user.click(await screen.findByRole('button', { name: 'New machine' }));
+    const dialog = screen.getByRole('dialog', { name: 'New machine' });
+    expect(within(dialog).getAllByText('Set in your contract.')).toHaveLength(3);
+    expect(within(dialog).queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
+  it('on Free, New machine says hosting is on Pro and Team, with their rates and Upgrade', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
+    const { user, router, client } = renderApp('/machines');
+    expect(await screen.findByText('No machines yet')).toBeInTheDocument();
+    await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
+    await user.click(within(screen.getByRole('main')).getAllByRole('button', { name: 'New machine' })[0]!);
+    const dialog = screen.getByRole('dialog', { name: 'New machine' });
+    expect(await within(dialog).findByText(/Glyphh hosts machines on Pro and Team\. Upgrade to make one\./)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Name')).not.toBeInTheDocument();
+    const table = await within(dialog).findByRole('table', { name: 'Hosted machine rates' });
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
+    expect(within(dialog).getByRole('link', { name: 'Getting started' })).toHaveAttribute('href', '/getting-started');
+    await user.click(within(dialog).getByRole('button', { name: 'Upgrade' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('on Free, asks a member to ask their admin, with no Upgrade', async () => {
+    server.use(
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member', plan: plans[0] })),
+      http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Rates are unavailable.')),
+    );
+    const { user, client } = renderApp('/machines');
+    await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
+    await user.click(screen.getByRole('button', { name: 'New machine' }));
+    const dialog = screen.getByRole('dialog', { name: 'New machine' });
+    expect(await within(dialog).findByText(/Ask your admin to upgrade\./)).toBeInTheDocument();
+    expect(await within(dialog).findByText('Rates are unavailable.')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog', { name: 'New machine' })).not.toBeInTheDocument();
   });
 
   it('says plainly when the plan has no room for another machine, with the way to Billing', async () => {

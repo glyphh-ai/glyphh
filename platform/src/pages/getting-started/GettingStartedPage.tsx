@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
+import { usePlans } from '@/api/queries';
 import type { NewSelfRuntime } from '@/api/types';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
+import { hostingPlansText } from '@/pages/settings/billing/plans';
 import { Card, CopyField } from '@/ui';
 import { HostedChoice } from './HostedChoice';
 import { SelfHostedSetup } from './SelfHostedSetup';
@@ -10,14 +12,16 @@ import styles from './GettingStarted.module.css';
 
 type Where = 'hosted' | Deployment;
 
-const choices: ReadonlyArray<{ value: Where; title: string; text: string }> = [
-  { value: 'hosted', title: 'Glyphh hosted', text: 'Glyphh runs it for you. Make a machine and connect.' },
-  { value: 'compose', title: 'Docker Compose', text: 'One VM or your own machine.' },
-  { value: 'helm', title: 'Helm', text: 'Your Kubernetes cluster: EKS, GKE or AKS.' },
-  { value: 'terraform', title: 'Terraform', text: 'One VM on AWS or GCP.' },
+/** Where rrotor can run. Hosting is on the paid plans; running it yourself is free on every plan. */
+const choices = (hosting: string): ReadonlyArray<{ value: Where; title: string; text: string }> => [
+  { value: 'hosted', title: 'Glyphh hosted', text: `On ${hosting}. Glyphh runs it for you. Make a machine and connect.` },
+  { value: 'compose', title: 'Docker Compose', text: 'Free. One VM or your own machine.' },
+  { value: 'helm', title: 'Helm', text: 'Free. Your Kubernetes cluster: EKS, GKE or AKS.' },
+  { value: 'terraform', title: 'Terraform', text: 'Free. One VM on AWS or GCP.' },
 ];
 
 export function GettingStartedPage() {
+  const plans = usePlans();
   const [where, setWhere] = useState<Where>('hosted');
   const [registered, setRegistered] = useState<NewSelfRuntime | null>(null);
 
@@ -27,8 +31,8 @@ export function GettingStartedPage() {
         title="Getting started"
         description={
           <>
-            Install the SDK and the Claude plugin, choose where rrotor runs, then connect Claude. Running it yourself? Read the{' '}
-            <a href={docsUrl}>self-hosting docs</a>.
+            Install the SDK and the Claude plugin, choose where rrotor runs, then connect Claude. Running it yourself is free on every
+            plan: read the <a href={docsUrl}>self-hosting docs</a>.
           </>
         }
       />
@@ -55,7 +59,7 @@ export function GettingStartedPage() {
           <Step number={2}>Where rrotor runs</Step>
           <fieldset className={styles.choices}>
             <legend className="visually-hidden">Where rrotor runs</legend>
-            {choices.map((choice) => (
+            {choices(hostingPlansText(plans.data)).map((choice) => (
               <label key={choice.value} className={styles.choice}>
                 <input type="radio" name="where" value={choice.value} checked={where === choice.value} onChange={() => setWhere(choice.value)} />
                 <span className={styles.choiceBody}>

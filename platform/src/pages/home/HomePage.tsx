@@ -3,9 +3,11 @@ import { useMe, useRuntime, useStartRuntime, useStopRuntime } from '@/api/querie
 import type { Runtime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
-import { ago, hours } from '@/lib/format';
+import { ago, money } from '@/lib/format';
 import { useCopy } from '@/lib/useCopy';
-import { Button, Card, Chip, CopyButton, CopyField, EmptyState, ErrorNotice, LoadingCard, ProgressBar, type ChipTone } from '@/ui';
+import { StartMachineError } from '@/pages/machines/MachineFields';
+import { useMachineCents } from '@/pages/machines/HostingUpsell';
+import { Button, Card, Chip, CopyButton, CopyField, EmptyState, LoadingCard, type ChipTone } from '@/ui';
 import styles from './HomePage.module.css';
 
 const stateChip: Record<Exclude<Runtime['state'], 'none'>, { label: string; tone: ChipTone }> = {
@@ -20,6 +22,7 @@ export function HomePage() {
   const start = useStartRuntime();
   const stop = useStopRuntime();
   const { copied, copy } = useCopy();
+  const cents = useMachineCents(runtime.data?.runtime_id ?? null);
 
   const data = runtime.data;
   const connector = data?.address ? `${data.address}/mcp` : null;
@@ -32,7 +35,7 @@ export function HomePage() {
           Stop
         </Button>
       ) : (
-        <Button onClick={() => start.mutate()} loading={start.isPending} disabled={data.paused}>
+        <Button onClick={() => start.mutate()} loading={start.isPending}>
           Start
         </Button>
       )}
@@ -58,7 +61,8 @@ export function HomePage() {
       />
 
       <div className={styles.stack}>
-        <ApiErrorNotice error={start.error ?? stop.error} />
+        <StartMachineError error={start.error} />
+        <ApiErrorNotice error={stop.error} />
 
         {runtime.isPending && <LoadingCard />}
         {runtime.error && <ApiErrorNotice error={runtime.error} />}
@@ -80,13 +84,6 @@ export function HomePage() {
 
         {data && data.state !== 'none' && (
           <>
-            {data.paused && (
-              <ErrorNotice
-                message="Paused: this month’s hours are used up."
-                action={<Link to="/settings/billing">Billing</Link>}
-              />
-            )}
-
             <Card>
               <div className={styles.addressLine}>
                 <span className={styles.address}>{data.address ?? 'Address not ready yet'}</span>
@@ -113,13 +110,10 @@ export function HomePage() {
               )}
               <Card>
                 <h2 className={styles.cardTitle}>This month</h2>
-                <div className={styles.hours}>
-                  <span className={styles.hoursValue}>{hours(data.seconds_used)}</span>
-                  <span className={styles.meta}>{data.hours_allowed === null ? 'hours, no limit' : `of ${data.hours_allowed} hours`}</span>
+                <div className={styles.cost}>
+                  <span className={styles.costValue}>{cents === undefined ? '—' : money(cents)}</span>
+                  <span className={styles.meta}>hosting so far</span>
                 </div>
-                {data.hours_allowed !== null && (
-                  <ProgressBar value={hours(data.seconds_used)} max={data.hours_allowed} label="Runtime hours used this month" />
-                )}
               </Card>
             </div>
           </>

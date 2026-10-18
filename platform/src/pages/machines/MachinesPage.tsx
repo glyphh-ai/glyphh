@@ -10,7 +10,7 @@ import { MachineCard } from './MachineCard';
 import { NewMachineDialog } from './NewMachineDialog';
 import styles from './Machines.module.css';
 
-/** The person's hosted machines: each one's address and hours, made, started, stopped, restarted and deleted here. */
+/** The person's hosted machines: each one's address and cost this month, made, started, stopped, restarted and deleted here. */
 export function MachinesPage() {
   const machines = useMachines();
   const [making, setMaking] = useState(false);

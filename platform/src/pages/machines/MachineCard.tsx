@@ -1,9 +1,10 @@
-import { Link } from 'react-router';
 import { useRestartMachine, useStartMachine, useStopMachine } from '@/api/queries';
 import type { Machine } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { date, hours, plural } from '@/lib/format';
+import { date, money } from '@/lib/format';
 import { Button, Card, Chip, CopyButton, CopyField, type ChipTone } from '@/ui';
+import { useMachineCents } from './HostingUpsell';
+import { StartMachineError } from './MachineFields';
 import { connectorUrl, sizeLabel } from './sizes';
 import styles from './Machines.module.css';
 
@@ -13,7 +14,7 @@ export const machineState: Record<Machine['state'], { label: string; tone: ChipT
   stopped: { label: 'Stopped', tone: 'neutral' },
 };
 
-/** One machine: its state, where it answers, this month's hours, and Start, Stop, Restart and Delete. */
+/** One machine: its state, where it answers, what it has cost this month, and Start, Stop, Restart and Delete. */
 export function MachineCard({ machine, onDelete }: { machine: Machine; onDelete: () => void }) {
   const start = useStartMachine();
   const stop = useStopMachine();
@@ -21,6 +22,7 @@ export function MachineCard({ machine, onDelete }: { machine: Machine; onDelete:
   const running = machine.state !== 'stopped';
   const connector = connectorUrl(machine);
   const state = machineState[machine.state];
+  const cents = useMachineCents(machine.id);
 
   return (
     <Card as="li" aria-label={machine.name}>
@@ -43,7 +45,7 @@ export function MachineCard({ machine, onDelete }: { machine: Machine; onDelete:
               </Button>
             </>
           ) : (
-            <Button size="sm" onClick={() => start.mutate(machine.id)} loading={start.isPending} disabled={machine.paused}>
+            <Button size="sm" onClick={() => start.mutate(machine.id)} loading={start.isPending}>
               Start
             </Button>
           )}
@@ -59,14 +61,10 @@ export function MachineCard({ machine, onDelete }: { machine: Machine; onDelete:
       </div>
       {connector && <CopyField value={connector} label="connector URL" />}
       <span className={styles.meta}>
-        {plural(hours(machine.month_seconds), 'hour')} this month · made {date(machine.created_at)}
+        {cents !== undefined && `${money(cents)} this month · `}made {date(machine.created_at)}
       </span>
-      {machine.paused && (
-        <span className={styles.meta}>
-          Paused: this month’s hours are used up. See <Link to="/settings/billing">Billing</Link>.
-        </span>
-      )}
-      <ApiErrorNotice error={start.error ?? stop.error ?? restart.error} />
+      <StartMachineError error={start.error} />
+      <ApiErrorNotice error={stop.error ?? restart.error} />
     </Card>
   );
 }
