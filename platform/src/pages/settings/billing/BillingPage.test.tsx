@@ -12,7 +12,7 @@ describe('Billing', () => {
     expect(await screen.findByText('$99 / month')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('Renews 16 Nov 2026')).toBeInTheDocument();
-    expect(screen.getAllByText('3 hosted machines')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('3 runtime nodes')[0]).toBeInTheDocument();
     expect(screen.getAllByText('100,000 precedents on hosted machines')[0]).toBeInTheDocument();
     expect(screen.getByText('Hosting this month')).toBeInTheDocument();
     expect(screen.getByText('$12.17')).toBeInTheDocument();
@@ -25,12 +25,12 @@ describe('Billing', () => {
     const { user, router } = renderApp('/settings/billing');
     const team = await card('Team');
     expect(within(team).getByText('$299 / month')).toBeInTheDocument();
-    expect(within(team).getByText('10 hosted machines')).toBeInTheDocument();
+    expect(within(team).getByText('10 runtime nodes')).toBeInTheDocument();
     expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
     const enterprise = await card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
     expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
     for (const text of ['SSO and SAML', 'Roles', 'Audit logs']) expect(within(enterprise).getByText(text)).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
@@ -59,7 +59,7 @@ describe('Billing', () => {
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
     expect(screen.getAllByText('Free')).toHaveLength(2);
-    expect(screen.getByText('No hosted machines')).toBeInTheDocument();
+    expect(screen.getByText('1 runtime node')).toBeInTheDocument();
     expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
     expect(await card('Pro')).toBeInTheDocument();
     expect(await screen.findByText('Hosting is on Pro and Team. Running rrotor yourself is free.')).toBeInTheDocument();

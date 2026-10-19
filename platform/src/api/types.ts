@@ -25,7 +25,10 @@ export type Plan = {
   interval: 'month' | 'year' | null;
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
-  /** Hosted machines, and the precedents managed on them; null is unlimited. */
+  /**
+   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10). The
+   * precedent bucket. Null is unlimited.
+   */
   limits: { machines: number | null; precedents: number | null };
   features: PlanFeatures;
   /** Whether each feature is built; a feature not in it (or no map at all) is built. */

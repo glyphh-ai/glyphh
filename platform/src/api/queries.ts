@@ -73,20 +73,17 @@ export function hostedRates(answer: Rates | HostingOff): Rates | null {
 }
 
 /**
- * Whether Glyphh hosts machines at all: off when the rates say so, or when no plan has a hosted machine. Undefined
- * until both are read; on when neither could be read, so a page keeps its own refusal in view.
+ * Whether Glyphh hosts machines at all, from the rates alone: off when the server refuses them with `hosting_off`,
+ * answers `{hosting: "off"}` or no plans (all read as null). A plan's `limits.machines` is its runtime nodes, hosted or
+ * self-hosted, so it says nothing of hosting. On when the rates could not be read, so a page keeps its own refusal.
  */
-export function hostingOn(plans: Plan[] | undefined, rates: Rates | null | undefined): boolean {
-  if (rates === null) return false;
-  if (plans) return plans.some((plan) => plan.limits.machines !== 0);
-  return true;
-}
+export const hostingOn = (rates: Rates | null | undefined): boolean => rates !== null;
 
+/** Undefined until the rates are read. */
 export function useHosting(): boolean | undefined {
-  const plans = usePlans();
   const rates = useRates();
-  if (plans.isPending || rates.isPending) return undefined;
-  return hostingOn(plans.data, rates.data);
+  if (rates.isPending) return undefined;
+  return hostingOn(rates.data);
 }
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });

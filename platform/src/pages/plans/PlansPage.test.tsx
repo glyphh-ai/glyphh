@@ -19,13 +19,13 @@ describe('Choosing a plan', () => {
     expect(within(pro).getByRole('button', { name: 'Current plan' })).toBeDisabled();
     expect(within(pro).getByText('$99')).toBeInTheDocument();
     expect(within(pro).getByText('per month')).toBeInTheDocument();
-    expect(within(pro).getByText('3 hosted machines')).toBeInTheDocument();
+    expect(within(pro).getByText('3 runtime nodes')).toBeInTheDocument();
     expect(within(pro).getByText('100,000 precedents on hosted machines')).toBeInTheDocument();
     expect(within(pro).getByText('Sync across runtimes')).toBeInTheDocument();
 
     const free = card('Free');
     expect(within(free).getByText('$0')).toBeInTheDocument();
-    expect(within(free).getByText('No hosted machines')).toBeInTheDocument();
+    expect(within(free).getByText('1 runtime node')).toBeInTheDocument();
     expect(within(free).queryByText(/precedents/)).not.toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
@@ -38,7 +38,7 @@ describe('Choosing a plan', () => {
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited precedents on hosted machines')).toBeInTheDocument();
     expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');

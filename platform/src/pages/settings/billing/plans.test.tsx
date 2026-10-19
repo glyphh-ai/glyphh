@@ -5,11 +5,11 @@ import { factText, machinesText, planFacts, precedentsText, priceText } from './
 
 describe('plan wording', () => {
   it.each([
-    [null, 'Unlimited hosted machines'],
-    [0, 'No hosted machines'],
-    [1, '1 hosted machine'],
-    [3, '3 hosted machines'],
-  ])('%s machines read %s', (machines, text) => expect(machinesText(machines)).toBe(text));
+    [null, 'Unlimited runtime nodes'],
+    [0, 'No runtime nodes'],
+    [1, '1 runtime node'],
+    [3, '3 runtime nodes'],
+  ])('%s runtime nodes read %s', (machines, text) => expect(machinesText(machines)).toBe(text));
 
   it('names the managed bucket, and none on a plan without hosting', () => {
     expect(precedentsText(0)).toBeNull();
@@ -34,14 +34,14 @@ describe('the hosted machine rates', () => {
 describe('plan wording while Glyphh hosts nothing and sync is not built', () => {
   const [free, pro, , enterprise] = hostingOff.plans;
 
-  it('says nothing of hosted machines, and marks the synced bucket and sync as coming soon', () => {
-    expect(planFacts(free!, false)).toEqual([]);
-    expect(planFacts(pro!, false).map(factText)).toEqual(['Coming soon: 100,000 precedents in the synced store', 'Coming soon: Sync across runtimes']);
+  it('shows the runtime nodes as with hosting on, and marks the synced bucket and sync as coming soon', () => {
+    expect(planFacts(free!, false).map(factText)).toEqual(['1 runtime node']);
+    expect(planFacts(pro!, false).map(factText)).toEqual(['3 runtime nodes', 'Coming soon: 100,000 precedents in the synced store', 'Coming soon: Sync across runtimes']);
   });
 
   it('shows only what is built as included', () => {
     const facts = planFacts(enterprise!, false);
-    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Offline licences for air-gapped runtimes']);
+    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Unlimited runtime nodes', 'Offline licences for air-gapped runtimes']);
     expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual([
       'Unlimited precedents in the synced store',
       'Sync across runtimes',

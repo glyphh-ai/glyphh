@@ -10,7 +10,7 @@ const none = { sync: false, ha: false, offline: false, sso: false };
 const built = { sync: true, ha: true, offline: true, sso: true };
 
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, built, markup_hidden: true },
+  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 1, precedents: 0 }, features: none, built, markup_hidden: true },
   { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
   { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
   {
@@ -174,12 +174,13 @@ export const installs: Install[] = [
 ];
 
 /**
- * As the server answers with `GLYPHH_HOSTING=off` and sync not yet built: no hosted machines on any plan, the rates
- * off, and each feature saying whether it is built. The org is on Free.
+ * As the server answers with `GLYPHH_HOSTING=off` and sync not yet built: the rates off
+ * (refused with hosting_off), and each feature saying whether it is built. The org is on Free.
  */
 // As the server's BUILT: only offline licences work today.
 const unbuilt = { sync: false, ha: false, offline: true, sso: false };
-const off = (plan: Plan, change: Partial<Plan>): Plan => ({ ...plan, ...change, limits: { ...plan.limits, machines: 0 }, built: unbuilt });
+// The runtime nodes stay as they are: they count self-hosted runtimes too.
+const off = (plan: Plan, change: Partial<Plan>): Plan => ({ ...plan, ...change, built: unbuilt });
 const offPlans: Plan[] = [
   off(plans[0]!, {}),
   off(plans[1]!, {}),

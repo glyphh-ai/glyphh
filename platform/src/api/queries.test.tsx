@@ -38,12 +38,17 @@ describe('whether Glyphh hosts machines', () => {
     expect(hostedRates(rates)).toBe(rates);
   });
 
-  it('is off when the rates are off or no plan has a hosted machine, and on otherwise', () => {
-    expect(hostingOn(plans, null)).toBe(false);
-    expect(hostingOn(hostingOff.plans, rates)).toBe(false);
-    expect(hostingOn(plans, rates)).toBe(true);
-    expect(hostingOn(plans, undefined)).toBe(true);
-    expect(hostingOn(undefined, undefined)).toBe(true);
+  it('is off from the rates alone, never from the plans’ runtime nodes', () => {
+    expect(hostingOn(null)).toBe(false);
+    expect(hostingOn(rates)).toBe(true);
+    expect(hostingOn(undefined)).toBe(true);
+    expect(hostingOff.plans.map((plan) => plan.limits.machines)).toEqual([1, 3, 10, null]);
+  });
+
+  it('is on while the rates are read, even with every plan at no runtime nodes', async () => {
+    server.use(http.get(v1('/plans'), () => HttpResponse.json(plans.map((plan) => ({ ...plan, limits: { ...plan.limits, machines: 0 } })))));
+    const on = renderHook(() => useHosting(), { wrapper });
+    await waitFor(() => expect(on.result.current).toBe(true));
   });
 
   it('reads the server’s hosting_off refusal of the rates as no rates, and passes any other refusal on', async () => {
