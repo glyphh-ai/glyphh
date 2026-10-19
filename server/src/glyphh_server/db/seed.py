@@ -57,13 +57,14 @@ ENTERPRISE: str = "Enterprise"
 SALES: str = "sales@glyphh.ai"
 
 
-# Never per seat, per model or per install: a plan sells managed precedents and hosted machines (Chris, 2026-10-18).
+# Never per seat, per model or per install: a plan sells runtime nodes (max_machines: Free 1, Pro 3, Team 10, Enterprise
+# unlimited; Chris, 2026-10-19), precedents and sync.
 # Local and self-hosted runtimes hold any number of precedents on every plan; `precedents` is the managed bucket, what
 # a hosted runtime may hold. Enterprise is by contract, its price and its markup each
 # customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): the machines each plan allows
 # and the markups on Fly's rates are placeholders until set.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, None, True, 0, 0, Features(), None),
+    PlanSeed(FREE, 0, None, True, 1, 0, Features(), None),
     PlanSeed("Pro", 9_900, "month", True, 3, 100_000, Features(sync=True), 30),
     PlanSeed("Team", 29_900, "month", True, 10, 1_000_000, Features(sync=True), 30),
     PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True), None),

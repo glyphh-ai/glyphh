@@ -7,7 +7,7 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
-from glyphh_server.mcp.tools.machines import line
+from glyphh_server.mcp.tools.machines import OFF, line
 from glyphh_server.ops import machines, runtime_keys, runtimes
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.runtimes import HostedRuntime
@@ -36,16 +36,16 @@ class KeyId(BaseModel):
     key_id: uuid.UUID
 
 
-def _line(view: HostedRuntime) -> str:
+def _line(view: HostedRuntime, hosting: bool) -> str:
     if view.runtime_id is None:
-        return "You have no hosted runtime yet: start_runtime makes one."
+        return "You have no hosted runtime yet: start_runtime makes one." if hosting else OFF
     hours = f"{view.seconds_used / 3600:.1f} h this month"
     return f"Your runtime is {view.state} at {view.address}, {hours}."
 
 
 async def runtime(ctx: Context, _: NoArgs) -> Done:
     view = await runtimes.hosted_view(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
-    return Done(_line(view), dump(view))
+    return Done(_line(view, ctx.settings.hosting), dump(view))
 
 
 async def start_runtime(ctx: Context, args: MaybeMachine) -> Done:
@@ -55,7 +55,7 @@ async def start_runtime(ctx: Context, args: MaybeMachine) -> Done:
         return Done(line(started) + "." + connect, dump(started))
     await machines.start_first(ctx.conn, fly, ctx.who)
     view = await runtimes.hosted_view(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
-    return Done(_line(view) + connect, dump(view))
+    return Done(_line(view, True) + connect, dump(view))
 
 
 async def stop_runtime(ctx: Context, args: MaybeMachine) -> Done:
@@ -65,7 +65,7 @@ async def stop_runtime(ctx: Context, args: MaybeMachine) -> Done:
         return Done(line(stopped) + ".", dump(stopped))
     await machines.stop(ctx.conn, fly, ctx.who, await machines.first(ctx.conn, ctx.who))
     view = await runtimes.hosted_view(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
-    return Done(_line(view), dump(view))
+    return Done(_line(view, ctx.settings.hosting), dump(view))
 
 
 async def list_keys(ctx: Context, _: NoArgs) -> Done:
@@ -107,7 +107,7 @@ TOOLS: tuple[Tool, ...] = (
         "start_runtime",
         "Start the runtime",
         "Start a hosted machine by id, or your first (made the first time). Its models are then called at its own"
-        " address.",
+        " address. Refused (hosting_off) while Glyphh's managed cloud is off.",
         MaybeMachine,
         start_runtime,
     ),

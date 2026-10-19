@@ -46,7 +46,7 @@ async def test_the_license_carries_the_plan_and_verifies_with_the_public_key(
 async def test_free_includes_ada_and_the_license_needs_a_token(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await person(engine)
     p = (await client.get("/v1/license", headers=ada.headers)).json()["payload"]
-    assert (p["mods"], p["limits"]) == ({"ada": {"limits": {"precedents": None}}}, {"machines": 0})
+    assert (p["mods"], p["limits"]) == ({"ada": {"limits": {"precedents": None}}}, {"machines": 1})
     assert not any(p["features"].values())
     for path in ("/v1/license", "/v1/license/key"):
         assert (await client.get(path)).status_code == 401

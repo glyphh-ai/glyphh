@@ -1,14 +1,14 @@
 # server
 
 The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, the signed licence,
-flat plans and per-second hosting on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly
-and the record of each person's Ada models, runtimes and runs. It renders nothing (every browser step lands on the
+flat plans on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly (built, off by default:
+`GLYPHH_HOSTING`) and the record of each person's Ada models, runtimes and runs. It renders nothing (every browser step lands on the
 platform, `glyphh-ai/platform`) and is never on the data path: a model is called at its runtime's own address.
 
 - [`docs/architecture.md`](docs/architecture.md): the contract. The system, the API, the settings, the data model,
   and what is not built yet.
-- [`docs/pricing.md`](docs/pricing.md): the plans and their rules, Stripe's setup and setting up an Enterprise
-  customer.
+- [`docs/pricing.md`](docs/pricing.md): the tiers and the licensing strategy, and where today's code differs from
+  it.
 
 ## Run it
 
@@ -26,7 +26,7 @@ or a secrets key with:
     python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 
 To try billing against Stripe's test mode, make the products once
-([pricing.md](docs/pricing.md#stripe-once-per-account)) and forward its events with
+([pricing.md](docs/pricing.md#the-control-plane)) and forward its events with
 `stripe listen --forward-to localhost:8080/v1/stripe/webhook`, setting the webhook secret it prints.
 
 ## Layout

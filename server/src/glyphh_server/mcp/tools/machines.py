@@ -1,6 +1,7 @@
 """The connector's machine tools: the person's hosted machines listed, one made (named, of a size) and started, one
 restarted, and one deleted with its name typed to confirm. start_runtime and stop_runtime (mcp/tools/runtime.py) take
-a machine's id too."""
+a machine's id too. With hosting off (GLYPHH_HOSTING) making, starting and restarting are refused, E_UNAVAILABLE
+`hosting_off`; stopping and deleting still work."""
 
 import uuid
 
@@ -11,6 +12,8 @@ from glyphh_server.models.rrotor import SIZES_SAID, SizeName
 from glyphh_server.ops import machines
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.machines import Machine
+
+OFF: str = "Glyphh's managed cloud is off: run rrotor yourself and register it with register_self_runtime."
 
 
 class NewMachine(BaseModel):
@@ -37,7 +40,8 @@ def line(m: Machine) -> str:
 
 async def list_machines(ctx: Context, _: NoArgs) -> Done:
     found = await machines.list_machines(ctx.conn, ctx.who, ctx.settings.fly_public_domain)
-    text = "\n".join(line(m) for m in found) or "You have no hosted machines yet: create_runtime makes one."
+    none = "You have no hosted machines yet: create_runtime makes one." if ctx.settings.hosting else OFF
+    text = "\n".join(line(m) for m in found) or none
     return Done(text, {"runtimes": [dump(m) for m in found]})
 
 
@@ -69,11 +73,18 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "create_runtime",
         "Create a machine",
-        "Make a hosted machine of a size and start it (up to your plan's machines).",
+        "Make a hosted machine of a size on Glyphh's managed cloud and start it (up to your plan's machines). While "
+        "the managed cloud is off, refused (hosting_off): register a self-hosted runtime instead.",
         NewMachine,
         create,
     ),
-    Tool("restart_runtime", "Restart a machine", "Restart one of your hosted machines.", MachineId, restart),
+    Tool(
+        "restart_runtime",
+        "Restart a machine",
+        "Restart one of your hosted machines; refused (hosting_off) while the managed cloud is off.",
+        MachineId,
+        restart,
+    ),
     Tool(
         "delete_runtime",
         "Delete a machine",

@@ -31,7 +31,7 @@ async def check_machines(conn: AsyncConnection, used: int, version: Row, more: i
         return
     lift = await lifting_plan(conn, used + more - 1)
     then = f" {lift} allows more." if lift else " Remove one first."
-    said = "no hosted machines" if allowed == 0 else f"{allowed} hosted machines"
+    said = "no hosted machines" if allowed == 0 else f"{allowed} hosted machine{'s' * (allowed != 1)}"
     raise LimitReached(
         f"Your {version.name} plan allows {said}.{then}",
         reason=MACHINES,

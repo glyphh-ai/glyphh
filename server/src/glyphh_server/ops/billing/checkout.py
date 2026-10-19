@@ -1,5 +1,6 @@
-"""Subscribing (Stripe Checkout: the plan's flat monthly price and the metered hosting price) and Stripe's own portal
-for the card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by contract."""
+"""Subscribing (Stripe Checkout: the plan's flat monthly price, and with hosting on the metered hosting price) and
+Stripe's own portal for the card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by
+contract."""
 
 import uuid
 
@@ -47,14 +48,15 @@ async def checkout(
     conn: AsyncConnection, who: Principal, stripe: StripeClient, settings: Settings, plan: str
 ) -> StripePage:
     require_admin(who)
-    price = sold(await newest_version(conn, plan))
-    if not settings.stripe_price_hosting:
-        raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
+    lines = [{"price": sold(await newest_version(conn, plan)), "quantity": 1}]
+    if settings.hosting:
+        if not settings.stripe_price_hosting:
+            raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
+        lines.append({"price": settings.stripe_price_hosting})
     org = await billing_row(conn, who.org_id)
     if org.stripe_subscription_id is not None:
         raise Conflict("Your org is already subscribed: change plan instead.", reason="subscribed")
     customer = org.stripe_customer_id or await _customer(conn, who, stripe, org.name)
-    lines = [{"price": price, "quantity": 1}, {"price": settings.stripe_price_hosting}]
     url = await stripe.checkout(customer, lines, str(who.org_id), return_url(settings))
     return StripePage(url=url)
 

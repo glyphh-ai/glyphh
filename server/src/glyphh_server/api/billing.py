@@ -58,7 +58,8 @@ async def get_billing(caller: Caller, conn: Conn) -> BillingView:
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")
 async def start_checkout(body: CheckoutIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
-    """Stripe Checkout's address for a self-serve plan (Pro or Team), to open in the browser pane."""
+    """Stripe Checkout's address for a self-serve plan (Pro or Team), to open in the browser pane; with hosting on,
+    the metered hosting price is its second item."""
     return await checkout.checkout(conn, caller, stripe, request.app.state.settings, body.plan)
 
 
@@ -83,7 +84,7 @@ async def stripe_webhook(
     secret = request.app.state.settings.stripe_webhook_secret
     event = signature.verified_event(secret, await request.body(), stripe_signature)
     settings = request.app.state.settings
-    fly = Fly(request.app.state.http, settings) if settings.fly_configured else None
+    fly = Fly(request.app.state.http, settings) if settings.hosting_on else None
     await webhook.handle_event(conn, stripe_client(request), event, fly)
     return Response(status_code=204)
 

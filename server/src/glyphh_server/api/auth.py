@@ -10,6 +10,7 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from glyphh_server.config import Settings
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Unauthorized
 from glyphh_server.obs import context
@@ -28,6 +29,13 @@ async def connection(request: Request) -> AsyncIterator[AsyncConnection]:
 
 
 Conn = Annotated[AsyncConnection, Depends(connection)]
+
+
+def settings_of(request: Request) -> Settings:
+    return request.app.state.settings  # type: ignore[no-any-return]
+
+
+Cfg = Annotated[Settings, Depends(settings_of)]
 
 
 Bearer = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]

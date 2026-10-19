@@ -34,7 +34,7 @@ async def room_for(conn: AsyncConnection, who: Principal, version: Row) -> None:
     held, allowed = await limits.org_machines(conn, who.org_id), version.max_machines
     if allowed is None or held <= allowed:
         return
-    said = "" if allowed == 0 else f" {version.name} allows {allowed} hosted machines."
+    said = "" if allowed == 0 else f" {version.name} allows {allowed} hosted machine{'s' * (allowed != 1)}."
     raise Conflict(f"Delete your hosted machines first.{said}", reason="machines", held=held, max=allowed)
 
 

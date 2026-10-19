@@ -78,7 +78,7 @@ async def test_the_plans_carry_their_price_limits_features_and_hidden_markup(eng
             .order_by(Plan.sort)
         )
         assert [tuple(r) for r in rows] == [
-            ("Free", 0, 0, 0, False, None),
+            ("Free", 0, 1, 0, False, None),
             ("Pro", 9_900, 3, 100_000, False, 30),
             ("Team", 29_900, 10, 1_000_000, False, 30),
             ("Enterprise", None, None, None, True, None),

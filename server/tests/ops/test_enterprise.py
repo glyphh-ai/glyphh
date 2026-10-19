@@ -116,11 +116,14 @@ async def test_revoking_puts_the_org_on_free_its_machines_stopped_and_held_its_h
         values = {"markup_pct": 10, "plan_until": datetime(2030, 1, 1, tzinfo=UTC)}
         await conn.execute(update(Org).where(Org.id == ada.org_id).values(**values))
     customer = await _a_deal_with_hosting_due(engine, ada, 250)
+    kept = await hosted_runtime(engine, ada, f"k_{ada.org_id.hex[:8]}")  # the oldest: Free's one runs on
     machine = await hosted_runtime(engine, ada, f"m_{ada.org_id.hex[:8]}")
     async with engine.begin() as conn:
+        await conn.execute(update(Rrotor).where(Rrotor.id == kept.id).values(state="online", fly_machine_id="m_k"))
         await conn.execute(update(Rrotor).where(Rrotor.id == machine.id).values(state="online", fly_machine_id="m_x"))
     fly = FakeFly()
     fly.machines["m_x"] = {"id": "m_x", "state": "started"}
+    fly.machines["m_k"] = {"id": "m_k", "state": "started"}
     said = await enterprise.run(
         ["revoke", "--org", str(ada.org_id)],
         FLY_SETTINGS.model_copy(update={"database_url": SETTINGS.database_url}),
@@ -128,7 +131,7 @@ async def test_revoking_puts_the_org_on_free_its_machines_stopped_and_held_its_h
     )
     assert said == "Ada Lovelace's org is on Free, 1 hosted machines stopped. Cancel its subscription in Stripe."
     assert _reported(stripe, customer) == ["250"]  # to the deal's subscription, before it was dropped
-    assert fly.machines["m_x"]["state"] == "stopped"
+    assert (fly.machines["m_x"]["state"], fly.machines["m_k"]["state"]) == ("stopped", "started")
     org = await org_row(engine, ada.org_id)
     assert (await _plan(engine, ada.org_id), org.plan_until, org.markup_pct) == ("Free", None, None)
     unbilled = SETTINGS.model_copy(update={"stripe_secret_key": ""})

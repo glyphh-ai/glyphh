@@ -88,7 +88,7 @@ async def tend_forever(
 
 def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
     """The minute tick, always; with hosting on, Fly and the hub's waker; with billing set up, Stripe's meter."""
-    fly = Fly(app.state.http, cfg) if cfg.fly_configured else None
+    fly = Fly(app.state.http, cfg) if cfg.hosting_on else None
     if fly is not None:
         app.state.hub.waker = waker(engine, fly)
     meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting)

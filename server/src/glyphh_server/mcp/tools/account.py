@@ -29,7 +29,7 @@ def price(plan: PlanView) -> str:
 def includes(plan: PlanView) -> str:
     on = [name for name, yes in plan.features.model_dump().items() if yes]
     return (
-        f"hosted machines {amount(plan.limits.machines)}, managed precedents {amount(plan.limits.precedents)}; "
+        f"runtime nodes {amount(plan.limits.machines)}, managed precedents {amount(plan.limits.precedents)}; "
         f"features: {', '.join(on) or 'none'}"
     )
 
@@ -91,7 +91,7 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "plans",
         "Glyphh plans",
-        "What each Glyphh plan costs and includes: hosted machines, managed precedents and features. Never per seat, "
+        "What each Glyphh plan costs and includes: runtime nodes, managed precedents and features. Never per seat, "
         "per model or per install.",
         NoArgs,
         list_plans,
