@@ -1,78 +1,68 @@
 # server
 
-The Glyphh server: the one cloud part behind Glyphh's mods for Claude, sold as flat plans (Free, Pro, Team, Enterprise) that each include every mod on the account (`ada`), never per seat, per model or per install, with hosted machines metered per second. It renders nothing: people use the platform (`glyphh-ai/platform`), or Claude through the Glyphh connector (`/mcp`, signed in with OAuth). It keeps accounts, one org per user, invites, the mods catalog, versioned plans (Free, Pro and Team through Stripe, Enterprise granted by contract), each with its hosted machines, managed precedents and features, Fly's rates and each hosted machine's month metered at them, reported to a Stripe Billing Meter, installs signed in by device flow (RFC 8628), one per machine, a signed license carrying the plan's features and each mod's limits, and the record of Ada models: runtimes (hosted machines up to the org's plan's, one local per install, and any self-hosted ones, each with its own token), the models (`models`, as rrotor runs them) and their versions (a commit each, in the person's own repo), deployments, runs, approvals, connector grants, the Glyphh GitHub App's installations (repo-scoped tokens minted per deploy), routine triggers (fired on a model's events, their tokens encrypted) and model events. The connector (OAuth 2.1 and `/mcp`, with the account and model tools and the account panel), the models record and the hosted runtimes (several Fly machines per org on Pro, Team and Enterprise, each named and small, medium or large, reached directly at `https://<machine>.glyphh.app` with a runtime key, stopped when idle, billed per second) and self-hosted runtimes (registered by public address, their licence by link, a daily heartbeat or offline) are built; calling a model never passes through here. What a person makes stays on their machine or in their runtime. `docs/architecture.md` is the contract: the API, the data model and the plans; `docs/pricing.md` holds the pricing's rules and how an Enterprise customer is set up.
+The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, the signed licence,
+flat plans and per-second hosting on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly
+and the record of each person's Ada models, runtimes and runs. It renders nothing (every browser step lands on the
+platform, `glyphh-ai/platform`) and is never on the data path: a model is called at its runtime's own address.
+
+- [`docs/architecture.md`](docs/architecture.md): the contract. The system, the API, the settings, the data model,
+  and what is not built yet.
+- [`docs/pricing.md`](docs/pricing.md): the plans and their rules, Stripe's setup and setting up an Enterprise
+  customer.
 
 ## Run it
 
     docker compose up --build
 
-The API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the docs at `/docs`). Compose runs Postgres, Redis and the server.
+Compose runs Postgres, Redis and the server; the API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the
+docs at `/docs`). Before the server starts, the image runs the schema step, `python -m glyphh_server.db.schema`
+([starting up](docs/architecture.md#starting-up-and-the-reset-on-deploy)). There are no migrations yet: after a
+change to an existing table the server refuses to boot; reset the dev database with `docker compose down -v`.
 
-Redis carries only live signals (pub/sub): an approval reaches whichever server process holds the person's `/v1/approvals/stream`, and a call reaches whichever holds the runtime's `/v1/runtime/link`. Nothing kept lives there; Postgres holds the record, so Redis saves nothing to disk. In production Redis runs on the server's own Fly machine, beside the server.
-
-Before the server starts, the image runs the schema step (`python -m glyphh_server.db.schema`): it runs `db/schema.sql`, the one file that holds the schema (every table and index, and the row-level security that keeps each org to its own rows, binding the server's own role: it connects as an ordinary role, never a superuser, which would bypass it; safe to run again), then seeds the mods (`ada`; a mod no longer seeded is retired), the plans (Free, Pro, Team, Enterprise), each with its first version (every plan includes every mod; the machines each allows and the markups on Fly's rates are placeholders marked TBD in `db/seed.py`), Fly's rates (`db/seed_rates.py`) and the platform's own OAuth client (`db/seed_clients.py`, from `GLYPHH_PLATFORM_CLIENT_ID` and `_SECRET`). Until relaunch there are no migrations: after a change to an existing table the server refuses to boot and says so; reset the dev database with `docker compose down -v`. In production, while nothing in it is kept, every deploy starts the database clean: Fly's release command (`python -m glyphh_server.db.reset`, on only while `fly.toml` sets `GLYPHH_RESET_DATABASE=1`) drops every table the server owns and makes the schema again from `schema.sql`, seeded.
-
-Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed):
-
-| Setting | What |
-|---|---|
-| `GLYPHH_ENV` | `dev` (default), `test` or `prod` |
-| `GLYPHH_DATABASE_URL` | Postgres (`postgresql+asyncpg://…`; a plain `postgres://…?sslmode=` URL is made asyncpg's) |
-| `GLYPHH_RESET_DATABASE` | `1` to drop every table and make the schema again on each deploy (`db/reset.py`, Fly's release command); off by default |
-| `GLYPHH_VERSION`, `GLYPHH_LOG_LEVEL` | The version the API reports (`dev`; set by the image build) and the logs' level (`INFO`) |
-| `GLYPHH_REDIS_URL` | Redis, for live signals only (`redis://…`); in production on the server's own Fly machine |
-| `GLYPHH_PUBLIC_URL` | The server's own address: the device flow's link and the provider callbacks (`/auth/{google,github}/callback`) |
-| `GLYPHH_PLATFORM_URL` | The platform, the one web app (`https://platform.glyphh.ai`; `http://localhost:3000` by default): where every browser step of a flow is sent. The server renders nothing |
-| `GLYPHH_PLATFORM_CLIENT_ID`, `GLYPHH_PLATFORM_CLIENT_SECRET` | The platform's own OAuth client (the platform's `PLATFORM_CLIENT_ID` and `PLATFORM_CLIENT_SECRET`), made at every start so the database's reset never loses it |
-| `GLYPHH_SECRET_KEY` | Required, 32+ characters (the server refuses to start without it); signs every browser step's value: the device sign-in, linking a provider, the connector's Allow and installing the GitHub App |
-| `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | Sign-in providers; a provider without both is not offered |
-| `GLYPHH_LICENSE_KEY` | Base64 of a raw 32-byte Ed25519 private key that signs licenses. Required in prod; without it in dev and test a key is made at start (licenses then don't survive a restart) |
-| `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | Billing; without them billing answers `E_UNAVAILABLE` `billing_off` |
-| `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | The flat monthly Stripe prices Pro and Team sell on. A price a plan's newest version doesn't sell on becomes a new plan version at the next boot |
-| `GLYPHH_STRIPE_PRICE_HOSTING` | The metered hosting price on the Billing Meter (a cent a unit), the second item on every paid subscription. Without it Checkout answers `E_UNAVAILABLE` |
-| `GLYPHH_STRIPE_METER_HOSTING` | The Billing Meter's event name (`glyphh_hosting`). Without it no hosting is reported to Stripe |
-| `GLYPHH_GITHUB_APP_ID`, `GLYPHH_GITHUB_APP_PRIVATE_KEY`, `GLYPHH_GITHUB_APP_SLUG` | The Glyphh GitHub App: its id, its private key (PEM; line breaks may be written as `\n`) and its slug (the install page is `https://github.com/apps/<slug>/installations/new`). Set the App's Setup URL to `{public_url}/v1/github/callback`. Without all three, installing the App answers `E_UNAVAILABLE` |
-| `GLYPHH_FLY_API_TOKEN`, `GLYPHH_FLY_APP`, `GLYPHH_FLY_IMAGE` | Hosted runtimes on Fly: a deploy token, the one app the machines live in, and the hosted rrotor image (`registry.fly.io/<app>:<version>`, private: it carries the Ada part). Without all three, hosting is off (`E_UNAVAILABLE` `hosting_off`). Also `GLYPHH_FLY_PUBLIC_DOMAIN` (`glyphh.app`: each runtime is `https://<machine>.<domain>`, a wildcard certificate and DNS record on the app), `GLYPHH_FLY_REGION` (`iad`), `GLYPHH_RUNTIME_IDLE_MINUTES` (10). A machine's CPUs, memory and volume come from its size (`SIZES` in `models/rrotor.py`) |
-| `GLYPHH_SECRETS_KEY` | Base64 of 32 random bytes; encrypts routine trigger tokens at rest (AES-256-GCM). Without it routine triggers answer `E_UNAVAILABLE` `secrets_off`; changing it makes the stored tokens unreadable |
-| `GLYPHH_INVITE_URL` | Where an invite's link points (its token rides `?invite=`); defaults to `{public_url}/join` |
-| `GLYPHH_MCP_ORIGINS` | Browser origins `/mcp` accepts besides the server's own, comma-separated; defaults to `https://claude.ai,https://claude.com`. A request without an `Origin` always passes |
-
-Make the Stripe products, prices and meter once per Stripe account (test mode, then live), and print the four Stripe settings above, with:
-
-    STRIPE_SECRET_KEY=sk_test_… uv run python scripts/stripe-setup.py
-
-Enterprise is granted, never bought: on the server's machine (`fly ssh console`), `python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --markup <pct> --subscription <sub_…>`, and `revoke --org <uuid>` (`docs/pricing.md`).
-
-Make a license key, or a secrets key, with:
+Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed): the
+[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make a licence key
+or a secrets key with:
 
     python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+
+To try billing against Stripe's test mode, make the products once
+([pricing.md](docs/pricing.md#stripe-once-per-account)) and forward its events with
+`stripe listen --forward-to localhost:8080/v1/stripe/webhook`, setting the webhook secret it prints.
 
 ## Layout
 
 `src/glyphh_server/`, built database first, then the service functions, then thin routes:
 
-- `models/`: the tables mapped for queries, one per module (`db/schema.sql` is the schema; `tests/db/test_schema_sql.py` fails when they disagree; drawn in `docs/architecture.md`, Data model)
-- `db/`: the engine, `schema.sql` and the schema step, the seed, the drift check, tenancy (row-level security keyed on the org) and `signals.py`, the Redis client for live signals
-- `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe, `ops/connector/` the connector's OAuth 2.1 authorization server (clients, codes, grants, tokens)
-- `api/`: the routes, every one with an OpenAPI operation id; `api/device_pages.py` is the device flow's plain HTML page, `api/link_pages.py` linking another sign-in provider through the same provider pages, `api/github_pages.py` installing the GitHub App in the browser, `api/oauth_pages.py` the connector's authorization and Allow page, `api/oauth.py` and `api/oauth_meta.py` its token, registration, revocation and metadata endpoints (refusals in OAuth's own shape), `api/mcp.py` `/mcp`
-- `mcp/`: the connector's MCP server: the protocol (2026-07-28 and the earlier `initialize` revisions), the tools (`mcp/tools/`) and the account panel (`mcp/panel/`, an MCP App that inlines the MCP Apps client bundle)
-- `obs/`: JSON logs, each line with its trace id; every refusal is `{"error": {"code", "message", "trace_id"}}`, but on the OAuth endpoints (OAuth's `{"error", "error_description"}`) and `/mcp`'s protocol errors (JSON-RPC)
+- `models/`: the tables mapped for queries, one per module (`db/schema.sql` is the schema;
+  `tests/db/test_schema_sql.py` fails when they disagree)
+- `db/`: the engine, `schema.sql` and the schema step, the seeds, the drift check, tenancy (row-level security keyed
+  on the org) and `signals.py`, the Redis client for live signals
+- `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe,
+  `ops/connector/` the connector's OAuth 2.1 authorization server
+- `api/`: the routes, every one with an OpenAPI operation id; `*_pages.py` the browser steps, `oauth.py` and
+  `oauth_meta.py` OAuth's endpoints (refusals in OAuth's own shape), `mcp.py` `/mcp`
+- `mcp/`: the connector's MCP server: the protocol, the tools (`mcp/tools/`) and the account panel (`mcp/panel/`)
+- `obs/`: JSON logs, each line with its trace id
 
 ## Test it
 
     docker compose --profile test run --rm --build test
 
-The suite runs against a real Postgres (its own `glyphh_test` database, made fresh each run) and a real Redis and fails under 100% line and branch coverage. Google, GitHub (sign-in and the GitHub App), Stripe and Anthropic's routines are faked at the HTTP layer; no test reaches them, and the keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
-
-To try billing against Stripe's test mode locally, forward its events with `stripe listen --forward-to localhost:8080/v1/stripe/webhook` and set the webhook secret it prints.
+The suite runs against a real Postgres (its own `glyphh_test` database, fresh each run) and a real Redis, and fails
+under 100% line and branch coverage. Google, GitHub, Stripe and Anthropic's routines are faked at the HTTP layer; the
+keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40
+and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
 
 ## Builds
 
-Every push and pull request runs lint and the suite in Docker (`.github/workflows/ci.yml`). Every merge to main then publishes the image to `ghcr.io/glyphh-ai/server`, tagged with the commit and `main`.
+Every push and pull request runs lint and the suite in Docker (`.github/workflows/ci.yml`). Every merge to main
+publishes the image to `ghcr.io/glyphh-ai/server`, tagged with the commit and `main`, and deploys it to Fly
+(`fly.toml`, the app `glyphh-ai-server`).
 
 ## Docs
 
     uv sync --group docs
     uv run mkdocs serve
 
-Then open http://127.0.0.1:8000/architecture/. The docs are `docs/architecture.md` (what is built, and in its last section what is not yet) and `docs/pricing.md` (the pricing's rules and setting up an Enterprise customer); diagrams are Mermaid blocks and reload on save.
+Then open http://127.0.0.1:8000/architecture/. Diagrams are Mermaid blocks, each with its rendered image in
+`docs/img/`.
