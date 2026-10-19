@@ -48,8 +48,8 @@ class BillingView(Usage):
 
 @router.get("/v1/billing", operation_id="billing")
 async def get_billing(caller: Caller, conn: Conn) -> BillingView:
-    """The org's billing: its plan and price, the precedents its hosted runtimes hold of the plan's managed bucket,
-    and its hosting this month, all in, machine by machine."""
+    """The org's billing: its plan and price, the precedents its fullest runtime holds of the plan's per node, and
+    its hosting this month, all in, machine by machine."""
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
@@ -85,7 +85,7 @@ async def stripe_webhook(
     event = signature.verified_event(secret, await request.body(), stripe_signature)
     settings = request.app.state.settings
     fly = Fly(request.app.state.http, settings) if settings.hosting_on else None
-    await webhook.handle_event(conn, stripe_client(request), event, fly)
+    await webhook.handle_event(conn, stripe_client(request), event, request.app.state.signing_key, fly)
     return Response(status_code=204)
 
 

@@ -45,7 +45,7 @@ async def register(ctx: Context, args: NewSelf) -> Done:
 
 
 async def offline_licence(ctx: Context, args: OfflineFor) -> Done:
-    issued = await heartbeat.offline(ctx.conn, ctx.license_key, ctx.who, args.runtime_id, args.days)
+    issued = await heartbeat.offline(ctx.conn, ctx.signing_key, ctx.who, args.runtime_id, args.days)
     text = f"Offline licence, expires {issued.expires_at:%Y-%m-%d} (14 days' grace after):\n{issued.token}\n"
     text += "Set it as RROTOR_LICENCE, or write it to /data/licence.token."
     return Done(text, dump(issued))

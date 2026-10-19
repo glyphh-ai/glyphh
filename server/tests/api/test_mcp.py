@@ -17,7 +17,7 @@ from glyphh_server.ops.connector import grants
 from tests.connector import MODERN, UI, granted, modern, modern_headers, rpc
 from tests.db.helpers import person
 
-PANEL: str = "ui://glyphh/account/3"
+PANEL: str = "ui://glyphh/account/4"
 
 
 async def _auth(engine: AsyncEngine) -> dict[str, str]:

@@ -1,5 +1,5 @@
-"""What an org uses that its plan sells: the precedents its hosted runtimes hold against the plan's managed bucket,
-and its hosted machines' month to date, all in (Fly's rates with the markup, never named), each machine's own too,
+"""What an org uses that its plan sells: the precedents its fullest runtime holds against the plan's precedents per
+node, and its hosted machines' month to date, all in (Fly's rates with the markup, never named), each machine's own too,
 those deleted this month included."""
 
 import uuid
@@ -17,8 +17,8 @@ MICROS_PER_CENT: int = 10_000
 
 
 class Precedents(BaseModel):
-    used: int = Field(description="What the org's hosted runtimes hold, as each last said")
-    limit: int | None = Field(description="The plan's managed bucket; null = unlimited")
+    used: int = Field(description="The most any one of the org's hosted or self-hosted runtimes holds, as it last said")
+    limit: int | None = Field(description="The plan's precedents per node; null = unlimited")
 
 
 class MachineCost(BaseModel):
@@ -42,8 +42,8 @@ class Usage(BaseModel):
 
 async def precedents_used(conn: AsyncConnection, org_id: uuid.UUID) -> int:
     people = select(User.id).where(User.org_id == org_id)
-    held = select(func.coalesce(func.sum(Rrotor.precedents), 0)).where(
-        Rrotor.user_id.in_(people), Rrotor.mode == "hosted"
+    held = select(func.coalesce(func.max(Rrotor.precedents), 0)).where(
+        Rrotor.user_id.in_(people), Rrotor.mode.in_(("hosted", "self"))
     )
     return int((await conn.execute(held)).scalar_one())
 

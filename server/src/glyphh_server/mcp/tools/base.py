@@ -28,7 +28,7 @@ class Context:
     settings: Settings
     http: httpx.AsyncClient
     hub: Hub
-    license_key: Ed25519PrivateKey
+    signing_key: Ed25519PrivateKey
 
     def stripe(self) -> StripeClient:
         return StripeClient(self.http, self.settings.stripe_secret_key, self.settings.stripe_meter_hosting)

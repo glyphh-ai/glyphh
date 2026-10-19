@@ -68,14 +68,14 @@ function showPlan(d) {
   const renews = o.renews_at ? `, renews ${o.renews_at.slice(0, 10)}` : "";
   $("plan").textContent = `${p.name}, billing ${o.billing_status}${renews}. Members and installs are unlimited.`;
   const on = Object.entries(p.features).filter(([, v]) => v).map(([k]) => k).join(", ") || "none";
-  $("limits").replaceChildren(item(`Hosted machines: ${amount(p.limits.machines)}`),
-    item(`Managed precedents: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
+  $("limits").replaceChildren(item(`Runtime nodes: ${amount(p.limits.machines)}`),
+    item(`Precedents per node: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
 }
 
 const dollars = (c) => `$${(c / 100).toFixed(2)}`;
 
 function showUsage(u) {
-  $("usage").textContent = `Managed precedents ${u.precedents.used} of ${amount(u.precedents.limit)}. ` +
+  $("usage").textContent = `Precedents ${u.precedents.used} on the fullest runtime, of ${amount(u.precedents.limit)} per node. ` +
     `Hosting this month: ${dollars(u.hosting.month_to_date_cents)}.`;
   $("hosting").replaceChildren(...u.hosting.machines.map((m) => item(`${m.name} (${m.size}): ${dollars(m.cents)}`)));
 }

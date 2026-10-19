@@ -1,5 +1,5 @@
 """Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
-(hosted machines and the managed precedents) and its features. The markup on Fly's rates is a version's own and is
+(runtime nodes and precedents per node) and its features. The markup on Fly's rates is a version's own and is
 never shown."""
 
 import uuid
@@ -16,12 +16,12 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 class Limits(BaseModel):
     machines: int | None = Field(
-        description="Runtime nodes, the org's together: every runtime linked for it, hosted or self-hosted (today only "
-        "hosted machines are counted); null = unlimited"
+        description="Runtime nodes, the org's together: every runtime node linked for it, hosted or self-hosted (only "
+        "hosted machines are refused past it; the rest are counted, never refused); null = unlimited"
     )
     precedents: int | None = Field(
-        description="Managed precedents: what a hosted runtime may hold; null = unlimited. Local and self-hosted "
-        "runtimes are unlimited on every plan"
+        description="Precedents per node, across all its Ada models: the licence key's max_precedents, enforced by "
+        "rrotor; null = unlimited"
     )
 
 

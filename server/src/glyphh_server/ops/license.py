@@ -1,5 +1,5 @@
 """The license: what an org's plan allows (its hosted machines, its features, and every active mod with its limits:
-Ada's managed precedents on a hosted runtime, unlimited anywhere else), signed with Ed25519 so the mod can check it
+Ada's precedents per node on a hosted runtime, unlimited anywhere else), signed with Ed25519 so the mod can check it
 offline with the public key, and short-lived so a change of plan reaches the machine within a day.
 docs/architecture.md (The license) shows the payload.
 
@@ -62,7 +62,7 @@ class LicensePayload(BaseModel):
 @dataclass(frozen=True, slots=True)
 class Stamp:
     """What a runtime's licence says of itself: the runtime, how it came, its grace and how long it lasts; whether it
-    is hosted, where the plan's managed precedents are its cap."""
+    is hosted, where the plan's precedents per node are its cap."""
 
     runtime_id: uuid.UUID
     kind: str
@@ -83,10 +83,12 @@ class LicenseKey(BaseModel):
 
 def load_key(settings: Settings) -> Ed25519PrivateKey:
     """The configured key; outside prod, without one, a new key for this run."""
-    if settings.license_key:
-        return Ed25519PrivateKey.from_private_bytes(base64.b64decode(settings.license_key))
+    if settings.license_signing_key:
+        return Ed25519PrivateKey.from_private_bytes(base64.b64decode(settings.license_signing_key))
     if settings.env == "prod":
-        raise RuntimeError("GLYPHH_LICENSE_KEY must be set in prod: base64 of a raw 32-byte Ed25519 private key.")
+        raise RuntimeError(
+            "GLYPHH_LICENSE_SIGNING_KEY must be set in prod: base64 of a raw 32-byte Ed25519 private key."
+        )
     return Ed25519PrivateKey.generate()
 
 
