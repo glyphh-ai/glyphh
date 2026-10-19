@@ -12,19 +12,22 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import sqlite3
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 import numpy as np
+from collections.abc import Callable
 
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
-TAU = 0.12     # default softmax temperature (fit on Kubernetes issues; calibrate())
-POOL = 25      # nearest precedents a probability is spread over
-TAUS = (0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 1.0)
+TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
+POOL = 25  # nearest precedents a probability is spread over
+TAUS = (0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
 ENCODING = 3  # bump when encode() changes; stores re-encode on open
 
 SPEC = """\
@@ -106,6 +109,11 @@ THE TWO CONSTRUCTS.
       answers from 87% to 94% right.
       refresh() pulls rows other agents wrote to a shared WAL file;
       merge(other_path) unions another Space file by id, authors kept.
+      Space(path=..., readonly=True) opens the file read-only (a
+      follower's copy, a read-only disk): every read works, every write
+      (record, merge, calibrate, set_meta, rewrite) raises ReadOnlyError
+      (code E_READ_ONLY) before touching the file, and nothing is ever
+      created beside it.
 
 THE CONTRACT: NOTHING UNGRADED. Route every domain decision through
 decide(wins, vetoes, situation, events) -> Decision. It is:
@@ -163,15 +171,30 @@ were stored re-encode without their trajectory).
 """
 
 
+class ReadOnlyError(Exception):
+    """A write asked of a store opened read-only (Space(path,
+    readonly=True)). Raised before the file is touched. `code` is
+    "E_READ_ONLY"; `operation` names the write refused; `path` is the
+    store's."""
+
+    code = "E_READ_ONLY"
+
+    def __init__(self, operation: str, path: str | None = None):
+        where = f" ({path})" if path else ""
+        super().__init__(f"E_READ_ONLY: {operation} writes, and the store is open read-only{where}")
+        self.operation = operation
+        self.path = path
+
+
 def spec() -> str:
     """The substrate guidance. An agent that imports this kernel cold
     should read spec() before recording or querying anything."""
     return SPEC
 
 
-def reencode_store(path: str, dim: int = DIM, k: int = 15,
-                   min_sim: float = 0.10, seed: int = 42,
-                   decay: float = 0.7) -> int:
+def reencode_store(
+    path: str, dim: int = DIM, k: int = 15, min_sim: float = 0.10, seed: int = 42, decay: float = 0.7
+) -> int:
     """Re-encode every precedent's glyph from its stored situation and
     events, under the current encoding, and stamp the file with it.
     Opening a Space does this automatically for files from an older
@@ -179,8 +202,12 @@ def reencode_store(path: str, dim: int = DIM, k: int = 15,
     seed or decay). Returns rows re-encoded.
 
     Rows recorded before events were persisted re-encode without their
-    trajectory component."""
-    db = sqlite3.connect(str(Path(path).expanduser()))
+    trajectory component. A store that cannot be written (the file or
+    its folder read-only) raises ReadOnlyError before it is opened."""
+    p = Path(path).expanduser()
+    if (p.parent.is_dir() and not os.access(p.parent, os.W_OK)) or (p.exists() and not os.access(p, os.W_OK)):
+        raise ReadOnlyError("reencode_store", str(p))
+    db = sqlite3.connect(str(p))
     _ensure_schema(db)
     space = Space(dim=dim, k=k, min_sim=min_sim, seed=seed, decay=decay)
     n = _reencode_rows(db, space)
@@ -190,6 +217,7 @@ def reencode_store(path: str, dim: int = DIM, k: int = 15,
 
 
 # ── primitives ──────────────────────────────────────────────────────
+
 
 def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
     """Deterministic bipolar (+1/-1) symbol for a key.
@@ -201,14 +229,13 @@ def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
     cached = _SYMBOLS.get((key, seed, dim))
     if cached is None:
         digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
-        rng = np.random.RandomState(np.frombuffer(digest[:4],
-                                                  dtype=np.uint32))
+        rng = np.random.RandomState(np.frombuffer(digest[:4], dtype=np.uint32))
         cached = rng.randint(0, 2, dim, dtype=np.int8) * 2 - 1
         _SYMBOLS[(key, seed, dim)] = cached
     return cached.copy()
 
 
-_SYMBOLS: Dict[Tuple[str, int, int], np.ndarray] = {}
+_SYMBOLS: dict[tuple[str, int, int], np.ndarray] = {}
 
 
 def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -234,11 +261,10 @@ def _tiebreak(parts: Sequence[np.ndarray]) -> np.ndarray:
     for b in sorted(np.ascontiguousarray(p).tobytes() for p in parts):
         h.update(b)
     rng = np.random.RandomState(np.frombuffer(h.digest()[:4], dtype=np.uint32))
-    return (rng.randint(0, 2, len(parts[0]), dtype=np.int8) * 2 - 1)
+    return rng.randint(0, 2, len(parts[0]), dtype=np.int8) * 2 - 1
 
 
-def bundle(parts: Sequence[np.ndarray],
-           weights: Optional[Sequence[float]] = None) -> np.ndarray:
+def bundle(parts: Sequence[np.ndarray], weights: Sequence[float] | None = None) -> np.ndarray:
     """Superpose glyphs (majority vote). The result resembles ALL
     inputs. Capacity is finite: past a few dozen items, individual
     contributions fade — detail dies, gist survives. That is
@@ -260,10 +286,8 @@ def bundle(parts: Sequence[np.ndarray],
         return signs.astype(np.int8)
     if len(weights) != len(parts):
         raise ValueError(f"{len(parts)} parts but {len(weights)} weights")
-    pairs = [(np.ascontiguousarray(p), _check_weight(w))
-             for p, w in zip(parts, weights)]
-    pairs = sorted(((p, w) for p, w in pairs if w > 0),
-                   key=lambda pw: (pw[0].tobytes(), pw[1]))
+    pairs = [(np.ascontiguousarray(p), _check_weight(w)) for p, w in zip(parts, weights)]
+    pairs = sorted(((p, w) for p, w in pairs if w > 0), key=lambda pw: (pw[0].tobytes(), pw[1]))
     if not pairs:
         raise ValueError("cannot bundle when every weight is 0")
     acc = np.zeros(len(pairs[0][0]), dtype=np.float64)
@@ -312,6 +336,7 @@ def sim(a: np.ndarray, b: np.ndarray) -> float:
 # under "*". Unlisted keys weigh 1.0; weights for absent keys are
 # ignored.
 
+
 def _text(v: Any) -> str:
     """A scalar's text, the same in every language: strings as they
     are, true/false/null, numbers as JavaScript prints them."""
@@ -321,7 +346,7 @@ def _text(v: Any) -> str:
         return "null"
     if isinstance(v, bool):
         return "true" if v else "false"
-    if isinstance(v, int) and abs(v) < 10 ** 21:
+    if isinstance(v, int) and abs(v) < 10**21:
         return str(v)
     if isinstance(v, (int, float)):
         return _js_number(float(v))
@@ -358,7 +383,7 @@ def _js_number(x: float) -> str:
     return f"{sign}{digits[0]}.{digits[1:]}e{e_text}"
 
 
-def _weight(w: Any) -> Tuple[float, Optional[Dict[str, Any]]]:
+def _weight(w: Any) -> tuple[float, dict[str, Any] | None]:
     """(own weight, weights inside) for one entry of a weights tree."""
     if w is None:
         return 1.0, None
@@ -367,8 +392,9 @@ def _weight(w: Any) -> Tuple[float, Optional[Dict[str, Any]]]:
     return _check_weight(w), None
 
 
-def _keyed(data: Dict[str, Any], weights: Optional[Dict[str, Any]],
-           seed: int, dim: int) -> Tuple[List[np.ndarray], List[float]]:
+def _keyed(
+    data: dict[str, Any], weights: dict[str, Any] | None, seed: int, dim: int
+) -> tuple[list[np.ndarray], list[float]]:
     """bind(attr:key, child) for every key, code-point order, with
     each key's weight."""
     parts, ws = [], []
@@ -387,8 +413,33 @@ def _keyed(data: Dict[str, Any], weights: Optional[Dict[str, Any]],
     return parts, ws
 
 
-def _encode(data: Any, weights: Optional[Dict[str, Any]],
-            seed: int, dim: int) -> np.ndarray:
+def _word_glyph(item: Any, seed: int, dim: int) -> np.ndarray:
+    """A weighted set's item: a word, read through the lexicon when the kernel ships one; else its symbol."""
+    if isinstance(item, str):
+        try:
+            from glyphh_lexicon import LEXICON
+        except ImportError:  # the kernel without its lexicon module: words are symbols
+            return symbol(f"val:{item}", seed, dim)
+        return LEXICON.glyph(item, seed, dim)
+    return symbol(f"val:{_text(item)}", seed, dim)
+
+
+def _weighted_set(data: Any) -> bool:
+    """A list of [scalar, weight] pairs: a set whose items weigh differently (a bag of words whose words were
+    learned, for one). A plain set is a list of scalars; a list of pairs of anything else is a set of pairs."""
+    return all(
+        isinstance(x, (list, tuple))
+        and len(x) == 2
+        and isinstance(x[0], (str, int, float))
+        and not isinstance(x[0], bool)
+        and isinstance(x[1], (int, float))
+        and not isinstance(x[1], bool)
+        and 0 <= x[1] <= 1
+        for x in data
+    )
+
+
+def _encode(data: Any, weights: dict[str, Any] | None, seed: int, dim: int) -> np.ndarray:
     if isinstance(data, dict):
         if not data:
             raise ValueError("cannot encode an empty object")
@@ -399,12 +450,15 @@ def _encode(data: Any, weights: Optional[Dict[str, Any]],
     if isinstance(data, (list, tuple)):
         if not data:
             raise ValueError("cannot encode an empty array")
+        if _weighted_set(data):  # [[item, weight], ...]: each item's voice in the vote is its weight; a word read
+            parts = [_word_glyph(item, seed, dim) for item, _ in data]  # through the lexicon (glyphh_lexicon.py)
+            weights = [float(w) for _, w in data]
+            return bundle(parts, weights) if sum(weights) > 0 else bundle(parts)
         return bundle([_encode(x, None, seed, dim) for x in data])
     return symbol(f"val:{_text(data)}", seed, dim)
 
 
-def encode(data: Any, weights: Optional[Dict[str, Any]] = None,
-           seed: int = 42, dim: int = DIM) -> np.ndarray:
+def encode(data: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM) -> np.ndarray:
     """One glyph for any JSON-shaped value — objects nest, arrays are
     sets, scalars are symbols — with weights at every level (see the
     note above). The glyph is what sim() compares; explain() gives the
@@ -444,13 +498,17 @@ class Fact:
     status: str
     query: Any
     record: Any
-    children: List["Fact"]
+    children: list[Fact]
 
-    def to_json(self) -> Dict[str, Any]:
-        out: Dict[str, Any] = {
-            "key": self.key, "weight": self.weight,
-            "score": _4(self.score), "share": _4(self.share),
-            "sim": _4(self.sim), "status": self.status}
+    def to_json(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "key": self.key,
+            "weight": self.weight,
+            "score": _4(self.score),
+            "share": _4(self.share),
+            "sim": _4(self.sim),
+            "status": self.status,
+        }
         if not self.children:
             if self.query is not _ABSENT:
                 out["query"] = self.query
@@ -471,13 +529,11 @@ class Fact:
         else:
             missing = "record" if self.status == "query_only" else "query"
             head = f"{pad}{self.key}: not in the {missing}"
-        line = (f"{head}  score {_2(self.score)} × w {self.weight:g}"
-                f" → {_2(self.share)}")
-        return "\n".join([line] + [c.to_text(depth + 1)
-                                   for c in self.children])
+        line = f"{head}  score {_2(self.score)} × w {self.weight:g} → {_2(self.share)}"
+        return "\n".join([line] + [c.to_text(depth + 1) for c in self.children])
 
 
-def _tally(children: List[Fact]) -> float:
+def _tally(children: list[Fact]) -> float:
     """Each child's share of its parent; returns the parent's score."""
     total = sum(c.weight for c in children)
     for c in children:
@@ -485,7 +541,7 @@ def _tally(children: List[Fact]) -> float:
     return sum(c.share for c in children)
 
 
-def _weighs_nothing(data: Any, weights: Optional[Dict[str, Any]]) -> bool:
+def _weighs_nothing(data: Any, weights: dict[str, Any] | None) -> bool:
     """True when every key of an object weighs 0 here, all the way down."""
     if not isinstance(data, dict) or not weights:
         return False
@@ -496,8 +552,7 @@ def _weighs_nothing(data: Any, weights: Optional[Dict[str, Any]]) -> bool:
     return True
 
 
-def _side_by_side(q: Any, r: Any, weights: Optional[Dict[str, Any]],
-                  seed: int, dim: int) -> float:
+def _side_by_side(q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int) -> float:
     """The glyph sim of two subtrees under the same weights; 0 when either
     side weighs nothing there (there is no glyph to compare)."""
     if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
@@ -505,33 +560,30 @@ def _side_by_side(q: Any, r: Any, weights: Optional[Dict[str, Any]],
     return sim(_encode(q, weights, seed, dim), _encode(r, weights, seed, dim))
 
 
-def _explain(key: str, weight: float, q: Any, r: Any,
-             weights: Optional[Dict[str, Any]], seed: int, dim: int,
-             glyphs: bool = True) -> Fact:
+def _explain(
+    key: str, weight: float, q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int, glyphs: bool = True
+) -> Fact:
     """glyphs=False skips the glyph sim at inner nodes: the score is
     the same, only the side-by-side sim is left 0 (scoring every row
     of a store needs the score alone)."""
     if q is _ABSENT or r is _ABSENT:
-        return Fact(key, weight, 0.0, 0.0, 0.0,
-                    "record_only" if q is _ABSENT else "query_only",
-                    q, r, [])
+        side = r if q is _ABSENT else q
+        own = 0.0 if _weighs_nothing(side, weights) else weight  # nothing weighed under it: nothing missing
+        return Fact(key, own, 0.0, 0.0, 0.0, "record_only" if q is _ABSENT else "query_only", q, r, [])
+    if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
+        return Fact(key, 0.0, 0.0, 0.0, 0.0, "both", q, r, [])  # nothing to compare on one side: out of the mean
     if not (isinstance(q, dict) and isinstance(r, dict)):
         leaf = _side_by_side(q, r, weights, seed, dim)
         return Fact(key, weight, leaf, 0.0, leaf, "both", q, r, [])
     children = []
     for k in sorted(set(q) | set(r)):
         own, inner = _weight(weights.get(k) if weights else None)
-        children.append(_explain(k, own, q.get(k, _ABSENT),
-                                 r.get(k, _ABSENT), inner, seed, dim,
-                                 glyphs))
+        children.append(_explain(k, own, q.get(k, _ABSENT), r.get(k, _ABSENT), inner, seed, dim, glyphs))
     glyph_sim = _side_by_side(q, r, weights, seed, dim) if glyphs else 0.0
-    return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both",
-                q, r, children)
+    return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both", q, r, children)
 
 
-def explain(query: Any, record: Any,
-            weights: Optional[Dict[str, Any]] = None,
-            seed: int = 42, dim: int = DIM) -> Fact:
+def explain(query: Any, record: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM) -> Fact:
     """The fact tree for one query against one record: per key, how
     close, with what weight, and its share of the whole. root.score is
     the weighted sim. A key on one side only scores 0 at full weight,
@@ -543,6 +595,7 @@ def explain(query: Any, record: Any,
 
 # ── Strand: ordered meaning ─────────────────────────────────────────
 
+
 class Strand:
     """A sequence of glyphs whose ORDER is part of the meaning.
 
@@ -553,10 +606,10 @@ class Strand:
     'what kind of trajectory is this' survives far longer.
     """
 
-    def __init__(self, codons: Optional[List[np.ndarray]] = None):
-        self.codons: List[np.ndarray] = list(codons or [])
+    def __init__(self, codons: list[np.ndarray] | None = None):
+        self.codons: list[np.ndarray] = list(codons or [])
 
-    def append(self, codon: np.ndarray) -> "Strand":
+    def append(self, codon: np.ndarray) -> Strand:
         self.codons.append(codon)
         return self
 
@@ -568,7 +621,7 @@ class Strand:
         for age, codon in enumerate(reversed(self.codons)):
             shifted = roll(codon, age)
             rolled.append(shifted)
-            acc += (decay ** age) * shifted.astype(np.float64)
+            acc += (decay**age) * shifted.astype(np.float64)
         signs = np.sign(acc)
         ties = signs == 0
         if ties.any():
@@ -581,6 +634,7 @@ class Strand:
 
 # ── Space: graded precedent ─────────────────────────────────────────
 
+
 @dataclass
 class Answer:
     """What a Space says. Trust `top` only when `sufficient` is True
@@ -589,14 +643,14 @@ class Answer:
     precedents behind the answer: (id, similarity, outcome, hash)."""
 
     sufficient: bool
-    confidence: float          # consensus among qualifying precedents
-    support: float             # how CLOSE they are (mean similarity)
-    count: int                 # how many precedents cleared min_sim
-    top: Optional[str]         # leading outcome, None if insufficient
-    outcomes: Dict[str, float]  # similarity-weighted distribution
-    receipts: List[Tuple[str, float, Optional[str], str, str]]  # +author
+    confidence: float  # consensus among qualifying precedents
+    support: float  # how CLOSE they are (mean similarity)
+    count: int  # how many precedents cleared min_sim
+    top: str | None  # leading outcome, None if insufficient
+    outcomes: dict[str, float]  # similarity-weighted distribution
+    receipts: list[tuple[str, float, str | None, str, str]]  # +author
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         return {
             "sufficient": self.sufficient,
             "confidence": round(self.confidence, 4),
@@ -605,9 +659,7 @@ class Answer:
             "top": self.top,
             "outcomes": {k: round(v, 4) for k, v in self.outcomes.items()},
             "receipts": [
-                {"id": i, "sim": round(s, 4), "outcome": o, "hash": h,
-                 "author": a}
-                for i, s, o, h, a in self.receipts
+                {"id": i, "sim": round(s, 4), "outcome": o, "hash": h, "author": a} for i, s, o, h, a in self.receipts
             ],
         }
 
@@ -625,13 +677,17 @@ class Evidence:
     support: float
     nearest: float
     latest: float
-    authors: List[str]
+    authors: list[str]
 
-    def to_json(self) -> Dict[str, Any]:
-        return {"outcome": self.outcome, "count": self.count,
-                "support": round(self.support, 4),
-                "nearest": round(self.nearest, 4),
-                "latest": self.latest, "authors": self.authors}
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "outcome": self.outcome,
+            "count": self.count,
+            "support": round(self.support, 4),
+            "nearest": round(self.nearest, 4),
+            "latest": self.latest,
+            "authors": self.authors,
+        }
 
 
 @dataclass
@@ -643,7 +699,7 @@ class FactTree:
     precedent."""
 
     id: str
-    outcome: Optional[str]
+    outcome: str | None
     author: str
     ts: float
     hash: str
@@ -655,18 +711,25 @@ class FactTree:
     def score(self) -> float:
         return self.root.score
 
-    def to_json(self) -> Dict[str, Any]:
-        return {"id": self.id, "outcome": self.outcome,
-                "probability": _4(self.probability),
-                "score": _4(self.score), "sim": _4(self.sim),
-                "author": self.author, "ts": self.ts, "hash": self.hash,
-                "tree": self.root.to_json()}
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "outcome": self.outcome,
+            "probability": _4(self.probability),
+            "score": _4(self.score),
+            "sim": _4(self.sim),
+            "author": self.author,
+            "ts": self.ts,
+            "hash": self.hash,
+            "tree": self.root.to_json(),
+        }
 
     def to_text(self) -> str:
-        return (f"{self.outcome or '(memory)'}  p {_2(self.probability)}  score "
-                f"{_2(self.score)}  (sim "
-                f"{_2(self.sim)}, {self.id} by {self.author})\n"
-                + self.root.to_text(1))
+        return (
+            f"{self.outcome or '(memory)'}  p {_2(self.probability)}  score "
+            f"{_2(self.score)}  (sim "
+            f"{_2(self.sim)}, {self.id} by {self.author})\n" + self.root.to_text(1)
+        )
 
 
 class Space:
@@ -689,9 +752,23 @@ class Space:
     and the default 0.10 only excludes near-strangers.
     """
 
-    def __init__(self, dim: int = DIM, k: int = 15, min_sim: float = 0.10,
-                 seed: int = 42, decay: float = 0.7, author: str = "anon",
-                 path: Optional[str] = None, tau: Optional[float] = None):
+    def __init__(
+        self,
+        dim: int = DIM,
+        k: int = 15,
+        min_sim: float = 0.10,
+        seed: int = 42,
+        decay: float = 0.7,
+        author: str = "anon",
+        path: str | None = None,
+        tau: float | None = None,
+        readonly: bool = False,
+    ):
+        """readonly: open the file read-only. Reads work as ever; every write raises ReadOnlyError before the
+        file is touched; nothing is created (no schema, no folder, no journal or WAL files); a store from an older
+        encoding is re-encoded in memory only. A path with no file yet reads as an empty store."""
+        self.readonly = bool(readonly)
+        self.path = str(Path(path).expanduser()) if path else None
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
         # temperature for probabilities: given, else the file's
         # calibrated one (calibrate()), else TAU
@@ -699,43 +776,167 @@ class Space:
         self._tau_given = tau is not None
         self.decay = decay
         self.author = author
-        self._ids: List[str] = []
-        self._outcomes: List[Optional[str]] = []
-        self._authors: List[str] = []
-        self._ts: List[float] = []
-        self._situations: List[Any] = []
-        self._trajs: List[Optional[np.ndarray]] = []
-        self._glyphs: List[np.ndarray] = []
+        self._ids: list[str] = []
+        self._outcomes: list[str | None] = []
+        self._authors: list[str] = []
+        self._ts: list[float] = []
+        self._situations: list[Any] = []
+        self._meta: dict[str, Any] = {}
+        self._trajs: list[np.ndarray | None] = []
+        self._glyphs: list[np.ndarray] = []
         self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
         self._n = 0
         self._db = None
+        # the exact weighted score, fast: per leaf path, every distinct value's glyph once (a table and a
+        # matrix), and per precedent the index of its value there (-1: the precedent has no such leaf)
+        self._leaf_index: dict[str, dict[str, int]] = {}
+        self._leaf_vectors: dict[str, list[np.ndarray]] = {}
+        self._leaf_matrix: dict[str, np.ndarray | None] = {}
+        self._leaf_of: dict[str, list[int]] = {}
         if path:
             self._open(path)
+
+    # leaves: the fast path's tables
+
+    @staticmethod
+    def _leaves(situation: Any, at: str = "") -> list[tuple[str, Any]]:
+        """Every leaf of a situation as (path, value): an object's keys nest, anything else is a leaf."""
+        if isinstance(situation, dict):
+            out: list[tuple[str, Any]] = []
+            for key in sorted(situation):
+                out += Space._leaves(situation[key], f"{at}/{key}")
+            return out
+        return [(at, situation)]
+
+    def _leaf_add(self, situation: Any) -> None:
+        """One more precedent's leaves, in every table (a leaf it lacks: -1)."""
+        n = self._n  # its row, once appended
+        present: dict[str, Any] = dict(self._leaves(situation))
+        for path in set(self._leaf_of) | set(present):
+            rows = self._leaf_of.setdefault(path, [])
+            rows += [-1] * (n - len(rows))
+            if path in present:
+                key = json.dumps(present[path], sort_keys=True, ensure_ascii=False)
+                index = self._leaf_index.setdefault(path, {})
+                if key not in index:
+                    index[key] = len(index)
+                    self._leaf_vectors.setdefault(path, []).append(
+                        _encode(present[path], None, self.seed, self.dim).astype(np.float32)
+                    )
+                    self._leaf_matrix[path] = None  # rebuilt on the next read
+                rows.append(index[key])
+            else:
+                rows.append(-1)
+
+    def _leaf_drop(self, i: int) -> None:
+        for rows in self._leaf_of.values():
+            if i < len(rows):
+                del rows[i]
+
+    def _leaf_sims(self, path: str, query_vector: np.ndarray) -> np.ndarray | None:
+        """Every precedent's leaf sim with the query's leaf at this path; None when no precedent has the leaf."""
+        vectors = self._leaf_vectors.get(path)
+        if not vectors:
+            return None
+        matrix = self._leaf_matrix.get(path)
+        if matrix is None or len(matrix) != len(vectors):
+            matrix = np.stack(vectors)
+            self._leaf_matrix[path] = matrix
+        by_value = (matrix @ query_vector.astype(np.float32)) / self.dim
+        rows = self._leaf_of[path]
+        rows = rows + [-1] * (self._n - len(rows))
+        index = np.array(rows[: self._n], dtype=np.int64)
+        sims = np.where(index >= 0, by_value[np.maximum(index, 0)], 0.0)
+        return sims.astype(np.float64)
+
+    def _has(self, path: str) -> np.ndarray:
+        rows = self._leaf_of.get(path)
+        if rows is None:
+            return np.zeros(self._n, dtype=bool)
+        return np.array((rows + [-1] * (self._n - len(rows)))[: self._n], dtype=np.int64) >= 0
+
+    def _present(self, prefix: str, weights: dict[str, Any] | None) -> np.ndarray:
+        """Which precedents weigh something at this path: a leaf there, or a leaf with weight under it."""
+        found = self._has(prefix)
+        for k in self._keys_under(prefix):
+            own, inner = _weight(weights.get(k) if weights else None)
+            if own > 0:
+                found |= self._present(f"{prefix}/{k}", inner)
+        return found
+
+    def _has_any(self, prefix: str) -> np.ndarray:
+        """Which precedents carry anything at this path or under it, weighed or not."""
+        found = self._has(prefix)
+        for path in self._leaf_of:
+            if path.startswith(prefix + "/"):
+                found |= self._has(path)
+        return found
+
+    def _keys_under(self, prefix: str) -> set[str]:
+        """The keys the precedents have directly under this path."""
+        cut = len(prefix) + 1
+        return {path[cut:].split("/", 1)[0] for path in self._leaf_of if path.startswith(prefix + "/")}
+
+    def _fast_scores(self, situation: dict[str, Any], weights: dict[str, Any] | None) -> np.ndarray:
+        """The exact weighted sim of the situation against every precedent, as _exact scores it, by leaf and in
+        one pass: a node's score is the weighted mean of its children's (a key on one side only scores 0 at its
+        weight), a leaf's the glyph sim of the two values. The query's side fixes the weights; the only thing that
+        varies by precedent is which keys it has, so each node is a numerator and a denominator over n precedents,
+        and each leaf one matrix product."""
+        n = self._n
+
+        def node(q: Any, w: dict[str, Any] | None, at: str) -> np.ndarray:
+            if not isinstance(q, dict):
+                sims = self._leaf_sims(at, _encode(q, None, self.seed, self.dim))
+                return np.zeros(n) if sims is None else sims
+            owns = {k: _weight(w.get(k) if w else None) for k in q}
+            numerator = np.zeros(n)
+            denominator = np.zeros(n)
+            for k, (own, inner) in owns.items():
+                if own > 0 and not _weighs_nothing(q[k], inner):
+                    # the key counts for a precedent that weighs something there (present, or missing something
+                    # weighed); for one that weighs nothing there it is out of the mean, as _explain has it
+                    there = self._present(f"{at}/{k}", inner)
+                    denominator += own * (there | ~self._has_any(f"{at}/{k}"))
+                    numerator += own * node(q[k], inner, f"{at}/{k}")
+            for k in self._keys_under(at) - set(q):
+                own, inner = _weight(w.get(k) if w else None)
+                if own > 0:
+                    denominator += own * self._present(f"{at}/{k}", inner)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return np.where(denominator > 0, numerator / denominator, 0.0)
+
+        return node(situation, weights, "")
 
     # encoding: a situation is an object (values may nest — see
     # encode()); optional events fold in as a strand so order-carrying
     # situations keep their order; weights weigh the situation's keys
-    def encode(self, situation: Dict[str, Any],
-               events: Optional[List[np.ndarray]] = None,
-               weights: Optional[Dict[str, Any]] = None) -> np.ndarray:
+    def encode(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None = None, weights: dict[str, Any] | None = None
+    ) -> np.ndarray:
         if not isinstance(situation, dict):
             raise TypeError("a situation is an object of attributes")
         parts, ws = _keyed(situation, weights, self.seed, self.dim)
         if events:
-            parts.append(bind(symbol("trajectory", self.seed, self.dim),
-                              Strand(list(events)).state(self.decay)))
+            parts.append(bind(symbol("trajectory", self.seed, self.dim), Strand(list(events)).state(self.decay)))
             ws.append(1.0)
         if not parts:
             raise ValueError("cannot encode an empty situation")
         return bundle(parts, ws)
 
-    def _traj(self, events: Optional[List[np.ndarray]]
-              ) -> Optional[np.ndarray]:
+    def _traj(self, events: list[np.ndarray] | None) -> np.ndarray | None:
         return Strand(list(events)).state(self.decay) if events else None
 
-    def _append(self, rid: str, outcome: Optional[str], glyph: np.ndarray,
-                author: str, ts: float, situation: Any,
-                traj: Optional[np.ndarray]) -> None:
+    def _append(
+        self,
+        rid: str,
+        outcome: str | None,
+        glyph: np.ndarray,
+        author: str,
+        ts: float,
+        situation: Any,
+        traj: np.ndarray | None,
+    ) -> None:
         self._ids.append(rid)
         self._situations.append(situation)
         self._trajs.append(traj)
@@ -744,58 +945,76 @@ class Space:
         self._ts.append(float(ts))
         self._glyphs.append(glyph)
         if self._n == len(self._matrix):  # amortized O(1) growth
-            grown = np.empty((max(64, 2 * len(self._matrix)), self.dim),
-                             dtype=np.float32)
-            grown[:self._n] = self._matrix[:self._n]
+            grown = np.empty((max(64, 2 * len(self._matrix)), self.dim), dtype=np.float32)
+            grown[: self._n] = self._matrix[: self._n]
             self._matrix = grown
         self._matrix[self._n] = glyph.astype(np.float32)
+        self._leaf_add(situation)
         self._n += 1
 
+    def _writes(self, operation: str) -> None:
+        if self.readonly:
+            raise ReadOnlyError(operation, self.path)
+
     def _drop(self, i: int) -> None:
-        for column in (self._ids, self._situations, self._trajs, self._outcomes,
-                       self._authors, self._ts, self._glyphs):
+        for column in (self._ids, self._situations, self._trajs, self._outcomes, self._authors, self._ts, self._glyphs):
             del column[i]
-        self._matrix[i:self._n - 1] = self._matrix[i + 1:self._n]
+        self._leaf_drop(i)
+        self._matrix[i : self._n - 1] = self._matrix[i + 1 : self._n]
         self._n -= 1
 
-    def record(self, situation: Dict[str, Any],
-               outcome: Optional[str] = None,
-               events: Optional[List[np.ndarray]] = None,
-               rid: Optional[str] = None,
-               ts: Optional[float] = None) -> str:
+    def record(
+        self,
+        situation: dict[str, Any],
+        outcome: str | None = None,
+        events: list[np.ndarray] | None = None,
+        rid: str | None = None,
+        ts: float | None = None,
+    ) -> str:
+        self._writes("record")
         rid = rid or str(uuid.uuid4())[:12]
         ts = time.time() if ts is None else float(ts)
         glyph = self.encode(situation, events)
         if rid in self._ids:  # the same id again replaces the row
             self._drop(self._ids.index(rid))
-        self._append(rid, outcome, glyph, self.author, ts, situation,
-                     self._traj(events))
+        self._append(rid, outcome, glyph, self.author, ts, situation, self._traj(events))
         if self._db is not None:
-            blob = (np.stack(events).astype(np.int8).tobytes()
-                    if events else None)
+            blob = np.stack(events).astype(np.int8).tobytes() if events else None
             self._db.execute(
                 "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
                 " dim, glyph, author, ts, events)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (rid, json.dumps(situation, ensure_ascii=False),
-                 outcome or "", self.dim, glyph.tobytes(), self.author, ts,
-                 blob))
+                (
+                    rid,
+                    json.dumps(situation, ensure_ascii=False),
+                    outcome or "",
+                    self.dim,
+                    glyph.tobytes(),
+                    self.author,
+                    ts,
+                    blob,
+                ),
+            )
             self._db.commit()
         return rid
 
-    def _sims(self, situation: Dict[str, Any],
-              events: Optional[List[np.ndarray]],
-              weights: Optional[Dict[str, Any]] = None) -> np.ndarray:
+    def _sims(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None, weights: dict[str, Any] | None = None
+    ) -> np.ndarray:
         q = self.encode(situation, events, weights).astype(np.float32)
-        return (self._matrix[:self._n] @ q) / self.dim
+        return (self._matrix[: self._n] @ q) / self.dim
 
-    def _exact(self, i: int, situation: Dict[str, Any],
-               traj: Optional[np.ndarray], weights: Optional[Dict[str, Any]],
-               glyphs: bool = False) -> Fact:
+    def _exact(
+        self,
+        i: int,
+        situation: dict[str, Any],
+        traj: np.ndarray | None,
+        weights: dict[str, Any] | None,
+        glyphs: bool = False,
+    ) -> Fact:
         """Precedent i explained against the situation; events, when
         either side has them, are one more key: "~events"."""
-        root = _explain("", 1.0, situation, self._situations[i], weights,
-                        self.seed, self.dim, glyphs)
+        root = _explain("", 1.0, situation, self._situations[i], weights, self.seed, self.dim, glyphs)
         theirs = self._trajs[i]
         if (traj is not None or theirs is not None) and root.children:
             own, _ = _weight(weights.get("~events") if weights else None)
@@ -803,18 +1022,25 @@ class Space:
                 s = sim(traj, theirs)
                 fact = Fact("~events", own, s, 0.0, s, "both", "…", "…", [])
             else:
-                fact = Fact("~events", own, 0.0, 0.0, 0.0,
-                            "query_only" if theirs is None else "record_only",
-                            "…" if traj is not None else _ABSENT,
-                            "…" if theirs is not None else _ABSENT, [])
+                fact = Fact(
+                    "~events",
+                    own,
+                    0.0,
+                    0.0,
+                    0.0,
+                    "query_only" if theirs is None else "record_only",
+                    "…" if traj is not None else _ABSENT,
+                    "…" if theirs is not None else _ABSENT,
+                    [],
+                )
             root.children.append(fact)
             root.score = _tally(root.children)
         root.share = root.score
         return root
 
-    def _scores(self, situation: Dict[str, Any],
-                events: Optional[List[np.ndarray]],
-                weights: Optional[Dict[str, Any]]) -> np.ndarray:
+    def _scores(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None, weights: dict[str, Any] | None
+    ) -> np.ndarray:
         """The similarity every read ranks and gates on: the glyph sim,
         or — when the caller weighs the keys — the exact weighted sim,
         so a weight can raise a match as well as lower one."""
@@ -822,83 +1048,95 @@ class Space:
             return self._sims(situation, events)
         self.encode(situation, events, weights)  # same errors either way
         traj = self._traj(events)
-        return np.array([self._exact(i, situation, traj, weights).score
-                         for i in range(self._n)], dtype=np.float64)
+        if traj is None and not any(t is not None for t in self._trajs[: self._n]):
+            return self._fast_scores(situation, weights)
+        return np.array([self._exact(i, situation, traj, weights).score for i in range(self._n)], dtype=np.float64)
 
-    def _top(self, situation: Dict[str, Any],
-             events: Optional[List[np.ndarray]],
-             weights: Optional[Dict[str, Any]] = None,
-             k: Optional[int] = None) -> List[Tuple[int, float]]:
+    def _top(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None,
+        weights: dict[str, Any] | None = None,
+        k: int | None = None,
+    ) -> list[tuple[int, float]]:
         sims = self._scores(situation, events, weights)
         # highest first; equal scores, the later row first (stable, so
         # the order holds at any size and in every language)
-        order = np.argsort(sims, kind="stable")[::-1][
-            :self.k if k is None else k]
+        order = np.argsort(sims, kind="stable")[::-1][: self.k if k is None else k]
         return [(int(i), float(sims[i])) for i in order]
 
     def _hash(self, i: int) -> str:
         return hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16]
 
-    def query(self, situation: Dict[str, Any],
-              events: Optional[List[np.ndarray]] = None,
-              weights: Optional[Dict[str, Any]] = None) -> Answer:
+    def query(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        bias: Callable[[str], float] | None = None,
+    ) -> Answer:
         """weights: the query's weights tree (see encode()). Weighted,
         every similarity here is the exact weighted sim (a fact tree's
         score), so min_sim reads as 'the weighted share of attributes
-        that must agree'. Unweighted, it is the glyph sim, as always."""
+        that must agree'. Unweighted, it is the glyph sim, as always.
+        bias(outcome): a factor on each voter's weight by its outcome
+        (what the query's own words say about that outcome, for one);
+        the similarity bar, support and receipts are unbiased."""
         if self._n == 0:
             return Answer(False, 0.0, 0.0, 0, None, {}, [])
         top = self._top(situation, events, weights)
-        receipts = [
-            (self._ids[i], s, self._outcomes[i], self._hash(i),
-             self._authors[i])
-            for i, s in top]
+        receipts = [(self._ids[i], s, self._outcomes[i], self._hash(i), self._authors[i]) for i, s in top]
         # only precedents that clear the similarity bar get a vote
-        voters = [(i, s) for i, s in top
-                  if s >= self.min_sim and self._outcomes[i] is not None]
+        voters = [(i, s) for i, s in top if s >= self.min_sim and self._outcomes[i] is not None]
         if not voters:
-            return Answer(False, 0.0, max(top[0][1], 0.0), 0,
-                          None, {}, receipts)
-        weights = np.array([s for _, s in voters])
+            return Answer(False, 0.0, max(top[0][1], 0.0), 0, None, {}, receipts)
+        sims = np.array([s for _, s in voters])
+        weights = sims if bias is None else np.array([s * bias(self._outcomes[i]) for i, s in voters])
         wsum = float(weights.sum()) or 1.0
-        outcomes: Dict[str, float] = {}
+        outcomes: dict[str, float] = {}
         for (i, _), w in zip(voters, weights):
-            outcomes[self._outcomes[i]] = (
-                outcomes.get(self._outcomes[i], 0.0) + float(w))
+            outcomes[self._outcomes[i]] = outcomes.get(self._outcomes[i], 0.0) + float(w)
         outcomes = {o: w / wsum for o, w in outcomes.items()}
         top_outcome = max(outcomes, key=outcomes.get)
-        return Answer(True, outcomes[top_outcome], float(weights.mean()),
-                      len(voters), top_outcome, outcomes, receipts)
+        return Answer(True, outcomes[top_outcome], float(sims.mean()), len(voters), top_outcome, outcomes, receipts)
 
-    def _evidence(self, sims: np.ndarray, outcome: str,
-                  bar: float) -> Evidence:
-        idx = [i for i in range(self._n)
-               if self._outcomes[i] == outcome and sims[i] >= bar]
+    def _evidence(self, sims: np.ndarray, outcome: str, bar: float) -> Evidence:
+        idx = [i for i in range(self._n) if self._outcomes[i] == outcome and sims[i] >= bar]
         if not idx:
             return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
         close = sims[idx]
-        return Evidence(outcome, len(idx), float(close.mean()),
-                        float(close.max()),
-                        max(self._ts[i] for i in idx),
-                        sorted({self._authors[i] for i in idx}))
+        return Evidence(
+            outcome,
+            len(idx),
+            float(close.mean()),
+            float(close.max()),
+            max(self._ts[i] for i in idx),
+            sorted({self._authors[i] for i in idx}),
+        )
 
-    def evidence(self, situation: Dict[str, Any], outcome: str,
-                 events: Optional[List[np.ndarray]] = None,
-                 min_sim: Optional[float] = None,
-                 weights: Optional[Dict[str, Any]] = None) -> Evidence:
+    def evidence(
+        self,
+        situation: dict[str, Any],
+        outcome: str,
+        events: list[np.ndarray] | None = None,
+        min_sim: float | None = None,
+        weights: dict[str, Any] | None = None,
+    ) -> Evidence:
         """Support for ONE candidate outcome, over every precedent (not
         just the top k), judged on its own: how many precedents with
         this outcome clear the bar, how close, how recent, by whom."""
         if self._n == 0:
             return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
         bar = self.min_sim if min_sim is None else min_sim
-        return self._evidence(self._scores(situation, events, weights),
-                              outcome, bar)
+        return self._evidence(self._scores(situation, events, weights), outcome, bar)
 
-    def answers(self, situation: Dict[str, Any],
-                events: Optional[List[np.ndarray]] = None,
-                min_count: int = 1,
-                weights: Optional[Dict[str, Any]] = None) -> List[Evidence]:
+    def answers(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        min_count: int = 1,
+        weights: dict[str, Any] | None = None,
+    ) -> list[Evidence]:
         """Every outcome with qualifying precedent in this situation,
         strongest first. The read for situations that genuinely have
         several true outcomes: gate each on its own count, not on its
@@ -906,32 +1144,38 @@ class Space:
         if self._n == 0:
             return []
         sims = self._scores(situation, events, weights)
-        found = {self._outcomes[i] for i in range(self._n)
-                 if sims[i] >= self.min_sim and self._outcomes[i] is not None}
+        found = {self._outcomes[i] for i in range(self._n) if sims[i] >= self.min_sim and self._outcomes[i] is not None}
         out = [self._evidence(sims, o, self.min_sim) for o in found]
         out = [e for e in out if e.count >= min_count]
         return sorted(out, key=lambda e: (-e.count, -e.support, e.outcome))
 
-    def matches(self, situation: Dict[str, Any], outcome: str,
-                events: Optional[List[np.ndarray]] = None,
-                weights: Optional[Dict[str, Any]] = None) -> float:
+    def matches(
+        self,
+        situation: dict[str, Any],
+        outcome: str,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+    ) -> float:
         """Max similarity among precedents with THIS outcome (0.0 if
         none). The veto primitive: 'how close is the nearest recorded
         failure of this exact action?' — a direct check that no
         consensus vote can dilute."""
         if self._n == 0:
             return 0.0
-        mask = np.array([o == outcome for o in self._outcomes[:self._n]])
+        mask = np.array([o == outcome for o in self._outcomes[: self._n]])
         if not mask.any():
             return 0.0
         sims = self._scores(situation, events, weights)[mask]
         return float(sims.max())
 
-    def facts(self, situation: Dict[str, Any],
-              events: Optional[List[np.ndarray]] = None,
-              weights: Optional[Dict[str, Any]] = None,
-              top: Optional[int] = None,
-              min_score: Optional[float] = None) -> List["FactTree"]:
+    def facts(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        top: int | None = None,
+        min_score: float | None = None,
+    ) -> list[FactTree]:
         """The exact read: every precedent scored by weighted sim
         (unweighted keys weigh 1), the `top` (default k) best each
         explained as a fact tree — per key its score, weight and share,
@@ -942,80 +1186,177 @@ class Space:
             return []
         sims = self._sims(situation, events)
         scores = self._scores(situation, events, weights or {})
-        order = sorted((i for i in range(self._n)
-                        if min_score is None or scores[i] >= min_score),
-                       key=lambda i: (-scores[i], -sims[i], -self._ts[i],
-                                      self._ids[i]))
+        order = sorted(
+            (i for i in range(self._n) if min_score is None or scores[i] >= min_score),
+            key=lambda i: (-scores[i], -sims[i], -self._ts[i], self._ids[i]),
+        )
         traj = self._traj(events)
         probs = self._probabilities(scores, self.tau)
-        return [FactTree(self._ids[i], self._outcomes[i], self._authors[i],
-                         self._ts[i], self._hash(i), float(sims[i]),
-                         self._exact(i, situation, traj, weights,
-                                     glyphs=True),
-                         probs.get(self._outcomes[i], 0.0)
-                         if self._outcomes[i] is not None else 0.0)
-                for i in order[:self.k if top is None else top]]
+        return [
+            FactTree(
+                self._ids[i],
+                self._outcomes[i],
+                self._authors[i],
+                self._ts[i],
+                self._hash(i),
+                float(sims[i]),
+                self._exact(i, situation, traj, weights, glyphs=True),
+                probs.get(self._outcomes[i], 0.0) if self._outcomes[i] is not None else 0.0,
+            )
+            for i in order[: self.k if top is None else top]
+        ]
 
-    def probabilities(self, situation: Dict[str, Any],
-                      events: Optional[List[np.ndarray]] = None,
-                      weights: Optional[Dict[str, Any]] = None
-                      ) -> Dict[str, float]:
+    def probabilities(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        bias: Callable[[str], float] | None = None,
+    ) -> dict[str, float]:
         """P(outcome | situation) for every outcome among the POOL
         nearest precedents by exact weighted sim: a softmax of their
         scores at temperature tau, summed per outcome. Calibrated once
         calibrate() has fit tau to this store's own graded record."""
         if self._n == 0:
             return {}
-        return self._probabilities(
-            self._scores(situation, events, weights or {}), self.tau)
+        return self._probabilities(self._scores(situation, events, weights or {}), self.tau, bias=bias)
 
-    def _probabilities(self, scores: np.ndarray, tau: float,
-                       skip: int = -1) -> Dict[str, float]:
-        order = [int(i) for i in np.argsort(scores, kind="stable")[::-1]
-                 if i != skip and self._outcomes[i] is not None][:POOL]
+    def _probabilities(
+        self, scores: np.ndarray, tau: float, skip: int = -1, bias: Callable[[str], float] | None = None
+    ) -> dict[str, float]:
+        order = [
+            int(i) for i in np.argsort(scores, kind="stable")[::-1] if i != skip and self._outcomes[i] is not None
+        ][:POOL]
         if not order:
             return {}
         top = float(scores[order[0]])
-        mass: Dict[str, float] = {}
+        mass: dict[str, float] = {}
         for i in order:
             o = self._outcomes[i]
-            mass[o] = mass.get(o, 0.0) + math.exp((float(scores[i]) - top) / tau)
-        z = sum(mass.values())
+            mass[o] = mass.get(o, 0.0) + math.exp((float(scores[i]) - top) / tau) * (1.0 if bias is None else bias(o))
+        z = sum(mass.values()) or 1.0
         return {o: m / z for o, m in mass.items()}
 
-    def calibrate(self, sample: int = 100,
-                  weights: Optional[Dict[str, Any]] = None) -> float:
+    def calibrate(
+        self,
+        sample: int = 100,
+        weights: dict[str, Any] | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        cost: Callable[[dict[str, float], str], float] | None = None,
+        bias_for: Callable[[dict[str, Any]], Callable[[str], float] | None] | None = None,
+    ) -> float:
         """Fit tau so probabilities mean what they say: hold out each of
         the `sample` newest precedents in turn, score it against the
         rest, and keep the temperature (from TAUS) with the least
         log-loss on the held-out outcomes. Saved in the file, so every
-        later open uses it. Events are left out. Returns tau."""
+        later open uses it. Events are left out. Returns tau.
+        `weights_for` gives each held-out situation its own weights
+        (a spec's, which depend on what the situation carries).
+        `cost(probabilities, true)` is what deciding from those
+        probabilities would cost when `true` is the outcome: given, the
+        temperature with the least total cost wins, log-loss breaking
+        ties, so the fit serves the decision rather than the curve."""
+        self._writes("calibrate")
         graded = [i for i in range(self._n) if self._outcomes[i] is not None]
         if len(graded) < 10:
             raise ValueError("calibrate needs at least 10 precedents with an outcome")
         held = graded[-sample:]
-        scored = [(h, self._scores(self._situations[h], None, weights or {}))
-                  for h in held]
-        best = (float("inf"), TAU)
+        scored = [
+            (
+                h,
+                self._scores(self._situations[h], None, weights_for(self._situations[h]) if weights_for else (weights or {})),
+                bias_for(self._situations[h]) if bias_for else None,
+            )
+            for h in held
+        ]
+        best: tuple[float, float, float] = (float("inf"), float("inf"), TAU)
         for tau in TAUS:
-            loss = 0.0
-            for h, scores in scored:
-                p = self._probabilities(scores, tau, skip=h)
+            loss = paid = 0.0
+            for h, scores, bias in scored:
+                p = self._probabilities(scores, tau, skip=h, bias=bias)
                 loss -= math.log(max(p.get(self._outcomes[h], 0.0), 1e-6))
-            if loss < best[0]:
-                best = (loss, tau)
-        self.tau, self._tau_given = best[1], False
+                if cost is not None:
+                    paid += cost(p, self._outcomes[h])
+            key = (round(paid, 9), loss) if cost is not None else (loss, 0.0)
+            if key < best[:2]:
+                best = (*key, tau)
+        self.tau, self._tau_given = best[2], False
         if self._db is not None:
-            self._db.execute("INSERT OR REPLACE INTO meta VALUES ('tau', ?)",
-                             (repr(self.tau),))
+            self._db.execute("INSERT OR REPLACE INTO meta VALUES ('tau', ?)", (repr(self.tau),))
             self._db.commit()
         return self.tau
 
     def __len__(self) -> int:
         return self._n
 
+    def rewrite(self, fn: Callable[[dict[str, Any]], dict[str, Any]], persist: bool = True) -> int:
+        """Every precedent's situation passed through fn and stored again, glyph and leaf tables rebuilt (its
+        events kept). For a spec that has changed what a situation carries. Returns how many were rewritten.
+        persist=False changes the copy in memory only, the file untouched (the one rewrite a read-only store
+        allows)."""
+        if persist:
+            self._writes("rewrite")
+        blobs: dict[str, bytes | None] = {}
+        if self._db is not None:
+            try:
+                blobs = dict(self._db.execute("SELECT id, events FROM precedents").fetchall())
+            except sqlite3.OperationalError:  # a read-only store from before events were kept
+                blobs = {}
+        changed = 0
+        for i in range(self._n):
+            new = fn(self._situations[i])
+            if new == self._situations[i]:
+                continue
+            events = _events_from_blob(blobs.get(self._ids[i]), self.dim) if self._db is not None else None
+            parts, ws = _keyed(new, None, self.seed, self.dim)
+            traj = self._trajs[i]
+            if traj is not None:
+                parts.append(bind(symbol("trajectory", self.seed, self.dim), traj if events is None else Strand(events).state(self.decay)))
+                ws.append(1.0)
+            glyph = bundle(parts, ws)
+            self._situations[i], self._glyphs[i] = new, glyph
+            self._matrix[i] = glyph.astype(np.float32)
+            if self._db is not None and persist:
+                self._db.execute(
+                    "UPDATE precedents SET situation = ?, glyph = ? WHERE id = ?",
+                    (json.dumps(new, ensure_ascii=False), glyph.tobytes(), self._ids[i]),
+                )
+            changed += 1
+        if changed:
+            self._leaf_index, self._leaf_vectors, self._leaf_matrix, self._leaf_of = {}, {}, {}, {}
+            n, self._n = self._n, 0
+            for i in range(n):
+                self._leaf_add(self._situations[i])
+                self._n += 1
+            if self._db is not None and persist:
+                self._db.commit()
+        return changed
+
+    def graded(self) -> list[tuple[dict[str, Any], str]]:
+        """Every precedent with an outcome: (situation, outcome), oldest first."""
+        return [(self._situations[i], self._outcomes[i]) for i in range(self._n) if self._outcomes[i] is not None]
+
+    def meta(self, key: str) -> Any:
+        """A value kept with the store (JSON), or None: what a model learned from it, for one."""
+        if self._db is None:
+            return self._meta.get(key)
+        if self.readonly and not _has_meta(self._db):
+            return None
+        row = self._db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def set_meta(self, key: str, value: Any) -> None:
+        self._writes("set_meta")
+        if self._db is None:
+            self._meta[key] = value
+            return
+        self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, json.dumps(value, sort_keys=True)))
+        self._db.commit()
+
     # persistence: one portable file; WAL so several agents can share it
     def _open(self, path: str) -> None:
+        if self.readonly:
+            return self._open_readonly(path)
         p = Path(path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(str(p), timeout=10.0)
@@ -1025,32 +1366,85 @@ class Space:
         if _file_encoding(self._db) < ENCODING:
             _reencode_rows(self._db, self)
         self._db.commit()
-        saved = self._db.execute(
-            "SELECT value FROM meta WHERE key = 'tau'").fetchone()
+        saved = self._db.execute("SELECT value FROM meta WHERE key = 'tau'").fetchone()
         if saved and not self._tau_given:
             self.tau = float(saved[0])
         self.refresh()
 
+    def _open_readonly(self, path: str) -> None:
+        self._ro_connect()
+        if self._db is not None and _has_meta(self._db):
+            saved = self._db.execute("SELECT value FROM meta WHERE key = 'tau'").fetchone()
+            if saved and not self._tau_given:
+                self.tau = float(saved[0])
+        self.refresh()
+
+    def _ro_connect(self) -> None:
+        """(Re)connect a read-only store: mode=ro, no journal_mode pragma, no schema. A WAL store whose -wal and
+        -shm are not beside it (no writer has it open) is read immutable, since SQLite would otherwise make them,
+        or fail on a read-only folder; reconnecting on every refresh keeps that read current."""
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+        p = Path(self.path or "")
+        if not self.path or not p.is_file():
+            return  # no store yet: an empty one, made nowhere
+        with open(p, "rb") as f:
+            header = f.read(20)
+        wal = len(header) == 20 and header[18] == 2
+        live = Path(f"{p}-wal").exists() and Path(f"{p}-shm").exists()
+        flags = "mode=ro&immutable=1" if wal and not live else "mode=ro"
+        self._db = sqlite3.connect(f"{p.resolve().as_uri()}?{flags}", uri=True, timeout=10.0)
+        self._db.execute("PRAGMA busy_timeout=10000")
+
     def refresh(self) -> int:
         """Pull in rows other agents wrote to this file since open.
-        Returns how many new precedents arrived."""
+        Returns how many new precedents arrived. A read-only store
+        written under an older encoding is re-encoded on the way in, in
+        memory only."""
+        if self.readonly:
+            self._ro_connect()
         if self._db is None:
             return 0
+        stale = False
+        select = "SELECT id, situation, outcome, dim, glyph, author, ts, events FROM precedents ORDER BY ts, rowid"
+        if self.readonly:  # the file as it is: no schema made, no migration written
+            cols = [r[1] for r in self._db.execute("PRAGMA table_info(precedents)")]
+            if not cols:
+                return 0
+            stale = _file_encoding(self._db) < ENCODING
+            select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents ORDER BY {o}rowid".format(
+                a="author" if "author" in cols else "'anon'",
+                t="ts" if "ts" in cols else "0.0",
+                e="events" if "events" in cols else "NULL",
+                o="ts, " if "ts" in cols else "",
+            )
         known = set(self._ids)
         added = 0
-        for rid, situation, outcome, dim, blob, author, ts, ev in \
-                self._db.execute(
-                    "SELECT id, situation, outcome, dim, glyph, author, ts,"
-                    " events FROM precedents ORDER BY ts, rowid"):
+        for rid, situation, outcome, dim, blob, author, ts, ev in self._db.execute(select):
             if rid in known:
                 continue
-            if dim != self.dim:
-                raise ValueError(
-                    f"precedent {rid} has dim {dim}, space is {self.dim}")
-            self._append(rid, outcome,
-                         np.frombuffer(blob, dtype=np.int8).copy(),
-                         author, ts, _situation_of(situation),
-                         self._traj(_events_from_blob(ev, dim)))
+            if dim != self.dim and not stale:
+                raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
+            glyph = None
+            if stale:
+                try:
+                    glyph = self.encode(json.loads(situation), _events_from_blob(ev, self.dim))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    glyph = None  # no usable situation stored: keep the old glyph
+            if glyph is None:
+                if dim != self.dim:
+                    raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
+                glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            self._append(
+                rid,
+                outcome,
+                glyph,
+                author,
+                ts,
+                _situation_of(situation),
+                self._traj(_events_from_blob(ev, dim)),
+            )
             added += 1
         return added
 
@@ -1061,38 +1455,36 @@ class Space:
         file written under an older encoding are re-encoded from their
         situations on the way in. Returns how many precedents were
         new."""
+        self._writes("merge")
         other = sqlite3.connect(str(Path(other_path).expanduser()))
         cols = [r[1] for r in other.execute("PRAGMA table_info(precedents)")]
         stale = _file_encoding(other) < ENCODING
-        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} " \
-                 "FROM precedents".format(
-                     a="author" if "author" in cols else "'anon'",
-                     t="ts" if "ts" in cols else "0.0",
-                     e="events" if "events" in cols else "NULL")
+        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents".format(
+            a="author" if "author" in cols else "'anon'",
+            t="ts" if "ts" in cols else "0.0",
+            e="events" if "events" in cols else "NULL",
+        )
         known = set(self._ids)
         added = 0
-        for rid, situation, outcome, dim, blob, author, ts, ev in \
-                other.execute(select):
+        for rid, situation, outcome, dim, blob, author, ts, ev in other.execute(select):
             if rid in known:
                 continue
             if dim != self.dim:
-                raise ValueError(
-                    f"precedent {rid} has dim {dim}, space is {self.dim}")
+                raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
             if stale:
-                glyph = self.encode(json.loads(situation),
-                                    _events_from_blob(ev, dim))
+                glyph = self.encode(json.loads(situation), _events_from_blob(ev, dim))
             else:
                 glyph = np.frombuffer(blob, dtype=np.int8).copy()
-            self._append(rid, outcome, glyph, author, ts,
-                         _situation_of(situation),
-                         self._traj(_events_from_blob(ev, dim)))
+            self._append(
+                rid, outcome, glyph, author, ts, _situation_of(situation), self._traj(_events_from_blob(ev, dim))
+            )
             if self._db is not None:
                 self._db.execute(
                     "INSERT OR REPLACE INTO precedents (id, situation,"
                     " outcome, dim, glyph, author, ts, events)"
                     " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (rid, situation, outcome, dim, glyph.tobytes(), author,
-                     ts, ev))
+                    (rid, situation, outcome, dim, glyph.tobytes(), author, ts, ev),
+                )
             added += 1
         if self._db is not None:
             self._db.commit()
@@ -1104,7 +1496,7 @@ class Space:
             self._db.close()
             self._db = None
 
-    def __enter__(self) -> "Space":
+    def __enter__(self) -> Space:
         return self
 
     def __exit__(self, *exc) -> None:
@@ -1112,6 +1504,7 @@ class Space:
 
 
 # ── the contract as a function ──────────────────────────────────────
+
 
 @dataclass
 class Decision:
@@ -1124,24 +1517,34 @@ class Decision:
     exists but a newer win outranks it."""
 
     act: bool
-    outcome: Optional[str]
+    outcome: str | None
     reason: str
     answer: Answer
-    veto: Optional[Evidence]
+    veto: Evidence | None
     lifted: bool
 
-    def to_json(self) -> Dict[str, Any]:
-        return {"act": self.act, "outcome": self.outcome,
-                "reason": self.reason, "lifted": self.lifted,
-                "veto": self.veto.to_json() if self.veto else None,
-                "answer": self.answer.to_json()}
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "act": self.act,
+            "outcome": self.outcome,
+            "reason": self.reason,
+            "lifted": self.lifted,
+            "veto": self.veto.to_json() if self.veto else None,
+            "answer": self.answer.to_json(),
+        }
 
 
-def decide(wins: Space, vetoes: Space, situation: Dict[str, Any],
-           events: Optional[List[np.ndarray]] = None, *,
-           min_confidence: float = 0.5, min_count: int = 3,
-           min_veto_count: int = 1,
-           weights: Optional[Dict[str, Any]] = None) -> Decision:
+def decide(
+    wins: Space,
+    vetoes: Space,
+    situation: dict[str, Any],
+    events: list[np.ndarray] | None = None,
+    *,
+    min_confidence: float = 0.5,
+    min_count: int = 3,
+    min_veto_count: int = 1,
+    weights: dict[str, Any] | None = None,
+) -> Decision:
     """THE CONTRACT (see SPEC): the three trust gates on the wins, then
     the veto check, with the newest evidence winning.
 
@@ -1156,25 +1559,21 @@ def decide(wins: Space, vetoes: Space, situation: Dict[str, Any],
     if not answer.sufficient:
         return Decision(False, None, "insufficient", answer, None, False)
     top = answer.top
-    veto = vetoes.evidence(situation, top, events,
-                           min_sim=max(answer.support, 1e-9),
-                           weights=weights)
+    veto = vetoes.evidence(situation, top, events, min_sim=max(answer.support, 1e-9), weights=weights)
     win = wins.evidence(situation, top, events, weights=weights)
     close = veto.count >= min_veto_count
     lifted = close and win.latest > veto.latest
     if close and not lifted:
         return Decision(False, top, "vetoed", answer, veto, False)
     if answer.count < min_count:
-        return Decision(False, top, "uncalibrated", answer,
-                        veto if veto.count else None, lifted)
+        return Decision(False, top, "uncalibrated", answer, veto if veto.count else None, lifted)
     if answer.confidence < min_confidence:
-        return Decision(False, top, "low_confidence", answer,
-                        veto if veto.count else None, lifted)
-    return Decision(True, top, "reflex", answer,
-                    veto if veto.count else None, lifted)
+        return Decision(False, top, "low_confidence", answer, veto if veto.count else None, lifted)
+    return Decision(True, top, "reflex", answer, veto if veto.count else None, lifted)
 
 
 # ── store schema and migration ──────────────────────────────────────
+
 
 def _ensure_schema(db: sqlite3.Connection) -> None:
     db.execute(
@@ -1182,33 +1581,28 @@ def _ensure_schema(db: sqlite3.Connection) -> None:
         " id TEXT PRIMARY KEY, situation TEXT NOT NULL,"
         " outcome TEXT NOT NULL, dim INTEGER NOT NULL,"
         " glyph BLOB NOT NULL, author TEXT NOT NULL DEFAULT 'anon',"
-        " ts REAL NOT NULL DEFAULT 0, events BLOB)")
-    db.execute("CREATE TABLE IF NOT EXISTS meta ("
-               " key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        " ts REAL NOT NULL DEFAULT 0, events BLOB)"
+    )
+    db.execute("CREATE TABLE IF NOT EXISTS meta ( key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     cols = [r[1] for r in db.execute("PRAGMA table_info(precedents)")]
     # migrate older files in place
     if "author" not in cols:
-        db.execute("ALTER TABLE precedents ADD COLUMN author "
-                   "TEXT NOT NULL DEFAULT 'anon'")
+        db.execute("ALTER TABLE precedents ADD COLUMN author TEXT NOT NULL DEFAULT 'anon'")
     if "ts" not in cols:
-        db.execute("ALTER TABLE precedents ADD COLUMN ts "
-                   "REAL NOT NULL DEFAULT 0")
+        db.execute("ALTER TABLE precedents ADD COLUMN ts REAL NOT NULL DEFAULT 0")
     if "events" not in cols:
         db.execute("ALTER TABLE precedents ADD COLUMN events BLOB")
     rows = db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0]
-    stamped = db.execute(
-        "SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+    stamped = db.execute("SELECT value FROM meta WHERE key = 'encoding'").fetchone()
     if stamped is None:
         # an empty file starts on the current encoding; a populated
         # file without a stamp predates stamping (encoding 1)
-        db.execute("INSERT INTO meta VALUES ('encoding', ?)",
-                   (str(ENCODING if rows == 0 else 1),))
+        db.execute("INSERT INTO meta VALUES ('encoding', ?)", (str(ENCODING if rows == 0 else 1),))
 
 
 def _file_encoding(db: sqlite3.Connection) -> int:
     try:
-        row = db.execute(
-            "SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+        row = db.execute("SELECT value FROM meta WHERE key = 'encoding'").fetchone()
     except sqlite3.Error:
         row = None
     if row is not None:
@@ -1220,34 +1614,33 @@ def _file_encoding(db: sqlite3.Connection) -> int:
     return ENCODING if rows == 0 else 1
 
 
-def _situation_of(text: Optional[str]) -> Any:
+def _has_meta(db: sqlite3.Connection) -> bool:
+    return db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'").fetchone() is not None
+
+
+def _situation_of(text: str | None) -> Any:
     try:
         return json.loads(text) if text else None
     except (TypeError, json.JSONDecodeError):
         return None
 
 
-def _events_from_blob(blob: Optional[bytes],
-                      dim: int) -> Optional[List[np.ndarray]]:
+def _events_from_blob(blob: bytes | None, dim: int) -> list[np.ndarray] | None:
     if not blob:
         return None
     flat = np.frombuffer(blob, dtype=np.int8)
     return [row.copy() for row in flat.reshape(-1, dim)]
 
 
-def _reencode_rows(db: sqlite3.Connection, space: "Space") -> int:
-    rows = db.execute(
-        "SELECT id, situation, dim, events FROM precedents").fetchall()
+def _reencode_rows(db: sqlite3.Connection, space: Space) -> int:
+    rows = db.execute("SELECT id, situation, dim, events FROM precedents").fetchall()
     done = 0
     for rid, situation_json, dim, ev in rows:
         try:
-            glyph = space.encode(json.loads(situation_json),
-                                 _events_from_blob(ev, space.dim))
+            glyph = space.encode(json.loads(situation_json), _events_from_blob(ev, space.dim))
         except (ValueError, TypeError, json.JSONDecodeError):
             continue  # no usable situation stored: keep the old glyph
-        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?",
-                   (glyph.tobytes(), space.dim, rid))
+        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?", (glyph.tobytes(), space.dim, rid))
         done += 1
-    db.execute("INSERT OR REPLACE INTO meta VALUES ('encoding', ?)",
-               (str(ENCODING),))
+    db.execute("INSERT OR REPLACE INTO meta VALUES ('encoding', ?)", (str(ENCODING),))
     return done
