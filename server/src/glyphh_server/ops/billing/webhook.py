@@ -1,5 +1,4 @@
-"""Stripe's events, keeping orgs true: a finished checkout, and every change to a subscription; and the one-time
-unlocks (a Payment Link's finished checkout, a refund), which have no org. The subscription
+"""Stripe's events, keeping orgs true: a finished checkout, and every change to a subscription. The subscription
 is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. The hosting due is
 reported first; an org left on a plan that allows fewer machines than it holds has them stopped at once."""
 
@@ -12,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.models import Org
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops import unlock
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import sync_subscription
@@ -30,12 +28,6 @@ async def handle_event(
     conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any], fly: Fly | None = None
 ) -> None:
     kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
-    if kind == "checkout.session.completed" and obj.get("mode") == "payment":
-        await unlock.record_checkout(conn, obj)
-        return
-    if kind == "charge.refunded":
-        await unlock.record_refund(conn, obj)
-        return
     if kind == "checkout.session.completed" and obj.get("mode") == "subscription":
         org_id = await _org(conn, obj.get("client_reference_id"), obj.get("customer"))
         sub_id = obj.get("subscription")

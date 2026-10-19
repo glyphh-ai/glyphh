@@ -335,7 +335,6 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the he
 | Account | `GET`/`PATCH /v1/me` (the org, the plan, `precedents` and `hosting` as in `GET /v1/billing`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key`, `POST /v1/license/verify` (a self-hosted runtime's heartbeat, its runtime token as auth) |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods` (each mod and the plans that include it: every one), `GET /v1/plans`, `GET /v1/rates`, `GET /v1/billing`, `POST /v1/billing/checkout`, `/plan`, `/portal`, `POST /v1/stripe/webhook` (below, Billing and hosting) |
-| Bought once | `GET /v1/unlock/license?mod=&install=` (open; [Bought once](#bought-once)) |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted, local or self-hosted (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a message sent on any process reaches it. The service functions other code calls: `send_continue` (an approval's answer) and `send_deploy`; calls never go down the link. A hosted runtime no process holds is woken first (its machine started) and the message waits up to 45 s for its link (with hosting off, `E_UNAVAILABLE` `hosting_off`); a runtime still not linked answers `E_UNAVAILABLE` `runtime_offline` with `last_seen_at`, in words for its kind (`AWAY` in `ops/link/calls.py`: a hosted machine that was started but did not connect in time, a local runtime to start from Claude, a self-hosted one to check). `GET /v1/runtime` (the first machine: `{runtime_id, address, state, region, image_version, last_seen_at, seconds_used}`, `state` `none` with no machine), `POST /v1/runtime/start` (made the first time, within the plan's machines; `E_UNAVAILABLE` `hosting_off` or `fly_failed`), `POST /v1/runtime/stop`, `DELETE /v1/runtime` (the machine, the volume and every model's data on it); `GET`/`POST /v1/runtimes`, `GET /v1/runtimes/{id}`, `POST /v1/runtimes/{id}/start`, `/stop`, `/restart`, `DELETE /v1/runtimes/{id}?confirm=<name>` (above, Machines); `GET`/`POST /v1/runtime/keys` (a key shown once, `glyphh_rk_…`, for the machine or self-hosted runtime `runtime_id` names, or every hosted machine of the person's; its hash to rrotor at once when linked, else in its next welcome), `DELETE /v1/runtime/keys/{id}` (revoked: answers the key, named in the list, dated, no longer taken), `DELETE /v1/runtime/keys/{id}/record` (204: a revoked or expired key's record gone; a live one `E_CONFLICT` `live`); `GET`/`POST /v1/runtimes/self`, `POST /v1/runtimes/self/{id}/token`, `DELETE /v1/runtimes/self/{id}`, `POST /v1/runtimes/{id}/offline-licence` (above, Self-hosted runtimes) |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional model; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a model's events |
@@ -451,14 +450,6 @@ sequenceDiagram
 **The minute tick** (`ops/tend.py`) runs whether or not hosting is on, in this order: each hosted machine's month tallied and metered; the keys that expired taken off their runtimes; Enterprise grants past their date ended (their hosting due reported first); with hosting on, the idle machines stopped, then those held past the plan; with `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_METER_HOSTING`, the meter reported. A failed tick is logged and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a Postgres advisory lock (`pg_try_advisory_lock`, `TICK` in `ops/tend.py`) on a connection it holds for the tick and lets go after, so no two ticks run at once; a process that finds it held skips that minute. Ticks one after another in different processes may both run within a minute, and every part is safe to run again: metering counts the time since each machine was last metered, never a fixed minute.
 
 Stripe's products, prices and meter are made once per account with `scripts/stripe-setup.py` ([pricing.md](pricing.md#stripe-once-per-account)).
-
-### Bought once
-
-One mod is sold once per machine, with no account: `glyphh-drip` (`UNLOCK_MODS`, `models/unlock.py`), by a Stripe Payment Link whose metadata names it and whose `client_reference_id` is the mod's own install id.
-
-- **The webhook** records a paid `checkout.session.completed` in `payment` mode naming such a mod: one `unlocks` row per session (a replay changes nothing), with its payment intent; `charge.refunded` marks that row refunded.
-- **`GET /v1/unlock/license?mod=&install=`** (open) answers `{paid, licence}`, from the newest purchase not refunded; a mod not sold once is `E_INVALID` `no_mod`. The licence is `base64url(payload) "." base64url(signature)` (unpadded): the payload `{"v": 1, "mod", "install", "session", "issued"}` as compact JSON, keys sorted; Ed25519 over the first part's text, with the key `GET /v1/license/key` serves. It is checked offline, so a refund stops it being handed out but not one already on a machine.
-- **No account, no org, no row-level security:** the install id is the only key.
 
 ### The connector
 
@@ -807,14 +798,6 @@ erDiagram
         text_array grant_types
         timestamp created_at
     }
-    UNLOCKS {
-        text session_id PK "Stripe's checkout session"
-        text mod "glyphh-drip"
-        text install "the mod's own install id"
-        text payment_intent_id UK
-        timestamp paid_at
-        timestamp refunded_at
-    }
     OAUTH_CODES {
         text code_hash PK
         uuid client_id FK
@@ -869,7 +852,6 @@ Every table and column is drawn, as `db/schema.sql` has them (28 tables); the ta
 - **OAuth clients:** the MCP clients that registered (RFC 7591), each with its exact redirect URIs; a confidential one's secret only as a hash. They belong to no org.
 - **OAuth codes:** an authorization the person allowed, until its code is redeemed (once, within 2 minutes), with its PKCE challenge and the resource it is for; `grant_id` names the grant it went into, so a second use revokes it.
 - **Connector grants:** each client (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, one live per client, revocable one by one. **Connector tokens:** its access tokens (1 hour) and refresh tokens (30 days, rotated on use; a rotated one used again revokes the grant), kept only as hashes.
-- **Unlocks:** a mod bought once for one machine, from Stripe's finished Payment Link checkout, keyed by the session; its payment intent, so a refund finds it. No org and no user: outside row-level security.
 - **Orgs:** `renews_at` is when the subscription renews, from Stripe; empty when it isn't subscribed or ends at the period's end. `markup_pct` and `plan_until` are an Enterprise grant's.
 
 ### Keys, checks, indexes and row-level security
@@ -905,9 +887,8 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `oauth_codes` | PK `code_hash` | `client_id` → `oauth_clients` (cascade); `user_id` → `users` (cascade); `grant_id` → `connector_grants` (cascade) | `ix_oauth_codes_client_id`; `ix_oauth_codes_user_id` | its user is visible |
 | `connector_grants` | PK `id` | `user_id` → `users` (cascade); `client_id` → `oauth_clients` (cascade) | `connector_grants_user_client` unique on (`user_id`, `client_id`) where `revoked_at` is null; `ix_connector_grants_client_id`; `ix_connector_grants_user_id` | its user is visible |
 | `connector_tokens` | PK `id`; `token_hash` unique; `connector_tokens_kind` `kind` in `access`, `refresh` | `grant_id` → `connector_grants` (cascade) | `ix_connector_tokens_grant_id` | its grant is visible |
-| `unlocks` | PK `session_id`; `payment_intent_id` unique; `unlocks_mod` `mod` in `glyphh-drip` | none | `ix_unlocks_mod_install` on (`mod`, `install`) | none: no org |
 
-**Row-level security.** Each of the 22 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat and introspection, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`, `unlocks`) belong to no org.
+**Row-level security.** Each of the 22 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat and introspection, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
 
 ## Not built yet
 
