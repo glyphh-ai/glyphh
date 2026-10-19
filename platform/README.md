@@ -47,11 +47,12 @@ A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message
 The server's `GLYPHH_HOSTING` is off by default. The platform reads it from the server and hard-codes nothing:
 
 - **Hosting is off** when `GET /v1/rates` is refused with `E_UNAVAILABLE` `reason: hosting_off` (503, as the server
-  does; read as no rates, never shown as an error), answers `{"hosting": "off"}` or an empty `plans` map, or when no
-  plan in `GET /v1/plans` has a hosted machine (`limits.machines` 0 on every plan). Then Machines is gone from the sidebar and
-  `/machines` goes to Getting started; Getting started offers Docker Compose, Helm and Terraform only; Home has no
-  Start, no cost and no link to Machines; Billing, Plans and Usage say nothing of hosted machines, rates or hosting
-  cost. A hosted machine route the server refuses with `E_UNAVAILABLE` `reason: hosting_off` says to run rrotor
+  does; read as no rates, never shown as an error), or answers `{"hosting": "off"}` or an empty `plans` map; never
+  from the plans. A plan's `limits.machines` is its **runtime nodes**: every runtime linked for the org, hosted or
+  self-hosted (Free 1, Pro 3, Team 10, Enterprise unlimited), shown as "runtime nodes" with hosting on or off.
+  With hosting off, Machines is gone from the sidebar and `/machines` goes to Getting started; Getting started offers
+  Docker Compose, Helm and Terraform only; Home has no Start, no cost and no link to Machines; Billing, Plans and Usage
+  say nothing of hosted machines, rates or hosting cost. A hosted machine route the server refuses with `E_UNAVAILABLE` `reason: hosting_off` says to run rrotor
   yourself. With hosting on, every page is as before.
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
   with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
