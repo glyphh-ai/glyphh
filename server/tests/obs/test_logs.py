@@ -50,7 +50,7 @@ def test_configure_installs_one_json_handler_however_often_it_runs(capsys: pytes
     assert json.loads(out)["k"] == "v"
 
 
-def test_the_access_line_of_a_heartbeat_is_dropped_so_no_address_is_logged() -> None:
+def test_the_access_line_of_a_heartbeat_or_otlp_batch_is_dropped_so_no_address_is_logged() -> None:
     from glyphh_server.obs.logs import NoAddress
 
     def access(path: object) -> logging.LogRecord:
@@ -59,6 +59,7 @@ def test_the_access_line_of_a_heartbeat_is_dropped_so_no_address_is_logged() -> 
 
     quiet = NoAddress()
     assert not quiet.filter(access("/v1/license/verify")) and not quiet.filter(access("/v1/license/verify?x=1"))
+    assert not any(quiet.filter(access(f"/v1/otlp/v1/{signal}")) for signal in ("logs", "metrics", "traces"))
     assert quiet.filter(access("/v1/license")) and quiet.filter(_record("no args"))
     configure("INFO")
     configure("INFO")

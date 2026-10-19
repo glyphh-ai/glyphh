@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     fly_public_domain: str = "glyphh.app"
     # A hosted runtime with no run for this long is stopped; a call starts it again.
     runtime_idle_minutes: int = 10
+    # Server-side logging (rrotor's RROTOR_SERVER_LOGS=on): days a runtime's logs, audit events, metric points and
+    # spans are kept before the minute tick purges them. One for every plan.
+    telemetry_retention_days: int = Field(7, ge=1, le=90)
 
     @field_validator("database_url")
     @classmethod

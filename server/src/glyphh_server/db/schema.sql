@@ -406,6 +406,75 @@ CREATE TABLE IF NOT EXISTS nodes (
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
 );
 
+-- telemetry_logs, telemetry_metrics, telemetry_spans: server-side logging (OTLP), kept GLYPHH_TELEMETRY_RETENTION_DAYS
+CREATE TABLE IF NOT EXISTS telemetry_logs (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    rrotor_id UUID NOT NULL,
+    node_id TEXT,
+    at TIMESTAMP WITH TIME ZONE NOT NULL,
+    severity INTEGER NOT NULL,
+    level TEXT NOT NULL,
+    body TEXT NOT NULL,
+    audit TEXT,
+    trace_id TEXT,
+    span_id TEXT,
+    attributes JSONB NOT NULL,
+    received_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_telemetry_logs_rrotor_id ON telemetry_logs (rrotor_id);
+CREATE INDEX IF NOT EXISTS telemetry_logs_newest ON telemetry_logs (org_id, at, id);
+CREATE INDEX IF NOT EXISTS telemetry_logs_at ON telemetry_logs (at);
+
+CREATE TABLE IF NOT EXISTS telemetry_metrics (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    rrotor_id UUID NOT NULL,
+    node_id TEXT,
+    series TEXT NOT NULL,
+    name TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    minute TIMESTAMP WITH TIME ZONE NOT NULL,
+    at TIMESTAMP WITH TIME ZONE NOT NULL,
+    value DOUBLE PRECISION,
+    count BIGINT,
+    attributes JSONB NOT NULL,
+    received_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS telemetry_metrics_point ON telemetry_metrics (rrotor_id, series, minute);
+CREATE INDEX IF NOT EXISTS telemetry_metrics_newest ON telemetry_metrics (org_id, name, at);
+CREATE INDEX IF NOT EXISTS telemetry_metrics_at ON telemetry_metrics (at);
+
+CREATE TABLE IF NOT EXISTS telemetry_spans (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    rrotor_id UUID NOT NULL,
+    node_id TEXT,
+    trace_id TEXT NOT NULL,
+    span_id TEXT NOT NULL,
+    parent_span_id TEXT,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ended_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT NOT NULL,
+    attributes JSONB NOT NULL,
+    received_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_telemetry_spans_rrotor_id ON telemetry_spans (rrotor_id);
+CREATE INDEX IF NOT EXISTS telemetry_spans_newest ON telemetry_spans (org_id, started_at);
+CREATE INDEX IF NOT EXISTS telemetry_spans_at ON telemetry_spans (started_at);
+
 -- runtime_keys
 CREATE TABLE IF NOT EXISTS runtime_keys (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -609,3 +678,15 @@ ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nodes FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON nodes;
 CREATE POLICY tenant ON nodes USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR rrotor_id IN (SELECT id FROM rrotors));
+ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telemetry_logs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON telemetry_logs;
+CREATE POLICY tenant ON telemetry_logs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE telemetry_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telemetry_metrics FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON telemetry_metrics;
+CREATE POLICY tenant ON telemetry_metrics USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE telemetry_spans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telemetry_spans FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON telemetry_spans;
+CREATE POLICY tenant ON telemetry_spans USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);

@@ -57,12 +57,12 @@ async def test_each_minute_meters_started_seconds_and_the_volume_always_with_the
     pro, deal, free = await person(engine, "Pro"), await person(engine, "Enterprise"), await person(engine)
     async with engine.begin() as conn:
         await conn.execute(update(Org).where(Org.id == deal.org_id).values(markup_pct=25))
-    small = await _machine(engine, pro, "small", "small", "online")
-    medium = await _machine(engine, pro, "medium", "medium", "stopped", region="iad")
-    theirs = await _machine(engine, deal, "big", "large", "online")
-    at_cost = await _machine(engine, free, "left", "small", "stopped")  # held on Free: its disk's cost, no charge
-    lost = await _machine(engine, pro, "lost", "small", "online", region="nowhere")
-    start = metered_from()
+    start = metered_from()  # every machine metered up to the same instant, however long making them takes
+    small = await _machine(engine, pro, "small", "small", "online", metered_at=start)
+    medium = await _machine(engine, pro, "medium", "medium", "stopped", region="iad", metered_at=start)
+    theirs = await _machine(engine, deal, "big", "large", "online", metered_at=start)
+    at_cost = await _machine(engine, free, "left", "small", "stopped", metered_at=start)  # held on Free: disk only
+    lost = await _machine(engine, pro, "lost", "small", "online", region="nowhere", metered_at=start)
     await tend.tally(engine, "iad", start + timedelta(seconds=60.4))
     await tend.tally(engine, "iad", start + timedelta(seconds=120.2))  # 0.4 s carried: 60 more, never 59
     await tend.tally(engine, "iad", start + timedelta(seconds=120.9))  # under a second since: nothing yet

@@ -26,6 +26,7 @@ from glyphh_server.models.routine_trigger import TRIGGER_STATUSES, RoutineTrigge
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
 from glyphh_server.models.runtime_key import RuntimeKey
+from glyphh_server.models.telemetry import TelemetryLog, TelemetryMetric, TelemetrySpan
 from glyphh_server.models.token import Token
 from glyphh_server.models.user import ROLES, User
 
@@ -71,6 +72,9 @@ __all__ = [
     "Rrotor",
     "Run",
     "RuntimeKey",
+    "TelemetryLog",
+    "TelemetryMetric",
+    "TelemetrySpan",
     "Token",
     "User",
 ]
