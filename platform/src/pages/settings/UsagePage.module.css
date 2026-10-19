@@ -35,3 +35,13 @@
   font-size: var(--text-md);
   font-variant-numeric: tabular-nums;
 }
+
+.over {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}

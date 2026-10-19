@@ -49,9 +49,20 @@ export function dotEnv(env: Record<string, string>): string {
     .join('\n');
 }
 
+/**
+ * On a paid plan, the licence key's optional line, commented out: rrotor gets its key over the link and the daily
+ * heartbeat, so only an air-gapped node needs it set. Free has no key (rrotor runs as Community).
+ */
+export const licenceKeyNote = '# Air-gapped only, normally not needed: rrotor gets its licence key when it links.';
+export const licenceKeyPlaceholder = '<your licence key from Settings → Licence>';
+export const licenceDotEnv = [licenceKeyNote, `# GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder}`].join('\n');
+
+/** The env file with, on a paid plan, the licence key's commented line after a blank one. */
+export const composeEnv = (env: Record<string, string>, paid: boolean) => (paid ? `${dotEnv(env)}\n\n${licenceDotEnv}` : dotEnv(env));
+
 export const composeCommands = [`git clone ${repo}`, 'cd rrotor/deploy/compose', '# save the .env above here, then:', 'docker compose up -d'].join('\n');
 
-export function helmCommand(env: Record<string, string>, options: SnippetOptions): string {
+export function helmCommand(env: Record<string, string>, options: SnippetOptions, paid = false): string {
   const values = [
     ['runtime.id', env.RROTOR_RUNTIME_ID],
     ['runtime.token', env.RROTOR_RUNTIME_TOKEN],
@@ -60,10 +71,14 @@ export function helmCommand(env: Record<string, string>, options: SnippetOptions
     ['ingress.className', options.ingressClass.trim() || 'nginx'],
   ];
   const sets = values.map(([name, value]) => `  --set ${name}=${value ?? ''}`);
-  return [`git clone ${repo}`, ['helm install rrotor ./rrotor/deploy/helm/rrotor', ...sets].join(' \\\n')].join('\n');
+  const lines = [`git clone ${repo}`, ['helm install rrotor ./rrotor/deploy/helm/rrotor', ...sets].join(' \\\n')];
+  if (paid) {
+    lines.push('', `${licenceKeyNote} Add:`, '#   --set extraEnv[0].name=GLYPHH_LICENSE_KEY \\', `#   --set-string extraEnv[0].value='${licenceKeyPlaceholder}'`);
+  }
+  return lines.join('\n');
 }
 
-export function terraformModule(env: Record<string, string>, options: SnippetOptions): string {
+export function terraformModule(env: Record<string, string>, options: SnippetOptions, paid = false): string {
   const variables: Array<[string, string]> = [
     ['runtime_id', env.RROTOR_RUNTIME_ID ?? ''],
     ['runtime_token', env.RROTOR_RUNTIME_TOKEN ?? ''],
@@ -75,5 +90,7 @@ export function terraformModule(env: Record<string, string>, options: SnippetOpt
   }
   const width = Math.max(...variables.map(([name]) => name.length));
   const lines = variables.map(([name, value]) => `  ${name.padEnd(width)} = "${value}"`);
+  // The module sets offline_licence as RROTOR_LICENCE, which rrotor reads as GLYPHH_LICENSE_KEY.
+  if (paid) lines.push('', `  ${licenceKeyNote}`, `  # offline_licence = "${licenceKeyPlaceholder}"`);
   return ['module "rrotor" {', `  source = "${modules}/${options.cloud}"`, '', ...lines, '}'].join('\n');
 }

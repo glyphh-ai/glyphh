@@ -1,4 +1,22 @@
-import type { HostingOff, Install, Invite, Machine, MachineSize, Me, Member, Model, Org, Plan, Rates, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
+import type {
+  HostingOff,
+  Install,
+  Invite,
+  LicenceKey,
+  LicenceKeys,
+  Machine,
+  MachineSize,
+  Me,
+  Member,
+  Model,
+  Org,
+  Plan,
+  Rates,
+  Runtime,
+  RuntimeKey,
+  RuntimeNodes,
+  SelfRuntime,
+} from '@/api/types';
 
 /**
  * One org's data in the server's shapes, shared by the page tests and the local fake server: with hosting on and Pro
@@ -10,9 +28,9 @@ const none = { sync: false, ha: false, offline: false, sso: false };
 const built = { sync: true, ha: true, offline: true, sso: true };
 
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 1, precedents: 0 }, features: none, built, markup_hidden: true },
-  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
-  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
+  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 1, precedents: 5_000 }, features: none, built, markup_hidden: true },
+  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 50_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
+  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 500_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
   {
     name: 'Enterprise',
     version: 1,
@@ -36,7 +54,7 @@ export const me: Me = {
   providers: ['github', 'google'],
   org: { id: 'o-1', name: 'Glyphh', billing_status: 'active', renews_at: '2026-11-16T00:00:00Z', plan_until: null },
   plan: pro,
-  precedents: { used: 18_240, limit: 100_000 },
+  precedents: { used: 18_240, limit: 50_000 },
   hosting: {
     month: '2026-10',
     month_to_date_cents: 1217,
@@ -146,6 +164,41 @@ export const models: Model[] = [
   },
 ];
 
+/** As the server signs one: the payload's JSON and a signature, each base64url without padding. */
+const base64url = (text: string) => btoa(text).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+function licenceKey(terms: Omit<LicenceKey, 'state' | 'key' | 'revoked_at'>, state: LicenceKey['state'], revoked_at: string | null = null): LicenceKey {
+  const payload = { ...terms, customer_id: 'o-1' };
+  return { ...terms, revoked_at, state, key: `${base64url(JSON.stringify(payload))}.${base64url(`signature-${terms.license_id}`)}` };
+}
+
+const proTerms = { tier: 'pro', max_nodes: 3, max_precedents: 50_000, cluster_sync_enabled: true };
+
+/** One key per paid month, newest first: this month's live, last month's expired, and one from a subscription that ended. */
+export const licenceKeys: LicenceKeys = (() => {
+  const keys = [
+    licenceKey({ license_id: 'lk-3', ...proTerms, issued_at: '2026-10-16T00:00:04Z', expires_at: '2026-11-16T00:00:00Z' }, 'live'),
+    licenceKey({ license_id: 'lk-2', ...proTerms, issued_at: '2026-09-16T00:00:03Z', expires_at: '2026-10-16T00:00:00Z' }, 'expired'),
+    licenceKey(
+      { license_id: 'lk-1', tier: 'team', max_nodes: 10, max_precedents: 500_000, cluster_sync_enabled: true, issued_at: '2026-08-02T09:00:00Z', expires_at: '2026-09-02T09:00:00Z' },
+      'revoked',
+      '2026-08-20T12:00:00Z',
+    ),
+  ];
+  return { license_key: keys[0]!.key, keys };
+})();
+
+/** Pro's three nodes: the hosted machine (it names no node, so counts as one) and a self-hosted cluster of two. */
+export const nodes: RuntimeNodes = {
+  count: 3,
+  max_nodes: 3,
+  over: false,
+  nodes: [
+    { runtime_id: 'rt-self-1', runtime: 'Acme production', mode: 'self', node_id: 'rrotor-1', cluster_id: 'c-1', role: 'head', precedents: 12_050, version: '1.4.2', seen_at: '2026-10-16T13:50:00Z' },
+    { runtime_id: 'rt-self-1', runtime: 'Acme production', mode: 'self', node_id: 'rrotor-2', cluster_id: 'c-1', role: 'follower', precedents: 12_050, version: '1.4.2', seen_at: '2026-10-16T13:49:00Z' },
+    { runtime_id: 'rt-7f3a9c', runtime: 'Main', mode: 'hosted', node_id: null, cluster_id: null, role: null, precedents: 18_240, version: '1.4.2', seen_at: '2026-10-16T13:58:00Z' },
+  ],
+};
+
 export const members: Member[] = [{ id: 'u-chris', email: 'chris@example.com', name: 'Chris Timmerman', role: 'admin', joined_at: '2026-07-05T12:00:00Z' }];
 
 export const invites: Invite[] = [];
@@ -191,7 +244,7 @@ const offMe: Me = {
   ...me,
   org: { ...me.org, billing_status: 'none', renews_at: null },
   plan: offPlans[0]!,
-  precedents: { used: 0, limit: 0 },
+  precedents: { used: 3_200, limit: 5_000 },
   hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] },
 };
 
@@ -201,5 +254,13 @@ export const hostingOff = {
   me: offMe,
   org: { ...org, plan: offPlans[0]!, billing_status: 'none' } as Org,
   machines: [] as Machine[],
+  // Free has no key: rrotor runs as Community. Its one node is the self-hosted runtime.
+  licenceKeys: { license_key: null, keys: [] } as LicenceKeys,
+  nodes: {
+    count: 1,
+    max_nodes: 1,
+    over: false,
+    nodes: [{ runtime_id: 'rt-self-1', runtime: 'Acme production', mode: 'self', node_id: null, cluster_id: null, role: null, precedents: 3_200, version: '1.4.2', seen_at: '2026-10-16T13:50:00Z' }],
+  } as RuntimeNodes,
   runtime: { ...runtime, runtime_id: null, address: null, state: 'none', region: null, image_version: null, last_seen_at: null, seconds_used: 0 } as Runtime,
 };

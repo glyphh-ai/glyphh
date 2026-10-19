@@ -2,9 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
-import { hostingOff, machines, plans, rates } from '@/test/fixtures';
+import { hostingOff, licenceKeys, machines, nodes, plans, rates } from '@/test/fixtures';
 import { hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
-import { hostedRates, hostingOn, readRates, useDeleteMachine, useHosting, useMachine, useRates } from './queries';
+import { hostedRates, hostingOn, readRates, useDeleteMachine, useHosting, useLicenceKeys, useMachine, useRates, useRuntimeNodes } from './queries';
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={createQueryClient()}>{children}</QueryClientProvider>;
@@ -78,5 +78,24 @@ describe('whether Glyphh hosts machines', () => {
   it('is on with the hosting fixtures', async () => {
     const { result } = renderHook(() => useHosting(), { wrapper });
     await waitFor(() => expect(result.current).toBe(true));
+  });
+});
+
+describe('the licence hooks', () => {
+  it('reads the org’s licence keys, newest first, and the newest live one', async () => {
+    const { result } = renderHook(() => useLicenceKeys(), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual(licenceKeys));
+    expect(result.current.data?.license_key).toBe(result.current.data?.keys[0]?.key);
+  });
+
+  it('reads none on Free', async () => {
+    server.use(...hostingOffHandlers());
+    const { result } = renderHook(() => useLicenceKeys(), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual({ license_key: null, keys: [] }));
+  });
+
+  it('reads the runtime nodes against the plan’s', async () => {
+    const { result } = renderHook(() => useRuntimeNodes(), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual(nodes));
   });
 });

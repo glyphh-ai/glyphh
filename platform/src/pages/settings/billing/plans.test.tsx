@@ -11,10 +11,10 @@ describe('plan wording', () => {
     [3, '3 runtime nodes'],
   ])('%s runtime nodes read %s', (machines, text) => expect(machinesText(machines)).toBe(text));
 
-  it('names the managed bucket, and none on a plan without hosting', () => {
+  it('names the precedents one node may hold, and none when the plan says 0', () => {
     expect(precedentsText(0)).toBeNull();
-    expect(precedentsText(null)).toBe('Unlimited precedents on hosted machines');
-    expect(precedentsText(100_000)).toBe('100,000 precedents on hosted machines');
+    expect(precedentsText(null)).toBe('Unlimited precedents per node');
+    expect(precedentsText(50_000)).toBe('50,000 precedents per node');
   });
 
   it('prices each plan on one line', () => {
@@ -34,16 +34,15 @@ describe('the hosted machine rates', () => {
 describe('plan wording while Glyphh hosts nothing and sync is not built', () => {
   const [free, pro, , enterprise] = hostingOff.plans;
 
-  it('shows the runtime nodes as with hosting on, and marks the synced bucket and sync as coming soon', () => {
-    expect(planFacts(free!, false).map(factText)).toEqual(['1 runtime node']);
-    expect(planFacts(pro!, false).map(factText)).toEqual(['3 runtime nodes', 'Coming soon: 100,000 precedents in the synced store', 'Coming soon: Sync across runtimes']);
+  it('shows the runtime nodes and precedents per node as with hosting on, and marks sync as coming soon', () => {
+    expect(planFacts(free!).map(factText)).toEqual(['1 runtime node', '5,000 precedents per node']);
+    expect(planFacts(pro!).map(factText)).toEqual(['3 runtime nodes', '50,000 precedents per node', 'Coming soon: Sync across runtimes']);
   });
 
   it('shows only what is built as included', () => {
-    const facts = planFacts(enterprise!, false);
-    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Unlimited runtime nodes', 'Offline licences for air-gapped runtimes']);
+    const facts = planFacts(enterprise!);
+    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Unlimited runtime nodes', 'Unlimited precedents per node', 'Offline licences for air-gapped runtimes']);
     expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual([
-      'Unlimited precedents in the synced store',
       'Sync across runtimes',
       'High availability',
       'SSO and SAML',
@@ -53,6 +52,6 @@ describe('plan wording while Glyphh hosts nothing and sync is not built', () => 
   });
 
   it('names a feature it has no words for as the server does', () => {
-    expect(planFacts({ ...pro!, features: { ...pro!.features, sandbox: true } }, false).map(factText)).toContain('sandbox');
+    expect(planFacts({ ...pro!, features: { ...pro!.features, sandbox: true } }).map(factText)).toContain('sandbox');
   });
 });

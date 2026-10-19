@@ -68,6 +68,9 @@ export function SettingsLayout() {
             <NavItem to="/settings/billing" icon="card">
               Billing
             </NavItem>
+            <NavItem to="/settings/licence" icon="key">
+              Licence
+            </NavItem>
             <NavItem to="/settings/usage" icon="monitor">
               Usage
             </NavItem>

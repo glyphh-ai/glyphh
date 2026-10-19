@@ -13,7 +13,7 @@ describe('Billing', () => {
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('Renews 16 Nov 2026')).toBeInTheDocument();
     expect(screen.getAllByText('3 runtime nodes')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('100,000 precedents on hosted machines')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('50,000 precedents per node')[0]).toBeInTheDocument();
     expect(screen.getByText('Hosting this month')).toBeInTheDocument();
     expect(screen.getByText('$12.17')).toBeInTheDocument();
     expect(screen.getByText(/Members and installs are unlimited on every plan/)).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe('Billing', () => {
     const team = await card('Team');
     expect(within(team).getByText('$299 / month')).toBeInTheDocument();
     expect(within(team).getByText('10 runtime nodes')).toBeInTheDocument();
-    expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
+    expect(within(team).getByText('500,000 precedents per node')).toBeInTheDocument();
     const enterprise = await card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('Billing while Glyphh hosts nothing and some features are not built', (
     expect(within(pro).getByText('$99 / month')).toBeInTheDocument();
     expect(within(pro).getByText('Coming soon: Sync across runtimes')).toBeInTheDocument();
     expect(within(pro).queryByText('Sync across runtimes')).not.toBeInTheDocument();
-    expect(within(pro).getByText('Coming soon: 100,000 precedents in the synced store')).toBeInTheDocument();
+    expect(within(pro).getByText('50,000 precedents per node')).toBeInTheDocument();
     const enterprise = await card('Enterprise');
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
     expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();

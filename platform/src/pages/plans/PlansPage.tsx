@@ -89,7 +89,6 @@ export function PlansPage() {
               <PlanOption
                 key={plan.name}
                 plan={plan}
-                hosting={hosting}
                 isCurrent={index === at}
                 upgrade={index > at}
                 // Without a subscription there is nothing to move down to Free from, and a contract plan moves with Glyphh.
@@ -142,9 +141,9 @@ export function PlansPage() {
   );
 }
 
-type PlanOptionProps = { plan: Plan; hosting: boolean; isCurrent: boolean; upgrade: boolean; canChoose: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
+type PlanOptionProps = { plan: Plan; isCurrent: boolean; upgrade: boolean; canChoose: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
 
-function PlanOption({ plan, hosting, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
+function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
   const { amount, per } = priceParts(plan);
 
   return (
@@ -160,7 +159,7 @@ function PlanOption({ plan, hosting, isCurrent, upgrade, canChoose, recommended,
       </p>
 
       <ul className={styles.features}>
-        {planFacts(plan, hosting).map((fact) => (
+        {planFacts(plan).map((fact) => (
           <li key={fact.text}>
             <Icon name={fact.icon} />
             {fact.text}

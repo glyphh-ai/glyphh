@@ -20,7 +20,7 @@ export function UpgradeCard({ plan, isAdmin, hosting, onUpgrade }: { plan: Plan;
         {plan.self_serve ? isAdmin && <Button onClick={onUpgrade}>Upgrade</Button> : <ButtonLink href={salesUrl}>Talk to us</ButtonLink>}
       </div>
       <div className={styles.chips}>
-        {planFacts(plan, hosting).map((fact) => (
+        {planFacts(plan).map((fact) => (
           <Chip key={fact.text} tone={fact.icon === 'check' && !fact.soon ? 'violet' : 'neutral'}>
             {factText(fact)}
           </Chip>

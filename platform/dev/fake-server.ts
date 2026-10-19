@@ -171,6 +171,9 @@ app.delete('/v1/models/:id', (c) => {
   state.models = state.models.filter((m) => m.id !== c.req.param('id'));
   return c.body(null, 204);
 });
+// The licence key: one for the paid month, none on Free (rrotor runs as Community). The runtime nodes, counted softly.
+app.get('/v1/license/keys', (c) => c.json(state.licenceKeys));
+app.get('/v1/license/nodes', (c) => c.json(state.nodes));
 app.get('/v1/plans', (c) => c.json(data.plans));
 app.get('/v1/rates', (c) => hostingOff() ?? c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));
@@ -197,6 +200,31 @@ app.get('/v1/billing', (c) => {
   return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
+// A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free has none.
+const licenceFor = (plan: (typeof data.plans)[number]) => {
+  const now = new Date();
+  for (const key of state.licenceKeys.keys) if (key.state === 'live') Object.assign(key, { state: 'revoked', revoked_at: now.toISOString() });
+  state.nodes.max_nodes = plan.limits.machines;
+  state.nodes.over = plan.limits.machines !== null && state.nodes.count > plan.limits.machines;
+  if (plan.price_cents === 0) {
+    state.licenceKeys.license_key = null;
+    return;
+  }
+  const terms = {
+    license_id: crypto.randomUUID(),
+    tier: plan.name.toLowerCase(),
+    max_nodes: plan.limits.machines,
+    max_precedents: plan.limits.precedents,
+    cluster_sync_enabled: feature(plan, 'sync').included,
+    issued_at: now.toISOString(),
+    expires_at: new Date(now.getTime() + 31 * 86_400_000).toISOString(),
+  };
+  const payload = Buffer.from(JSON.stringify({ ...terms, customer_id: state.org.id })).toString('base64url');
+  const key = `${payload}.${Buffer.from('dev-signature').toString('base64url')}`;
+  state.licenceKeys.keys.unshift({ ...terms, revoked_at: null, state: 'live', key });
+  state.licenceKeys.license_key = key;
+};
+
 // A change of plan applies at once; down to Free, the hosted machines must go first.
 const subscribed = () => !['none', 'canceled', 'incomplete_expired'].includes(state.me.org.billing_status);
 const setPlan = (name: string) => {
@@ -208,6 +236,7 @@ const setPlan = (name: string) => {
   state.me.plan = plan;
   state.org.plan = plan;
   state.me.precedents.limit = plan.limits.precedents;
+  licenceFor(plan);
   return Response.json(state.org);
 };
 app.post('/v1/billing/plan', async (c) =>

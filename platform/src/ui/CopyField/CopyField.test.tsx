@@ -16,6 +16,15 @@ describe('CopyField', () => {
     expect(screen.getByRole('button', { name: 'Copy trace id' })).toHaveTextContent('Copy');
   });
 
+  it('shows a stand-in for a secret, still copying the value', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<CopyField value="secret-key" label="key" shown="secr…ey" />);
+    expect(screen.getByText('secr…ey')).toBeInTheDocument();
+    expect(screen.queryByText('secret-key')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copy key' }));
+    expect(await navigator.clipboard.readText()).toBe('secret-key');
+  });
+
   it('starts the moment afresh on a second copy', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<CopyField value="tr-77" label="trace id" />);

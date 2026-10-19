@@ -245,6 +245,31 @@ describe('Getting started', () => {
       expect(screen.queryByText('glyphh_rt_secret')).not.toBeInTheDocument();
     });
 
+    it('on a paid plan, adds the licence key’s line, commented out, for an air-gapped node only', async () => {
+      const { user } = renderApp('/getting-started');
+      await register(user, 'Docker Compose');
+      const env = screen.getByText(/RROTOR_RUNTIME_TOKEN=glyphh_rt_secret/);
+      expect(env).toHaveTextContent('# Air-gapped only, normally not needed: rrotor gets its licence key when it links.');
+      expect(env).toHaveTextContent('# GLYPHH_LICENSE_KEY=<your licence key from Settings → Licence>');
+      expect(screen.getByText(/reaches rrotor on its own when it links and at its daily heartbeat/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/settings/licence');
+
+      await user.click(screen.getByRole('radio', { name: /^Helm/ }));
+      expect(screen.getByText(/helm install rrotor/)).toHaveTextContent('# --set extraEnv[0].name=GLYPHH_LICENSE_KEY');
+      await user.click(screen.getByRole('radio', { name: /^Terraform/ }));
+      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('# offline_licence = "<your licence key from Settings → Licence>"');
+    });
+
+    it('on Free, has no licence key line: rrotor runs as Community', async () => {
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0] })));
+      const { user } = renderApp('/getting-started');
+      await register(user, 'Docker Compose');
+      expect(screen.getByText(/RROTOR_RUNTIME_TOKEN=glyphh_rt_secret/)).not.toHaveTextContent('GLYPHH_LICENSE_KEY');
+      expect(screen.queryByText(/reaches rrotor on its own/)).not.toBeInTheDocument();
+      await user.click(screen.getByRole('radio', { name: /^Helm/ }));
+      expect(screen.getByText(/helm install rrotor/)).not.toHaveTextContent('GLYPHH_LICENSE_KEY');
+    });
+
     it('asks for a host it can use before registering', async () => {
       const { user } = renderApp('/getting-started');
       await user.click(await screen.findByRole('radio', { name: /^Helm/ }));

@@ -16,6 +16,7 @@ import { DeviceDonePage, ErrorPage, GitHubInstalledPage, NotFoundPage } from '@/
 import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
+import { LicencePage } from '@/pages/settings/licence/LicencePage';
 import { MembersPage } from '@/pages/settings/MembersPage';
 import { ProfilePage } from '@/pages/settings/ProfilePage';
 import { UsagePage } from '@/pages/settings/UsagePage';
@@ -66,6 +67,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="general" replace /> },
       { path: 'general', element: <GeneralPage />, handle: crumbs('Settings', 'General') },
       { path: 'billing', element: <BillingPage />, handle: crumbs('Settings', 'Billing') },
+      { path: 'licence', element: <LicencePage />, handle: crumbs('Settings', 'Licence') },
       { path: 'usage', element: <UsagePage />, handle: crumbs('Settings', 'Usage') },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },

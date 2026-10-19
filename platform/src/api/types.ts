@@ -26,8 +26,8 @@ export type Plan = {
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
   /**
-   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10). The
-   * precedent bucket. Null is unlimited.
+   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10).
+   * `precedents`: what one node may hold, across its models (Free 5,000, Pro 50,000, Team 500,000). Null is unlimited.
    */
   limits: { machines: number | null; precedents: number | null };
   features: PlanFeatures;
@@ -48,7 +48,7 @@ export type Me = {
   /** `plan_until`: when an Enterprise grant ends; null on any other plan. */
   org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null; plan_until: IsoDate | null };
   plan: Plan;
-  /** Precedents across the org's hosted runtimes, against the plan's managed bucket (null: unlimited). */
+  /** The most any one of the org's runtimes holds, hosted or self-hosted, against the plan's per node (null: unlimited). */
   precedents: { used: number; limit: number | null };
   /** Hosted machines this month so far. */
   hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
@@ -121,6 +121,53 @@ export type SelfRuntime = {
 
 /** A registration as the server answers it once: the token, and the env rrotor runs with, filled in. */
 export type NewSelfRuntime = Pick<SelfRuntime, 'id' | 'name' | 'public_url'> & { token: string; env: Record<string, string> };
+
+/** A licence key's state: `live` is delivered to the org's runtimes; `revoked` when its subscription or grant ended. */
+export type LicenceKeyState = 'live' | 'expired' | 'revoked';
+
+/**
+ * One licence key, as `GET /v1/license/keys` lists it: the plan's terms signed for one paid period. rrotor runs on it;
+ * a node with none runs as Community (Free's limits).
+ */
+export type LicenceKey = {
+  license_id: Uuid;
+  /** The plan's name in lower case: pro, team or enterprise. */
+  tier: string;
+  /** Null is unlimited. */
+  max_nodes: number | null;
+  /** Precedents one node may hold, across its models; null is unlimited. */
+  max_precedents: number | null;
+  cluster_sync_enabled: boolean;
+  issued_at: IsoDate;
+  /** rrotor holds it 14 days past this, then runs as Community. */
+  expires_at: IsoDate;
+  revoked_at: IsoDate | null;
+  state: LicenceKeyState;
+  /** The key itself: `GLYPHH_LICENSE_KEY`, or `/etc/rrotor/license.key`, on a node. */
+  key: string;
+};
+
+/** `GET /v1/license/keys`: every key issued to the org, newest first, and the newest live one (null on Free). */
+export type LicenceKeys = { license_key: string | null; keys: LicenceKey[] };
+
+/** One runtime node, as its heartbeat or link last said it. */
+export type RuntimeNode = {
+  runtime_id: Uuid;
+  /** The runtime's name. */
+  runtime: string | null;
+  mode: 'hosted' | 'self';
+  /** As the node named itself; null for a runtime that has said no node (it counts as one). */
+  node_id: string | null;
+  cluster_id: Uuid | null;
+  role: 'standalone' | 'head' | 'follower' | null;
+  /** Its store's precedents across its models, as it last said. */
+  precedents: number | null;
+  version: string | null;
+  seen_at: IsoDate | null;
+};
+
+/** `GET /v1/license/nodes`: the org's runtime nodes against the plan's. Soft: `over` is shown, nothing is refused. */
+export type RuntimeNodes = { count: number; max_nodes: number | null; over: boolean; nodes: RuntimeNode[] };
 
 /** A long-lived licence for an air-gapped runtime, set as RROTOR_LICENCE. */
 export type OfflineLicence = { token: string; expires_at: IsoDate };

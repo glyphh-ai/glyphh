@@ -33,15 +33,11 @@ export function machinesText(machines: number | null): string {
   return machines === 1 ? '1 runtime node' : `${machines} runtime nodes`;
 }
 
-/**
- * The precedent bucket; none on a plan without one. With hosting on it is managed on the hosted machines; with hosting
- * off it is the synced store's.
- */
-export function precedentsText(precedents: number | null, hosting = true): string | null {
-  const where = hosting ? 'on hosted machines' : 'in the synced store';
-  if (precedents === null) return `Unlimited precedents ${where}`;
+/** What one node may hold, across its models, as the licence key carries it to every node, hosted or self-hosted. */
+export function precedentsText(precedents: number | null): string | null {
+  if (precedents === null) return 'Unlimited precedents per node';
   if (precedents === 0) return null;
-  return `${precedents.toLocaleString('en-GB')} precedents ${where}`;
+  return `${precedents.toLocaleString('en-GB')} precedents per node`;
 }
 
 const featureText: Record<FeatureName, string> = {
@@ -60,14 +56,13 @@ export type PlanFact = { icon: IconName; text: string; soon?: boolean };
 export const factText = (fact: PlanFact) => (fact.soon ? `Coming soon: ${fact.text}` : fact.text);
 
 /**
- * What a plan includes, as the server states it: its runtime nodes (hosting on or off), its precedents, and what it
- * turns on, each feature not yet built marked as coming soon. The synced store's bucket is coming soon until sync is
- * built.
+ * What a plan includes, as the server states it: its runtime nodes and its precedents per node, and
+ * what it turns on, each feature not yet built marked as coming soon.
  */
-export function planFacts(plan: Plan, hosting = true): PlanFact[] {
+export function planFacts(plan: Plan): PlanFact[] {
   const facts: PlanFact[] = [{ icon: 'chip', text: machinesText(plan.limits.machines) }];
-  const precedents = precedentsText(plan.limits.precedents, hosting);
-  if (precedents) facts.push({ icon: 'model', text: precedents, soon: !hosting && !feature(plan, 'sync').built });
+  const precedents = precedentsText(plan.limits.precedents);
+  if (precedents) facts.push({ icon: 'model', text: precedents });
   const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
   for (const name of names) {
     const { included, built } = feature(plan, name);
