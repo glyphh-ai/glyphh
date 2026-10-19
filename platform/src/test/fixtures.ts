@@ -1,7 +1,9 @@
 import type {
+  AuditEvent,
   HostingOff,
   Install,
   Invite,
+  LogLine,
   LicenceKey,
   LicenceKeys,
   Machine,
@@ -13,6 +15,7 @@ import type {
   Plan,
   Rates,
   Runtime,
+  RuntimeMetrics,
   RuntimeKey,
   RuntimeNodes,
   SelfRuntime,
@@ -224,6 +227,28 @@ export const installs: Install[] = [
     created_at: '2026-09-03T09:00:00Z',
     current: false,
   },
+];
+
+/**
+ * rrotor's opt-in telemetry, as the server passes it on with `RROTOR_SERVER_LOGS=on` on the self-hosted cluster. By
+ * default a runtime sends none and each list is empty. Newest first.
+ */
+const acme = { runtime_id: 'rt-self-1', runtime: 'Acme production' };
+export const logs: LogLine[] = [
+  { at: '2026-10-16T13:58:12Z', ...acme, node_id: 'rrotor-1', level: 'error', message: 'Sync to rrotor-2 failed: connection reset', attributes: { peer: 'rrotor-2', attempt: 3 } },
+  { at: '2026-10-16T13:57:40Z', ...acme, node_id: 'rrotor-2', level: 'warn', message: 'Precedents at 90% of the cap', attributes: { precedents: 45_000, cap: 50_000 } },
+  { at: '2026-10-16T13:55:03Z', ...acme, node_id: 'rrotor-1', level: 'info', message: 'Model credit-risk v4 active', attributes: {} },
+  { at: '2026-10-16T13:50:00Z', ...acme, node_id: 'rrotor-1', level: 'debug', message: 'Heartbeat sent' },
+];
+
+export const auditEvents: AuditEvent[] = [
+  { at: '2026-10-16T13:58:00Z', runtime_id: 'rt-self-1', node_id: 'rrotor-1', actor: { kind: 'key', id: 'Production app' }, action: 'model.query', target: 'credit-risk', outcome: 'allowed', via: 'api' },
+  { at: '2026-10-16T13:41:00Z', runtime_id: 'rt-self-1', node_id: 'rrotor-1', actor: { kind: 'user', id: 'chris@example.com' }, action: 'model.delete', target: 'old-model', outcome: 'denied', via: 'mcp' },
+];
+
+export const metrics: RuntimeMetrics[] = [
+  { ...acme, node_id: 'rrotor-1', at: '2026-10-16T13:58:00Z', runs: 1_284, run_seconds: 5_400, precedents: 12_050, cap: 50_000, link: 'up', drops: 0 },
+  { ...acme, node_id: 'rrotor-2', at: '2026-10-16T13:57:00Z', runs: 310, run_seconds: 90, precedents: 12_050, cap: 50_000, link: 'down', drops: 12 },
 ];
 
 /**
