@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { runtime } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 describe('Home', () => {
   it('shows the runtime: address, state, plan, connector URL and its hosting cost this month', async () => {
@@ -106,5 +106,28 @@ describe('Home', () => {
     server.use(http.get(v1('/runtime'), () => HttpResponse.error()));
     renderApp('/');
     expect(await screen.findByText('Glyphh could not be reached. Check your connection and try again.')).toBeInTheDocument();
+  });
+});
+
+describe('Home while Glyphh hosts nothing', () => {
+  it('offers no hosted runtime to start: running rrotor yourself, from Getting started', async () => {
+    server.use(...hostingOffHandlers());
+    const { user, router } = renderApp('/');
+    expect(await screen.findByText('No runtime yet')).toBeInTheDocument();
+    expect(screen.getByText(/Run it with Docker Compose, Helm or Terraform, free on every plan\./)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start your runtime' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Run rrotor yourself' }));
+    expect(router.state.location.pathname).toBe('/getting-started');
+  });
+
+  it('shows a machine made before hosting went off without its cost, and no Start', async () => {
+    server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'stopped' })), ...hostingOffHandlers());
+    renderApp('/');
+    expect(await screen.findByText('Stopped')).toBeInTheDocument();
+    await screen.findByText('Free');
+    expect(screen.queryByText('hosting so far')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
   });
 });

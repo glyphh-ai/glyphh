@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useDeleteSelfRuntime, useIssueOfflineLicence, useMe, useRotateSelfRuntimeToken, useSelfRuntimes } from '@/api/queries';
 import type { OfflineLicence, SelfRuntime } from '@/api/types';
+import { feature } from '@/api/plans';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
@@ -135,7 +136,7 @@ export function SelfRuntimes() {
 /** For a runtime that cannot reach Glyphh: a licence it checks with no network at all. On Enterprise only. */
 function OfflineLicenceDialog({ runtime, onClose }: { runtime: SelfRuntime; onClose: () => void }) {
   const me = useMe();
-  if (me.data && !me.data.plan.features.offline) return <OfflineNotInPlan onClose={onClose} />;
+  if (me.data && !feature(me.data.plan, 'offline').included) return <OfflineNotInPlan onClose={onClose} />;
   return <IssueOfflineLicence runtime={runtime} onClose={onClose} />;
 }
 

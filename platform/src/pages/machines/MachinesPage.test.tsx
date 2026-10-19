@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import type { Machine } from '@/api/types';
 import { me, machines, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const warning =
   'Deleting Experiments destroys the machine and its disk: every model, version, precedent and file on it. Fly keeps daily snapshots for 5 days; Glyphh keeps no other backup. Type Experiments to confirm.';
@@ -43,6 +43,7 @@ describe('Machines', () => {
   it('comes after Getting started in the sidebar, and Home links to it', async () => {
     const { user } = renderApp('/');
     const sidebar = await screen.findByRole('complementary', { name: 'Main' });
+    await within(sidebar).findByRole('link', { name: 'Machines' });
     expect(within(sidebar).getAllByRole('link')[1]).toHaveAccessibleName('Machines');
     await user.click(await within(screen.getByRole('main')).findByRole('link', { name: 'Machines' }));
     expect(await screen.findByRole('heading', { name: 'Machines', level: 1 })).toBeInTheDocument();
@@ -257,5 +258,15 @@ describe('Machines', () => {
     server.use(http.get(v1('/runtimes'), () => apiError(500, 'E_INTERNAL', 'The machines could not be read.')));
     renderApp('/machines');
     expect(await screen.findByText('The machines could not be read.')).toBeInTheDocument();
+  });
+});
+
+describe('Machines while Glyphh hosts nothing', () => {
+  it('is not a page: its address goes to Getting started', async () => {
+    server.use(...hostingOffHandlers());
+    const { router } = renderApp('/machines');
+    expect(await screen.findByRole('heading', { name: 'Getting started', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/getting-started');
+    expect(screen.queryByRole('heading', { name: 'Machines', level: 1 })).not.toBeInTheDocument();
   });
 });

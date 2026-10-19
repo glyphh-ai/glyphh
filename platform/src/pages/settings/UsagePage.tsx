@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { useMe, usePlans, useRuntimeKeys } from '@/api/queries';
+import { useHosting, useMe, usePlans, useRuntimeKeys } from '@/api/queries';
 import type { Me } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
@@ -11,9 +11,13 @@ import { hasHosting, hostingPlansText } from './billing/plans';
 import { SettingsTitle } from './SettingsTitle';
 import styles from './UsagePage.module.css';
 
-/** What you use this month: precedents against the plan's managed bucket, hosting so far, and each API key's calls. */
+/**
+ * What you use this month: precedents against the plan's managed bucket, hosting so far, and each API key's calls.
+ * While Glyphh hosts nothing, no hosting.
+ */
 export function UsagePage() {
   const me = useMe();
+  const hosting = useHosting();
   const keys = useRuntimeKeys();
   const plan = me.data?.plan;
 
@@ -22,17 +26,17 @@ export function UsagePage() {
       <SettingsTitle title="Usage">What you use, against what your plan allows.</SettingsTitle>
 
       <SettingsSection title="This month" description={plan && `On ${plan.name}.`}>
-        {me.isPending && <LoadingCard lines={3} />}
+        {(me.isPending || (me.data && hosting === undefined)) && <LoadingCard lines={3} />}
         <ApiErrorNotice error={me.error} />
-        {me.data && (
+        {me.data && hosting !== undefined && (
           <div className={styles.meters}>
             <Precedents me={me.data} />
-            <Hosting me={me.data} />
+            {hosting && <Hosting me={me.data} />}
           </div>
         )}
       </SettingsSection>
 
-      {me.data && hasHosting(me.data.plan) && (
+      {hosting && me.data && hasHosting(me.data.plan) && (
         <SettingsSection title="Hosted machines" description="What each machine has cost so far this month, as billed.">
           {me.data.hosting.machines.length === 0 ? (
             <EmptyState icon="chip" title="No hosted machines this month" />

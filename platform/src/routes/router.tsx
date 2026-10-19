@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { HostedOnly } from '@/components/HostedOnly';
 import { RequireSession } from '@/components/RequireSession';
 import { GettingStartedPage } from '@/pages/getting-started/GettingStartedPage';
 import { HomePage } from '@/pages/home/HomePage';
@@ -40,7 +41,15 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { path: 'getting-started', element: <GettingStartedPage />, handle: { crumbs: [{ label: 'Getting started' }] } },
-      { path: 'machines', element: <MachinesPage />, handle: { crumbs: [{ label: 'Machines' }] } },
+      {
+        path: 'machines',
+        element: (
+          <HostedOnly>
+            <MachinesPage />
+          </HostedOnly>
+        ),
+        handle: { crumbs: [{ label: 'Machines' }] },
+      },
       { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Home' }] } },
       { path: 'keys', element: <KeysPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }] } },
       { path: 'models', element: <ModelsPage />, handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] } },

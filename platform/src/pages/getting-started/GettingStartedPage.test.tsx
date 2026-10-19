@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import type { Machine } from '@/api/types';
 import { machines, me, plans, runtime, selfRuntimes } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const noRuntime = { ...runtime, state: 'none', address: null, runtime_id: null };
 
@@ -181,6 +181,18 @@ describe('Getting started', () => {
       const alert = await screen.findByRole('alert');
       expect(alert).toHaveTextContent('Your plan has no room for another machine.');
       expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
+    });
+
+    it('says plainly when the server has stopped hosting machines, with the way to run rrotor yourself', async () => {
+      server.use(
+        http.get(v1('/runtimes'), () => HttpResponse.json([])),
+        http.post(v1('/runtimes'), () => apiError(409, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })),
+      );
+      const { user } = renderApp('/getting-started');
+      await user.click(await screen.findByRole('button', { name: 'Make your machine' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Glyphh is not hosting machines now. Run rrotor yourself with Docker Compose, Helm or Terraform.');
+      expect(within(alert).getByRole('link', { name: 'Getting started' })).toHaveAttribute('href', '/getting-started');
     });
 
     it('says so when the machines cannot be read', async () => {
@@ -393,5 +405,36 @@ describe('Getting started', () => {
       await user.click(within(dialog).getByRole('button', { name: 'Close' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('Getting started while Glyphh hosts nothing', () => {
+  it.each(['off', 'empty'] as const)('offers only running rrotor yourself, Docker Compose first, when the rates answer %s', async (rates) => {
+    server.use(...hostingOffHandlers(rates));
+    renderApp('/getting-started');
+    const compose = await screen.findByRole('radio', { name: /^Docker Compose/ });
+    expect(compose).toBeChecked();
+    expect(screen.getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['compose', 'helm', 'terraform']);
+    expect(screen.queryByRole('radio', { name: /^Glyphh hosted/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Glyphh runs it for you/)).not.toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Make your machine' })).not.toBeInTheDocument();
+  });
+
+  it('registers a self-hosted runtime as before', async () => {
+    server.use(...hostingOffHandlers());
+    const { user } = renderApp('/getting-started');
+    const sent = await register(user, 'Helm');
+    expect(sent).toEqual([{ name: 'Acme production', public_url: 'https://rrotor.acme.com' }]);
+    expect(screen.getByText(/helm install/)).toBeInTheDocument();
+  });
+
+  it('lists the self-hosted runtimes, and offline licences stay on Enterprise', async () => {
+    server.use(...hostingOffHandlers());
+    const { user } = renderApp('/getting-started');
+    const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
+    expect(within(list).getByText('Acme production')).toBeInTheDocument();
+    await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
+    expect(await screen.findByRole('dialog', { name: 'Offline licences are on Enterprise' })).toBeInTheDocument();
   });
 });

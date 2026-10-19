@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router';
-import { keys, useMe, usePlans, useRates } from '@/api/queries';
+import { keys, useHosting, useMe, usePlans, useRates } from '@/api/queries';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { LoadingCard, useToast } from '@/ui';
@@ -17,6 +17,7 @@ export function BillingPage() {
   const me = useMe();
   const plans = usePlans();
   const rates = useRates();
+  const hosting = useHosting();
   const toast = useToast();
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
@@ -46,39 +47,42 @@ export function BillingPage() {
     <>
       <SettingsTitle title="Billing" />
       <SettingsSection title="Subscription" description="Your plan, and the plans above it. Members and installs are unlimited on every plan.">
-        {me.isPending && <LoadingCard lines={4} />}
+        {(me.isPending || (me.data && hosting === undefined)) && <LoadingCard lines={4} />}
         <ApiErrorNotice error={me.error ?? plans.error} />
-        {me.data && (
+        {me.data && hosting !== undefined && (
           <div className={settings.cards}>
-            <PlanCard me={me.data} isAdmin={isAdmin} />
+            <PlanCard me={me.data} isAdmin={isAdmin} hosting={hosting} />
             {upgrades.map((plan) => (
-              <UpgradeCard key={plan.name} plan={plan} isAdmin={isAdmin} onUpgrade={() => navigate('/settings/plans')} />
+              <UpgradeCard key={plan.name} plan={plan} isAdmin={isAdmin} hosting={hosting} onUpgrade={() => navigate('/settings/plans')} />
             ))}
             <AdminOnlyNote isAdmin={isAdmin} />
           </div>
         )}
       </SettingsSection>
 
-      <SettingsSection
-        title="Hosted machines"
-        description={
-          current &&
-          (contract
-            ? `${current.name}’s rates: ${contractRates.toLowerCase()}`
-            : hasHosting(current)
-              ? `${current.name}’s rates.`
-              : `Hosting is on ${hostingPlansText(plans.data)}. Running rrotor yourself is free.`)
-        }
-      >
-        {!contract && rates.isPending && <LoadingCard lines={3} />}
-        {!contract && <ApiErrorNotice error={rates.error} />}
-        {!contract && rates.data && ratePlans.length > 0 && (
-          <>
-            <HostingRates rates={rates.data} plans={ratePlans} />
-            <p className={styles.note}>{ratesNote}</p>
-          </>
-        )}
-      </SettingsSection>
+      {/* While Glyphh hosts nothing, there are no rates to show. */}
+      {hosting && (
+        <SettingsSection
+          title="Hosted machines"
+          description={
+            current &&
+            (contract
+              ? `${current.name}’s rates: ${contractRates.toLowerCase()}`
+              : hasHosting(current)
+                ? `${current.name}’s rates.`
+                : `Hosting is on ${hostingPlansText(plans.data)}. Running rrotor yourself is free.`)
+          }
+        >
+          {!contract && rates.isPending && <LoadingCard lines={3} />}
+          {!contract && <ApiErrorNotice error={rates.error} />}
+          {!contract && rates.data && ratePlans.length > 0 && (
+            <>
+              <HostingRates rates={rates.data} plans={ratePlans} />
+              <p className={styles.note}>{ratesNote}</p>
+            </>
+          )}
+        </SettingsSection>
+      )}
     </>
   );
 }

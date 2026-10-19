@@ -1,8 +1,11 @@
-import type { Install, Invite, Machine, MachineSize, Me, Member, Model, Org, Plan, Rates, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
+import type { HostingOff, Install, Invite, Machine, MachineSize, Me, Member, Model, Org, Plan, Rates, Runtime, RuntimeKey, SelfRuntime } from '@/api/types';
 
-/** One org's data in the server's shapes, shared by the page tests and the local fake server. */
+/**
+ * One org's data in the server's shapes, shared by the page tests and the local fake server: with hosting on and Pro
+ * and Team for sale (`GLYPHH_HOSTING=on`, sync shipped), and below, `hostingOff`, as the server answers today.
+ */
 
-const none = { sync: false, ha: false, offline: false, sso: false };
+const none = { sync: false, ha: false, offline: false, sso: false, rbac: false, audit: false };
 
 export const plans: Plan[] = [
   { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, markup_hidden: true },
@@ -15,7 +18,7 @@ export const plans: Plan[] = [
     interval: null,
     self_serve: false,
     limits: { machines: null, precedents: null },
-    features: { sync: true, ha: true, offline: true, sso: true },
+    features: { sync: true, ha: true, offline: true, sso: true, rbac: true, audit: true },
     markup_hidden: true,
   },
 ];
@@ -166,3 +169,32 @@ export const installs: Install[] = [
     current: false,
   },
 ];
+
+/**
+ * As the server answers with `GLYPHH_HOSTING=off` and sync not yet built: no hosted machines on any plan, the rates
+ * off, and each feature saying whether it is built. The org is on Free.
+ */
+const unbuilt = { sync: false, ha: false, offline: true, sso: false, rbac: false, audit: false };
+const off = (plan: Plan, change: Partial<Plan>): Plan => ({ ...plan, ...change, limits: { ...plan.limits, machines: 0 }, built: unbuilt });
+const offPlans: Plan[] = [
+  off(plans[0]!, {}),
+  off(plans[1]!, {}),
+  off(plans[2]!, {}),
+  off(plans[3]!, {}),
+];
+const offMe: Me = {
+  ...me,
+  org: { ...me.org, billing_status: 'none', renews_at: null },
+  plan: offPlans[0]!,
+  precedents: { used: 0, limit: 0 },
+  hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] },
+};
+
+export const hostingOff = {
+  plans: offPlans,
+  rates: { hosting: 'off' } as HostingOff,
+  me: offMe,
+  org: { ...org, plan: offPlans[0]!, billing_status: 'none' } as Org,
+  machines: [] as Machine[],
+  runtime: { ...runtime, runtime_id: null, address: null, state: 'none', region: null, image_version: null, last_seen_at: null, seconds_used: 0 } as Runtime,
+};

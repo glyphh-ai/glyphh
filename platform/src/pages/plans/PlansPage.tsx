@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/api/client';
-import { useChangePlan, useCheckout, useMe, usePlans, useRates } from '@/api/queries';
+import { useChangePlan, useCheckout, useHosting, useMe, usePlans, useRates } from '@/api/queries';
 import type { Plan } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { cx } from '@/lib/cx';
@@ -18,13 +18,15 @@ const BILLING = '/settings/billing';
  * Choosing a plan, over the whole window: no sidebar, closed with the X (or Escape) back to Billing. Each plan shows
  * what the server says it includes, and below them the hosted machine rates of each plan with hosting. With a
  * subscription a change applies at once (Stripe prorates it), after a confirm; without one, the person pays in
- * Stripe's checkout first. A plan sold by contract is Talk to us.
+ * Stripe's checkout first. A plan sold by contract is Talk to us. A feature not yet built is marked coming soon. While
+ * Glyphh hosts nothing, no plan speaks of hosted machines and there are no rates.
  */
 export function PlansPage() {
   const navigate = useNavigate();
   const me = useMe();
   const plans = usePlans();
   const rates = useRates();
+  const hosting = useHosting();
   const [switching, setSwitching] = useState<Plan | null>(null);
   const change = useChangePlan();
   const checkout = useCheckout();
@@ -43,8 +45,8 @@ export function PlansPage() {
   const at = list.findIndex((plan) => plan.name === current?.name);
   // The next self-serve plan up is the one recommended.
   const recommended = list.find((plan, index) => index > at && plan.self_serve);
-  const hosting = list.filter(hasHosting);
-  const machinesInTheWay = change.error instanceof ApiError && change.error.code === 'E_CONFLICT' && change.error.detail.reason === 'machines';
+  const hostingPlans = hosting ? list.filter(hasHosting) : [];
+  const machinesInTheWay = hosting === true && change.error instanceof ApiError && change.error.code === 'E_CONFLICT' && change.error.detail.reason === 'machines';
 
   const closeConfirm = () => {
     change.reset();
@@ -80,13 +82,14 @@ export function PlansPage() {
         <p className={styles.subtitle}>Every plan has unlimited members, installs and self-hosted runtimes, with Ada included. Never priced per seat.</p>
 
         <ApiErrorNotice error={me.error ?? plans.error ?? checkout.error} />
-        {(me.isPending || plans.isPending) && <LoadingCard lines={6} />}
-        {me.data && plans.data && (
+        {(me.isPending || plans.isPending || hosting === undefined) && <LoadingCard lines={6} />}
+        {me.data && plans.data && hosting !== undefined && (
           <div className={styles.grid}>
             {plans.data.map((plan, index) => (
               <PlanOption
                 key={plan.name}
                 plan={plan}
+                hosting={hosting}
                 isCurrent={index === at}
                 upgrade={index > at}
                 // Without a subscription there is nothing to move down to Free from, and a contract plan moves with Glyphh.
@@ -105,13 +108,13 @@ export function PlansPage() {
           </p>
         )}
 
-        {rates.data && hosting.length > 0 && (
+        {rates.data && hostingPlans.length > 0 && (
           <section className={styles.rates} aria-labelledby="rates-title">
             <h2 id="rates-title" className={styles.ratesTitle}>
               Hosted machines
             </h2>
             <p className={styles.note}>{ratesNote}</p>
-            <HostingRates rates={rates.data} plans={hosting} />
+            <HostingRates rates={rates.data} plans={hostingPlans} />
           </section>
         )}
         <ApiErrorNotice error={rates.error} />
@@ -139,9 +142,9 @@ export function PlansPage() {
   );
 }
 
-type PlanOptionProps = { plan: Plan; isCurrent: boolean; upgrade: boolean; canChoose: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
+type PlanOptionProps = { plan: Plan; hosting: boolean; isCurrent: boolean; upgrade: boolean; canChoose: boolean; recommended: boolean; pending: boolean; onChoose: () => void };
 
-function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
+function PlanOption({ plan, hosting, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
   const { amount, per } = priceParts(plan);
 
   return (
@@ -157,10 +160,11 @@ function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, pending,
       </p>
 
       <ul className={styles.features}>
-        {planFacts(plan).map((fact) => (
+        {planFacts(plan, hosting).map((fact) => (
           <li key={fact.text}>
             <Icon name={fact.icon} />
             {fact.text}
+            {fact.soon && <span className={styles.soonTag}>Coming soon</span>}
           </li>
         ))}
       </ul>

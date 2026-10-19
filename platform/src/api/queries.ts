@@ -16,6 +16,7 @@ import type {
   Plan,
   Provider,
   Rates,
+  HostingOff,
   Runtime,
   RuntimeKey,
   SelfRuntime,
@@ -49,7 +50,31 @@ export const useMachine = (id: string) =>
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
-export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: () => api.get<Rates>('/rates') });
+/** The hosted machine rates; null while Glyphh hosts nothing (the server answers `{hosting: "off"}` or no plans). */
+export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: () => api.get<Rates | HostingOff>('/rates').then(hostedRates) });
+
+export function hostedRates(answer: Rates | HostingOff): Rates | null {
+  if ('hosting' in answer && answer.hosting === 'off') return null;
+  const rates = answer as Rates;
+  return rates.plans && Object.keys(rates.plans).length > 0 ? rates : null;
+}
+
+/**
+ * Whether Glyphh hosts machines at all: off when the rates say so, or when no plan has a hosted machine. Undefined
+ * until both are read; on when neither could be read, so a page keeps its own refusal in view.
+ */
+export function hostingOn(plans: Plan[] | undefined, rates: Rates | null | undefined): boolean {
+  if (rates === null) return false;
+  if (plans) return plans.some((plan) => plan.limits.machines !== 0);
+  return true;
+}
+
+export function useHosting(): boolean | undefined {
+  const plans = usePlans();
+  const rates = useRates();
+  if (plans.isPending || rates.isPending) return undefined;
+  return hostingOn(plans.data, rates.data);
+}
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
-import { plans, rates } from '@/test/fixtures';
+import { hostingOff, plans, rates } from '@/test/fixtures';
 import { HostingRates } from './HostingRates';
-import { machinesText, precedentsText, priceText } from './plans';
+import { factText, machinesText, planFacts, precedentsText, priceText } from './plans';
 
 describe('plan wording', () => {
   it.each([
@@ -28,5 +28,31 @@ describe('the hosted machine rates', () => {
     const table = screen.getByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByText('—')).toHaveLength(4);
     expect(within(table).getAllByText('Set in your contract.')).toHaveLength(4);
+  });
+});
+
+describe('plan wording while Glyphh hosts nothing and sync is not built', () => {
+  const [free, pro, , enterprise] = hostingOff.plans;
+
+  it('says nothing of hosted machines, and marks the synced bucket and sync as coming soon', () => {
+    expect(planFacts(free!, false)).toEqual([]);
+    expect(planFacts(pro!, false).map(factText)).toEqual(['Coming soon: 100,000 precedents in the synced store', 'Coming soon: Sync across runtimes']);
+  });
+
+  it('shows only what is built as included', () => {
+    const facts = planFacts(enterprise!, false);
+    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Offline licences for air-gapped runtimes']);
+    expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual([
+      'Unlimited precedents in the synced store',
+      'Sync across runtimes',
+      'High availability',
+      'SSO and SAML',
+      'Roles',
+      'Audit logs',
+    ]);
+  });
+
+  it('names a feature it has no words for as the server does', () => {
+    expect(planFacts({ ...pro!, features: { ...pro!.features, sandbox: true } }, false).map(factText)).toContain('sandbox');
   });
 });

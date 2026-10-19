@@ -33,6 +33,21 @@ export const defaultHandlers: HttpHandler[] = [
   http.get(v1('/installs'), () => HttpResponse.json(fixtures.installs)),
 ];
 
+/**
+ * The server as it answers with hosting off and features not yet built: a test calls `server.use(...hostingOffHandlers())`.
+ * `rates` picks which of the two answers the server gives for the rates.
+ */
+export const hostingOffHandlers = (rates: 'off' | 'empty' = 'off'): HttpHandler[] => [
+  http.get(v1('/me'), () => HttpResponse.json(fixtures.hostingOff.me)),
+  http.get(v1('/org'), () => HttpResponse.json(fixtures.hostingOff.org)),
+  http.get(v1('/plans'), () => HttpResponse.json(fixtures.hostingOff.plans)),
+  http.get(v1('/rates'), () => HttpResponse.json(rates === 'off' ? fixtures.hostingOff.rates : { ...fixtures.rates, plans: {} })),
+  http.get(v1('/runtime'), () => HttpResponse.json(fixtures.hostingOff.runtime)),
+  http.get(v1('/runtimes'), () => HttpResponse.json(fixtures.hostingOff.machines)),
+  http.post(v1('/runtimes'), () => apiError(409, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
+  http.post(v1('/runtime/start'), () => apiError(409, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
+];
+
 export const server = setupServer(...defaultHandlers);
 
 export { http, HttpResponse, v1 };

@@ -1,5 +1,5 @@
-import { Link } from 'react-router';
-import { useMe, useRuntime, useStartRuntime, useStopRuntime } from '@/api/queries';
+import { Link, useNavigate } from 'react-router';
+import { useHosting, useMe, useRuntime, useStartRuntime, useStopRuntime } from '@/api/queries';
 import type { Runtime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -16,7 +16,15 @@ const stateChip: Record<Exclude<Runtime['state'], 'none'>, { label: string; tone
   stopped: { label: 'Stopped', tone: 'neutral' },
 };
 
+/**
+ * The first hosted machine: its address, state, connector URL and cost this month. While Glyphh hosts nothing there is
+ * no starting one, no cost and no Machines: Getting started shows how to run rrotor yourself.
+ */
 export function HomePage() {
+  const navigate = useNavigate();
+  // Undefined until the plans and rates are read; an existing machine is shown meanwhile as hosting is on.
+  const hosting = useHosting();
+  const hosted = hosting !== false;
   const runtime = useRuntime();
   const me = useMe();
   const start = useStartRuntime();
@@ -35,9 +43,11 @@ export function HomePage() {
           Stop
         </Button>
       ) : (
-        <Button onClick={() => start.mutate()} loading={start.isPending}>
-          Start
-        </Button>
+        hosted && (
+          <Button onClick={() => start.mutate()} loading={start.isPending}>
+            Start
+          </Button>
+        )
       )}
       {connector && (
         <Button variant="primary" icon={copied ? 'check' : undefined} onClick={() => void copy(connector)}>
@@ -54,7 +64,12 @@ export function HomePage() {
         description={
           <>
             Your runtime and how to reach it. Claude connects to its address; your apps call it with an <Link to="/keys">API key</Link>.
-            Run more than one? <Link to="/machines">Machines</Link> lists them all.
+            {hosting === true && (
+              <>
+                {' '}
+                Run more than one? <Link to="/machines">Machines</Link> lists them all.
+              </>
+            )}
           </>
         }
         actions={actions}
@@ -64,10 +79,25 @@ export function HomePage() {
         <StartMachineError error={start.error} />
         <ApiErrorNotice error={stop.error} />
 
-        {runtime.isPending && <LoadingCard />}
+        {(runtime.isPending || (data?.state === 'none' && hosting === undefined)) && <LoadingCard />}
         {runtime.error && <ApiErrorNotice error={runtime.error} />}
 
-        {data?.state === 'none' && (
+        {data?.state === 'none' && hosting === false && (
+          <EmptyState
+            icon="home"
+            title="No runtime yet"
+            action={
+              <Button variant="primary" onClick={() => navigate('/getting-started')}>
+                Run rrotor yourself
+              </Button>
+            }
+          >
+            Run it with Docker Compose, Helm or Terraform, free on every plan. <Link to="/getting-started">Getting started</Link> walks you
+            through it.
+          </EmptyState>
+        )}
+
+        {data?.state === 'none' && hosting === true && (
           <EmptyState
             icon="home"
             title="No runtime yet"
@@ -108,13 +138,15 @@ export function HomePage() {
                   <span className={styles.meta}>Add it in Claude as a custom connector. You’ll be asked to allow it once.</span>
                 </Card>
               )}
-              <Card>
-                <h2 className={styles.cardTitle}>This month</h2>
-                <div className={styles.cost}>
-                  <span className={styles.costValue}>{cents === undefined ? '—' : money(cents)}</span>
-                  <span className={styles.meta}>hosting so far</span>
-                </div>
-              </Card>
+              {hosted && (
+                <Card>
+                  <h2 className={styles.cardTitle}>This month</h2>
+                  <div className={styles.cost}>
+                    <span className={styles.costValue}>{cents === undefined ? '—' : money(cents)}</span>
+                    <span className={styles.meta}>hosting so far</span>
+                  </div>
+                </Card>
+              )}
             </div>
           </>
         )}
