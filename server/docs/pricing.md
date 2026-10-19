@@ -92,21 +92,21 @@ Checkout sells no hosting. Its design, metering and meter are in [architecture.m
 
 ## Against what is built
 
-Facts only; none of this is changed yet.
+Facts only.
 
 | The strategy | Today |
 |---|---|
-| Runtime nodes: every linked runtime, hosted or self-hosted | `max_machines` (`limits.machines`: Free 1, Pro 3, Team 10, Enterprise unlimited) is enforced only on hosted machines; self-hosted and local runtimes are not counted |
-| Precedents per node: 5,000, 50,000, 500,000, unlimited | `db/seed.py` seeds managed precedents 0, 100,000, 1,000,000, unlimited, applied only on a hosted runtime; local and self-hosted runtimes are unlimited on every plan |
-| One key string, `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key` | Licences reach rrotor in the link's `welcome` (24 hours), from the self-hosted heartbeat (24 hours), or as an offline token in `RROTOR_LICENCE` or `/data/licence.token` (Enterprise only, up to 365 days). On the server, `GLYPHH_LICENSE_KEY` is the Ed25519 private key that signs licences |
-| `<payload>.<signature>`, both base64url | JSON `{payload, signature}`, the signature base64 over the payload's canonical JSON; the offline token is base64url of that JSON |
-| Payload `license_id`, `tier`, `max_nodes`, `max_precedents`, `cluster_sync_enabled`, `issued_at`, `expires_at`, `customer_id` | `licence_id`, `plan`, `limits.machines`, `mods.ada.limits.precedents`, `features` (`sync`, `ha`, `offline`, `sso`), `expires_at`, `org_id`, `user_id`, `install_id`, `runtime_id`, `kind`, `grace_days` |
-| A key per paid month, issued on `invoice.payment_succeeded`, kept in `licenses`, emailed | No `licenses` table and no key issued or emailed; licences last 24 hours and are re-signed on each link and heartbeat. The webhook (`checkout.session.completed`, `customer.subscription.*`, `charge.refunded`) keeps the org's plan version and billing status |
-| `customer.subscription.deleted` revokes the licence | It puts the org on Free; the next licence carries Free |
+| Runtime nodes: every linked runtime, hosted or self-hosted | `max_machines` (`limits.machines`: Free 1, Pro 3, Team 10, Enterprise unlimited) is refused only on hosted machines. Every hosted and self-hosted runtime node is counted, softly: each node's heartbeat or `hello` (`node_id`, `cluster_id`, `role`) is kept in `nodes`, and `GET /v1/license/nodes` and the connector's `usage` show "4 of 3, over", never refusing; a runtime that says no node is one; local runtimes are not counted |
+| Precedents per node: 5,000, 50,000, 500,000, unlimited | `db/seed.py` seeds 5,000, 50,000, 500,000 (TBD) and unlimited, signed into the key as `max_precedents`; a hosted runtime's old licence carries the same as its cap, a self-hosted one's says unlimited. The usage shown is the fullest hosted or self-hosted runtime's |
+| One key string, `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key` | The server signs it and sends it as `license_key` in every runtime's `welcome` and in the heartbeat's answer, beside the old licence (rrotor's release N), and shows it at `GET /v1/license/keys` and, masked, in the connector's `plan` and `usage`. Where rrotor reads it is rrotor's. On the server the signing key is `GLYPHH_LICENSE_SIGNING_KEY` (`GLYPHH_LICENSE_KEY`, its old name, still read) |
+| `<payload>.<signature>`, both base64url | As specified: base64url without padding, Ed25519 over the payload's exact bytes (`ops/license_keys.py`). The old licence, JSON `{payload, signature}` over canonical JSON, is still sent beside it, and the Enterprise offline token is still that licence |
+| Payload `license_id`, `tier`, `max_nodes`, `max_precedents`, `cluster_sync_enabled`, `issued_at`, `expires_at`, `customer_id` | Exactly these, in this order, times RFC 3339 UTC; `customer_id` is the org's id. The old licence keeps `licence_id`, `plan`, `limits`, `mods`, `features`, `runtime_id`, `kind`, `grace_days` |
+| A key per paid month, issued on `invoice.payment_succeeded`, kept in `licenses`, emailed | Issued on `checkout.session.completed` and `invoice.payment_succeeded` for the org's own active subscription, expiring at its period's end, kept in `licenses` (the same terms to the same end are the same key); an Enterprise grant issues one through its `--until`; Free gets none. Not emailed: no key is in Stripe's receipt yet; the platform shows it |
+| `customer.subscription.deleted` revokes the licence | Every key of the org's is revoked (no longer delivered) and the org is on Free; so is an Enterprise grant's on revoke or lapse. A node keeps its key to `expires_at` and rrotor's grace |
 | A bad signature: Free mode, logged | rrotor's own behaviour; not set by the server |
 | A `limit_exceeded` result, `indexed: false` | rrotor refuses a `record` past the cap with `E_LIMIT_PRECEDENTS` |
-| Sync, HA, the head node | Not built: `sync` and `ha` are licence flags only; no cluster transport or head election |
-| Air-gapped optional on Pro and Team | Offline licences are Enterprise only (`POST /v1/runtimes/{id}/offline-licence`, else 403 `E_NOT_IN_PLAN` `offline`) |
-| Audit log, log drains, opt-in server-side logging | Not built; no audit logs, SSO/SAML or RBAC either |
-| Heartbeat to `/v1/telemetry/heartbeat`: `license_id`, hashed GUID, version, store size; fail-open | `POST /v1/license/verify` with the runtime's token: `{machine, licence_id, version, active_runs}`, answered with a fresh licence; self-hosted runtimes only |
-| Expired key: Free limits after 14 days' grace | A self-hosted runtime's licence is live until `expires_at` plus 14 days; past that rrotor refuses only what needs a licensed mod |
+| Sync, HA, the head node | Not built: `sync` and `ha` are licence flags and `cluster_sync_enabled` a key field; no cluster transport or head election. The server keeps each node's `role` and `cluster_id` as said |
+| Air-gapped optional on Pro and Team | Offline licences are Enterprise only (`POST /v1/runtimes/{id}/offline-licence`, else 403 `E_NOT_IN_PLAN` `offline`); a Pro or Team operator can copy the key from `GET /v1/license/keys` into `/etc/rrotor/license.key` each month |
+| Audit log, log drains, opt-in server-side logging | Not built; no audit logs, SSO/SAML or RBAC either. `sub` (the person's user id) is in `/v1/runtime/introspect`'s answer for rrotor's audit |
+| Heartbeat to `/v1/telemetry/heartbeat`: `license_id`, hashed GUID, version, store size; fail-open | `POST /v1/license/verify` with the runtime's token: `{machine, licence_id, version, active_runs}` and, optional, `{node_id, cluster_id, role, precedents}`, answered with the licence and `license_key`; self-hosted runtimes only |
+| Expired key: Free limits after 14 days' grace | A self-hosted runtime's old licence is live until `expires_at` plus 14 days; past that rrotor refuses only what needs a licensed mod. The server stops delivering a key past its `expires_at` |
