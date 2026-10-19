@@ -43,7 +43,7 @@ describe('the main sidebar', () => {
 });
 
 describe('the main sidebar while Glyphh hosts nothing', () => {
-  it.each(['off', 'empty'] as const)('has no Machines when the rates answer %s', async (rates) => {
+  it.each(['refused', 'off', 'empty'] as const)('has no Machines when the rates answer %s', async (rates) => {
     server.use(...hostingOffHandlers(rates));
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });

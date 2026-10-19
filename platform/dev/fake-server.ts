@@ -9,7 +9,7 @@ import * as fixtures from '../src/test/fixtures.js';
  * approve at once), the browser steps and /v1 with the shared fixtures. Not for tests of the server itself.
  *
  * It answers as the real server does by default: hosting off (no hosted machines, the rates off, hosted machine
- * routes refused with E_UNAVAILABLE reason hosting_off) and each feature saying whether it is built. FAKE_HOSTING=on
+ * routes and the rates refused with 503 E_UNAVAILABLE reason hosting_off) and each feature saying whether it is built. FAKE_HOSTING=on
  * turns hosting back on, as GLYPHH_HOSTING=on does.
  *
  *   npm run fake-server   → http://localhost:8080
@@ -95,7 +95,7 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
 const refuse = (status: number, code: string, message: string, reason: string) =>
   Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
 // With hosting off no hosted machine is made or started.
-const hostingOff = () => (hosting ? undefined : refuse(409, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now. Run rrotor yourself.', 'hosting_off'));
+const hostingOff = () => (hosting ? undefined : refuse(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now. Run rrotor yourself.', 'hosting_off'));
 const machine = (id: string) => state.machines.find((m) => m.id === id);
 const setMachine = (id: string, to: 'online' | 'stopped') => {
   const found = machine(id);
@@ -171,7 +171,7 @@ app.delete('/v1/models/:id', (c) => {
   return c.body(null, 204);
 });
 app.get('/v1/plans', (c) => c.json(data.plans));
-app.get('/v1/rates', (c) => c.json(data.rates));
+app.get('/v1/rates', (c) => hostingOff() ?? c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));
 app.patch('/v1/org', async (c) => {
   const name = (await c.req.json()).name;

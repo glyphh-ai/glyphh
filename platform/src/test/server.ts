@@ -35,17 +35,21 @@ export const defaultHandlers: HttpHandler[] = [
 
 /**
  * The server as it answers with hosting off and features not yet built: a test calls `server.use(...hostingOffHandlers())`.
- * `rates` picks which of the two answers the server gives for the rates.
+ * `rates` picks how the server answers the rates: refused with `hosting_off` (as it does), `{hosting: "off"}`, or no plans.
  */
-export const hostingOffHandlers = (rates: 'off' | 'empty' = 'off'): HttpHandler[] => [
+export const hostingOffHandlers = (rates: 'refused' | 'off' | 'empty' = 'refused'): HttpHandler[] => [
   http.get(v1('/me'), () => HttpResponse.json(fixtures.hostingOff.me)),
   http.get(v1('/org'), () => HttpResponse.json(fixtures.hostingOff.org)),
   http.get(v1('/plans'), () => HttpResponse.json(fixtures.hostingOff.plans)),
-  http.get(v1('/rates'), () => HttpResponse.json(rates === 'off' ? fixtures.hostingOff.rates : { ...fixtures.rates, plans: {} })),
+  http.get(v1('/rates'), () =>
+    rates === 'refused'
+      ? apiError(503, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })
+      : HttpResponse.json(rates === 'off' ? fixtures.hostingOff.rates : { ...fixtures.rates, plans: {} }),
+  ),
   http.get(v1('/runtime'), () => HttpResponse.json(fixtures.hostingOff.runtime)),
   http.get(v1('/runtimes'), () => HttpResponse.json(fixtures.hostingOff.machines)),
-  http.post(v1('/runtimes'), () => apiError(409, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
-  http.post(v1('/runtime/start'), () => apiError(409, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
+  http.post(v1('/runtimes'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
+  http.post(v1('/runtime/start'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
 ];
 
 export const server = setupServer(...defaultHandlers);

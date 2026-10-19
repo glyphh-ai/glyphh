@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
 import { hostingOff, machines, plans, rates } from '@/test/fixtures';
 import { hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
-import { hostedRates, hostingOn, useDeleteMachine, useHosting, useMachine } from './queries';
+import { hostedRates, hostingOn, readRates, useDeleteMachine, useHosting, useMachine, useRates } from './queries';
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={createQueryClient()}>{children}</QueryClientProvider>;
@@ -44,6 +44,23 @@ describe('whether Glyphh hosts machines', () => {
     expect(hostingOn(plans, rates)).toBe(true);
     expect(hostingOn(plans, undefined)).toBe(true);
     expect(hostingOn(undefined, undefined)).toBe(true);
+  });
+
+  it('reads the server’s hosting_off refusal of the rates as no rates, and passes any other refusal on', async () => {
+    server.use(...hostingOffHandlers());
+    await expect(readRates()).resolves.toBeNull();
+    const { result } = renderHook(() => useRates(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
+    expect(result.current.error).toBeNull();
+    server.use(http.get(v1('/rates'), () => HttpResponse.json({ error: { code: 'E_UNAVAILABLE', message: 'Down.' } }, { status: 503 })));
+    await expect(readRates()).rejects.toThrow('Down.');
+  });
+
+  it('is off when the rates are refused with hosting_off, whatever the plans say', async () => {
+    server.use(http.get(v1('/rates'), () => HttpResponse.json({ error: { code: 'E_UNAVAILABLE', message: 'Off.', reason: 'hosting_off' } }, { status: 503 })));
+    const { result } = renderHook(() => useHosting(), { wrapper });
+    await waitFor(() => expect(result.current).toBe(false));
   });
 
   it('is undefined until both are read, then the server’s answer', async () => {

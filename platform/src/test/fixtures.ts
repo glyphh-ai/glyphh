@@ -5,12 +5,14 @@ import type { HostingOff, Install, Invite, Machine, MachineSize, Me, Member, Mod
  * and Team for sale (`GLYPHH_HOSTING=on`, sync shipped), and below, `hostingOff`, as the server answers today.
  */
 
-const none = { sync: false, ha: false, offline: false, sso: false, rbac: false, audit: false };
+// The server's four flags; roles and audit logs ride on sso. With hosting on, as if every feature were built.
+const none = { sync: false, ha: false, offline: false, sso: false };
+const built = { sync: true, ha: true, offline: true, sso: true };
 
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, markup_hidden: true },
-  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, markup_hidden: true },
-  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, markup_hidden: true },
+  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 0, precedents: 0 }, features: none, built, markup_hidden: true },
+  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 100_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
+  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 1_000_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
   {
     name: 'Enterprise',
     version: 1,
@@ -18,7 +20,8 @@ export const plans: Plan[] = [
     interval: null,
     self_serve: false,
     limits: { machines: null, precedents: null },
-    features: { sync: true, ha: true, offline: true, sso: true, rbac: true, audit: true },
+    features: { sync: true, ha: true, offline: true, sso: true },
+    built,
     markup_hidden: true,
   },
 ];
@@ -174,7 +177,8 @@ export const installs: Install[] = [
  * As the server answers with `GLYPHH_HOSTING=off` and sync not yet built: no hosted machines on any plan, the rates
  * off, and each feature saying whether it is built. The org is on Free.
  */
-const unbuilt = { sync: false, ha: false, offline: true, sso: false, rbac: false, audit: false };
+// As the server's BUILT: only offline licences work today.
+const unbuilt = { sync: false, ha: false, offline: true, sso: false };
 const off = (plan: Plan, change: Partial<Plan>): Plan => ({ ...plan, ...change, limits: { ...plan.limits, machines: 0 }, built: unbuilt });
 const offPlans: Plan[] = [
   off(plans[0]!, {}),

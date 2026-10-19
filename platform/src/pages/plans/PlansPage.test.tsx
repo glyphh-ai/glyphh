@@ -219,10 +219,12 @@ describe('Choosing a plan while Glyphh hosts nothing and some features are not b
     expect(within(enterprise).getByText('Audit logs').closest('li')).toHaveTextContent('Coming soon');
   });
 
-  it('says nothing of hosted machines and shows no rates', async () => {
+  it('says nothing of hosted machines and shows no rates, and the rates refused is no error', async () => {
     server.use(...hostingOffHandlers());
     renderApp('/settings/plans');
     await screen.findByRole('region', { name: 'Enterprise' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hosting is off.')).not.toBeInTheDocument();
     expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Hosted machines' })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();

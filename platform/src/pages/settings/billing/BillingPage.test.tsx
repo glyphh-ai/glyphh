@@ -181,6 +181,7 @@ describe('Billing while Glyphh hosts nothing and some features are not built', (
     server.use(...hostingOffHandlers('empty'));
     renderApp('/settings/billing');
     await card('Enterprise');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/hosting/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();

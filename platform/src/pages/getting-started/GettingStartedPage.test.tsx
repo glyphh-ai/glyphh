@@ -409,7 +409,7 @@ describe('Getting started', () => {
 });
 
 describe('Getting started while Glyphh hosts nothing', () => {
-  it.each(['off', 'empty'] as const)('offers only running rrotor yourself, Docker Compose first, when the rates answer %s', async (rates) => {
+  it.each(['refused', 'off', 'empty'] as const)('offers only running rrotor yourself, Docker Compose first, when the rates answer %s', async (rates) => {
     server.use(...hostingOffHandlers(rates));
     renderApp('/getting-started');
     const compose = await screen.findByRole('radio', { name: /^Docker Compose/ });

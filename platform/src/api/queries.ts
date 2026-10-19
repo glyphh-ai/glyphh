@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from './client';
+import { api, ApiError } from './client';
 import type {
   Install,
   Machine,
@@ -50,8 +50,21 @@ export const useMachine = (id: string) =>
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
-/** The hosted machine rates; null while Glyphh hosts nothing (the server answers `{hosting: "off"}` or no plans). */
-export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: () => api.get<Rates | HostingOff>('/rates').then(hostedRates) });
+/**
+ * The hosted machine rates; null while Glyphh hosts nothing: the server refuses them with `hosting_off`, or answers
+ * `{hosting: "off"}` or no plans.
+ */
+export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: readRates });
+
+/** With hosting off the server refuses the rates (503 E_UNAVAILABLE `hosting_off`): that is no rates, not an error. */
+export async function readRates(): Promise<Rates | null> {
+  try {
+    return hostedRates(await api.get<Rates | HostingOff>('/rates'));
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'E_UNAVAILABLE' && error.detail.reason === 'hosting_off') return null;
+    throw error;
+  }
+}
 
 export function hostedRates(answer: Rates | HostingOff): Rates | null {
   if ('hosting' in answer && answer.hosting === 'off') return null;
