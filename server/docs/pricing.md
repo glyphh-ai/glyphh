@@ -66,6 +66,8 @@ is where Programs and the gateway will be scheduled from. The rest follow it. Wh
   audit events) to the customer's own collector, never through Glyphh.
 - **Opt-in server-side logging:** a flag that sends them to Glyphh so the platform can show them. Turning it on says
   plainly that the data then leaves the rrotor.
+- **Kept on Glyphh for 7 days** (`GLYPHH_TELEMETRY_RETENTION_DAYS`), the same on every plan, then deleted. Never a
+  model's inputs or results, and never a caller's address.
 
 ## The control plane
 
@@ -107,6 +109,6 @@ Facts only.
 | A `limit_exceeded` result, `indexed: false` | rrotor refuses a `record` past the cap with `E_LIMIT_PRECEDENTS` |
 | Sync, HA, the head node | Not built: `sync` and `ha` are licence flags and `cluster_sync_enabled` a key field; no cluster transport or head election. The server keeps each node's `role` and `cluster_id` as said |
 | Air-gapped optional on Pro and Team | Offline licences are Enterprise only (`POST /v1/runtimes/{id}/offline-licence`, else 403 `E_NOT_IN_PLAN` `offline`); a Pro or Team operator can copy the key from `GET /v1/license/keys` into `/etc/rrotor/license.key` each month |
-| Audit log, log drains, opt-in server-side logging | Not built; no audit logs, SSO/SAML or RBAC either. `sub` (the person's user id) is in `/v1/runtime/introspect`'s answer for rrotor's audit |
+| Audit log, log drains, opt-in server-side logging | Drains and the audit log are rrotor's. The server's side of server-side logging is built: `POST /v1/otlp/v1/{logs,metrics,traces}` takes OTLP protobuf with the runtime's token, on every plan, keeps log records, audit events (rrotor's `rrotor.audit.<kind>` records), a metric point per series a minute and spans in the org for 7 days, and the platform reads them at `GET /v1/telemetry/logs`, `/audit` and `/metrics`, the connector with `logs` ([architecture.md](architecture.md#server-side-logging)). Audit events are shown for whatever plan sends them: rrotor keeps an audit store on Enterprise only. No SSO/SAML or RBAC. `sub` (the person's user id) is in `/v1/runtime/introspect`'s answer for rrotor's audit |
 | Heartbeat to `/v1/telemetry/heartbeat`: `license_id`, hashed GUID, version, store size; fail-open | `POST /v1/license/verify` with the runtime's token: `{machine, licence_id, version, active_runs}` and, optional, `{node_id, cluster_id, role, precedents}`, answered with the licence and `license_key`; self-hosted runtimes only |
 | Expired key: Free limits after 14 days' grace | A self-hosted runtime's old licence is live until `expires_at` plus 14 days; past that rrotor refuses only what needs a licensed mod. The server stops delivering a key past its `expires_at` |

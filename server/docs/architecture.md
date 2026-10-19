@@ -286,6 +286,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **The runtime link:** rrotor's outbound WebSocket, on its own token. Up come online, `deployed`, events, `usage` and each run's status and seconds; down go only the licence, keys, a deploy and an approval's answer. Never a call.
 - **Approvals:** a `needs_approval` is a row in `approvals` and a signal on Redis pub/sub to whichever server process holds the person's `/v1/approvals/stream`. Redis (`GLYPHH_REDIS_URL`) holds only live signals; Postgres holds everything kept.
 - **Models:** the record of each Ada model, its versions, deployments and runs, never their content (`/v1/models`).
+- **Server-side logging** (rrotor's `RROTOR_SERVER_LOGS=on`, opt-in): a runtime's logs, audit events, metrics and spans by OTLP, kept for its org a week and shown on the platform ([Server-side logging](#server-side-logging)).
 - **Hosting** (off by default, `GLYPHH_HOSTING`): each machine and volume made in Glyphh's one Fly app, stopped when idle, metered every minute ([Reaching a runtime](#reaching-a-runtime)).
 
 ### Starting up, and the reset on deploy
@@ -325,10 +326,11 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_FLY_REGION` | `iad` | Where machines are made, and the rates `/v1/rates` shows |
 | `GLYPHH_FLY_PUBLIC_DOMAIN` | `glyphh.app` | Each runtime is `https://<machine>.<domain>` |
 | `GLYPHH_RUNTIME_IDLE_MINUTES` | `10` | A hosted machine idle this long is stopped |
+| `GLYPHH_TELEMETRY_RETENTION_DAYS` | `7` | Days server-side logging is kept (1 to 90), every plan alike; the minute tick purges what is older ([Server-side logging](#server-side-logging)) |
 
 ### API
 
-JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the health check, the device flow's, the plans, rates and mods lists, the bought-once licence, the browser steps (sign-in, GitHub's pages, `/billing/done`), OAuth's own endpoints and Stripe's webhook carries an install's token or an OAuth access token (`Authorization: Bearer`); a runtime's own calls (`POST /v1/license/verify`, `POST /v1/runtime/introspect` and the link) carry its runtime token instead. The platform signs in as an OAuth client, so `/v1` takes either person's token, as the same person and org: a caller by access token has no install: `POST /v1/sign-out` ends its grant instead, no install is `current` in `GET /v1/installs`, and `POST /v1/runtime/local` refuses it (`E_INVALID` `no_install`: a local runtime belongs to an install). The server's root and `/health` answer `E_NOT_FOUND`: the health check is `/v1/health`. `/mcp` takes only an access token. The server renders no page: a browser in a flow is sent to the platform (above, The platform). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `reason` and `limit` (both the limit's name), `used`, `max` and the `plan` that lifts it; a feature the plan lacks is `E_NOT_IN_PLAN` with its `reason`.
+JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the health check, the device flow's, the plans, rates and mods lists, the bought-once licence, the browser steps (sign-in, GitHub's pages, `/billing/done`), OAuth's own endpoints and Stripe's webhook carries an install's token or an OAuth access token (`Authorization: Bearer`); a runtime's own calls (`POST /v1/license/verify`, `POST /v1/runtime/introspect`, `POST /v1/otlp/v1/{logs,metrics,traces}` and the link) carry its runtime token instead. The platform signs in as an OAuth client, so `/v1` takes either person's token, as the same person and org: a caller by access token has no install: `POST /v1/sign-out` ends its grant instead, no install is `current` in `GET /v1/installs`, and `POST /v1/runtime/local` refuses it (`E_INVALID` `no_install`: a local runtime belongs to an install). The server's root and `/health` answer `E_NOT_FOUND`: the health check is `/v1/health`. `/mcp` takes only an access token. The server renders no page: a browser in a flow is sent to the platform (above, The platform). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `reason` and `limit` (both the limit's name), `used`, `max` and the `plan` that lifts it; a feature the plan lacks is `E_NOT_IN_PLAN` with its `reason`.
 
 | Area | Calls |
 |---|---|
@@ -344,6 +346,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the he
 | Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}`; `POST /v1/runtime/introspect` (a hosted or self-hosted runtime asking about a bearer, its runtime token as auth) (below, The connector) |
 | Models | `GET`/`POST /v1/models` (never limited; a name once per person), `GET`/`DELETE /v1/models/{id}` (the record, its versions, deployments and runs; the rrotor keeps its copy until a `remove` deploy), `POST /v1/models/{id}/versions` (a commit's SHA and its manifest: the next version; `E_CONFLICT` `commit_known`), `POST /v1/models/{id}/deploy` (`version`, `action` deploy \| activate \| remove, `runtime_id` or the caller's own: the install's local runtime, else the person's first hosted machine, else `E_NOT_FOUND` `no_runtime`; the rrotor answers `deployed` on its link and only then is the version active there) |
 | Runs | None here: a model is called on the runtime itself (above, Reaching a runtime). The server keeps the run record it hears over the link (status, times, seconds), never inputs or outputs |
+| Telemetry | `POST /v1/otlp/v1/logs`, `/metrics`, `/traces` (a runtime's server-side logging, OTLP protobuf, its runtime token as auth); `GET /v1/telemetry/logs`, `GET /v1/telemetry/audit`, `GET /v1/telemetry/metrics` (the org's, for the platform) (below, Server-side logging) |
 | Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` `{answer: approve \| decline}` (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting) |
 
 ### The license
@@ -420,6 +423,29 @@ The key rrotor runs on (rrotor's `docs/specs/licensing.md`; [pricing.md](pricing
 - **The heartbeat's new fields** (rrotor's clusters; each optional, for rrotor before them): `{"machine", "licence_id", "version", "active_runs", "node_id": "rrotor-1", "cluster_id": "<uuid>" | null, "role": "standalone" | "head" | "follower", "precedents": 1200}`; `node_id` 1 to 253 characters with no space, `precedents` ≥ 0. A `hello` may say `node_id`, `cluster_id` and `role` the same way.
 - **Nodes:** each node said is kept in `nodes` by its runtime and `node_id` (its cluster, role, store's precedents, version and when it was seen); a heartbeat's `precedents` is the runtime's `precedents` too. `GET /v1/license/nodes` counts the org's runtime nodes: each node seen in the last 48 hours, and a hosted or self-hosted runtime that has said no node as one (hosted always, self-hosted while linked or heard in those 48 hours; local runtimes are not counted): `{"count": 4, "max_nodes": 3, "over": true, "nodes": [{"runtime_id", "runtime", "mode", "node_id", "cluster_id", "role", "precedents", "version", "seen_at"}]}`. **Soft:** shown (the platform, the connector's `usage`: "Runtime nodes: 4 of 3 (over the plan: shown, never stopped)"), never refusing; rrotor enforces `max_nodes` itself, per cluster, at join.
 
+### Server-side logging
+
+rrotor keeps its logs, metrics, traces and audit events on the runtime unless its operator sends them somewhere (rrotor's `docs/specs/cluster.md`, section 7). `RROTOR_SERVER_LOGS=on` (off by default, refused with the link off, said plainly at every start) sends them to this server too, so the platform can show them; in a cluster the head sends for the cluster. Every plan takes them.
+
+**The receiver.** `POST /v1/otlp/v1/logs`, `/metrics` and `/traces`: OTLP over HTTP with protobuf (`Content-Type: application/x-protobuf`; OTLP's JSON and any other type is 415 `E_UNSUPPORTED_MEDIA`), gzipped or plain (`Content-Encoding: gzip`; another encoding is 415 too), the runtime's own token as the bearer (hosted, self-hosted or local; else 401 before the body is read). The body is at most 4 MB as sent and 16 MB unzipped (413 `E_TOO_LARGE`); one that is not gzip or not the signal's export request is 422 `E_INVALID`. Decoded with `opentelemetry-proto` (pinned, as rrotor pins it). Each resource's `rrotor.runtime.id`, when it says one, must be the token's runtime, else the whole batch is 403 `E_FORBIDDEN` `runtime_mismatch` and nothing is kept; its `service.instance.id` is the node. Taken, the answer is 200 with OTLP's empty export response (protobuf); rrotor retries anything else with backoff. The code is `ops/otlp/`.
+
+**What is kept,** in the runtime's org (row-level security), in three tables ([Data model](#in-the-cloud)):
+
+- **Log records** (`telemetry_logs`): the time (else when observed, else when received; a clock more than 5 minutes ahead is read as now), OTLP's severity number and its level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`; a record without a number is read from its severity text, else `info`), the body (up to 16 KB; one that is not a string as JSON), trace and span ids as hex, and the attributes as JSONB.
+- **Audit events:** rrotor sends them as log records whose `event_name` (or `event.name` attribute) is `rrotor.audit.<kind>`, its kept events on Enterprise and its `rrotor.audit` log lines below it; kept in the same table with `audit` the kind (`run.call`, `model.deploy`, `access.denied`, …), the event's fields its attributes (nested ones dotted: `actor.type`, `outcome.status`).
+- **Metric points** (`telemetry_metrics`): rrotor sends every series every 5 s, so a series (the node, the metric's name and its point's attributes) keeps one point a minute, the newest. A gauge's or sum's value; a histogram's (plain, exponential or summary) sum as `value` with its `count`.
+- **Spans** (`telemetry_spans`): trace, span and parent ids, name, kind, start, end, status, attributes. Kept; no read route yet.
+- **Never kept:** a caller's address or a payload. rrotor strips `client`, `inputs` and `data` (and `rrotor.inputs`, `rrotor.data`) before it sends; the server drops them again at every depth, with `client.*`, `http.client_ip` and `network.peer.*`. The server logs neither a body nor the caller's address for these paths (its access line is dropped, as for the heartbeat). NUL characters are dropped and a non-finite number in an attribute is kept as text.
+
+**Retention:** `GLYPHH_TELEMETRY_RETENTION_DAYS`, 7 days by default and the same on every plan (pricing.md names none per plan); the minute tick deletes every row older, by its time (a span's start). A deleted runtime's go with it.
+
+**Reading it,** any member of the org, newest first:
+
+- `GET /v1/telemetry/logs?runtime=&node=&level=&since=&text=&limit=&cursor=`: the log records that are not audit events. `runtime` a runtime's id, `node` its `node_id`, `level` that level and above, `since` an RFC 3339 instant (at or after), `text` in the body (any case, taken literally), `limit` 1 to 500 (100), `cursor` the last page's `next_cursor`. Answers `{"records": [{"id", "at", "runtime_id", "runtime", "node_id", "level", "severity", "body", "trace_id", "span_id", "attributes"}], "next_cursor": "<opaque>" | null}`; `runtime` is the runtime's name. A cursor no page gave is 422 `E_INVALID` `cursor`.
+- `GET /v1/telemetry/audit?runtime=&node=&kind=&since=&limit=&cursor=`: the audit events, `kind` exact. Answers `{"events": [{"id", "at", "runtime_id", "runtime", "node_id", "kind", "attributes"}], "next_cursor": … | null}`.
+- `GET /v1/telemetry/metrics?runtime=&node=&name=`: the latest point of each series within retention, ordered by runtime, node and name. Answers `{"metrics": [{"runtime_id", "runtime", "node_id", "name", "unit", "kind": "gauge" | "sum" | "histogram", "value", "count", "attributes", "at"}]}`.
+- The connector's `logs` tool reads the first two ([The connector](#the-connector)).
+
 ### Billing and hosting
 
 A paid plan is one Stripe subscription: the plan's flat price and, with hosting on, the shared metered hosting price. Writes are the admin's.
@@ -472,7 +498,7 @@ sequenceDiagram
 
 **Held past the plan.** A plan's machines are the org's, its oldest first. An org on a plan that allows fewer hosted machines than it holds (a subscription cancelled in the portal or ended, an Enterprise grant revoked or lapsed; the server's own plan changes refuse to get there) keeps its oldest machines up to the plan's running and has its newest beyond them stopped: from the webhook and `revoke` at once, and at every minute's tick, which also stops any a request woke on Fly's proxy since. Starting, restarting or waking one (`POST /v1/runtimes/{id}/start`, `/restart`, `/v1/runtime/start`, a deploy or an approval's answer that would wake it) is `E_LIMIT` `machines` (`used` the org's) until the org is on a plan that allows them or deletes enough: they keep their disks and may be deleted, and deleting one lets the next oldest start. A request at a held machine's own address is woken by Fly's proxy, and the next tick stops it again.
 
-**The minute tick** (`ops/tend.py`) runs whether or not hosting is on, in this order: with hosting on, each hosted machine's month tallied and metered; the keys that expired taken off their runtimes; Enterprise grants past their date ended (their hosting due reported first); with hosting on, the idle machines stopped, then those held past the plan; with `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_METER_HOSTING`, the meter reported. A failed tick is logged and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a Postgres advisory lock (`pg_try_advisory_lock`, `TICK` in `ops/tend.py`) on a connection it holds for the tick and lets go after, so no two ticks run at once; a process that finds it held skips that minute. Ticks one after another in different processes may both run within a minute, and every part is safe to run again: metering counts the time since each machine was last metered, never a fixed minute.
+**The minute tick** (`ops/tend.py`) runs whether or not hosting is on, in this order: with hosting on, each hosted machine's month tallied and metered; the keys that expired taken off their runtimes; Enterprise grants past their date ended (their hosting due reported first); server-side logging past `GLYPHH_TELEMETRY_RETENTION_DAYS` deleted; with hosting on, the idle machines stopped, then those held past the plan; with `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_METER_HOSTING`, the meter reported. A failed tick is logged and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a Postgres advisory lock (`pg_try_advisory_lock`, `TICK` in `ops/tend.py`) on a connection it holds for the tick and lets go after, so no two ticks run at once; a process that finds it held skips that minute. Ticks one after another in different processes may both run within a minute, and every part is safe to run again: metering counts the time since each machine was last metered, never a fixed minute.
 
 Stripe's products, prices and meter are made once per account with `scripts/stripe-setup.py` ([pricing.md](pricing.md#the-control-plane)).
 
@@ -523,6 +549,7 @@ The server has no rate limiting ([Not built yet](#not-built-yet)).
 | `runtime`, `start_runtime`, `stop_runtime` | The person's first machine: its address, state and the month's online time; start a machine (`id`, or the first, made the first time); stop one (`id`, or the first) | Everyone |
 | `runtimes`, `create_runtime`, `restart_runtime`, `delete_runtime` | The person's machines; make one (`name`, `size`: small, medium or large; up to the plan's machines) and start it; restart one (`id`); delete one (`id`, and `confirm`, its name as the person typed it). With hosting off, making, starting and restarting are `E_UNAVAILABLE` `hosting_off` | Everyone |
 | `runtime_keys`, `create_runtime_key`, `revoke_runtime_key` | The keys that call the runtimes at their addresses; make one (`name`; `expires_in_days` 1 to 365, or never; `runtime_id` for one machine or self-hosted runtime, else every hosted machine; shown once); revoke one (`key_id`) | Everyone |
+| `logs` | The org's runtimes' recent log records (`level` and above, `text` in the message, `runtime_id`), or with `audit` their audit events, newest first, `limit` 1 to 100 (20); with nothing sent, how to turn server-side logging on | Everyone |
 | `self_runtimes`, `register_self_runtime`, `offline_licence` | The person's self-hosted runtimes (address, state, version, last heartbeat); register one (`name`, `public_url`, a plain `https://<host>`; its token and environment shown once); an offline licence for one (`runtime_id`, `days` 1 to 365) | Everyone; `offline_licence` on Enterprise only |
 
 Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content, bad arguments `E_INVALID`. An unknown tool is a JSON-RPC error (`-32602`). Each call runs in a savepoint, so a refusal leaves nothing half done.
@@ -582,6 +609,10 @@ erDiagram
     CONNECTOR_GRANTS ||--o{ CONNECTOR_TOKENS : "holds"
     ORGS ||--o{ LICENSES : "issued keys"
     RROTORS ||--o{ NODES : "seen as"
+    RROTORS ||--o{ TELEMETRY_LOGS : "sent, logging on"
+    RROTORS ||--o{ TELEMETRY_METRICS : "sent, logging on"
+    RROTORS ||--o{ TELEMETRY_SPANS : "sent, logging on"
+    ORGS ||--o{ TELEMETRY_LOGS : "holds"
     PLANS {
         uuid id PK
         text name UK
@@ -756,6 +787,53 @@ erDiagram
         text version
         timestamp seen_at
     }
+    TELEMETRY_LOGS {
+        uuid id PK
+        uuid org_id FK
+        uuid rrotor_id FK
+        text node_id "service.instance.id"
+        timestamp at "its time, else observed, else received"
+        int severity "OTLP's, 1 to 24"
+        text level "trace, debug, info, warn, error or fatal"
+        text body "the message, up to 16 KB"
+        text audit "an audit event's kind; null: a log record"
+        text trace_id
+        text span_id
+        jsonb attributes "as sent, never addresses or payloads"
+        timestamp received_at
+    }
+    TELEMETRY_METRICS {
+        uuid id PK
+        uuid org_id FK
+        uuid rrotor_id FK
+        text node_id
+        text series "SHA-256 of node, name, attributes"
+        text name
+        text unit
+        text kind "gauge, sum or histogram"
+        timestamp minute "one point per series a minute"
+        timestamp at
+        double value "a histogram's sum"
+        bigint count "a histogram's"
+        jsonb attributes
+        timestamp received_at
+    }
+    TELEMETRY_SPANS {
+        uuid id PK
+        uuid org_id FK
+        uuid rrotor_id FK
+        text node_id
+        text trace_id
+        text span_id
+        text parent_span_id
+        text name
+        text kind "server, internal, client, …"
+        timestamp started_at
+        timestamp ended_at
+        text status "unset, ok or error"
+        jsonb attributes
+        timestamp received_at
+    }
     RUNTIME_KEYS {
         uuid id PK
         uuid rrotor_id FK "null: every hosted machine"
@@ -882,7 +960,7 @@ erDiagram
     }
 ```
 
-Every table and column is drawn, as `db/schema.sql` has them (30 tables); the tables from rrotors on are for Ada models, which rrotor runs as models, so the tables say `models`. Timestamps carry the time zone; ids are made by the database.
+Every table and column is drawn, as `db/schema.sql` has them (33 tables); the tables from rrotors on are for Ada models, which rrotor runs as models, so the tables say `models`. Timestamps carry the time zone; ids are made by the database.
 
 - **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to.
 - **Mods:** every plan includes every active mod; a retired mod (`active` false) is in no license.
@@ -903,11 +981,12 @@ Every table and column is drawn, as `db/schema.sql` has them (30 tables); the ta
 - **Connector grants:** each client (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, one live per client, revocable one by one. **Connector tokens:** its access tokens (1 hour) and refresh tokens (30 days, rotated on use; a rotated one used again revokes the grant), kept only as hashes.
 - **Licences** (`licenses`): each licence key the server signed for an org, its terms as signed and the whole key string, one per paid period or Enterprise grant, never on Free; `revoked_at` once its subscription or grant ended. Row-level secure on the org.
 - **Nodes** (`nodes`): each node a runtime's heartbeat or `hello` named, by its `node_id` within the runtime, as it last said; counted, never refused. Row-level secure through its runtime.
+- **Telemetry** (`telemetry_logs`, `telemetry_metrics`, `telemetry_spans`): what a runtime sent with server-side logging on ([Server-side logging](#server-side-logging)), each row with its org and runtime (from the token) and its node; log records and audit events (`audit` the kind) in one table, metric points one per series a minute, spans; attributes as sent, as JSONB, never a caller's address or a payload. Kept `GLYPHH_TELEMETRY_RETENTION_DAYS` (7). Row-level secure on the org.
 - **Orgs:** `renews_at` is when the subscription renews, from Stripe; empty when it isn't subscribed or ends at the period's end. `markup_pct` and `plan_until` are an Enterprise grant's.
 
 ### Keys, checks, indexes and row-level security
 
-Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<column>` index is a plain index on that one column. Ids are `gen_random_uuid()`; `created_at` (and `asked_at`, `at`, `paid_at`, `started_at`, `deployed_at`, `updated_at`) default to `now()`.
+Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<column>` index is a plain index on that one column. Ids are `gen_random_uuid()`; `created_at` (and `asked_at`, `at`, `paid_at`, `started_at`, `deployed_at`, `updated_at`, `received_at`) default to `now()`.
 
 | Table | Keys and checks | Foreign keys (on delete) | Indexes | Row-level security |
 |---|---|---|---|---|
@@ -926,6 +1005,9 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `runtime_keys` | PK `id`; `key_hash` unique; `calls` 0 by default | `rrotor_id` → `rrotors` (cascade); `user_id` → `users` (cascade) | `ix_runtime_keys_rrotor_id`; `ix_runtime_keys_user_id` | its user is visible |
 | `licenses` | PK `id` (the key's `license_id`); `licenses_tier` `tier` in `free`, `pro`, `team`, `enterprise`; `licenses_limits` `max_nodes` ≥ 1 and `max_precedents` ≥ 0 (or null) | `org_id` → `orgs` (cascade) | `licenses_newest` on (`org_id`, `issued_at`) | `org_id` is the org |
 | `nodes` | PK (`rrotor_id`, `node_id`); `nodes_role` `role` in `standalone`, `head`, `follower` (or null) | `rrotor_id` → `rrotors` (cascade) | none beyond the key | its runtime is visible |
+| `telemetry_logs` | PK `id` | `org_id` → `orgs` (cascade); `rrotor_id` → `rrotors` (cascade) | `telemetry_logs_newest` on (`org_id`, `at`, `id`); `telemetry_logs_at` on `at`; `ix_telemetry_logs_rrotor_id` | `org_id` is the org |
+| `telemetry_metrics` | PK `id` | `org_id` → `orgs` (cascade); `rrotor_id` → `rrotors` (cascade) | `telemetry_metrics_point` unique on (`rrotor_id`, `series`, `minute`); `telemetry_metrics_newest` on (`org_id`, `name`, `at`); `telemetry_metrics_at` on `at` | `org_id` is the org |
+| `telemetry_spans` | PK `id` | `org_id` → `orgs` (cascade); `rrotor_id` → `rrotors` (cascade) | `telemetry_spans_newest` on (`org_id`, `started_at`); `telemetry_spans_at` on `started_at`; `ix_telemetry_spans_rrotor_id` | `org_id` is the org |
 | `machine_months` | PK (`rrotor_id`, `month`), no foreign key on `rrotor_id`; `cost_micros` and `charge_micros` 0 by default | `org_id` → `orgs` (cascade) | `ix_machine_months_org_id` | `org_id` is the org |
 | `meter_events` | PK `id`; `meter_events_cents` `cents` > 0 | `org_id` → `orgs` (cascade) | `ix_meter_events_org_id` | `org_id` is the org |
 | `models` | PK `id` | `user_id` → `users` (cascade); `org_id` → `orgs` (restrict) | `ix_models_org_id`; `ix_models_user_id` | `org_id` is the org |
@@ -941,7 +1023,7 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `connector_grants` | PK `id` | `user_id` → `users` (cascade); `client_id` → `oauth_clients` (cascade) | `connector_grants_user_client` unique on (`user_id`, `client_id`) where `revoked_at` is null; `ix_connector_grants_client_id`; `ix_connector_grants_user_id` | its user is visible |
 | `connector_tokens` | PK `id`; `token_hash` unique; `connector_tokens_kind` `kind` in `access`, `refresh` | `grant_id` → `connector_grants` (cascade) | `ix_connector_tokens_grant_id` | its grant is visible |
 
-**Row-level security.** Each of the 24 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat and introspection, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
+**Row-level security.** Each of the 27 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat, introspection and server-side logging, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
 
 ## Not built yet
 
