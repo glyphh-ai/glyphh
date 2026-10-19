@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from glyphh_server.api.auth import Caller, Cfg, Conn
+from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.pages import to_platform
 from glyphh_server.models import Org
 from glyphh_server.ops.billing import changes, checkout, signature, webhook
@@ -47,13 +47,13 @@ class BillingView(Usage):
 
 
 @router.get("/v1/billing", operation_id="billing")
-async def get_billing(caller: Caller, conn: Conn, settings: Cfg) -> BillingView:
+async def get_billing(caller: Caller, conn: Conn) -> BillingView:
     """The org's billing: its plan and price, the precedents its hosted runtimes hold of the plan's managed bucket,
     and its hosting this month, all in, machine by machine."""
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
-    return BillingView(**(await usage(conn, caller.org_id, settings)).model_dump(), **row._mapping)
+    return BillingView(**(await usage(conn, caller.org_id)).model_dump(), **row._mapping)
 
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")
@@ -64,10 +64,10 @@ async def start_checkout(body: CheckoutIn, caller: Caller, conn: Conn, stripe: S
 
 
 @router.post("/v1/billing/plan", operation_id="changePlan")
-async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe, settings: Cfg) -> OrgView:
+async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe) -> OrgView:
     """Change plan: the newest version of another self-serve plan, prorated; or Free, which cancels the subscription
     now once the org has no hosted machines."""
-    return await changes.change_plan(conn, caller, stripe, settings, body.plan)
+    return await changes.change_plan(conn, caller, stripe, body.plan)
 
 
 @router.post("/v1/billing/portal", operation_id="openBillingPortal")

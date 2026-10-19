@@ -6,7 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
-from glyphh_server.api.auth import Caller, Cfg, Conn
+from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.link_pages import link_url
 from glyphh_server.ops import identities, installs, me
 from glyphh_server.ops.auth.providers import provider as configured
@@ -32,15 +32,15 @@ class LinkOut(BaseModel):
 
 
 @router.get("/me", operation_id="me")
-async def get_me(caller: Caller, conn: Conn, settings: Cfg) -> Me:
+async def get_me(caller: Caller, conn: Conn) -> Me:
     """The user, their org and role, the plan version with its limits and features, the precedents its hosted runtimes
     hold and its hosting this month."""
-    return await me.me(conn, caller, settings)
+    return await me.me(conn, caller)
 
 
 @router.patch("/me", operation_id="renameMe")
-async def rename_me(body: Rename, caller: Caller, conn: Conn, settings: Cfg) -> Me:
-    return await me.rename_me(conn, caller, body.name, settings)
+async def rename_me(body: Rename, caller: Caller, conn: Conn) -> Me:
+    return await me.rename_me(conn, caller, body.name)
 
 
 @router.post("/me/identities", operation_id="linkIdentity")

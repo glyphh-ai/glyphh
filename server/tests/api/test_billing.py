@@ -21,7 +21,7 @@ async def test_the_plans_are_free_pro_team_and_enterprise_and_never_name_the_mar
         ("Enterprise", None, "year", False),
     ]
     assert [p["limits"] for p in plans] == [
-        {"machines": 0, "precedents": 0},
+        {"machines": 1, "precedents": 0},
         {"machines": 3, "precedents": 100_000},
         {"machines": 10, "precedents": 1_000_000},
         {"machines": None, "precedents": None},
@@ -162,10 +162,11 @@ async def test_down_to_free_cancels_now_once_no_machine_is_left(
     bob = await member(engine, ada.org_id)
     stripe.sub("sub_down", "cus_down", "price_test_team", 1)
     await subscribed(engine, ada.org_id, "sub_down", "cus_down")
-    machine = await hosted_runtime(engine, bob)
+    await hosted_runtime(engine, ada)
+    machine = await hosted_runtime(engine, bob)  # two, the org's together: Free allows one
     held = await client.post("/v1/billing/plan", json={"plan": "Free"}, headers=ada.headers)
     assert held.status_code == 409 and held.json()["error"]["reason"] == "machines"
-    assert held.json()["error"]["message"] == "Delete your hosted machines first."
+    assert held.json()["error"]["message"] == "Delete your hosted machines first. Free allows 1 hosted machine."
     async with engine.begin() as conn:
         await conn.execute(delete(Rrotor).where(Rrotor.id == machine.id))
     res = await client.post("/v1/billing/plan", json={"plan": "Free"}, headers=ada.headers)

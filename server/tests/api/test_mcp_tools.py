@@ -35,11 +35,11 @@ async def test_whoami_and_plan_show_the_account_its_limits_and_features(
     assert who["content"] == [{"type": "text", "text": f"Ada Lovelace ({ada.email}), admin of Ada Lovelace's org."}]
     plan = await tool(client, auth, "plan")
     assert plan["content"][0]["text"] == (
-        "Free (version 1), free: billing none, renews 2026-11-15.\nIt includes hosted machines 0, managed precedents "
+        "Free (version 1), free: billing none, renews 2026-11-15.\nIt includes runtime nodes 1, managed precedents "
         "0; features: none. Members, installs and local or self-hosted precedents are unlimited."
     )
     data = plan["structuredContent"]
-    assert data["org"]["renews_at"].startswith("2026-11-15") and data["plan"]["limits"]["machines"] == 0
+    assert data["org"]["renews_at"].startswith("2026-11-15") and data["plan"]["limits"]["machines"] == 1
 
 
 async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
@@ -47,10 +47,10 @@ async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.Async
     plans = await tool(client, auth, "plans")
     assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Pro", "Team", "Enterprise"]
     assert plans["content"][0]["text"].splitlines() == [
-        "Free: free; hosted machines 0, managed precedents 0; features: none",
-        "Pro: $99 a month; hosted machines 3, managed precedents 100000; features: sync",
-        "Team: $299 a month; hosted machines 10, managed precedents 1000000; features: sync",
-        "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; hosted machines unlimited, managed precedents "
+        "Free: free; runtime nodes 1, managed precedents 0; features: none",
+        "Pro: $99 a month; runtime nodes 3, managed precedents 100000; features: sync",
+        "Team: $299 a month; runtime nodes 10, managed precedents 1000000; features: sync",
+        "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; runtime nodes unlimited, managed precedents "
         "unlimited; features: sync, ha, offline, sso",
     ]
 

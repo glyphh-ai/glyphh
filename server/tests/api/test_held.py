@@ -57,14 +57,15 @@ async def test_machines_past_the_plan_start_never_and_are_deleted_still(engine: 
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
         assert (await client.post(f"/v1/runtimes/{a.id}/start", headers=ada.headers)).status_code == 200
         await _on(engine, ada, "Free")
-        for path in (f"/v1/runtimes/{a.id}/start", f"/v1/runtimes/{b.id}/restart", "/v1/runtime/start"):
+        for path in (f"/v1/runtimes/{b.id}/start", f"/v1/runtimes/{b.id}/restart"):  # Free: the oldest one only
             error = _limit(await client.post(path, headers=ada.headers))
-            assert (error["used"], error["max"], error["plan"]) == (2, 0, "Pro"), path
+            assert (error["used"], error["max"], error["plan"]) == (2, 1, "Pro"), path
+        assert (await client.post("/v1/runtime/start", headers=ada.headers)).status_code == 200  # the oldest, a
         with pytest.raises(LimitReached):
-            await waker(engine, Fly(fake_http(fly=fly), FLY_SETTINGS))(a.id)
-        assert (await client.delete(f"/v1/runtimes/{b.id}?confirm=b", headers=ada.headers)).status_code == 204
+            await waker(engine, Fly(fake_http(fly=fly), FLY_SETTINGS))(b.id)
         await _on(engine, ada, "Pro")  # back on a plan that allows it
-        assert (await client.post(f"/v1/runtimes/{a.id}/start", headers=ada.headers)).status_code == 200
+        assert (await client.post(f"/v1/runtimes/{b.id}/start", headers=ada.headers)).status_code == 200
+        assert (await client.delete(f"/v1/runtimes/{b.id}?confirm=b", headers=ada.headers)).status_code == 204
 
 
 async def test_past_the_plan_the_orgs_oldest_machines_start_and_its_newest_never(engine: AsyncEngine) -> None:
@@ -94,6 +95,8 @@ async def test_hold_stops_every_machine_past_the_plan_that_is_not_stopped(
 ) -> None:
     fly = FakeFly()
     ada, eve, ok = await person(engine), await person(engine), await person(engine, "Pro")
+    await _machine(engine, fly, ada, "oldest")  # Free's one: it runs on
+    await _machine(engine, fly, eve, "eve's oldest")
     (on, on_m), (off, _) = await _machine(engine, fly, ada, "on"), await _machine(engine, fly, ada, "off", "stopped")
     lost, lost_m = await _machine(engine, fly, ada, "lost")
     theirs, theirs_m = await _machine(engine, fly, eve, "theirs")
@@ -116,6 +119,7 @@ async def test_a_subscription_ending_stops_the_orgs_machines_at_once(engine: Asy
     ada = await person(engine, "Team")
     sub, customer = f"sub_{ada.org_id.hex}", f"cus_{ada.org_id.hex}"
     await subscribed(engine, ada.org_id, sub, customer)
+    _, kept = await _machine(engine, fly, ada, "oldest")  # Free's one: it runs on
     _, machine = await _machine(engine, fly, ada, "research")
     stripe.sub(sub, customer, "price_test_team", 1, "canceled")
     body = json.dumps({"type": "customer.subscription.deleted", "data": {"object": {"id": sub, "customer": customer}}})
@@ -123,7 +127,7 @@ async def test_a_subscription_ending_stops_the_orgs_machines_at_once(engine: Asy
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(stripe, fly=fly))):
         assert (await client.post("/v1/stripe/webhook", content=body, headers=headers)).status_code == 204
         assert (await client.get("/v1/me", headers=ada.headers)).json()["plan"]["name"] == "Free"
-    assert fly.machines[machine]["state"] == "stopped"
+    assert (fly.machines[machine]["state"], fly.machines[kept]["state"]) == ("stopped", "started")
 
 
 async def test_a_plan_with_fewer_machines_than_the_org_holds_is_refused(

@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.config import Settings
 from glyphh_server.models import Identity, Org, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import PlanView
@@ -34,14 +33,14 @@ class Me(BaseModel):
     hosting: Hosting
 
 
-async def me(conn: AsyncConnection, who: Principal, settings: Settings) -> Me:
+async def me(conn: AsyncConnection, who: Principal) -> Me:
     person = (await conn.execute(select(User.email, User.name, User.role).where(User.id == who.user_id))).one()
     columns = (Org.id, Org.name, Org.billing_status, Org.renews_at, Org.plan_until)
     org = (await conn.execute(select(*columns).where(Org.id == who.org_id))).one()
     providers = await conn.execute(
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)
     )
-    used = await usage(conn, who.org_id, settings)
+    used = await usage(conn, who.org_id)
     return Me(
         id=who.user_id,
         email=person.email,
@@ -55,6 +54,6 @@ async def me(conn: AsyncConnection, who: Principal, settings: Settings) -> Me:
     )
 
 
-async def rename_me(conn: AsyncConnection, who: Principal, name: str, settings: Settings) -> Me:
+async def rename_me(conn: AsyncConnection, who: Principal, name: str) -> Me:
     await conn.execute(update(User).where(User.id == who.user_id).values(name=name.strip()))
-    return await me(conn, who, settings)
+    return await me(conn, who)

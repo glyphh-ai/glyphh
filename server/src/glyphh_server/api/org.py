@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
-from glyphh_server.api.auth import Caller, Cfg, Conn
+from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.ops import invites, joining, members, org
 from glyphh_server.ops.invites import InviteView
 from glyphh_server.ops.joining import Joined
@@ -35,13 +35,13 @@ class AcceptInvite(BaseModel):
 
 
 @router.get("/org", operation_id="getOrg")
-async def get_org(caller: Caller, conn: Conn, settings: Cfg) -> OrgView:
-    return await org.get_org(conn, caller, settings)
+async def get_org(caller: Caller, conn: Conn) -> OrgView:
+    return await org.get_org(conn, caller)
 
 
 @router.patch("/org", operation_id="renameOrg")
-async def rename_org(body: RenameOrg, caller: Caller, conn: Conn, settings: Cfg) -> OrgView:
-    return await org.rename_org(conn, caller, body.name, settings)
+async def rename_org(body: RenameOrg, caller: Caller, conn: Conn) -> OrgView:
+    return await org.rename_org(conn, caller, body.name)
 
 
 @router.get("/org/members", operation_id="listMembers")

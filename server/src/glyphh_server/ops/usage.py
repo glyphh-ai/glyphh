@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.config import Settings
 from glyphh_server.models import MachineMonth, Rrotor, User
 from glyphh_server.ops.plans import PlanView, org_plan
 from glyphh_server.ops.runtimes import month_of
@@ -65,7 +64,7 @@ async def hosting(conn: AsyncConnection, org_id: uuid.UUID) -> Hosting:
     return Hosting(month=month, month_to_date_cents=total, machines=machines)
 
 
-async def usage(conn: AsyncConnection, org_id: uuid.UUID, settings: Settings) -> Usage:
-    plan = await org_plan(conn, org_id, settings)
+async def usage(conn: AsyncConnection, org_id: uuid.UUID) -> Usage:
+    plan = await org_plan(conn, org_id)
     used = Precedents(used=await precedents_used(conn, org_id), limit=plan.limits.precedents)
     return Usage(plan=plan, precedents=used, hosting=await hosting(conn, org_id))

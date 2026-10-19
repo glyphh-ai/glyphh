@@ -1,5 +1,5 @@
 """Glyphh's managed cloud switched off (GLYPHH_HOSTING, off by default): no hosted machine is made, started or
-restarted, from the API or from Claude, every plan shows no hosted machines, the tick meters nothing, Checkout sells no
+restarted, from the API or from Claude, the plans keep their runtime nodes, the tick meters nothing, Checkout sells no
 hosting, /v1/rates says so and an Enterprise grant needs no markup. Machines made before can still be stopped and
 deleted. The rest of the suite runs with it on."""
 
@@ -54,9 +54,7 @@ async def test_with_hosting_off_no_machine_is_made_or_started_and_none_is_shown(
     fly.machines["m_old"] = {"id": "m_old", "state": "started"}
     async for client in _client(create_app(HOSTING_OFF, http=fake_http(fly=fly))):
         plans = (await client.get("/v1/plans")).json()
-        assert [p["limits"]["machines"] for p in plans] == [0, 0, 0, 0]
-        assert [p["limits"]["precedents"] for p in plans] == [0, 100_000, 1_000_000, None]
-        assert (await client.get("/v1/me", headers=ada.headers)).json()["plan"]["limits"]["machines"] == 0
+        assert [p["limits"]["machines"] for p in plans] == [1, 3, 10, None]  # runtime nodes, hosting or not
         _off(await client.get("/v1/rates"))
         _off(await client.post("/v1/runtimes", json={"name": "research", "size": "small"}, headers=ada.headers))
         _off(await client.post("/v1/runtime/start", headers=ada.headers))
@@ -82,8 +80,6 @@ async def test_with_hosting_off_claude_is_told_so(engine: AsyncEngine) -> None:
         rt = await hosted_runtime(engine, ada, "older")
         again = await tool(client, auth, "restart_runtime", id=str(rt.id))
         assert _refused(again, "E_UNAVAILABLE")["reason"] == "hosting_off"
-        plans = (await tool(client, auth, "plans"))["content"][0]["text"].splitlines()
-        assert plans[1] == "Pro: $99 a month; hosted machines 0, managed precedents 100000; features: sync"
 
 
 async def test_with_hosting_off_the_tick_meters_nothing(engine: AsyncEngine, redis: Redis) -> None:
