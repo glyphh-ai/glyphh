@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { me, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const meter = (name: string) => screen.getByText(name, { selector: 'div' }).parentElement!;
 const free = { ...me, plan: plans[0]!, precedents: { used: 0, limit: 0 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
@@ -83,5 +83,18 @@ describe('Usage from Billing and the settings rail', () => {
     expect(router.state.location.pathname).toBe('/settings/usage');
     const rail = screen.getByRole('complementary', { name: 'Main' });
     expect(within(rail).getByRole('link', { name: 'Usage' })).toHaveAttribute('href', '/settings/usage');
+  });
+});
+
+describe('Usage while Glyphh hosts nothing', () => {
+  it('has no hosting cost: precedents on your own runtimes and the API keys only', async () => {
+    server.use(...hostingOffHandlers());
+    renderApp('/settings/usage');
+    expect(await screen.findByText('On Free.')).toBeInTheDocument();
+    expect(await screen.findByText('No limit on your own runtimes.')).toBeInTheDocument();
+    expect(screen.queryByText('Hosting', { selector: 'div' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosting/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Hosted machines' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: 'API key calls' })).toBeInTheDocument();
   });
 });

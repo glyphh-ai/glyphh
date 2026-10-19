@@ -1,4 +1,5 @@
-import type { Plan } from '@/api/types';
+import { feature, featureNames } from '@/api/plans';
+import type { FeatureName, Plan } from '@/api/types';
 import { listText, money } from '@/lib/format';
 import type { IconName } from '@/ui';
 
@@ -16,8 +17,8 @@ export function priceText(plan: Plan): string {
   return per ? `${amount} / ${per}` : amount;
 }
 
-/** Whether Glyphh hosts machines on the plan. */
-export const hasHosting = (plan: Plan) => plan.limits.machines !== 0;
+/** Whether Glyphh hosts machines on the plan (while hosting is on): every plan but Free. */
+export const hasHosting = (plan: Plan) => plan.price_cents !== 0;
 
 /** The self-serve plans with hosting, as words: "Pro and Team". */
 export function hostingPlansText(plans: Plan[] | undefined): string {
@@ -25,33 +26,52 @@ export function hostingPlansText(plans: Plan[] | undefined): string {
   return names.length ? listText(names) : 'a paid plan';
 }
 
+/** A plan's runtime nodes (`limits.machines`): every runtime linked for the org, hosted or self-hosted. */
 export function machinesText(machines: number | null): string {
-  if (machines === null) return 'Unlimited hosted machines';
-  if (machines === 0) return 'No hosted machines';
-  return machines === 1 ? '1 hosted machine' : `${machines} hosted machines`;
+  if (machines === null) return 'Unlimited runtime nodes';
+  if (machines === 0) return 'No runtime nodes';
+  return machines === 1 ? '1 runtime node' : `${machines} runtime nodes`;
 }
 
-/** The managed bucket; none on a plan without hosting, where precedents live on your own runtimes. */
-export function precedentsText(precedents: number | null): string | null {
-  if (precedents === null) return 'Unlimited precedents on hosted machines';
+/**
+ * The precedent bucket; none on a plan without one. With hosting on it is managed on the hosted machines; with hosting
+ * off it is the synced store's.
+ */
+export function precedentsText(precedents: number | null, hosting = true): string | null {
+  const where = hosting ? 'on hosted machines' : 'in the synced store';
+  if (precedents === null) return `Unlimited precedents ${where}`;
   if (precedents === 0) return null;
-  return `${precedents.toLocaleString('en-GB')} precedents on hosted machines`;
+  return `${precedents.toLocaleString('en-GB')} precedents ${where}`;
 }
 
-const featureText: Record<keyof Plan['features'], string> = {
+const featureText: Record<FeatureName, string> = {
   sync: 'Sync across runtimes',
   ha: 'High availability',
   offline: 'Offline licences for air-gapped runtimes',
-  sso: 'SSO and SAML, roles and audit logs',
+  sso: 'SSO and SAML',
+  rbac: 'Roles',
+  audit: 'Audit logs',
 };
 
-/** What a plan includes, as the server states it: its hosted machines, its precedents, and what it turns on. */
-export function planFacts(plan: Plan): Array<{ icon: IconName; text: string }> {
-  const facts: Array<{ icon: IconName; text: string }> = [{ icon: 'chip', text: machinesText(plan.limits.machines) }];
-  const precedents = precedentsText(plan.limits.precedents);
-  if (precedents) facts.push({ icon: 'model', text: precedents });
-  for (const [feature, text] of Object.entries(featureText)) {
-    if (plan.features[feature as keyof Plan['features']]) facts.push({ icon: 'check', text });
+/** One line of what a plan includes; `soon` when Glyphh has not built it yet, so it is never shown as included. */
+export type PlanFact = { icon: IconName; text: string; soon?: boolean };
+
+/** A fact as one line: "Sync across runtimes", or "Coming soon: Sync across runtimes". */
+export const factText = (fact: PlanFact) => (fact.soon ? `Coming soon: ${fact.text}` : fact.text);
+
+/**
+ * What a plan includes, as the server states it: its runtime nodes (hosting on or off), its precedents, and what it
+ * turns on, each feature not yet built marked as coming soon. The synced store's bucket is coming soon until sync is
+ * built.
+ */
+export function planFacts(plan: Plan, hosting = true): PlanFact[] {
+  const facts: PlanFact[] = [{ icon: 'chip', text: machinesText(plan.limits.machines) }];
+  const precedents = precedentsText(plan.limits.precedents, hosting);
+  if (precedents) facts.push({ icon: 'model', text: precedents, soon: !hosting && !feature(plan, 'sync').built });
+  const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
+  for (const name of names) {
+    const { included, built } = feature(plan, name);
+    if (included) facts.push({ icon: 'check', text: featureText[name as FeatureName] ?? name, soon: !built });
   }
   return facts;
 }

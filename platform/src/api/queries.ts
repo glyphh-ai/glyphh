@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from './client';
+import { api, ApiError } from './client';
 import type {
   Install,
   Machine,
@@ -16,6 +16,7 @@ import type {
   Plan,
   Provider,
   Rates,
+  HostingOff,
   Runtime,
   RuntimeKey,
   SelfRuntime,
@@ -49,7 +50,41 @@ export const useMachine = (id: string) =>
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
-export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: () => api.get<Rates>('/rates') });
+/**
+ * The hosted machine rates; null while Glyphh hosts nothing: the server refuses them with `hosting_off`, or answers
+ * `{hosting: "off"}` or no plans.
+ */
+export const useRates = () => useQuery({ queryKey: keys.rates, queryFn: readRates });
+
+/** With hosting off the server refuses the rates (503 E_UNAVAILABLE `hosting_off`): that is no rates, not an error. */
+export async function readRates(): Promise<Rates | null> {
+  try {
+    return hostedRates(await api.get<Rates | HostingOff>('/rates'));
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'E_UNAVAILABLE' && error.detail.reason === 'hosting_off') return null;
+    throw error;
+  }
+}
+
+export function hostedRates(answer: Rates | HostingOff): Rates | null {
+  if ('hosting' in answer && answer.hosting === 'off') return null;
+  const rates = answer as Rates;
+  return rates.plans && Object.keys(rates.plans).length > 0 ? rates : null;
+}
+
+/**
+ * Whether Glyphh hosts machines at all, from the rates alone: off when the server refuses them with `hosting_off`,
+ * answers `{hosting: "off"}` or no plans (all read as null). A plan's `limits.machines` is its runtime nodes, hosted or
+ * self-hosted, so it says nothing of hosting. On when the rates could not be read, so a page keeps its own refusal.
+ */
+export const hostingOn = (rates: Rates | null | undefined): boolean => rates !== null;
+
+/** Undefined until the rates are read. */
+export function useHosting(): boolean | undefined {
+  const rates = useRates();
+  if (rates.isPending) return undefined;
+  return hostingOn(rates.data);
+}
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });

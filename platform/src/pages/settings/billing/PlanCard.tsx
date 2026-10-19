@@ -5,12 +5,15 @@ import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { date, money } from '@/lib/format';
 import { Button, Card, CardEyebrow, Chip, Menu, MenuItem } from '@/ui';
 import { isSubscribed, statusChip } from './billingStatus';
-import { hasHosting, planFacts, priceText } from './plans';
+import { factText, hasHosting, planFacts, priceText } from './plans';
 import { contractRates } from './HostingRates';
 import styles from './billing.module.css';
 
-/** The org's plan: its price, renewal, what it includes, hosting so far this month, and the ways to change it. */
-export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
+/**
+ * The org's plan: its price, renewal, what it includes, hosting so far this month, and the ways to change it. While
+ * Glyphh hosts nothing (`hosting` false) it says nothing of hosting.
+ */
+export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; hosting: boolean }) {
   const portal = usePortal();
   const navigate = useNavigate();
   const { plan, org } = me;
@@ -26,13 +29,13 @@ export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
         {org.plan_until && <Chip>Until {date(org.plan_until)}</Chip>}
       </div>
       <div className={styles.chips}>
-        {planFacts(plan).map((fact) => (
-          <Chip key={fact.text}>{fact.text}</Chip>
+        {planFacts(plan, hosting).map((fact) => (
+          <Chip key={fact.text}>{factText(fact)}</Chip>
         ))}
       </div>
-      {!plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
+      {hosting && !plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
 
-      {hasHosting(plan) && (
+      {hosting && hasHosting(plan) && (
         <div className={styles.usageLine}>
           <span>Hosting this month</span>
           <span>{money(me.hosting.month_to_date_cents)}</span>

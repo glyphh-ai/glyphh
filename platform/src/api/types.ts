@@ -3,8 +3,17 @@
 export type Uuid = string;
 export type IsoDate = string;
 
-/** What a plan turns on, as each runtime's licence carries it. */
-export type PlanFeatures = { sync: boolean; ha: boolean; offline: boolean; sso: boolean };
+/** The features the platform has words for; the server may name more. */
+export type FeatureName = 'sync' | 'ha' | 'offline' | 'sso' | 'rbac' | 'audit';
+
+/** One feature as the server may state it: on the plan, and whether Glyphh has built it yet. */
+export type FeatureState = { included: boolean; built: boolean };
+
+/**
+ * What a plan turns on, as each runtime's licence carries it: a boolean per feature, with whether each is built in the
+ * plan's separate `built` map. A server may instead answer `{included, built}` per feature; both are read alike.
+ */
+export type PlanFeatures = Partial<Record<FeatureName, boolean | FeatureState>> & { [feature: string]: boolean | FeatureState | undefined };
 
 /** A plan as `GET /v1/plans` lists it. Members, installs, self-hosted runtimes and Ada are unlimited on every plan. */
 export type Plan = {
@@ -16,9 +25,14 @@ export type Plan = {
   interval: 'month' | 'year' | null;
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
-  /** Hosted machines, and the precedents managed on them; null is unlimited. */
+  /**
+   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10). The
+   * precedent bucket. Null is unlimited.
+   */
   limits: { machines: number | null; precedents: number | null };
   features: PlanFeatures;
+  /** Whether each feature is built; a feature not in it (or no map at all) is built. */
+  built?: { [feature: string]: boolean | undefined };
   markup_hidden: true;
 };
 
@@ -128,6 +142,9 @@ export type Rates = {
   volume_usd_per_gb_month: number;
   plans: Record<string, { sizes: SizeRate[]; volume_usd_per_gb_month: number }>;
 };
+
+/** `GET /v1/rates` while Glyphh hosts nothing (`GLYPHH_HOSTING=off`): this, or the rates with an empty `plans`. */
+export type HostingOff = { hosting: 'off' };
 
 export type Org = {
   id: Uuid;

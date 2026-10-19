@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const card = (name: string) => screen.getByRole('region', { name });
 
@@ -19,13 +19,13 @@ describe('Choosing a plan', () => {
     expect(within(pro).getByRole('button', { name: 'Current plan' })).toBeDisabled();
     expect(within(pro).getByText('$99')).toBeInTheDocument();
     expect(within(pro).getByText('per month')).toBeInTheDocument();
-    expect(within(pro).getByText('3 hosted machines')).toBeInTheDocument();
+    expect(within(pro).getByText('3 runtime nodes')).toBeInTheDocument();
     expect(within(pro).getByText('100,000 precedents on hosted machines')).toBeInTheDocument();
     expect(within(pro).getByText('Sync across runtimes')).toBeInTheDocument();
 
     const free = card('Free');
     expect(within(free).getByText('$0')).toBeInTheDocument();
-    expect(within(free).getByText('No hosted machines')).toBeInTheDocument();
+    expect(within(free).getByText('1 runtime node')).toBeInTheDocument();
     expect(within(free).queryByText(/precedents/)).not.toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
@@ -38,7 +38,7 @@ describe('Choosing a plan', () => {
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited precedents on hosted machines')).toBeInTheDocument();
     expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
@@ -202,5 +202,31 @@ describe('Choosing a plan', () => {
     renderApp('/settings/plans');
     expect(await screen.findByText('Plans are unavailable.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Pro' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Choosing a plan while Glyphh hosts nothing and some features are not built', () => {
+  it('offers the plans as before, with each feature not built marked coming soon', async () => {
+    server.use(...hostingOffHandlers());
+    renderApp('/settings/plans');
+    const pro = await screen.findByRole('region', { name: 'Pro' });
+    expect(within(pro).getByText('$99')).toBeInTheDocument();
+    expect(within(pro).getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
+    expect(within(pro).getByText('Sync across runtimes').closest('li')).toHaveTextContent('Sync across runtimesComing soon');
+    const enterprise = card('Enterprise');
+    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes').closest('li')).not.toHaveTextContent('Coming soon');
+    expect(within(enterprise).getByText('Audit logs').closest('li')).toHaveTextContent('Coming soon');
+  });
+
+  it('says nothing of hosted machines and shows no rates, and the rates refused is no error', async () => {
+    server.use(...hostingOffHandlers());
+    renderApp('/settings/plans');
+    await screen.findByRole('region', { name: 'Enterprise' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hosting is off.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Hosted machines' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();
   });
 });

@@ -1,19 +1,26 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import * as data from '../src/test/fixtures.js';
+import { feature } from '../src/api/plans.js';
+import * as fixtures from '../src/test/fixtures.js';
 
 /**
  * A stand-in Glyphh server for working on the platform without the real one: the OAuth steps (which
  * approve at once), the browser steps and /v1 with the shared fixtures. Not for tests of the server itself.
+ *
+ * It answers as the real server does by default: hosting off (the hosted machine routes and the rates refused with
+ * 503 E_UNAVAILABLE reason hosting_off), each plan's runtime nodes as they are, and each feature saying whether it is
+ * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does.
  *
  *   npm run fake-server   → http://localhost:8080
  */
 process.loadEnvFile?.('.env');
 const platform = process.env.PLATFORM_URL ?? 'http://localhost:3000';
 const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
+const hosting = process.env.FAKE_HOSTING === 'on';
+const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
 const app = new Hono();
-const state = structuredClone({ ...data });
+const state = structuredClone(data);
 let nextKey = 10;
 let nextSelf = 10;
 let nextMachine = 10;
@@ -64,7 +71,7 @@ app.delete('/v1/installs/:id', (c) => {
   return c.body(null, 204);
 });
 app.get('/v1/runtime', (c) => c.json(state.runtime));
-app.post('/v1/runtime/start', (c) => c.json(Object.assign(state.runtime, { state: 'online' })));
+app.post('/v1/runtime/start', (c) => hostingOff() ?? c.json(Object.assign(state.runtime, { state: 'online' })));
 app.post('/v1/runtime/stop', (c) => c.json(Object.assign(state.runtime, { state: 'stopped' })));
 app.get('/v1/runtime/keys', (c) => c.json(state.runtimeKeys));
 app.post('/v1/runtime/keys', async (c) => {
@@ -84,15 +91,18 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
   state.runtimeKeys = state.runtimeKeys.filter((k) => k.id !== c.req.param('id'));
   return c.body(null, 204);
 });
-// Hosted machines, as many as the plan allows (none on Free). The old /v1/runtime above stands for the first.
+// Hosted machines, as many runtime nodes as the plan allows (none on Free). The old /v1/runtime above stands for the first.
 const refuse = (status: number, code: string, message: string, reason: string) =>
   Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
+// With hosting off no hosted machine is made or started.
+const hostingOff = () => (hosting ? undefined : refuse(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now. Run rrotor yourself.', 'hosting_off'));
 const machine = (id: string) => state.machines.find((m) => m.id === id);
 const setMachine = (id: string, to: 'online' | 'stopped') => {
   const found = machine(id);
   if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
   // A machine past what the plan allows stays stopped.
   const allowed = state.me.plan.limits.machines;
+  if (to === 'online' && !hosting) return hostingOff()!;
   if (to === 'online' && allowed !== null && state.machines.indexOf(found) >= allowed) {
     return refuse(403, 'E_LIMIT', `${state.me.plan.name} allows ${allowed} machines.`, 'machines');
   }
@@ -100,11 +110,14 @@ const setMachine = (id: string, to: 'online' | 'stopped') => {
 };
 app.get('/v1/runtimes', (c) => c.json(state.machines));
 app.post('/v1/runtimes', async (c) => {
+  const off = hostingOff();
+  if (off) return off;
   const { name, size } = await c.req.json();
-  const { name: plan, limits } = state.me.plan;
-  if (limits.machines !== null && state.machines.length >= limits.machines) {
-    const message = limits.machines === 0 ? 'Hosted machines are on Pro and Team.' : `${plan} allows ${limits.machines} machines.`;
-    return refuse(403, 'E_LIMIT', message, 'machines');
+  const { name: plan, limits, price_cents } = state.me.plan;
+  // Hosted machines are on the paid plans; each counts as one of the plan's runtime nodes, as a self-hosted one does.
+  if (price_cents === 0) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
+  if (limits.machines !== null && state.machines.length + state.selfRuntimes.length >= limits.machines) {
+    return refuse(403, 'E_LIMIT', `${plan} allows ${limits.machines} runtime nodes.`, 'machines');
   }
   const id = `rt-${nextMachine++}`;
   const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, created_at: new Date().toISOString() };
@@ -146,7 +159,7 @@ app.delete('/v1/runtimes/:id', (c) => {
   return c.body(null, 204);
 });
 app.post('/v1/runtimes/:id/offline-licence', async (c) => {
-  if (!state.me.plan.features.offline) return refuse(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', 'offline');
+  if (!feature(state.me.plan, 'offline').included) return refuse(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', 'offline');
   const { days } = await c.req.json();
   const expires_at = new Date(Date.now() + days * 86_400_000).toISOString();
   const payload = { runtime_id: c.req.param('id'), licence_id: crypto.randomUUID(), kind: 'offline', expires_at, grace_days: 14 };
@@ -159,7 +172,7 @@ app.delete('/v1/models/:id', (c) => {
   return c.body(null, 204);
 });
 app.get('/v1/plans', (c) => c.json(data.plans));
-app.get('/v1/rates', (c) => c.json(data.rates));
+app.get('/v1/rates', (c) => hostingOff() ?? c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));
 app.patch('/v1/org', async (c) => {
   const name = (await c.req.json()).name;
@@ -191,7 +204,7 @@ const setPlan = (name: string) => {
   if (!plan) return refuse(422, 'E_INVALID', `${name} isn't sold through Stripe.`, 'not_sold');
   if (!plan.self_serve) return refuse(422, 'E_INVALID', `${name} is by contract: talk to us at sales@glyphh.ai.`, 'not_self_serve');
   if (!state.me.plan.self_serve) return refuse(409, 'E_CONFLICT', `Your ${state.me.plan.name} plan is by contract: talk to us at sales@glyphh.ai.`, 'contract');
-  if (plan.limits.machines === 0 && state.machines.length > 0) return refuse(409, 'E_CONFLICT', 'Delete your hosted machines first.', 'machines');
+  if (plan.price_cents === 0 && state.machines.length > 0) return refuse(409, 'E_CONFLICT', 'Delete your hosted machines first.', 'machines');
   state.me.plan = plan;
   state.org.plan = plan;
   state.me.precedents.limit = plan.limits.precedents;

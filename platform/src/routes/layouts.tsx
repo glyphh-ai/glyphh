@@ -1,4 +1,5 @@
 import { Outlet, useMatches } from 'react-router';
+import { useHosting } from '@/api/queries';
 import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
@@ -17,6 +18,8 @@ function useCrumbs(): Crumb[] {
 }
 
 export function MainLayout() {
+  // Machines are Glyphh's hosted ones: shown only once the server says it hosts any.
+  const hosting = useHosting();
   return (
     <AppShell
       crumbs={useCrumbs()}
@@ -25,9 +28,11 @@ export function MainLayout() {
           <NavItem to="/getting-started" icon="flag">
             Getting started
           </NavItem>
-          <NavItem to="/machines" icon="chip">
-            Machines
-          </NavItem>
+          {hosting && (
+            <NavItem to="/machines" icon="chip">
+              Machines
+            </NavItem>
+          )}
           <NavGroup label="Runtime">
             <NavItem to="/" end icon="home">
               Home

@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
-import { me, plans, rates } from '@/test/fixtures';
+import { hostingOff, me, plans, rates } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
 const card = (name: string) => screen.findByRole('region', { name });
@@ -12,7 +12,7 @@ describe('Billing', () => {
     expect(await screen.findByText('$99 / month')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('Renews 16 Nov 2026')).toBeInTheDocument();
-    expect(screen.getAllByText('3 hosted machines')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('3 runtime nodes')[0]).toBeInTheDocument();
     expect(screen.getAllByText('100,000 precedents on hosted machines')[0]).toBeInTheDocument();
     expect(screen.getByText('Hosting this month')).toBeInTheDocument();
     expect(screen.getByText('$12.17')).toBeInTheDocument();
@@ -25,14 +25,14 @@ describe('Billing', () => {
     const { user, router } = renderApp('/settings/billing');
     const team = await card('Team');
     expect(within(team).getByText('$299 / month')).toBeInTheDocument();
-    expect(within(team).getByText('10 hosted machines')).toBeInTheDocument();
+    expect(within(team).getByText('10 runtime nodes')).toBeInTheDocument();
     expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
     const enterprise = await card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
     expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
-    expect(within(enterprise).getByText('SSO and SAML, roles and audit logs')).toBeInTheDocument();
+    for (const text of ['SSO and SAML', 'Roles', 'Audit logs']) expect(within(enterprise).getByText(text)).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
     expect(screen.queryByRole('region', { name: 'Free' })).not.toBeInTheDocument();
     await user.click(within(team).getByRole('button', { name: 'Upgrade' }));
@@ -59,7 +59,7 @@ describe('Billing', () => {
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
     expect(screen.getAllByText('Free')).toHaveLength(2);
-    expect(screen.getByText('No hosted machines')).toBeInTheDocument();
+    expect(screen.getByText('1 runtime node')).toBeInTheDocument();
     expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
     expect(await card('Pro')).toBeInTheDocument();
     expect(await screen.findByText('Hosting is on Pro and Team. Running rrotor yourself is free.')).toBeInTheDocument();
@@ -153,5 +153,46 @@ describe('Billing', () => {
     renderApp('/settings/billing');
     expect(await screen.findByText('Payment due')).toBeInTheDocument();
     expect(screen.queryByText(/^Renews/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Billing while Glyphh hosts nothing and some features are not built', () => {
+  it('lists the plans as before, each feature not built as coming soon, never as included', async () => {
+    server.use(...hostingOffHandlers());
+    const { user, router } = renderApp('/settings/billing');
+    expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    const pro = await card('Pro');
+    expect(within(pro).getByText('$99 / month')).toBeInTheDocument();
+    expect(within(pro).getByText('Coming soon: Sync across runtimes')).toBeInTheDocument();
+    expect(within(pro).queryByText('Sync across runtimes')).not.toBeInTheDocument();
+    expect(within(pro).getByText('Coming soon: 100,000 precedents in the synced store')).toBeInTheDocument();
+    const enterprise = await card('Enterprise');
+    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
+    for (const text of ['SSO and SAML', 'Roles', 'Audit logs', 'High availability']) {
+      expect(within(enterprise).getByText(`Coming soon: ${text}`)).toBeInTheDocument();
+      expect(within(enterprise).queryByText(text)).not.toBeInTheDocument();
+    }
+    await user.click(within(pro).getByRole('button', { name: 'Upgrade' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('says nothing of hosting: no machines, no rates, no hosting this month', async () => {
+    server.use(...hostingOffHandlers('empty'));
+    renderApp('/settings/billing');
+    await card('Enterprise');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosting/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();
+  });
+
+  it('shows an org on Pro no hosting this month', async () => {
+    const pro = hostingOff.plans[1]!;
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: pro })), ...hostingOffHandlers());
+    renderApp('/settings/billing');
+    expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    await card('Team');
+    expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
   });
 });

@@ -44,11 +44,26 @@ export function MachineFields({ name, size, onName, onSize, rates }: MachineFiel
   );
 }
 
+/** Glyphh is not hosting machines now (`GLYPHH_HOSTING=off`): the way to run rrotor yourself. */
+function HostingOffError({ error }: { error: ApiError }) {
+  return (
+    <ErrorNotice
+      message="Glyphh is not hosting machines now. Run rrotor yourself with Docker Compose, Helm or Terraform."
+      traceId={error.traceId}
+      action={<Link to="/getting-started">Getting started</Link>}
+    />
+  );
+}
+
+const isHostingOff = (error: unknown): error is ApiError =>
+  error instanceof ApiError && error.code === 'E_UNAVAILABLE' && error.detail.reason === 'hosting_off';
+
 /**
  * Why a machine would not start. A machine past what the plan allows (after a move to a smaller plan) is stopped and
  * refuses to start: the way to Billing, or to delete one.
  */
 export function StartMachineError({ error }: { error: unknown }) {
+  if (isHostingOff(error)) return <HostingOffError error={error} />;
   if (error instanceof ApiError && error.code === 'E_LIMIT' && error.detail.reason === 'machines') {
     return (
       <ErrorNotice
@@ -63,6 +78,7 @@ export function StartMachineError({ error }: { error: unknown }) {
 
 /** Why a machine was not made; at the plan's limit, the way to a bigger plan. */
 export function CreateMachineError({ error }: { error: unknown }) {
+  if (isHostingOff(error)) return <HostingOffError error={error} />;
   if (error instanceof ApiError && error.code === 'E_LIMIT' && error.detail.reason === 'machines') {
     return (
       <ErrorNotice

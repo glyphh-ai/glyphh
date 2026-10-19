@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
+import { hostingOffHandlers, server } from '@/test/server';
 
 const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentElement!;
 
@@ -38,5 +39,17 @@ describe('the main sidebar', () => {
     for (const name of ['Home', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
     expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
     for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
+  });
+});
+
+describe('the main sidebar while Glyphh hosts nothing', () => {
+  it.each(['refused', 'off', 'empty'] as const)('has no Machines when the rates answer %s', async (rates) => {
+    server.use(...hostingOffHandlers(rates));
+    renderApp('/');
+    const main = await screen.findByRole('complementary', { name: 'Main' });
+    // Home's empty state for running rrotor yourself shows once the plans and rates are read.
+    await screen.findByRole('button', { name: 'Run rrotor yourself' });
+    expect(within(main).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Getting started', 'Home', 'API Keys', 'Models']);
   });
 });
