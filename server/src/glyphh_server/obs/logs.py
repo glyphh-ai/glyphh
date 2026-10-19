@@ -1,6 +1,6 @@
-"""One JSON object per log line, each with its trace id, user and org, so any line leads to its request. No line
-carries a caller's address for a path whose callers' addresses are never kept (a self-hosted runtime's heartbeat):
-the access line uvicorn writes for it, the one line that would, is dropped."""
+"""One JSON object per log line, each with its trace id, user and org, so any line leads to its request. No line carries
+a caller's address for a path whose callers' addresses are never kept (a self-hosted runtime's heartbeat, a runtime's
+server-side logging): the access line uvicorn writes for it, the one line that would, is dropped."""
 
 import json
 import logging
@@ -11,7 +11,9 @@ from typing import Any
 from glyphh_server.obs import context
 
 _HANDLER_NAME: str = "glyphh-json"
-UNLOGGED_ADDRESS: frozenset[str] = frozenset({"/v1/license/verify"})
+UNLOGGED_ADDRESS: frozenset[str] = frozenset(
+    {"/v1/license/verify", "/v1/otlp/v1/logs", "/v1/otlp/v1/metrics", "/v1/otlp/v1/traces"}
+)
 
 
 class JsonFormatter(logging.Formatter):

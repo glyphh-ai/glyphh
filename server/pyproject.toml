@@ -13,6 +13,7 @@ dependencies = [
     "cryptography>=44",
     "python-multipart>=0.0.20",
     "redis>=5.2",
+    "opentelemetry-proto==1.45.1",
 ]
 
 [dependency-groups]

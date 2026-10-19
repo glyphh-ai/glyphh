@@ -158,6 +158,7 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "self_runtimes",
         "register_self_runtime",
         "offline_licence",
+        "logs",
     }
     assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan", "usage"}
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}

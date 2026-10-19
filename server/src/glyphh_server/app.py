@@ -27,10 +27,12 @@ from glyphh_server.api import (
     oauth_meta,
     oauth_pages,
     org,
+    otlp,
     plans,
     routine_triggers,
     runtime,
     self_hosted,
+    telemetry,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
@@ -51,6 +53,8 @@ ROUTERS = (
     device_pages,
     me,
     license,
+    otlp,
+    telemetry,
     org,
     mods,
     plans,

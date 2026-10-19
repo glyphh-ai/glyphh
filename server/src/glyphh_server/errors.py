@@ -41,6 +41,16 @@ class Conflict(GlyphhError):
     status = 409
 
 
+class TooLarge(GlyphhError):
+    code = "E_TOO_LARGE"
+    status = 413
+
+
+class UnsupportedMedia(GlyphhError):
+    code = "E_UNSUPPORTED_MEDIA"
+    status = 415
+
+
 class LimitReached(GlyphhError):
     """The plan allows no more hosted machines. The detail names the limit, what is used, the most allowed, and the
     plan that would lift it."""
