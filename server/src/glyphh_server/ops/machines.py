@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Row, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import Conflict, Invalid, NotFound
+from glyphh_server.errors import Conflict, Invalid, NotFound, NotInPlan
 from glyphh_server.models import Rrotor
 from glyphh_server.models.rrotor import SizeName
 from glyphh_server.ops import limits
@@ -25,6 +25,7 @@ from glyphh_server.ops.runtimes import FIRST, NOT_LINKED, month_of
 
 DEFAULT_NAME: str = "default"  # the machine the routes made for one runtime make
 DEFAULT_SIZE: SizeName = "small"
+ON_FREE: str = "Glyphh's managed cloud is on Pro and Team; on Free, run rrotor yourself."
 
 
 class Machine(BaseModel):
@@ -71,10 +72,14 @@ async def machine(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID, 
 
 async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, size: SizeName) -> Machine:
     """A new machine, made and started (the app's doorman with the first one); past the plan's machines, or
-    with a name the person has given another, refused; with hosting off, E_UNAVAILABLE `hosting_off`."""
+    with a name the person has given another, refused; with hosting off, E_UNAVAILABLE `hosting_off`; on Free (its one
+    runtime node is self-hosted), E_NOT_IN_PLAN `hosting`."""
     require_hosting(fly.settings)
     await limits.lock_org(conn, who.org_id)
-    await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), await org_version(conn, who.org_id))
+    version = await org_version(conn, who.org_id)
+    if version.price_cents == 0:
+        raise NotInPlan(ON_FREE, reason="hosting", plan=version.name)
+    await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), version)
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)
     if (await conn.execute(taken)).first() is not None:
         raise Conflict("You have a machine of that name already.", reason="name", name=name)

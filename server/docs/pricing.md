@@ -86,7 +86,8 @@ is where Programs and the gateway will be scheduled from. The rest follow it. Wh
 ## Managed cloud (off)
 
 Glyphh running rrotor on Fly for a customer (compute plus a margin) is built and switched off: `GLYPHH_HOSTING`, off
-by default. Off, no hosted machine is made, started or restarted, `GET /v1/rates` is `E_UNAVAILABLE` `hosting_off` and
+by default. On, it is Pro's and Team's (and Enterprise's): Free is refused, `E_NOT_IN_PLAN` `hosting`, its one node
+being self-hosted. Off, no hosted machine is made, started or restarted, `GET /v1/rates` is `E_UNAVAILABLE` `hosting_off` and
 Checkout sells no hosting. Its design, metering and meter are in [architecture.md](architecture.md#billing-and-hosting).
 
 ## Against what is built

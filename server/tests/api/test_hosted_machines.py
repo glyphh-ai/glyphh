@@ -94,19 +94,14 @@ async def test_names_sizes_and_the_plans_machines_are_checked(engine: AsyncEngin
     fly = FakeFly()
     free, pro = await person(engine), await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        first = await client.post("/v1/runtime/start", headers=free.headers)  # Free's one
-        assert first.status_code == 200, first.text
-        res = await client.post("/v1/runtimes", json={"name": "two", "size": "small"}, headers=free.headers)
-        full = _error(res, 403)
-        assert (full["code"], full["reason"], full["limit"], full["used"], full["max"], full["plan"]) == (
-            "E_LIMIT",
-            "machines",
-            "machines",
-            1,
-            1,
-            "Pro",
-        )
-        assert full["message"] == "Your Free plan allows 1 hosted machine. Pro allows more."
+        for made in (  # Free's one runtime node is self-hosted: the managed cloud is Pro's and Team's
+            await client.post("/v1/runtimes", json={"name": "one", "size": "small"}, headers=free.headers),
+            await client.post("/v1/runtime/start", headers=free.headers),
+        ):
+            refused = _error(made, 403)
+            assert (refused["code"], refused["reason"], refused["plan"]) == ("E_NOT_IN_PLAN", "hosting", "Free")
+            assert refused["message"] == "Glyphh's managed cloud is on Pro and Team; on Free, run rrotor yourself."
+        assert fly.calls == []
         await _made(client, pro, "a")
         taken = await client.post("/v1/runtimes", json={"name": "a", "size": "large"}, headers=pro.headers)
         assert (_error(taken, 409)["reason"], _error(taken, 409)["name"]) == ("name", "a")
