@@ -1,111 +1,112 @@
 # platform
 
-The Glyphh platform: the one door. A person signs in here, has a runtime, makes the keys that call it, answers
-approvals, pays, and runs their org. Everything it shows comes from the server's API; it keeps nothing of its own.
-
-Three parts, kept simple:
+The Glyphh platform, https://platform.glyphh.ai: the one web app a person uses. They sign in, run their machines,
+make the keys that call them, pay and run their org. Every page shows the server's API; the platform stores nothing.
 
 | Part | Repo | What |
 |---|---|---|
-| **Platform** | `glyphh-ai/platform` (this) | The one web app: every page a person sees |
-| **Server** | `glyphh-ai/server` | The API and the authorization server: accounts, plans, Stripe, licences, provisioning, the record. Renders nothing |
-| **Runtimes** | `glyphh-ai/rrotor` | A person's rrotors (hosted machines, one or more, or ones they run themselves), each reached directly at `https://<machine>.glyphh.app` (REST and MCP); nothing of Glyphh's on the data path |
+| Platform | `glyphh-ai/platform` (this) | Every page a person sees |
+| Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai. Renders no page |
+| Runtimes | `glyphh-ai/rrotor` | rrotor: hosted at `https://<machine>.glyphh.app`, or self-hosted at `https://<host>`. Claude and apps call it directly |
 
-The UI is built to Chris's design (the Glyphh Style canvas: ngrok's style, Glyphh's palette, light and dark in the
-platform, dark only on the sign-in pages). The contract it builds to is the server's `docs/architecture.md` (the API table and the section **The platform**);
-what is not built yet is the server's `docs/roadmap.md`.
+The contract is the server's `docs/architecture.md` (the API table and **The platform**); prices and plan rules are
+its `docs/pricing.md`.
 
-## How a person gets in
+## Sign-in
 
-1. **Sign in once, here.** The platform is a confidential OAuth client of the server (`PLATFORM_CLIENT_ID` and
-   `PLATFORM_CLIENT_SECRET`, registered once at `POST {server}/oauth/register`). Sign in goes to the server's
-   `/oauth/authorize`, which sends the browser straight back to this platform's `/authorize` page (below) to pick
-   Google or GitHub; the tokens come back to `{PLATFORM_URL}/auth/callback` and live in a sealed, HttpOnly cookie.
-   The browser never holds a token.
-2. **Connect Claude once, to the runtime.** Getting started walks a new account through it. Home shows the one connector URL, `https://<machine>.glyphh.app/mcp`.
-   Adding it in Claude runs OAuth against the same server, which lands on `/authorize` here; signed in already,
-   that is one Allow click.
-3. **Apps** use a runtime key (made on Keys, shown once) as the bearer at the runtime's address.
+1. **The platform** is a confidential OAuth client of the server (`PLATFORM_CLIENT_ID`, `PLATFORM_CLIENT_SECRET`,
+   registered once at `POST {server}/oauth/register`). `/login` starts `/auth/login`, which goes to
+   `{server}/oauth/authorize`; the server sends the browser to `/authorize` here to pick Google or GitHub, and the
+   tokens come back to `{PLATFORM_URL}/auth/callback`. They live in a sealed, HttpOnly cookie; the browser never holds
+   a token.
+2. **Claude** connects to a runtime at `https://<machine>.glyphh.app/mcp` (or `https://<host>/mcp`). Its OAuth runs
+   against the same server and lands on `/authorize` here; already signed in, it is one Allow.
+3. **Apps** call a runtime with a runtime key (made on API Keys, shown once) as the bearer.
 
-## The routes the server sends a browser to
+## Routes the server sends a browser to
 
-The server renders no page. In every flow it redirects the browser here with signed values in the query; the page
-reads what it needs from the server and answers with the server call named. A consent is tied to the browser that
-started the flow by the server's own short-lived cookie (`glyphh_signin`, ten minutes, on the server's domain), so
-each answer is a top-level navigation (a link, not a fetch).
+The server redirects here with signed values in the query. A consent is tied to the browser that started it by the
+server's `glyphh_signin` cookie (ten minutes, on the server's domain), so each answer is a link, not a fetch.
 
 | Route | Arrives from | Shows | Answers with |
 |---|---|---|---|
-| `/device?code=` | `GET {server}/v1/device?code=` (the link Claude shows; without a code, ask for it and reload with it) | The code, to match against Claude's; Continue with each provider from `GET {server}/auth/providers` → link to `GET {server}/auth/{provider}/start?code=` | — |
-| `/device/approve?consent=` | the provider's callback | `GET {server}/auth/consent?consent=` → `{kind: "device", code, name, surface, email}`: "<name> (<surface>) wants to sign in as <email>" | Link to `GET {server}/auth/approve?consent=&decision=approve` or `deny` |
-| `/device/done?result=approved\|denied` | `/auth/approve` | "Signed in. Go back to Claude." or "Nothing was signed in." | — |
-| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` (a client's request, already checked) | "<client> wants to use your Glyphh account"; Continue with each provider → link to `GET {server}/auth/{provider}/start?oauth=` | — |
-| `/allow?consent=` | the provider's callback | `GET {server}/auth/consent?consent=` → `{kind: "oauth", client, returns_to, resource, email}`: Allow or Deny | Link to `GET {server}/auth/oauth/allow?consent=&decision=allow` or `deny` (the server sends the browser on to the client) |
-| `/account?linked=<provider>` | a provider link's callback | The account, the provider now linked | — |
+| `/device?code=` | `GET {server}/v1/device?code=` (without a code, asks for it) | The code, to match Claude's; a button per provider from `GET {server}/auth/providers` | Link to `GET {server}/auth/{provider}/start?code=` |
+| `/device/approve?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "device", code, name, surface, email}` | Link to `GET {server}/auth/approve?consent=&decision=approve` or `deny` |
+| `/device/done?result=approved\|denied` | `/auth/approve` | "Signed in" or "Nothing was signed in" | — |
+| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` | "<client> wants to use your Glyphh account"; a button per provider | Link to `GET {server}/auth/{provider}/start?oauth=` |
+| `/allow?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "oauth", client, returns_to, resource, email}` | Link to `GET {server}/auth/oauth/allow?consent=&decision=allow` or `deny` |
+| `/account?linked=<provider>` | a provider link's callback | Redirects to `/settings/profile`, which confirms the link | — |
+| `/billing?done=1` | Stripe Checkout and the portal | Redirects to `/settings/billing`, read afresh | — |
 | `/github?installed=<login>` | the GitHub App's callback | "Glyphh's GitHub App is installed on <login>" | — |
-| `/billing?done=1` | Stripe's checkout and portal | Billing, refreshed | — |
-| `/error?code=&message=&trace=` | any refusal in a browser flow | The message, and the trace id to quote | — |
+| `/error?code=&message=&trace=` | any refusal in a browser flow | The message and the trace id | — |
 
-A refusal from `GET {server}/auth/consent` (the consent expired, or another browser) is JSON, `{"error": {"code",
-"message", "trace_id"}}`; show it the same way as `/error`.
+A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message", "trace_id"}}`, shown like `/error`.
 
-## The platform's own pages
+## Pages
 
-Each reads the server with the session's access token (`Authorization: Bearer`), from a route handler, never the
-browser.
+The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
 
-| Page | Server calls | Does |
-|---|---|---|
-| Getting started | `GET /v1/runtimes`, `GET /v1/runtimes/self` (each self-hosted runtime's state, version, last heartbeat) | The SDKs and the Claude plugin to copy; where rrotor runs: Glyphh hosted on Pro and Team (make a first machine, `POST /v1/runtimes {name, size}`, with the plan's rates, or start the first one), or Docker Compose, Helm or Terraform (AWS, GCP): register (`POST /v1/runtimes/self {name, public_url}`; the token is shown once), then the option's settings filled in from the answer's `env` and the connector URL `https://<host>/mcp`. Rotate a token (`POST /v1/runtimes/self/{id}/token`, shown once), delete (`DELETE /v1/runtimes/self/{id}`), issue an offline licence for an air-gapped runtime on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`, set as `RROTOR_LICENCE`). Hosting is on Pro and Team; running rrotor yourself is free on every plan |
-| Machines | `GET /v1/runtimes` (each hosted machine's name, size, state, address), `GET /v1/me` (what each has cost this month) | Make one (`POST /v1/runtimes {name, size}`; small, medium or large), start, stop or restart it (`POST /v1/runtimes/{id}/start`, `stop`, `restart`), copy its address and connector URL `{address}/mcp`, delete it after typing its name (`DELETE /v1/runtimes/{id}?confirm=<name>`; the disk goes with it). At the plan's limit, or starting a machine the plan no longer allows (`E_LIMIT`, `reason: machines`), the way to Billing. Each size shows the plan's rate a month (`GET /v1/rates`). On Free, New machine says hosting is on Pro and Team, with their rates and Upgrade |
-| Home | `GET /v1/runtime` (the first machine: address, state), `GET /v1/me` (what it has cost this month) | Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`), copy the connector URL `{address}/mcp`; links to Machines |
-| Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name}`; the key is shown once), revoke (`DELETE /v1/runtime/keys/{id}`) |
-| Approvals | `GET /v1/approvals`, live from `GET /v1/approvals/stream` (server-sent events `approval`, `answered`) | Approve or decline (`POST /v1/approvals/{id} {answer}`) |
-| Models | `GET /v1/models` (versions by commit, where each is active) | Delete (`DELETE /v1/models/{id}`) |
-| Billing | `GET /v1/me` (plan, price, precedents used of the plan's bucket, hosting this month), `GET /v1/plans`, `GET /v1/rates` | The plan and the plans above it: Free, Pro and Team at a flat price, Enterprise by contract. Upgrade or change plan (`POST /v1/billing/checkout {plan}` → Stripe, or `POST /v1/billing/plan {plan}`, prorated by Stripe, for a subscribed org; down to Free only once the hosted machines are deleted; a plan by contract changes with Glyphh), Talk to us for Enterprise (`mailto:sales@glyphh.ai`), portal (`POST /v1/billing/portal`). The hosted machine rates of the plan in force, or of Pro and Team on Free; Enterprise's are set in each contract and never shown. No seats and no add-ons: members, installs, self-hosted runtimes and Ada are unlimited on every plan |
-| Usage | `GET /v1/me`, `GET /v1/runtime/keys` | Precedents on hosted machines against the plan's bucket, hosting this month in total and by machine, each API key's calls |
-| Org | `GET /v1/org`, `/v1/org/members`, `/v1/org/invites` | Rename, invite (`POST /v1/org/invites`), remove a member or an invite |
-| Account | `GET /v1/me`, `GET /v1/installs` | Rename (`PATCH /v1/me`), link a provider (`POST /v1/me/identities` → its link), unlink, sign out an install (`DELETE /v1/installs/{id}`) |
+| Route | Page | Server calls | Does |
+|---|---|---|---|
+| `/getting-started` | Getting started | `GET /v1/plans`, `GET /v1/runtimes`, `GET /v1/runtimes/self`, `GET /v1/me` | The SDK and plugin install commands. Where rrotor runs: hosted (make a first machine, `POST /v1/runtimes {name, size}`, or start it, `POST /v1/runtimes/{id}/start`) or Docker Compose, Helm or Terraform (register, `POST /v1/runtimes/self {name, public_url}`, token shown once; the option's settings from the answer's `env`; connector URL `https://<host>/mcp`). Self-hosted runtimes: rotate the token (`POST /v1/runtimes/self/{id}/token`), delete (`DELETE /v1/runtimes/self/{id}`), offline licence on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`) |
+| `/machines` | Machines | `GET /v1/runtimes`, `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | Each hosted machine's size, state, address, connector URL and cost this month. Make one (`POST /v1/runtimes {name, size}`), start, stop, restart (`POST /v1/runtimes/{id}/start`, `stop`, `restart`), delete after typing its name (`DELETE /v1/runtimes/{id}?confirm=<name>`). `E_LIMIT` `reason: machines` links to Billing. On Free, the plans with hosting and their rates |
+| `/` | Home | `GET /v1/runtime`, `GET /v1/me` | The first machine: address, state, cost this month, connector URL. Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`) |
+| `/keys` | API Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name, expires_in_days?}`: 7, 30, 60, 90 or 365 days, or never; shown once), revoke (`DELETE /v1/runtime/keys/{id}`), delete a revoked or expired one (`DELETE /v1/runtime/keys/{id}/record`) |
+| `/models` | Models | `GET /v1/models` | Each Ada model's versions by commit and where each is active. Delete (`DELETE /v1/models/{id}`) |
+| `/settings/general` | General | `GET /v1/org`, `GET /v1/me` | Rename the org (`PATCH /v1/org`) |
+| `/settings/billing` | Billing | `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | The plan, its renewal and hosting this month; the plans above it; the hosted machine rates. Invoices and payment (`POST /v1/billing/portal`) |
+| `/settings/plans` | Plans (full window) | `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | Choose a plan: Stripe Checkout without a subscription (`POST /v1/billing/checkout {plan}`), else a prorated change (`POST /v1/billing/plan {plan}`). Enterprise is Talk to us (`mailto:sales@glyphh.ai`) |
+| `/settings/usage` | Usage | `GET /v1/me`, `GET /v1/plans`, `GET /v1/runtime/keys` | Precedents on hosted machines against the plan's bucket, hosting this month by machine, each API key's calls |
+| `/settings/members` | Members | `GET /v1/org`, `GET /v1/org/members`, `GET /v1/org/invites`, `GET /v1/me` | Invite (`POST /v1/org/invites {email}`, valid seven days), cancel an invite (`DELETE /v1/org/invites/{id}`), remove a member (`DELETE /v1/org/members/{id}`) |
+| `/settings/profile` | Profile | `GET /v1/me` | Rename (`PATCH /v1/me`), link a provider (`POST /v1/me/identities` → its link), unlink (`DELETE /v1/me/identities/{provider}`) |
+| `/settings/installs` | Installs | `GET /v1/installs` | Sign out an install (`DELETE /v1/installs/{id}`) |
+
+The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/logout` (POST), `/auth/session`,
+`/auth/providers` (the server's, passed through) and `/api/v1/*`. Writes must come from this origin.
 
 ## Settings
 
 | Variable | What |
 |---|---|
-| `GLYPHH_SERVER_URL` | The server (`https://api.glyphh.ai`; locally a tunnel or `http://localhost:8080`) |
-| `PLATFORM_URL` | This app's own address; the server's `GLYPHH_PLATFORM_URL` must be the same |
+| `GLYPHH_SERVER_URL` | The server: `https://api.glyphh.ai` |
+| `PLATFORM_URL` | This app's own address; the server's `GLYPHH_PLATFORM_URL` must match |
 | `PLATFORM_CLIENT_ID`, `PLATFORM_CLIENT_SECRET` | The platform's OAuth client at the server |
+| `PLATFORM_CLIENT_NAME` | The `client_name` it registered with (default `Glyphh`), so its own consent pages are recognised |
 | `SESSION_SECRET` | 32+ random bytes, base64: seals the session cookie |
+| `PORT` | Where it listens (default 3000) |
+
+Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
+main.
 
 ## Develop
 
 Node 22 or later.
 
 ```bash
-npm install
-cp .env.example .env        # then fill it in, or use the fake server's values below
-npm run fake-server         # a stand-in Glyphh server on FAKE_SERVER_PORT (8090), with sample data
-npm run dev                 # the platform on PLATFORM_URL, with hot reload
-npm test                    # the route handlers, the API calls and every page, against fake servers
+npm ci
+cp .env.example .env        # then set PLATFORM_CLIENT_ID, PLATFORM_CLIENT_SECRET and SESSION_SECRET
+npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080)
+npm run dev                 # the platform on PLATFORM_URL (default http://localhost:3000), hot reload
+npm test                    # route handlers, API calls and every page, against fake servers
 npm run typecheck
-npm run build && npm start  # production: dist/client is served by the route handlers' server
+npm run build && npm start  # production build
 ```
 
-With the fake server, `.env` is `GLYPHH_SERVER_URL=http://localhost:8090`, `PLATFORM_URL=http://localhost:3100`,
-any client id and secret, and `SESSION_SECRET` from `openssl rand -base64 32`. Logging in then runs the whole OAuth
-round trip and lands on Home.
+With the fake server, any client id and secret will do; `SESSION_SECRET` from `openssl rand -base64 32`. Logging in
+runs the whole OAuth round trip and lands on Home.
 
-## How the code is laid out
+## Layout
 
 | Path | What |
 |---|---|
-| `server/` | The route handlers (Hono on Node): `/auth/login`, `/auth/callback`, `/auth/logout`, `/auth/session`, `/auth/providers` and `/api/v1/*`, which calls the server with the session's token, refreshing it when it runs out. `seal.ts` seals the cookie (AES-256-GCM); `oauth.ts` is the token endpoint |
-| `src/styles/` | `tokens.css`: every colour, size and font, one set per theme (`dark`, `light`, `dark-hc`, `light-hc`) on `[data-theme]`; `base.css`: document defaults and the thin scroll bar |
-| `src/ui/` | The component library: Button, Chip, Card, TextField, Switch, ProgressBar, CopyField, CodeBlock, Menu (with submenus), Dialog, Toast, the empty, loading and error states, Logo, Avatar. Each is a folder with its component and its CSS Module, and nothing in it knows about the API |
-| `src/layout/` | The app shell (sidebar, breadcrumb bar, phone drawer), the account menu with its themes, page headers, settings sections, and the sign-in card |
-| `src/api/` | The server's types, the client for `/api/v1`, and one TanStack Query hook per read and write |
-| `src/pages/` | One folder per page; Billing's parts live in `pages/settings/billing/` |
-| `src/routes/` | The route table, with each page's breadcrumb |
-| `dev/fake-server.ts` | A stand-in Glyphh server for working locally |
+| `server/` | The route handlers (Hono on Node): `app.ts` the routes, `oauth.ts` the calls to the token endpoint, `seal.ts` the cookie (AES-256-GCM), `config.ts` the settings |
+| `src/api/` | The server's types, the `/api/v1` client, one TanStack Query hook per read and write |
+| `src/pages/` | One folder per page; sign-in and consent in `pages/flows/`, Settings in `pages/settings/` |
+| `src/routes/` | The route table and the two layouts with their sidebars |
+| `src/layout/` | The app shell, sidebar, top bar, account menu, page headers, settings sections, the sign-in card |
+| `src/ui/` | The component library, a folder each with its CSS Module; nothing in it knows the API |
+| `src/styles/` | `tokens.css` (every colour, size and font for the `dark`, `light`, `dark-hc` and `light-hc` themes), `base.css` |
+| `dev/fake-server.ts` | The stand-in server |
 
 ## Standards
 
