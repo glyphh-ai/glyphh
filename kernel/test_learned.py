@@ -3,6 +3,7 @@ the calibrated decision, and the fast weighted score equal to the fact tree's.""
 
 from __future__ import annotations
 
+import json
 import random
 from pathlib import Path
 
@@ -62,6 +63,31 @@ def test_learned_weights_follow_what_decides_and_value_weights_say_which_values(
     assert Spec.from_json(spec.to_json()).to_json() == spec.to_json()  # round-trips, spec_id stable
     with pytest.raises(SpecError, match="two outcomes"):
         Spec.from_json(SPEC).learned([(case(1, "car", 500), "bad")])
+
+
+def test_a_role_of_sets_is_left_alone_by_learn_as_a_bag_of_words_is() -> None:
+    """A symbol role whose value is a set (an array) has no single value to weigh: learn() leaves it at the spec's
+    weight, with no value_weights (Role.value_weight gives a set the role's weight alone), and learns the rest."""
+    obj = json.loads(json.dumps(SPEC))
+    obj["layers"][0]["segments"][0]["roles"].append({"name": "tags", "similarity_weight": 0.7})
+    rng = random.Random(2)
+    graded = []
+    for i, (data, outcome) in enumerate(cases()):
+        data["loan"]["ask"]["tags"] = sorted(rng.sample(["new", "repeat", "online", "branch"], rng.choice([1, 2])))
+        if i % 3 == 0:
+            data["loan"]["ask"]["tags"] = "branch"  # a set role may also carry a single symbol
+        graded.append((data, outcome))
+    spec = Spec.from_json(obj).learned(graded)
+    roles = {r["name"]: r for l in spec.to_json()["layers"] for s in l["segments"] for r in s["roles"]}
+    assert roles["tags"]["similarity_weight"] == 0.7 and "value_weights" not in roles["tags"]
+    assert roles["purpose"]["similarity_weight"] == 1.0 and roles["purpose"]["value_weights"]["home"] == 1.0
+    assert not any("tags" in i["roles"][0] + i["roles"][1] for i in spec.to_json().get("interactions", []))
+
+    model = Model(Spec.from_json(obj), author="t", path=None)
+    for data, outcome in graded:
+        model.record(data, outcome)
+    model.refresh()  # learn, then calibrate: the store's own graded precedents, sets and all
+    assert model.decide(graded[0][0])["outcome"] == graded[0][1]
 
 
 def test_value_weights_change_the_weights_tree_for_the_value_present() -> None:
