@@ -119,8 +119,10 @@ export function sinceAt(since: Since, now: Date = new Date()): string | undefine
   return since ? new Date(now.getTime() - sinceMs[since]).toISOString() : undefined;
 }
 
-export type LogFilters = { runtime?: string; node?: string; level?: string; since?: Since; q?: string };
-export type AuditFilters = { runtime?: string; node?: string; since?: Since; actor?: string; action?: string };
+/** `level` is that level and above; `text` is words in the message, any case. */
+export type LogFilters = { runtime?: string; node?: string; level?: string; since?: Since; text?: string };
+/** `kind`: one kind only, such as run.call. */
+export type AuditFilters = { runtime?: string; node?: string; since?: Since; kind?: string };
 
 /** A telemetry path with its filters, leaving out the empty ones. The window starts when the page is read. */
 export function telemetryPath(
@@ -140,7 +142,7 @@ export function telemetryPath(
 }
 
 const pages = { initialPageParam: null as string | null, refetchInterval: liveEvery, staleTime: 0 } as const;
-const nextOf = (page: { next?: string | null }) => page.next || null;
+const nextOf = (page: { next_cursor?: string | null }) => page.next_cursor || null;
 
 /** Log lines, newest first, a page at a time; older pages follow the server's cursor. */
 export const useLogs = (filters: LogFilters) =>
@@ -160,9 +162,17 @@ export const useAudit = (filters: AuditFilters) =>
     getNextPageParam: nextOf,
   });
 
-/** Each node's latest metrics. */
-export const useMetrics = () =>
-  useQuery({ queryKey: keys.metrics, queryFn: () => api.get<MetricsAnswer>('/telemetry/metrics'), refetchInterval: liveEvery, staleTime: 0 });
+/** The latest point of each metric series, of one runtime or node if asked. */
+export const useMetrics = (filters: { runtime?: string; node?: string } = {}) =>
+  useQuery({
+    queryKey: [...keys.metrics, filters],
+    queryFn: () => {
+      const params = new URLSearchParams(Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])));
+      return api.get<MetricsAnswer>(`/telemetry/metrics${params.size ? `?${params.toString()}` : ''}`);
+    },
+    refetchInterval: liveEvery,
+    staleTime: 0,
+  });
 
 // Writes
 

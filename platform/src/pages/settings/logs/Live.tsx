@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { Button, Chip } from '@/ui';
+import { ApiError } from '@/api/client';
 import { liveEvery } from '@/api/queries';
+import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { Button, Chip, ErrorNotice } from '@/ui';
 import styles from './Logs.module.css';
 
 /** That the list is read again on its own while the page is open. */
@@ -36,4 +38,25 @@ export function Details({ fields }: { fields: Record<string, unknown> }): ReactN
       <pre className={styles.pre}>{JSON.stringify(fields, null, 2)}</pre>
     </details>
   );
+}
+
+/**
+ * A refusal of a read. One of a cursor (422 `reason: cursor`, a cursor no page gave) is the paging gone stale: start
+ * again from the newest.
+ */
+export function ReadError({ error, onRestart }: { error: unknown; onRestart: () => void }) {
+  if (error instanceof ApiError && error.detail.reason === 'cursor') {
+    return (
+      <ErrorNotice
+        message="The older pages could not be found. Start again from the newest."
+        traceId={error.traceId}
+        action={
+          <Button size="sm" onClick={onRestart}>
+            Start again
+          </Button>
+        }
+      />
+    );
+  }
+  return <ApiErrorNotice error={error} />;
 }

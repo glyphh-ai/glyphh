@@ -217,63 +217,71 @@ export type ApiErrorBody = {
 };
 
 /**
- * rrotor's opt-in server-side telemetry (`RROTOR_SERVER_LOGS=on`): by default a runtime sends none, and these lists are
- * empty. Read tolerantly: a field the platform does not know is kept, and an optional one may be missing.
+ * rrotor's opt-in server-side telemetry (`RROTOR_SERVER_LOGS=on`), as `GET /v1/telemetry/*` answers it. By default a
+ * runtime sends none, and these lists are empty. Read tolerantly: a field the platform does not know is kept, and an
+ * optional one may be missing.
  */
-export type LogLine = {
+
+/** OTLP's severity, named as the server names it: a filter by one means it and above. */
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+/** What every record carries: when, and which runtime and node sent it. `attributes` are rrotor's, nested ones dotted. */
+type Sent = {
+  id?: Uuid;
   at: IsoDate;
   runtime_id?: Uuid | null;
   /** The runtime's name. */
   runtime?: string | null;
+  /** The node it came from (its service.instance.id). */
   node_id?: string | null;
-  /** Such as debug, info, warn or error, as rrotor named it. */
-  level?: string | null;
-  message?: string | null;
   attributes?: Record<string, unknown> | null;
   [field: string]: unknown;
 };
 
-/** `GET /v1/telemetry/logs`: newest first, and the cursor for the page before (null at the oldest). */
-export type LogsPage = { logs?: LogLine[]; next?: string | null; [field: string]: unknown };
-
-/** Who did it: a member, a runtime key, Claude through an install, and so on. */
-export type AuditActor = { kind?: string | null; id?: string | null; [field: string]: unknown };
-
-/** One audit event, recorded by rrotor on Enterprise. */
-export type AuditEvent = {
-  at: IsoDate;
-  runtime_id?: Uuid | null;
-  node_id?: string | null;
-  actor?: AuditActor | null;
-  action?: string | null;
-  target?: unknown;
-  /** Such as allowed, denied or error. */
-  outcome?: string | null;
-  /** How it came in, such as mcp or api. */
-  via?: string | null;
-  [field: string]: unknown;
+/** One log record. */
+export type LogRecord = Sent & {
+  level?: LogLevel | string | null;
+  /** OTLP's severity number, 1 to 24. */
+  severity?: number | null;
+  /** The message. */
+  body?: string | null;
+  trace_id?: string | null;
+  span_id?: string | null;
 };
 
-/** `GET /v1/telemetry/audit`: newest first, and the cursor for the page before (null at the oldest). */
-export type AuditPage = { events?: AuditEvent[]; next?: string | null; [field: string]: unknown };
+/** `GET /v1/telemetry/logs`: newest first, without the audit events, and the next page's cursor (null on the last). */
+export type LogsPage = { records?: LogRecord[]; next_cursor?: string | null; [field: string]: unknown };
 
-/** One node's latest metrics, as it last sent them. */
-export type RuntimeMetrics = {
+/**
+ * One audit event: its kind (run.call, model.deploy, access.denied, …) and its fields as attributes, flattened:
+ * `actor.type` (key, sign-in, local, server, rrotor, anonymous), `actor.key_sha256`, `actor.sub`, `via`,
+ * `outcome.status`, `outcome.code`.
+ */
+export type AuditEvent = Sent & { kind?: string | null };
+
+/** `GET /v1/telemetry/audit`: newest first, and the next page's cursor (null on the last). */
+export type AuditPage = { events?: AuditEvent[]; next_cursor?: string | null; [field: string]: unknown };
+
+/**
+ * The latest point of one metric series: a node, a metric and its point's attributes. rrotor's are `rrotor.runs`
+ * (sum: model, function, status), `rrotor.run.seconds` (histogram), `rrotor.precedents` (gauge: model),
+ * `rrotor.precedents.cap`, `rrotor.link.state` (gauge: state) and `rrotor.drain.dropped` (sum: drain, signal).
+ */
+export type MetricPoint = {
   runtime_id?: Uuid | null;
   runtime?: string | null;
   node_id?: string | null;
+  name: string;
+  unit?: string | null;
+  kind?: 'gauge' | 'sum' | 'histogram' | string | null;
+  /** A gauge's or sum's value; a histogram's sum. */
+  value?: number | null;
+  /** A histogram's count. */
+  count?: number | null;
+  attributes?: Record<string, unknown> | null;
   at?: IsoDate | null;
-  runs?: number | null;
-  run_seconds?: number | null;
-  precedents?: number | null;
-  /** The precedents the node may hold; null is no cap. */
-  cap?: number | null;
-  /** The node's link to Glyphh, as rrotor states it. */
-  link?: unknown;
-  /** Telemetry the node dropped rather than sent. */
-  drops?: number | null;
   [field: string]: unknown;
 };
 
-/** `GET /v1/telemetry/metrics`: each node that sends metrics. */
-export type MetricsAnswer = { runtimes?: RuntimeMetrics[]; [field: string]: unknown };
+/** `GET /v1/telemetry/metrics`: the latest point of each series. */
+export type MetricsAnswer = { metrics?: MetricPoint[]; [field: string]: unknown };

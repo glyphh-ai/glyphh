@@ -3,7 +3,8 @@ import type {
   HostingOff,
   Install,
   Invite,
-  LogLine,
+  LogRecord,
+  MetricPoint,
   LicenceKey,
   LicenceKeys,
   Machine,
@@ -15,7 +16,6 @@ import type {
   Plan,
   Rates,
   Runtime,
-  RuntimeMetrics,
   RuntimeKey,
   RuntimeNodes,
   SelfRuntime,
@@ -234,21 +234,59 @@ export const installs: Install[] = [
  * default a runtime sends none and each list is empty. Newest first.
  */
 const acme = { runtime_id: 'rt-self-1', runtime: 'Acme production' };
-export const logs: LogLine[] = [
-  { at: '2026-10-16T13:58:12Z', ...acme, node_id: 'rrotor-1', level: 'error', message: 'Sync to rrotor-2 failed: connection reset', attributes: { peer: 'rrotor-2', attempt: 3 } },
-  { at: '2026-10-16T13:57:40Z', ...acme, node_id: 'rrotor-2', level: 'warn', message: 'Precedents at 90% of the cap', attributes: { precedents: 45_000, cap: 50_000 } },
-  { at: '2026-10-16T13:55:03Z', ...acme, node_id: 'rrotor-1', level: 'info', message: 'Model credit-risk v4 active', attributes: {} },
-  { at: '2026-10-16T13:50:00Z', ...acme, node_id: 'rrotor-1', level: 'debug', message: 'Heartbeat sent' },
+export const logs: LogRecord[] = [
+  { id: 'l-4', at: '2026-10-16T13:58:12Z', ...acme, node_id: 'rrotor-1', level: 'error', severity: 17, body: 'Sync to rrotor-2 failed: connection reset', trace_id: 'a1b2', span_id: 'c3d4', attributes: { peer: 'rrotor-2', attempt: 3 } },
+  { id: 'l-3', at: '2026-10-16T13:57:40Z', ...acme, node_id: 'rrotor-2', level: 'warn', severity: 13, body: 'Precedents at 90% of the cap', trace_id: null, span_id: null, attributes: { precedents: 45_000, cap: 50_000 } },
+  { id: 'l-2', at: '2026-10-16T13:55:03Z', ...acme, node_id: 'rrotor-1', level: 'info', severity: 9, body: 'Model credit-risk v4 active', trace_id: null, span_id: null, attributes: {} },
+  { id: 'l-1', at: '2026-10-16T13:50:00Z', ...acme, node_id: 'rrotor-1', level: 'debug', severity: 5, body: 'Heartbeat sent', trace_id: null, span_id: null, attributes: {} },
 ];
 
 export const auditEvents: AuditEvent[] = [
-  { at: '2026-10-16T13:58:00Z', runtime_id: 'rt-self-1', node_id: 'rrotor-1', actor: { kind: 'key', id: 'Production app' }, action: 'model.query', target: 'credit-risk', outcome: 'allowed', via: 'api' },
-  { at: '2026-10-16T13:41:00Z', runtime_id: 'rt-self-1', node_id: 'rrotor-1', actor: { kind: 'user', id: 'chris@example.com' }, action: 'model.delete', target: 'old-model', outcome: 'denied', via: 'mcp' },
+  {
+    id: 'a-2',
+    at: '2026-10-16T13:58:00Z',
+    ...acme,
+    node_id: 'rrotor-1',
+    kind: 'run.call',
+    attributes: { 'actor.type': 'key', 'actor.key_sha256': '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', via: 'rest', model: 'credit-risk', 'outcome.status': 'done', 'outcome.code': null },
+  },
+  {
+    id: 'a-1',
+    at: '2026-10-16T13:41:00Z',
+    ...acme,
+    node_id: 'rrotor-1',
+    kind: 'access.denied',
+    attributes: { 'actor.type': 'anonymous', via: 'mcp', method: 'POST', path: '/mcp', 'outcome.status': 401, 'outcome.code': 'E_UNAUTHORIZED' },
+  },
 ];
 
-export const metrics: RuntimeMetrics[] = [
-  { ...acme, node_id: 'rrotor-1', at: '2026-10-16T13:58:00Z', runs: 1_284, run_seconds: 5_400, precedents: 12_050, cap: 50_000, link: 'up', drops: 0 },
-  { ...acme, node_id: 'rrotor-2', at: '2026-10-16T13:57:00Z', runs: 310, run_seconds: 90, precedents: 12_050, cap: 50_000, link: 'down', drops: 12 },
+const point = (node_id: string, name: string, kind: MetricPoint['kind'], value: number, attributes: Record<string, unknown> = {}, extra: Partial<MetricPoint> = {}): MetricPoint => ({
+  ...acme,
+  node_id,
+  name,
+  unit: '1',
+  kind,
+  value,
+  count: null,
+  attributes,
+  at: '2026-10-16T13:58:00Z',
+  ...extra,
+});
+export const metrics: MetricPoint[] = [
+  point('rrotor-1', 'rrotor.runs', 'sum', 1_200, { model: 'credit-risk', function: 'score', status: 'done' }),
+  point('rrotor-1', 'rrotor.runs', 'sum', 84, { model: 'credit-risk', function: 'score', status: 'failed' }),
+  point('rrotor-1', 'rrotor.run.seconds', 'histogram', 5_400, { model: 'credit-risk' }, { unit: 's', count: 1_284 }),
+  point('rrotor-1', 'rrotor.precedents', 'gauge', 10_000, { model: 'credit-risk' }),
+  point('rrotor-1', 'rrotor.precedents', 'gauge', 2_050, { model: 'banking77' }),
+  point('rrotor-1', 'rrotor.precedents.cap', 'gauge', 50_000),
+  point('rrotor-1', 'rrotor.link.state', 'gauge', 1, { state: 'up' }),
+  point('rrotor-1', 'rrotor.drain.dropped', 'sum', 0, { drain: 'glyphh', signal: 'logs' }),
+  point('rrotor-2', 'rrotor.runs', 'sum', 310, { model: 'credit-risk', function: 'score', status: 'done' }, { at: '2026-10-16T13:57:00Z' }),
+  point('rrotor-2', 'rrotor.run.seconds', 'histogram', 90, { model: 'credit-risk' }, { unit: 's', count: 310, at: '2026-10-16T13:57:00Z' }),
+  point('rrotor-2', 'rrotor.precedents', 'gauge', 12_050, { model: 'credit-risk' }, { at: '2026-10-16T13:57:00Z' }),
+  point('rrotor-2', 'rrotor.precedents.cap', 'gauge', 50_000, {}, { at: '2026-10-16T13:57:00Z' }),
+  point('rrotor-2', 'rrotor.link.state', 'gauge', 1, { state: 'reconnecting' }, { at: '2026-10-16T13:57:00Z' }),
+  point('rrotor-2', 'rrotor.drain.dropped', 'sum', 12, { drain: 'glyphh', signal: 'logs' }, { at: '2026-10-16T13:57:00Z' }),
 ];
 
 /**

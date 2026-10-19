@@ -128,11 +128,11 @@ describe('the telemetry hooks', () => {
 
   it('asks with the filters set, trimmed, a page’s worth and the cursor; the empty ones left out', () => {
     expect(telemetryPath('/telemetry/logs', {}, null, now)).toBe('/telemetry/logs?limit=50');
-    expect(telemetryPath('/telemetry/logs', { runtime: 'rt-1', node: '', level: 'warn', since: '1h', q: ' sync failed ' }, 'c2', now)).toBe(
-      '/telemetry/logs?runtime=rt-1&level=warn&since=2026-10-16T13%3A00%3A00.000Z&q=sync+failed&limit=50&cursor=c2',
+    expect(telemetryPath('/telemetry/logs', { runtime: 'rt-1', node: '', level: 'warn', since: '1h', text: ' sync failed ' }, 'c2', now)).toBe(
+      '/telemetry/logs?runtime=rt-1&level=warn&since=2026-10-16T13%3A00%3A00.000Z&text=sync+failed&limit=50&cursor=c2',
     );
-    expect(telemetryPath('/telemetry/audit', { actor: 'chris@example.com', action: 'model.delete', since: '' }, null, now)).toBe(
-      '/telemetry/audit?actor=chris%40example.com&action=model.delete&limit=50',
+    expect(telemetryPath('/telemetry/audit', { kind: 'run.call', since: '' }, null, now)).toBe(
+      '/telemetry/audit?kind=run.call&limit=50',
     );
   });
 
@@ -143,29 +143,39 @@ describe('the telemetry hooks', () => {
         const url = new URL(request.url);
         seen.push(url.search);
         return url.searchParams.get('cursor') === 'c2'
-          ? HttpResponse.json({ logs: logs.slice(2), next: null })
-          : HttpResponse.json({ logs: logs.slice(0, 2), next: 'c2' });
+          ? HttpResponse.json({ records: logs.slice(2), next_cursor: null })
+          : HttpResponse.json({ records: logs.slice(0, 2), next_cursor: 'c2' });
       }),
     );
     const { result } = renderHook(() => useLogs({ level: 'error' }), { wrapper });
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
     expect(result.current.hasNextPage).toBe(true);
     await result.current.fetchNextPage();
-    await waitFor(() => expect(result.current.data?.pages.flatMap((page) => page.logs)).toEqual(logs));
+    await waitFor(() => expect(result.current.data?.pages.flatMap((page) => page.records)).toEqual(logs));
     expect(result.current.hasNextPage).toBe(false);
     expect(seen).toEqual(['?level=error&limit=50', '?level=error&limit=50&cursor=c2']);
   });
 
   it('reads audit events and metrics, keeping fields it does not know', async () => {
     server.use(
-      http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: [{ ...auditEvents[0], region: 'eu' }], next: null, total: 1 })),
+      http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: [{ ...auditEvents[0], region: 'eu' }], next_cursor: null, total: 1 })),
     );
     const audit = renderHook(() => useAudit({}), { wrapper });
     await waitFor(() => expect(audit.result.current.data?.pages[0]?.events?.[0]?.region).toBe('eu'));
     expect(audit.result.current.data?.pages[0]?.total).toBe(1);
     expect(audit.result.current.hasNextPage).toBe(false);
     const read = renderHook(() => useMetrics(), { wrapper });
-    await waitFor(() => expect(read.result.current.data?.runtimes).toEqual(metrics));
+    await waitFor(() => expect(read.result.current.data?.metrics).toEqual(metrics));
+    let asked = '';
+    server.use(
+      http.get(v1('/telemetry/metrics'), ({ request }) => {
+        asked = new URL(request.url).search;
+        return HttpResponse.json({ metrics: [] });
+      }),
+    );
+    const one = renderHook(() => useMetrics({ runtime: 'rt-self-1', node: '' }), { wrapper });
+    await waitFor(() => expect(one.result.current.isSuccess).toBe(true));
+    expect(asked).toBe('?runtime=rt-self-1');
   });
 
   it('reads again every 10 seconds while in use', async () => {
@@ -175,7 +185,7 @@ describe('the telemetry hooks', () => {
       server.use(
         http.get(v1('/telemetry/logs'), () => {
           reads += 1;
-          return HttpResponse.json({ logs, next: null });
+          return HttpResponse.json({ records: logs, next_cursor: null });
         }),
       );
       const { result, unmount } = renderHook(() => useLogs({}), { wrapper });

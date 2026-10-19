@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { auditEvents, logs, metrics } from '@/test/fixtures';
+import { auditEvents, logs } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, nothingSentHandlers, server, v1 } from '@/test/server';
 
@@ -50,7 +50,7 @@ describe('Logs', () => {
   it('reads a line tolerantly: fields it does not know shown in its details, missing ones left out', async () => {
     server.use(
       http.get(v1('/telemetry/logs'), () =>
-        HttpResponse.json({ logs: [{ at: '2026-10-16T13:00:00Z', runtime_id: 'rt-self-1', message: 'Started', trace_id: 'abc' }], next: null }),
+        HttpResponse.json({ records: [{ at: '2026-10-16T13:00:00Z', runtime_id: 'rt-self-1', body: 'Started', trace_id: 'abc', region: 'eu' }], next_cursor: null }),
       ),
     );
     const { user } = renderApp('/settings/logs');
@@ -58,10 +58,11 @@ describe('Logs', () => {
     expect(within(line).getByText('Acme production')).toBeInTheDocument();
     await user.click(within(line).getByText('Details'));
     expect(within(line).getByText(/"trace_id": "abc"/)).toBeInTheDocument();
+    expect(within(line).getByText(/"region": "eu"/)).toBeInTheDocument();
   });
 
-  it('filters by runtime, node, level and time at once, and by words when searched', async () => {
-    const seen = recordReads('/telemetry/logs', () => ({ logs, next: null }));
+  it('filters by runtime, node, level and above and time at once, and by words when searched', async () => {
+    const seen = recordReads('/telemetry/logs', () => ({ records: logs, next_cursor: null }));
     const { user } = renderApp('/settings/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     const filters = screen.getByRole('form', { name: 'Filter log lines' });
@@ -70,13 +71,14 @@ describe('Logs', () => {
     await user.selectOptions(within(filters).getByLabelText('Level'), 'error');
     await user.selectOptions(within(filters).getByLabelText('Time'), '1h');
     await user.type(within(filters).getByLabelText('Words'), 'sync');
-    expect(seen.at(-1)?.get('q')).toBeNull();
+    expect(seen.at(-1)?.get('text')).toBeNull();
+    expect(within(filters).getByRole('option', { name: 'Warning and above' })).toHaveValue('warn');
     await user.click(within(filters).getByRole('button', { name: 'Search' }));
     const last = seen.at(-1)!;
     expect(last.get('runtime')).toBe('rt-self-1');
     expect(last.get('node')).toBe('rrotor-2');
     expect(last.get('level')).toBe('error');
-    expect(last.get('q')).toBe('sync');
+    expect(last.get('text')).toBe('sync');
     expect(Date.now() - new Date(last.get('since')!).getTime()).toBeGreaterThanOrEqual(3_600_000);
     expect(Date.now() - new Date(last.get('since')!).getTime()).toBeLessThan(3_660_000);
     expect(last.get('limit')).toBe('50');
@@ -84,7 +86,7 @@ describe('Logs', () => {
 
   it('pages back with Load older by the server’s cursor, until there is no more', async () => {
     const seen = recordReads('/telemetry/logs', (url) =>
-      url.searchParams.get('cursor') === 'c2' ? { logs: logs.slice(2), next: null } : { logs: logs.slice(0, 2), next: 'c2' },
+      url.searchParams.get('cursor') === 'c2' ? { records: logs.slice(2), next_cursor: null } : { records: logs.slice(0, 2), next_cursor: 'c2' },
     );
     const { user } = renderApp('/settings/logs');
     await screen.findByRole('list', { name: 'Log lines' });
@@ -97,7 +99,7 @@ describe('Logs', () => {
   });
 
   it('says nothing matches the filters, and clears them', async () => {
-    recordReads('/telemetry/logs', (url) => (url.searchParams.get('level') ? { logs: [], next: null } : { logs, next: null }));
+    recordReads('/telemetry/logs', (url) => (url.searchParams.get('level') ? { records: [], next_cursor: null } : { records: logs, next_cursor: null }));
     const { user } = renderApp('/settings/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     await user.selectOptions(screen.getByLabelText('Level'), 'error');
@@ -113,6 +115,24 @@ describe('Logs', () => {
     renderApp('/settings/logs');
     expect(await screen.findByText('Logs are unavailable.')).toBeInTheDocument();
     expect(screen.getByText('Trace trace-123')).toBeInTheDocument();
+  });
+  it('starts again from the newest when the server refuses a cursor no page gave', async () => {
+    let refuse = true;
+    server.use(
+      http.get(v1('/telemetry/logs'), ({ request }) => {
+        if (!new URL(request.url).searchParams.get('cursor')) return HttpResponse.json({ records: logs.slice(0, 2), next_cursor: 'stale' });
+        return refuse ? apiError(422, 'E_INVALID', 'This cursor is not one a page gave.', { reason: 'cursor' }) : HttpResponse.json({ records: [], next_cursor: null });
+      }),
+    );
+    const { user } = renderApp('/settings/logs');
+    await screen.findByRole('list', { name: 'Log lines' });
+    await user.click(screen.getByRole('button', { name: 'Load older' }));
+    expect(await screen.findByText('The older pages could not be found. Start again from the newest.')).toBeInTheDocument();
+    refuse = false;
+    await user.click(screen.getByRole('button', { name: 'Start again' }));
+    expect(await screen.findByRole('list', { name: 'Log lines' })).toBeInTheDocument();
+    expect(screen.queryByText(/older pages could not be found/)).not.toBeInTheDocument();
+    expect(rows('Log lines')).toHaveLength(2);
   });
 });
 
@@ -145,8 +165,8 @@ describe('Logs while the runtimes send nothing, rrotor’s default', () => {
 });
 
 describe('Logs’ Audit tab', () => {
-  it('opens from the address, says audit is recorded on Enterprise, and lists who did what', async () => {
-    renderApp('/settings/logs?tab=audit');
+  it('opens from the address, says audit is recorded on Enterprise, and lists who did what and how it ended', async () => {
+    const { user } = renderApp('/settings/logs?tab=audit');
     expect(await screen.findByRole('tab', { name: 'Audit' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel', { name: 'Audit' })).toBeInTheDocument();
     const note = screen.getByText(/rrotor records audit events on Enterprise/);
@@ -155,20 +175,23 @@ describe('Logs’ Audit tab', () => {
     await screen.findByRole('list', { name: 'Audit events' });
     const events = rows('Audit events');
     expect(events).toHaveLength(auditEvents.length);
-    expect(events[0]).toHaveTextContent('model.query on credit-risk');
-    expect(within(events[0]!).getByText('Allowed')).toBeInTheDocument();
-    expect(within(events[0]!).getByText('By Production app (API key) · via api · Acme production · rrotor-1')).toBeInTheDocument();
-    expect(within(events[1]!).getByText('Denied')).toBeInTheDocument();
+    expect(within(events[0]!).getByText('run.call')).toBeInTheDocument();
+    expect(within(events[0]!).getByText('Done')).toBeInTheDocument();
+    expect(within(events[0]!).getByText('By API key 9f86d081 · via rest · Acme production · rrotor-1')).toBeInTheDocument();
+    expect(within(events[1]!).getByText('access.denied')).toBeInTheDocument();
+    expect(within(events[1]!).getByText('Refused 401')).toBeInTheDocument();
+    expect(within(events[1]!).getByText('By No credential · via mcp · Acme production · rrotor-1')).toBeInTheDocument();
+    await user.click(within(events[1]!).getByText('Details'));
+    expect(within(events[1]!).getByText(/"outcome.code": "E_UNAUTHORIZED"/)).toBeInTheDocument();
+    expect(within(events[1]!).queryByText(/actor.type/)).not.toBeInTheDocument();
   });
 
-  it('filters by who and what when searched', async () => {
-    const seen = recordReads('/telemetry/audit', () => ({ events: auditEvents, next: null }));
+  it('filters by kind when searched', async () => {
+    const seen = recordReads('/telemetry/audit', () => ({ events: auditEvents, next_cursor: null }));
     const { user } = renderApp('/settings/logs?tab=audit');
     await screen.findByRole('list', { name: 'Audit events' });
-    await user.type(screen.getByLabelText('Who'), 'chris@example.com');
-    await user.type(screen.getByLabelText('Action'), 'model.delete{Enter}');
-    expect(seen.at(-1)?.get('actor')).toBe('chris@example.com');
-    expect(seen.at(-1)?.get('action')).toBe('model.delete');
+    await user.type(screen.getByLabelText('Kind'), 'run.call{Enter}');
+    expect(seen.at(-1)?.get('kind')).toBe('run.call');
   });
 
   it('keeps the tab in the address', async () => {
@@ -181,24 +204,37 @@ describe('Logs’ Audit tab', () => {
 });
 
 describe('Logs’ Metrics tab', () => {
-  it('shows each node’s latest: runs, run time, precedents of its cap, link, drops and when sent', async () => {
+  it('gathers each node’s series: runs, run time, precedents of the cap, link, drops and when sent', async () => {
     renderApp('/settings/logs?tab=metrics');
     const table = await screen.findByRole('table', { name: 'Metrics by node' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Node', 'Runs', 'Run time', 'Precedents', 'Link', 'Dropped', 'Sent']);
     const [, first, second] = within(table).getAllByRole('row');
-    expect(within(first!).getAllByRole('cell').map((td) => td.textContent).slice(0, 5)).toEqual(['1,284', '1 h 30 min', '12,050 of 50,000', 'Up', '0']);
     expect(within(first!).getByRole('rowheader')).toHaveTextContent('rrotor-1Acme production');
-    expect(within(second!).getByText('12')).toBeInTheDocument();
-    expect(within(second!).getByText('Down')).toBeInTheDocument();
-    expect(metrics).toHaveLength(2);
+    expect(within(first!).getAllByRole('cell').map((td) => td.textContent).slice(0, 5)).toEqual(['1,28484 not done', '1 h 30 min', '12,050 of 50,000', 'Up', '0']);
+    expect(within(second!).getAllByRole('cell').map((td) => td.textContent).slice(0, 5)).toEqual(['310', '1 min 30 s', '12,050 of 50,000', 'Reconnecting', '12']);
+    expect(screen.queryByRole('list', { name: 'Other series' })).not.toBeInTheDocument();
   });
 
-  it('reads a node tolerantly, saying what it did not send', async () => {
-    server.use(http.get(v1('/telemetry/metrics'), () => HttpResponse.json({ runtimes: [{ runtime_id: 'rt-7f3a9c', precedents: 10, cap: 10 }] })));
+  it('says what a node did not send, and lists series it has no column for', async () => {
+    server.use(
+      http.get(v1('/telemetry/metrics'), () =>
+        HttpResponse.json({
+          metrics: [
+            { runtime_id: 'rt-7f3a9c', node_id: null, name: 'rrotor.precedents', kind: 'gauge', value: 10, attributes: { model: 'm' } },
+            { runtime_id: 'rt-7f3a9c', node_id: null, name: 'rrotor.precedents.cap', kind: 'gauge', value: 10, attributes: {} },
+            { runtime_id: 'rt-7f3a9c', node_id: null, name: 'rrotor.queue.depth', unit: '{item}', kind: 'gauge', value: 4, attributes: { queue: 'runs' } },
+          ],
+        }),
+      ),
+    );
     renderApp('/settings/logs?tab=metrics');
     const table = await screen.findByRole('table', { name: 'Metrics by node' });
     const [, row] = within(table).getAllByRole('row');
     expect(within(row!).getByRole('rowheader')).toHaveTextContent('Main');
     expect(within(row!).getAllByRole('cell').map((td) => td.textContent)).toEqual(['Not sent', 'Not sent', '10 of 10 Full', 'Not said', 'Not sent', 'Not sent']);
+    const other = screen.getByRole('list', { name: 'Other series' });
+    expect(other).toHaveTextContent('rrotor.queue.depth');
+    expect(other).toHaveTextContent('Main · queue=runs');
+    expect(other).toHaveTextContent('4 {item}');
   });
 });

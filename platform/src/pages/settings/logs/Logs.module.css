@@ -55,7 +55,7 @@
 
 .line {
   display: grid;
-  grid-template-columns: 128px 84px minmax(0, 1fr);
+  grid-template-columns: 128px 100px minmax(0, 1fr);
   align-items: start;
   gap: var(--space-3);
   padding: 10px var(--space-4);
