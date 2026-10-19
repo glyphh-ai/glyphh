@@ -31,6 +31,8 @@ export const defaultHandlers: HttpHandler[] = [
   http.get(v1('/org/members'), () => HttpResponse.json(fixtures.members)),
   http.get(v1('/org/invites'), () => HttpResponse.json(fixtures.invites)),
   http.get(v1('/installs'), () => HttpResponse.json(fixtures.installs)),
+  http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.licenceKeys)),
+  http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.nodes)),
 ];
 
 /**
@@ -48,6 +50,8 @@ export const hostingOffHandlers = (rates: 'refused' | 'off' | 'empty' = 'refused
   ),
   http.get(v1('/runtime'), () => HttpResponse.json(fixtures.hostingOff.runtime)),
   http.get(v1('/runtimes'), () => HttpResponse.json(fixtures.hostingOff.machines)),
+  http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.hostingOff.licenceKeys)),
+  http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.hostingOff.nodes)),
   http.post(v1('/runtimes'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
   http.post(v1('/runtime/start'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
 ];

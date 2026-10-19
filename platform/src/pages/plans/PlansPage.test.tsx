@@ -20,26 +20,26 @@ describe('Choosing a plan', () => {
     expect(within(pro).getByText('$99')).toBeInTheDocument();
     expect(within(pro).getByText('per month')).toBeInTheDocument();
     expect(within(pro).getByText('3 runtime nodes')).toBeInTheDocument();
-    expect(within(pro).getByText('100,000 precedents on hosted machines')).toBeInTheDocument();
+    expect(within(pro).getByText('50,000 precedents per node')).toBeInTheDocument();
     expect(within(pro).getByText('Sync across runtimes')).toBeInTheDocument();
 
     const free = card('Free');
     expect(within(free).getByText('$0')).toBeInTheDocument();
     expect(within(free).getByText('1 runtime node')).toBeInTheDocument();
-    expect(within(free).queryByText(/precedents/)).not.toBeInTheDocument();
+    expect(within(free).getByText('5,000 precedents per node')).toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
     const team = card('Team');
     expect(within(team).getByText('Recommended')).toBeInTheDocument();
     expect(within(team).getByText('$299')).toBeInTheDocument();
-    expect(within(team).getByText('1,000,000 precedents on hosted machines')).toBeInTheDocument();
+    expect(within(team).getByText('500,000 precedents per node')).toBeInTheDocument();
     expect(within(team).getByRole('button', { name: 'Upgrade to Team' })).toBeInTheDocument();
 
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
     expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited precedents on hosted machines')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited precedents per node')).toBeInTheDocument();
     expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
     expect(within(enterprise).queryByRole('button')).not.toBeInTheDocument();

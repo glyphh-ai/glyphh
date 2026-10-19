@@ -5,6 +5,7 @@ import type {
   Machine,
   MachineSize,
   Invite,
+  LicenceKeys,
   Me,
   Member,
   Model,
@@ -19,6 +20,7 @@ import type {
   HostingOff,
   Runtime,
   RuntimeKey,
+  RuntimeNodes,
   SelfRuntime,
 } from './types';
 
@@ -33,6 +35,8 @@ export const keys = {
   models: ['models'] as const,
   plans: ['plans'] as const,
   rates: ['rates'] as const,
+  licenceKeys: ['license', 'keys'] as const,
+  nodes: ['license', 'nodes'] as const,
   org: ['org'] as const,
   members: ['org', 'members'] as const,
   invites: ['org', 'invites'] as const,
@@ -85,6 +89,10 @@ export function useHosting(): boolean | undefined {
   if (rates.isPending) return undefined;
   return hostingOn(rates.data);
 }
+/** The org's licence keys, newest first, and the newest live one: none on Free. */
+export const useLicenceKeys = () => useQuery({ queryKey: keys.licenceKeys, queryFn: () => api.get<LicenceKeys>('/license/keys') });
+/** The org's runtime nodes against the plan's. */
+export const useRuntimeNodes = () => useQuery({ queryKey: keys.nodes, queryFn: () => api.get<RuntimeNodes>('/license/nodes') });
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });
@@ -147,4 +155,6 @@ export const useRemoveMember = () => useWrite((id: string) => api.delete(`/org/m
 
 export const useCheckout = () => useWrite((plan: string) => api.post<{ url: string }>('/billing/checkout', { plan }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);
-export const useChangePlan = () => useWrite((plan: string) => api.post<Org>('/billing/plan', { plan }), [keys.org, keys.me]);
+// A new plan is a new licence key and a new count of runtime nodes.
+export const useChangePlan = () =>
+  useWrite((plan: string) => api.post<Org>('/billing/plan', { plan }), [keys.org, keys.me, keys.licenceKeys, keys.nodes]);

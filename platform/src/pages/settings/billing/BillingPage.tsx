@@ -27,7 +27,7 @@ export function BillingPage() {
   const done = params.get('done');
   useEffect(() => {
     if (!done) return;
-    for (const queryKey of [keys.me, keys.org]) void client.invalidateQueries({ queryKey });
+    for (const queryKey of [keys.me, keys.org, keys.licenceKeys]) void client.invalidateQueries({ queryKey });
     toast.show('Billing is up to date.');
     setParams({}, { replace: true });
   }, [done, client, setParams, toast]);

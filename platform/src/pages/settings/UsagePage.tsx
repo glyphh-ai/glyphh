@@ -12,7 +12,7 @@ import { SettingsTitle } from './SettingsTitle';
 import styles from './UsagePage.module.css';
 
 /**
- * What you use this month: precedents against the plan's managed bucket, hosting so far, and each API key's calls.
+ * What you use this month: precedents against the plan's per node, hosting so far, and each API key's calls.
  * While Glyphh hosts nothing, no hosting.
  */
 export function UsagePage() {
@@ -81,7 +81,10 @@ export function UsagePage() {
   );
 }
 
-/** Precedents on the org's hosted runtimes against the plan's bucket. Those on your own runtimes never count. */
+/**
+ * Precedents against the plan's per node: the fullest node's, hosted or self-hosted, as the runtimes last said. rrotor
+ * holds each node to the cap its licence key carries.
+ */
 function Precedents({ me }: { me: Me }) {
   const { used, limit } = me.precedents;
   return (
@@ -90,17 +93,11 @@ function Precedents({ me }: { me: Me }) {
         <Icon name="model" />
         Precedents
       </div>
-      {hasHosting(me.plan) ? (
-        <>
-          <div className={styles.value}>
-            <span className={styles.used}>{used.toLocaleString('en-GB')}</span>
-            <span className={styles.of}>{limit === null ? 'on hosted machines, no limit' : `of ${limit.toLocaleString('en-GB')} on hosted machines`}</span>
-          </div>
-          {limit !== null && <ProgressBar value={used} max={limit} label="Precedents used" />}
-        </>
-      ) : (
-        <span className={styles.of}>No limit on your own runtimes.</span>
-      )}
+      <div className={styles.value}>
+        <span className={styles.used}>{used.toLocaleString('en-GB')}</span>
+        <span className={styles.of}>{limit === null ? 'on the fullest node, no limit' : `of ${limit.toLocaleString('en-GB')} on the fullest node`}</span>
+      </div>
+      {limit !== null && <ProgressBar value={used} max={limit} label="Precedents on the fullest node" />}
     </Card>
   );
 }
