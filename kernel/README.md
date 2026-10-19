@@ -268,6 +268,22 @@ Space(dim=4096, k=15, min_sim=0.10, seed=42, decay=0.7,
   Authors are preserved and the result is persisted.
 - Files open in WAL mode, so several processes can share one. Call
   `close()` or use the Space as a context manager.
+- `Space(path=..., readonly=True)` opens the file read-only: a
+  follower's copy, or a store on a read-only disk. Every read works
+  (`query`, `answers`, `evidence`, `matches`, `facts`,
+  `probabilities`, `decide`, `meta`, `refresh`). Every write
+  (`record`, `merge`, `calibrate`, `set_meta`, `rewrite`, and
+  `reencode_store` on a file that can't be written) raises
+  `ReadOnlyError` before the file is touched: `code` is
+  `"E_READ_ONLY"`, `operation` names the write.
+  - The file opens `mode=ro` with no `journal_mode` pragma and no
+    schema made. Nothing is ever created beside it.
+  - A WAL file that no writer holds open (no `-wal` and `-shm` beside
+    it) is read immutable, since SQLite would otherwise create them,
+    or fail in a read-only folder. `refresh()` reconnects, so it still
+    sees rows written since.
+  - A store from an older encoding is re-encoded in memory only. A
+    path with no file yet reads as an empty store.
 - **Stores outlive encodings.** Each file records the encoding it was
   written under (`ENCODING`, currently 3).
   - Opening or merging a file from an older encoding re-encodes its
@@ -443,6 +459,13 @@ weights from the graded precedents it holds and keeps them with the store
 (over the spec file's, until the next learn); `model.refresh()` is learn then
 calibrate, and `Model(..., refresh_every=100)` does it on its own every so
 many graded records, so the model follows its cases as they arrive.
+
+`Model(spec, path=..., readonly=True)` opens the store read-only (see
+`Space`). `query`, `facts`, `probabilities`, `decide` and the settings
+(`model.settings`, `configure()` with no changes) read as ever. `record`,
+`learn`, `calibrate`, `refresh` and `configure(...)` raise
+`ReadOnlyError` (`E_READ_ONLY`) before anything is written. A store
+restated on open is restated in memory only.
 
 `learned` sets every role's `similarity_weight` to its information gain
 about the outcome (scaled so the best weighs 1) and, per role, a
