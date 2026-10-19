@@ -5,7 +5,9 @@ stops, restarts and deletes them, up to the plan's machines). The runtime token 
 per app, made with the first runtime) replays a request that landed elsewhere. The server stops a machine that sat
 idle (ops/idle.py) and those held past the plan (ops/held.py), and meters each machine per second at Fly's rates, its
 online time this month tallied (ops/metering.py, the minute tick in ops/tend.py); no plan has hours, so a machine is
-never paused. `state` is `stopped` until its hello, `online` while linked, `offline` after a link dropped."""
+never paused. `state` is `stopped` until its hello, `online` while linked, `offline` after a link dropped.
+
+All of it is behind GLYPHH_HOSTING, off by default (require_hosting): off, no machine is made, started or woken."""
 
 import logging
 import uuid
@@ -14,6 +16,7 @@ from sqlalchemy import insert, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
+from glyphh_server.errors import Unavailable
 from glyphh_server.models import Rrotor
 from glyphh_server.models.rrotor import SIZES, SizeName
 from glyphh_server.obs.logs import fields
@@ -25,6 +28,13 @@ from glyphh_server.ops.runtimes import NOT_LINKED
 log = logging.getLogger("glyphh.runtime")
 
 DOORMAN: str = "doorman"
+HOSTING_OFF: str = "Glyphh's managed cloud is off: run rrotor yourself and register it (a self-hosted runtime)."
+
+
+def require_hosting(settings: Settings) -> None:
+    """Refused unless GLYPHH_HOSTING is on: E_UNAVAILABLE `hosting_off`, as for a server without Fly."""
+    if not settings.hosting:
+        raise Unavailable(HOSTING_OFF, reason="hosting_off")
 
 
 def machine_env(settings: Settings, runtime_id: uuid.UUID, token: str) -> dict[str, str]:

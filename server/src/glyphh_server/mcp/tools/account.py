@@ -7,7 +7,7 @@ from glyphh_server.ops.plans import PlanView
 
 
 async def whoami(ctx: Context, _: NoArgs) -> Done:
-    found = await me.me(ctx.conn, ctx.who)
+    found = await me.me(ctx.conn, ctx.who, ctx.settings)
     data = {
         "id": str(found.id),
         "email": found.email,
@@ -35,7 +35,7 @@ def includes(plan: PlanView) -> str:
 
 
 async def plan(ctx: Context, _: NoArgs) -> Done:
-    found = await me.me(ctx.conn, ctx.who)
+    found = await me.me(ctx.conn, ctx.who, ctx.settings)
     org, p = found.org, found.plan
     renews = f", renews {org.renews_at:%Y-%m-%d}" if org.renews_at else ""
     lines = [
@@ -50,7 +50,7 @@ def dollars(cents: int) -> str:
 
 
 async def show_usage(ctx: Context, _: NoArgs) -> Done:
-    found = await usage.usage(ctx.conn, ctx.who.org_id)
+    found = await usage.usage(ctx.conn, ctx.who.org_id, ctx.settings)
     held, hosting = found.precedents, found.hosting
     lines = [
         f"Managed precedents: {held.used:,} of {amount(held.limit)}, on your hosted runtimes.",
@@ -61,7 +61,7 @@ async def show_usage(ctx: Context, _: NoArgs) -> Done:
 
 
 async def list_plans(ctx: Context, _: NoArgs) -> Done:
-    found = await plans.list_plans(ctx.conn)
+    found = await plans.list_plans(ctx.conn, ctx.settings)
     lines = [f"{p.name}: {price(p)}; {includes(p)}" for p in found]
     return Done("\n".join(lines), {"plans": [dump(p) for p in found]})
 
@@ -91,8 +91,8 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "plans",
         "Glyphh plans",
-        "What each Glyphh plan costs and includes: hosted machines, managed precedents and features. Never per seat, "
-        "per model or per install.",
+        "What each Glyphh plan costs and includes: hosted machines (none while Glyphh's managed cloud is off), "
+        "managed precedents and features. Never per seat, per model or per install.",
         NoArgs,
         list_plans,
         True,

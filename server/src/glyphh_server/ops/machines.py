@@ -1,7 +1,8 @@
 """A person's hosted machines: as many as the org's plan allows, all its people's together, each named, of one size
 (small, medium or large), made and started, stopped, restarted and deleted, each only by its owner. Deleting one
 destroys its machine and its volume: nothing is kept past Fly's daily snapshots (5 days). The routes made for one
-runtime act on the first."""
+runtime act on the first. With hosting off (GLYPHH_HOSTING) none is made, started or restarted; one already made can
+still be stopped and deleted."""
 
 import uuid
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.held import check_start
-from glyphh_server.ops.hosted import provision
+from glyphh_server.ops.hosted import provision, require_hosting
 from glyphh_server.ops.link.presence import ONLINE
 from glyphh_server.ops.plans import org_version
 from glyphh_server.ops.runtimes import FIRST, NOT_LINKED, month_of
@@ -70,7 +71,8 @@ async def machine(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID, 
 
 async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, size: SizeName) -> Machine:
     """A new machine, made and started (the app's doorman with the first one); past the plan's machines, or
-    with a name the person has given another, refused."""
+    with a name the person has given another, refused; with hosting off, E_UNAVAILABLE `hosting_off`."""
+    require_hosting(fly.settings)
     await limits.lock_org(conn, who.org_id)
     await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), await org_version(conn, who.org_id))
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)
@@ -84,7 +86,8 @@ async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, siz
 
 async def start(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
     """Its machine started, unless it is online already. It is `stopped` until its rrotor links. Refused for a machine
-    past the plan's, the org's newest beyond it."""
+    past the plan's, the org's newest beyond it, and with hosting off."""
+    require_hosting(fly.settings)
     row = await _row(conn, who, runtime_id)
     await check_start(conn, runtime_id, who.org_id)
     if row.state != ONLINE:
@@ -105,6 +108,7 @@ async def stop(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid
 
 async def restart(conn: AsyncConnection, fly: Fly, who: Principal, runtime_id: uuid.UUID) -> Machine:
     """Its machine restarted: its link drops and it links again, `stopped` until then. Refused as starting is."""
+    require_hosting(fly.settings)
     row = await _row(conn, who, runtime_id)
     await check_start(conn, runtime_id, who.org_id)
     await fly.restart(str(row.fly_machine_id))

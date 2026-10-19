@@ -1,7 +1,8 @@
-"""The server's minute tick, with or without hosting on: every hosted machine metered at Fly's rates up to now, its
-online seconds this month tallied (ops/metering.py), the keys that expired taken off their runtimes, the Enterprise
-grants past their date ended (their hosting due reported first), the idle machines and those held past their plan
-stopped, and the hosting due reported to Stripe's meter (ops/billing/meter.py).
+"""The server's minute tick, with or without hosting on: with hosting on (GLYPHH_HOSTING), every hosted machine metered
+at Fly's rates up to now, its online seconds this month tallied (ops/metering.py); always, the keys that expired taken
+off their runtimes and the Enterprise grants past their date ended (their hosting due reported first); with hosting
+on, the idle machines and those held past their plan stopped; and the hosting due reported to Stripe's meter
+(ops/billing/meter.py).
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 on a connection it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -56,11 +57,12 @@ async def tend(
 async def _tick(
     engine: AsyncEngine, hub: Hub, settings: Settings, step: int, fly: Fly | None, stripe: StripeClient | None
 ) -> None:
-    """The month tallied and metered, the keys that expired since the last tick (with a tick to spare) taken off
-    their runtimes, the Enterprise grants past their date ended (with Stripe, their hosting due reported first); with
-    hosting on, the idle machines stopped and those held past their plan stopped; with Stripe, the hosting due
-    reported to its meter."""
-    await tally(engine, settings.fly_region)
+    """With hosting on, the month tallied and metered; the keys that expired since the last tick (with a tick to spare)
+    taken off their runtimes, the Enterprise grants past their date ended (with Stripe, their hosting due reported
+    first); with hosting on and Fly set up, the idle machines stopped and those held past their plan stopped; with
+    Stripe, the hosting due reported to its meter."""
+    if settings.hosting:
+        await tally(engine, settings.fly_region)
     await push_expired(engine, hub, timedelta(seconds=2 * step))
     await expire(engine, stripe)
     if fly is not None:

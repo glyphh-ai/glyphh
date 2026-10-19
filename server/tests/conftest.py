@@ -56,6 +56,8 @@ SETTINGS: Settings = Settings(
     github_app_id=GITHUB_APP_ID,
     github_app_private_key=GITHUB_APP_PEM,
     github_app_slug="glyphh-test",
+    # The suite runs with Glyphh's managed cloud on; tests/api/test_tiers.py turns it off.
+    hosting=True,
 )
 PROVIDER_SETTINGS: Settings = SETTINGS.model_copy(
     update={

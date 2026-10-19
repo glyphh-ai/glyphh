@@ -6,6 +6,7 @@ org is synced from Stripe's answer at once; the webhook keeps it true after."""
 from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_server.config import Settings
 from glyphh_server.db.seed import FREE, SALES
 from glyphh_server.errors import Conflict
 from glyphh_server.ops import limits
@@ -44,7 +45,9 @@ async def to_free(conn: AsyncConnection, who: Principal, stripe: StripeClient, o
     await sync_subscription(conn, who.org_id, await stripe.cancel(org.stripe_subscription_id))
 
 
-async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClient, plan: str) -> OrgView:
+async def change_plan(
+    conn: AsyncConnection, who: Principal, stripe: StripeClient, settings: Settings, plan: str
+) -> OrgView:
     org = await subscribed(conn, who)
     current = await org_version(conn, who.org_id)
     if not current.self_serve:
@@ -53,10 +56,10 @@ async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClien
     await room_for(conn, who, version)
     if version.name == FREE:
         await to_free(conn, who, stripe, org)
-        return await org_view(conn, who.org_id)
+        return await org_view(conn, who.org_id, settings)
     price = sold(version)
     if version.id != current.id:
         found = await classify(conn, who.org_id, await stripe.subscription(org.stripe_subscription_id))
         item = {"price": price, "quantity": 1} | ({"id": found.plan["id"]} if found.plan else {})
         await sync_subscription(conn, who.org_id, await stripe.change(org.stripe_subscription_id, [item]))
-    return await org_view(conn, who.org_id)
+    return await org_view(conn, who.org_id, settings)

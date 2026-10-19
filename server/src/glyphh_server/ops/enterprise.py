@@ -1,10 +1,11 @@
-"""Enterprise, granted by Glyphh's staff, never bought: the org's plan becomes Enterprise until a date, its markup on
-Fly's rates and its own Stripe subscription (the deal's annual price, invoiced, and the metered hosting price) recorded,
-so its hosting is reported to that subscription's customer. Revoking it, or the date passing, puts the org back on
-Free, its hosted machines stopped and held (ops/held.py), the hosting due reported first to the subscription it is
-leaving (ops/billing/meter.py), as a subscription's own change is. Run on the server's machine (`fly ssh console`):
+"""Enterprise, granted by Glyphh's staff, never bought: the org's plan becomes Enterprise until a date and its own
+Stripe subscription (the deal's annual price, invoiced; with hosting on, the metered hosting price too) recorded, and
+with hosting on its markup on Fly's rates, so its hosting is reported to that subscription's customer. Revoking it,
+or the date passing, puts the org back on Free, its hosted machines stopped and held (ops/held.py), the hosting due
+reported first to the subscription it is leaving (ops/billing/meter.py), as a subscription's own change is. Run on
+the server's machine (`fly ssh console`):
 
-    python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --markup <pct> --subscription <sub_…>
+    python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…> [--markup N]
     python -m glyphh_server.ops.enterprise revoke --org <uuid>"""
 
 import argparse
@@ -45,10 +46,11 @@ async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
 
 
 async def grant(
-    engine: AsyncEngine, stripe: StripeClient, org_id: uuid.UUID, until: date, markup: int, subscription: str
+    engine: AsyncEngine, stripe: StripeClient, org_id: uuid.UUID, until: date, markup: int | None, subscription: str
 ) -> str:
-    """The org on Enterprise through the end of `until` (UTC), at this markup, billed on this subscription. Granted
-    again, a deal renewed or changed (a new subscription too); a self-serve subscription is cancelled first."""
+    """The org on Enterprise through the end of `until` (UTC), at this markup (none: its hosting is not charged),
+    billed on this subscription. Granted again, a deal renewed or changed (a new subscription too); a self-serve
+    subscription is cancelled first."""
     sub = await stripe.subscription(subscription)
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
@@ -63,7 +65,8 @@ async def grant(
             "billing_status": sub["status"] if sub["status"] in BILLING_STATUSES else "none",
         }
         await conn.execute(update(Org).where(Org.id == org_id).values(**values))
-    return f"{org.name} is on Enterprise through {until}, at {markup}%, billed on {subscription} ({sub['customer']})."
+    at = "" if markup is None else f", at {markup}%"
+    return f"{org.name} is on Enterprise through {until}{at}, billed on {subscription} ({sub['customer']})."
 
 
 async def back_to_free(conn: AsyncConnection, org_id: uuid.UUID) -> None:
@@ -109,7 +112,7 @@ def parser() -> argparse.ArgumentParser:
     granting = commands.add_parser("grant", help="The org on Enterprise until a date")
     granting.add_argument("--org", type=uuid.UUID, required=True)
     granting.add_argument("--until", type=date.fromisoformat, required=True, help="YYYY-MM-DD, the last day")
-    granting.add_argument("--markup", type=int, required=True, help="Percent over Fly's rates, 0 or more")
+    granting.add_argument("--markup", type=int, help="With hosting on: percent over Fly's rates, 0 or more")
     granting.add_argument("--subscription", required=True, help="The deal's Stripe subscription, sub_…")
     revoking = commands.add_parser("revoke", help="The org back on Free")
     revoking.add_argument("--org", type=uuid.UUID, required=True)
@@ -118,13 +121,13 @@ def parser() -> argparse.ArgumentParser:
 
 async def run(argv: list[str], settings: Settings, http: httpx.AsyncClient | None = None) -> str:
     args = parser().parse_args(argv)
-    if args.command == "grant" and args.markup < 0:
+    if args.command == "grant" and args.markup is not None and args.markup < 0:
         parser().error("--markup is 0 or more")
     engine = make_engine(settings.database_url)
     client = http or httpx.AsyncClient(timeout=10)
     try:
         if args.command == "revoke":
-            fly = Fly(client, settings) if settings.fly_configured else None
+            fly = Fly(client, settings) if settings.hosting_on else None
             meter = settings.stripe_secret_key and StripeClient(
                 client, settings.stripe_secret_key, settings.stripe_meter_hosting
             )

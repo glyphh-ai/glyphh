@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     invite_url: str = ""
     # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
     mcp_origins: str = "https://claude.ai,https://claude.com"
+    # Glyphh's managed cloud, the hosted runtimes on Fly: off by default (GLYPHH_HOSTING=on brings it back). Off, no
+    # machine is made, started or restarted, the tick meters and stops nothing, Checkout sells no hosting, /v1/rates is
+    # E_UNAVAILABLE hosting_off and /v1/plans shows no hosted machines; machines already made can still be stopped and
+    # deleted. The code stays.
+    hosting: bool = False
     # Hosted runtimes on Fly: the deploy token, the one app the machines live in, their region, the hosted rrotor
     # image (private: carries the Ada part). Without all three of the token, the app and the image, hosting is off.
     fly_api_token: str = ""
@@ -90,6 +95,11 @@ class Settings(BaseSettings):
     @property
     def fly_configured(self) -> bool:
         return bool(self.fly_api_token and self.fly_app and self.fly_image)
+
+    @property
+    def hosting_on(self) -> bool:
+        """Hosting switched on and Fly set up: the server makes, starts, wakes, meters and stops machines."""
+        return self.hosting and self.fly_configured
 
     @property
     def mcp_resource(self) -> str:

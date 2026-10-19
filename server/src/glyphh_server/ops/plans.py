@@ -1,6 +1,6 @@
 """Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
 (hosted machines and the managed precedents) and its features. The markup on Fly's rates is a version's own and is
-never shown."""
+never shown. With GLYPHH_HOSTING off every plan shows no hosted machines (the versions themselves are unchanged)."""
 
 import uuid
 from typing import Literal
@@ -10,12 +10,16 @@ from sqlalchemy import Row, select
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
 from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 
 class Limits(BaseModel):
-    machines: int | None = Field(description="Hosted machines, the org's together: null = unlimited, 0 = none")
+    machines: int | None = Field(
+        description="Hosted machines on Glyphh's managed cloud, the org's together: null = unlimited, 0 = none (every "
+        "plan's while hosting is off)"
+    )
     precedents: int | None = Field(
         description="Managed precedents: what a hosted runtime may hold; null = unlimited. Local and self-hosted "
         "runtimes are unlimited on every plan"
@@ -67,21 +71,21 @@ def features(row: Row) -> Features:
     return Features(sync=row.sync, ha=row.ha, offline=row.offline, sso=row.sso)
 
 
-def view(row: Row) -> PlanView:
+def view(row: Row, settings: Settings) -> PlanView:
     return PlanView(
         name=row.name,
         version=row.version,
         price_cents=row.price_cents,
         interval=row.billing_interval,
         self_serve=row.self_serve,
-        limits=Limits(machines=row.max_machines, precedents=row.precedents),
+        limits=Limits(machines=row.max_machines if settings.hosting else 0, precedents=row.precedents),
         features=features(row),
     )
 
 
-async def org_plan(conn: AsyncConnection, org_id: uuid.UUID) -> PlanView:
+async def org_plan(conn: AsyncConnection, org_id: uuid.UUID, settings: Settings) -> PlanView:
     """The org's pinned version as callers see it."""
-    return view(await org_version(conn, org_id))
+    return view(await org_version(conn, org_id), settings)
 
 
 def _newest():  # type: ignore[no-untyped-def]
@@ -104,8 +108,8 @@ async def newest_versions(conn: AsyncConnection) -> list[Row]:
     return list(await conn.execute(_newest()))
 
 
-async def list_plans(conn: AsyncConnection) -> list[PlanView]:
-    return [view(r) for r in await newest_versions(conn)]
+async def list_plans(conn: AsyncConnection, settings: Settings) -> list[PlanView]:
+    return [view(r, settings) for r in await newest_versions(conn)]
 
 
 async def newest_version(conn: AsyncConnection, name: str) -> Row:

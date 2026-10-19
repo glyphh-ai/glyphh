@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_server.config import Settings
 from glyphh_server.models import Org
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
@@ -22,22 +23,22 @@ class OrgView(BaseModel):
     billing_status: str
 
 
-async def org_view(conn: AsyncConnection, org_id: uuid.UUID) -> OrgView:
+async def org_view(conn: AsyncConnection, org_id: uuid.UUID, settings: Settings) -> OrgView:
     row = (
         await conn.execute(select(Org.id, Org.name, Org.admin_user_id, Org.billing_status).where(Org.id == org_id))
     ).one()
     return OrgView(
         **row._mapping,
-        plan=await org_plan(conn, org_id),
+        plan=await org_plan(conn, org_id, settings),
         members=await limits.members(conn, org_id),
     )
 
 
-async def get_org(conn: AsyncConnection, who: Principal) -> OrgView:
-    return await org_view(conn, who.org_id)
+async def get_org(conn: AsyncConnection, who: Principal, settings: Settings) -> OrgView:
+    return await org_view(conn, who.org_id, settings)
 
 
-async def rename_org(conn: AsyncConnection, who: Principal, name: str) -> OrgView:
+async def rename_org(conn: AsyncConnection, who: Principal, name: str, settings: Settings) -> OrgView:
     require_admin(who)
     await conn.execute(update(Org).where(Org.id == who.org_id).values(name=name.strip()))
-    return await org_view(conn, who.org_id)
+    return await org_view(conn, who.org_id, settings)
