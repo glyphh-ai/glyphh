@@ -33,6 +33,10 @@ class Features(BaseModel):
     sso: bool = Field(description="SSO and SAML, roles and audit logs")
 
 
+# What works today, one source of truth: only offline licences; the other features are licence flags, not built.
+BUILT: Features = Features(sync=False, ha=False, offline=True, sso=False)
+
+
 class PlanView(BaseModel):
     name: str
     version: int
@@ -41,6 +45,10 @@ class PlanView(BaseModel):
     self_serve: bool = Field(description="Bought with Stripe Checkout; else talk to sales@glyphh.ai")
     limits: Limits
     features: Features
+    built: Features = Field(
+        BUILT,
+        description="Which features work today, the same on every plan: never show one as included that is not built",
+    )
     markup_hidden: Literal[True] = Field(True, description="The hosted rates already carry the plan's markup")
 
 
