@@ -470,7 +470,7 @@ restated on open is restated in memory only.
 `learned` sets every role's `similarity_weight` to its information gain
 about the outcome (scaled so the best weighs 1) and, per role, a
 `value_weights` table: how far each value moves the outcome from the base
-rate. Key parts and text roles are left alone. `output.costs`
+rate. Key parts, text roles and roles that carry sets are left alone. `output.costs`
 (`{decided: {true: cost}}`, default 0 for the same outcome and 1 for a
 different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
