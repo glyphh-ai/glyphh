@@ -1,22 +1,20 @@
 # Glyphh
 
-Glyphh as it is built: the [product](#product), the [architecture](#architecture), the [data model](#data-model) and the [plans](#plans), every statement checked against the code. Everything here works today, in `glyphh-ai/server`, `glyphh-ai/mods`, `glyphh-ai/glyphh` or `glyphh-ai/rrotor`; what is decided but not built is in the last section, [Not built yet](#not-built-yet), and nowhere else above it. How the parts call each other, step by step, is in rrotor's `docs/architecture.md`. The platform's pages are specified in `glyphh-ai/platform`'s README, from the routes in [The platform](#the-platform) below.
+Glyphh as it is built: the [product](#product), the [architecture](#architecture) and the [data model](#data-model), checked against the code. What is not built is in [Not built yet](#not-built-yet) and nowhere else. Plans and prices are in [pricing.md](pricing.md). How rrotor and the server talk, step by step, is in rrotor's `docs/architecture.md`; the platform's pages are in `glyphh-ai/platform`'s README.
 
 ## Product
 
-**Glyphh is a platform, a server and runtimes.** A person signs in once on the platform (the one web app), has a runtime where their Ada models live and run, and connects Claude to that runtime once. Mods for Claude are products beside it: Claude Code plugins installed from one Glyphh marketplace, turned on by the same account.
+**Glyphh is a platform, a server and runtimes.** A person signs in once on the platform (https://platform.glyphh.ai), has runtimes where their Ada models live and run, and connects Claude to a runtime once.
 
-| Mod | What it is | Runs | Sold | State |
-|---|---|---|---|---|
-| `glyphh` | The account: sign in, the licence, and the account, org, plan and billing panels. Every other mod depends on it | Claude | Every plan | Built |
-| `glyphh-drip` | Glyphh Drip: games and drips (visual effects with sound) over Claude: five arcade games, twenty drips, and the ones you make with Claude; your top score to beat | The person's Mac | Once, $4.99 per machine, no account | Built |
-| Ada | Ada models in your runtime: a typed spec and a precedent store, deployed by commit, run with no network, called by Claude and by any app at the runtime's own address | **rrotor**, an isolated runtime: local and self-hosted on every plan; hosted on Pro, Team and Enterprise | Every plan | Built: the runtime, the `ada` plugin (a skill, in `mods`), the SDKs `@glyphh-ai/ada` and `glyphh-ada` (`glyphh-ai/ada`, public) |
+| Part for the person | What it is | Where |
+|---|---|---|
+| Ada | Ada models: a typed spec and a precedent store, deployed by commit, run in the person's own runtime (**rrotor**), called by Claude and by any app at the runtime's address | Hosted at `https://<machine>.glyphh.app` (Pro, Team, Enterprise) or self-hosted at `https://<host>` (every plan) |
+| The `glyphh` plugin | For Claude Code: the account panels and sign-in card, the Ada skill, the file ledger | `/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh` |
+| The SDKs | A runtime's API for an app, with a runtime key | PyPI `glyphh` 3.0.0, npm `@glyphh-ai/glyphh` 3.0.0 |
 
-- **Ada is in every plan.** A plan (Free, Pro, Team, Enterprise) sells managed precedents and hosted machines, never seats, models or installs (below, [Plans](#plans); the rules in [pricing.md](pricing.md)).
-- **Glyphh Drip is bought once**, per machine, with no Glyphh account: a Stripe Payment Link, then a licence the server signs for that install, checked offline from then on (below, Bought once).
-- **The platform is the one door.** Sign-in, the runtime and its keys, approvals, billing and the org are pages on the platform; the server renders nothing. In Claude, the `glyphh` mod and the Glyphh connector show the account too.
-- **Glyphh has no model in it.** Claude is the brain, on the person's own Claude; Glyphh's machines do exact work. Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
-- **Desktop first, then the CLI.** Mods look like Claude: its theme, its fonts. **Functional first:** every screen works before design draws it.
+- **Ada is in every plan.** Plans sell managed precedents and hosted machines, never seats, models or installs ([pricing.md](pricing.md)).
+- **The platform is the one door.** The server renders nothing; every browser step lands on the platform. In Claude, the plugin and the Glyphh connector show the account too.
+- **Glyphh has no model in it.** Claude runs on the person's own subscription; Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
 
 ## Architecture
 
@@ -26,13 +24,11 @@ Glyphh as it is built: the [product](#product), the [architecture](#architecture
 flowchart TB
     subgraph Machine["The person's machine"]
         subgraph Claude["Claude, desktop or CLI"]
-            Base["glyphh mod"]
-            Fun["glyphh-drip"]
+            Base["glyphh plugin"]
         end
         LocalRotor["rrotor, local<br/>loopback API"]
         Local[("~/.glyphh<br/>install, licence")]
         Base --> Local
-        Base -- "runtime token" --> LocalRotor
     end
 
     Browser["A browser"]
@@ -61,7 +57,6 @@ flowchart TB
 
     Browser --> Platform
     Base <-- "device flow, licence" --> API
-    Fun -- "the licence, once paid" --> API
     Claude -- "the Glyphh connector" --> API
     Callers -- "REST or MCP" --> Fly
     Callers -- "REST or MCP" --> Self
@@ -72,23 +67,20 @@ flowchart TB
     API <-- "checkout, webhook, meter events" --> Stripe
 ```
 
-**What a person makes stays theirs:** their models, their precedents and their data, in their own rrotor. **Nothing of Glyphh's is on the data path:** a call goes from the caller to the person's machine over Fly's proxy, and the answer comes straight back. The server holds who they are, what they pay for, and the record of their models and runs (each run's status and seconds), never their content, and never a result's data.
+**What a person makes stays theirs:** their models, precedents and data, in their own rrotor. **Nothing of Glyphh's is on the data path:** a call goes from the caller to the person's machine over Fly's proxy and back. The server holds who they are, what they pay for, and the record of their models and runs (status and seconds), never content or a result's data.
 
 ### The parts
 
-| Part | What it is | Repo | State |
-|---|---|---|---|
-| **The platform** | The one web app: sign in, the runtime and its keys, approvals, billing, the org, the models record; every browser step of every flow | `glyphh-ai/platform` | Routes specified below; pages to build to the design |
-| **The server** | The API and the authorization server: accounts, orgs, installs, the signed licence, plans and metered hosting on Stripe, the Glyphh connector (`/mcp`), provisioning, the runtime link and approvals. Renders nothing | `glyphh-ai/server` | Built |
-| **The `glyphh` mod** | The account in Claude | `glyphh-ai/glyphh` | Built |
-| **The mods** | `glyphh` (the account), `glyphh-drip` (bought once, on `shared/unlock/`), `ada` (the skill: build, deploy and call models on the runtime's connector; no hooks) | `glyphh-ai/mods` | Built |
-| **The SDKs** | `@glyphh-ai/ada` (npm) and `glyphh-ada` (PyPI): a runtime's API for an app, with a runtime key; one contract (the Result, the Answer, the error) with fixtures taken live | `glyphh-ai/ada` (public, MIT) | Built; publishing on a `sdk-v*` tag |
-| **rrotor** | The runtime Ada installs into: a small base image, the model sandbox and runner, and a part per mod | `glyphh-ai/rrotor` | Built, local, hosted and self-hosted |
-| **The marketplace** | What buyers install from: each mod built, with its live values | Written by each source repo's release build | Built (publishing off) |
+| Part | What it is | Repo |
+|---|---|---|
+| **The platform** | The one web app, https://platform.glyphh.ai: every browser step of every flow, and the account's pages | `glyphh-ai/platform` |
+| **The server** | https://api.glyphh.ai: the API and the authorization server; accounts, orgs, installs, the signed licence, plans and metered hosting on Stripe, the Glyphh connector (`/mcp`), provisioning, the runtime link, approvals. Renders nothing | `glyphh-ai/server` |
+| **The plugin, the marketplace and the SDKs** | The `glyphh` plugin and its marketplace; the SDKs `glyphh` (PyPI) and `@glyphh-ai/glyphh` (npm), one contract with fixtures | `glyphh-ai/glyphh` (public) |
+| **rrotor** | The runtime: one image (`ghcr.io/glyphh-ai/rrotor`, public), the model sandbox and runner, the Ada part | `glyphh-ai/rrotor` |
 
 ### The platform
 
-The platform is a client of the server and nothing more: a confidential OAuth client for its own sign-in (tokens in a sealed HttpOnly cookie; the browser never holds a token), and the pages every browser flow lands on. The server sends a browser to these routes; each reads what it needs from the server and answers with the server call named.
+A confidential OAuth client of the server (tokens in a sealed HttpOnly cookie; the browser never holds one) and the pages every browser flow lands on. The server sends a browser to these routes; each reads what it needs and answers with the server call named.
 
 | Platform route | Arrives from | Shows | Answers with |
 |---|---|---|---|
@@ -135,36 +127,29 @@ sequenceDiagram
 
 The consent values are signed by the server and tied to the browser that started the flow by the server's short-lived cookie (`glyphh_signin`, ten minutes, on the server's domain), so the answering `GET` must be a top-level navigation from that browser. The platform reads `GET /auth/consent` from the browser itself (`credentials: include`): the server answers it with CORS for the platform's origin only (`GLYPHH_PLATFORM_URL`), with credentials. The cookie is `SameSite=Lax` when the platform and the server share a site (`platform.glyphh.ai` and `api.glyphh.ai`), and `SameSite=None; Secure` when they do not (locally, `localhost` beside a tunnel), so that read still carries it. The server always sends a person through a provider's sign-in before Allow; whether the platform skips its own choice of provider for someone already signed in is the platform's.
 
-The pages that are the platform's own, from the API with the session's token: Home (the first machine: `GET /v1/runtime`, its address, state, time online this month; `POST /v1/runtime/start`, `/stop`), Machines (`GET`/`POST /v1/runtimes`, `POST /v1/runtimes/{id}/start`, `/stop`, `/restart`, `DELETE /v1/runtimes/{id}?confirm=<name>`), Keys (`GET`/`POST /v1/runtime/keys`, `DELETE /v1/runtime/keys/{id}`), Approvals (`GET /v1/approvals`, `/stream`, `POST /v1/approvals/{id}`), Models (`GET /v1/models`, `DELETE /v1/models/{id}`), Billing and Usage (`GET /v1/plans`, `/v1/rates`, `/v1/billing`, `POST /v1/billing/*`), Org (`GET /v1/org`, `/members`, `/invites`), Account (`GET`/`PATCH /v1/me`, `/v1/installs`, `POST /v1/me/identities`).
+The platform's own pages, from the API with the session's token: Home (the first machine: `GET /v1/runtime`, its address, state, time online this month; `POST /v1/runtime/start`, `/stop`), Machines (`GET`/`POST /v1/runtimes`, `POST /v1/runtimes/{id}/start`, `/stop`, `/restart`, `DELETE /v1/runtimes/{id}?confirm=<name>`), Keys (`GET`/`POST /v1/runtime/keys`, `DELETE /v1/runtime/keys/{id}`), Models (`GET /v1/models`, `DELETE /v1/models/{id}`), Billing and Usage (`GET /v1/plans`, `/v1/rates`, `/v1/billing`, `POST /v1/billing/*`), Org (`GET /v1/org`, `/members`, `/invites`), Account (`GET`/`PATCH /v1/me`, `/v1/installs`, `POST /v1/me/identities`).
 
-### Mods and how they are installed
+### The `glyphh` plugin
 
-- **A mod is a Claude Code plugin** whose hooks are a code module (`.claude-plugin/plugin.json`, `hooks/hooks.json` naming `register.tsx`). A mod can ship its own MCP server, skills and commands. Mods are behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while the API is early access.
-- **Installed from the Glyphh marketplace** at the user scope, so it loads in every session, the desktop's Code tab too. Every mod depends on `glyphh`.
-- **Source and releases are apart.** The source repos hold tests, the shared modules and the release scripts; a release build writes only each mod's shipped files and the marketplace file, with the live server address and licence key swapped in.
-- **A mod sold once** (`glyphh-drip`) keeps its own licence and checks it at start; `/drip unlock` buys it. **A mod on the account** checks the plan's licence at start.
+Its home is `glyphh-ai/glyphh` (the README there); what touches the server:
 
-### Two kinds of panel
+- **Sign in** by device flow (`/glyphh signin`): the link lands on the platform's `/device`, where the person signs in with Google or GitHub and approves the install. Asking Claude "sign in to Glyphh" shows a sign-in card from the plugin's own MCP server.
+- **Licence:** fetched and checked (Ed25519) at start, refreshed daily ([The license](#the-license)); kept in [`~/.glyphh`](#on-the-machine-glyphh).
+- **Panels:** account, org, plan and billing, a hooks module (`hooks/hooks.json` naming `register.tsx`), behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while function hooks are early access. The Ada skill and the file ledger need neither the flag nor the server.
 
-| | Mod panels | MCP App panels |
+### Panels
+
+| Panel | Where | Kind |
 |---|---|---|
-| What | Claude's own elements: boxes, text, buttons, inputs, selects, links, markdown, SVG | An HTML page with scripts that an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), shown in a frame |
-| Can | Forms, lists, actions, on desktop and CLI | Live pictures, take control, anything a page can do; the host passes its theme as CSS variables |
-| Used for | Account, org, plan, billing | The connector's account panel; the sign-in card |
+| Sign in, account, org, plan, billing | The plugin | Hooks module: Claude's own elements, on desktop and CLI |
+| The sign-in card, in the chat | The plugin's MCP server | MCP App |
+| The account: who, plan, usage, upgrade, billing, installs, grants | The Glyphh connector ([The account panel](#the-connector)) | MCP App |
 
-Proved on 2026-10-12, in a prototype: an MCP App panel in Claude showed a machine's screen live and took control of it. Its lessons hold: Claude's panel frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
+An MCP App panel is an HTML page an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), framed, the host's theme passed as CSS variables. Claude's frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
 
-### `glyphh`: the account (built)
+### Ada models
 
-- **Sign in** by device flow: `/glyphh` shows the code and opens the link in Claude's browser pane (in the CLI, prints it); the link lands on the platform's `/device` page, where the person signs in with Google or GitHub and approves the install. One sign-in serves every mod on that machine. Asking Claude "sign in to Glyphh" shows a sign-in card in the chat, from the mod's own MCP server.
-- **Licence:** fetched and checked (Ed25519) at start and refreshed daily; every mod reads it.
-- **Panels:** account, org, plan, billing.
-
-### `ada`: models and rrotor
-
-**An Ada model is a typed spec and a precedent store; rrotor runs it; Claude calls it.** Ada is a library (`glyphh_kernel.py`, `glyphh_spec.py`, `glyphh_nsm.py`; numpy only): a model is `spec.json` and a small `model.py` whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`). Nothing is trained; the model learns from the precedents it records. To rrotor a model is a **model**: a Python package with a manifest, deployed by commit, run in the sandbox, answering with a `Result`.
-
-rrotor deploys a model by commit and runs it in its sandbox; the Ada part; hosted machines on Fly (on Pro, Team and Enterprise, as many as the plan's machines, each named and of a size, stopped when idle, metered per second); each runtime reached directly at `<machine>.glyphh.app` with a runtime key, REST and MCP served by rrotor itself (below, Reaching a runtime); the server's models record, rrotor's link, approvals and the GitHub App. Nothing calls a model through the server.
+**An Ada model is a typed spec and a precedent store; rrotor runs it; Claude or an app calls it.** Ada is a library (`glyphh_kernel.py`, `glyphh_spec.py`, `glyphh_nsm.py`; numpy only): a model is `spec.json` and a small `model.py` whose functions call the kernel (`record`, `query`, `facts`, `probabilities`, `decide`). Nothing is trained; the model learns from the precedents it records. To rrotor it is a Python package with a manifest, deployed by commit, run in the sandbox, answering with a `Result`. Nothing calls a model through the server.
 
 **A model**, as rrotor runs one:
 
@@ -187,37 +172,35 @@ def end(ctx: Ctx) -> None: ...  # always runs: close up, keep results
 | `needs_approval` | About to act: "record this" | Asks the person; unattended, leaves it waiting for them |
 | `failed` | Which step and why | Retries, tries another way, or reports |
 
-- **`ctx` is what the model was granted**, nothing else: `ctx.http` (only the hosts the manifest declares; an Ada model declares none), `ctx.db` (its own databases, from the database parts), `ctx.secrets`, `ctx.files`, `ctx.log`, `ctx.checkpoint` (resume a run between calls).
-- **Folders exist only through the model:** a model sees its own folder (`ctx.files`, `/data/models/<name>/files`) and its persistent data folder (`/data/models/<name>/data`, Ada's precedent store, outside git) and nothing else; no model reaches another's.
-- **The manifest** declares the model's functions and their inputs, the hosts it reaches, its secrets, its databases, the parts it needs (Ada's kernel), the steps that need approval, and the Claude connectors its routine needs.
+- **`ctx` is what the model was granted**, nothing else (`ctx.http` only to the hosts its manifest declares, none for an Ada model; its own databases, secrets, files, log and checkpoints); it sees only its own folders. The manifest declares its functions, hosts, secrets, databases, parts and the steps that need approval. Details: rrotor's `docs/architecture.md`.
 - **A model lives in the runtime and in git:** each is a repo in the person's own GitHub account; a version is a commit. The server keeps only an index (name, repo, versions as commit SHAs, where each is deployed) and the run records. Glyphh's cloud never keeps a copy of the code or the precedents.
 - **Git is required for hosted models:** the person installs the Glyphh GitHub App on their account (built); deploying pins a commit, and the hosted rrotor fetches exactly that commit with a short-lived token the App issues for that repo. Local-only use needs no GitHub.
 - **A redeploy that changes the encoding** (the spec's `seed`, `dim`, `encoding` or `spec_id`) re-encodes the store from its recorded facts before the new version is active, or refuses the deploy (`E_ADA_ENCODING`) when the old facts cannot be read by the new spec.
 - **`clearance`** comes from the caller's Glyphh identity (the run's caller, the person's plan and org role), passed in the call and never from the inputs, so a model's facts are filtered by who asks.
 - **Secrets are never committed:** they stay in rrotor's vault.
 
-**In Claude, on the runtime.** Claude has the person's runtime as a connector (`https://<machine>.glyphh.app/mcp`: signed in to Glyphh with one Allow click, or a runtime key): with the person it writes the spec and the model's functions, deploys by commit, calls the model (`model_call(model, function, inputs)`, then `model_continue(run_id, answer)` as needed), reads the result and fixes it until it passes. Any app does the same over REST (`POST /v1/runs` at the runtime's address) with a runtime key. Fly's proxy lands each request on the person's machine, starting it if it was stopped; nothing of Glyphh's sees the call or the answer. rrotor runs the step in its sandbox and answers the `Result`. There is no Ada mod; machines are made and started and their keys made on the platform (or with the Glyphh connector's `create_runtime`, `start_runtime` and `create_runtime_key`).
+**Calling it.** Claude adds the runtime as a connector (`https://<machine>.glyphh.app/mcp` or `https://<host>/mcp`, with one Allow click or a runtime key) and, guided by the plugin's Ada skill, writes the spec and functions, deploys by commit and calls the model (`model_call`, then `model_continue` as needed). Any app does the same over REST (`POST /v1/runs` at the runtime's address) with a runtime key. Machines and keys are made on the platform or with the connector's `create_runtime`, `start_runtime` and `create_runtime_key`.
 
-A step that `needs_approval` waits for the person: the approval is on the platform's Approvals page and in Claude's band; the first answer wins.
+A step that `needs_approval` waits for the person; the first answer to `POST /v1/approvals/{id}` wins.
 
 ### rrotor
 
-**Isolated runtimes per person: a local one, hosted machines up to the org's plan's, and any the person runs themselves.** Each is a runtime where their models live and run.
+**A person's runtimes: hosted machines up to the org's plan's, any they run themselves, and a local one per install.** All run the same image (`ghcr.io/glyphh-ai/rrotor`, public; `RROTOR_MODE` sets which); rrotor's `docs/architecture.md` is its home.
 
-| | Local runtime (built) | Hosted runtime (built) | Self-hosted runtime (built) |
+| | Hosted | Self-hosted | Local |
 |---|---|---|---|
-| Who | Every plan, Free included | Pro (3 machines), Team (10) and Enterprise (unlimited), placeholders until set; Free has none | Every plan, unlimited |
-| Where | The person's own computer (Apple's `container`, else OrbStack, else Docker), installed and started by the first mod that needs it | A Fly machine and its volume each, named and of a size (below, Machines), made with `POST /v1/runtimes` (or the first one by `POST /v1/runtime/start`) | The person's own infrastructure (Docker Compose, a Helm chart, Terraform), registered by name and public address (below, Self-hosted runtimes) |
-| Up | While the computer is on | Stopped by the server after `GLYPHH_RUNTIME_IDLE_MINUTES` (10) with no run in progress or recent, and by Fly's proxy when no request comes; a request to its hostname starts it, and so does the server for a deploy or an approval's answer | As long as its owner runs it; the server never starts or stops it |
-| Called by | Claude on that computer, on its loopback API | Claude anywhere and any app, at `<machine>.glyphh.app` with a runtime key | Claude and any app at `https://<its host>`, with a runtime key or a Glyphh sign-in |
-| Caps | The computer's own; precedents unlimited | The plan's machines and its managed precedents (Pro 100,000, Team 1,000,000, Enterprise unlimited), across the runtime's Ada models | Its own; precedents unlimited |
-| Billed | Never | Per second at Fly's rates with the plan's markup (below, Billing and hosting) | Never |
+| Who | Pro, Team, Enterprise, up to the plan's machines ([pricing.md](pricing.md)) | Every plan, unlimited | Every plan |
+| Where | A Fly machine and its volume each, named and of a size ([Machines](#machines)) | The person's own infrastructure (Compose, Helm or Terraform, in rrotor's `deploy/`), registered by name and address ([Self-hosted runtimes](#self-hosted-runtimes)) | The person's computer, linked with an install's runtime token (`POST /v1/runtime/local`) |
+| Up | Stopped after `GLYPHH_RUNTIME_IDLE_MINUTES` (10) with no run in progress or recent, and by Fly's proxy when no request comes; woken by a request to its address, or by the server for a deploy or an approval's answer | While its owner runs it; the server never starts or stops it | While the computer runs it |
+| Reached at | `https://<machine>.glyphh.app`, a runtime key or a Glyphh sign-in | `https://<host>`, a runtime key or a Glyphh sign-in | Its loopback API only |
+| Precedents | The plan's managed bucket | Unlimited | Unlimited |
+| Billed | Per second ([Billing and hosting](#billing-and-hosting)) | Never | Never |
 
-All run the same image and the same SDK; a model built locally deploys to a hosted machine unchanged.
+Every rrotor is headless, with no sign-in of its own, no Claude login, model or keys in it, one volume (`/data`), each run sandboxed (bubblewrap, Landlock, seccomp; network only to the hosts its manifest declares), and an outbound link to the server ([The server](#the-server)); a local one's token stops working when its install is signed out.
 
 ### Machines
 
-**A person's hosted runtimes are machines: several, each named, each of one size.** The sizes are one table (`SIZES`, `models/rrotor.py`) that makes each machine's Fly guest and volume:
+**Each hosted runtime is a machine, named and of one size.** The sizes are one table (`SIZES`, `models/rrotor.py`) that makes each machine's Fly guest and volume:
 
 | Size | Fly guest | Memory | Volume |
 |---|---|---|---|
@@ -227,17 +210,9 @@ All run the same image and the same SDK; a model built locally deploys to a host
 
 - **Made and run from the account:** `GET /v1/runtimes` lists the person's machines, oldest first: `[{id, name, size, state, address, month_seconds, created_at}]` (`address` `https://<machine>.glyphh.app`, `month_seconds` its online time this month). `POST /v1/runtimes {name, size}` makes one and starts it (the app's doorman made with the first) and answers `201` the machine; past the plan's machines, the org's together, `E_LIMIT` (`reason: machines`; on Free, any), a name the person has given another `E_CONFLICT` (`reason: name`). `GET /v1/runtimes/{id}`, `POST /v1/runtimes/{id}/start`, `/stop` and `/restart` (Fly's `POST /machines/{id}/restart`; `stopped` until it links again) answer the machine. Each acts only on the caller's own machines: anyone else's is `E_NOT_FOUND`.
 - **Deleting one is not undone:** `DELETE /v1/runtimes/{id}?confirm=<its name>` answers `204` and destroys the machine and its volume: every model, version, precedent and file on it. A `confirm` that is not its name is `E_INVALID` (`reason: confirm`). Nothing is backed up past Fly's daily snapshots of the volume (5 days).
-- **The routes made for one runtime act on the first machine** (the oldest), so the clients made before machines keep working: `GET /v1/runtime`, `POST /v1/runtime/start` (with no machine, one made: `default`, small), `/stop`, `DELETE /v1/runtime`. A deploy with no runtime named, and no local one, goes to the first machine too.
+- **The single-runtime routes act on the first machine** (the oldest): `GET /v1/runtime`, `POST /v1/runtime/start` (with no machine, one made: `default`, small), `/stop`, `DELETE /v1/runtime`. A deploy with no runtime named, and no local one, goes to the first machine too.
 - **Keys:** a runtime key names one machine (or a self-hosted runtime) with `runtime_id`, or none: then every hosted machine of the person's holds it, those made later too, and none of their self-hosted ones.
-- **Metered:** each machine is billed per second, started, and its volume always (below, Billing and hosting); a deleted one for the days it ran. Machines past the plan (an org back on Free, say) are stopped and held: starting one from the account is `E_LIMIT` (`machines`), and one a request wakes at its address is stopped again within the minute (below, Held past the plan). Idling, waking and stopping are each machine's own.
-
-- **A small base image** (`ghcr.io/glyphh-ai/rrotor`): Python, Node, the model sandbox, the link client, the local API and the model runner. **Headless:** no UI, no desktop, nothing to log into.
-- **A part per mod**, installed into rrotor from the mod's own release, versioned, verified and licensed by the plan: Ada's numpy and kernel, and the database parts (Postgres with pgvector, MongoDB, Neo4j) a model asks for.
-- **No sign-in of its own:** the mod, signed in, asks the server for the runtime token (`POST /v1/runtime/local`) and hands it to rrotor; signing the install out cuts rrotor off.
-- **No inbound ports from outside the machine:** the local API listens on loopback only, behind a token only the mod holds; rrotor connects out to the server and takes remote calls over that link.
-- **Each run sandboxed** (bubblewrap, Landlock, seccomp): only its model and its own data mounted; network only through an egress proxy that lets through the hosts the manifest declares; anything else refused and recorded.
-- **One volume, `/data`:** model versions, secrets (encrypted), run logs and outputs.
-- **No Claude login, no model, no keys of Claude's** anywhere in it.
+- **Metered** per second while started, its volume always; held when past the plan ([Billing and hosting](#billing-and-hosting)).
 
 ### Reaching a runtime
 
@@ -266,14 +241,14 @@ sequenceDiagram
     R-)G: link#58; online, deployed, usage per key and precedents, events, each run's status (never its data)
 ```
 
-- **One Fly app (`GLYPHH_FLY_APP`; in production `glyphh-ai-runtime`), a wildcard certificate `*.glyphh.app` and a wildcard DNS record.** The hostname *is* the machine id, so no lookup anywhere: a machine that gets a request for another `Host` answers `fly-replay: instance=<id>` and Fly's proxy replays it there, starting that machine if it is stopped. One small always-on **doorman** machine takes the first hop, so nobody's machine is woken to bounce someone else's request. `fly-replay` carries bodies up to 1 MB: calls, continues and MCP; a deploy bundle goes by git through the link as before.
-- **Auth is rrotor's:** a request carries a **runtime key** (`Authorization: Bearer`), checked against the SHA-256s rrotor holds, **or a Glyphh sign-in**: the runtime is an OAuth protected resource whose authorization server is this server (below, The connector: A runtime as a resource), and rrotor asks `POST /v1/runtime/introspect` whether the bearer is live for its own address. Keys are made from the account (`POST /v1/runtime/keys {name, expires_in_days, runtime_id}`, `runtime_id` one machine or left out for every one of the person's, or the `glyphh` mod and the connector's `create_runtime_key`), shown once, and their hashes reach rrotor in its `welcome` and as `keys` down the link when they change; revoking one is the same message. **A key expires** 1 to 365 days from when it is made, or never (`expires_in_days` left out): the platform warns before making one that never expires. An expired key leaves the list rrotor holds: the server's minute tick sends `keys` for any runtime whose key expired since the last, and a `welcome` never carries one. A revoked or expired key stays in the account's list, dated, until the person deletes it (`DELETE /v1/runtime/keys/{id}/record`); a live key cannot be deleted, only revoked first (`E_CONFLICT`, `reason: live`). The local rrotor keeps its loopback-only API and local token.
+- **One Fly app (`GLYPHH_FLY_APP`; in production `glyphh-ai-runtime`), a wildcard certificate `*.glyphh.app` and a wildcard DNS record.** The hostname *is* the machine id, so no lookup anywhere: a machine that gets a request for another `Host` answers `fly-replay: instance=<id>` and Fly's proxy replays it there, starting that machine if it is stopped. One small always-on **doorman** machine takes the first hop, so nobody's machine is woken to bounce someone else's request. `fly-replay` carries bodies up to 1 MB: calls, continues and MCP; a deploy goes by git through the link.
+- **Auth is rrotor's:** a request carries a **runtime key** (`Authorization: Bearer`), checked against the SHA-256s rrotor holds, **or a Glyphh sign-in**: the runtime is an OAuth protected resource whose authorization server is this server (below, The connector: A runtime as a resource), and rrotor asks `POST /v1/runtime/introspect` whether the bearer is live for its own address. Keys are made from the account (`POST /v1/runtime/keys {name, expires_in_days, runtime_id}`, `runtime_id` one runtime or left out for every hosted machine of the person's; or the connector's `create_runtime_key`), shown once, and their hashes reach rrotor in its `welcome` and as `keys` down the link when they change; revoking one is the same message. **A key expires** 1 to 365 days from when it is made, or never (`expires_in_days` left out): the platform warns before making one that never expires. An expired key leaves the list rrotor holds: the server's minute tick sends `keys` for any runtime whose key expired since the last, and a `welcome` never carries one. A revoked or expired key stays in the account's list, dated, until the person deletes it (`DELETE /v1/runtime/keys/{id}/record`); a live key cannot be deleted, only revoked first (`E_CONFLICT`, `reason: live`).
 - **What rrotor reports, and never more:** every minute it has calls to report, rrotor sends `usage` up the link: for each runtime key that let a request in since the last report, its SHA-256, the number of calls and when it was last used (numbered, kept in rrotor's outbox until acknowledged, so each report counts once; calls in the minute before a crash are lost). The server adds them to that key's `calls` and `last_used_at`, shown with the key (`GET /v1/runtime/keys`). `usage` also carries `precedents`, the runtime's total across its Ada models (left out until rrotor has read it; it may come with no keys): the server keeps the newest (`rrotors.precedents`, `precedents_at`), and an org's hosted runtimes' together are shown as what it uses of its plan's managed bucket; each hosted runtime's licence carries the whole bucket as its own cap. After **every** deploy, however it was asked for (the server's `deploy`, rrotor's own `POST /v1/models/deploy` or its MCP `model_deploy`), rrotor sends `deployed` with the model, version, commit, and the repo and manifest when it has them; a model or version the server has not seen is recorded then, in the person's org, so `GET /v1/models` shows every model on the runtime. Each `hello` lists the versions active on the runtime, and the server records them the same way (without repo or manifest), so models deployed before the link last went down are never missed. Never a call's inputs, outputs or the key itself.
 - **The API on the machine is rrotor's own** (rrotor's `docs/architecture.md`, section 7): `POST /v1/runs` answers the first `Result` with its data, `/continue`, `/cancel`, `GET /v1/runs/{id}`, `/log`, `/approvals`, `GET /v1/models`, `POST /v1/models/deploy`. **MCP too:** `https://<machine>.glyphh.app/mcp` (Streamable HTTP, a Glyphh sign-in or the runtime key as the bearer) with `models_list`, `model_deploy`, `model_call`, `model_continue`, `run_status`, so Claude adds the runtime as a connector and talks to it directly.
-- **Metered, never paused:** every minute the server adds the seconds since it last metered each machine to its month, its online time and its cost (below, Billing and hosting). The precedent cap comes from the runtime's licence: in `welcome` for a hosted one (the plan's managed precedents; rrotor refuses a `record` past the runtime's total) and a self-hosted one (unlimited); a local one's `welcome` carries no licence or keys, and its licence, unlimited, comes from its mod.
-- **The server's part:** provisioning (the doorman with the first runtime; each machine and its volume, of its size, its token and the public domain in its environment), keys, metering, the licence, the record of versions (`/v1/models`, by commit) and what rrotor reports up the link. Down the link go only the licence and keys (in `welcome` and as `keys`), a deploy, activate or remove of one version, and an approval's answer (`continue`); no call. Up it comes each run's `result` (the server keeps its status and seconds, never its data; a `needs_approval` becomes an approval), events, `deployed` and `usage`. For a deploy or an answer to a hosted machine that is stopped, the server starts it and waits up to 45 seconds for its link. The Glyphh connector's tools are the account's and the runtime's (`runtime`, `start_runtime`, `stop_runtime`, `runtimes`, `create_runtime`, `restart_runtime`, `delete_runtime`, `runtime_keys`, `create_runtime_key`, `revoke_runtime_key`, and for self-hosted ones `self_runtimes`, `register_self_runtime`, `offline_licence`); calling a model is the runtime's own MCP.
+- **The precedent cap is the licence's:** in `welcome` for a hosted runtime (the plan's managed precedents; rrotor refuses a `record` past the runtime's total) and a self-hosted one (unlimited); a local one's `welcome` carries no licence or keys.
+- **The server's part:** provisioning (the doorman with the first runtime; each machine and its volume, of its size, its token and the public domain in its environment), keys, metering, the licence, the record of versions (`/v1/models`, by commit) and what rrotor reports up the link. Down the link go only the licence and keys (in `welcome` and as `keys`), a deploy, activate or remove of one version, and an approval's answer (`continue`); no call. Up it comes each run's `result` (the server keeps its status and seconds, never its data; a `needs_approval` becomes an approval), events, `deployed` and `usage`. For a deploy or an answer to a hosted machine that is stopped, the server starts it and waits up to 45 seconds for its link. Calling a model is the runtime's own MCP, never the [connector](#the-connector)'s.
 - **Provisioning, on Fly's Machines API** (`ops/hosted.py`, `ops/fly.py`): the first machine makes the app's **doorman** (named `doorman`, `RROTOR_MODE=doorman`, a shared CPU and 256 MB, no volume, never stopped, restarted always). Each machine is a volume of its size (`data_<id>`, mounted at `/data`) and a machine (`rt-<id>`) of its size's guest, made stopped (`skip_launch`) in `GLYPHH_FLY_REGION`, then started; its environment is `RROTOR_MODE=hosted`, `RROTOR_SERVER`, `RROTOR_RUNTIME_ID`, `RROTOR_RUNTIME_TOKEN` and `RROTOR_PUBLIC_DOMAIN`, its service port 7777 behind 443 and 80, started by Fly's proxy on a request and stopped by it when idle (`autostop: stop`). A runtime's `state` is `stopped` until its first `hello`, `online` while linked, `offline` after. Without hosting set up, these routes are `E_UNAVAILABLE` `hosting_off`; a failure at Fly is `E_UNAVAILABLE` `fly_failed`, never a 500.
-- **One-time on Fly:** the runtimes app, `fly certs add "*.glyphh.app"` on it, a wildcard DNS record `*.glyphh.app` to the app's IPs (DNS only in Cloudflare, no proxy and no Worker in front), and the hosted image pushed to `registry.fly.io/<app>` (Fly's proxy pulls no private GHCR image). The server's `GLYPHH_FLY_*` settings name them.
+- **One-time on Fly:** the runtimes app, `fly certs add "*.glyphh.app"` on it, a wildcard DNS record `*.glyphh.app` to the app's IPs (DNS only in Cloudflare, not proxied), and the hosted image in Fly's registry (`registry.fly.io/<app>`, pushed by rrotor's CI). The server's `GLYPHH_FLY_*` settings name them.
 - **Why no proxy of ours:** the server on the data path would couple every customer's throughput to it and make "we never see your data" a promise instead of a fact. Fly's replay routes by `Host` with no lookup, and TLS ends on Fly's proxy and nowhere else.
 
 ### Self-hosted runtimes
@@ -289,76 +264,61 @@ sequenceDiagram
 
 ### On the machine: `~/.glyphh`
 
-Only what the mods need to start and sign in; nothing here goes to the cloud.
+What the plugin keeps for the server (its own files are in its README):
 
 | Path | What |
 |---|---|
 | `install.json` | This install's id and token, mode 0600 |
 | `license.json` | The signed licence: plan, limits, features, mods, expiry |
 
-### In rrotor: `/data`
-
-The same layout in the local and the hosted rrotor. rrotor calls a deployed model a model, and its paths say so.
-
-| Path | What |
-|---|---|
-| `models/<name>/<commit>/` | A deployed version of a model: the checkout of that commit, its manifest and installed dependencies |
-| `models/<name>/files/` | The model's own folder, the only folder it sees |
-| `models/<name>/data/` | The model's persistent data, outside git: its precedent store |
-| `secrets/` | Each model's secrets, encrypted with rrotor's key |
-| `parts/<part>/` | The parts the mods installed |
-| `db/` | The database parts' data: each model its own database |
-| `runs/<run_id>/` | A run's log, checkpoints and outputs |
+A runtime's own volume, `/data`, is laid out in rrotor's `docs/architecture.md`.
 
 ### The server
 
 The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, in Docker. Database first, then API; 100% test coverage; errors with stable codes and a trace id; small files.
 
-- **Sign in by device flow (RFC 8628)**; an **install** is a machine: signing in again on the same machine reuses its install. Installs are unlimited.
-- **Org:** the first user is its admin and pays; one org per user; members by invite, unlimited.
-- **Plans:** flat, through Stripe (Pro and Team monthly by Checkout; Enterprise by contract, granted by staff). A plan sets the hosted machines, the managed precedents and the licence's features; every mod is in every plan (below, Plans).
-- **Hosting billed per second:** every hosted machine metered at Fly's rates with the markup, reported to a Stripe Billing Meter (below, Billing and hosting).
-- **Licence:** short-lived, signed, per install or runtime: plan, hosted machines, features, and every mod with its limits (below, The license).
-- **The Glyphh connector:** a remote MCP server (`/mcp`, Streamable HTTP) that Claude and routines call, signed in with OAuth (below, The connector). Its tools are the account's and the runtime's; calling a model is the runtime's own MCP, at its address.
-- **The runtime link:** rrotor's outbound WebSocket (its own token); what rrotor reports comes up (online, deployed, events, approvals, each run's status and seconds) and only the licence, keys, a deploy and an approval's answer go down. A local runtime's token stops working when its install is signed out.
-- **Approvals:** a step that needs approval is a row in `approvals` and a signal on **Redis** pub/sub to the server process holding the person's connection (`/v1/approvals/stream`: the platform's Approvals page, and Claude's band); the first answer wins. Redis (`GLYPHH_REDIS_URL`) holds only what is live; Postgres holds everything kept.
-- **Models:** the record of each Ada model (a model, to rrotor and in the tables), its versions and deployments, and of each run (who called it, status, times), never its content (`/v1/models`).
-- **Hosting:** makes each of a person's machines on Fly, up to the plan's machines (a machine and a volume of its size in Glyphh's one Fly app, the runtime token in the machine's environment, the licence and keys in its `welcome`), stops it when idle, and meters it every minute.
-- **Limits are enforced here** where the server sees the use: hosted machines. The managed precedents rrotor enforces from its licence.
+- **Sign in by device flow (RFC 8628).** An install is a machine: signing in again on it reuses its install.
+- **Org:** one per user; the first user is its admin and pays; members by invite.
+- **Plans, billing and the licence:** flat plans on Stripe, hosted machines metered per second to a Billing Meter ([Billing and hosting](#billing-and-hosting)); a short-lived signed licence per install or runtime ([The license](#the-license)). The server enforces the hosted machines; rrotor enforces the managed precedents from its licence.
+- **The Glyphh connector:** a remote MCP server (`/mcp`) for the account and the runtimes, signed in with OAuth ([The connector](#the-connector)).
+- **The runtime link:** rrotor's outbound WebSocket, on its own token. Up come online, `deployed`, events, `usage` and each run's status and seconds; down go only the licence, keys, a deploy and an approval's answer. Never a call.
+- **Approvals:** a `needs_approval` is a row in `approvals` and a signal on Redis pub/sub to whichever server process holds the person's `/v1/approvals/stream`. Redis (`GLYPHH_REDIS_URL`) holds only live signals; Postgres holds everything kept.
+- **Models:** the record of each Ada model, its versions, deployments and runs, never their content (`/v1/models`).
+- **Hosting:** each machine and volume made in Glyphh's one Fly app, stopped when idle, metered every minute ([Reaching a runtime](#reaching-a-runtime)).
 
 ### Starting up, and the reset on deploy
 
-The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (until launch there are no migrations: reset the dev database with `docker compose down -v`), then seeds the mods (`ada`; a mod no longer seeded is retired, never deleted), the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version), Fly's rates (`db/seed_rates.py`; a row there is never changed) and the platform's OAuth client (`db/seed_clients.py`, above, The connector). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more, or in `prod` without `GLYPHH_LICENSE_KEY`.
+The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (there are no migrations yet: reset the dev database with `docker compose down -v`), then seeds the mods (`ada`; a mod no longer seeded is retired, never deleted), the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version), Fly's rates (`db/seed_rates.py`; a row there is never changed) and the platform's OAuth client (`db/seed_clients.py`, [The connector](#the-connector)). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more, or in `prod` without `GLYPHH_LICENSE_KEY`.
 
 **In production the database is made clean on every deploy**, while nothing in it is kept: Fly's release command, `python -m glyphh_server.db.reset`, runs once before the new machines start and, only while `fly.toml` sets `GLYPHH_RESET_DATABASE=1`, drops every table the server's role owns and runs the schema step again. Every org, subscription record and grant goes with it; subscriptions in Stripe outlive it. Without the setting it keeps the data and says so.
 
 ### Settings
 
-From the environment (prefix `GLYPHH_`, or `.env`; `config.py`):
+From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`). In production each is a secret or `[env]` of the Fly app `glyphh-ai-server`:
 
 | Setting | Default | What |
 |---|---|---|
 | `GLYPHH_ENV` | `dev` | `dev`, `test` or `prod` |
 | `GLYPHH_DATABASE_URL` | `postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh` | Postgres; a plain `postgres://…?sslmode=` URL is made asyncpg's |
 | `GLYPHH_RESET_DATABASE` | off | The reset on deploy (above) |
-| `GLYPHH_REDIS_URL` | `redis://localhost:6379/0` | Redis, for live signals only |
+| `GLYPHH_REDIS_URL` | `redis://localhost:6379/0` | Redis, for live signals only; in production on the server's own Fly machine |
 | `GLYPHH_VERSION` | `dev` | The version the API and the connector report (set by the image build) |
 | `GLYPHH_LOG_LEVEL` | `INFO` | The JSON logs' level |
 | `GLYPHH_PUBLIC_URL` | `http://localhost:8080` | The server's own address: the issuer, the connector's resource, the provider callbacks |
 | `GLYPHH_PLATFORM_URL` | `http://localhost:3000` | The platform: every browser step is sent there; the one origin `GET /auth/consent` answers with CORS |
-| `GLYPHH_PLATFORM_CLIENT_ID`, `_SECRET` | none | The platform's own OAuth client, made at every start |
-| `GLYPHH_SECRET_KEY` | none (required) | 32+ characters; signs every browser step's value (device sign-in, linking a provider, the connector's Allow, installing the GitHub App) |
-| `GLYPHH_LICENSE_KEY` | none | Base64 of a raw 32-byte Ed25519 private key; signs every licence. Required in `prod`; elsewhere one is made at start |
+| `GLYPHH_PLATFORM_CLIENT_ID`, `_SECRET` | none | The platform's own OAuth client (the platform's `PLATFORM_CLIENT_ID` and `_SECRET`), made at every start |
+| `GLYPHH_SECRET_KEY` | none (required) | 32+ characters, or the server refuses to start; signs every browser step's value (device sign-in, linking a provider, the connector's Allow, installing the GitHub App) |
+| `GLYPHH_LICENSE_KEY` | none | Base64 of a raw 32-byte Ed25519 private key; signs every licence. Required in `prod`; elsewhere one is made at start (licences then don't survive a restart) |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | none | Sign-in providers; one without both is not offered |
 | `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | none | Billing; without them it answers `E_UNAVAILABLE` `billing_off` |
-| `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | none | The flat monthly prices Pro and Team sell on |
-| `GLYPHH_STRIPE_PRICE_HOSTING` | none | The metered hosting price; without it Checkout is `billing_off` |
+| `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | none | The flat monthly prices Pro and Team sell on; a price a plan's newest version doesn't sell on becomes a new version at the next boot |
+| `GLYPHH_STRIPE_PRICE_HOSTING` | none | The metered hosting price (a cent a unit), the second item on every paid subscription; without it Checkout is `billing_off` |
 | `GLYPHH_STRIPE_METER_HOSTING` | none | The meter's event name (`glyphh_hosting`); without it nothing is reported |
-| `GLYPHH_GITHUB_APP_ID`, `_PRIVATE_KEY`, `_SLUG` | none | The Glyphh GitHub App; without all three, `E_UNAVAILABLE` `github_off` |
+| `GLYPHH_GITHUB_APP_ID`, `_PRIVATE_KEY`, `_SLUG` | none | The Glyphh GitHub App: its id, its PEM key (line breaks may be written `\n`) and its slug (install page `https://github.com/apps/<slug>/installations/new`; set the App's Setup URL to `{public_url}/v1/github/callback`); without all three, `E_UNAVAILABLE` `github_off` |
 | `GLYPHH_SECRETS_KEY` | none | Base64 of 32 bytes; encrypts routine trigger tokens (AES-256-GCM); without it routine triggers are `E_UNAVAILABLE` `secrets_off`; changing it makes the stored tokens unreadable |
 | `GLYPHH_INVITE_URL` | `{public_url}/join` | Where an invite's link points |
-| `GLYPHH_MCP_ORIGINS` | `https://claude.ai,https://claude.com` | Browser origins `/mcp` takes besides the server's own |
-| `GLYPHH_FLY_API_TOKEN`, `GLYPHH_FLY_APP`, `GLYPHH_FLY_IMAGE` | none | Hosting: without all three it is off (`hosting_off`) |
+| `GLYPHH_MCP_ORIGINS` | `https://claude.ai,https://claude.com` | Browser origins `/mcp` takes besides the server's own, comma-separated; a request with no `Origin` passes |
+| `GLYPHH_FLY_API_TOKEN`, `GLYPHH_FLY_APP`, `GLYPHH_FLY_IMAGE` | none | Hosting: a deploy token, the one app the machines live in (`glyphh-ai-runtime` in production) and the hosted image (`registry.fly.io/<app>:<version>`); without all three it is off (`hosting_off`) |
 | `GLYPHH_FLY_REGION` | `iad` | Where machines are made, and the rates `/v1/rates` shows |
 | `GLYPHH_FLY_PUBLIC_DOMAIN` | `glyphh.app` | Each runtime is `https://<machine>.<domain>` |
 | `GLYPHH_RUNTIME_IDLE_MINUTES` | `10` | A hosted machine idle this long is stopped |
@@ -370,23 +330,23 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the he
 | Area | Calls |
 |---|---|
 | Health | `GET /v1/health` (open: `{status, version, database, redis}`; Fly's check) |
-| Device flow | `POST /v1/device/code` (with the mod's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` (to the platform's `/device`) |
+| Device flow | `POST /v1/device/code` (with the plugin's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` (to the platform's `/device`) |
 | Browser steps | `GET /auth/providers` (`{providers: [google, github]}`), `GET /auth/{provider}/start?code=\|link=\|oauth=` (to the provider), `GET /auth/{provider}/callback` (to the platform's `/device/approve`, `/allow` or `/account`), `GET /auth/consent?consent=` (what a consent asks), `GET /auth/approve?consent=&decision=`, `GET /auth/oauth/allow?consent=&decision=`, `GET /billing/done` (to the platform's `/billing`); each consent signed, ten minutes, tied to the browser by the `glyphh_signin` cookie; a refusal on any of these but `/auth/providers` and `/auth/consent` (which the platform reads as JSON) goes to the platform's `/error` |
 | Account | `GET`/`PATCH /v1/me` (the org, the plan, `precedents` and `hosting` as in `GET /v1/billing`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out`, `GET /v1/license`, `GET /v1/license/key`, `POST /v1/license/verify` (a self-hosted runtime's heartbeat, its runtime token as auth) |
 | Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept` |
 | Mods, plans, billing | `GET /v1/mods` (each mod and the plans that include it: every one), `GET /v1/plans`, `GET /v1/rates`, `GET /v1/billing`, `POST /v1/billing/checkout`, `/plan`, `/portal`, `POST /v1/stripe/webhook` (below, Billing and hosting) |
-| Bought once | `GET /v1/unlock/license?mod=&install=` (open: `paid` false until the mod's Payment Link checkout for that install is paid, then the licence); Stripe's webhook records `checkout.session.completed` in `payment` mode and `charge.refunded` (below, Bought once) |
+| Bought once | `GET /v1/unlock/license?mod=&install=` (open; [Bought once](#bought-once)) |
 | Runtime | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link`, the runtime's outbound WebSocket, hosted, local or self-hosted (protocol 1, as rrotor's `docs/architecture.md` section 6: the token in the `Authorization` header, a local runtime refused once its install is signed out, `hello` then `welcome`, the runtime `online` until it closes; results and events acked and applied once by their sequence number; a newer link of the same runtime takes over). Which server process holds which link: in memory, and a Redis channel per runtime, so a message sent on any process reaches it. The service functions other code calls: `send_continue` (an approval's answer) and `send_deploy`; calls never go down the link. A hosted runtime no process holds is woken first (its machine started) and the message waits up to 45 s for its link (with hosting off, `E_UNAVAILABLE` `hosting_off`); a runtime still not linked answers `E_UNAVAILABLE` `runtime_offline` with `last_seen_at`, in words for its kind (`AWAY` in `ops/link/calls.py`: a hosted machine that was started but did not connect in time, a local runtime to start from Claude, a self-hosted one to check). `GET /v1/runtime` (the first machine: `{runtime_id, address, state, region, image_version, last_seen_at, seconds_used}`, `state` `none` with no machine), `POST /v1/runtime/start` (made the first time, within the plan's machines; `E_UNAVAILABLE` `hosting_off` or `fly_failed`), `POST /v1/runtime/stop`, `DELETE /v1/runtime` (the machine, the volume and every model's data on it); `GET`/`POST /v1/runtimes`, `GET /v1/runtimes/{id}`, `POST /v1/runtimes/{id}/start`, `/stop`, `/restart`, `DELETE /v1/runtimes/{id}?confirm=<name>` (above, Machines); `GET`/`POST /v1/runtime/keys` (a key shown once, `glyphh_rk_…`, for the machine or self-hosted runtime `runtime_id` names, or every hosted machine of the person's; its hash to rrotor at once when linked, else in its next welcome), `DELETE /v1/runtime/keys/{id}` (revoked: answers the key, named in the list, dated, no longer taken), `DELETE /v1/runtime/keys/{id}/record` (204: a revoked or expired key's record gone; a live one `E_CONFLICT` `live`); `GET`/`POST /v1/runtimes/self`, `POST /v1/runtimes/self/{id}/token`, `DELETE /v1/runtimes/self/{id}`, `POST /v1/runtimes/{id}/offline-licence` (above, Self-hosted runtimes) |
 | GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`; the Cloud mints a repo-scoped installation token per deploy |
 | Routine triggers | `GET`/`POST /v1/routine-triggers` (name, fire URL, token, optional model; the token is never shown again), `DELETE /v1/routine-triggers/{id}`; the Cloud fires them (`POST …/fire`) on a model's events |
 | Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}`; `POST /v1/runtime/introspect` (a hosted or self-hosted runtime asking about a bearer, its runtime token as auth) (below, The connector) |
 | Models | `GET`/`POST /v1/models` (never limited; a name once per person), `GET`/`DELETE /v1/models/{id}` (the record, its versions, deployments and runs; the rrotor keeps its copy until a `remove` deploy), `POST /v1/models/{id}/versions` (a commit's SHA and its manifest: the next version; `E_CONFLICT` `commit_known`), `POST /v1/models/{id}/deploy` (`version`, `action` deploy \| activate \| remove, `runtime_id` or the caller's own: the install's local runtime, else the person's first hosted machine, else `E_NOT_FOUND` `no_runtime`; the rrotor answers `deployed` on its link and only then is the version active there) |
 | Runs | None here: a model is called on the runtime itself (above, Reaching a runtime). The server keeps the run record it hears over the link (status, times, seconds), never inputs or outputs |
-| Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` `{answer: approve \| decline}` (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting). Not built yet: the email when no Claude is open waits on a mail provider (`notified_at` stays empty) |
+| Approvals | `GET /v1/approvals` (waiting, newest first), `GET /v1/approvals/stream` (server-sent events: `approval`, `answered`; the waiting ones replayed first, a heartbeat every 20 s), `POST /v1/approvals/{id}` `{answer: approve \| decline}` (first answer wins); a run's `needs_approval` enters through the link; the answer goes down it as `continue` (a runtime not connected answers `E_UNAVAILABLE` and the step keeps waiting) |
 
 ### The license
 
-`GET /v1/license` answers the caller's license (an install's; for an OAuth caller, the same with `install_id` `null`); `GET /v1/license/key` the public key (`{"alg": "Ed25519", "public_key": "<base64 of the raw 32 bytes>"}`). A mod verifies it offline: the signature (base64) is Ed25519 over the payload's canonical JSON, the payload's keys sorted at every level, no spaces, ASCII only (Python's `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, UTF-8), and the license holds until `expires_at` (24 hours; the mod fetches a new one daily).
+`GET /v1/license` answers the caller's license (an install's; for an OAuth caller, the same with `install_id` `null`); `GET /v1/license/key` the public key (`{"alg": "Ed25519", "public_key": "<base64 of the raw 32 bytes>"}`). The plugin verifies it offline: the signature (base64) is Ed25519 over the payload's canonical JSON, the payload's keys sorted at every level, no spaces, ASCII only (Python's `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, UTF-8), and the license holds until `expires_at` (24 hours; the plugin fetches a new one daily).
 
 ```json
 {
@@ -406,7 +366,7 @@ JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the he
 }
 ```
 
-(A Pro org's install: precedents are unlimited on the local runtime it starts.)
+(A Pro org's install: an install's licence carries no precedent limit.)
 
 A runtime's licence (in a hosted or self-hosted runtime's `welcome`, from a self-hosted one's heartbeat, or issued offline) has `install_id` `null` and three more signed fields, four on a self-hosted one's (`grace_days`); an install's licence has none of them. A hosted runtime's carries the plan's managed precedents:
 
@@ -436,7 +396,7 @@ A runtime's licence (in a hosted or self-hosted runtime's `welcome`, from a self
 
 - `mods` names every active mod (every plan includes each); a retired mod is in no license. Ada's one limit is `precedents`, the runtime's total across its Ada models: the plan's managed bucket on a hosted runtime (Pro 100,000, Team 1,000,000, Enterprise `null`), `null` (unlimited) on a local or self-hosted one and in an install's licence.
 - `limits` at the top holds `machines`, the hosted machines the org may have, its people's together (`null` unlimited).
-- `features` are the plan's: `sync` (precedent-store sync across instances; not built yet, only the flag), `ha`, `offline` (offline licences), `sso`.
+- `features` are the plan's: `sync`, `ha`, `offline`, `sso`. Only `offline` is acted on (offline licences); the others are flags ([Not built yet](#not-built-yet)).
 
 ### Billing and hosting
 
@@ -484,21 +444,21 @@ sequenceDiagram
 
 **The meter.** The hosting price is on the Stripe Billing Meter `glyphh_hosting` (`GLYPHH_STRIPE_METER_HOSTING`; a unit is a US cent, summed, the customer by its id). With Stripe set up, every minute each subscribed org's hosting due (all it has charged, across every month, to the cent, less all it has reported; the rest carried) is reported once a day (the first as soon as a cent is due) and as its period ends (ten minutes before `renews_at`); the webhook reports it too, before every subscription event it applies, and so does a change to Free. Each report is a `meter_events` row written before it is sent, its id the event's identifier, worked out with the org's row locked, so two servers report it once; one Stripe refused is sent again with the same identifier at the next tick.
 
-**Enterprise** is granted, never bought: `python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --markup <pct> --subscription <sub_…>` (on the server's machine, `fly ssh console`) reads the deal's subscription from Stripe and puts the org on Enterprise through the end of that day (`plan_until`), its markup and its subscription and customer recorded, so its hosting goes to that subscription. Granted again, the deal is renewed or changed; an org with a self-serve subscription is refused until it is cancelled (`E_CONFLICT` `subscribed`). `revoke --org <uuid>` puts it back on Free, its hosted machines held (stopped at once when the command runs with hosting set up; it prints how many); the minute tick ends a grant whose date has passed, and holds its machines in the same tick. Either way, with Stripe and the meter set, the hosting due is reported to the deal's subscription first, before the org's subscription is cleared, as the webhook does. `revoke` checks no plan: it puts any org on Free.
+**Enterprise** is granted by staff, never bought (`ops/enterprise.py`, `grant` and `revoke`: [pricing.md](pricing.md#enterprise-setting-up-a-customer)). The org's `plan_until`, `markup_pct` and deal subscription are recorded on it; its hosting goes to that subscription, and before a grant is revoked or lapses the hosting due is reported there first, as the webhook does.
 
 **Held past the plan.** A plan's machines are the org's, its oldest first. An org on a plan that allows fewer hosted machines than it holds (a subscription cancelled in the portal or ended, an Enterprise grant revoked or lapsed; the server's own plan changes refuse to get there) keeps its oldest machines up to the plan's running and has its newest beyond them stopped: from the webhook and `revoke` at once, and at every minute's tick, which also stops any a request woke on Fly's proxy since. Starting, restarting or waking one (`POST /v1/runtimes/{id}/start`, `/restart`, `/v1/runtime/start`, a deploy or an approval's answer that would wake it) is `E_LIMIT` `machines` (`used` the org's) until the org is on a plan that allows them or deletes enough: they keep their disks and may be deleted, and deleting one lets the next oldest start. A request at a held machine's own address is woken by Fly's proxy, and the next tick stops it again.
 
-**The minute tick** (`ops/tend.py`) runs whether or not hosting is on, in this order: each hosted machine's month tallied and metered; the keys that expired taken off their runtimes; Enterprise grants past their date ended (their hosting due reported first); with hosting on, the idle machines stopped, then those held past the plan; with `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_METER_HOSTING`, the meter reported. A failed tick is logged and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a Postgres advisory lock (`pg_try_advisory_lock`, `TICK` in `ops/tend.py`) on a connection it holds for the tick and lets go after, so no two ticks run at once; a process that finds it held skips that minute. Ticks one after another in different processes may both run within a minute, and every part is safe to run again: metering counts the time since each machine was last metered, never a fixed minute. How to set a customer up is in [pricing.md](pricing.md).
+**The minute tick** (`ops/tend.py`) runs whether or not hosting is on, in this order: each hosted machine's month tallied and metered; the keys that expired taken off their runtimes; Enterprise grants past their date ended (their hosting due reported first); with hosting on, the idle machines stopped, then those held past the plan; with `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_METER_HOSTING`, the meter reported. A failed tick is logged and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a Postgres advisory lock (`pg_try_advisory_lock`, `TICK` in `ops/tend.py`) on a connection it holds for the tick and lets go after, so no two ticks run at once; a process that finds it held skips that minute. Ticks one after another in different processes may both run within a minute, and every part is safe to run again: metering counts the time since each machine was last metered, never a fixed minute.
 
-**Setting Stripe up:** `scripts/stripe-setup.py` (below, Plans).
+Stripe's products, prices and meter are made once per account with `scripts/stripe-setup.py` ([pricing.md](pricing.md#stripe-once-per-account)).
 
 ### Bought once
 
-Glyphh Drip is sold once, per machine, with no Glyphh account. It has a Stripe **Payment Link** (`PAYMENT_LINK` in the mod, set by the release build) whose metadata names the mod (`mod: glyphh-drip`). `/drip unlock` opens it with the mod's own install id as `client_reference_id`, then asks `GET /v1/unlock/license?mod=<mod>&install=<id>` every few seconds.
+One mod is sold once per machine, with no account: `glyphh-drip` (`UNLOCK_MODS`, `models/unlock.py`), by a Stripe Payment Link whose metadata names it and whose `client_reference_id` is the mod's own install id.
 
-- **The webhook** records a `checkout.session.completed` in `payment` mode whose metadata names a mod sold once and whose `payment_status` is `paid`: one `unlocks` row per session (a replay changes nothing), with its payment intent. A `charge.refunded` marks the row of that payment intent refunded.
-- **The licence** is `base64url(payload) "." base64url(signature)` (unpadded): the payload `{"v": 1, "mod", "install", "session", "issued"}` as compact JSON, keys sorted, `issued` the purchase's time; the Ed25519 signature over the first part's text, with the server's one key (the one `GET /v1/license/key` serves; the mod carries it, having no account to fetch it with). `GET /v1/unlock/license` answers `{paid, licence}`, the newest purchase not refunded; a mod not sold once is `E_INVALID` `no_mod`. The mod checks it offline and keeps it; `/<mod> key <licence>` carries it to another machine. A refunded purchase is no longer handed out; a licence already on a machine keeps working, which an offline check cannot help.
-- **No account, no org, no row-level security:** the install id is the only key, the licence is for that install alone, and nothing else is learned from it.
+- **The webhook** records a paid `checkout.session.completed` in `payment` mode naming such a mod: one `unlocks` row per session (a replay changes nothing), with its payment intent; `charge.refunded` marks that row refunded.
+- **`GET /v1/unlock/license?mod=&install=`** (open) answers `{paid, licence}`, from the newest purchase not refunded; a mod not sold once is `E_INVALID` `no_mod`. The licence is `base64url(payload) "." base64url(signature)` (unpadded): the payload `{"v": 1, "mod", "install", "session", "issued"}` as compact JSON, keys sorted; Ed25519 over the first part's text, with the key `GET /v1/license/key` serves. It is checked offline, so a refund stops it being handed out but not one already on a machine.
+- **No account, no org, no row-level security:** the install id is the only key.
 
 ### The connector
 
@@ -512,7 +472,7 @@ A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization serve
 
 **A runtime as a resource.** A hosted runtime is a protected resource of its own: its `GET https://<machine>.glyphh.app/.well-known/oauth-protected-resource` names this server as its authorization server, and `resource` on `/oauth/authorize` and `/oauth/token` may be `https://<machine>.glyphh.app` or that `/mcp` (the machine label 6 to 32 of `0-9a-z`, the domain `GLYPHH_FLY_PUBLIC_DOMAIN`); the token is bound to `https://<machine>.glyphh.app/mcp` and is no good on this server's `/mcp`. A registered self-hosted runtime's `public_url` (or its `/mcp`) is a resource the same way, looked up across every org, and the token is bound to `https://<its host>/mcp`. rrotor cannot read the token: it asks `POST /v1/runtime/introspect` (`{token}`, its own runtime token as the bearer) and gets RFC 7662's shape, `{active, sub, org, scope, exp}`, `active` only when the token was issued for that runtime's own address (its machine's, or its `public_url`'s) to a person of the runtime's org; `Cache-Control: no-store`, and rrotor keeps the answer a minute. A local runtime, or one without a machine yet, is always told `active: false`. So Claude adds a runtime as a connector with one Allow click and no key.
 
-**Registration.** `POST /oauth/register` (RFC 7591): `redirect_uris` (1 to 10; each `https`, or `http` on `localhost`, `127.0.0.1` or `[::1]`; a host, no fragment, up to 2,000 characters), `client_name` (up to 100 characters; left out, the first redirect URI's host), `token_endpoint_auth_method` (`none` for a public client; `client_secret_basic`, RFC 7591's default, or `client_secret_post` get a `client_secret`, shown once and kept hashed), `grant_types` within `authorization_code` and `refresh_token` (both when left out), `response_types` `["code"]`; any other metadata is ignored. It answers `201` with the `client_id` and `client_id_issued_at` (and the secret, with `client_secret_expires_at` 0). Refusals are `invalid_redirect_uri` or `invalid_client_metadata`. Client ID metadata documents are not supported yet.
+**Registration.** `POST /oauth/register` (RFC 7591): `redirect_uris` (1 to 10; each `https`, or `http` on `localhost`, `127.0.0.1` or `[::1]`; a host, no fragment, up to 2,000 characters), `client_name` (up to 100 characters; left out, the first redirect URI's host), `token_endpoint_auth_method` (`none` for a public client; `client_secret_basic`, RFC 7591's default, or `client_secret_post` get a `client_secret`, shown once and kept hashed), `grant_types` within `authorization_code` and `refresh_token` (both when left out), `response_types` `["code"]`; any other metadata is ignored. It answers `201` with the `client_id` and `client_id_issued_at` (and the secret, with `client_secret_expires_at` 0). Refusals are `invalid_redirect_uri` or `invalid_client_metadata`.
 
 **The platform's own client** is not registered: it is made at every start (`db/seed_clients.py`, in the schema step) from `GLYPHH_PLATFORM_CLIENT_ID` (a UUID: the platform's `PLATFORM_CLIENT_ID`; any other value stops the start) and `GLYPHH_PLATFORM_CLIENT_SECRET`, so the database's reset on deploy never loses it. It is confidential (`client_secret_basic`, its secret kept hashed), named `Glyphh`, with both grant types and one redirect URI, `{GLYPHH_PLATFORM_URL}/auth/callback`; a changed secret or address takes at the next start. Without both settings, none is made. The flow treats it as any other client.
 
@@ -527,7 +487,7 @@ A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization serve
 - `POST /oauth/revoke` (RFC 7009), the client authenticated as at the token endpoint: a refresh token revokes its grant, an access token itself; any token, unknown or another client's included, answers 200.
 - These endpoints answer refusals in OAuth's own shape (`{"error": "invalid_grant", "error_description": …}`, RFC 6749 section 5.2 and RFC 7591 section 3.2.2), not the API's: OAuth clients read that shape.
 
-Nothing on these endpoints is rate-limited yet: the server has no rate limiting anywhere so far.
+The server has no rate limiting ([Not built yet](#not-built-yet)).
 
 **Grants.** One live per person and client: allowing the same client again reuses its grant, now for the scope and resource last asked, so tokens for an earlier resource stop working. `GET /v1/connector/grants` lists the person's grants (id, client, scope, when allowed, last used to the minute, and `current` for the one calling); `DELETE /v1/connector/grants/{id}` revokes one and every token it holds (`204`; another person's is `E_NOT_FOUND`); the connector's own `revoke_grant` does the same.
 
@@ -551,18 +511,7 @@ Nothing on these endpoints is rate-limited yet: the server has no rate limiting 
 
 Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content, bad arguments `E_INVALID`. An unknown tool is a JSON-RPC error (`-32602`). Each call runs in a savepoint, so a refusal leaves nothing half done.
 
-**The account panel.** One MCP App resource, `ui://glyphh/account/3` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami`, `plan` and `usage` name it in `_meta.ui.resourceUri`. It shows who you are, the plan with its machines, managed precedents and features, the usage (precedents and hosting this month, machine by machine), Upgrade (opens Checkout, or changes plan), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address (`/3` since the pricing, 2026-10-18). Generic styling, with the host's theme variables, for now.
-
-### Panels
-
-The panels in Claude; the platform's pages are above. Each works before design draws it.
-
-| Panel | Where | Kind | State |
-|---|---|---|---|
-| Sign in, account, org, plan, billing | `glyphh` | Mod | Built |
-| The sign-in card, in the chat | `glyphh`'s MCP server | MCP App | Built |
-| The account: who, plan, usage, upgrade, billing, installs, grants | The Glyphh connector | MCP App | Built |
-| Locked, with the price and **Unlock**; the Drips and Games tabs | `glyphh-drip` | Mod | Built |
+**The account panel.** One MCP App resource, `ui://glyphh/account/3` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami`, `plan` and `usage` name it in `_meta.ui.resourceUri`. It shows who you are, the plan with its machines, managed precedents and features, the usage (precedents and hosting this month, machine by machine), Upgrade (opens Checkout, or changes plan), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables.
 
 ### Anthropic's terms
 
@@ -909,7 +858,7 @@ Every table and column is drawn, as `db/schema.sql` has them (28 tables); the ta
 - **Fly's rates** (`fly_rates`): never changed; a new rate is a new row, the newest whose `effective_from` has come in force. Not an org's: no row-level security.
 - **Machine months** (`machine_months`): a hosted machine's cost and charge for a month, in micro-dollars, by its id (no foreign key, so a deleted machine's month stays), its name and size copied. **Meter events** (`meter_events`): each report of an org's hosting cents to Stripe's meter, written before it is sent; `sent_at` once Stripe took it. Both row-level secure on the org.
 - **Runtimes** (`rrotors`): hosted machines (`mode: hosted`, each with its `name`, unique per person, `size`, its Fly machine and volume (`fly_machine_id`, `fly_volume_id`), `region`, and its month's online seconds, up to the plan's `max_machines`, the org's together), one local per install that started one (`mode: local`, keyed by its install), and any self-hosted ones (`mode: self`, each with its `name` and `public_url`, one per address per person, and from its heartbeat `last_heartbeat_at`, `image_version`, `active_runs` and `machine_hash`, never an address of its caller's); each its own token. `state` is `stopped` until its first link, `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again). `precedents` is the total across its Ada models it last reported.
-- **Installs are machines:** `INSTALLS.machine_id` is the id the mod sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked) or makes a new one: installs are never limited.
+- **Installs are machines:** `INSTALLS.machine_id` is the id the plugin sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked) or makes a new one: installs are never limited.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
 - **Models** (Ada models, as rrotor runs them): the record only: name, repo, versions (commit SHA, manifest), where each is deployed. The code is in the person's repo and their runtimes; secrets and data are in the rrotor.
 - **GitHub installations:** the person's Glyphh GitHub App installation, from which the Cloud mints a short-lived token per deploy; no long-lived GitHub key is kept.
@@ -960,59 +909,27 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 
 **Row-level security.** Each of the 22 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat and introspection, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`, `unlocks`) belong to no org.
 
-### In rrotor
-
-- **Models** live under `models/<name>/`: each deployed commit, the model's own folder and its precedent store.
-
-## Plans
-
-Never per seat, per model or per install: a plan sells managed precedents and the managed hosting option, flat, and every mod (Ada) is in every plan. Glyphh Drip is outside the plans: $4.99 once, per machine. The rules, and how an Enterprise customer is set up, are in [pricing.md](pricing.md).
-
-| | Free | Pro | Team | Enterprise |
-|---|---|---|---|---|
-| Price | $0 | $99 a month | $299 a month | A year, by contract (`price_cents` null) |
-| Bought | Sign up | Stripe Checkout | Stripe Checkout | Granted by staff (`ops/enterprise.py`) |
-| Managed precedents (a hosted runtime's) | 0 | 100,000 | 1,000,000 | Unlimited |
-| Hosted machines, the org's together | 0 | 3 | 10 | Unlimited |
-| Markup on Fly's rates (never shown) | n/a | 30% | 30% | The org's own |
-| Features | none | `sync` | `sync` | `sync`, `ha`, `offline`, `sso` |
-| Members, installs, models, local and self-hosted runtimes and their precedents | Unlimited | Unlimited | Unlimited | Unlimited |
-
-The machines and the markups are placeholders marked TBD in `db/seed.py`. Plans are versioned: an org is pinned to the version it signed up on; a new Stripe price is a new version. Of the features only `offline` is acted on (offline licences); `sync`, `ha` and `sso` are flags in the licence, not built.
-
-**Stripe, once per account:** `STRIPE_SECRET_KEY=sk_… uv run python scripts/stripe-setup.py` makes the products (`glyphh_pro`, `glyphh_team`, `glyphh_hosting`), Pro's and Team's flat monthly prices (found again by lookup key, `glyphh_<plan>_month_<cents>`), the Billing Meter `glyphh_hosting` and its metered price (a cent a unit, lookup key `glyphh_hosting_cent`), making nothing twice, and prints `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM`, `GLYPHH_STRIPE_PRICE_HOSTING` and `GLYPHH_STRIPE_METER_HOSTING` with the `fly secrets set` line.
-
 ## Not built yet
 
-Decided, or open, and not in the code above. Nothing in this section works today.
-
-**To build**
+Nothing in this section works today.
 
 | Area | What |
 |---|---|
-| The platform's pages | To the design. Machines, Billing, Usage and Getting started are live; the rest follow the routes in [The platform](#the-platform) |
-| Routines as the runner | A Claude routine (schedule, API trigger, GitHub event) calling the runtime's MCP; a `needs_approval` with nobody watching waits for the person on the platform, in Claude's band or by email |
-| Approvals email | When no Claude and no platform page is open: needs a mail provider (`approvals.notified_at` stays empty until then) |
+| What Pro, Team and Enterprise are sold on | Precedent-store sync across instances (`sync`), multi-node HA (`ha`), SSO/SAML (`sso`), RBAC, audit logs, background re-indexing, an SLA: only the licence's flags ship |
+| The platform's Approvals page, and approvals in Claude | Nothing reads `/v1/approvals/stream` yet; an answer is `POST /v1/approvals/{id}` |
+| Approvals email | When nobody is watching: needs a mail provider (`approvals.notified_at` stays empty) |
+| The local runtime from the plugin | The server issues its token (`POST /v1/runtime/local`) and takes its link; no plugin installs or starts rrotor locally. Then Windows (WSL2) and Linux (Docker or Podman) |
+| Routines as the runner | A Claude routine (schedule, API trigger, GitHub event) calling the runtime's MCP |
 | The live panel | A run as it happens (steps, log, approvals), an MCP App served by the runtime's own MCP |
 | Hosted storage | Growing a machine's volume (`POST /v1/runtime/storage`); every GB is already metered |
-| What Pro, Team and Enterprise are sold on | Precedent-store sync across instances (`sync`), background re-indexing, multi-node HA (`ha`), SSO/SAML, RBAC and audit logs (`sso`), an SLA: only the licence's flags ship |
-| Reconciling hosting | Each month, by hand for now: `machine_months` against Fly's invoice for the runtimes app; a gap means a rate row is out of date |
-| The local runtime on Windows and Linux | WSL2, and Docker or Podman |
+| Reconciling hosting | Each month, by hand: `machine_months.cost_micros` against Fly's invoice for the runtimes app; a gap means a rate row is out of date |
 | Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
-| The `glyphh` plugin with a light Ada kernel and model-building skills | Not started |
-| Programs, then the gateway | After the infrastructure. Remote Control needs a full claude.ai login on the machine, which [Anthropic's terms](#anthropics-terms) rule out as things stand |
+| Rate limiting | None anywhere, the OAuth endpoints included |
+| OAuth client ID metadata documents | Registration is RFC 7591 only |
+| Programs, then the gateway | Programs (coding-agent CLIs on the runtime), then the gateway. Remote Control needs a full claude.ai login on the machine, which [Anthropic's terms](#anthropics-terms) rule out |
 
-**To prove or finish in production**
+**Open**
 
-- The first hosted machine end to end: made on the platform, added in Claude at `https://<machine>.glyphh.app/mcp`, a model called; with it, Fly's replay to a stopped machine landing within a tool call's patience.
-- Stripe set up for the current prices (`scripts/stripe-setup.py`, then its `fly secrets set`); until then checkout answers `billing_off`, and the first hosted test needs Pro or an Enterprise grant.
-- The database's reset on every deploy turned off (`GLYPHH_RESET_DATABASE` out of `fly.toml`) before paid customers or Enterprise grants.
-- Self-hosting run on real infrastructure: Compose on a VM, the Helm chart on a cluster, each Terraform module applied once.
+- The database's reset on every deploy, to turn off (`GLYPHH_RESET_DATABASE` out of `fly.toml`) before paid customers or Enterprise grants.
+- The hosted machines each plan allows and the markups on Fly's rates: placeholders marked TBD in `db/seed.py`.
 - Whether Fly keeps a deleted volume's snapshots.
-- Apple's `container` running rrotor on macOS 26; dependencies through the marketplace, and a built mod loading as its source does.
-- Outside this repo: the `glyphh` mod's release, the rrotor image's push to GHCR, the legal pages and the site's cut products still describing the old model.
-
-**To decide (Chris)**
-
-- The hosted machines each plan allows and the markups on Fly's rates (placeholders marked TBD in `db/seed.py`).
-- The marketplace's home: the release builds write `glyphh-ai/glyphh`, which also holds the `glyphh` mod's source.
