@@ -46,17 +46,19 @@ A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message
 
 The server's `GLYPHH_HOSTING` is off by default. The platform reads it from the server and hard-codes nothing:
 
-- **Hosting is off** when `GET /v1/rates` answers `{"hosting": "off"}` or an empty `plans` map, or when no plan in
-  `GET /v1/plans` has a hosted machine (`limits.machines` 0 on every plan). Then Machines is gone from the sidebar and
+- **Hosting is off** when `GET /v1/rates` is refused with `E_UNAVAILABLE` `reason: hosting_off` (503, as the server
+  does; read as no rates, never shown as an error), answers `{"hosting": "off"}` or an empty `plans` map, or when no
+  plan in `GET /v1/plans` has a hosted machine (`limits.machines` 0 on every plan). Then Machines is gone from the sidebar and
   `/machines` goes to Getting started; Getting started offers Docker Compose, Helm and Terraform only; Home has no
   Start, no cost and no link to Machines; Billing, Plans and Usage say nothing of hosted machines, rates or hosting
   cost. A hosted machine route the server refuses with `E_UNAVAILABLE` `reason: hosting_off` says to run rrotor
   yourself. With hosting on, every page is as before.
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
-  with a separate `built` map beside it (`{"features": {"sync": true}, "built": {"sync": false}}`); `{"sync":
-  {"included": true, "built": false}}` is read alike. A feature not in `built` is built. With hosting off, the
-  precedent bucket is the synced store's, coming soon until sync is built. Plans are listed, priced and bought as
-  before.
+  with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
+  "offline": true, "sso": false}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
+  and audit logs missing from `built` (or with no map) are not built; roles and audit logs follow `sso` when the server
+  does not name them. With hosting off, the precedent bucket is the synced store's, coming soon until sync is built.
+  Plans are listed, priced and bought as before.
 
 ## Pages
 
