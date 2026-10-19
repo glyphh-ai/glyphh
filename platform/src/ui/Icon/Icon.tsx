@@ -15,6 +15,7 @@ const paths = {
       <path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5" />
     </>
   ),
+  logs: <path d="M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   key: (
     <>
