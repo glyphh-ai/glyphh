@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
+import { useMe } from '@/api/queries';
 import { CodeBlock, Select, TextField } from '@/ui';
 import {
   composeCommands,
+  composeEnv,
   defaultOptions,
   docsUrl,
-  dotEnv,
   helmCommand,
   image,
   sizes,
@@ -21,9 +23,14 @@ const clouds: ReadonlyArray<{ value: Cloud; label: string }> = [
   { value: 'gcp', label: 'GCP' },
 ];
 
-/** The chosen option's files and commands, filled in with the registration's env. */
+/**
+ * The chosen option's files and commands, filled in with the registration's env. On a paid plan, the licence key's
+ * line, commented out: only an air-gapped node needs it.
+ */
 export function DeploySnippet({ deployment, env }: { deployment: Deployment; env: Record<string, string> }) {
   const [options, setOptions] = useState<SnippetOptions>(defaultOptions);
+  const me = useMe();
+  const paid = me.data !== undefined && me.data.plan.price_cents !== 0;
   const set = (change: Partial<SnippetOptions>) => setOptions((current) => ({ ...current, ...change }));
 
   if (deployment === 'compose') {
@@ -31,9 +38,9 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
       <div className={styles.part}>
         <h3 className={styles.subTitle}>Run it with Docker Compose</h3>
         <span className={styles.meta}>Save this as .env beside the compose file:</span>
-        <CodeBlock code={dotEnv(env)} label=".env" />
+        <CodeBlock code={composeEnv(env, paid)} label=".env" />
         <CodeBlock code={composeCommands} label="commands" />
-        <Note />
+        <Note paid={paid} />
       </div>
     );
   }
@@ -48,8 +55,8 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
           {size}
           <TextField label="Ingress class" value={options.ingressClass} onChange={(e) => set({ ingressClass: e.target.value })} mono />
         </div>
-        <CodeBlock code={helmCommand(env, options)} label="helm install" />
-        <Note />
+        <CodeBlock code={helmCommand(env, options, paid)} label="helm install" />
+        <Note paid={paid} />
       </div>
     );
   }
@@ -67,17 +74,25 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
           <TextField label="Region" value={options.gcpRegion} onChange={(e) => set({ gcpRegion: e.target.value })} mono />
         </div>
       )}
-      <CodeBlock code={terraformModule(env, options)} label="Terraform module" />
+      <CodeBlock code={terraformModule(env, options, paid)} label="Terraform module" />
       <span className={styles.meta}>Then run terraform init and terraform apply. It makes one VM.</span>
-      <Note />
+      <Note paid={paid} />
     </div>
   );
 }
 
-function Note() {
+function Note({ paid }: { paid: boolean }) {
   return (
-    <span className={styles.meta}>
-      It runs the image {image}. The <a href={docsUrl}>self-hosting docs</a> cover TLS, the sandbox’s needs and upgrades.
-    </span>
+    <>
+      {paid && (
+        <span className={styles.meta}>
+          Your licence key reaches rrotor on its own when it links and at its daily heartbeat. Only an air-gapped node needs it set: see{' '}
+          <Link to="/settings/licence">Licence</Link>.
+        </span>
+      )}
+      <span className={styles.meta}>
+        It runs the image {image}. The <a href={docsUrl}>self-hosting docs</a> cover TLS, the sandbox’s needs and upgrades.
+      </span>
+    </>
   );
 }
