@@ -31,7 +31,6 @@ from glyphh_server.api import (
     routine_triggers,
     runtime,
     self_hosted,
-    unlock,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
@@ -60,7 +59,6 @@ ROUTERS = (
     self_hosted,
     machines,  # after self_hosted: /v1/runtimes/self is not a machine's id
     models,
-    unlock,
     routine_triggers,
     approvals,
     github,

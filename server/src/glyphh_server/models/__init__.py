@@ -25,7 +25,6 @@ from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.run import CALLERS, Run
 from glyphh_server.models.runtime_key import RuntimeKey
 from glyphh_server.models.token import Token
-from glyphh_server.models.unlock import UNLOCK_MODS, Unlock
 from glyphh_server.models.user import ROLES, User
 
 __all__ = [
@@ -40,7 +39,6 @@ __all__ = [
     "SURFACES",
     "TOKEN_KINDS",
     "TRIGGER_STATUSES",
-    "UNLOCK_MODS",
     "Approval",
     "Base",
     "ConnectorGrant",
@@ -68,6 +66,5 @@ __all__ = [
     "Run",
     "RuntimeKey",
     "Token",
-    "Unlock",
     "User",
 ]
