@@ -2,8 +2,10 @@
 Stripe subscription (the deal's annual price, invoiced; with hosting on, the metered hosting price too) recorded, and
 with hosting on its markup on Fly's rates, so its hosting is reported to that subscription's customer. Revoking it,
 or the date passing, puts the org back on Free, its hosted machines stopped and held (ops/held.py), the hosting due
-reported first to the subscription it is leaving (ops/billing/meter.py), as a subscription's own change is. Run on
-the server's machine (`fly ssh console`):
+reported first to the subscription it is leaving (ops/billing/meter.py), as a subscription's own change is. A grant
+issues the org a licence key through its last day (air-gapped: the contract's term, delivered out of band too);
+revoking or ending it revokes the org's keys. Run on the server's machine (`fly ssh console`), where
+GLYPHH_LICENSE_SIGNING_KEY is set:
 
     python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…> [--markup N]
     python -m glyphh_server.ops.enterprise revoke --org <uuid>"""
@@ -17,6 +19,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 import httpx
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -25,10 +28,12 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.seed import ENTERPRISE, FREE
 from glyphh_server.errors import Conflict, GlyphhError, NotFound
 from glyphh_server.models import BILLING_STATUSES, Org
+from glyphh_server.ops import license_keys
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.held import hold
+from glyphh_server.ops.license import load_key
 from glyphh_server.ops.plans import newest_version
 
 log = logging.getLogger("glyphh.billing")
@@ -46,25 +51,33 @@ async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
 
 
 async def grant(
-    engine: AsyncEngine, stripe: StripeClient, org_id: uuid.UUID, until: date, markup: int | None, subscription: str
+    engine: AsyncEngine,
+    stripe: StripeClient,
+    org_id: uuid.UUID,
+    until: date,
+    markup: int | None,
+    subscription: str,
+    signing_key: Ed25519PrivateKey,
 ) -> str:
     """The org on Enterprise through the end of `until` (UTC), at this markup (none: its hosting is not charged),
-    billed on this subscription. Granted again, a deal renewed or changed (a new subscription too); a self-serve
-    subscription is cancelled first."""
+    billed on this subscription, with a licence key to then. Granted again, a deal renewed or changed (a new
+    subscription too, and a new key); a self-serve subscription is cancelled first."""
     sub = await stripe.subscription(subscription)
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
         if org.plan_until is None and org.stripe_subscription_id not in (None, subscription):
             raise Conflict(f"Cancel the org's subscription {org.stripe_subscription_id} first.", reason="subscribed")
+        ends = datetime.combine(until + timedelta(days=1), time(), UTC)
         values = {
             "plan_version_id": (await newest_version(conn, ENTERPRISE)).id,
-            "plan_until": datetime.combine(until + timedelta(days=1), time(), UTC),
+            "plan_until": ends,
             "markup_pct": markup,
             "stripe_subscription_id": subscription,
             "stripe_customer_id": sub["customer"],
             "billing_status": sub["status"] if sub["status"] in BILLING_STATUSES else "none",
         }
         await conn.execute(update(Org).where(Org.id == org_id).values(**values))
+        await license_keys.issue(conn, signing_key, org_id, ends)
     at = "" if markup is None else f", at {markup}%"
     return f"{org.name} is on Enterprise through {until}{at}, billed on {subscription} ({sub['customer']})."
 
@@ -73,6 +86,7 @@ async def back_to_free(conn: AsyncConnection, org_id: uuid.UUID) -> None:
     free = await newest_version(conn, FREE)
     values = CLEARED | {"plan_version_id": free.id, "billing_status": "none"}
     await conn.execute(update(Org).where(Org.id == org_id).values(**values))
+    await license_keys.revoke(conn, org_id)
 
 
 async def revoke(engine: AsyncEngine, org_id: uuid.UUID, fly: Fly | None, stripe: StripeClient | None = None) -> str:
@@ -133,7 +147,8 @@ async def run(argv: list[str], settings: Settings, http: httpx.AsyncClient | Non
             )
             return await revoke(engine, args.org, fly, meter or None)
         stripe = StripeClient(client, settings.stripe_secret_key)
-        return await grant(engine, stripe, args.org, args.until, args.markup, args.subscription)
+        signing_key = load_key(settings)
+        return await grant(engine, stripe, args.org, args.until, args.markup, args.subscription, signing_key)
     finally:
         await client.aclose()
         await engine.dispose()

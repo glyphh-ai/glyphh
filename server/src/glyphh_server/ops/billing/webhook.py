@@ -1,11 +1,14 @@
-"""Stripe's events, keeping orgs true: a finished checkout, and every change to a subscription. The subscription
-is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. The hosting due is
-reported first; an org left on a plan that allows fewer machines than it holds has them stopped at once."""
+"""Stripe's events, keeping orgs true: a finished checkout, a paid invoice, and every change to a subscription. The
+subscription is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. The hosting
+due is reported first; a payment (the checkout, each paid invoice) issues the org a licence key to the paid period's
+end; a subscription ended revokes them (ops/billing/sync.py); an org left on a plan that allows fewer machines than it
+holds has them stopped at once."""
 
 import logging
 import uuid
 from typing import Any
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -13,7 +16,7 @@ from glyphh_server.models import Org
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.billing.sync import sync_subscription
+from glyphh_server.ops.billing.sync import issue_paid, sync_subscription
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.held import hold
 
@@ -24,24 +27,45 @@ SUBSCRIPTION_EVENTS: frozenset[str] = frozenset(
 )
 
 
+PAID: frozenset[str] = frozenset({"checkout.session.completed", "invoice.payment_succeeded"})
+
+
+def _target(kind: str, obj: dict[str, Any]) -> tuple[str | None, str | None, str | None] | None:
+    """What an event is about: the org id it was given, the customer and the subscription; None: of no interest. An
+    invoice names its subscription on itself in older Stripe versions, under `parent` in newer ones."""
+    if kind == "checkout.session.completed" and obj.get("mode") == "subscription":
+        return obj.get("client_reference_id"), obj.get("customer"), obj.get("subscription")
+    if kind == "invoice.payment_succeeded":
+        details = (obj.get("parent") or {}).get("subscription_details") or {}
+        sub_id = obj.get("subscription") or details.get("subscription")
+        return (details.get("metadata") or {}).get("org_id"), obj.get("customer"), sub_id
+    if kind in SUBSCRIPTION_EVENTS:
+        return obj.get("metadata", {}).get("org_id"), obj.get("customer"), obj.get("id")
+    return None
+
+
 async def handle_event(
-    conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any], fly: Fly | None = None
+    conn: AsyncConnection,
+    stripe: StripeClient,
+    event: dict[str, Any],
+    signing_key: Ed25519PrivateKey,
+    fly: Fly | None = None,
 ) -> None:
     kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
-    if kind == "checkout.session.completed" and obj.get("mode") == "subscription":
-        org_id = await _org(conn, obj.get("client_reference_id"), obj.get("customer"))
-        sub_id = obj.get("subscription")
-    elif kind in SUBSCRIPTION_EVENTS:
-        org_id = await _org(conn, obj.get("metadata", {}).get("org_id"), obj.get("customer"))
-        sub_id = obj.get("id")
-    else:
+    target = _target(kind, obj)
+    if target is None:
         log.info("stripe event ignored", extra=fields(type=kind))
         return
+    given, customer, sub_id = target
+    org_id = await _org(conn, given, customer)
     if org_id is None or not sub_id:
-        log.warning("stripe event for no org", extra=fields(type=kind, customer=obj.get("customer")))
+        log.warning("stripe event for no org", extra=fields(type=kind, customer=customer))
         return
     await report(conn.engine, stripe, only=org_id)  # what is due, on the subscription as it was
-    await sync_subscription(conn, org_id, await stripe.subscription(sub_id))
+    sub = await stripe.subscription(sub_id)
+    await sync_subscription(conn, org_id, sub)
+    if kind in PAID:
+        await issue_paid(conn, signing_key, org_id, sub)
     if fly is not None:
         await hold(conn, fly, org_id)  # a plan that allows fewer machines: those held past it stopped now
 

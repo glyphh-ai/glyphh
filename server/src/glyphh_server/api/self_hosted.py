@@ -53,4 +53,4 @@ async def issue_offline_licence(
     """An offline licence for an air-gapped self-hosted runtime: 1 to 365 days, live 14 days past its expiry, as one
     token (base64url of `{payload, signature}`) for `RROTOR_LICENCE` or `/data/licence.token`. Enterprise only:
     E_NOT_IN_PLAN `offline` on any other plan."""
-    return await heartbeat.offline(conn, request.app.state.license_key, caller, runtime_id, body.days)
+    return await heartbeat.offline(conn, request.app.state.signing_key, caller, runtime_id, body.days)

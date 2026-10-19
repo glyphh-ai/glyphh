@@ -10,6 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import insert, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -23,6 +24,8 @@ from tests.conftest import SETTINGS
 from tests.db.helpers import org_row, person, subscribed
 from tests.fakes import FakeStripe, fake_http
 from tests.link import hosted_runtime
+
+KEY: Ed25519PrivateKey = Ed25519PrivateKey.generate()
 
 
 async def _plan(engine: AsyncEngine, org_id: uuid.UUID) -> str:
@@ -73,9 +76,9 @@ async def test_a_grant_refuses_another_subscription_and_an_unknown_org(engine: A
     await subscribed(engine, ada.org_id, "sub_pro", "cus_pro")
     stripe.sub("sub_deal2", "cus_pro", "price_deal", 1)
     with pytest.raises(Conflict, match="Cancel the org's subscription sub_pro first"):
-        await enterprise.grant(engine, _stripe(stripe), ada.org_id, date(2027, 1, 1), 20, "sub_deal2")
+        await enterprise.grant(engine, _stripe(stripe), ada.org_id, date(2027, 1, 1), 20, "sub_deal2", KEY)
     with pytest.raises(NotFound):
-        await enterprise.grant(engine, _stripe(stripe), uuid.uuid4(), date(2027, 1, 1), 20, "sub_deal2")
+        await enterprise.grant(engine, _stripe(stripe), uuid.uuid4(), date(2027, 1, 1), 20, "sub_deal2", KEY)
     with pytest.raises(SystemExit):
         argv = ["grant", "--org", str(ada.org_id), "--until", "2027-01-01", "--markup", "-5", "--subscription", "x"]
         await enterprise.run(argv, SETTINGS, fake_http(stripe))

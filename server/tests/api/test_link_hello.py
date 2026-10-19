@@ -36,6 +36,7 @@ async def test_a_hello_is_welcomed_and_the_runtime_is_online_until_it_hangs_up(e
             welcome = await ws.receive_json(timeout=WAIT)
             assert welcome["type"] == "welcome" and welcome["accepted"] is True
             assert "limits" not in welcome and welcome["licence"] is None and welcome["id"]
+            assert welcome["license_key"] is None  # Free: no key, Community
             row = await runtime_row(engine, rt.id)
             assert (row.state, row.image_version) == ("online", "1.4.0") and row.last_seen_at is not None
             seen = row.last_seen_at
@@ -43,7 +44,7 @@ async def test_a_hello_is_welcomed_and_the_runtime_is_online_until_it_hangs_up(e
     assert (await runtime_row(engine, rt.id)).last_seen_at >= seen
 
 
-async def test_a_hosted_runtime_is_welcomed_with_the_plans_managed_precedents(engine: AsyncEngine) -> None:
+async def test_a_hosted_runtime_is_welcomed_with_the_plans_precedents_per_node(engine: AsyncEngine) -> None:
     ada = await person(engine, "Pro")
     rt = await hosted_runtime(engine, ada)
     async with server() as srv, connect(srv, rt.token) as ws:
@@ -55,7 +56,7 @@ async def test_a_hosted_runtime_is_welcomed_with_the_plans_managed_precedents(en
     payload = welcome["licence"]["payload"]
     assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
     assert (payload["kind"], payload["runtime_id"], "grace_days" in payload) == ("link", str(rt.id), False)
-    assert payload["mods"] == {"ada": {"limits": {"precedents": 100_000}}} and payload["limits"] == {"machines": 3}
+    assert payload["mods"] == {"ada": {"limits": {"precedents": 50_000}}} and payload["limits"] == {"machines": 3}
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
     public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
     ctx = session.Context(engine, None, None, None, None)  # type: ignore[arg-type]

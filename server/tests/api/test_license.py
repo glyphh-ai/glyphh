@@ -55,7 +55,7 @@ async def test_free_includes_ada_and_the_license_needs_a_token(client: httpx.Asy
 def test_the_configured_key_is_the_one_used() -> None:
     made = Ed25519PrivateKey.generate()
     raw = made.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
-    loaded = load_key(SETTINGS.model_copy(update={"license_key": base64.b64encode(raw).decode()}))
+    loaded = load_key(SETTINGS.model_copy(update={"license_signing_key": base64.b64encode(raw).decode()}))
     assert loaded.public_key().public_bytes_raw() == made.public_key().public_bytes_raw()
     first, second = load_key(SETTINGS), load_key(SETTINGS)
     assert first.public_key().public_bytes_raw() != second.public_key().public_bytes_raw()

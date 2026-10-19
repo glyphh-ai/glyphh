@@ -86,11 +86,11 @@ async def test_usage_is_the_orgs_precedents_and_hosting_month_to_date(
     b = await _machine(engine, bob, "crm", "small", "stopped", precedents=300)
     away = await self_runtime(engine, ada)
     local = await local_runtime(engine, ada)
-    async with engine.begin() as conn:
-        for rt in (away, local):  # unlimited where they run: never counted against the bucket
-            await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(precedents=10**6))
+    async with engine.begin() as conn:  # per node: the fullest hosted or self-hosted runtime; a local one is not one
+        for rt, held in ((away, 900), (local, 10**6)):
+            await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(precedents=held))
     empty = (await client.get("/v1/billing", headers=ada.headers)).json()
-    assert empty["precedents"] == {"used": 1_500, "limit": 100_000} and empty["hosting"]["machines"] == []
+    assert empty["precedents"] == {"used": 1_200, "limit": 50_000} and empty["hosting"]["machines"] == []
     for hour in range(1, 11):  # ten hours, an hour at a time
         await tend.tally(engine, "iad", metered_from() + timedelta(hours=hour))
     async with engine.begin() as conn:
@@ -101,14 +101,15 @@ async def test_usage_is_the_orgs_precedents_and_hosting_month_to_date(
     assert [m["name"] for m in billing["hosting"]["machines"]] == ["crm", "research"]
     assert cents == {"research": 48, "crm": 0}  # 10 h: medium's $25.39 and 10 GB, all in; small's 3 GB only
     assert billing["hosting"]["month_to_date_cents"] == 49  # the sum first, then to the cent
-    assert billing["precedents"] == {"used": 1_200, "limit": 100_000}
+    assert billing["precedents"] == {"used": 1_200, "limit": 50_000}
     me = (await client.get("/v1/me", headers=bob.headers)).json()
     assert (me["precedents"], me["hosting"]) == (billing["precedents"], billing["hosting"])
     _, auth = await granted(engine, ada)
     used = await tool(client, auth, "usage")
     assert used["content"][0]["text"] == (
-        f"Managed precedents: 1,200 of 100000, on your hosted runtimes.\nHosting {billing['hosting']['month']} so far: "
-        "$0.49.\ncrm (small): $0.00\nresearch (medium): $0.48"
+        "Runtime nodes: 1 of 3.\nPrecedents: 1,200 on your fullest runtime, of 50000 per node.\n"
+        "Licence key: none; rrotor runs as Community (Free) without one.\n"
+        f"Hosting {billing['hosting']['month']} so far: $0.49.\ncrm (small): $0.00\nresearch (medium): $0.48"
     )
     assert used["structuredContent"]["hosting"] == billing["hosting"]
     assert (await client.get("/v1/billing")).status_code == 401

@@ -27,12 +27,12 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "price_cents": 29_900,
         "interval": "month",
         "self_serve": True,
-        "limits": {"machines": 10, "precedents": 1_000_000},
+        "limits": {"machines": 10, "precedents": 500_000},
         "features": {"sync": True, "ha": False, "offline": False, "sso": False},
         "built": {"sync": False, "ha": False, "offline": True, "sso": False},
         "markup_hidden": True,
     }
-    assert me["precedents"] == {"used": 0, "limit": 1_000_000} and me["hosting"]["machines"] == []
+    assert me["precedents"] == {"used": 0, "limit": 500_000} and me["hosting"]["machines"] == []
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

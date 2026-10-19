@@ -147,6 +147,26 @@ CREATE TABLE IF NOT EXISTS meter_events (
 );
 CREATE INDEX IF NOT EXISTS ix_meter_events_org_id ON meter_events (org_id);
 
+-- licenses
+CREATE TABLE IF NOT EXISTS licenses (
+    id UUID NOT NULL,
+    org_id UUID NOT NULL,
+    tier TEXT NOT NULL,
+    max_nodes INTEGER,
+    max_precedents INTEGER,
+    cluster_sync_enabled BOOLEAN NOT NULL,
+    issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    customer_id TEXT NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    key TEXT NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT licenses_tier CHECK (tier IN ('free', 'pro', 'team', 'enterprise')),
+    CONSTRAINT licenses_limits CHECK (coalesce(max_nodes, 1) >= 1 AND coalesce(max_precedents, 0) >= 0),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS licenses_newest ON licenses (org_id, issued_at);
+
 -- users
 CREATE TABLE IF NOT EXISTS users (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -372,6 +392,20 @@ CREATE TABLE IF NOT EXISTS rrotors (
 );
 CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
 
+-- nodes
+CREATE TABLE IF NOT EXISTS nodes (
+    rrotor_id UUID NOT NULL,
+    node_id TEXT NOT NULL,
+    cluster_id UUID,
+    role TEXT,
+    precedents BIGINT,
+    version TEXT,
+    seen_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (rrotor_id, node_id),
+    CONSTRAINT nodes_role CHECK (role IN ('standalone', 'head', 'follower')),
+    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
+);
+
 -- runtime_keys
 CREATE TABLE IF NOT EXISTS runtime_keys (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -567,3 +601,11 @@ ALTER TABLE model_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE model_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON model_events;
 CREATE POLICY tenant ON model_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR model_id IN (SELECT id FROM models));
+ALTER TABLE licenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE licenses FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON licenses;
+CREATE POLICY tenant ON licenses USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nodes FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON nodes;
+CREATE POLICY tenant ON nodes USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR rrotor_id IN (SELECT id FROM rrotors));

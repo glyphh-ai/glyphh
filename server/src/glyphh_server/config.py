@@ -1,12 +1,12 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
@@ -26,8 +26,13 @@ class Settings(BaseSettings):
     platform_client_secret: str = ""
     # Signs the values the device sign-in pages carry; 32 characters or more.
     secret_key: str = ""
-    # The license's Ed25519 private key: base64 of its raw 32 bytes. Without one outside prod, one is made at start.
-    license_key: str = ""
+    # The Ed25519 private key that signs every licence and licence key: base64 of its raw 32 bytes. Without one outside
+    # prod, one is made at start. GLYPHH_LICENSE_KEY is its old name, still read: to rrotor that name is now the
+    # customer's key string, so the server's is GLYPHH_LICENSE_SIGNING_KEY.
+    license_signing_key: str = Field(
+        "",
+        validation_alias=AliasChoices("GLYPHH_LICENSE_SIGNING_KEY", "GLYPHH_LICENSE_KEY"),
+    )
     google_client_id: str = ""
     google_client_secret: str = ""
     github_client_id: str = ""

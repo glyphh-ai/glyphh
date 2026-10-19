@@ -1,7 +1,7 @@
 # server
 
 The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, the signed licence,
-flat plans on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly (built, off by default:
+the licence key (one per paid period, signed for rrotor), flat plans on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly (built, off by default:
 `GLYPHH_HOSTING`) and the record of each person's Ada models, runtimes and runs. It renders nothing (every browser step lands on the
 platform, `glyphh-ai/platform`) and is never on the data path: a model is called at its runtime's own address.
 
@@ -20,8 +20,9 @@ docs at `/docs`). Before the server starts, the image runs the schema step, `pyt
 change to an existing table the server refuses to boot; reset the dev database with `docker compose down -v`.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed): the
-[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make a licence key
-or a secrets key with:
+[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make the signing
+key (`GLYPHH_LICENSE_SIGNING_KEY`, the Ed25519 private key that signs licences and licence keys; `GLYPHH_LICENSE_KEY`
+is its old name, still read) or a secrets key with:
 
     python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 

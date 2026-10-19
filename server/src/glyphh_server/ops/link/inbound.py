@@ -18,11 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from glyphh_server.db import tenancy
 from glyphh_server.models import Deployment, Model, ModelEvent, ModelVersion, RoutineTrigger, Rrotor, Run
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops import nodes
 from glyphh_server.ops.approvals import ask_approval
 from glyphh_server.ops.link import reports
 from glyphh_server.ops.link.calls import hold_run
 from glyphh_server.ops.link.presence import Runtime
-from glyphh_server.ops.link.protocol import FINAL, Deployed, Event, Result, Version
+from glyphh_server.ops.link.protocol import FINAL, Deployed, Event, Hello, Result
 from glyphh_server.ops.routines import Routines, fire_routine
 
 log = logging.getLogger("glyphh.link")
@@ -94,10 +95,13 @@ async def apply_deployed(conn: AsyncConnection, runtime: Runtime, message: Deplo
     )
 
 
-async def record_hello(engine: AsyncEngine, runtime: Runtime, active: list[Version]) -> None:
+async def record_hello(engine: AsyncEngine, runtime: Runtime, hello: Hello) -> None:
     """The versions a hello says are active, recorded as a `deployed` of each is, in one transaction as the owner:
-    a model deployed while the link was down is never missed."""
+    a model deployed while the link was down is never missed; and the node it is, when it says (ops/nodes.py)."""
     async with engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
-        for version in active:
+        for version in hello.deployed:
             await apply_deployed(conn, runtime, Deployed(type="deployed", **version.model_dump()))
+        if hello.node_id is not None:
+            said = {"cluster_id": hello.cluster_id, "role": hello.role, "version": hello.version}
+            await nodes.record(conn, runtime.id, hello.node_id, said)

@@ -21,6 +21,7 @@ from starlette.websockets import WebSocket
 from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops import license_keys
 from glyphh_server.ops.license import GRACE_DAYS, LINK, Stamp, sign_license
 from glyphh_server.ops.link import inbound, reports
 from glyphh_server.ops.link.hello import next_text, read_hello
@@ -57,7 +58,7 @@ class Context:
     hub: Hub
     routines: Routines
     secrets_key: bytes | None
-    license_key: Ed25519PrivateKey | None = None  # signs the licence a hosted or self-hosted runtime's welcome carries
+    signing_key: Ed25519PrivateKey | None = None  # signs the licence a hosted or self-hosted runtime's welcome carries
 
 
 @dataclass(slots=True)
@@ -77,7 +78,7 @@ async def serve(ws: WebSocket, ctx: Context, token: str | None) -> None:
         if hello is None:
             return
         await mark(ctx.engine, runtime, ONLINE, hello.version)
-        await inbound.record_hello(ctx.engine, runtime, hello.deployed)
+        await inbound.record_hello(ctx.engine, runtime, hello)
         link = Link(ws, runtime.id)
         log.info("runtime linked", extra=fields(runtime=str(runtime.id), mode=runtime.mode, version=hello.version))
         try:
@@ -107,20 +108,20 @@ async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
 
 
 async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
-    """A local runtime's welcome has no licence (its mod hands one in); a hosted one's carries its keys and its licence,
-    the plan's managed precedents its cap; a self-hosted one's the same with its precedents unlimited and the
-    licence's grace."""
-    if runtime.mode == "local":
-        return Welcome()
-    hosted = runtime.mode == "hosted"
-    stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS, hosted=hosted)
-    licence = None
+    """Every runtime's welcome carries the org's newest licence key (null: none). A local runtime's has no licence
+    (its mod hands one in); a hosted one's carries its keys and its licence, the plan's precedents per node its cap; a
+    self-hosted one's the same with its precedents unlimited and the licence's grace."""
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
-        keys = await hashes_for(conn, runtime.id)
-        if ctx.license_key is not None:
-            licence = await sign_license(conn, ctx.license_key, runtime.user_id, runtime.org_id, None, stamp)
-    return Welcome(licence=licence, keys=keys)
+        license_key = await license_keys.newest(conn, runtime.org_id)
+        if runtime.mode == "local":
+            return Welcome(license_key=license_key)
+        hosted = runtime.mode == "hosted"
+        stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS, hosted=hosted)
+        keys, licence = await hashes_for(conn, runtime.id), None
+        if ctx.signing_key is not None:
+            licence = await sign_license(conn, ctx.signing_key, runtime.user_id, runtime.org_id, None, stamp)
+    return Welcome(licence=licence, license_key=license_key, keys=keys)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:

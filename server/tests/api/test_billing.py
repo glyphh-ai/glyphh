@@ -21,9 +21,9 @@ async def test_the_plans_are_free_pro_team_and_enterprise_and_never_name_the_mar
         ("Enterprise", None, "year", False),
     ]
     assert [p["limits"] for p in plans] == [
-        {"machines": 1, "precedents": 0},
-        {"machines": 3, "precedents": 100_000},
-        {"machines": 10, "precedents": 1_000_000},
+        {"machines": 1, "precedents": 5_000},
+        {"machines": 3, "precedents": 50_000},
+        {"machines": 10, "precedents": 500_000},
         {"machines": None, "precedents": None},
     ]
     assert [p["features"] for p in plans] == [

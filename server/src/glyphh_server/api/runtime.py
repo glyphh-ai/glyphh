@@ -133,6 +133,6 @@ async def runtime_link(websocket: WebSocket) -> None:
     `hello`. Calls go down it; results, events and deploys come back."""
     state = websocket.app.state
     ctx = session.Context(
-        state.engine, state.redis, state.hub, Routines(state.http), state.secrets_key, state.license_key
+        state.engine, state.redis, state.hub, Routines(state.http), state.secrets_key, state.signing_key
     )
     await session.serve(websocket, ctx, bearer(websocket.headers.get("authorization")))

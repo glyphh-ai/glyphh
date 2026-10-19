@@ -58,15 +58,16 @@ SALES: str = "sales@glyphh.ai"
 
 
 # Never per seat, per model or per install: a plan sells runtime nodes (max_machines: Free 1, Pro 3, Team 10, Enterprise
-# unlimited; Chris, 2026-10-19), precedents and sync.
-# Local and self-hosted runtimes hold any number of precedents on every plan; `precedents` is the managed bucket, what
-# a hosted runtime may hold. Enterprise is by contract, its price and its markup each
-# customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): the machines each plan allows
-# and the markups on Fly's rates are placeholders until set.
+# unlimited; Chris, 2026-10-19), precedents and sync. `precedents` is per node, across all the node's Ada models:
+# the licence key's max_precedents (Free 5,000, Pro 50,000, Team 500,000, Enterprise unlimited; rrotor's
+# docs/specs/licensing.md). It was the managed bucket (Pro 100,000, Team 1,000,000), what the hosted runtimes held
+# together. `sync` is the key's cluster_sync_enabled. Enterprise is by contract, its price and its markup each
+# customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): Team's 500,000 precedents, and the markups
+# on Fly's rates, are placeholders until set.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, None, True, 1, 0, Features(), None),
-    PlanSeed("Pro", 9_900, "month", True, 3, 100_000, Features(sync=True), 30),
-    PlanSeed("Team", 29_900, "month", True, 10, 1_000_000, Features(sync=True), 30),
+    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), None),
+    PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), 30),
+    PlanSeed("Team", 29_900, "month", True, 10, 500_000, Features(sync=True), 30),  # TBD: 500,000
     PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True), None),
 )
 
