@@ -1,4 +1,4 @@
-import { ago, date, listText, money, plural, usd, usdPerSecond } from './format';
+import { ago, date, duration, listText, money, plural, stamp, usd, usdPerSecond } from './format';
 
 describe('format', () => {
   it.each([
@@ -43,4 +43,21 @@ describe('format', () => {
     expect(plural(3, 'machine')).toBe('3 machines');
     expect(plural(10_000, 'precedent')).toBe('10,000 precedents');
   });
+
+  it('writes a moment to the second in UTC, and passes on what is not a date', () => {
+    expect(stamp('2026-10-16T13:58:12Z')).toBe('16 Oct 13:58:12');
+    expect(stamp('2026-01-02T03:04:05.678Z')).toBe('2 Jan 03:04:05');
+    expect(stamp('soon')).toBe('soon');
+  });
+
+  it.each([
+    [0, '0 s'],
+    [45, '45 s'],
+    [90, '1 min 30 s'],
+    [3_600, '1 h'],
+    [5_400, '1 h 30 min'],
+    [3_661, '1 h 1 min'],
+    [86_400 + 4 * 3_600, '1 day 4 h'],
+    [3 * 86_400 + 59, '3 days'],
+  ])('duration(%i) is %s', (seconds, text) => expect(duration(seconds)).toBe(text));
 });

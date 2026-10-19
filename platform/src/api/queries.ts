@@ -1,7 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from './client';
 import type {
+  AuditPage,
   Install,
+  LogsPage,
+  MetricsAnswer,
   Machine,
   MachineSize,
   Invite,
@@ -40,6 +43,9 @@ export const keys = {
   org: ['org'] as const,
   members: ['org', 'members'] as const,
   invites: ['org', 'invites'] as const,
+  logs: ['telemetry', 'logs'] as const,
+  audit: ['telemetry', 'audit'] as const,
+  metrics: ['telemetry', 'metrics'] as const,
 };
 
 // Reads
@@ -96,6 +102,77 @@ export const useRuntimeNodes = () => useQuery({ queryKey: keys.nodes, queryFn: (
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });
+
+// rrotor's opt-in telemetry: read live while its page is open.
+
+/** How often the telemetry is read again while its page is open. */
+export const liveEvery = 10_000;
+/** Lines or events in a page. */
+export const pageSize = 50;
+
+/** How far back to look; '' is any time. */
+export type Since = '' | '1h' | '24h' | '7d';
+const sinceMs: Record<Exclude<Since, ''>, number> = { '1h': 3_600_000, '24h': 86_400_000, '7d': 7 * 86_400_000 };
+
+/** The moment a window starts, counted back from `now`; undefined for any time. */
+export function sinceAt(since: Since, now: Date = new Date()): string | undefined {
+  return since ? new Date(now.getTime() - sinceMs[since]).toISOString() : undefined;
+}
+
+/** `level` is that level and above; `text` is words in the message, any case. */
+export type LogFilters = { runtime?: string; node?: string; level?: string; since?: Since; text?: string };
+/** `kind`: one kind only, such as run.call. */
+export type AuditFilters = { runtime?: string; node?: string; since?: Since; kind?: string };
+
+/** A telemetry path with its filters, leaving out the empty ones. The window starts when the page is read. */
+export function telemetryPath(
+  path: string,
+  filters: Record<string, string | undefined>,
+  cursor: string | null,
+  now: Date = new Date(),
+): string {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(filters)) {
+    const text = name === 'since' ? sinceAt((value ?? '') as Since, now) : value?.trim();
+    if (text) params.set(name, text);
+  }
+  params.set('limit', String(pageSize));
+  if (cursor) params.set('cursor', cursor);
+  return `${path}?${params.toString()}`;
+}
+
+const pages = { initialPageParam: null as string | null, refetchInterval: liveEvery, staleTime: 0 } as const;
+const nextOf = (page: { next_cursor?: string | null }) => page.next_cursor || null;
+
+/** Log lines, newest first, a page at a time; older pages follow the server's cursor. */
+export const useLogs = (filters: LogFilters) =>
+  useInfiniteQuery({
+    ...pages,
+    queryKey: [...keys.logs, filters],
+    queryFn: ({ pageParam }) => api.get<LogsPage>(telemetryPath('/telemetry/logs', filters, pageParam)),
+    getNextPageParam: nextOf,
+  });
+
+/** Audit events, newest first, a page at a time. */
+export const useAudit = (filters: AuditFilters) =>
+  useInfiniteQuery({
+    ...pages,
+    queryKey: [...keys.audit, filters],
+    queryFn: ({ pageParam }) => api.get<AuditPage>(telemetryPath('/telemetry/audit', filters, pageParam)),
+    getNextPageParam: nextOf,
+  });
+
+/** The latest point of each metric series, of one runtime or node if asked. */
+export const useMetrics = (filters: { runtime?: string; node?: string } = {}) =>
+  useQuery({
+    queryKey: [...keys.metrics, filters],
+    queryFn: () => {
+      const params = new URLSearchParams(Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])));
+      return api.get<MetricsAnswer>(`/telemetry/metrics${params.size ? `?${params.toString()}` : ''}`);
+    },
+    refetchInterval: liveEvery,
+    staleTime: 0,
+  });
 
 // Writes
 

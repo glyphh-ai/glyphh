@@ -12,5 +12,6 @@ export { ProgressBar } from './ProgressBar/ProgressBar';
 export { Select } from './Select/Select';
 export { EmptyState, ErrorNotice, LoadingCard, Skeleton } from './States/States';
 export { Switch } from './Switch/Switch';
+export { panelId, tabId, Tabs, type Tab } from './Tabs/Tabs';
 export { TextField } from './TextField/TextField';
 export { ToastProvider, useToast } from './Toast/Toast';

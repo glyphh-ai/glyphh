@@ -33,6 +33,16 @@ export const defaultHandlers: HttpHandler[] = [
   http.get(v1('/installs'), () => HttpResponse.json(fixtures.installs)),
   http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.licenceKeys)),
   http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.nodes)),
+  http.get(v1('/telemetry/logs'), () => HttpResponse.json({ records: fixtures.logs, next_cursor: null })),
+  http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: fixtures.auditEvents, next_cursor: null })),
+  http.get(v1('/telemetry/metrics'), () => HttpResponse.json({ metrics: fixtures.metrics })),
+];
+
+/** The server as it answers while no runtime sends it anything, rrotor's default: `server.use(...nothingSentHandlers())`. */
+export const nothingSentHandlers = (): HttpHandler[] => [
+  http.get(v1('/telemetry/logs'), () => HttpResponse.json({ records: [], next_cursor: null })),
+  http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: [], next_cursor: null })),
+  http.get(v1('/telemetry/metrics'), () => HttpResponse.json({ metrics: [] })),
 ];
 
 /**

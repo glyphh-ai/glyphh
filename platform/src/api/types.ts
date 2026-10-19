@@ -215,3 +215,73 @@ export type Consent = DeviceConsent | OAuthConsent;
 export type ApiErrorBody = {
   error: { code: string; message: string; trace_id?: string; reason?: string; [detail: string]: unknown };
 };
+
+/**
+ * rrotor's opt-in server-side telemetry (`RROTOR_SERVER_LOGS=on`), as `GET /v1/telemetry/*` answers it. By default a
+ * runtime sends none, and these lists are empty. Read tolerantly: a field the platform does not know is kept, and an
+ * optional one may be missing.
+ */
+
+/** OTLP's severity, named as the server names it: a filter by one means it and above. */
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+/** What every record carries: when, and which runtime and node sent it. `attributes` are rrotor's, nested ones dotted. */
+type Sent = {
+  id?: Uuid;
+  at: IsoDate;
+  runtime_id?: Uuid | null;
+  /** The runtime's name. */
+  runtime?: string | null;
+  /** The node it came from (its service.instance.id). */
+  node_id?: string | null;
+  attributes?: Record<string, unknown> | null;
+  [field: string]: unknown;
+};
+
+/** One log record. */
+export type LogRecord = Sent & {
+  level?: LogLevel | string | null;
+  /** OTLP's severity number, 1 to 24. */
+  severity?: number | null;
+  /** The message. */
+  body?: string | null;
+  trace_id?: string | null;
+  span_id?: string | null;
+};
+
+/** `GET /v1/telemetry/logs`: newest first, without the audit events, and the next page's cursor (null on the last). */
+export type LogsPage = { records?: LogRecord[]; next_cursor?: string | null; [field: string]: unknown };
+
+/**
+ * One audit event: its kind (run.call, model.deploy, access.denied, …) and its fields as attributes, flattened:
+ * `actor.type` (key, sign-in, local, server, rrotor, anonymous), `actor.key_sha256`, `actor.sub`, `via`,
+ * `outcome.status`, `outcome.code`.
+ */
+export type AuditEvent = Sent & { kind?: string | null };
+
+/** `GET /v1/telemetry/audit`: newest first, and the next page's cursor (null on the last). */
+export type AuditPage = { events?: AuditEvent[]; next_cursor?: string | null; [field: string]: unknown };
+
+/**
+ * The latest point of one metric series: a node, a metric and its point's attributes. rrotor's are `rrotor.runs`
+ * (sum: model, function, status), `rrotor.run.seconds` (histogram), `rrotor.precedents` (gauge: model),
+ * `rrotor.precedents.cap`, `rrotor.link.state` (gauge: state) and `rrotor.drain.dropped` (sum: drain, signal).
+ */
+export type MetricPoint = {
+  runtime_id?: Uuid | null;
+  runtime?: string | null;
+  node_id?: string | null;
+  name: string;
+  unit?: string | null;
+  kind?: 'gauge' | 'sum' | 'histogram' | string | null;
+  /** A gauge's or sum's value; a histogram's sum. */
+  value?: number | null;
+  /** A histogram's count. */
+  count?: number | null;
+  attributes?: Record<string, unknown> | null;
+  at?: IsoDate | null;
+  [field: string]: unknown;
+};
+
+/** `GET /v1/telemetry/metrics`: the latest point of each series. */
+export type MetricsAnswer = { metrics?: MetricPoint[]; [field: string]: unknown };

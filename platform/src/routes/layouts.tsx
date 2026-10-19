@@ -74,6 +74,9 @@ export function SettingsLayout() {
             <NavItem to="/settings/usage" icon="monitor">
               Usage
             </NavItem>
+            <NavItem to="/settings/logs" icon="logs">
+              Logs
+            </NavItem>
             <NavItem to="/settings/members" icon="team">
               Members
             </NavItem>

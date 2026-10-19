@@ -10,7 +10,8 @@ import * as fixtures from '../src/test/fixtures.js';
  *
  * It answers as the real server does by default: hosting off (the hosted machine routes and the rates refused with
  * 503 E_UNAVAILABLE reason hosting_off), each plan's runtime nodes as they are, and each feature saying whether it is
- * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does.
+ * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does. Its runtimes send no telemetry, as rrotor
+ * sends none by default; FAKE_SERVER_LOGS=on has them send logs, audit events and metrics, as RROTOR_SERVER_LOGS=on does.
  *
  *   npm run fake-server   → http://localhost:8080
  */
@@ -18,6 +19,7 @@ process.loadEnvFile?.('.env');
 const platform = process.env.PLATFORM_URL ?? 'http://localhost:3000';
 const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
 const hosting = process.env.FAKE_HOSTING === 'on';
+const serverLogs = process.env.FAKE_SERVER_LOGS === 'on';
 const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
 const app = new Hono();
 const state = structuredClone(data);
@@ -174,6 +176,62 @@ app.delete('/v1/models/:id', (c) => {
 // The licence key: one for the paid month, none on Free (rrotor runs as Community). The runtime nodes, counted softly.
 app.get('/v1/license/keys', (c) => c.json(state.licenceKeys));
 app.get('/v1/license/nodes', (c) => c.json(state.nodes));
+// rrotor's opt-in telemetry, newest first, filtered and paged as the server does: `level` is it and above, `text` in
+// the message, `kind` one audit kind; `next_cursor` is opaque, and one no page gave is refused 422 reason cursor.
+// Empty unless FAKE_SERVER_LOGS=on; then a record more arrives with each read, and the runs go up, as from a live
+// runtime.
+type Row = { at: string; runtime_id?: string | null; node_id?: string | null };
+const least: Record<string, number> = { trace: 1, debug: 5, info: 9, warn: 13, error: 17, fatal: 21 };
+const telemetry = {
+  logs: serverLogs ? [...fixtures.logs] : [],
+  audit: serverLogs ? [...fixtures.auditEvents] : [],
+  metrics: serverLogs ? fixtures.metrics.map((m) => ({ ...m })) : [],
+};
+let beats = 0;
+const liveRecord = () => {
+  if (!serverLogs) return;
+  beats += 1;
+  const at = new Date().toISOString();
+  telemetry.logs.unshift({ id: `l-live-${beats}`, at, runtime_id: 'rt-self-1', runtime: 'Acme production', node_id: 'rrotor-1', level: 'debug', severity: 5, body: `Heartbeat ${beats} sent`, trace_id: null, span_id: null, attributes: { beat: beats } });
+  for (const m of telemetry.metrics) {
+    m.at = at;
+    if (m.name === 'rrotor.runs' && m.attributes?.status === 'done') m.value = (m.value ?? 0) + 3;
+    if (m.name === 'rrotor.run.seconds') Object.assign(m, { value: (m.value ?? 0) + 10, count: (m.count ?? 0) + 3 });
+  }
+};
+const cursorOf = (index: number) => Buffer.from(`page|${index}`).toString('base64url');
+function page<T extends Row>(rows: T[], q: Record<string, string>, matches: (row: T) => boolean) {
+  let start = 0;
+  if (q.cursor) {
+    const [mark, index] = Buffer.from(q.cursor, 'base64url').toString().split('|');
+    start = Number(index);
+    if (mark !== 'page' || !Number.isInteger(start) || start < 0) return { refused: refuse(422, 'E_INVALID', 'This cursor is not one a page gave.', 'cursor') };
+  }
+  const limit = Number(q.limit ?? 100);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) return { refused: refuse(422, 'E_INVALID', 'limit is 1 to 500.', 'limit') };
+  const since = q.since ? new Date(q.since).getTime() : -Infinity;
+  const found = rows.filter(
+    (row) => (!q.runtime || row.runtime_id === q.runtime) && (!q.node || row.node_id === q.node) && new Date(row.at).getTime() >= since && matches(row),
+  );
+  return { found: found.slice(start, start + limit), next_cursor: start + limit < found.length ? cursorOf(start + limit) : null };
+}
+app.get('/v1/telemetry/logs', (c) => {
+  const q = c.req.query();
+  if (!q.cursor) liveRecord();
+  const words = q.text?.toLowerCase();
+  const read = page(telemetry.logs, q, (r) => (!q.level || (r.severity ?? 0) >= (least[q.level] ?? 0)) && (!words || (r.body ?? '').toLowerCase().includes(words)));
+  return read.refused ?? c.json({ records: read.found, next_cursor: read.next_cursor });
+});
+app.get('/v1/telemetry/audit', (c) => {
+  const q = c.req.query();
+  const read = page(telemetry.audit, q, (event) => !q.kind || event.kind === q.kind);
+  return read.refused ?? c.json({ events: read.found, next_cursor: read.next_cursor });
+});
+app.get('/v1/telemetry/metrics', (c) => {
+  const { runtime, node, name } = c.req.query();
+  const metrics = telemetry.metrics.filter((m) => (!runtime || m.runtime_id === runtime) && (!node || m.node_id === node) && (!name || m.name === name));
+  return c.json({ metrics });
+});
 app.get('/v1/plans', (c) => c.json(data.plans));
 app.get('/v1/rates', (c) => hostingOff() ?? c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));

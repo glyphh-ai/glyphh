@@ -48,3 +48,31 @@ export function ago(iso: string, now: Date = new Date()): string {
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count.toLocaleString(locale)} ${count === 1 ? one : many}`;
 }
+
+const two = (n: number) => String(n).padStart(2, '0');
+
+/** A moment to the second, in UTC as dates are: 16 Oct 13:58:12. */
+export function stamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${two(d.getUTCHours())}:${two(d.getUTCMinutes())}:${two(d.getUTCSeconds())}`;
+}
+
+/** A length of time, to its two largest units: 45 s, 1 min 30 s, 2 h 5 min, 3 days 4 h. */
+export function duration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  const units: Array<[number, (n: number) => string]> = [
+    [86_400, (n) => (n === 1 ? '1 day' : `${n.toLocaleString(locale)} days`)],
+    [3_600, (n) => `${n} h`],
+    [60, (n) => `${n} min`],
+    [1, (n) => `${n} s`],
+  ];
+  const first = units.findIndex(([size]) => s >= size);
+  if (first === -1) return '0 s';
+  const [size, text] = units[first]!;
+  const parts = [text(Math.floor(s / size))];
+  const next = units[first + 1];
+  const rest = next ? Math.floor((s % size) / next[0]) : 0;
+  if (next && rest > 0) parts.push(next[1](rest));
+  return parts.join(' ');
+}

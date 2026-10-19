@@ -1,0 +1,289 @@
+/* Logs, Audit and Metrics: the tabs over the panel, the filters, then the lines. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.search {
+  justify-self: start;
+}
+
+.live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.note {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+/* The lines: time, level and the message, in a bordered list. */
+.lines {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  list-style: none;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 128px 100px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+}
+
+.line + .line {
+  border-top: 1px solid var(--line);
+}
+
+.time {
+  padding-top: 2px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.badge {
+  display: flex;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.message {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.target {
+  color: var(--text-secondary);
+}
+
+.source {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.details summary {
+  width: fit-content;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.details summary:hover {
+  color: var(--text);
+}
+
+.pre {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--field);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.older {
+  display: flex;
+  justify-content: center;
+}
+
+/* Metrics: one row a node. */
+.tableBox {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.table th,
+.table td {
+  padding: 12px var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-bottom: 1px solid var(--line);
+}
+
+.table tbody tr + tr > * {
+  border-top: 1px solid var(--line);
+}
+
+.table tbody th {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 500;
+}
+
+.table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.node {
+  color: var(--text);
+}
+
+/* Nothing sent: rrotor's default, and the two ways to see the data. */
+.nothing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.nothingIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+}
+
+.nothingTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.ways {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.way {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.wayHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.wayTitle {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.text {
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  line-height: 1.55;
+}
+
+.code {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.docs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--text);
+  font-size: var(--text-md);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--amber-line);
+  border-radius: var(--radius-md);
+  background: var(--amber-bg);
+  color: var(--amber-text);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.warning svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .line {
+    grid-template-columns: auto 1fr;
+  }
+
+  .body {
+    grid-column: 1 / -1;
+  }
+}
