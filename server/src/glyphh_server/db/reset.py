@@ -1,7 +1,7 @@
-"""The database made clean: every table the server's role owns dropped, then the schema made again from schema.sql
-and seeded. Fly runs it once per deploy, before the new machines start (fly.toml, `release_command`), while nothing
-in the database is kept (Chris, 2026-10-18). It does nothing unless GLYPHH_RESET_DATABASE is set, so taking that line
-out of fly.toml keeps the data from then on."""
+"""The database made clean, by hand only (development, emergencies; never on deploy, since production keeps its data):
+every table the server's role owns dropped, then the schema step as at every start, so the schema is made again from
+schema.sql and seeded. It does nothing unless GLYPHH_RESET_DATABASE is set for that run:
+`GLYPHH_RESET_DATABASE=1 python -m glyphh_server.db.reset`."""
 
 import asyncio
 import logging

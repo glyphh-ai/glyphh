@@ -1,7 +1,8 @@
 -- The Glyphh database: every table, index, and the tenant role and its row-level security. The one source of the
--- schema; the server runs it before it starts (db/schema.py), so every statement here is safe to run again. Until
--- launch there are no migrations: a change to a table means resetting the development database
--- (`docker compose down -v`). The models in glyphh_server.models map these tables for queries, and
+-- schema's latest shape; the server runs it before it starts (db/schema.py), so every statement here is safe to run
+-- again. Production keeps its data, so a change here comes with a migration, db/migrations/NNNN_name.sql, that brings
+-- an existing database to it; tests/db/test_migrations.py fails when tests/db/baseline.sql and the migrations do not
+-- make what this file makes. The models in glyphh_server.models map these tables for queries, and
 -- tests/db/test_schema_sql.py fails when they disagree.
 
 -- mods
