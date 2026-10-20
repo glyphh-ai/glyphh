@@ -5,12 +5,13 @@ import { useTheme, type ThemeChoice } from '@/theme/ThemeProvider';
 import { Avatar, Icon, Menu, MenuItem, MenuLabel, MenuRadioItem, MenuSeparator, MenuSubmenu, type IconName } from '@/ui';
 import styles from './UserMenu.module.css';
 
+// High-visibility dark first: it is the default and the main look, the site's own black and white.
 const themes: Array<{ choice: ThemeChoice; label: string; icon: IconName }> = [
-  { choice: 'system', label: 'System preference', icon: 'monitor' },
-  { choice: 'light', label: 'Light mode', icon: 'sun' },
+  { choice: 'dark-hc', label: 'High-visibility dark', icon: 'moonFilled' },
   { choice: 'dark', label: 'Dark mode', icon: 'moon' },
+  { choice: 'light', label: 'Light mode', icon: 'sun' },
   { choice: 'light-hc', label: 'Light high contrast', icon: 'sunFilled' },
-  { choice: 'dark-hc', label: 'Dark high contrast', icon: 'moonFilled' },
+  { choice: 'system', label: 'System preference', icon: 'monitor' },
 ];
 
 /** The person at the bottom of the sidebar: their account, billing, settings, theme and log out. */

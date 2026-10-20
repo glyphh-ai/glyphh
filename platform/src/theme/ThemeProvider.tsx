@@ -6,15 +6,18 @@ export type ResolvedTheme = Exclude<ThemeChoice, 'system'>;
 
 const storageKey = 'glyphh.theme';
 
+/** What a new visitor gets: high-visibility dark, the site's black and white. index.html applies the same before paint. */
+export const defaultTheme: ThemeChoice = 'dark-hc';
+
 type ThemeApi = { choice: ThemeChoice; resolved: ResolvedTheme; setChoice: (choice: ThemeChoice) => void };
 const ThemeContext = createContext<ThemeApi | null>(null);
 
 function readChoice(): ThemeChoice {
   try {
     const stored = localStorage.getItem(storageKey);
-    return themeChoices.includes(stored as ThemeChoice) ? (stored as ThemeChoice) : 'system';
+    return themeChoices.includes(stored as ThemeChoice) ? (stored as ThemeChoice) : defaultTheme;
   } catch {
-    return 'system';
+    return defaultTheme;
   }
 }
 
@@ -22,7 +25,10 @@ function systemTheme(): ResolvedTheme {
   return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
-/** The person's theme: kept in this browser, and System follows the operating system as it changes. */
+/**
+ * The person's theme: high-visibility dark until they choose, then kept in this browser;
+ * System, when chosen, follows the operating system as it changes.
+ */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [choice, setChoiceState] = useState<ThemeChoice>(readChoice);
   const [system, setSystem] = useState<ResolvedTheme>(systemTheme);
