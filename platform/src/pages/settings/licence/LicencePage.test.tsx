@@ -24,7 +24,7 @@ describe('the licence wording', () => {
 
 describe('Licence', () => {
   it('shows the current key masked, its terms and expiry; reveals and copies it whole', async () => {
-    const { user } = renderApp('/settings/licence');
+    const { user } = renderApp('/licence');
     const card = await screen.findByRole('region', { name: 'Current licence key' });
     expect(within(card).getByText('Pro')).toBeInTheDocument();
     expect(within(card).getByText('Live')).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('Licence', () => {
   });
 
   it('says the key reaches rrotor on its own, and how to paste it on an air-gapped node', async () => {
-    renderApp('/settings/licence');
+    renderApp('/licence');
     expect(await screen.findByRole('heading', { name: 'How it reaches rrotor' })).toBeInTheDocument();
     expect(screen.getByText(/picks up the newest key when it links to Glyphh, and again at its daily heartbeat/)).toBeInTheDocument();
     expect(screen.getByText('GLYPHH_LICENSE_KEY')).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('Licence', () => {
   });
 
   it('lists the older keys with their state, masked, each to copy', async () => {
-    const { user } = renderApp('/settings/licence');
+    const { user } = renderApp('/licence');
     const list = await screen.findByRole('list', { name: 'Older licence keys' });
     const rows = within(list).getAllByRole('listitem');
     expect(rows).toHaveLength(2);
@@ -68,7 +68,7 @@ describe('Licence', () => {
 
   it('on Free, says Community needs no key, with its limits, and nothing to paste', async () => {
     server.use(...hostingOffHandlers());
-    renderApp('/settings/licence');
+    renderApp('/licence');
     const card = await screen.findByRole('region', { name: 'Community' });
     expect(within(card).getByText('Community: no key needed')).toBeInTheDocument();
     for (const text of ['1 runtime node', '5,000 precedents per node', 'No sync']) expect(within(card).getByText(text)).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('Licence', () => {
 
   it('on a paid plan with no live key yet, runs as Community until the payment goes through', async () => {
     server.use(http.get(v1('/license/keys'), () => HttpResponse.json({ license_key: null, keys: licenceKeys.keys.slice(1) })));
-    renderApp('/settings/licence');
+    renderApp('/licence');
     const card = await screen.findByRole('region', { name: 'Community' });
     expect(within(card).getByText('Running as Community')).toBeInTheDocument();
     expect(within(card).getByText(/issued once your plan’s payment goes through/)).toBeInTheDocument();
@@ -88,13 +88,13 @@ describe('Licence', () => {
 
   it('shows the refusal when the keys cannot be read', async () => {
     server.use(http.get(v1('/license/keys'), () => apiError(503, 'E_UNAVAILABLE', 'Keys are unavailable.')));
-    renderApp('/settings/licence');
+    renderApp('/licence');
     expect(await screen.findByText('Keys are unavailable.')).toBeInTheDocument();
   });
 
-  it('opens from the settings rail', async () => {
-    renderApp('/settings/general');
+  it('opens from the main sidebar', async () => {
+    renderApp('/');
     const rail = await screen.findByRole('complementary', { name: 'Main' });
-    expect(within(rail).getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/settings/licence');
+    expect(within(rail).getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
   });
 });

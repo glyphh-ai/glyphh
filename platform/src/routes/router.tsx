@@ -55,6 +55,9 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Home' }] } },
       { path: 'keys', element: <KeysPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }] } },
       { path: 'models', element: <ModelsPage />, handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] } },
+      { path: 'usage', element: <UsagePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Usage' }] } },
+      { path: 'logs', element: <LogsPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Logs' }] } },
+      { path: 'licence', element: <LicencePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Licence' }] } },
     ],
   },
   {
@@ -68,9 +71,10 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="general" replace /> },
       { path: 'general', element: <GeneralPage />, handle: crumbs('Settings', 'General') },
       { path: 'billing', element: <BillingPage />, handle: crumbs('Settings', 'Billing') },
-      { path: 'licence', element: <LicencePage />, handle: crumbs('Settings', 'Licence') },
-      { path: 'usage', element: <UsagePage />, handle: crumbs('Settings', 'Usage') },
-      { path: 'logs', element: <LogsPage />, handle: crumbs('Settings', 'Logs') },
+      // Licence, usage and logs moved to the main sidebar (2026-10-20).
+      { path: 'licence', element: <Moved to="/licence" /> },
+      { path: 'usage', element: <Moved to="/usage" /> },
+      { path: 'logs', element: <Moved to="/logs" /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },

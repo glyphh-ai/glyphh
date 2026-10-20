@@ -29,7 +29,7 @@ export function AuditPanel({ nodes }: { nodes: RuntimeNode[] | undefined }) {
   return (
     <>
       <p className={styles.note} role="note">
-        rrotor records audit events on Enterprise. Below Enterprise it sends them as log lines instead: see <Link to="/settings/logs">Logs</Link>.
+        rrotor records audit events on Enterprise. Below Enterprise it sends them as log lines instead: see <Link to="/logs">Logs</Link>.
       </p>
       <FilterBar label="Filter audit events" onSearch={() => setFilters({ ...filters, kind })}>
         <WhereFilters nodes={nodes} filters={filters} onChange={setFilters} />

@@ -82,7 +82,7 @@ describe('the licence key’s line, on a paid plan', () => {
   it('is commented out after the env, for an air-gapped node only; none on Free', () => {
     expect(composeEnv(env, false)).toBe(dotEnv(env));
     expect(composeEnv(env, true)).toBe(
-      `${dotEnv(env)}\n\n# Air-gapped only, normally not needed: rrotor gets its licence key when it links.\n# GLYPHH_LICENSE_KEY=<your licence key from Settings → Licence>`,
+      `${dotEnv(env)}\n\n# Air-gapped only, normally not needed: rrotor gets its licence key when it links.\n# GLYPHH_LICENSE_KEY=<your licence key from the Licence page>`,
     );
   });
 
@@ -92,7 +92,7 @@ describe('the licence key’s line, on a paid plan', () => {
     expect(helm.split('\n').slice(-3)).toEqual([
       '# Air-gapped only, normally not needed: rrotor gets its licence key when it links. Add:',
       '#   --set extraEnv[0].name=GLYPHH_LICENSE_KEY \\',
-      "#   --set-string extraEnv[0].value='<your licence key from Settings → Licence>'",
+      "#   --set-string extraEnv[0].value='<your licence key from the Licence page>'",
     ]);
   });
 
@@ -100,7 +100,7 @@ describe('the licence key’s line, on a paid plan', () => {
     const module = terraformModule(env, defaultOptions, true).split('\n');
     expect(module.slice(-3)).toEqual([
       '  # Air-gapped only, normally not needed: rrotor gets its licence key when it links.',
-      '  # offline_licence = "<your licence key from Settings → Licence>"',
+      '  # offline_licence = "<your licence key from the Licence page>"',
       '}',
     ]);
     expect(terraformModule(env, defaultOptions)).not.toContain('offline_licence');

@@ -44,7 +44,7 @@ export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; h
 
       {isAdmin && (
         <div className={styles.actions}>
-          <Button onClick={() => navigate('/settings/usage')}>Usage</Button>
+          <Button onClick={() => navigate('/usage')}>Usage</Button>
           <Menu
             label="Manage billing"
             placement="bottom-end"

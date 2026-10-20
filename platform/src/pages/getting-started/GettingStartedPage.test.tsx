@@ -250,14 +250,14 @@ describe('Getting started', () => {
       await register(user, 'Docker Compose');
       const env = screen.getByText(/RROTOR_RUNTIME_TOKEN=glyphh_rt_secret/);
       expect(env).toHaveTextContent('# Air-gapped only, normally not needed: rrotor gets its licence key when it links.');
-      expect(env).toHaveTextContent('# GLYPHH_LICENSE_KEY=<your licence key from Settings → Licence>');
+      expect(env).toHaveTextContent('# GLYPHH_LICENSE_KEY=<your licence key from the Licence page>');
       expect(screen.getByText(/reaches rrotor on its own when it links and at its daily heartbeat/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/settings/licence');
+      expect(within(screen.getByRole('main')).getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
 
       await user.click(screen.getByRole('radio', { name: /^Helm/ }));
       expect(screen.getByText(/helm install rrotor/)).toHaveTextContent('# --set extraEnv[0].name=GLYPHH_LICENSE_KEY');
       await user.click(screen.getByRole('radio', { name: /^Terraform/ }));
-      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('# offline_licence = "<your licence key from Settings → Licence>"');
+      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('# offline_licence = "<your licence key from the Licence page>"');
     });
 
     it('on Free, has no licence key line: rrotor runs as Community', async () => {

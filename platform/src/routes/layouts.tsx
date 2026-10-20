@@ -40,6 +40,15 @@ export function MainLayout() {
             <NavItem to="/keys" icon="key">
               API Keys
             </NavItem>
+            <NavItem to="/usage" icon="monitor">
+              Usage
+            </NavItem>
+            <NavItem to="/logs" icon="logs">
+              Logs
+            </NavItem>
+            <NavItem to="/licence" icon="card">
+              Licence
+            </NavItem>
           </NavGroup>
           <NavGroup label="Ada">
             <NavItem to="/models" icon="model">
@@ -67,15 +76,6 @@ export function SettingsLayout() {
             </NavItem>
             <NavItem to="/settings/billing" icon="card">
               Billing
-            </NavItem>
-            <NavItem to="/settings/licence" icon="key">
-              Licence
-            </NavItem>
-            <NavItem to="/settings/usage" icon="monitor">
-              Usage
-            </NavItem>
-            <NavItem to="/settings/logs" icon="logs">
-              Logs
             </NavItem>
             <NavItem to="/settings/members" icon="team">
               Members
