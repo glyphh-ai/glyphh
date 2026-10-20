@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { keys, useHosting, useMe, usePlans, useRates } from '@/api/queries';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
@@ -10,7 +10,6 @@ import settings from '../settings.module.css';
 import { contractRates, HostingRates, ratesNote } from './HostingRates';
 import { PlanCard } from './PlanCard';
 import { hasHosting, hostingPlansText } from './plans';
-import { UpgradeCard } from './UpgradeCard';
 import styles from './billing.module.css';
 
 export function BillingPage() {
@@ -21,7 +20,6 @@ export function BillingPage() {
   const toast = useToast();
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
 
   // Stripe's checkout and portal send the browser back with ?done=1: read everything afresh.
   const done = params.get('done');
@@ -35,9 +33,6 @@ export function BillingPage() {
   const isAdmin = me.data?.role === 'admin';
   const current = me.data?.plan;
   const list = plans.data ?? [];
-  const at = list.findIndex((plan) => plan.name === current?.name);
-  // The plans after this one in the server's order; all of them when this one is not listed.
-  const upgrades = current ? list.slice(at + 1) : [];
   // The rates of the plan in force, or, on a plan without hosting, of the self-serve plans that have it. A plan sold
   // by contract has its rates in the contract.
   const contract = current !== undefined && !current.self_serve;
@@ -46,15 +41,13 @@ export function BillingPage() {
   return (
     <>
       <SettingsTitle title="Billing" />
-      <SettingsSection title="Subscription" description="Your plan, and the plans above it. Members and installs are unlimited on every plan.">
+      {/* The other plans are on Manage, Change plan (his order, 2026-10-20), not listed here. */}
+      <SettingsSection title="Subscription" description="Your plan. Members and installs are unlimited on every plan.">
         {(me.isPending || (me.data && hosting === undefined)) && <LoadingCard lines={4} />}
         <ApiErrorNotice error={me.error ?? plans.error} />
         {me.data && hosting !== undefined && (
           <div className={settings.cards}>
             <PlanCard me={me.data} isAdmin={isAdmin} hosting={hosting} />
-            {upgrades.map((plan) => (
-              <UpgradeCard key={plan.name} plan={plan} isAdmin={isAdmin} hosting={hosting} onUpgrade={() => navigate('/settings/plans')} />
-            ))}
             <AdminOnlyNote isAdmin={isAdmin} />
           </div>
         )}
