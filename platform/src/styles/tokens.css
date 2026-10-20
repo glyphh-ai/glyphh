@@ -1,12 +1,16 @@
 /*
  * Design tokens. Every colour, size and font in the app comes from here; components never use raw values.
  * A theme is a set of colour tokens on [data-theme], so any subtree can pin its own theme
- * (the sign-in pages are always dark).
+ * (the sign-in pages are always high-visibility dark).
+ *
+ * The look is the site's (glyphh.ai, web/app/globals.css): Geist for text, JetBrains Mono for code and labels,
+ * black and white with 1px #5a5a5a lines, and the site's purple as the one accent. High-visibility dark
+ * (dark-hc) is the default and the main theme; on dark, no text is darker than #999.
  */
 
 :root {
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', monospace;
+  --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', 'Fira Code', monospace;
 
   --text-xs: 12px;
   --text-sm: 13px;
@@ -37,10 +41,12 @@
   --control-lg: 44px;
 
   --sidebar-width: 248px;
-  --content-width: 980px;
+  /* The page uses the width it is given; only running text is held to a readable measure. */
+  --measure: 72ch;
 
-  --accent: #7c4dff;
-  --accent-gradient: linear-gradient(90deg, #c084fc 0%, #7c4dff 38%, #3b82f6 70%, #22d3ee 100%);
+  --accent: #b066ff;
+  --on-accent: #000000;
+  --accent-gradient: linear-gradient(to top right, #9333ea, #ec4899);
 
   --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.28);
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -48,31 +54,31 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0b0b0f;
-  --bg-sidebar: #0b0b0f;
-  --surface: #121217;
-  --surface-raised: #18181f;
-  --surface-hover: #18181f;
-  --surface-selected: #1c1c24;
-  --surface-pop: #16161c;
-  --field: #121217;
-  --line: #26262f;
-  --line-strong: #34343f;
-  --text: #ededf2;
-  --text-secondary: #b4b4c0;
-  --text-muted: #9a9aa8;
-  --text-nav: #c9c9d3;
-  --link: #a78bfa;
-  --link-hover: #c4b5fd;
-  --primary-bg: #f4f4f6;
-  --primary-text: #0b0b0f;
-  --track: #22222b;
-  --switch-off: #34343f;
-  --switch-knob-off: #9a9aa8;
-  --menu-selected: #1c1838;
-  --focus-ring: rgb(124 77 255 / 0.35);
-  --scrollbar: #34343f;
-  --scrollbar-hover: #4a4a55;
+  --bg: #0a0a0a;
+  --bg-sidebar: #0a0a0a;
+  --surface: #111111;
+  --surface-raised: #181818;
+  --surface-hover: #181818;
+  --surface-selected: #202020;
+  --surface-pop: #141414;
+  --field: #111111;
+  --line: #2e2e2e;
+  --line-strong: #444444;
+  --text: #f2f2f2;
+  --text-secondary: #bdbdbd;
+  --text-muted: #a0a0a0;
+  --text-nav: #d0d0d0;
+  --link: #c68cff;
+  --link-hover: #d9b0ff;
+  --primary-bg: #ffffff;
+  --primary-text: #000000;
+  --track: #242424;
+  --switch-off: #444444;
+  --switch-knob-off: #a0a0a0;
+  --menu-selected: #1f1530;
+  --focus-ring: rgb(176 102 255 / 0.4);
+  --scrollbar: #3a3a3a;
+  --scrollbar-hover: #555555;
 
   --green-text: #34d399;
   --green-bg: #0f2a22;
@@ -86,12 +92,12 @@
   --blue-text: #60a5fa;
   --blue-bg: #0f1e33;
   --blue-line: #1e3a5f;
-  --violet-text: #a78bfa;
-  --violet-bg: #1b1433;
-  --violet-line: #352a5e;
-  --neutral-text: #b4b4c0;
-  --neutral-bg: #18181f;
-  --neutral-line: #34343f;
+  --violet-text: #c68cff;
+  --violet-bg: #1b1129;
+  --violet-line: #3e2660;
+  --neutral-text: #bdbdbd;
+  --neutral-bg: #181818;
+  --neutral-line: #444444;
 
   --logo: url('/glyphh-logo-text-white.png');
 }
@@ -99,31 +105,33 @@
 [data-theme='light'] {
   color-scheme: light;
   --bg: #ffffff;
-  --bg-sidebar: #fafafb;
+  --bg-sidebar: #fafafa;
   --surface: #ffffff;
-  --surface-raised: #f4f4f6;
-  --surface-hover: #f4f4f6;
-  --surface-selected: #eeeef2;
+  --surface-raised: #f6f6f6;
+  --surface-hover: #f6f6f6;
+  --surface-selected: #ededed;
   --surface-pop: #ffffff;
   --field: #ffffff;
-  --line: #e6e6eb;
-  --line-strong: #d9d9e0;
-  --text: #111114;
-  --text-secondary: #4b4b57;
-  --text-muted: #6b6b78;
-  --text-nav: #3f3f4a;
-  --link: #6d3df5;
-  --link-hover: #5b2be0;
-  --primary-bg: #111114;
+  --line: #e2e2e2;
+  --line-strong: #c8c8c8;
+  --text: #000000;
+  --text-secondary: #4a4a4a;
+  --text-muted: #6a6a6a;
+  --text-nav: #1f1f1f;
+  --accent: #8c3bf2;
+  --on-accent: #ffffff;
+  --link: #7a2fe0;
+  --link-hover: #6a26c8;
+  --primary-bg: #000000;
   --primary-text: #ffffff;
-  --track: #ececf1;
-  --switch-off: #d9d9e0;
+  --track: #ededed;
+  --switch-off: #c8c8c8;
   --switch-knob-off: #ffffff;
-  --menu-selected: #f1ecff;
-  --focus-ring: rgb(124 77 255 / 0.3);
-  --scrollbar: #d4d4dc;
-  --scrollbar-hover: #b8b8c2;
-  --shadow-pop: 0 12px 32px rgb(17 17 20 / 0.12);
+  --menu-selected: #f3ebff;
+  --focus-ring: rgb(140 59 242 / 0.3);
+  --scrollbar: #d0d0d0;
+  --scrollbar-hover: #b0b0b0;
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.12);
 
   --green-text: #047857;
   --green-bg: #ecfdf5;
@@ -137,44 +145,48 @@
   --blue-text: #1d4ed8;
   --blue-bg: #eff6ff;
   --blue-line: #bfdbfe;
-  --violet-text: #6d3df5;
-  --violet-bg: #f5f3ff;
-  --violet-line: #ddd6fe;
-  --neutral-text: #4b4b57;
-  --neutral-bg: #f4f4f6;
-  --neutral-line: #e6e6eb;
+  --violet-text: #7a2fe0;
+  --violet-bg: #f7f0ff;
+  --violet-line: #dcc4ff;
+  --neutral-text: #4a4a4a;
+  --neutral-bg: #f6f6f6;
+  --neutral-line: #e2e2e2;
 
   --logo: url('/glyphh-logo-text-black.png');
 }
 
-/* High contrast: the same themes with stronger lines and text. */
+/*
+ * High contrast: the same themes with stronger lines and text.
+ * dark-hc is high-visibility dark, the site's own palette and the default: pure black, white text,
+ * #5a5a5a lines, #0d0d0d / #141414 surfaces, white primary buttons.
+ */
 [data-theme='dark-hc'] {
   color-scheme: dark;
   --bg: #000000;
   --bg-sidebar: #000000;
-  --surface: #0a0a0d;
-  --surface-raised: #16161c;
-  --surface-hover: #1c1c24;
-  --surface-selected: #26262f;
-  --surface-pop: #0a0a0d;
+  --surface: #0d0d0d;
+  --surface-raised: #141414;
+  --surface-hover: #1a1a1a;
+  --surface-selected: #242424;
+  --surface-pop: #0d0d0d;
   --field: #000000;
-  --line: #5a5a66;
-  --line-strong: #8a8a96;
+  --line: #5a5a5a;
+  --line-strong: #7a7a7a;
   --text: #ffffff;
-  --text-secondary: #e4e4ea;
-  --text-muted: #c8c8d0;
+  --text-secondary: #eaeaea;
+  --text-muted: #c8c8c8;
   --text-nav: #ffffff;
-  --link: #c4b5fd;
-  --link-hover: #ddd6fe;
+  --link: #c68cff;
+  --link-hover: #dcb8ff;
   --primary-bg: #ffffff;
   --primary-text: #000000;
-  --track: #26262f;
-  --switch-off: #5a5a66;
-  --switch-knob-off: #e4e4ea;
-  --menu-selected: #2a1f55;
-  --focus-ring: rgb(196 181 253 / 0.6);
-  --scrollbar: #5a5a66;
-  --scrollbar-hover: #8a8a96;
+  --track: #242424;
+  --switch-off: #5a5a5a;
+  --switch-knob-off: #eaeaea;
+  --menu-selected: #22163a;
+  --focus-ring: rgb(198 140 255 / 0.6);
+  --scrollbar: #5a5a5a;
+  --scrollbar-hover: #7a7a7a;
 
   --green-text: #6ee7b7;
   --green-bg: #002619;
@@ -188,12 +200,12 @@
   --blue-text: #93c5fd;
   --blue-bg: #00142e;
   --blue-line: #60a5fa;
-  --violet-text: #c4b5fd;
-  --violet-bg: #150b33;
-  --violet-line: #a78bfa;
-  --neutral-text: #e4e4ea;
-  --neutral-bg: #16161c;
-  --neutral-line: #8a8a96;
+  --violet-text: #d2a8ff;
+  --violet-bg: #170b29;
+  --violet-line: #b066ff;
+  --neutral-text: #eaeaea;
+  --neutral-bg: #141414;
+  --neutral-line: #7a7a7a;
 
   --logo: url('/glyphh-logo-text-white.png');
 }
@@ -203,28 +215,30 @@
   --bg: #ffffff;
   --bg-sidebar: #ffffff;
   --surface: #ffffff;
-  --surface-raised: #ececf1;
-  --surface-hover: #e6e6eb;
-  --surface-selected: #d9d9e0;
+  --surface-raised: #ededed;
+  --surface-hover: #e6e6e6;
+  --surface-selected: #d8d8d8;
   --surface-pop: #ffffff;
   --field: #ffffff;
-  --line: #6b6b78;
-  --line-strong: #3f3f4a;
+  --line: #6a6a6a;
+  --line-strong: #3a3a3a;
   --text: #000000;
-  --text-secondary: #1c1c22;
-  --text-muted: #33333d;
+  --text-secondary: #1a1a1a;
+  --text-muted: #333333;
   --text-nav: #000000;
-  --link: #4c1fd6;
-  --link-hover: #3a12b0;
+  --accent: #6a26c8;
+  --on-accent: #ffffff;
+  --link: #5b1fb0;
+  --link-hover: #47178c;
   --primary-bg: #000000;
   --primary-text: #ffffff;
-  --track: #d9d9e0;
-  --switch-off: #6b6b78;
+  --track: #d8d8d8;
+  --switch-off: #6a6a6a;
   --switch-knob-off: #ffffff;
-  --menu-selected: #e4dcff;
-  --focus-ring: rgb(76 31 214 / 0.5);
-  --scrollbar: #6b6b78;
-  --scrollbar-hover: #3f3f4a;
+  --menu-selected: #ebdcff;
+  --focus-ring: rgb(106 38 200 / 0.5);
+  --scrollbar: #6a6a6a;
+  --scrollbar-hover: #3a3a3a;
   --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.2);
 
   --green-text: #065f46;
@@ -239,12 +253,12 @@
   --blue-text: #1e3a8a;
   --blue-bg: #eff6ff;
   --blue-line: #1d4ed8;
-  --violet-text: #4c1fd6;
-  --violet-bg: #f5f3ff;
-  --violet-line: #6d3df5;
-  --neutral-text: #1c1c22;
-  --neutral-bg: #ececf1;
-  --neutral-line: #3f3f4a;
+  --violet-text: #5b1fb0;
+  --violet-bg: #f7f0ff;
+  --violet-line: #6a26c8;
+  --neutral-text: #1a1a1a;
+  --neutral-bg: #ededed;
+  --neutral-line: #3a3a3a;
 
   --logo: url('/glyphh-logo-text-black.png');
 }
