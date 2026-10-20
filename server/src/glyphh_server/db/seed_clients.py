@@ -1,5 +1,5 @@
-"""The platform's own OAuth client, made at every start from the server's settings: the database is made clean on
-each deploy while nothing in it is kept, and a client registered once (POST /oauth/register) would go with it. Kept
+"""The platform's own OAuth client, made at every start from the server's settings, so a reset of the database
+(db/reset.py) never loses it as it would a client registered once (POST /oauth/register). Kept
 under the id the platform already holds, with its secret's hash and its one redirect URI, `{platform}/auth/callback`;
 a changed secret or address takes on the next start. Without the settings, nothing is made."""
 

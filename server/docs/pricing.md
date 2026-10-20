@@ -82,8 +82,8 @@ is where Programs and the gateway will be scheduled from. The rest follow it. Wh
 - **Enterprise** is by contract: an annual invoice on its own Stripe subscription, recorded on the org on the server's
   machine (`fly ssh console -a glyphh-ai-server`) with
   `python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…>` and ended
-  with `revoke --org <uuid>`. While the database is reset on every deploy
-  ([architecture.md](architecture.md#starting-up-and-the-reset-on-deploy)), grants do not survive a deploy.
+  with `revoke --org <uuid>`. Grants survive deploys: production keeps its data
+  ([architecture.md](architecture.md#starting-up-and-migrations)).
 
 ## Managed cloud (off)
 

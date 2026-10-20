@@ -45,6 +45,8 @@ def _from_database(conn: Connection) -> dict[str, dict[str, Any]]:
     seen = inspect(conn)
     out = {}
     for name in seen.get_table_names():
+        if name == "schema_migrations":  # the schema step's own record of migrations, not a table the code maps
+            continue
         out[name] = {
             "columns": {c["name"]: (_type(c["type"]), c["nullable"]) for c in seen.get_columns(name)},
             "primary_key": sorted(seen.get_pk_constraint(name)["constrained_columns"]),

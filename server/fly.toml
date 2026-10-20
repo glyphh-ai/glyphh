@@ -12,15 +12,8 @@ primary_region = "iad"
   dockerfile = "Dockerfile"
   build-target = "runtime"
 
-# While nothing in the database is kept (Chris, 2026-10-18), every deploy starts it clean: the release command runs
-# once, before the new machines start, and drops every table and makes the schema again (src/glyphh_server/db/reset.py).
-# Take GLYPHH_RESET_DATABASE out to keep the data from then on.
-[deploy]
-  release_command = "python -m glyphh_server.db.reset"
-
 [env]
   GLYPHH_ENV = "prod"
-  GLYPHH_RESET_DATABASE = "1"
   GLYPHH_PUBLIC_URL = "https://api.glyphh.ai"
   GLYPHH_PLATFORM_URL = "https://platform.glyphh.ai"
 

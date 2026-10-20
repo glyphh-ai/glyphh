@@ -16,8 +16,16 @@ platform, `glyphh-ai/platform`) and is never on the data path: a model is called
 
 Compose runs Postgres, Redis and the server; the API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the
 docs at `/docs`). Before the server starts, the image runs the schema step, `python -m glyphh_server.db.schema`
-([starting up](docs/architecture.md#starting-up-and-the-reset-on-deploy)). There are no migrations yet: after a
-change to an existing table the server refuses to boot; reset the dev database with `docker compose down -v`.
+([starting up](docs/architecture.md#starting-up-and-migrations)), which also runs the migrations a database has not
+had.
+
+Production keeps its data, so a schema change is two edits: change `src/glyphh_server/db/schema.sql` (always the
+latest shape, which a new database is made from) and add `src/glyphh_server/db/migrations/NNNN_name.sql`, the next
+number, which brings an existing database to it, run once and recorded in `schema_migrations`.
+`tests/db/test_migrations.py` fails unless the baseline (`tests/db/baseline.sql`, production's shape when it began
+keeping its data, never edited) plus every migration makes exactly what `schema.sql` makes. A dev database can still
+be made again with `docker compose down -v`, or any database by hand with
+`GLYPHH_RESET_DATABASE=1 python -m glyphh_server.db.reset`; nothing resets on deploy.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed): the
 [settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make the signing
@@ -36,7 +44,7 @@ To try billing against Stripe's test mode, make the products once
 
 - `models/`: the tables mapped for queries, one per module (`db/schema.sql` is the schema;
   `tests/db/test_schema_sql.py` fails when they disagree)
-- `db/`: the engine, `schema.sql` and the schema step, the seeds, the drift check, tenancy (row-level security keyed
+- `db/`: the engine, `schema.sql`, `migrations/` and the schema step, the by-hand reset, the seeds, the drift check, tenancy (row-level security keyed
   on the org) and `signals.py`, the Redis client for live signals
 - `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe,
   `ops/connector/` the connector's OAuth 2.1 authorization server

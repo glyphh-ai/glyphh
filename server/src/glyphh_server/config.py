@@ -10,8 +10,8 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
-    # Drop every table and make the schema again on each deploy (db/reset.py, Fly's release command): while nothing
-    # in the database is kept. Off by default; on only where fly.toml sets GLYPHH_RESET_DATABASE=1.
+    # Lets db/reset.py, run by hand, drop every table and make the schema again (development, emergencies). Off by
+    # default and never set on deploy: production keeps its data.
     reset_database: bool = False
     # Live signals only (pub/sub): in production Redis runs on the server's own Fly machine, beside the server.
     redis_url: str = "redis://localhost:6379/0"
@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     public_url: str = "http://localhost:8080"
     # The platform, the one web app: every page a browser sees in a flow is there; the server renders nothing.
     platform_url: str = "http://localhost:3000"
-    # The platform's own OAuth client, made at every start from these (db/seed_clients.py), so the database's reset
-    # on deploy never loses it: the same id and secret as the platform's PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET.
+    # The platform's own OAuth client, made at every start from these (db/seed_clients.py), so a reset of the
+    # database never loses it: the same id and secret as the platform's PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET.
     platform_client_id: str = ""
     platform_client_secret: str = ""
     # Signs the values the device sign-in pages carry; 32 characters or more.

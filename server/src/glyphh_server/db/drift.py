@@ -1,5 +1,5 @@
-"""Until launch there are no migrations: the schema is created, never altered. A database made by older
-code would be missing columns and fail on the first request that needs one. This check refuses to boot
+"""The schema step's last check: a database missing a column the code maps (schema.sql changed with no migration
+bringing an existing database to it) would fail on the first request that needs one. This check refuses to boot
 instead, and says how to fix it."""
 
 from sqlalchemy import inspect
@@ -7,7 +7,10 @@ from sqlalchemy.engine import Connection
 
 from glyphh_server.models import Base
 
-FIX: str = "Until launch there are no migrations: reset the development database with `docker compose down -v`."
+FIX: str = (
+    "Add the migration that brings an existing database to schema.sql (db/migrations/NNNN_name.sql); "
+    "a development database can instead be made again with `docker compose down -v`."
+)
 
 
 def missing_columns(conn: Connection) -> dict[str, list[str]]:
