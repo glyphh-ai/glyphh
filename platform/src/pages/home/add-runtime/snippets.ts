@@ -7,7 +7,10 @@
 /** The self-hosting docs' hub; each deployment also has its own page. */
 export const docsUrl = 'https://docs.glyphh.ai/run-rrotor';
 export const image = 'ghcr.io/glyphh-ai/rrotor';
-/** The install script for one Linux machine: Docker, rrotor and HTTPS in front of it. */
+/**
+ * The install script: on a Linux server, rrotor with Compose and HTTPS in front of it; with a public host of
+ * 127.0.0.1, localhost or an IP address, the image alone on port 7777 over plain HTTP, no Compose.
+ */
 export const installScriptUrl = 'https://glyphh.ai/install.sh';
 /** The Helm chart as released from the public repo. */
 export const helmChartUrl = 'https://github.com/glyphh-ai/glyphh/releases/download/rrotor-chart-0.2.0/rrotor-0.2.0.tgz';
@@ -70,10 +73,13 @@ export function isHost(host: string): boolean {
   return /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z0-9-]*(:\d{1,5})?$/.test(host);
 }
 
-/** On this computer, also localhost or an IP address; elsewhere, a DNS name as `isHost`. */
+/**
+ * On this computer, also localhost or an IPv4 address, with no port (the server keeps `https://<host>` alone and
+ * refuses a port or an IPv6 literal); elsewhere, a DNS name as `isHost`.
+ */
 export function isHostFor(deployment: Deployment, host: string): boolean {
   if (deployment !== 'local') return isHost(host);
-  return isHost(host) || /^(localhost|\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:]+\])(:\d{1,5})?$/.test(host);
+  return /^(localhost|\d{1,3}(\.\d{1,3}){3}|[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z0-9-]*)$/.test(host);
 }
 
 export const connectorUrl = (host: string) => `https://${host}/mcp`;
@@ -89,7 +95,7 @@ export const healthCheck = (base: string) => `curl -fsS --retry 15 --retry-connr
  */
 export const licenceKeyPlaceholder = '<your licence key from the Licence page>';
 export const licenceKeyAddition: Record<Deployment, string> = {
-  local: `-e GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} before the image`,
+  local: `GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} before sh`,
   compose: `GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} before sh`,
   helm: `--set extraEnv[0].name=GLYPHH_LICENSE_KEY --set-string extraEnv[0].value='${licenceKeyPlaceholder}'`,
   terraform: `offline_licence = "${licenceKeyPlaceholder}" to the module`,
@@ -101,9 +107,18 @@ const hostIn = (env: Record<string, string>) => env.RROTOR_PUBLIC_HOST ?? '';
 
 /** One command on a Linux server: the install script with the registration's values, and the size unless small. */
 export function dockerInstall(env: Record<string, string>, size: Size = 'small'): string {
+  return [...installLines(env, size), healthCheck(`https://${hostIn(env)}`)].join('\n');
+}
+
+/** This computer: the same install script, which runs the image alone on 7777 for a local host, checked over HTTP. */
+export function localInstall(env: Record<string, string>): string {
+  return [...installLines(env, 'small'), healthCheck(localRuntimeUrl(hostIn(env) || localHost))].join('\n');
+}
+
+function installLines(env: Record<string, string>, size: Size): string[] {
   const vars = runtimeVars.map((name) => `${name}=${env[name] ?? ''}`);
   if (size !== 'small') vars.push(`RROTOR_SIZE=${size}`);
-  return [`curl -fsSL ${installScriptUrl} | \\`, `  ${vars.join(' ')} sh`, healthCheck(`https://${hostIn(env)}`)].join('\n');
+  return [`curl -fsSL ${installScriptUrl} | \\`, `  ${vars.join(' ')} sh`];
 }
 
 /** The image alone on port 7777. */

@@ -10,6 +10,7 @@ import {
   helmCommand,
   image,
   licenceKeyAddition,
+  localInstall,
   localRun,
   sizes,
   terraformCommands,
@@ -42,8 +43,14 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
     return (
       <div className={styles.part}>
         <h3 className={styles.subTitle}>Run it on this computer</h3>
-        <span className={styles.meta}>In a terminal, with Docker running. The last line waits until rrotor answers.</span>
-        <CodeBlock code={localRun(env)} label="docker run command" />
+        <span className={styles.meta}>
+          In a terminal, with Docker running. The script runs the image alone on port 7777, no Compose; the last line waits until rrotor answers.
+        </span>
+        <CodeBlock code={localInstall(env)} label="install command" />
+        <details className={styles.details}>
+          <summary className={styles.summary}>Rather run the image yourself?</summary>
+          <CodeBlock code={localRun(env)} label="docker run command" />
+        </details>
         <span className={styles.meta}>
           There is no HTTPS here, so Claude’s connector cannot reach it: that needs a public HTTPS host, so use Docker or Helm on a server for
           Claude. Your code can use it now.

@@ -3,6 +3,7 @@ import { useHosting, usePlans } from '@/api/queries';
 import type { NewSelfRuntime } from '@/api/types';
 import { hostingPlansText } from '@/pages/settings/billing/plans';
 import { Button, Dialog, LoadingCard } from '@/ui';
+import type { OnPrimary, Primary } from './footer';
 import { HostedChoice } from './HostedChoice';
 import { SelfHostedSetup } from './SelfHostedSetup';
 import { docsUrl, type Deployment } from './snippets';
@@ -31,6 +32,8 @@ const choices = (hosting: boolean, plans: string): ReadonlyArray<Choice> =>
  * then the connector URL and the SDKs. Its state goes when it closes.
  */
 export function AddRuntimeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  // The form that makes the runtime, while there is one: its button goes in the footer, after Cancel.
+  const [primary, setPrimary] = useState<Primary | null>(null);
   return (
     <Dialog
       open={open}
@@ -44,17 +47,28 @@ export function AddRuntimeDialog({ open, onClose }: { open: boolean; onClose: ()
         </>
       }
       actions={
-        <Button variant="primary" onClick={onClose}>
-          Done
-        </Button>
+        primary ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form={primary.form} loading={primary.pending} disabled={!primary.ready}>
+              {primary.label}
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" onClick={onClose}>
+            Done
+          </Button>
+        )
       }
     >
-      <AddRuntime />
+      <AddRuntime onPrimary={setPrimary} />
     </Dialog>
   );
 }
 
-function AddRuntime() {
+function AddRuntime({ onPrimary }: { onPrimary: OnPrimary }) {
   const plans = usePlans();
   const known = useHosting();
   const hosting = known === true;
@@ -80,7 +94,11 @@ function AddRuntime() {
         ))}
       </fieldset>
       <div className={styles.divider} />
-      {where === 'hosted' ? <HostedChoice /> : <SelfHostedSetup deployment={where} registered={registered} onRegistered={setRegistered} />}
+      {where === 'hosted' ? (
+        <HostedChoice onPrimary={onPrimary} />
+      ) : (
+        <SelfHostedSetup deployment={where} registered={registered} onRegistered={setRegistered} onPrimary={onPrimary} />
+      )}
     </div>
   );
 }

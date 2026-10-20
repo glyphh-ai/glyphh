@@ -8,13 +8,14 @@ import { CreateMachineError, MachineFields, StartMachineError } from '@/pages/ma
 import { connectorUrl } from '@/pages/machines/sizes';
 import { Button, LoadingCard } from '@/ui';
 import { Connect } from './Connect';
+import { useFooterPrimary, type OnPrimary } from './footer';
 import styles from './AddRuntime.module.css';
 
 /**
  * Glyphh runs it: make a first machine (a name and a size, with the plan's rates), or start the first one; then the
  * connector URL. On a plan without hosting, the plans that have it.
  */
-export function HostedChoice() {
+export function HostedChoice({ onPrimary }: { onPrimary: OnPrimary }) {
   const machines = useMachines();
   const noHosting = useNoHosting();
 
@@ -22,7 +23,7 @@ export function HostedChoice() {
   if (machines.error) return <ApiErrorNotice error={machines.error} />;
 
   const first = machines.data[0];
-  if (!first) return noHosting ? <NoHosting /> : <FirstMachine />;
+  if (!first) return noHosting ? <NoHosting /> : <FirstMachine onPrimary={onPrimary} />;
 
   const connector = connectorUrl(first);
   return (
@@ -59,11 +60,13 @@ function NoHosting() {
   );
 }
 
-function FirstMachine() {
+/** Its Make your machine button sits in the dialog's footer. */
+function FirstMachine({ onPrimary }: { onPrimary: OnPrimary }) {
   const create = useCreateMachine();
   const rates = usePlanRates();
   const [name, setName] = useState('Main');
   const [size, setSize] = useState<MachineSize>('small');
+  useFooterPrimary(onPrimary, { form: 'make-machine', label: 'Make your machine', ready: !!name.trim(), pending: create.isPending });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -71,14 +74,9 @@ function FirstMachine() {
   };
 
   return (
-    <form className={styles.form} onSubmit={submit} aria-label="Make your machine">
+    <form id="make-machine" className={styles.form} onSubmit={submit} aria-label="Make your machine">
       <MachineFields name={name} size={size} onName={setName} onSize={setSize} rates={rates} />
       <span className={styles.meta}>It starts once it is made, at an address of its own. It is billed by the second while it runs, and its disk all month.</span>
-      <div className={styles.actions}>
-        <Button variant="primary" type="submit" loading={create.isPending} disabled={!name.trim()}>
-          Make your machine
-        </Button>
-      </div>
       <CreateMachineError error={create.error} />
     </form>
   );
