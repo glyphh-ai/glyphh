@@ -128,7 +128,7 @@ export function HomePage() {
               </Button>
             }
           >
-            Run it with Docker, Helm or Terraform, free on every plan.
+            Try it on this computer, or run it on a server with Docker, Helm or Terraform, free on every plan.
           </EmptyState>
         )}
 

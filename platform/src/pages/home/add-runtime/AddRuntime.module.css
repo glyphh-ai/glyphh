@@ -4,6 +4,19 @@
   gap: var(--space-4);
 }
 
+.needs {
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.needs strong {
+  color: var(--text);
+}
+
 .details {
   display: flex;
   flex-direction: column;
