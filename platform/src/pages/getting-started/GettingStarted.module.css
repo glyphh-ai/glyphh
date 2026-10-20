@@ -101,7 +101,8 @@
 .formRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  /* Fields line up by their labels; a hint or an error grows down, never up. */
+  align-items: flex-start;
   gap: var(--space-3);
 }
 
