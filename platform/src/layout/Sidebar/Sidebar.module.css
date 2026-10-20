@@ -18,10 +18,14 @@
   flex-direction: column;
 }
 
+/* The site's kicker: small mono capitals. */
 .groupLabel {
   padding: var(--space-4) 10px 6px;
-  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
