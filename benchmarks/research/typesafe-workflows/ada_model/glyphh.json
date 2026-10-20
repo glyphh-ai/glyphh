@@ -1,5 +1,5 @@
 {
-  "name": "security-incidents",
+  "name": "security_incidents",
   "version": 1,
   "description": "TypeSafe's security-incidents workflow answered by one Ada model: every workflow question is one of its outputs",
   "python": "3.13",

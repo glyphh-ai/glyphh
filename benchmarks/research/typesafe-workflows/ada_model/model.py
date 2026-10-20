@@ -1,4 +1,4 @@
-"""security-incidents: the benchmark's one Ada model on rrotor. A case is recorded once with the consensus's answer
+"""security_incidents: the benchmark's one Ada model on rrotor. A case is recorded once with the consensus's answer
 to every workflow question it was asked (its named outputs); refresh() learns and calibrates each question;
 decide_all() answers the questions a workflow step asks, one decision per question. The spec beside this file
 (spec.json, written by ada_runtime.py from ada.py) says what a case looks like; the Ada part brings the kernel."""

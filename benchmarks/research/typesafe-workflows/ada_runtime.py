@@ -36,7 +36,7 @@ HERE = Path(__file__).parent
 MODEL_DIR = HERE / "ada_model"
 MODEL_REPO = "glyphh-ai/benchmarks"
 MODEL_BRANCH = "ada-model"
-MODEL = "security-incidents"
+MODEL = "security_incidents"
 
 
 def write_spec() -> None:
