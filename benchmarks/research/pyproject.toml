@@ -1,0 +1,9 @@
+[project]
+name = "glyphh-benchmarks"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5.4",
+    "system-one-adapter[anthropic,openai]>=0.2.1",
+    "typesafe-sdk>=0.7.5",
+]
