@@ -146,7 +146,7 @@ describe('Logs while the runtimes send nothing, rrotor’s default', () => {
     expect(within(nothing).getByText('OTEL_EXPORTER_OTLP_ENDPOINT')).toBeInTheDocument();
     expect(within(nothing).getByRole('link', { name: 'rrotor’s self-hosting docs' })).toHaveAttribute(
       'href',
-      'https://github.com/glyphh-ai/rrotor/tree/main/docs/self-hosting',
+      'https://docs.glyphh.ai/logs',
     );
     expect(within(nothing).getByText('RROTOR_SERVER_LOGS=on')).toBeInTheDocument();
     expect(within(nothing).getByRole('note')).toHaveTextContent(

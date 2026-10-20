@@ -1,8 +1,8 @@
 import type { MetricPoint, RuntimeNode } from '@/api/types';
 import type { ChipTone } from '@/ui';
 
-/** rrotor's self-hosting docs: OpenTelemetry to your own collector, and RROTOR_SERVER_LOGS. */
-export const selfHostingDocs = 'https://github.com/glyphh-ai/rrotor/tree/main/docs/self-hosting';
+/** rrotor's logs and drains docs: OpenTelemetry to your own collector, and RROTOR_SERVER_LOGS. */
+export const selfHostingDocs = 'https://docs.glyphh.ai/logs';
 export const otelEnv = 'OTEL_EXPORTER_OTLP_ENDPOINT';
 export const serverLogsEnv = 'RROTOR_SERVER_LOGS';
 

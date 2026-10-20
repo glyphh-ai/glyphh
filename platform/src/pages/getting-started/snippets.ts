@@ -1,11 +1,19 @@
 /** What each self-hosted option needs pasted, filled in from a registration's env. */
 
-export const docsUrl = 'https://github.com/glyphh-ai/rrotor/tree/main/docs/self-hosting';
+/** The self-hosting docs' hub; each deployment also has its own page. */
+export const docsUrl = 'https://docs.glyphh.ai/run-rrotor';
 export const image = 'ghcr.io/glyphh-ai/rrotor';
-const repo = 'https://github.com/glyphh-ai/rrotor.git';
-const modules = 'github.com/glyphh-ai/rrotor//deploy/terraform';
+/** The public repo the deploy files ship in: deploy/compose, deploy/helm and deploy/terraform/<cloud>. */
+const repo = 'https://github.com/glyphh-ai/glyphh.git';
+const modules = 'github.com/glyphh-ai/glyphh//deploy/terraform';
 
 export type Deployment = 'compose' | 'helm' | 'terraform';
+
+export const deploymentDocsUrl: Record<Deployment, string> = {
+  compose: 'https://docs.glyphh.ai/docker-compose',
+  helm: 'https://docs.glyphh.ai/helm',
+  terraform: 'https://docs.glyphh.ai/terraform',
+};
 export type Cloud = 'aws' | 'gcp';
 export type Size = 'small' | 'medium' | 'large';
 
@@ -60,7 +68,7 @@ export const licenceDotEnv = [licenceKeyNote, `# GLYPHH_LICENSE_KEY=${licenceKey
 /** The env file with, on a paid plan, the licence key's commented line after a blank one. */
 export const composeEnv = (env: Record<string, string>, paid: boolean) => (paid ? `${dotEnv(env)}\n\n${licenceDotEnv}` : dotEnv(env));
 
-export const composeCommands = [`git clone ${repo}`, 'cd rrotor/deploy/compose', '# save the .env above here, then:', 'docker compose up -d'].join('\n');
+export const composeCommands = [`git clone ${repo}`, 'cd glyphh/deploy/compose', '# save the .env above here, then:', 'docker compose up -d'].join('\n');
 
 export function helmCommand(env: Record<string, string>, options: SnippetOptions, paid = false): string {
   const values = [
@@ -71,7 +79,7 @@ export function helmCommand(env: Record<string, string>, options: SnippetOptions
     ['ingress.className', options.ingressClass.trim() || 'nginx'],
   ];
   const sets = values.map(([name, value]) => `  --set ${name}=${value ?? ''}`);
-  const lines = [`git clone ${repo}`, ['helm install rrotor ./rrotor/deploy/helm/rrotor', ...sets].join(' \\\n')];
+  const lines = [`git clone ${repo}`, ['helm install rrotor ./glyphh/deploy/helm/rrotor', ...sets].join(' \\\n')];
   if (paid) {
     lines.push('', `${licenceKeyNote} Add:`, '#   --set extraEnv[0].name=GLYPHH_LICENSE_KEY \\', `#   --set-string extraEnv[0].value='${licenceKeyPlaceholder}'`);
   }
