@@ -460,6 +460,32 @@ weights from the graded precedents it holds and keeps them with the store
 calibrate, and `Model(..., refresh_every=100)` does it on its own every so
 many graded records, so the model follows its cases as they arrive.
 
+### Several answers about one case: named outputs
+
+A spec's `outputs` names several decisions about the same case, each with an
+optional closed set of `values` and its own `costs` and `ask`. A case is
+recorded once and carries every answer; each output learns, calibrates and
+decides on its own (docs/multi-output.md):
+
+```python
+spec = Spec.from_json({..., "outputs": {
+    "team":   {"values": ["billing", "login", "shipping"]},
+    "urgent": {"values": ["yes", "no"], "costs": {"no": {"yes": 5}}, "ask": 0.6}}})
+model = Model(spec, path="tickets.db")
+rid = model.record(data, outcomes={"team": "login"})   # an answer outside `values`: E_OUTPUT_VALUE
+model.grade(rid, "urgent", "yes")                      # an answer given later (None takes it away)
+model.refresh()                                        # {output: {learned, tau}}, each its own
+model.decide(data, output="team")                      # one output's decision
+model.decide_all(data)                                 # {output: decision}, every output
+```
+
+Each output's learned weights are kept as `learned:<output>` and its
+temperature as `tau:<output>`. The store holds each case once, as recorded;
+an output whose learned word weights or interactions differ from the store's
+reads it through an in-memory view (`Space.view`) built from those, kept
+current as cases arrive. A spec without `outputs` has the one `default`
+output, and every call reads as before; `outcome=` is the default output's.
+
 `Model(spec, path=..., readonly=True)` opens the store read-only (see
 `Space`). `query`, `facts`, `probabilities`, `decide` and the settings
 (`model.settings`, `configure()` with no changes) read as ever. `record`,
