@@ -577,3 +577,169 @@ def test_calibrate_fits_tau_and_the_file_keeps_it(tmp_path):
     assert Space(path=path, tau=0.5).tau == 0.5   # given wins
     with pytest.raises(ValueError):
         Space().calibrate()
+
+
+# ── named outputs: one store, one record per case, many answers ─────
+
+
+def _two_output_space(path=None):
+    """Each case: its component decides `team`; its severity decides `page`."""
+    space = Space(path=path)
+    for i in range(60):
+        team = ["node", "net", "storage"][i % 3]
+        sev = ["low", "high"][i % 2]
+        space.record({"component": team, "sev": sev}, rid=f"c{i}", ts=float(i),
+                     outcomes={"team": f"sig/{team}",
+                               "page": "yes" if sev == "high" else "no"})
+    return space
+
+
+def test_one_record_answers_every_output():
+    space = _two_output_space()
+    case = {"component": "net", "sev": "high"}
+    assert space.outputs() == ["page", "team"]       # no default outcome given
+    assert space.query(case, output="team").top == "sig/net"
+    assert space.query(case, output="page").top == "yes"
+    assert space.query(case).top is None              # the default output: ungraded
+    assert space.probabilities(case) == {}
+    p = space.probabilities(case, weights={"component": 2.0}, output="team")
+    assert max(p, key=p.get) == "sig/net"
+    assert space.evidence(case, "yes", output="page").count > 0
+    assert space.evidence(case, "yes").count == 0
+    assert [e.outcome for e in space.answers(case, output="page")][0] == "yes"
+    assert space.matches(case, "no", output="page") > 0
+    assert space.matches(case, "no", output="ghost") == 0.0
+    facts = space.facts(case, top=2, output="team")
+    assert facts[0].outcome == "sig/net" and facts[0].probability > 0
+    assert space.facts(case, top=1)[0].outcome is None
+    assert len(space.graded("page")) == 60 and space.graded() == []
+
+
+def test_the_default_output_is_the_outcome_by_either_name():
+    space = Space()
+    space.record({"a": 1}, "x", outcomes={"default": "x", "o": "y"})
+    space.record({"a": 2}, outcomes={"default": "z"})
+    assert space.graded() == [({"a": 1}, "x"), ({"a": 2}, "z")]
+    assert space.outputs() == ["default", "o"]
+    with pytest.raises(ValueError, match="same output"):
+        space.record({"a": 3}, "x", outcomes={"default": "w"})
+
+
+@pytest.mark.parametrize("outcomes, said", [
+    (["x"], "object"),
+    ({"o": ""}, "non-empty"),
+    ({"o": 3}, "non-empty"),
+    ({"bad name": "x"}, "letters"),
+    ({"9lives": "x"}, "letters"),
+])
+def test_named_outcomes_are_checked(outcomes, said):
+    with pytest.raises(ValueError, match=said):
+        Space().record({"a": 1}, outcomes=outcomes)
+
+
+def test_an_output_name_is_checked_on_every_read():
+    space = _two_output_space()
+    for read in (lambda: space.query({"a": 1}, output="x y"),
+                 lambda: space.graded(output=""),
+                 lambda: space.probabilities({"a": 1}, output=7)):
+        with pytest.raises(ValueError, match="letters"):
+            read()
+
+
+def test_grade_adds_replaces_and_takes_away_an_answer(tmp_path):
+    path = str(tmp_path / "g.db")
+    space = Space(path=path)
+    rid = space.record({"a": 1}, outcomes={"o": "x"})
+    space.grade(rid, "o", "y")
+    space.grade(rid, "p", "z")
+    space.grade(rid, None, "d")                       # the default output
+    assert [space.graded(o) for o in ("o", "p", None)] == [
+        [({"a": 1}, "y")], [({"a": 1}, "z")], [({"a": 1}, "d")]]
+    space.grade(rid, "p", None)
+    space.grade(rid, "default", None)
+    assert space.graded("p") == [] and space.graded() == []
+    space.close()
+    again = Space(path=path)
+    assert again.graded("o") == [({"a": 1}, "y")]
+    assert again.graded("p") == [] and again.graded() == []
+    with pytest.raises(KeyError):
+        again.grade("nobody", "o", "x")
+    with pytest.raises(ValueError, match="non-empty"):
+        again.grade(rid, "o", "")
+    memory = Space()
+    mid = memory.record({"a": 1}, "x", outcomes={"o": "y"})
+    memory.grade(mid, "o", None)
+    memory.grade(mid, "o", "w")
+    memory.grade(mid, None, None)
+    assert memory.graded("o") == [({"a": 1}, "w")] and memory.graded() == []
+
+
+def test_recording_an_id_again_replaces_every_answer(tmp_path):
+    path = str(tmp_path / "r.db")
+    space = Space(path=path)
+    space.record({"a": 1}, rid="c", outcomes={"o": "x", "p": "y"})
+    space.record({"a": 2}, rid="c", outcomes={"o": "z"})
+    assert space.graded("o") == [({"a": 2}, "z")] and space.graded("p") == []
+    space.close()
+    assert Space(path=path).graded("p") == []
+
+
+def test_each_output_calibrates_its_own_tau_and_the_file_keeps_them(tmp_path):
+    path = str(tmp_path / "t.db")
+    space = _two_output_space(path)
+    team = space.calibrate(sample=30, output="team")
+    page = space.calibrate(sample=30, output="page")
+    assert space.tau == 0.12                          # the default's untouched
+    assert space._tau_for("team") == team and space._tau_for("page") == page
+    assert space._tau_for("ghost") == 0.12
+    with pytest.raises(ValueError, match="at least 10"):
+        space.calibrate(output="ghost")
+    space.close()
+    for again in (Space(path=path), Space(path=path, readonly=True)):
+        assert again._tau_for("team") == team and again._tau_for("page") == page
+        assert again.outputs() == ["page", "team"]
+    given = Space(path=path, tau=0.5)
+    assert given._tau_for("team") == 0.5               # given wins
+    memory = _two_output_space()
+    assert memory.calibrate(sample=30, output="page") == page
+
+
+def test_another_writers_answers_arrive_on_refresh(tmp_path):
+    path = str(tmp_path / "w.db")
+    a, b = Space(path=path), Space(path=path)
+    rid = a.record({"a": 1}, outcomes={"o": "x"})
+    b.refresh()
+    assert b.graded("o") == [({"a": 1}, "x")]
+    a.grade(rid, "o", "y")
+    b.refresh()
+    assert b.graded("o") == [({"a": 1}, "y")]
+
+
+def test_merge_brings_every_answer_with_the_precedent(tmp_path):
+    src, dst = str(tmp_path / "s.db"), str(tmp_path / "d.db")
+    s = Space(path=src)
+    s.record({"a": 1}, "x", rid="c1", outcomes={"o": "y"})
+    s.close()
+    d = Space(path=dst)
+    assert d.merge(src) == 1 and d.merge(src) == 0
+    assert d.graded("o") == [({"a": 1}, "y")] and d.graded() == [({"a": 1}, "x")]
+    d.close()
+    assert Space(path=dst).graded("o") == [({"a": 1}, "y")]
+    memory = Space()
+    assert memory.merge(src) == 1 and memory.graded("o") == [({"a": 1}, "y")]
+
+
+def test_a_file_from_before_named_outputs_still_opens(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    s = Space(path=path)
+    s.record({"a": 1}, "x")
+    s.close()
+    db = sqlite3.connect(path)
+    db.execute("DROP TABLE outcomes")
+    db.commit()
+    db.close()
+    ro = Space(path=path, readonly=True)
+    assert ro.graded() == [({"a": 1}, "x")] and ro.outputs() == ["default"]
+    other = Space(path=str(tmp_path / "new.db"))
+    assert other.merge(path) == 1 and other.outputs() == ["default"]

@@ -1,6 +1,7 @@
 # Multi-output models
 
-Status: design, for review. Not built.
+Status: kernel and spec built in glyphh-kernel 3.11.0 (order of work steps 1–3); rrotor, the SDKs and the
+contract follow.
 
 ## The problem
 
@@ -62,10 +63,15 @@ Everything learned today is learned against the outcome, so it is kept **per out
 - **word evidence** (PMI) — per output, as now per store.
 - **interactions** — per output, added as query-time layers, not written into stored situations.
 
-One change follows: **word weights stop rewriting the store.** Today `learn` writes word weights into stored
-situations (`Space.rewrite`), which can hold only one table. With outputs, word weights are applied at query time
-from the output's table, like role weights. `test_learned.py` already proves the weighted query and the fact tree
-equal; the same check covers word weights read at query time.
+Word weights and interactions are part of a situation's glyph (a weighted bag, a pairs layer), so the stored
+situations can carry only one table. As built: **a named output never rewrites the store.** The store holds each
+case as recorded (the `default` output still rewrites it, as before, so a spec without `outputs` is unchanged). A
+named output whose learned word weights or interactions differ from the store's reads it through a **view**
+(`Space.view(fn)`): the same precedents, ids, outcomes, events and temperatures in memory, each situation passed
+through the output's `restate` and its glyph made again. A view is kept current: cases added since are appended,
+outcomes and temperatures copied on every read; a precedent changed or replaced rebuilds it, as does relearning.
+Calibration runs on the view and the store keeps the temperature (`Space.set_tau`). An output whose tables are the
+store's reads the store itself.
 
 ## Precedents and limits
 
