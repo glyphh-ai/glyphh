@@ -9,6 +9,7 @@ import {
   hostOf,
   isHost,
   isHostFor,
+  localInstall,
   localRun,
   localRuntimeUrl,
   terraformCommands,
@@ -53,8 +54,9 @@ describe('the host', () => {
   });
 
   it('may be localhost or an IP address on this computer only', () => {
-    for (const host of ['127.0.0.1', 'localhost', '192.168.1.20', 'localhost:7777', 'rrotor.acme.com']) expect(isHostFor('local', host)).toBe(true);
-    for (const host of ['', 'rrotor acme.com', 'not_a_host']) expect(isHostFor('local', host)).toBe(false);
+    for (const host of ['127.0.0.1', 'localhost', '192.168.1.20', 'rrotor.acme.com']) expect(isHostFor('local', host)).toBe(true);
+    // The server keeps https://<host> with no port, and no IPv6 literal.
+    for (const host of ['', 'rrotor acme.com', 'not_a_host', 'localhost:7777', '127.0.0.1:7777', '[::1]']) expect(isHostFor('local', host)).toBe(false);
     for (const way of ['compose', 'helm', 'terraform'] as const) {
       expect(isHostFor(way, '127.0.0.1')).toBe(false);
       expect(isHostFor(way, 'localhost')).toBe(false);
@@ -69,6 +71,16 @@ describe('the host', () => {
 });
 
 describe('the snippets', () => {
+  it('runs the install script on this computer (it runs the image alone there), then checks it over HTTP at its host', () => {
+    expect(localInstall(localEnv)).toBe(
+      [
+        'curl -fsSL https://glyphh.ai/install.sh | \\',
+        '  RROTOR_RUNTIME_ID=rt-1 RROTOR_RUNTIME_TOKEN=glyphh_rt_abc RROTOR_PUBLIC_HOST=127.0.0.1 sh',
+        'curl -fsS --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:7777/healthz',
+      ].join('\n'),
+    );
+  });
+
   it('runs the image alone on this computer, then checks it at its host', () => {
     expect(localRun(localEnv)).toBe(`${runImage('127.0.0.1')}\ncurl -fsS --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:7777/healthz`);
     expect(localRun({ ...localEnv, RROTOR_PUBLIC_HOST: 'localhost' })).toMatch(/http:\/\/localhost:7777\/healthz$/);
@@ -134,7 +146,7 @@ describe('the snippets', () => {
     expect(terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpProject: 'acme-prod', gcpRegion: 'us-east1' })).toContain('project       = "acme-prod"');
   });
 
-  const shell = () => [localRun(localEnv), dockerInstall(env, 'medium'), dockerRun(env), helmCommand(env, defaultOptions), terraformCommands(env)];
+  const shell = () => [localInstall(localEnv), localRun(localEnv),dockerInstall(env, 'medium'), dockerRun(env), helmCommand(env, defaultOptions), terraformCommands(env)];
 
   it('pastes into zsh or bash: no comment lines, and each ends with the health check', () => {
     for (const block of shell()) {

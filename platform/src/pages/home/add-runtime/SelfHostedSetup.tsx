@@ -4,6 +4,7 @@ import type { NewSelfRuntime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { Button, CopyField, TextField } from '@/ui';
 import { Connect } from './Connect';
+import { useFooterPrimary, type OnPrimary } from './footer';
 import { DeploySnippet } from './DeploySnippet';
 import { connectorUrl, docsUrl, hostOf, isHostFor, localHost, localRuntimeUrl, requirements, type Deployment } from './snippets';
 import styles from './AddRuntime.module.css';
@@ -13,10 +14,12 @@ type SelfHostedSetupProps = {
   /** Kept by the dialog, so changing the option keeps the runtime just registered. */
   registered: NewSelfRuntime | null;
   onRegistered: (runtime: NewSelfRuntime | null) => void;
+  /** Register runtime goes in the dialog's footer. */
+  onPrimary: OnPrimary;
 };
 
 /** What the way needs, then register a runtime you run yourself, then paste what it needs where it runs. */
-export function SelfHostedSetup({ deployment, registered, onRegistered }: SelfHostedSetupProps) {
+export function SelfHostedSetup({ deployment, registered, onRegistered, onPrimary }: SelfHostedSetupProps) {
   const needs = (
     <p className={styles.needs}>
       <strong>What you need:</strong> {requirements[deployment]}
@@ -26,7 +29,7 @@ export function SelfHostedSetup({ deployment, registered, onRegistered }: SelfHo
     return (
       <div className={styles.stack}>
         {needs}
-        <RegisterForm deployment={deployment} onRegistered={onRegistered} />
+        <RegisterForm deployment={deployment} onRegistered={onRegistered} onPrimary={onPrimary} />
       </div>
     );
   }
@@ -59,7 +62,9 @@ export function SelfHostedSetup({ deployment, registered, onRegistered }: SelfHo
   );
 }
 
-function RegisterForm({ deployment, onRegistered }: { deployment: Deployment; onRegistered: (runtime: NewSelfRuntime) => void }) {
+type RegisterFormProps = { deployment: Deployment; onRegistered: (runtime: NewSelfRuntime) => void; onPrimary: OnPrimary };
+
+function RegisterForm({ deployment, onRegistered, onPrimary }: RegisterFormProps) {
   const register = useRegisterSelfRuntime();
   const local = deployment === 'local';
   const [name, setName] = useState('');
@@ -68,6 +73,7 @@ function RegisterForm({ deployment, onRegistered }: { deployment: Deployment; on
   const hostInput = typed ?? (local ? localHost : '');
   const host = hostOf(hostInput);
   const valid = isHostFor(deployment, host);
+  useFooterPrimary(onPrimary, { form: 'register-runtime', label: 'Register runtime', ready: !!name.trim() && valid, pending: register.isPending });
   const hostError = hostInput.trim() && !valid ? (local ? 'Use a host or an IP address, such as 127.0.0.1.' : 'Use the host alone, such as rrotor.acme.com.') : undefined;
 
   const submit = (event: FormEvent) => {
@@ -76,7 +82,7 @@ function RegisterForm({ deployment, onRegistered }: { deployment: Deployment; on
   };
 
   return (
-    <form className={styles.form} onSubmit={submit} aria-label="Register a runtime">
+    <form id="register-runtime" className={styles.form} onSubmit={submit} aria-label="Register a runtime">
       <span className={styles.meta}>
         Register it first: you get its token and the command to paste. See the <a href={docsUrl}>self-hosting docs</a> for what the host needs.
       </span>
@@ -88,16 +94,11 @@ function RegisterForm({ deployment, onRegistered }: { deployment: Deployment; on
           onChange={(e) => setTyped(e.target.value)}
           placeholder={local ? localHost : 'rrotor.acme.com'}
           mono
-          hint={local ? 'Where it answers on this computer, on port 7777.' : 'Its DNS name. HTTPS ends in front of it.'}
+          hint={local ? '127.0.0.1 (this computer only)' : 'The DNS name that will point at the server, e.g. rrotor.acme.com'}
           error={hostError}
         />
       </div>
       <ApiErrorNotice error={register.error} />
-      <div className={styles.actions}>
-        <Button variant="primary" type="submit" loading={register.isPending} disabled={!name.trim() || !valid}>
-          Register runtime
-        </Button>
-      </div>
     </form>
   );
 }
