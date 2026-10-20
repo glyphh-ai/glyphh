@@ -53,10 +53,20 @@ wheels = [
 ]
 
 [[package]]
+name = "glyphh"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/71/3f462facc22f29abca2d9dedbeb35f9e02179eb07cfc0401570d8a939889/glyphh-3.1.0.tar.gz", hash = "sha256:551ff49ba95d259ea3f6ebda2a78b1a01ff8050b92714d2371e3e9776dbea878", size = 11153, upload-time = "2026-10-19T17:16:21.991Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/f2/dfc6ada3305b4d75e7c4390509eb7b543e7e382fad09f3bdb8c45f472348/glyphh-3.1.0-py3-none-any.whl", hash = "sha256:2556b5c13aa5513a03e9ed64ff97a32e492f4ad1b5ac4178cc34e617d4dcf7c2", size = 9053, upload-time = "2026-10-19T17:16:20.681Z" },
+]
+
+[[package]]
 name = "glyphh-benchmarks"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "glyphh" },
     { name = "numpy" },
     { name = "system-one-adapter", extra = ["anthropic", "openai"] },
     { name = "typesafe-sdk" },
@@ -64,6 +74,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "glyphh", specifier = "==3.1.0" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "system-one-adapter", extras = ["anthropic", "openai"], specifier = ">=0.2.1" },
     { name = "typesafe-sdk", specifier = ">=0.7.5" },

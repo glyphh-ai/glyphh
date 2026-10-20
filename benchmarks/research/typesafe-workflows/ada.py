@@ -1,11 +1,12 @@
 """Ada on Security Incidents: the Ada product (the ada-private kernel with its English lexicon) in Jev's place in
 TypeSafe's workflow — it answers the workflow's questions, and the same policy code decides — by cross-validation.
 
-Code turns each case's state (the alert and the joined records) into typed fields, as a model.py would. For each
-of the workflow's questions an Ada model learns, from the other folds' cases, what the references' consensus
-answered for cases like it, the way the product is used: record the graded cases, refresh() (learn the role, value
-and word weights and the word evidence, then calibrate), decide() each new case. Every case is answered by models
-that never saw it: five folds, each answered by models of the other four.
+Code turns each case's state (the alert and the joined records) into typed fields, as a model.py would. One Ada
+model answers every one of the workflow's questions, as Jev does: its spec names each question as an output, and it
+learns, from the other folds' cases, what the references' consensus answered for cases like it, the way the
+product is used: record each graded case once with every answer, refresh() (each output learns its role, value and
+word weights and word evidence, then calibrates), decide_all() each new case. Every case is answered by a model
+that never saw it: five folds, each answered by a model of the other four.
 
 The kernel is Glyphh's and is not published: GLYPHH_KERNEL points at an ada-private checkout (default:
 ../../ada-private). load_kernel() refuses anything else — an older copy, a kernel without its lexicon, or a lexicon
@@ -16,6 +17,7 @@ that does not load — so a run can only ever measure the product.
 
 from __future__ import annotations
 
+import functools
 import math
 import os
 import re
@@ -31,13 +33,14 @@ import score
 
 HERE = Path(__file__).parent
 KERNEL = Path(os.environ.get("GLYPHH_KERNEL", HERE.parents[1] / "ada-private")).resolve()
-MIN_VERSION = (3, 10, 0)  # the kernel that reads text through the lexicon and learns, calibrates and decides
+MIN_VERSION = (3, 11, 0)  # the kernel whose one model answers many questions (named outputs)
 LEXICON_WORDS, LEXICON_FORMS = 77_817, 192_960  # WordNet 3.0 words, Moby word forms (ada-private/lexicon)
 FOLDS = 5
 
 
+@functools.cache
 def load_kernel():
-    """The ada-private kernel, checked: its version, its lexicon on disk, and the lexicon actually loaded. Exits
+    """The ada-private kernel, checked (once, when a model is first made here; ada_runtime.py needs none): its version, its lexicon on disk, and the lexicon actually loaded. Exits
     with the reason otherwise; a benchmark of an older or partial kernel is not a benchmark of Ada."""
     need = ["glyphh_kernel.py", "glyphh_spec.py", "glyphh_lexicon.py", "lexicon/words.jsonl.gz", "lexicon/grammar.jsonl.gz", "pyproject.toml"]
     missing = [n for n in need if not (KERNEL / n).is_file()]
@@ -57,8 +60,6 @@ def load_kernel():
     print(f"Ada: kernel {project['version']} from {KERNEL}, lexicon {words:,} words / {forms:,} forms", file=sys.stderr)
     return glyphh_spec
 
-
-glyphh_spec = load_kernel()
 
 SPEC = {
     "name": "security_incidents",
@@ -320,62 +321,82 @@ def answer_workflow(cases: list[dict], situation) -> dict[str, dict]:
     """Ada in Jev's place in TypeSafe's workflow, compared exactly as Jev is: it answers the workflow's questions,
     and security.decide() — the same policy code — turns the answers into the action.
 
-    One Ada model per question, used as the product is: record the other folds' cases, each graded with the
-    consensus's answer to that question; refresh() (learn, then calibrate) once there are ten graded cases with two
-    answers; decide() the held-out case. Its decided outcome is the answer, in the shape Jev's are: a noul its
-    band's P(true), a choice or score its option. Where a model knows nothing near enough, it answers with its
-    precedents' commonest answer."""
+    One Ada model, used as the product is: record the other folds' cases, each once with the consensus's answer to
+    every question it was asked; refresh() (each question learns, then calibrates); decide_all() the held-out case.
+    Each decided outcome is that question's answer, in the shape Jev's are: a noul its band's P(true), a choice or
+    score its option. Where the model knows nothing near enough, it answers with its precedents' commonest
+    answer."""
     reference = {c["id"]: run.consensus(c["id"]) for c in cases}
     folds = [cases[i::FOLDS] for i in range(FOLDS)]
     out = {}
     for i, fold in enumerate(folds):
         train = [c for j, f in enumerate(folds) if j != i for c in f]
-        out.update(answer_cases(train_models(train, reference, situation), fold, situation))
+        out.update(answer_cases(train_model(train, reference, situation), fold, situation))
     return out
 
 
-def train_models(train: list[dict], reference: dict[str, dict], situation) -> dict:
-    """One Ada model per workflow question, recorded from the training cases graded with the consensus's answer,
-    learned and calibrated (refresh) once it holds ten graded cases with two answers; plus each question's base
-    rates, the answer where a model declines."""
+def spec() -> dict:
+    """The model's spec: the case's fields (SPEC), and every workflow question as one of its outputs, its outcomes
+    the question's zones, levels or options."""
     import published
     import security
 
     questions = published.questions("security_incidents")
-    models, base = {}, {}
-    for q in (*security.TRIAGE, *security.CONTAINMENT):
-        graded = [(c, label(q, reference[c["id"]][q])) for c in train if q in reference[c["id"]]]
-        model = glyphh_spec.Model(glyphh_spec.Spec.from_json(SPEC), author="eval", path=None)
-        for c, outcome in graded:
-            model.record(situation(c), outcome)
-        if len(graded) >= 10 and len({o for _, o in graded}) > 1:
-            model.refresh()
-        models[q] = model
-        counts = Counter(o for _, o in graded)
-        base[q] = {o: counts[o] / len(graded) for o in options(q, questions[q])}
-    return {"models": models, "base": base, "questions": questions}
+    return {**SPEC, "outputs": {q: {"values": options(q, questions[q])} for q in (*security.TRIAGE, *security.CONTAINMENT)}}
+
+
+def graded(c: dict, reference: dict[str, dict]) -> dict[str, str]:
+    """A case's answers, one outcome per question the consensus answered for it."""
+    import security
+
+    return {q: label(q, reference[c["id"]][q]) for q in (*security.TRIAGE, *security.CONTAINMENT) if q in reference[c["id"]]}
+
+
+def train_model(train: list[dict], reference: dict[str, dict], situation) -> dict:
+    """The one Ada model, each training case recorded once with every answer the consensus gave it, then
+    refreshed (every question with ten graded cases learns and calibrates); plus each question's base rates, the
+    answer where the model declines."""
+    import published
+
+    questions = published.questions("security_incidents")
+    glyphh_spec = load_kernel()
+    model = glyphh_spec.Model(glyphh_spec.Spec.from_json(spec()), author="eval", path=None)
+    counts: dict[str, Counter] = {q: Counter() for q in model.outputs()}
+    for c in train:
+        answers = graded(c, reference)
+        model.record(situation(c), outcomes=answers)
+        for q, outcome in answers.items():
+            counts[q][outcome] += 1
+    model.refresh()
+    base = {q: {o: n[o] / max(sum(n.values()), 1) for o in options(q, questions[q])} for q, n in counts.items()}
+    return {"model": model, "base": base, "questions": questions}
 
 
 def answer_cases(trained: dict, cases: list[dict], situation) -> dict[str, dict]:
-    """Each case through the workflow: the trained models answer, security.decide() turns the answers into the
-    action."""
+    """Each case through the workflow: the model answers the questions each step asks (decide_all), and
+    security.decide() turns the answers into the action."""
     import security
 
-    models, base, questions = trained["models"], trained["base"], trained["questions"]
+    model, base, questions = trained["model"], trained["base"], trained["questions"]
 
-    def answer(q: str, data: dict) -> float | dict[str, float]:
+    def answer(qs: list[str], data: dict) -> dict[str, float | dict[str, float]]:
         # decide()'s outcome, sharp as Jev's answers are: an averaged probability rarely reaches the policy's
         # thresholds (close below 0.15, act above 0.75). Declined (nothing near enough): the commonest answer.
-        outcome = models[q].decide(data)["outcome"] or max(base[q], key=base[q].get)
-        if questions[q]["type"] == "noul":
-            return zones(q)[outcome]
-        return {o: 1.0 if o == outcome else 0.0 for o in options(q, questions[q])}
+        decided = model.decide_all(data, outputs=list(qs))
+        out: dict[str, float | dict[str, float]] = {}
+        for q in qs:
+            outcome = decided[q]["outcome"] or max(base[q], key=base[q].get)
+            if questions[q]["type"] == "noul":
+                out[q] = zones(q)[outcome]
+            else:
+                out[q] = {o: 1.0 if o == outcome else 0.0 for o in options(q, questions[q])}
+        return out
 
     out = {}
     for c in cases:
         t0 = time.time()
         data = situation(c)
-        action, answers = security.decide(lambda qs, data=data: {q: answer(q, data) for q in qs}, c)
+        action, answers = security.decide(lambda qs, data=data: answer(qs, data), c)
         out[c["id"]] = {"action": action, "answers": answers, "seconds": time.time() - t0, "dollars": 0.0}
     return out
 
@@ -388,7 +409,7 @@ def main() -> None:
         dev = run.cases("dev")
         reference = {c["id"]: run.consensus(c["id"], "dev") for c in dev}
         train = [c for c in dev if all(q in reference[c["id"]] for q in ("is_true_positive", "context_explains_activity"))]
-        out = answer_cases(train_models(train, reference, situation), [c for c in run.cases() if c["id"] in labels], situation)
+        out = answer_cases(train_model(train, reference, situation), [c for c in run.cases() if c["id"] in labels], situation)
         how = f"trained on {len(train)} development cases"
     else:
         out = answer_workflow([c for c in run.cases() if c["id"] in labels], situation)

@@ -1,0 +1,41 @@
+{
+  "name": "security-incidents",
+  "version": 1,
+  "description": "TypeSafe's security-incidents workflow answered by one Ada model: every workflow question is one of its outputs",
+  "python": "3.13",
+  "needs": ["ada"],
+  "data": true,
+  "functions": {
+    "start": {
+      "writes": false,
+      "description": "How many cases the model holds, and its outputs",
+      "inputs": { "type": "object", "additionalProperties": false }
+    },
+    "record": {
+      "writes": true,
+      "description": "Record a case once, with its answer to every question it was asked",
+      "inputs": {
+        "type": "object",
+        "properties": { "data": { "type": "object" }, "outcomes": { "type": "object" } },
+        "required": ["data"],
+        "additionalProperties": false
+      }
+    },
+    "refresh": {
+      "writes": true,
+      "description": "Learn and calibrate every question from the recorded cases",
+      "inputs": { "type": "object", "additionalProperties": false }
+    },
+    "decide_all": {
+      "writes": false,
+      "description": "Answer a case's questions (every one, or those named), one decision per question",
+      "inputs": {
+        "type": "object",
+        "properties": { "data": { "type": "object" }, "outputs": { "type": "array", "items": { "type": "string" } } },
+        "required": ["data"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "limits": { "seconds": 300, "memory_mb": 1024 }
+}
