@@ -17,7 +17,14 @@ describe('the account menu', () => {
     await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
     await user.click(screen.getByRole('menuitem', { name: 'Theme' }));
     const themes = screen.getByRole('menu', { name: 'Theme' });
-    expect(within(themes).getByRole('menuitemradio', { name: 'System preference' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(themes).getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+      'High-visibility dark',
+      'Dark mode',
+      'Light mode',
+      'Light high contrast',
+      'System preference',
+    ]);
+    expect(within(themes).getByRole('menuitemradio', { name: 'High-visibility dark' })).toHaveAttribute('aria-checked', 'true');
     await user.click(within(themes).getByRole('menuitemradio', { name: 'Light high contrast' }));
     expect(document.documentElement.dataset.theme).toBe('light-hc');
     expect(localStorage.getItem('glyphh.theme')).toBe('light-hc');
@@ -91,7 +98,7 @@ describe('the account menu', () => {
     screen.getByRole('menuitem', { name: 'Theme' }).focus();
     await user.keyboard(key);
     const themes = screen.getByRole('menu', { name: 'Theme' });
-    expect(within(themes).getByRole('menuitemradio', { name: 'System preference' })).toHaveFocus();
+    expect(within(themes).getByRole('menuitemradio', { name: 'High-visibility dark' })).toHaveFocus();
   });
 
   it('moves on past the theme item with the arrows, and between themes inside it', async () => {
@@ -105,7 +112,7 @@ describe('the account menu', () => {
     screen.getByRole('menuitem', { name: 'Theme' }).focus();
     await user.keyboard('{ArrowRight}{ArrowDown}');
     const themes = screen.getByRole('menu', { name: 'Theme' });
-    expect(within(themes).getByRole('menuitemradio', { name: 'Light mode' })).toHaveFocus();
+    expect(within(themes).getByRole('menuitemradio', { name: 'Dark mode' })).toHaveFocus();
     expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument();
   });
 });

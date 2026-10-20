@@ -11,11 +11,11 @@ type AuthLayoutProps = {
 
 /**
  * The sign-in and consent pages: one centred card under the logo.
- * They are always dark, whatever theme the platform is in.
+ * They are always high-visibility dark, the site's black and white, whatever theme the platform is in.
  */
 export function AuthLayout({ title, children, footer }: AuthLayoutProps) {
   return (
-    <div className={styles.page} data-theme="dark">
+    <div className={styles.page} data-theme="dark-hc">
       <Logo height={44} />
       <div className={styles.card}>
         <div className={styles.body}>

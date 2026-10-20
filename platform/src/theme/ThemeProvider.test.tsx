@@ -7,8 +7,8 @@ function Show() {
   return (
     <>
       <p>{`${choice} → ${resolved}`}</p>
-      <button type="button" onClick={() => setChoice('dark-hc')}>
-        Dark high contrast
+      <button type="button" onClick={() => setChoice('light')}>
+        Light mode
       </button>
     </>
   );
@@ -39,7 +39,23 @@ function fakeSystem(light: boolean) {
 }
 
 describe('ThemeProvider', () => {
-  it('follows the system by default, and keeps following it as it changes', () => {
+  it('gives a new visitor high-visibility dark, whatever the system prefers', () => {
+    const system = fakeSystem(true);
+    try {
+      render(
+        <ThemeProvider>
+          <Show />
+        </ThemeProvider>,
+      );
+      expect(screen.getByText('dark-hc → dark-hc')).toBeInTheDocument();
+      expect(document.documentElement.dataset.theme).toBe('dark-hc');
+    } finally {
+      system.restore();
+    }
+  });
+
+  it('follows the system once chosen, and keeps following it as it changes', () => {
+    localStorage.setItem('glyphh.theme', 'system');
     const system = fakeSystem(true);
     try {
       const view = render(
@@ -76,7 +92,7 @@ describe('ThemeProvider', () => {
         <Show />
       </ThemeProvider>,
     );
-    expect(screen.getByText('system → dark')).toBeInTheDocument();
+    expect(screen.getByText('dark-hc → dark-hc')).toBeInTheDocument();
   });
 
   it('still works when the browser refuses storage', async () => {
@@ -92,10 +108,10 @@ describe('ThemeProvider', () => {
           <Show />
         </ThemeProvider>,
       );
-      expect(screen.getByText('system → dark')).toBeInTheDocument();
-      await userEvent.setup().click(screen.getByRole('button', { name: 'Dark high contrast' }));
       expect(screen.getByText('dark-hc → dark-hc')).toBeInTheDocument();
-      expect(document.documentElement.dataset.theme).toBe('dark-hc');
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Light mode' }));
+      expect(screen.getByText('light → light')).toBeInTheDocument();
+      expect(document.documentElement.dataset.theme).toBe('light');
     } finally {
       getItem.mockRestore();
       setItem.mockRestore();
@@ -103,6 +119,7 @@ describe('ThemeProvider', () => {
   });
 
   it('falls back to dark in a browser that cannot report the system theme', () => {
+    localStorage.setItem('glyphh.theme', 'system');
     const original = window.matchMedia;
     // @ts-expect-error: older browsers have no matchMedia at all.
     delete window.matchMedia;
