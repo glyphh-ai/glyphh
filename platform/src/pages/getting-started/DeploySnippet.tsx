@@ -6,7 +6,7 @@ import {
   composeCommands,
   composeEnv,
   defaultOptions,
-  docsUrl,
+  deploymentDocsUrl,
   helmCommand,
   image,
   sizes,
@@ -40,7 +40,7 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
         <span className={styles.meta}>Save this as .env beside the compose file:</span>
         <CodeBlock code={composeEnv(env, paid)} label=".env" />
         <CodeBlock code={composeCommands} label="commands" />
-        <Note paid={paid} />
+        <Note paid={paid} deployment={deployment} />
       </div>
     );
   }
@@ -56,7 +56,7 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
           <TextField label="Ingress class" value={options.ingressClass} onChange={(e) => set({ ingressClass: e.target.value })} mono />
         </div>
         <CodeBlock code={helmCommand(env, options, paid)} label="helm install" />
-        <Note paid={paid} />
+        <Note paid={paid} deployment={deployment} />
       </div>
     );
   }
@@ -76,12 +76,12 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
       )}
       <CodeBlock code={terraformModule(env, options, paid)} label="Terraform module" />
       <span className={styles.meta}>Then run terraform init and terraform apply. It makes one VM.</span>
-      <Note paid={paid} />
+      <Note paid={paid} deployment={deployment} />
     </div>
   );
 }
 
-function Note({ paid }: { paid: boolean }) {
+function Note({ paid, deployment }: { paid: boolean; deployment: Deployment }) {
   return (
     <>
       {paid && (
@@ -91,7 +91,7 @@ function Note({ paid }: { paid: boolean }) {
         </span>
       )}
       <span className={styles.meta}>
-        It runs the image {image}. The <a href={docsUrl}>self-hosting docs</a> cover TLS, the sandbox’s needs and upgrades.
+        It runs the image {image}. The <a href={deploymentDocsUrl[deployment]}>self-hosting docs</a> cover TLS, the sandbox’s needs and upgrades.
       </span>
     </>
   );

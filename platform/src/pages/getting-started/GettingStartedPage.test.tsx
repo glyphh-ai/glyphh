@@ -45,7 +45,7 @@ describe('Getting started', () => {
     const sidebar = screen.getByRole('complementary', { name: 'Main' });
     expect(within(sidebar).getAllByRole('link')[0]).toHaveAccessibleName('Getting started');
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Getting started')).toHaveAttribute('aria-current', 'page');
-    expect(screen.getAllByRole('link', { name: 'self-hosting docs' })[0]).toHaveAttribute('href', 'https://github.com/glyphh-ai/rrotor/tree/main/docs/self-hosting');
+    expect(screen.getAllByRole('link', { name: 'self-hosting docs' })[0]).toHaveAttribute('href', 'https://docs.glyphh.ai/run-rrotor');
   });
 
   it('gives the SDKs and the Claude plugin to copy', async () => {
@@ -218,8 +218,11 @@ describe('Getting started', () => {
     it('keeps the registration on changing option: Helm with its values, then Terraform for AWS and GCP', async () => {
       const { user } = renderApp('/getting-started');
       await register(user, 'Docker Compose');
+      const docs = () => screen.getAllByRole('link', { name: 'self-hosting docs' }).map((link) => link.getAttribute('href'));
+      expect(docs()).toContain('https://docs.glyphh.ai/docker-compose');
 
       await user.click(screen.getByRole('radio', { name: /^Helm/ }));
+      expect(docs()).toContain('https://docs.glyphh.ai/helm');
       await user.selectOptions(screen.getByLabelText('Size'), 'Large');
       await user.clear(screen.getByLabelText('Ingress class'));
       await user.type(screen.getByLabelText('Ingress class'), 'traefik');
@@ -229,7 +232,8 @@ describe('Getting started', () => {
       expect(helm).toHaveTextContent('--set ingress.className=traefik');
 
       await user.click(screen.getByRole('radio', { name: /^Terraform/ }));
-      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('//deploy/terraform/aws');
+      expect(docs()).toContain('https://docs.glyphh.ai/terraform');
+      expect(screen.getByText(/module "rrotor"/)).toHaveTextContent('github.com/glyphh-ai/glyphh//deploy/terraform/aws');
       await user.selectOptions(screen.getByLabelText('Cloud'), 'GCP');
       await user.type(screen.getByLabelText('Project'), 'acme-prod');
       const gcp = screen.getByText(/module "rrotor"/);

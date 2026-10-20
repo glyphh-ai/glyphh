@@ -31,15 +31,15 @@ describe('the snippets', () => {
     expect(dotEnv(env)).toBe(
       'RROTOR_MODE=self\nRROTOR_SERVER=https://api.glyphh.ai\nRROTOR_RUNTIME_ID=rt-1\nRROTOR_RUNTIME_TOKEN=glyphh_rt_abc\nRROTOR_PUBLIC_HOST=rrotor.acme.com',
     );
-    expect(composeCommands).toContain('cd rrotor/deploy/compose');
+    expect(composeCommands).toContain('cd glyphh/deploy/compose');
     expect(composeCommands).toContain('docker compose up -d');
   });
 
   it('installs the Helm chart with each value set', () => {
     expect(helmCommand(env, { ...defaultOptions, size: 'medium', ingressClass: ' ' })).toBe(
       [
-        'git clone https://github.com/glyphh-ai/rrotor.git',
-        'helm install rrotor ./rrotor/deploy/helm/rrotor \\',
+        'git clone https://github.com/glyphh-ai/glyphh.git',
+        'helm install rrotor ./glyphh/deploy/helm/rrotor \\',
         '  --set runtime.id=rt-1 \\',
         '  --set runtime.token=glyphh_rt_abc \\',
         '  --set publicHost=rrotor.acme.com \\',
@@ -58,7 +58,7 @@ describe('the snippets', () => {
     expect(terraformModule(env, defaultOptions)).toBe(
       [
         'module "rrotor" {',
-        '  source = "github.com/glyphh-ai/rrotor//deploy/terraform/aws"',
+        '  source = "github.com/glyphh-ai/glyphh//deploy/terraform/aws"',
         '',
         '  runtime_id    = "rt-1"',
         '  runtime_token = "glyphh_rt_abc"',
@@ -71,7 +71,7 @@ describe('the snippets', () => {
 
   it('adds the project and the region for GCP, with placeholders until they are given', () => {
     const gcp = terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpRegion: '' });
-    expect(gcp).toContain('source = "github.com/glyphh-ai/rrotor//deploy/terraform/gcp"');
+    expect(gcp).toContain('source = "github.com/glyphh-ai/glyphh//deploy/terraform/gcp"');
     expect(gcp).toContain('project       = "your-project-id"');
     expect(gcp).toContain('region        = "europe-west2"');
     expect(terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpProject: 'acme-prod', gcpRegion: 'us-east1' })).toContain('project       = "acme-prod"');
