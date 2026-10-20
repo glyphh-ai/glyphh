@@ -1,0 +1,29 @@
+# Every change to the kernel on main reaches rrotor's Ada part: this asks glyphh-ai/rrotor's ci.yml to build and
+# publish the part (part-ada-<version>, from this repository's main) and the hosted image that carries it. A kernel
+# change ships as a new version in pyproject.toml, so the part is a new release, not the same one replaced.
+#
+# Set up once by hand: the secret RROTOR_DISPATCH_TOKEN in this repository, a fine-grained token on
+# glyphh-ai/rrotor with "Contents: read and write" (what repository_dispatch needs).
+name: part
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rrotor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ask rrotor to build the Ada part from this commit's kernel
+        env:
+          GH_TOKEN: ${{ secrets.RROTOR_DISPATCH_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::RROTOR_DISPATCH_TOKEN is not set: the Ada part will not be rebuilt."; exit 1; }
+          version="$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
+          gh api repos/glyphh-ai/rrotor/dispatches -f event_type=ada-kernel \
+            -F "client_payload[version]=$version" -F "client_payload[sha]=$GITHUB_SHA"
+          echo "Asked glyphh-ai/rrotor to build Ada part $version from $GITHUB_SHA." >> "$GITHUB_STEP_SUMMARY"
