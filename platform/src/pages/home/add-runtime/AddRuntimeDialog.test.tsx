@@ -39,7 +39,9 @@ async function register(user: ReturnType<typeof renderApp>['user'], choice: stri
   await user.click(await screen.findByRole('radio', { name: new RegExp(`^${choice}`) }));
   const form = screen.getByRole('form', { name: 'Register a runtime' });
   await user.type(within(form).getByLabelText('Name'), 'Acme production');
-  await user.type(within(form).getByLabelText('Public host'), 'https://rrotor.acme.com/');
+  // "Public host", or "Host" on this computer, where it starts as 127.0.0.1.
+  await user.clear(within(form).getByLabelText(/host$/i));
+  await user.type(within(form).getByLabelText(/host$/i), 'https://rrotor.acme.com/');
   await user.click(within(form).getByRole('button', { name: 'Register runtime' }));
   await screen.findByText('Runtime token for Acme production');
   return sent;
@@ -136,6 +138,10 @@ describe('Add a runtime', () => {
     it('says hosting is on Pro and Team, and running it yourself is free', async () => {
       const { dialog } = await openAdd();
       expect(await within(dialog).findByRole('radio', { name: /^Glyphh hosted.*On Pro and Team\./ })).toBeInTheDocument();
+      expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['hosted', 'local', 'compose', 'helm', 'terraform']);
+      expect(
+        within(dialog).getByRole('radio', { name: /^This computer.*Free\. Try it on your laptop; no HTTPS, so Claude cannot connect yet\./ }),
+      ).toBeInTheDocument();
       expect(within(dialog).getByRole('radio', { name: /^Docker.*Free\. One command on a Linux machine\./ })).toBeInTheDocument();
       expect(within(dialog).getByRole('radio', { name: /^Helm.*Free\./ })).toBeInTheDocument();
       expect(within(dialog).getByRole('radio', { name: /^Terraform.*Free\./ })).toBeInTheDocument();
@@ -260,7 +266,9 @@ describe('Add a runtime', () => {
       const run = within(dialog).getByText(/docker run -d --name rrotor/);
       expect(run).toHaveTextContent('-e RROTOR_RUNTIME_TOKEN=glyphh_rt_secret');
       expect(run).toHaveTextContent('ghcr.io/glyphh-ai/rrotor:latest');
-      expect(within(dialog).getByText(/DNS at the machine first/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/rrotor\.acme\.com’s DNS at the server first/)).toBeInTheDocument();
+      expect(install).toHaveTextContent('curl -fsS --retry 15 --retry-connrefused --retry-delay 2 https://rrotor.acme.com/healthz');
+      expect(run).toHaveTextContent('http://127.0.0.1:7777/healthz');
       expect(within(dialog).queryByText(/git\s+clone/)).not.toBeInTheDocument();
       expect(within(dialog).getByText('https://rrotor.acme.com/mcp')).toBeInTheDocument();
       expect(within(dialog).getByText('pip install glyphh')).toBeInTheDocument();
@@ -305,19 +313,38 @@ describe('Add a runtime', () => {
       expect(within(dialog).queryByText('glyphh_rt_secret')).not.toBeInTheDocument();
     });
 
-    it('on a paid plan, adds the licence key’s line, commented out, for an air-gapped node only', async () => {
+    it('on a paid plan, says beside the command how to set the licence key, for an air-gapped node only', async () => {
       const { user, dialog } = await openAdd();
       await register(user, 'Docker');
-      const install = within(dialog).getByText(/curl -fsSL/);
-      expect(install).toHaveTextContent('# Air-gapped only, normally not needed: rrotor gets its licence key when it links.');
-      expect(install).toHaveTextContent('# Add GLYPHH_LICENSE_KEY=<your licence key from the Licence page> before sh.');
-      expect(within(dialog).getByText(/reaches rrotor on its own when it links and at its daily heartbeat/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/curl -fsSL/)).not.toHaveTextContent('GLYPHH_LICENSE_KEY');
+      expect(within(dialog).getByText(/reaches rrotor on its own when it links and at its daily heartbeat\. Only for an air-gapped node, add/)).toBeInTheDocument();
+      expect(within(dialog).getByText('GLYPHH_LICENSE_KEY=<your licence key from the Licence page> before sh')).toBeInTheDocument();
       expect(within(dialog).getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
 
+      await user.click(within(dialog).getByRole('radio', { name: /^This computer/ }));
+      expect(within(dialog).getByText('-e GLYPHH_LICENSE_KEY=<your licence key from the Licence page> before the image')).toBeInTheDocument();
       await user.click(within(dialog).getByRole('radio', { name: /^Helm/ }));
-      expect(within(dialog).getByText(/helm install rrotor/)).toHaveTextContent('# --set extraEnv[0].name=GLYPHH_LICENSE_KEY');
+      expect(within(dialog).getByText(/helm install rrotor/)).not.toHaveTextContent('GLYPHH_LICENSE_KEY');
+      expect(within(dialog).getByText(/^--set extraEnv\[0\]\.name=GLYPHH_LICENSE_KEY/)).toBeInTheDocument();
       await user.click(within(dialog).getByRole('radio', { name: /^Terraform/ }));
-      expect(within(dialog).getByText(/module "rrotor"/)).toHaveTextContent('# offline_licence = "<your licence key from the Licence page>"');
+      expect(within(dialog).getByText(/module "rrotor"/)).not.toHaveTextContent('offline_licence');
+      expect(within(dialog).getByText('offline_licence = "<your licence key from the Licence page>" to the module')).toBeInTheDocument();
+    });
+
+    it('shows no comment lines in any command, so each pastes into zsh or bash, and each ends with the health check', async () => {
+      const { user, dialog } = await openAdd();
+      await register(user, 'This computer');
+      const blocks = () => within(dialog).getAllByRole('button', { name: /^Copy (docker run command|install command|helm install|terraform commands)$/ });
+      const codeOf = (button: HTMLElement) => button.parentElement!.querySelector('code')!.textContent!;
+      for (const way of ['This computer', 'Docker', 'Helm', 'Terraform']) {
+        await user.click(within(dialog).getByRole('radio', { name: new RegExp(`^${way}`) }));
+        expect(blocks().length).toBeGreaterThan(0);
+        for (const button of blocks()) {
+          const lines = codeOf(button).split('\n');
+          expect(lines.filter((line) => line.trim().startsWith('#'))).toEqual([]);
+          expect(lines.at(-1)).toMatch(/^curl -fsS .*\/healthz$/);
+        }
+      }
     });
 
     it('on Free, has no licence key line: rrotor runs as Community', async () => {
@@ -330,7 +357,7 @@ describe('Add a runtime', () => {
       expect(within(dialog).getByText(/helm install rrotor/)).not.toHaveTextContent('GLYPHH_LICENSE_KEY');
     });
 
-    it('asks for a host it can use before registering', async () => {
+    it('asks for a DNS name it can use before registering, except on this computer', async () => {
       const { user, dialog } = await openAdd();
       await user.click(await within(dialog).findByRole('radio', { name: /^Helm/ }));
       const button = within(dialog).getByRole('button', { name: 'Register runtime' });
@@ -338,6 +365,57 @@ describe('Add a runtime', () => {
       await user.type(within(dialog).getByLabelText('Public host'), 'localhost');
       expect(within(dialog).getByText('Use the host alone, such as rrotor.acme.com.')).toBeInTheDocument();
       expect(button).toBeDisabled();
+      await user.click(within(dialog).getByRole('radio', { name: /^This computer/ }));
+      expect(within(dialog).getByLabelText('Host')).toHaveValue('localhost');
+      expect(within(dialog).queryByText('Use the host alone, such as rrotor.acme.com.')).not.toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Register runtime' })).toBeEnabled();
+    });
+
+    it('says what each way needs before registering', async () => {
+      const { user, dialog } = await openAdd();
+      const needs: Array<[string, RegExp]> = [
+        ['This computer', /What you need: Docker running on this computer/],
+        ['Docker', /What you need: A Linux server with Docker and the Compose plugin \(docker compose version works\), a DNS name pointing at it, ports 80 and 443 open\./],
+        ['Helm', /What you need: A Kubernetes cluster with an Ingress controller, and kubectl and helm/],
+        ['Terraform', /What you need: An AWS account or a GCP project, and terraform\./],
+      ];
+      for (const [way, text] of needs) {
+        await user.click(await within(dialog).findByRole('radio', { name: new RegExp(`^${way}`) }));
+        expect(within(dialog).getByText('What you need:').parentElement).toHaveTextContent(text);
+        expect(within(dialog).getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
+      }
+    });
+
+    it('runs on this computer: 127.0.0.1 to start with, the image alone, its check, and the SDKs’ URL instead of a connector', async () => {
+      const local = { ...registration, name: 'My laptop', public_url: 'https://127.0.0.1', env: { ...registration.env, RROTOR_PUBLIC_HOST: '127.0.0.1' } };
+      let sent: unknown;
+      server.use(
+        http.post(v1('/runtimes/self'), async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json(local, { status: 201 });
+        }),
+      );
+      const { user, dialog } = await openAdd();
+      await user.click(await within(dialog).findByRole('radio', { name: /^This computer/ }));
+      const form = within(dialog).getByRole('form', { name: 'Register a runtime' });
+      expect(within(form).getByLabelText('Host')).toHaveValue('127.0.0.1');
+      await user.type(within(form).getByLabelText('Name'), 'My laptop');
+      await user.click(within(form).getByRole('button', { name: 'Register runtime' }));
+      await within(dialog).findByText('Runtime token for My laptop');
+      expect(sent).toEqual({ name: 'My laptop', public_url: 'https://127.0.0.1' });
+
+      const run = within(dialog).getByText(/docker run -d --name rrotor/);
+      expect(run).toHaveTextContent('-p 7777:7777');
+      expect(run).toHaveTextContent('-e RROTOR_PUBLIC_HOST=127.0.0.1');
+      expect(run).toHaveTextContent('ghcr.io/glyphh-ai/rrotor:latest');
+      expect(run).toHaveTextContent(/curl -fsS .* http:\/\/127\.0\.0\.1:7777\/healthz$/);
+      expect(run).not.toHaveTextContent('install.sh');
+      expect(run).not.toHaveTextContent('compose');
+      expect(within(dialog).getByText(/Claude’s connector cannot reach it: that needs a public HTTPS host, so use Docker or Helm on a server/)).toBeInTheDocument();
+      expect(within(dialog).getByText('export GLYPHH_RUNTIME_URL=http://127.0.0.1:7777')).toBeInTheDocument();
+      expect(within(dialog).getByRole('link', { name: 'API Keys' })).toHaveAttribute('href', '/keys');
+      expect(within(dialog).queryByRole('button', { name: 'Copy connector URL' })).not.toBeInTheDocument();
+      expect(within(dialog).getByText('pip install glyphh')).toBeInTheDocument();
     });
 
     it('shows why a runtime could not be registered', async () => {
@@ -353,12 +431,12 @@ describe('Add a runtime', () => {
 });
 
 describe('Add a runtime while Glyphh hosts nothing', () => {
-  it.each(['refused', 'off', 'empty'] as const)('offers only running rrotor yourself, Docker first, when the rates answer %s', async (rates) => {
+  it.each(['refused', 'off', 'empty'] as const)('offers only running rrotor yourself, this computer first, when the rates answer %s', async (rates) => {
     server.use(...hostingOffHandlers(rates));
     const { dialog } = await openAdd();
-    const docker = await within(dialog).findByRole('radio', { name: /^Docker/ });
-    expect(docker).toBeChecked();
-    expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['compose', 'helm', 'terraform']);
+    const local = await within(dialog).findByRole('radio', { name: /^This computer/ });
+    expect(local).toBeChecked();
+    expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['local', 'compose', 'helm', 'terraform']);
     expect(within(dialog).queryByRole('radio', { name: /^Glyphh hosted/ })).not.toBeInTheDocument();
     expect(within(dialog).queryByText(/Glyphh runs it for you/)).not.toBeInTheDocument();
     expect(within(dialog).getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();

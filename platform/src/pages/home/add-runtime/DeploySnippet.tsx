@@ -9,7 +9,10 @@ import {
   dockerRun,
   helmCommand,
   image,
+  licenceKeyAddition,
+  localRun,
   sizes,
+  terraformCommands,
   terraformModule,
   type Cloud,
   type Deployment,
@@ -24,8 +27,8 @@ const clouds: ReadonlyArray<{ value: Cloud; label: string }> = [
 ];
 
 /**
- * The chosen option's command, filled in with the registration's env. On a paid plan, the licence key's line,
- * commented out: only an air-gapped node needs it.
+ * The chosen option's command, filled in with the registration's env, ending with the health check. On a paid plan,
+ * how to set the licence key, as text: only an air-gapped node needs it.
  */
 export function DeploySnippet({ deployment, env }: { deployment: Deployment; env: Record<string, string> }) {
   const [options, setOptions] = useState<SnippetOptions>(defaultOptions);
@@ -33,17 +36,33 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
   const paid = me.data !== undefined && me.data.plan.price_cents !== 0;
   const set = (change: Partial<SnippetOptions>) => setOptions((current) => ({ ...current, ...change }));
   const size = <Select label="Size" value={options.size} onChange={(e) => set({ size: e.target.value as Size })} options={sizes} />;
+  const host = env.RROTOR_PUBLIC_HOST;
+
+  if (deployment === 'local') {
+    return (
+      <div className={styles.part}>
+        <h3 className={styles.subTitle}>Run it on this computer</h3>
+        <span className={styles.meta}>In a terminal, with Docker running. The last line waits until rrotor answers.</span>
+        <CodeBlock code={localRun(env)} label="docker run command" />
+        <span className={styles.meta}>
+          There is no HTTPS here, so Claude’s connector cannot reach it: that needs a public HTTPS host, so use Docker or Helm on a server for
+          Claude. Your code can use it now.
+        </span>
+        <Note paid={paid} deployment={deployment} />
+      </div>
+    );
+  }
 
   if (deployment === 'compose') {
-    const host = env.RROTOR_PUBLIC_HOST;
     return (
       <div className={styles.part}>
         <h3 className={styles.subTitle}>Run it with Docker</h3>
         <span className={styles.meta}>
-          Point {host ? <code>{host}</code> : 'the host'}’s DNS at the machine first; the script serves it over HTTPS. Then, on the machine:
+          Point {host ?? 'the host'}’s DNS at the server first; the script serves it over HTTPS. Then paste this on the server. The last line waits
+          until rrotor answers.
         </span>
         <div className={styles.formRow}>{size}</div>
-        <CodeBlock code={dockerInstall(env, options.size, paid)} label="install command" />
+        <CodeBlock code={dockerInstall(env, options.size)} label="install command" />
         <details className={styles.details}>
           <summary className={styles.summary}>HTTPS already in front? Run the image alone:</summary>
           <CodeBlock code={dockerRun(env)} label="docker run command" />
@@ -61,7 +80,8 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
           {size}
           <TextField label="Ingress class" value={options.ingressClass} onChange={(e) => set({ ingressClass: e.target.value })} mono />
         </div>
-        <CodeBlock code={helmCommand(env, options, paid)} label="helm install" />
+        <span className={styles.meta}>Point {host ?? 'the host'}’s DNS at your Ingress first. The last line waits until rrotor answers.</span>
+        <CodeBlock code={helmCommand(env, options)} label="helm install" />
         <Note paid={paid} deployment={deployment} />
       </div>
     );
@@ -80,8 +100,10 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
           <TextField label="Region" value={options.gcpRegion} onChange={(e) => set({ gcpRegion: e.target.value })} mono />
         </div>
       )}
-      <CodeBlock code={terraformModule(env, options, paid)} label="Terraform module" />
-      <span className={styles.meta}>Then run terraform init and terraform apply. It makes one VM.</span>
+      <span className={styles.meta}>Save this as main.tf in an empty folder:</span>
+      <CodeBlock code={terraformModule(env, options)} label="Terraform module" />
+      <span className={styles.meta}>Then, in that folder (it makes one VM; the last line waits until rrotor answers):</span>
+      <CodeBlock code={terraformCommands(env)} label="terraform commands" />
       <Note paid={paid} deployment={deployment} />
     </div>
   );
@@ -92,8 +114,8 @@ function Note({ paid, deployment }: { paid: boolean; deployment: Deployment }) {
     <>
       {paid && (
         <span className={styles.meta}>
-          Your licence key reaches rrotor on its own when it links and at its daily heartbeat. Only an air-gapped node needs it set: see{' '}
-          <Link to="/licence">Licence</Link>.
+          Your licence key reaches rrotor on its own when it links and at its daily heartbeat. Only for an air-gapped node, add{' '}
+          <code>{licenceKeyAddition[deployment]}</code>: see <Link to="/licence">Licence</Link>.
         </span>
       )}
       <span className={styles.meta}>

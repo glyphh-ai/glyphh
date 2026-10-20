@@ -122,7 +122,7 @@ describe('Home while Glyphh hosts nothing', () => {
     server.use(...hostingOffHandlers());
     const { user, router } = renderApp('/');
     expect(await screen.findByText('No runtime yet')).toBeInTheDocument();
-    expect(screen.getByText(/Run it with Docker, Helm or Terraform, free on every plan\./)).toBeInTheDocument();
+    expect(screen.getByText(/Try it on this computer, or run it on a server with Docker, Helm or Terraform, free on every plan\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start your runtime' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Run rrotor yourself' }));

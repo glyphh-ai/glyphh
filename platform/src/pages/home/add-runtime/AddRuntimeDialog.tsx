@@ -14,6 +14,7 @@ type Choice = { value: Where; title: string; text: string };
 
 /** Running rrotor yourself: free on every plan, and the way to run it while Glyphh hosts nothing. */
 const selfHosted: ReadonlyArray<Choice> = [
+  { value: 'local', title: 'This computer', text: 'Free. Try it on your laptop; no HTTPS, so Claude cannot connect yet.' },
   { value: 'compose', title: 'Docker', text: 'Free. One command on a Linux machine.' },
   { value: 'helm', title: 'Helm', text: 'Free. Your Kubernetes cluster: EKS, GKE or AKS.' },
   { value: 'terraform', title: 'Terraform', text: 'Free. One VM on AWS or GCP.' },
@@ -57,9 +58,9 @@ function AddRuntime() {
   const plans = usePlans();
   const known = useHosting();
   const hosting = known === true;
-  // Until the person picks, the first option: Glyphh hosted when it is offered, else Docker.
+  // Until the person picks, the first option: Glyphh hosted when it is offered, else this computer.
   const [picked, setWhere] = useState<Where | null>(null);
-  const where: Where = picked === 'hosted' && !hosting ? 'compose' : (picked ?? (hosting ? 'hosted' : 'compose'));
+  const where: Where = picked === 'hosted' && !hosting ? 'local' : (picked ?? (hosting ? 'hosted' : 'local'));
   const [registered, setRegistered] = useState<NewSelfRuntime | null>(null);
 
   if (known === undefined) return <LoadingCard lines={3} />;
