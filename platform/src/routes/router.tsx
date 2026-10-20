@@ -52,7 +52,7 @@ export const routes: RouteObject[] = [
         ),
         handle: { crumbs: [{ label: 'Machines' }] },
       },
-      { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Home' }] } },
+      { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Runtimes' }] } },
       { path: 'keys', element: <KeysPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }] } },
       { path: 'models', element: <ModelsPage />, handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] } },
       { path: 'usage', element: <UsagePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Usage' }] } },

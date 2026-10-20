@@ -35,7 +35,7 @@ export function MainLayout() {
           )}
           <NavGroup label="Runtime">
             <NavItem to="/" end icon="home">
-              Home
+              Runtimes
             </NavItem>
             <NavItem to="/keys" icon="key">
               API Keys
