@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
 import { HostedOnly } from '@/components/HostedOnly';
 import { RequireSession } from '@/components/RequireSession';
-import { GettingStartedPage } from '@/pages/getting-started/GettingStartedPage';
 import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { MachinesPage } from '@/pages/machines/MachinesPage';
@@ -42,7 +41,8 @@ export const routes: RouteObject[] = [
       </RequireSession>
     ),
     children: [
-      { path: 'getting-started', element: <GettingStartedPage />, handle: { crumbs: [{ label: 'Getting started' }] } },
+      // Getting started became the Add a runtime dialog on Runtimes (2026-10-20); old links open it there.
+      { path: 'getting-started', element: <Navigate to="/?add=1" replace /> },
       {
         path: 'machines',
         element: (

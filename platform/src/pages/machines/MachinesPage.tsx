@@ -39,7 +39,7 @@ export function MachinesPage() {
       {machines.error && <ApiErrorNotice error={machines.error} />}
       {machines.data?.length === 0 && (
         <EmptyState icon="chip" title="No machines yet" action={newMachine}>
-          Make one to run rrotor. Running it yourself? <Link to="/getting-started">Getting started</Link> walks you through it.
+          Make one to run rrotor. Running it yourself? <Link to="/?add=1">Add a runtime</Link> walks you through it.
         </EmptyState>
       )}
       {machines.data && machines.data.length > 0 && (

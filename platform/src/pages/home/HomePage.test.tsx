@@ -4,7 +4,7 @@ import { renderApp } from '@/test/render';
 import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 describe('Home', () => {
-  // The hosted runtime alone: the self-hosted list is tested with Getting started.
+  // The hosted runtime alone: the self-hosted list is tested in SelfRuntimes.test.tsx.
   beforeEach(() => server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([]))));
 
   it('shows the runtime: address, state, plan, connector URL and its hosting cost this month', async () => {
@@ -42,12 +42,14 @@ describe('Home', () => {
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
   });
 
-  it('offers to start when there is no runtime yet', async () => {
+  it('offers to start when there is no runtime yet, or to run it yourself in Add a runtime', async () => {
     server.use(http.get(v1('/runtime'), () => HttpResponse.json({ ...runtime, state: 'none', address: null, runtime_id: null })));
-    renderApp('/');
+    const { user } = renderApp('/');
     expect(await screen.findByText('No runtime yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start your runtime' })).toBeInTheDocument();
     expect(screen.queryByText('Connect Claude')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Run rrotor yourself' }));
+    expect(await screen.findByRole('dialog', { name: 'Add a runtime' })).toBeInTheDocument();
   });
 
   it('shows the server’s refusal when starting fails', async () => {
@@ -113,18 +115,19 @@ describe('Home', () => {
 });
 
 describe('Home while Glyphh hosts nothing', () => {
-  // The hosted runtime alone: the self-hosted list is tested with Getting started.
+  // The hosted runtime alone: the self-hosted list is tested in SelfRuntimes.test.tsx.
   beforeEach(() => server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([]))));
 
-  it('offers no hosted runtime to start: running rrotor yourself, from Getting started', async () => {
+  it('offers no hosted runtime to start: running rrotor yourself, in Add a runtime', async () => {
     server.use(...hostingOffHandlers());
     const { user, router } = renderApp('/');
     expect(await screen.findByText('No runtime yet')).toBeInTheDocument();
-    expect(screen.getByText(/Run it with Docker Compose, Helm or Terraform, free on every plan\./)).toBeInTheDocument();
+    expect(screen.getByText(/Run it with Docker, Helm or Terraform, free on every plan\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start your runtime' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Run rrotor yourself' }));
-    expect(router.state.location.pathname).toBe('/getting-started');
+    expect(await screen.findByRole('dialog', { name: 'Add a runtime' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
   });
 
   it('shows a machine made before hosting went off without its cost, and no Start', async () => {

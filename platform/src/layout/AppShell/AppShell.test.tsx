@@ -50,6 +50,6 @@ describe('the main sidebar while Glyphh hosts nothing', () => {
     // Home's empty state for running rrotor yourself shows once the plans and rates are read.
     await screen.findByRole('button', { name: 'Run rrotor yourself' });
     expect(within(main).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Getting started', 'Runtimes', 'API Keys', 'Usage', 'Logs', 'Licence', 'Models']);
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'API Keys', 'Usage', 'Logs', 'Licence', 'Models']);
   });
 });
