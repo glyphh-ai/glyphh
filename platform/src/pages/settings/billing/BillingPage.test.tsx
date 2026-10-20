@@ -4,7 +4,6 @@ import { renderApp, stubLocation } from '@/test/render';
 import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
-const card = (name: string) => screen.findByRole('region', { name });
 
 describe('Billing', () => {
   it('shows the plan: its flat price, renewal, what it includes and hosting this month', async () => {
@@ -21,22 +20,12 @@ describe('Billing', () => {
     expect(screen.queryByText(/add-on/i)).not.toBeInTheDocument();
   });
 
-  it('offers the plans above this one: Upgrade for Team, Talk to us for Enterprise', async () => {
-    const { user, router } = renderApp('/settings/billing');
-    const team = await card('Team');
-    expect(within(team).getByText('$299 / month')).toBeInTheDocument();
-    expect(within(team).getByText('10 runtime nodes')).toBeInTheDocument();
-    expect(within(team).getByText('500,000 precedents per node')).toBeInTheDocument();
-    const enterprise = await card('Enterprise');
-    expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Hosting rates: set in your contract.')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
-    for (const text of ['SSO and SAML', 'Roles', 'Audit logs']) expect(within(enterprise).getByText(text)).toBeInTheDocument();
-    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
-    expect(screen.queryByRole('region', { name: 'Free' })).not.toBeInTheDocument();
-    await user.click(within(team).getByRole('button', { name: 'Upgrade' }));
-    expect(router.state.location.pathname).toBe('/settings/plans');
+  it('lists no other plan: they are on Manage, Change plan', async () => {
+    renderApp('/settings/billing');
+    expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    for (const name of ['Free', 'Team', 'Enterprise']) expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+    expect(screen.queryByText('$299 / month')).not.toBeInTheDocument();
   });
 
   it('shows the hosted machine rates of the plan in force, a month and a second', async () => {
@@ -54,14 +43,13 @@ describe('Billing', () => {
     expect(within(table).queryByText('$6.70 / month')).not.toBeInTheDocument();
   });
 
-  it('on Free, offers every paid plan, shows Pro and Team’s rates, and says hosting is on them', async () => {
+  it('on Free, shows Pro and Team’s rates, and says hosting is on them', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    expect(screen.getAllByText('Free')).toHaveLength(2);
     expect(screen.getByText('1 runtime node')).toBeInTheDocument();
     expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
-    expect(await card('Pro')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Pro' })).not.toBeInTheDocument();
     expect(await screen.findByText('Hosting is on Pro and Team. Running rrotor yourself is free.')).toBeInTheDocument();
     const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
@@ -95,13 +83,11 @@ describe('Billing', () => {
     }
   });
 
-  it('is read-only for members who are not the admin, but anyone can talk to sales', async () => {
+  it('is read-only for members who are not the admin', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })));
     renderApp('/settings/billing');
     expect(await screen.findByText('Only your org’s admin can change this.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage' })).not.toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'Talk to us' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
   });
 
   it('on Enterprise, offers no plan above, and never shows a rate: the contract sets them', async () => {
@@ -120,14 +106,13 @@ describe('Billing', () => {
     expect(screen.queryByRole('region', { name: 'Team' })).not.toBeInTheDocument();
   });
 
-  it('offers every plan when the org’s plan is not among those listed, and a dash for a size without a rate', async () => {
+  it('shows a plan not among those listed, and a dash for a size without a rate', async () => {
     server.use(
       http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[1], name: 'Legacy', interval: 'year' } })),
       http.get(v1('/rates'), () => HttpResponse.json({ ...rates, plans: { Legacy: { sizes: [rates.plans.Pro!.sizes[0]], volume_usd_per_gb_month: '0.20' } } })),
     );
     renderApp('/settings/billing');
     expect(await screen.findByText('$99 / year')).toBeInTheDocument();
-    expect(await card('Free')).toBeInTheDocument();
     const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByText('—')).toHaveLength(2);
     expect(within(table).getByText('$0.20 / GB / month')).toBeInTheDocument();
@@ -157,30 +142,20 @@ describe('Billing', () => {
 });
 
 describe('Billing while Glyphh hosts nothing and some features are not built', () => {
-  it('lists the plans as before, each feature not built as coming soon, never as included', async () => {
+  it('shows the plan alone, and the plans from Manage, Change plan', async () => {
     server.use(...hostingOffHandlers());
     const { user, router } = renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    const pro = await card('Pro');
-    expect(within(pro).getByText('$99 / month')).toBeInTheDocument();
-    expect(within(pro).getByText('Coming soon: Sync across runtimes')).toBeInTheDocument();
-    expect(within(pro).queryByText('Sync across runtimes')).not.toBeInTheDocument();
-    expect(within(pro).getByText('50,000 precedents per node')).toBeInTheDocument();
-    const enterprise = await card('Enterprise');
-    expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
-    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes')).toBeInTheDocument();
-    for (const text of ['SSO and SAML', 'Roles', 'Audit logs', 'High availability']) {
-      expect(within(enterprise).getByText(`Coming soon: ${text}`)).toBeInTheDocument();
-      expect(within(enterprise).queryByText(text)).not.toBeInTheDocument();
-    }
-    await user.click(within(pro).getByRole('button', { name: 'Upgrade' }));
+    expect(screen.queryByRole('region', { name: 'Pro' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Manage' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Change plan' }));
     expect(router.state.location.pathname).toBe('/settings/plans');
   });
 
   it('says nothing of hosting: no machines, no rates, no hosting this month', async () => {
     server.use(...hostingOffHandlers('empty'));
     renderApp('/settings/billing');
-    await card('Enterprise');
+    await screen.findByRole('heading', { name: 'Free' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/hosting/i)).not.toBeInTheDocument();
@@ -192,7 +167,6 @@ describe('Billing while Glyphh hosts nothing and some features are not built', (
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: pro })), ...hostingOffHandlers());
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();
-    await card('Team');
     expect(screen.queryByText('Hosting this month')).not.toBeInTheDocument();
   });
 });
