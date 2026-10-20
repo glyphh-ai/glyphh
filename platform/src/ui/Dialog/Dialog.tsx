@@ -1,8 +1,11 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { cx } from '@/lib/cx';
 import styles from './Dialog.module.css';
 
 type DialogProps = {
   open: boolean;
+  /** `wide` fits code blocks and a form beside each other; the default suits a question or a short form. */
+  size?: 'default' | 'wide';
   onClose: () => void;
   title: string;
   description?: ReactNode;
@@ -12,7 +15,7 @@ type DialogProps = {
 };
 
 /** A modal on the native <dialog>, so focus, Escape and the backdrop behave as the browser does. */
-export function Dialog({ open, onClose, title, description, children, actions }: DialogProps) {
+export function Dialog({ open, size = 'default', onClose, title, description, children, actions }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -27,7 +30,7 @@ export function Dialog({ open, onClose, title, description, children, actions }:
   return (
     <dialog
       ref={ref}
-      className={styles.dialog}
+      className={cx(styles.dialog, size === 'wide' && styles.wide)}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onClose={onClose}

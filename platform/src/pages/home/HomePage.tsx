@@ -1,5 +1,6 @@
-import { Link, useNavigate } from 'react-router';
-import { useHosting, useMe, useRuntime, useSelfRuntimes, useStartRuntime, useStopRuntime } from '@/api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router';
+import { keys, useHosting, useMe, useRuntime, useSelfRuntimes, useStartRuntime, useStopRuntime } from '@/api/queries';
 import type { Runtime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -8,6 +9,7 @@ import { useCopy } from '@/lib/useCopy';
 import { StartMachineError } from '@/pages/machines/MachineFields';
 import { useMachineCents } from '@/pages/machines/HostingUpsell';
 import { Button, Card, Chip, CopyButton, CopyField, EmptyState, LoadingCard, type ChipTone } from '@/ui';
+import { AddRuntimeDialog } from './add-runtime/AddRuntimeDialog';
 import { SelfRuntimes } from './SelfRuntimes';
 import styles from './HomePage.module.css';
 
@@ -20,10 +22,32 @@ const stateChip: Record<Exclude<Runtime['state'], 'none'>, { label: string; tone
 /**
  * Runtimes, the signed-in home: the runtimes you run yourself, with their token, licence and removal, and the hosted
  * machine with its address, state, connector URL and cost this month. While Glyphh hosts nothing there is no starting
- * one, no cost and no Machines: Getting started adds a runtime.
+ * one, no cost and no Machines. Add a runtime opens over the page; `?add=1` opens it on load, as the server and emails
+ * link to it.
  */
 export function HomePage() {
-  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const adding = params.get('add') === '1';
+  const client = useQueryClient();
+  const openAdd = () =>
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('add', '1');
+      return next;
+    });
+  const closeAdd = () => {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('add');
+        return next;
+      },
+      { replace: true },
+    );
+    // A runtime registered or made in it shows at once.
+    void client.invalidateQueries({ queryKey: keys.selfRuntimes });
+    void client.invalidateQueries({ queryKey: keys.runtime });
+  };
   // Undefined until the plans and rates are read; an existing machine is shown meanwhile as hosting is on.
   const hosting = useHosting();
   const hosted = hosting !== false;
@@ -42,7 +66,7 @@ export function HomePage() {
 
   const actions = (
     <>
-      <Button icon="plus" onClick={() => navigate('/getting-started')}>
+      <Button icon="plus" onClick={openAdd}>
         Add a runtime
       </Button>
       {data && data.state !== 'none' && (
@@ -99,13 +123,12 @@ export function HomePage() {
             icon="home"
             title="No runtime yet"
             action={
-              <Button variant="primary" onClick={() => navigate('/getting-started')}>
+              <Button variant="primary" onClick={openAdd}>
                 Run rrotor yourself
               </Button>
             }
           >
-            Run it with Docker Compose, Helm or Terraform, free on every plan. <Link to="/getting-started">Getting started</Link> walks you
-            through it.
+            Run it with Docker, Helm or Terraform, free on every plan.
           </EmptyState>
         )}
 
@@ -114,13 +137,15 @@ export function HomePage() {
             icon="home"
             title="No runtime yet"
             action={
-              <Button variant="primary" onClick={() => start.mutate()} loading={start.isPending}>
-                Start your runtime
-              </Button>
+              <div className={styles.emptyActions}>
+                <Button onClick={openAdd}>Run rrotor yourself</Button>
+                <Button variant="primary" onClick={() => start.mutate()} loading={start.isPending}>
+                  Start your runtime
+                </Button>
+              </div>
             }
           >
-            Starting it the first time makes it, at an address of its own. New here, or running it yourself?{' '}
-            <Link to="/getting-started">Getting started</Link> walks you through it.
+            Starting it the first time makes it, at an address of its own. Running it yourself is free on every plan.
           </EmptyState>
         )}
 
@@ -165,6 +190,8 @@ export function HomePage() {
 
         <SelfRuntimes />
       </div>
+
+      <AddRuntimeDialog open={adding} onClose={closeAdd} />
     </>
   );
 }

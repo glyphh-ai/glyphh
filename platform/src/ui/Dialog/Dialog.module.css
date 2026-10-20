@@ -8,6 +8,12 @@
   box-shadow: var(--shadow-pop);
 }
 
+.wide {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
 .dialog::backdrop {
   background: rgb(0 0 0 / 0.55);
 }

@@ -40,11 +40,11 @@ function liveMachines(start: Machine[] = machines) {
 const card = (name: string) => screen.findByRole('listitem', { name });
 
 describe('Machines', () => {
-  it('comes after Getting started in the sidebar, and Home links to it', async () => {
+  it('comes first in the sidebar, and Home links to it', async () => {
     const { user } = renderApp('/');
     const sidebar = await screen.findByRole('complementary', { name: 'Main' });
     await within(sidebar).findByRole('link', { name: 'Machines' });
-    expect(within(sidebar).getAllByRole('link')[1]).toHaveAccessibleName('Machines');
+    expect(within(sidebar).getAllByRole('link')[0]).toHaveAccessibleName('Machines');
     await user.click(await within(screen.getByRole('main')).findByRole('link', { name: 'Machines' }));
     expect(await screen.findByRole('heading', { name: 'Machines', level: 1 })).toBeInTheDocument();
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Machines')).toHaveAttribute('aria-current', 'page');
@@ -158,7 +158,7 @@ describe('Machines', () => {
     expect(within(dialog).queryByLabelText('Name')).not.toBeInTheDocument();
     const table = await within(dialog).findByRole('table', { name: 'Hosted machine rates' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
-    expect(within(dialog).getByRole('link', { name: 'Getting started' })).toHaveAttribute('href', '/getting-started');
+    expect(within(dialog).getByRole('link', { name: 'Add a runtime' })).toHaveAttribute('href', '/?add=1');
     await user.click(within(dialog).getByRole('button', { name: 'Upgrade' }));
     expect(router.state.location.pathname).toBe('/settings/plans');
   });
@@ -240,7 +240,7 @@ describe('Machines', () => {
     server.use(http.get(v1('/runtimes'), () => HttpResponse.json([])));
     const { user } = renderApp('/machines');
     expect(await screen.findByText('No machines yet')).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Getting started' })).toHaveAttribute('href', '/getting-started');
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Add a runtime' })).toHaveAttribute('href', '/?add=1');
     await user.click(within(screen.getByRole('main')).getAllByRole('button', { name: 'New machine' })[1]!);
     expect(screen.getByRole('dialog', { name: 'New machine' })).toBeInTheDocument();
   });
@@ -262,11 +262,11 @@ describe('Machines', () => {
 });
 
 describe('Machines while Glyphh hosts nothing', () => {
-  it('is not a page: its address goes to Getting started', async () => {
+  it('is not a page: its address opens Add a runtime on Runtimes', async () => {
     server.use(...hostingOffHandlers());
     const { router } = renderApp('/machines');
-    expect(await screen.findByRole('heading', { name: 'Getting started', level: 1 })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/getting-started');
+    expect(await screen.findByRole('dialog', { name: 'Add a runtime' })).toBeInTheDocument();
+    expect(router.state.location.pathname + router.state.location.search).toBe('/?add=1');
     expect(screen.queryByRole('heading', { name: 'Machines', level: 1 })).not.toBeInTheDocument();
   });
 });

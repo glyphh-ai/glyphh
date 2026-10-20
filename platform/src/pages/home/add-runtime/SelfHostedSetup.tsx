@@ -3,13 +3,14 @@ import { useRegisterSelfRuntime } from '@/api/queries';
 import type { NewSelfRuntime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { Button, CopyField, TextField } from '@/ui';
+import { Connect } from './Connect';
 import { DeploySnippet } from './DeploySnippet';
 import { connectorUrl, docsUrl, hostOf, isHost, type Deployment } from './snippets';
-import styles from './GettingStarted.module.css';
+import styles from './AddRuntime.module.css';
 
 type SelfHostedSetupProps = {
   deployment: Deployment;
-  /** Kept by the page, so changing the option keeps the runtime just registered. */
+  /** Kept by the dialog, so changing the option keeps the runtime just registered. */
   registered: NewSelfRuntime | null;
   onRegistered: (runtime: NewSelfRuntime | null) => void;
 };
@@ -27,11 +28,7 @@ export function SelfHostedSetup({ deployment, registered, onRegistered }: SelfHo
         <span className={styles.meta}>Shown once. It is in the snippet below too; keep both out of version control.</span>
       </div>
       <DeploySnippet deployment={deployment} env={registered.env} />
-      <div className={styles.part}>
-        <h3 className={styles.subTitle}>Connect Claude</h3>
-        <CopyField value={connectorUrl(host)} label="connector URL" />
-        <span className={styles.meta}>Once it answers at {host}, add this in Claude as a custom connector.</span>
-      </div>
+      <Connect title="Connect" connector={connectorUrl(host)} note={`Once it answers at ${host}, add this in Claude as a custom connector.`} />
       <div className={styles.actions}>
         <Button variant="ghost" icon="plus" onClick={() => onRegistered(null)}>
           Register another

@@ -48,9 +48,9 @@ export function MachineFields({ name, size, onName, onSize, rates }: MachineFiel
 function HostingOffError({ error }: { error: ApiError }) {
   return (
     <ErrorNotice
-      message="Glyphh is not hosting machines now. Run rrotor yourself with Docker Compose, Helm or Terraform."
+      message="Glyphh is not hosting machines now. Run rrotor yourself with Docker, Helm or Terraform."
       traceId={error.traceId}
-      action={<Link to="/getting-started">Getting started</Link>}
+      action={<Link to="/?add=1">Add a runtime</Link>}
     />
   );
 }

@@ -25,9 +25,6 @@ export function MainLayout() {
       crumbs={useCrumbs()}
       sidebar={
         <Sidebar footer={<UserMenu />}>
-          <NavItem to="/getting-started" icon="flag">
-            Getting started
-          </NavItem>
           {hosting && (
             <NavItem to="/machines" icon="chip">
               Machines

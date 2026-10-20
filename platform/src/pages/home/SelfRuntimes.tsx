@@ -8,8 +8,8 @@ import { List, Row } from '@/components/List';
 import { ago, date } from '@/lib/format';
 import { salesUrl } from '@/lib/links';
 import { Button, ButtonLink, Chip, CopyField, Dialog, TextField, type ChipTone } from '@/ui';
-import { hostOf } from '@/pages/getting-started/snippets';
-import styles from '@/pages/getting-started/GettingStarted.module.css';
+import { hostOf } from './add-runtime/snippets';
+import styles from './add-runtime/AddRuntime.module.css';
 
 const stateChip: Record<SelfRuntime['state'], { label: string; tone: ChipTone }> = {
   online: { label: 'Running', tone: 'green' },

@@ -1,4 +1,4 @@
-import { composeCommands, composeEnv, connectorUrl, defaultOptions, dotEnv, helmCommand, hostOf, isHost, terraformModule } from './snippets';
+import { connectorUrl, defaultOptions, dockerInstall, dockerRun, helmChartUrl, helmCommand, hostOf, isHost, terraformModule } from './snippets';
 
 const env = {
   RROTOR_MODE: 'self',
@@ -27,19 +27,35 @@ describe('the host', () => {
 });
 
 describe('the snippets', () => {
-  it('writes the env file in the server’s order', () => {
-    expect(dotEnv(env)).toBe(
-      'RROTOR_MODE=self\nRROTOR_SERVER=https://api.glyphh.ai\nRROTOR_RUNTIME_ID=rt-1\nRROTOR_RUNTIME_TOKEN=glyphh_rt_abc\nRROTOR_PUBLIC_HOST=rrotor.acme.com',
+  it('runs the install script with the registration’s values, the size only when not small', () => {
+    expect(dockerInstall(env)).toBe(
+      [
+        'curl -fsSL https://glyphh.ai/install.sh | \\',
+        '  RROTOR_RUNTIME_ID=rt-1 RROTOR_RUNTIME_TOKEN=glyphh_rt_abc RROTOR_PUBLIC_HOST=rrotor.acme.com sh',
+      ].join('\n'),
     );
-    expect(composeCommands).toContain('cd glyphh/deploy/compose');
-    expect(composeCommands).toContain('docker compose up -d');
+    expect(dockerInstall(env, 'large')).toContain('RROTOR_PUBLIC_HOST=rrotor.acme.com RROTOR_SIZE=large sh');
   });
 
-  it('installs the Helm chart with each value set', () => {
+  it('runs the image alone, over lines', () => {
+    expect(dockerRun(env)).toBe(
+      [
+        'docker run -d --name rrotor --restart unless-stopped \\',
+        '  --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \\',
+        '  --read-only --tmpfs /tmp:exec,mode=1777 -v rrotor-data:/data -p 7777:7777 \\',
+        '  -e RROTOR_MODE=self \\',
+        '  -e RROTOR_RUNTIME_ID=rt-1 \\',
+        '  -e RROTOR_RUNTIME_TOKEN=glyphh_rt_abc \\',
+        '  -e RROTOR_PUBLIC_HOST=rrotor.acme.com \\',
+        '  ghcr.io/glyphh-ai/rrotor:latest',
+      ].join('\n'),
+    );
+  });
+
+  it('installs the released Helm chart with each value set', () => {
     expect(helmCommand(env, { ...defaultOptions, size: 'medium', ingressClass: ' ' })).toBe(
       [
-        'git clone https://github.com/glyphh-ai/glyphh.git',
-        'helm install rrotor ./glyphh/deploy/helm/rrotor \\',
+        `helm install rrotor ${helmChartUrl} \\`,
         '  --set runtime.id=rt-1 \\',
         '  --set runtime.token=glyphh_rt_abc \\',
         '  --set publicHost=rrotor.acme.com \\',
@@ -47,18 +63,20 @@ describe('the snippets', () => {
         '  --set ingress.className=nginx',
       ].join('\n'),
     );
+    expect(helmChartUrl).toBe('https://github.com/glyphh-ai/glyphh/releases/download/rrotor-chart-0.2.0/rrotor-0.2.0.tgz');
   });
 
   it('leaves a value blank when the env lacks it', () => {
     expect(helmCommand({}, defaultOptions)).toContain('--set runtime.id= \\');
     expect(terraformModule({}, defaultOptions)).toContain('runtime_id    = ""');
+    expect(dockerInstall({})).toContain('RROTOR_RUNTIME_ID= ');
   });
 
   it('writes the AWS module with its four variables', () => {
     expect(terraformModule(env, defaultOptions)).toBe(
       [
         'module "rrotor" {',
-        '  source = "github.com/glyphh-ai/glyphh//deploy/terraform/aws"',
+        '  source = "git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/aws?ref=main"',
         '',
         '  runtime_id    = "rt-1"',
         '  runtime_token = "glyphh_rt_abc"',
@@ -71,18 +89,23 @@ describe('the snippets', () => {
 
   it('adds the project and the region for GCP, with placeholders until they are given', () => {
     const gcp = terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpRegion: '' });
-    expect(gcp).toContain('source = "github.com/glyphh-ai/glyphh//deploy/terraform/gcp"');
+    expect(gcp).toContain('source = "git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/gcp?ref=main"');
     expect(gcp).toContain('project       = "your-project-id"');
     expect(gcp).toContain('region        = "europe-west2"');
     expect(terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpProject: 'acme-prod', gcpRegion: 'us-east1' })).toContain('project       = "acme-prod"');
   });
+
+  it('never clones a repo', () => {
+    const all = [dockerInstall(env, 'medium', true), dockerRun(env), helmCommand(env, defaultOptions, true), terraformModule(env, defaultOptions, true)];
+    for (const snippet of all) expect(snippet).not.toMatch(/git\s+clone/);
+  });
 });
 
 describe('the licence key’s line, on a paid plan', () => {
-  it('is commented out after the env, for an air-gapped node only; none on Free', () => {
-    expect(composeEnv(env, false)).toBe(dotEnv(env));
-    expect(composeEnv(env, true)).toBe(
-      `${dotEnv(env)}\n\n# Air-gapped only, normally not needed: rrotor gets its licence key when it links.\n# GLYPHH_LICENSE_KEY=<your licence key from the Licence page>`,
+  it('follows the install command, commented out, for an air-gapped node only; none on Free', () => {
+    expect(dockerInstall(env, 'small', false)).not.toContain('GLYPHH_LICENSE_KEY');
+    expect(dockerInstall(env, 'small', true)).toBe(
+      `${dockerInstall(env)}\n\n# Air-gapped only, normally not needed: rrotor gets its licence key when it links.\n# Add GLYPHH_LICENSE_KEY=<your licence key from the Licence page> before sh.`,
     );
   });
 

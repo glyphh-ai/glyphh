@@ -107,7 +107,7 @@ export type Machine = {
 /** How a self-hosted rrotor last reported in: `stopped` until it first links. */
 export type SelfRuntimeState = 'stopped' | 'online' | 'offline';
 
-/** A runtime someone runs themselves (Docker Compose, Helm, Terraform), registered with the server. */
+/** A runtime someone runs themselves (Docker, Helm, Terraform), registered with the server. */
 export type SelfRuntime = {
   id: Uuid;
   name: string;

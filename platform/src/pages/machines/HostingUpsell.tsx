@@ -42,7 +42,7 @@ export function HostingUpsell({ isAdmin }: { isAdmin: boolean }) {
     <div className={styles.upsell}>
       <p className={styles.upsellText}>
         Glyphh hosts machines on {hostingPlansText(plans.data)}. {isAdmin ? 'Upgrade to make one.' : 'Ask your admin to upgrade.'} Running rrotor
-        yourself is free: <Link to="/getting-started">Getting started</Link> shows how.
+        yourself is free: <Link to="/?add=1">Add a runtime</Link> shows how.
       </p>
       {(plans.isPending || rates.isPending) && <LoadingCard lines={3} />}
       <ApiErrorNotice error={plans.error ?? rates.error} />

@@ -153,7 +153,7 @@ function NodeList({ nodes, perNode }: { nodes: RuntimeNodes; perNode: number | n
       )}
       {nodes.nodes.length === 0 ? (
         <EmptyState icon="chip" title="No runtime nodes yet">
-          A runtime counts once it links to Glyphh. See <Link to="/getting-started">Getting started</Link>.
+          A runtime counts once it links to Glyphh. See <Link to="/?add=1">Add a runtime</Link>.
         </EmptyState>
       ) : (
         <List label="Runtime nodes">

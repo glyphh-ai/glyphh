@@ -6,8 +6,9 @@ import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { HostingUpsell, useNoHosting, usePlanRates } from '@/pages/machines/HostingUpsell';
 import { CreateMachineError, MachineFields, StartMachineError } from '@/pages/machines/MachineFields';
 import { connectorUrl } from '@/pages/machines/sizes';
-import { Button, CopyField, LoadingCard } from '@/ui';
-import styles from './GettingStarted.module.css';
+import { Button, LoadingCard } from '@/ui';
+import { Connect } from './Connect';
+import styles from './AddRuntime.module.css';
 
 /**
  * Glyphh runs it: make a first machine (a name and a size, with the plan's rates), or start the first one; then the
@@ -28,13 +29,13 @@ export function HostedChoice() {
     <div className={styles.part}>
       {first.state === 'stopped' && <StartMachine id={first.id} />}
       {connector && (
-        <>
-          <h3 className={styles.subTitle}>Connect Claude to {first.name}</h3>
-          <CopyField value={connector} label="connector URL" />
-        </>
+        <Connect
+          title={`Connect Claude to ${first.name}`}
+          connector={connector}
+          note="Add it in Claude as a custom connector. You’ll be asked to allow it once."
+        />
       )}
       <span className={styles.meta}>
-        {connector && 'Add it in Claude as a custom connector. You’ll be asked to allow it once. '}
         <Link to="/machines">Machines</Link> shows each of yours, and makes more.
       </span>
     </div>
