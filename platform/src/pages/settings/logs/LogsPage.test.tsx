@@ -20,17 +20,17 @@ const rows = (name: string) => within(screen.getByRole('list', { name })).getAll
 
 describe('Logs', () => {
   it('opens from the settings rail, after Usage', async () => {
-    const { user, router } = renderApp('/settings/usage');
+    const { user, router } = renderApp('/usage');
     const rail = await screen.findByRole('complementary', { name: 'Main' });
     const links = within(rail).getAllByRole('link').map((link) => link.textContent);
     expect(links.indexOf('Logs')).toBe(links.indexOf('Usage') + 1);
     await user.click(within(rail).getByRole('link', { name: 'Logs' }));
-    expect(router.state.location.pathname).toBe('/settings/logs');
+    expect(router.state.location.pathname).toBe('/logs');
     expect(await screen.findByRole('heading', { name: 'Logs', level: 1 })).toBeInTheDocument();
   });
 
   it('shows the log lines newest first: time in UTC, level, message, where from, and the details kept', async () => {
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     expect(await screen.findByRole('tab', { name: 'Logs' })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByRole('list', { name: 'Log lines' })).toBeInTheDocument();
     const lines = rows('Log lines');
@@ -53,7 +53,7 @@ describe('Logs', () => {
         HttpResponse.json({ records: [{ at: '2026-10-16T13:00:00Z', runtime_id: 'rt-self-1', body: 'Started', trace_id: 'abc', region: 'eu' }], next_cursor: null }),
       ),
     );
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     const line = (await screen.findByRole('list', { name: 'Log lines' })).querySelector('li')!;
     expect(within(line).getByText('Acme production')).toBeInTheDocument();
     await user.click(within(line).getByText('Details'));
@@ -63,7 +63,7 @@ describe('Logs', () => {
 
   it('filters by runtime, node, level and above and time at once, and by words when searched', async () => {
     const seen = recordReads('/telemetry/logs', () => ({ records: logs, next_cursor: null }));
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     const filters = screen.getByRole('form', { name: 'Filter log lines' });
     await user.selectOptions(await within(filters).findByLabelText('Runtime'), 'rt-self-1');
@@ -88,7 +88,7 @@ describe('Logs', () => {
     const seen = recordReads('/telemetry/logs', (url) =>
       url.searchParams.get('cursor') === 'c2' ? { records: logs.slice(2), next_cursor: null } : { records: logs.slice(0, 2), next_cursor: 'c2' },
     );
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     expect(rows('Log lines')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: 'Load older' }));
@@ -100,7 +100,7 @@ describe('Logs', () => {
 
   it('says nothing matches the filters, and clears them', async () => {
     recordReads('/telemetry/logs', (url) => (url.searchParams.get('level') ? { records: [], next_cursor: null } : { records: logs, next_cursor: null }));
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     await user.selectOptions(screen.getByLabelText('Level'), 'error');
     expect(await screen.findByText('No log lines match')).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('Logs', () => {
 
   it('shows a refusal', async () => {
     server.use(http.get(v1('/telemetry/logs'), () => apiError(503, 'E_UNAVAILABLE', 'Logs are unavailable.')));
-    renderApp('/settings/logs');
+    renderApp('/logs');
     expect(await screen.findByText('Logs are unavailable.')).toBeInTheDocument();
     expect(screen.getByText('Trace trace-123')).toBeInTheDocument();
   });
@@ -124,7 +124,7 @@ describe('Logs', () => {
         return refuse ? apiError(422, 'E_INVALID', 'This cursor is not one a page gave.', { reason: 'cursor' }) : HttpResponse.json({ records: [], next_cursor: null });
       }),
     );
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     await screen.findByRole('list', { name: 'Log lines' });
     await user.click(screen.getByRole('button', { name: 'Load older' }));
     expect(await screen.findByText('The older pages could not be found. Start again from the newest.')).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe('Logs', () => {
 describe('Logs while the runtimes send nothing, rrotor’s default', () => {
   it('says the data stays on rrotor, recommends your own collector, and warns what opting in sends', async () => {
     server.use(...nothingSentHandlers());
-    renderApp('/settings/logs');
+    renderApp('/logs');
     const nothing = await screen.findByRole('region', { name: 'No log lines yet' });
     expect(nothing).toHaveTextContent('Your runtimes have sent Glyphh nothing. That is how rrotor works by default: its logs, metrics, traces and audit events stay on your rrotor.');
     expect(nothing).toHaveTextContent('Stream to your own collectorRecommended');
@@ -156,7 +156,7 @@ describe('Logs while the runtimes send nothing, rrotor’s default', () => {
 
   it('says so on Audit and Metrics too', async () => {
     server.use(...nothingSentHandlers());
-    const { user } = renderApp('/settings/logs');
+    const { user } = renderApp('/logs');
     await user.click(await screen.findByRole('tab', { name: 'Audit' }));
     expect(await screen.findByRole('region', { name: 'No audit events yet' })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Metrics' }));
@@ -166,12 +166,12 @@ describe('Logs while the runtimes send nothing, rrotor’s default', () => {
 
 describe('Logs’ Audit tab', () => {
   it('opens from the address, says audit is recorded on Enterprise, and lists who did what and how it ended', async () => {
-    const { user } = renderApp('/settings/logs?tab=audit');
+    const { user } = renderApp('/logs?tab=audit');
     expect(await screen.findByRole('tab', { name: 'Audit' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel', { name: 'Audit' })).toBeInTheDocument();
     const note = screen.getByText(/rrotor records audit events on Enterprise/);
     expect(note).toHaveTextContent('rrotor records audit events on Enterprise. Below Enterprise it sends them as log lines instead: see Logs.');
-    expect(within(note).getByRole('link', { name: 'Logs' })).toHaveAttribute('href', '/settings/logs');
+    expect(within(note).getByRole('link', { name: 'Logs' })).toHaveAttribute('href', '/logs');
     await screen.findByRole('list', { name: 'Audit events' });
     const events = rows('Audit events');
     expect(events).toHaveLength(auditEvents.length);
@@ -188,14 +188,14 @@ describe('Logs’ Audit tab', () => {
 
   it('filters by kind when searched', async () => {
     const seen = recordReads('/telemetry/audit', () => ({ events: auditEvents, next_cursor: null }));
-    const { user } = renderApp('/settings/logs?tab=audit');
+    const { user } = renderApp('/logs?tab=audit');
     await screen.findByRole('list', { name: 'Audit events' });
     await user.type(screen.getByLabelText('Kind'), 'run.call{Enter}');
     expect(seen.at(-1)?.get('kind')).toBe('run.call');
   });
 
   it('keeps the tab in the address', async () => {
-    const { user, router } = renderApp('/settings/logs');
+    const { user, router } = renderApp('/logs');
     await user.click(await screen.findByRole('tab', { name: 'Audit' }));
     expect(router.state.location.search).toBe('?tab=audit');
     await user.click(screen.getByRole('tab', { name: 'Logs' }));
@@ -205,7 +205,7 @@ describe('Logs’ Audit tab', () => {
 
 describe('Logs’ Metrics tab', () => {
   it('gathers each node’s series: runs, run time, precedents of the cap, link, drops and when sent', async () => {
-    renderApp('/settings/logs?tab=metrics');
+    renderApp('/logs?tab=metrics');
     const table = await screen.findByRole('table', { name: 'Metrics by node' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Node', 'Runs', 'Run time', 'Precedents', 'Link', 'Dropped', 'Sent']);
     const [, first, second] = within(table).getAllByRole('row');
@@ -227,7 +227,7 @@ describe('Logs’ Metrics tab', () => {
         }),
       ),
     );
-    renderApp('/settings/logs?tab=metrics');
+    renderApp('/logs?tab=metrics');
     const table = await screen.findByRole('table', { name: 'Metrics by node' });
     const [, row] = within(table).getAllByRole('row');
     expect(within(row!).getByRole('rowheader')).toHaveTextContent('Main');

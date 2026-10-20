@@ -87,7 +87,7 @@ function Note({ paid }: { paid: boolean }) {
       {paid && (
         <span className={styles.meta}>
           Your licence key reaches rrotor on its own when it links and at its daily heartbeat. Only an air-gapped node needs it set: see{' '}
-          <Link to="/settings/licence">Licence</Link>.
+          <Link to="/licence">Licence</Link>.
         </span>
       )}
       <span className={styles.meta}>

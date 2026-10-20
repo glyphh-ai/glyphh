@@ -54,7 +54,7 @@ export function dotEnv(env: Record<string, string>): string {
  * heartbeat, so only an air-gapped node needs it set. Free has no key (rrotor runs as Community).
  */
 export const licenceKeyNote = '# Air-gapped only, normally not needed: rrotor gets its licence key when it links.';
-export const licenceKeyPlaceholder = '<your licence key from Settings → Licence>';
+export const licenceKeyPlaceholder = '<your licence key from the Licence page>';
 export const licenceDotEnv = [licenceKeyNote, `# GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder}`].join('\n');
 
 /** The env file with, on a paid plan, the licence key's commented line after a blank one. */
