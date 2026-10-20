@@ -293,7 +293,7 @@ describe('Getting started', () => {
 
   describe('the self-hosted runtimes', () => {
     it('lists each with its state, version and last heartbeat', async () => {
-      renderApp('/getting-started');
+      renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       const [acme, lab] = within(list).getAllByRole('listitem');
       expect(within(acme!).getByText('Acme production')).toBeInTheDocument();
@@ -312,7 +312,7 @@ describe('Getting started', () => {
 
     it('says so when the list cannot be read', async () => {
       server.use(http.get(v1('/runtimes/self'), () => apiError(500, 'E_INTERNAL', 'The runtimes could not be read.')));
-      renderApp('/getting-started');
+      renderApp('/');
       expect(await screen.findByText('The runtimes could not be read.')).toBeInTheDocument();
     });
 
@@ -324,7 +324,7 @@ describe('Getting started', () => {
           return HttpResponse.json({ token: 'glyphh_rt_new' });
         }),
       );
-      const { user } = renderApp('/getting-started');
+      const { user } = renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await user.click(within(list).getAllByRole('button', { name: 'Rotate token' })[0]!);
       const confirm = screen.getByRole('dialog', { name: 'Rotate this runtime’s token?' });
@@ -339,7 +339,7 @@ describe('Getting started', () => {
 
     it('shows why a token could not be rotated, and forgets it on cancel', async () => {
       server.use(http.post(v1('/runtimes/self/:id/token'), () => apiError(404, 'E_NOT_FOUND', 'No such runtime.')));
-      const { user } = renderApp('/getting-started');
+      const { user } = renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await user.click(within(list).getAllByRole('button', { name: 'Rotate token' })[0]!);
       const confirm = screen.getByRole('dialog', { name: 'Rotate this runtime’s token?' });
@@ -358,7 +358,7 @@ describe('Getting started', () => {
           return new HttpResponse(null, { status: 204 });
         }),
       );
-      const { user } = renderApp('/getting-started');
+      const { user } = renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await user.click(within(list).getAllByRole('button', { name: 'Delete' })[1]!);
       const confirm = screen.getByRole('dialog', { name: 'Delete this runtime?' });
@@ -379,7 +379,7 @@ describe('Getting started', () => {
           return HttpResponse.json({ token: 'eyJwYXlsb2FkIjp7fX0', expires_at: '2027-10-18T00:00:00Z' });
         }),
       );
-      const { user, client } = renderApp('/getting-started');
+      const { user, client } = renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
       await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
@@ -401,7 +401,7 @@ describe('Getting started', () => {
         http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })),
         http.post(v1('/runtimes/:id/offline-licence'), () => apiError(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', { reason: 'offline' })),
       );
-      const { user, client } = renderApp('/getting-started');
+      const { user, client } = renderApp('/');
       await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[1]!);
@@ -420,7 +420,7 @@ describe('Getting started', () => {
     });
 
     it('says offline licences are on Enterprise on other plans, with Talk to us', async () => {
-      const { user, client } = renderApp('/getting-started');
+      const { user, client } = renderApp('/');
       const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
       await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
       await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);
@@ -456,7 +456,7 @@ describe('Getting started while Glyphh hosts nothing', () => {
 
   it('lists the self-hosted runtimes, and offline licences stay on Enterprise', async () => {
     server.use(...hostingOffHandlers());
-    const { user } = renderApp('/getting-started');
+    const { user } = renderApp('/');
     const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
     expect(within(list).getByText('Acme production')).toBeInTheDocument();
     await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);

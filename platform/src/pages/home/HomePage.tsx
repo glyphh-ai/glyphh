@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import { useHosting, useMe, useRuntime, useStartRuntime, useStopRuntime } from '@/api/queries';
+import { useHosting, useMe, useRuntime, useSelfRuntimes, useStartRuntime, useStopRuntime } from '@/api/queries';
 import type { Runtime } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -8,6 +8,7 @@ import { useCopy } from '@/lib/useCopy';
 import { StartMachineError } from '@/pages/machines/MachineFields';
 import { useMachineCents } from '@/pages/machines/HostingUpsell';
 import { Button, Card, Chip, CopyButton, CopyField, EmptyState, LoadingCard, type ChipTone } from '@/ui';
+import { SelfRuntimes } from './SelfRuntimes';
 import styles from './HomePage.module.css';
 
 const stateChip: Record<Exclude<Runtime['state'], 'none'>, { label: string; tone: ChipTone }> = {
@@ -17,8 +18,9 @@ const stateChip: Record<Exclude<Runtime['state'], 'none'>, { label: string; tone
 };
 
 /**
- * The first hosted machine: its address, state, connector URL and cost this month. While Glyphh hosts nothing there is
- * no starting one, no cost and no Machines: Getting started shows how to run rrotor yourself.
+ * Runtimes, the signed-in home: the runtimes you run yourself, with their token, licence and removal, and the hosted
+ * machine with its address, state, connector URL and cost this month. While Glyphh hosts nothing there is no starting
+ * one, no cost and no Machines: Getting started adds a runtime.
  */
 export function HomePage() {
   const navigate = useNavigate();
@@ -31,12 +33,19 @@ export function HomePage() {
   const stop = useStopRuntime();
   const { copied, copy } = useCopy();
   const cents = useMachineCents(runtime.data?.runtime_id ?? null);
+  const self = useSelfRuntimes();
+  const hasSelf = (self.data?.length ?? 0) > 0;
 
   const data = runtime.data;
   const connector = data?.address ? `${data.address}/mcp` : null;
   const running = data?.state === 'online' || data?.state === 'offline';
 
-  const actions = data && data.state !== 'none' && (
+  const actions = (
+    <>
+      <Button icon="plus" onClick={() => navigate('/getting-started')}>
+        Add a runtime
+      </Button>
+      {data && data.state !== 'none' && (
     <>
       {running ? (
         <Button onClick={() => stop.mutate()} loading={stop.isPending}>
@@ -55,15 +64,18 @@ export function HomePage() {
         </Button>
       )}
     </>
+      )}
+    </>
   );
 
   return (
     <>
       <PageHeader
-        title="Home"
+        title="Runtimes"
         description={
           <>
-            Your runtime and how to reach it. Claude connects to its address; your apps call it with an <Link to="/keys">API key</Link>.
+            Your runtimes and how to reach them. Claude connects to a runtime’s address; your apps call it with an{' '}
+            <Link to="/keys">API key</Link>.
             {hosting === true && (
               <>
                 {' '}
@@ -82,7 +94,7 @@ export function HomePage() {
         {(runtime.isPending || (data?.state === 'none' && hosting === undefined)) && <LoadingCard />}
         {runtime.error && <ApiErrorNotice error={runtime.error} />}
 
-        {data?.state === 'none' && hosting === false && (
+        {data?.state === 'none' && hosting === false && self.data && !hasSelf && (
           <EmptyState
             icon="home"
             title="No runtime yet"
@@ -150,6 +162,8 @@ export function HomePage() {
             </div>
           </>
         )}
+
+        <SelfRuntimes />
       </div>
     </>
   );

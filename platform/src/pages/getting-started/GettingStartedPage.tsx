@@ -6,7 +6,6 @@ import { hostingPlansText } from '@/pages/settings/billing/plans';
 import { Card, CopyField, LoadingCard } from '@/ui';
 import { HostedChoice } from './HostedChoice';
 import { SelfHostedSetup } from './SelfHostedSetup';
-import { SelfRuntimes } from './SelfRuntimes';
 import { docsUrl, type Deployment } from './snippets';
 import styles from './GettingStarted.module.css';
 
@@ -93,8 +92,6 @@ export function GettingStartedPage() {
             </>
           )}
         </Card>
-
-        <SelfRuntimes />
       </div>
     </>
   );

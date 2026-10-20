@@ -4,6 +4,9 @@ import { renderApp } from '@/test/render';
 import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
 
 describe('Home', () => {
+  // The hosted runtime alone: the self-hosted list is tested with Getting started.
+  beforeEach(() => server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([]))));
+
   it('shows the runtime: address, state, plan, connector URL and its hosting cost this month', async () => {
     renderApp('/');
     expect(await screen.findByText('https://chris-7f3a.glyphh.app')).toBeInTheDocument();
@@ -110,6 +113,9 @@ describe('Home', () => {
 });
 
 describe('Home while Glyphh hosts nothing', () => {
+  // The hosted runtime alone: the self-hosted list is tested with Getting started.
+  beforeEach(() => server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([]))));
+
   it('offers no hosted runtime to start: running rrotor yourself, from Getting started', async () => {
     server.use(...hostingOffHandlers());
     const { user, router } = renderApp('/');
