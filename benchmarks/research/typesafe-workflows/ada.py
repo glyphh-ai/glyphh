@@ -8,22 +8,18 @@ product is used: record each graded case once with every answer, refresh() (each
 word weights and word evidence, then calibrates), decide_all() each new case. Every case is answered by a model
 that never saw it: five folds, each answered by a model of the other four.
 
-The kernel is Glyphh's and is not published: GLYPHH_KERNEL points at an ada-private checkout (default:
-../../ada-private). load_kernel() refuses anything else — an older copy, a kernel without its lexicon, or a lexicon
-that does not load — so a run can only ever measure the product.
+The kernel is Glyphh's and is not published: ../ada_kernel.py loads an ada-private checkout (GLYPHH_KERNEL) and
+refuses anything else, so a run can only ever measure the product.
 
     uv run python ada.py
 """
 
 from __future__ import annotations
 
-import functools
 import math
-import os
 import re
 import sys
 import time
-import tomllib
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,33 +28,10 @@ import run
 import score
 
 HERE = Path(__file__).parent
-KERNEL = Path(os.environ.get("GLYPHH_KERNEL", HERE.parents[1] / "ada-private")).resolve()
-MIN_VERSION = (3, 11, 0)  # the kernel whose one model answers many questions (named outputs)
-LEXICON_WORDS, LEXICON_FORMS = 77_817, 192_960  # WordNet 3.0 words, Moby word forms (ada-private/lexicon)
+sys.path.insert(0, str(HERE.parent))
+import ada_kernel  # noqa: E402  (loaded when a model is first made here; ada_runtime.py needs no kernel)
+
 FOLDS = 5
-
-
-@functools.cache
-def load_kernel():
-    """The ada-private kernel, checked (once, when a model is first made here; ada_runtime.py needs none): its version, its lexicon on disk, and the lexicon actually loaded. Exits
-    with the reason otherwise; a benchmark of an older or partial kernel is not a benchmark of Ada."""
-    need = ["glyphh_kernel.py", "glyphh_spec.py", "glyphh_lexicon.py", "lexicon/words.jsonl.gz", "lexicon/grammar.jsonl.gz", "pyproject.toml"]
-    missing = [n for n in need if not (KERNEL / n).is_file()]
-    if missing:
-        sys.exit(f"{KERNEL} is not an ada-private checkout (missing {', '.join(missing)}); set GLYPHH_KERNEL")
-    project = tomllib.loads((KERNEL / "pyproject.toml").read_text())["project"]
-    version = tuple(int(p) for p in project["version"].split(".")[:3])
-    if version < MIN_VERSION:
-        sys.exit(f"{KERNEL} has kernel {project['version']}; Ada is {'.'.join(map(str, MIN_VERSION))} or later")
-    sys.path.insert(0, str(KERNEL))
-    import glyphh_lexicon
-    import glyphh_spec
-
-    words, forms = glyphh_lexicon.LEXICON.size()
-    if (words, forms) != (LEXICON_WORDS, LEXICON_FORMS):
-        sys.exit(f"the lexicon loaded {words} words and {forms} forms, not {LEXICON_WORDS} and {LEXICON_FORMS}")
-    print(f"Ada: kernel {project['version']} from {KERNEL}, lexicon {words:,} words / {forms:,} forms", file=sys.stderr)
-    return glyphh_spec
 
 
 SPEC = {
@@ -359,7 +332,7 @@ def train_model(train: list[dict], reference: dict[str, dict], situation) -> dic
     import published
 
     questions = published.questions("security_incidents")
-    glyphh_spec = load_kernel()
+    glyphh_spec = ada_kernel.load()
     model = glyphh_spec.Model(glyphh_spec.Spec.from_json(spec()), author="eval", path=None)
     counts: dict[str, Counter] = {q: Counter() for q in model.outputs()}
     for c in train:
