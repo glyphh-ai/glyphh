@@ -172,6 +172,9 @@ class Settings:
     max_word_pairs: int = 20  # at most this many pairs per text role
     word_evidence: float = 2.0  # how much a query's words, by what each says of every outcome, weigh on the vote
     # (0: not at all; 2 chosen on Banking77 inside its training set, 83.4% to 88.0%)
+    shortlist: int = kernel.SHORTLIST  # over a store that can shortlist (Postgres): the candidates a read re-ranks
+    # exactly; 0 reads every precedent, exactly, at any size
+    exact_below: int = kernel.EXACT_BELOW  # a model holding fewer precedents is read whole, exactly
 
     RANGES = {  # name: (kind, low, high) or (kind, choices)
         "k": (int, 1, 1000),
@@ -188,6 +191,8 @@ class Settings:
         "word_pairs": (bool,),
         "max_word_pairs": (int, 0, 200),
         "word_evidence": (float, 0.0, 5.0),
+        "shortlist": (int, 0, 10000),
+        "exact_below": (int, 0, 100000000),
     }
     LEARNING = ("word_weights", "word_floor", "interactions", "max_interactions", "rare", "word_pairs", "max_word_pairs")
 
@@ -215,6 +220,8 @@ class Settings:
                     raise SpecError(f"{at}.{name}", "a whole number")
                 if not low <= value <= high:
                     raise SpecError(f"{at}.{name}", f"from {low} to {high}")
+                if name == "shortlist" and 0 < value < 100:
+                    raise SpecError(f"{at}.{name}", "0 (read exactly) or from 100 to 10000")
                 value = kind(value)
             values[name] = value
         return Settings(**values)
@@ -241,6 +248,9 @@ class Output:
     ask: float | None = None
     # a named output's closed set of outcomes (spec `outputs`); empty: any outcome
     values: tuple[str, ...] = ()
+    # a confidence bar: set, decide() asks whenever the most probable outcome's probability is under it (beside
+    # `ask`, for people who think in confidence before costs). Unset, confidence alone never asks.
+    ask_below: float | None = None
 
     def cost(self, decided: str, true: str) -> float:
         table = dict((d, dict(t)) for d, t in self.costs)
@@ -323,6 +333,7 @@ class Spec:
                 "report": list(self.output.report),
                 **({"costs": {d: dict(t) for d, t in self.output.costs}} if self.output.costs else {}),
                 **({"ask": self.output.ask} if self.output.ask is not None else {}),
+                **({"ask_below": self.output.ask_below} if self.output.ask_below is not None else {}),
             },
             **(
                 {
@@ -331,6 +342,7 @@ class Spec:
                             **({"values": list(o.values)} if o.values else {}),
                             **({"costs": {d: dict(t) for d, t in o.costs}} if o.costs else {}),
                             **({"ask": o.ask} if o.ask is not None else {}),
+                            **({"ask_below": o.ask_below} if o.ask_below is not None else {}),
                         }
                         for name, o in self.outputs
                     }
@@ -1080,7 +1092,7 @@ def _parse_spec(obj: Any) -> Spec:
     _unique([l.name for l in layers], "layers")
     if any(l.name == INTERACTIONS for l in layers):
         raise SpecError("layers", f'"{INTERACTIONS}" is the layer the spec adds for its interactions')
-    out = _fields(o.get("output", {}), "output", [], ["report", "costs", "ask"])
+    out = _fields(o.get("output", {}), "output", [], ["report", "costs", "ask", "ask_below"])
     report = out.get("report", [])
     if not isinstance(report, list) or not all(isinstance(x, str) for x in report):
         raise SpecError("output.report", "must be a list of paths")
@@ -1097,7 +1109,7 @@ def _parse_spec(obj: Any) -> Spec:
             raise SpecError(at, str(e)) from None
         if name == kernel.DEFAULT:
             raise SpecError(at, 'the default output is the spec\'s "output"; name the others')
-        od = _fields(spec_of, at, [], ["values", "costs", "ask"])
+        od = _fields(spec_of, at, [], ["values", "costs", "ask", "ask_below"])
         values = od.get("values", [])
         if (
             not isinstance(values, list)
@@ -1109,7 +1121,7 @@ def _parse_spec(obj: Any) -> Spec:
         named = [d for d, _ in o_costs] + [t for _, table in o_costs for t, _ in table]
         if values and any(v not in values for v in named):
             raise SpecError(f"{at}.costs", "names an outcome outside the output's values")
-        outputs.append((name, Output((), o_costs, o_ask, tuple(values))))
+        outputs.append((name, Output((), o_costs, o_ask, tuple(values), _ask_below(od, at))))
     spec = Spec(
         _name(o["name"], "name"),
         tuple(layers),
@@ -1118,7 +1130,7 @@ def _parse_spec(obj: Any) -> Spec:
         _unit(o.get("similarity_weight", 1.0), "similarity_weight"),
         _unit(o.get("security_weight", 0.0), "security_weight"),
         str(o.get("temporal_source", "auto")),
-        Output(tuple(report), costs, ask),
+        Output(tuple(report), costs, ask, (), _ask_below(out, "output")),
         _parse_interactions(o.get(INTERACTIONS, [])),
         Settings().with_changes(_fields(o.get("settings", {}), "settings", [], list(Settings.RANGES))),
         tuple(outputs),
@@ -1146,6 +1158,12 @@ def _costs_and_ask(obj: Mapping[str, Any], at: str) -> tuple[tuple[tuple[str, tu
     )
     ask = obj.get("ask")
     return costs, (None if ask is None else _number(ask, f"{at}.ask"))
+
+
+def _ask_below(obj: Mapping[str, Any], at: str) -> float | None:
+    """An output's confidence bar (ask_below), checked: a probability, or absent."""
+    value = obj.get("ask_below")
+    return None if value is None else _unit(value, f"{at}.ask_below")
 
 
 def _resolve(spec: Spec, path: str, at: str) -> None:
@@ -1177,12 +1195,19 @@ class Model:
         min_sim: float | None = None,
         refresh_every: int | None = None,
         readonly: bool = False,
+        store: kernel.Store | None = None,
     ):
         """The levers come from the spec's `settings`, then from what configure() kept with the store, then from
         the arguments given here (k, min_sim, refresh_every), each over the last. readonly opens the store
         read-only (kernel.Space's readonly): query, facts, probabilities, decide and the settings read as ever;
         record, learn, calibrate, refresh and configure raise kernel.ReadOnlyError (E_READ_ONLY) before
-        anything is written, and a restatement on open stays in memory."""
+        anything is written, and a restatement on open stays in memory.
+        store: where the precedents live, instead of path (a kernel.Store). Over a store that can shortlist
+        (glyphh_postgres.PostgresStore) the model holds no precedents in memory: writes go to the store, and
+        query, probabilities, facts and decide read the store's `shortlist` nearest and re-rank them exactly once
+        it holds `exact_below` precedents (settings), the whole store exactly below that; learn, calibrate and
+        refresh load it whole. Such a model restates nothing on open: the job that changes what a case carries
+        (learn, configure) rewrites the store."""
         self.given = spec
         self.readonly = bool(readonly)
         self.space = kernel.Space(
@@ -1194,12 +1219,18 @@ class Model:
             path=path,
             tau=tau,
             readonly=readonly,
+            store=store,
+            lexicon=spec.settings.lexicon,
+            load=False,
         )
         kept = self.space.meta("settings")
         self.overrides: dict[str, Any] = dict(kept) if isinstance(kept, dict) else {}
         given = {k_: v for k_, v in (("k", k), ("min_sim", min_sim), ("refresh_every", refresh_every)) if v is not None}
         self.settings = spec.settings.with_changes(self.overrides).with_changes(given)
         self.spec = spec.with_settings(self.settings)
+        self.space.lexicon = self.settings.lexicon  # before a glyph is made: the model's own reading of words
+        if not hasattr(self.space.store, "shortlist"):
+            self.space._ensure_loaded()  # a file, or memory: every precedent held, as ever
         learned = self.space.meta("learned")
         self.evidence: dict[str, Any] = {}
         if isinstance(learned, dict):
@@ -1216,19 +1247,18 @@ class Model:
                 self._specs[name] = spec.with_settings(self.settings).with_weights(own)
                 self._evidences[name] = own.get("~evidence", {})
         self._apply()
-        if len(self.space):
+        if self.space.loaded and len(self.space):
             # a store recorded under other settings: its bags brought to these (in memory only, read-only)
             self.space.rewrite(self.spec.restate, persist=not self.readonly)
 
     def _apply(self) -> None:
+        """The settings into the Space: its levers, and its reading of words (per model, never the process's:
+        one worker serves many models one after another)."""
         self.space.k, self.space.min_sim = self.settings.k, self.settings.min_sim
+        self.space.shortlist, self.space.exact_below = self.settings.shortlist, self.settings.exact_below
         self.refresh_every = self.settings.refresh_every
-        try:
-            from glyphh_lexicon import LEXICON
-
-            LEXICON.enabled = self.settings.lexicon
-        except ImportError:  # no lexicon module shipped: words are symbols either way
-            pass
+        if self.space.lexicon != self.settings.lexicon:
+            self.space.relexicon(self.settings.lexicon, persist=not self.readonly)
 
     def configure(self, **changes: Any) -> dict[str, Any]:
         """Change the levers live: checked, kept with the store (over the spec's `settings`, until changed again),
@@ -1303,13 +1333,60 @@ class Model:
         situation = self.spec.situation(data)
         stamp = ts if ts is not None else self.spec.timestamp(data)
         rid = self.space.record(situation, outcome, rid=self.spec.key(situation), ts=stamp, outcomes=named or None)
-        graded = len(self.space.graded()) if outcome is not None else len(self.space) if named else 0
+        graded = self.space.graded_count() if outcome is not None else len(self.space) if named else 0
         if graded and self.refresh_every and graded % self.refresh_every == 0:
             try:
                 self.refresh()
             except SpecError:  # one outcome so far: nothing to learn yet
                 pass
         return rid
+
+    def record_many(self, cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        """Many cases in one write (one transaction in the store): each {"data", "outcome"?, "outcomes"?, "ts"?},
+        checked as record() checks one. Any case the spec refuses refuses them all, before anything is written
+        (SpecError naming cases[n]). A key_part id held already, or given twice, replaces its row. Returns
+        {ids, added, replaced, precedents}: added counts the ids new to the model, replaced the rest. When the
+        graded count crosses a multiple of refresh_every, the model refreshes once, after the batch."""
+        self._writes("record")
+        prepared = []
+        for n, case in enumerate(cases):
+            at = f"cases[{n}]"
+            if not isinstance(case, Mapping) or "data" not in case:
+                raise SpecError(at, "a case is an object with data")
+            unknown = set(case) - {"data", "outcome", "outcomes", "ts"}
+            if unknown:
+                raise SpecError(at, f"unknown field(s): {', '.join(sorted(unknown))}")
+            outcome, named = case.get("outcome"), dict(case.get("outcomes") or {})
+            try:
+                if outcome is not None and (not isinstance(outcome, str) or not outcome):
+                    raise SpecError("outcome", "a non-empty string")
+                for name, value in named.items():
+                    if isinstance(value, str):
+                        self.spec.check_outcome(self._name(name), value)
+                situation = self.spec.situation(case["data"])
+                stamp = case.get("ts") if case.get("ts") is not None else self.spec.timestamp(case["data"])
+                kernel._named_outcomes(named)
+            except (SpecError, ValueError) as e:
+                raise SpecError(at, str(e)) from None
+            rid = self.spec.key(situation)
+            prepared.append({"situation": situation, "outcome": outcome, "rid": rid, "ts": stamp, "outcomes": named or None})
+        before = self.space.graded_count() if self.refresh_every else 0
+        held = self.space.holds([c["rid"] for c in prepared if c["rid"] is not None])
+        ids = self.space.record_many(prepared)
+        added = len(set(ids) - held)
+        after = self.space.graded_count() if self.refresh_every else 0
+        if self.refresh_every and after and after // self.refresh_every > before // self.refresh_every:
+            try:
+                self.refresh()
+            except SpecError:
+                pass
+        return {"ids": ids, "added": added, "replaced": len(ids) - added, "precedents": len(self.space)}
+
+    def forget(self, rid: str) -> None:
+        """Delete one case and every outcome it carries (KeyError when the model holds no such id). What the
+        model learned from it stays until the next learn()."""
+        self._writes("forget")
+        self.space.forget(rid)
 
     def grade(self, rid: str, output: str | None, value: str | None) -> None:
         """One output's outcome on a case already recorded: added, replaced or (None) taken away."""
@@ -1403,13 +1480,31 @@ class Model:
         factor = {o: math.exp(strength * max(min(t / seen, 3.0), -3.0)) for o, t in totals.items()}
         return lambda outcome: factor.get(outcome, 1.0)
 
-    def query(self, data: Any, clearance: float = 1.0, output: str | None = None) -> kernel.Answer:
-        name = self._name(output)
+    def _reader(self, name: str, data: Any, clearance: float) -> tuple[kernel.Space, dict[str, Any], dict[str, Any]]:
+        """(the Space a read of this output runs on, the situation, its weights). Every precedent held: the store
+        as this output reads it (_space_for). Over a store that shortlists: its nearest precedents to the case,
+        by the glyphs the store holds (the default reading's), as this output reads them; the store whole when
+        it is small (Space.candidates)."""
         spec = self._spec_for(name)
         situation = spec.situation(data)
-        return self._space_for(name).query(
-            situation, weights=spec.weights(clearance, situation), bias=self.bias(situation, name), output=name
-        )
+        weights = spec.weights(clearance, situation)
+        if not self.space.loaded:
+            same = name == kernel.DEFAULT or (
+                spec.interactions == self.spec.interactions and _word_tables(spec) == _word_tables(self.spec)
+            )
+            if same:
+                near = self.space.candidates(situation, None, weights)
+            else:
+                base = self.spec.situation(data)
+                near = self.space.candidates(base, None, self.spec.weights(clearance, base))
+            if near is not self.space:
+                return (near if same else near.view(spec.restate)), situation, weights
+        return self._space_for(name), situation, weights
+
+    def query(self, data: Any, clearance: float = 1.0, output: str | None = None) -> kernel.Answer:
+        name = self._name(output)
+        space, situation, weights = self._reader(name, data, clearance)
+        return space.query(situation, weights=weights, bias=self.bias(situation, name), output=name)
 
     def facts(
         self,
@@ -1423,20 +1518,15 @@ class Model:
         output's."""
         name = self._name(output)
         spec = self._spec_for(name)
-        situation = spec.situation(data)
-        trees = self._space_for(name).facts(
-            situation, weights=spec.weights(clearance, situation), top=top, min_score=min_score, output=name
-        )
+        space, situation, weights = self._reader(name, data, clearance)
+        trees = space.facts(situation, weights=weights, top=top, min_score=min_score, output=name)
         return [{**t.to_json(), "tree": spec.report(t.to_json()["tree"], clearance)} for t in trees]
 
     def probabilities(self, data: Any, clearance: float = 1.0, output: str | None = None) -> dict[str, float]:
         """P(outcome | data) over the nearest precedents, at the output's temperature (calibrate() fits it)."""
         name = self._name(output)
-        spec = self._spec_for(name)
-        situation = spec.situation(data)
-        return self._space_for(name).probabilities(
-            situation, weights=spec.weights(clearance, situation), bias=self.bias(situation, name), output=name
-        )
+        space, situation, weights = self._reader(name, data, clearance)
+        return space.probabilities(situation, weights=weights, bias=self.bias(situation, name), output=name)
 
     def calibrate(
         self, sample: int | None = None, clearance: float = 1.0, by: str | None = None, output: str | None = None
@@ -1482,7 +1572,8 @@ class Model:
         """The outcome with the least expected cost under the output's costs (every mistake costs 1 when the
         spec names none), from the calibrated probabilities. `ask` is true when a person should answer instead:
         nothing is known, or the spec prices asking (the output's ask) below every outcome's expected cost; the
-        outcome is then still the best guess, for the person to see."""
+        outcome is then still the best guess, for the person to see. The output's ask_below asks too whenever
+        the most probable outcome's probability is under it."""
         name = self._name(output)
         probabilities = self.probabilities(data, clearance, name)
         if not probabilities:
@@ -1497,7 +1588,8 @@ class Model:
             "outcome": best,
             "expected_cost": round(expected[best], 4),
             "probabilities": {o: round(p, 4) for o, p in probabilities.items()},
-            "ask": costs.ask is not None and expected[best] > costs.ask,
+            "ask": (costs.ask is not None and expected[best] > costs.ask)
+            or (costs.ask_below is not None and max(probabilities.values()) < costs.ask_below),
         }
 
     def decide_all(

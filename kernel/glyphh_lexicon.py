@@ -28,17 +28,36 @@ CLASSES = 0.3  # its parts of speech'
 CACHE = 50000  # word glyphs kept, per (seed, dim)
 
 
+def _folder() -> Path:
+    """Where the seeds are: GLYPHH_LEXICON_DIR, else lexicon/ beside this file (a checkout, rrotor's Ada part),
+    else the installed package's data (pip install glyphh-kernel puts lexicon/ there as glyphh_lexicon_data/)."""
+    if os.environ.get("GLYPHH_LEXICON_DIR"):
+        return Path(os.environ["GLYPHH_LEXICON_DIR"])
+    here = Path(__file__).parent
+    beside = here / "lexicon"
+    if not beside.is_dir() and (here / "glyphh_lexicon_data").is_dir():
+        return here / "glyphh_lexicon_data"
+    return beside
+
+
 class Lexicon:
     def __init__(self, folder: Path | None = None) -> None:
-        self.folder = folder or Path(os.environ.get("GLYPHH_LEXICON_DIR") or Path(__file__).parent / "lexicon")
+        self.folder = folder or _folder()
+        # the whole process's off switch, for a caller that wants no lexicon anywhere. No model sets it: a model's
+        # `lexicon` setting is its own (kernel.Space(lexicon=...)), so one process serves models with and without it.
         self.enabled = True
         self._words: dict[str, tuple[tuple[str, ...], tuple[str, ...], str]] | None = None
         self._grammar: dict[str, tuple[str, ...]] | None = None
         self._glyphs: OrderedDict[tuple[str, int, int], np.ndarray] = OrderedDict()
+        self._available: tuple[Path, bool] | None = None
 
     @property
     def available(self) -> bool:
-        return (self.folder / "words.jsonl.gz").is_file() or (self.folder / "grammar.jsonl.gz").is_file()
+        """The seeds are there (looked for once per folder: every word's glyph asks)."""
+        if self._available is None or self._available[0] != self.folder:
+            found = (self.folder / "words.jsonl.gz").is_file() or (self.folder / "grammar.jsonl.gz").is_file()
+            self._available = (self.folder, found)
+        return self._available[1]
 
     def _load(self) -> None:
         if self._words is not None:

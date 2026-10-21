@@ -175,6 +175,7 @@ def test_merge_unions_by_id(tmp_path):
     a3.close()
 
 
+@pytest.mark.sqlite_only
 def test_pre_author_file_migrates(tmp_path):
     import sqlite3
     path = str(tmp_path / "old.db")
@@ -211,6 +212,7 @@ def test_small_situations_not_correlated_by_tiebreak():
     assert abs(float(a @ c) / len(a)) < 0.08
 
 
+@pytest.mark.sqlite_only
 def test_reencode_store_restores_matching(tmp_path):
     from glyphh_kernel import reencode_store
     import sqlite3
@@ -255,6 +257,7 @@ def test_bundle_is_order_free():
     assert np.array_equal(bundle(parts), bundle(parts[::-1]))
 
 
+@pytest.mark.sqlite_only
 def test_old_encoding_store_reencodes_on_open(tmp_path):
     """A populated file with no encoding stamp predates encoding 2:
     opening it re-encodes the glyphs so fresh queries still match."""
@@ -281,6 +284,7 @@ def test_old_encoding_store_reencodes_on_open(tmp_path):
     db.close()
 
 
+@pytest.mark.sqlite_only
 def test_events_persist_so_reencoding_is_lossless(tmp_path):
     from glyphh_kernel import reencode_store
     import sqlite3
@@ -729,6 +733,7 @@ def test_merge_brings_every_answer_with_the_precedent(tmp_path):
     assert memory.merge(src) == 1 and memory.graded("o") == [({"a": 1}, "y")]
 
 
+@pytest.mark.sqlite_only
 def test_a_file_from_before_named_outputs_still_opens(tmp_path):
     import sqlite3
     path = str(tmp_path / "old.db")

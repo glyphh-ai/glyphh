@@ -309,7 +309,7 @@ def test_a_model_that_learns_interactions_rewrites_its_store_and_the_pairs_decid
     model = Model(Spec.from_json(XSPEC), k=15, min_sim=0.1, path=path)
     for data, outcome in xcases():
         model.record(data, outcome)
-    assert all("interactions" not in s for s in model.space._situations)
+    assert all("interactions" not in s for s in model.space.load()._situations)
     learned = model.learn()
     assert [i["name"] for i in learned["~interactions"]] == ["b_x_c"]
     assert all(s["interactions"]["pairs"]["b_x_c"] for s in model.space._situations)  # rewritten in place
@@ -319,7 +319,7 @@ def test_a_model_that_learns_interactions_rewrites_its_store_and_the_pairs_decid
     model.space.close()
     again = Model(Spec.from_json(XSPEC), k=15, min_sim=0.1, path=path)
     assert [i.name for i in again.spec.interactions] == ["b_x_c"]
-    assert again.space._situations[0]["interactions"] == model.space._situations[0]["interactions"]
+    assert again.space.load()._situations[0]["interactions"] == model.space._situations[0]["interactions"]
     assert again.space.rewrite(again.spec.recross) == 0  # nothing to change
     again.space.close()
 

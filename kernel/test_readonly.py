@@ -224,6 +224,7 @@ def test_no_store_yet_reads_empty_and_makes_nothing(tmp_path):
     assert not path.parent.exists()
 
 
+@pytest.mark.sqlite_only
 def test_an_older_encoding_is_reencoded_in_memory_only(tmp_path):
     path = tmp_path / "v1.db"
     db = sqlite3.connect(path)
@@ -253,6 +254,7 @@ def test_an_older_encoding_is_reencoded_in_memory_only(tmp_path):
     assert ENCODING > 1
 
 
+@pytest.mark.sqlite_only
 def test_a_restatement_on_open_stays_in_memory(tmp_path):
     """A model whose settings changed what a bag carries restates its store on open; read-only, only in memory."""
     path = tmp_path / "s.db"
