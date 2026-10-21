@@ -3,6 +3,7 @@ docs_dir: docs
 nav:
   - Glyphh: architecture.md
   - Pricing: pricing.md
+  - "Plan: Ada Cloud": specs/ada-cloud.md
 theme:
   name: material
   palette:
