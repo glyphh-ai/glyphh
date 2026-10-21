@@ -601,6 +601,14 @@ one database and one Redis.
 Decided by Chris on 2026-10-21 and so not open: Ada runs inside `glyphh-ai-server` as worker process groups on its
 Redis; Postgres with a schema per org and pgvector; processes, not threads.
 
+**Also decided by Chris, 2026-10-21 ("let's build it"): Ada Cloud is the whole product.** No machines, no runtimes, no
+licence keys or licence files, no self-hosted rrotor offered to customers, Enterprise included. A customer has the
+platform and the Glyphh sign-in (the plugin's OAuth to the server, the one connector) and API keys for their code.
+This overrides section 9's Enterprise rows and decision 6: rrotor, its licence keys, the Runtimes pages, Add a runtime,
+the self-hosting docs and `install.sh` leave the product (rrotor stays as an internal repo), and Glyphh-hosted
+machines are removed rather than kept off (decision 11), in step 9. Decisions 1 to 5 and 7 to 10 are taken as
+recommended; decision 12 does not arise (there are no paying self-hosted customers).
+
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | The shortlist: its size and the size below which a model is read exactly | **`S` = 1,000 and exact below 20,000** to start; set from step 1's recall numbers |
