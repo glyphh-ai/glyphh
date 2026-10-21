@@ -1,1 +1,6 @@
 glyphh_kernel
+glyphh_lexicon
+glyphh_lexicon_data
+glyphh_nsm
+glyphh_postgres
+glyphh_spec

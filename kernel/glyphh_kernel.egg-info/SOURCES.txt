@@ -1,9 +1,16 @@
 LICENSE
 README.md
 glyphh_kernel.py
+glyphh_lexicon.py
+glyphh_nsm.py
+glyphh_postgres.py
+glyphh_spec.py
 pyproject.toml
 glyphh_kernel.egg-info/PKG-INFO
 glyphh_kernel.egg-info/SOURCES.txt
 glyphh_kernel.egg-info/dependency_links.txt
 glyphh_kernel.egg-info/requires.txt
 glyphh_kernel.egg-info/top_level.txt
+lexicon/LICENSES.md
+lexicon/grammar.jsonl.gz
+lexicon/words.jsonl.gz

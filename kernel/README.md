@@ -18,7 +18,10 @@ glyphh_kernel.py    the kernel
 glyphh_spec.py      the Glyphh spec: a model's typed config (layers,
                     segments, roles, weights, clearance) over the kernel
 glyphh_nsm.py       the NSM default model: bare text in, as semantic primes
+glyphh_lexicon.py   the lexicon reader; lexicon/ its two seeds (WordNet, Moby)
+glyphh_postgres.py  PostgresStore: a model's precedents in Postgres (Ada Cloud)
 test_*.py           the tests
+bench/shortlist.py  shortlist recall and read latency on Postgres
 dogfood/            working state of the agent that develops this repo
 ```
 
@@ -36,6 +39,11 @@ python3 -m venv .venv
 without reinstalling. Activate with `source .venv/bin/activate`, or call
 `.venv/bin/python` directly. With uv, `uv venv && uv pip install -e
 '.[dev]'` does the same.
+
+One install carries everything: the kernel, the spec, the NSM model, the
+lexicon reader and its seeds (`lexicon/`, installed as the data package
+`glyphh_lexicon_data`), and the Postgres store; `pip install
+'glyphh-kernel[postgres]'` adds psycopg 3 for it.
 
 Or skip packaging: copy `glyphh_kernel.py` into your project and
 install `numpy` into that project's environment. The module embeds its own
@@ -501,7 +509,8 @@ rate. Key parts, text roles and roles that carry sets are left alone. `output.co
 different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
 `word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
-`calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`), each checked by name
+`calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`, `word_evidence`,
+`shortlist`, `exact_below`), each checked by name
 and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
 kept with the store over the spec's; a learning lever moved relearns there
 and then. `model.settings.to_json(all=True)` reads them. The settings are not
@@ -509,7 +518,14 @@ part of `spec_id`. `model.calibrate(by="cost")` fits the temperature on
 what deciding by those costs would have cost over the held-out precedents,
 rather than on log-loss. `output.ask` prices asking a person: set, `decide` answers
 `ask: true` whenever every outcome's expected cost is above it (the band
-where either answer is costly), with the best guess still named. Weighted queries score every precedent exactly as the fact
+where either answer is costly), with the best guess still named. `output.ask_below`
+(and each named output's) is a confidence bar beside it: `decide` asks whenever the
+most probable outcome's probability is under it. `model.record_many(cases)` records
+up to any number of cases (`[{data, outcome?, outcomes?, ts?}]`) in one write, every
+case checked before anything is written, and answers `{ids, added, replaced,
+precedents}`; `model.forget(id)` deletes one case. The `lexicon` setting is the
+model's own (`Space(lexicon=...)`): one process serves models with and without it.
+Weighted queries score every precedent exactly as the fact
 tree does, in one pass over per-leaf glyph tables (`test_learned.py`
 proves the two equal). `learn` also weighs **words**: for a `bag_of_words` role it writes a
 `value_weights` table: how far each word's presence moves some outcome from
@@ -556,10 +572,64 @@ raises `SpecError` naming where. `glyphh_nsm.py` is the spec every
 organization starts with: bare text taken down to the 64 NSM primes, plus
 its words.
 
+## Stores: a file, or Postgres
+
+A Space keeps its precedents in a **store** (`glyphh_kernel.Store`, every
+read and write the kernel makes of them). `Space(path=...)` is
+`Space(store=SqliteStore(path))`, the one file it has always written.
+`glyphh_postgres.PostgresStore` keeps a model's precedents in Postgres for
+Ada Cloud: a schema per org, given at construction; a `precedents` table
+partitioned by model, each partition with an HNSW index on its glyphs as
+pgvector `bit(dim)` (`bit_hamming_ops`; a bipolar glyph is its bits, +1 as 1,
+and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096); `outcomes`,
+`meta` and `counts` keyed by model.
+
+```python
+from glyphh_postgres import PostgresStore
+store = PostgresStore("postgresql://...", schema="ada_9f2c...", model="tickets")
+model = Model(spec, store=store)        # holds no precedents in memory
+model.record_many(cases)                # one transaction
+model.decide(data)                      # shortlisted once the model is big
+```
+
+A model over a store that can **shortlist** holds nothing in memory: writes
+go to the store, and `query`, `probabilities`, `facts` and `decide` ask it
+for the `shortlist` (1,000) nearest glyphs to the query's weighted glyph by
+Hamming distance, then re-rank them with the kernel's exact weighted score
+(`Space.candidates`), once it holds `exact_below` (1,000) precedents; below
+that, or with `shortlist: 0`, the store is read whole and the answer is the
+exact one. A precedent's exact score does not depend on the others, so the
+answer is exact whenever the shortlist holds the exact top. `learn`,
+`calibrate` and `refresh` load the store whole (`Space.load()`).
+
+What `bench/shortlist.py` measured (pgvector 0.8.7, HNSW m 64,
+ef_construction 400; recall = the exact top 15 found in the shortlist;
+`bench/results.txt` has every number): Banking77 (10,003) 100% from S 250,
+every `decide` identical; credit (800) 99.6% at S 200; a synthetic ticket
+store, queries that give every role, 100% at 100k and S 1,000, 97.6% at 1M
+and S 1,000, 99.7% at 1M and S 2,000. **Queries that give few of the roles
+the records carry shortlist badly at scale**: 99.5% at 100k (S 1,000), 33%
+at 1M (81% even by an exact Hamming scan). A worker's read, shortlisted:
+Banking77 60 ms p50 at S 1,000, the synthetic store 300 ms at 1M (most of
+it the re-rank's Python, not the SQL); read whole, 50 ms at 800 precedents,
+280 ms at 5,000, 3 s at 20,000.
+`Space.merge` takes a store as well as a path: an rrotor
+`precedents.sqlite` merges into Postgres as `SqliteStore(path,
+readonly=True)`. `bench/shortlist.py` measures recall and latency.
+
 ## Tests
 
 ```bash
 .venv/bin/python -m pytest -q
+```
+
+The same suite on PostgresStore: set `GLYPHH_TEST_POSTGRES` to a
+connection string of a Postgres with pgvector, and every path a test opens
+is a model in Postgres instead (tests about the SQLite file itself are
+marked `sqlite_only` and skipped there):
+
+```bash
+GLYPHH_TEST_POSTGRES=postgresql://postgres:pw@localhost/postgres .venv/bin/python -m pytest -q
 ```
 
 The research stacks carry their own tests; see

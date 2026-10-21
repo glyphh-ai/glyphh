@@ -17,10 +17,11 @@ import re
 import sqlite3
 import time
 import uuid
-from collections.abc import Sequence
+from collections import OrderedDict
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import numpy as np
 from collections.abc import Callable
@@ -31,6 +32,9 @@ POOL = 25  # nearest precedents a probability is spread over
 TAUS = (0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
 ENCODING = 3  # bump when encode() changes; stores re-encode on open
 DEFAULT = "default"  # the output a precedent's own `outcome` is: every read without output= reads it
+SHORTLIST = 1000  # candidates a store that can shortlist hands a read, re-ranked exactly (Space.candidates)
+EXACT_BELOW = 1000  # a store holding fewer precedents than this is read whole, exactly, never shortlisted (read
+# whole per request, 800 precedents take 50 ms, 5,000 take 280 ms and 20,000 3 s: bench/shortlist.py)
 _OUTPUT = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-]{0,63}$")
 
 
@@ -133,8 +137,14 @@ THE TWO CONSTRUCTS.
       tau is TAU (0.12). Calibrated, "act at P >= 0.9" means right
       about 9 times in 10 — on the Kubernetes test it took confident
       answers from 87% to 94% right.
+      record_many([{situation, outcome, ...}]) is one write for many;
+      forget(rid) deletes one precedent.
       refresh() pulls rows other agents wrote to a shared WAL file;
       merge(other_path) unions another Space file by id, authors kept.
+      Space(store=...) keeps precedents elsewhere than a file (a Store:
+      SqliteStore is the file; glyphh_postgres.PostgresStore is Postgres,
+      whose shortlist a Space opened with load=False reads, re-ranked
+      exactly).
       Space(path=..., readonly=True) opens the file read-only (a
       follower's copy, a read-only disk): every read works, every write
       (record, merge, calibrate, set_meta, rewrite) raises ReadOnlyError
@@ -252,16 +262,44 @@ def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
     Shared seeds are shared vocabulary; different seeds are mutually
     random noise. This is how two agents agree on meaning.
     """
-    cached = _SYMBOLS.get((key, seed, dim))
+    at = (key, seed, dim)
+    cached = _SYMBOLS.get(at)
     if cached is None:
         digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
         rng = np.random.RandomState(np.frombuffer(digest[:4], dtype=np.uint32))
         cached = rng.randint(0, 2, dim, dtype=np.int8) * 2 - 1
-        _SYMBOLS[(key, seed, dim)] = cached
+        _SYMBOLS[at] = cached
+        while len(_SYMBOLS) > SYMBOL_CACHE:
+            _SYMBOLS.popitem(last=False)  # the least recently used
+    else:
+        _SYMBOLS.move_to_end(at)
     return cached.copy()
 
 
-_SYMBOLS: dict[tuple[str, int, int], np.ndarray] = {}
+# the symbols a process keeps, least recently used out first: a worker serving every org's values stays bounded
+# (4 KB a symbol at the default dim, so about 128 MB). A symbol is a pure function of its key: the bound changes
+# speed, never an answer.
+SYMBOL_CACHE = int(os.environ.get("GLYPHH_SYMBOL_CACHE") or 32768)
+_SYMBOLS: OrderedDict[tuple[str, int, int], np.ndarray] = OrderedDict()
+
+
+def _leaf_glyph(key: str, value: Any, seed: int, dim: int, lexicon: bool) -> np.ndarray:
+    """A leaf value's glyph (key: its JSON), kept in a bounded cache: a worker re-ranking a model's shortlists
+    meets the same precedents' values again and again. Like a symbol, a pure function of its key."""
+    at = (key, seed, dim, lexicon)
+    held = _LEAVES.get(at)
+    if held is None:
+        held = _encode(value, None, seed, dim, lexicon)
+        _LEAVES[at] = held
+        while len(_LEAVES) > LEAF_CACHE:
+            _LEAVES.popitem(last=False)
+    else:
+        _LEAVES.move_to_end(at)
+    return held
+
+
+LEAF_CACHE = int(os.environ.get("GLYPHH_LEAF_CACHE") or 32768)  # leaf glyphs kept (int8: 128 MB at dim 4096)
+_LEAVES: OrderedDict[tuple[str, int, int, bool], np.ndarray] = OrderedDict()
 
 
 def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -419,10 +457,11 @@ def _weight(w: Any) -> tuple[float, dict[str, Any] | None]:
 
 
 def _keyed(
-    data: dict[str, Any], weights: dict[str, Any] | None, seed: int, dim: int
+    data: dict[str, Any], weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True
 ) -> tuple[list[np.ndarray], list[float]]:
     """bind(attr:key, child) for every key, code-point order, with
-    each key's weight."""
+    each key's weight. lexicon: read a weighted set's words through the
+    lexicon (a model's own setting, never the process's)."""
     parts, ws = [], []
     for key in sorted(data):
         if not isinstance(key, str):
@@ -431,7 +470,7 @@ def _keyed(
         value = data[key]
         if own == 0 or _weighs_nothing(value, inner):
             continue  # it would carry no voice in the vote
-        child = _encode(value, inner, seed, dim)
+        child = _encode(value, inner, seed, dim, lexicon)
         if isinstance(value, (dict, list, tuple)):
             child = roll(child, 1)
         parts.append(bind(symbol(f"attr:{key}", seed, dim), child))
@@ -439,9 +478,10 @@ def _keyed(
     return parts, ws
 
 
-def _word_glyph(item: Any, seed: int, dim: int) -> np.ndarray:
-    """A weighted set's item: a word, read through the lexicon when the kernel ships one; else its symbol."""
-    if isinstance(item, str):
+def _word_glyph(item: Any, seed: int, dim: int, lexicon: bool = True) -> np.ndarray:
+    """A weighted set's item: a word, read through the lexicon when the kernel ships one and the reader asks for
+    it (lexicon); else its symbol."""
+    if isinstance(item, str) and lexicon:
         try:
             from glyphh_lexicon import LEXICON
         except ImportError:  # the kernel without its lexicon module: words are symbols
@@ -465,11 +505,11 @@ def _weighted_set(data: Any) -> bool:
     )
 
 
-def _encode(data: Any, weights: dict[str, Any] | None, seed: int, dim: int) -> np.ndarray:
+def _encode(data: Any, weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True) -> np.ndarray:
     if isinstance(data, dict):
         if not data:
             raise ValueError("cannot encode an empty object")
-        parts, ws = _keyed(data, weights, seed, dim)
+        parts, ws = _keyed(data, weights, seed, dim, lexicon)
         if not parts:
             raise ValueError("cannot bundle when every weight is 0")
         return bundle(parts, ws)
@@ -477,19 +517,22 @@ def _encode(data: Any, weights: dict[str, Any] | None, seed: int, dim: int) -> n
         if not data:
             raise ValueError("cannot encode an empty array")
         if _weighted_set(data):  # [[item, weight], ...]: each item's voice in the vote is its weight; a word read
-            parts = [_word_glyph(item, seed, dim) for item, _ in data]  # through the lexicon (glyphh_lexicon.py)
+            parts = [_word_glyph(item, seed, dim, lexicon) for item, _ in data]  # through the lexicon (glyphh_lexicon.py)
             weights = [float(w) for _, w in data]
             return bundle(parts, weights) if sum(weights) > 0 else bundle(parts)
-        return bundle([_encode(x, None, seed, dim) for x in data])
+        return bundle([_encode(x, None, seed, dim, lexicon) for x in data])
     return symbol(f"val:{_text(data)}", seed, dim)
 
 
-def encode(data: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM) -> np.ndarray:
+def encode(
+    data: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM, lexicon: bool = True
+) -> np.ndarray:
     """One glyph for any JSON-shaped value — objects nest, arrays are
     sets, scalars are symbols — with weights at every level (see the
     note above). The glyph is what sim() compares; explain() gives the
-    exact weighted sim of two values as a fact tree."""
-    return _encode(data, weights, seed, dim)
+    exact weighted sim of two values as a fact tree. lexicon=False reads
+    a weighted set's words as bare symbols (a model's `lexicon` setting)."""
+    return _encode(data, weights, seed, dim, lexicon)
 
 
 _ABSENT = object()
@@ -578,16 +621,26 @@ def _weighs_nothing(data: Any, weights: dict[str, Any] | None) -> bool:
     return True
 
 
-def _side_by_side(q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int) -> float:
+def _side_by_side(
+    q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True
+) -> float:
     """The glyph sim of two subtrees under the same weights; 0 when either
     side weighs nothing there (there is no glyph to compare)."""
     if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
         return 0.0
-    return sim(_encode(q, weights, seed, dim), _encode(r, weights, seed, dim))
+    return sim(_encode(q, weights, seed, dim, lexicon), _encode(r, weights, seed, dim, lexicon))
 
 
 def _explain(
-    key: str, weight: float, q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int, glyphs: bool = True
+    key: str,
+    weight: float,
+    q: Any,
+    r: Any,
+    weights: dict[str, Any] | None,
+    seed: int,
+    dim: int,
+    glyphs: bool = True,
+    lexicon: bool = True,
 ) -> Fact:
     """glyphs=False skips the glyph sim at inner nodes: the score is
     the same, only the side-by-side sim is left 0 (scoring every row
@@ -599,22 +652,29 @@ def _explain(
     if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
         return Fact(key, 0.0, 0.0, 0.0, 0.0, "both", q, r, [])  # nothing to compare on one side: out of the mean
     if not (isinstance(q, dict) and isinstance(r, dict)):
-        leaf = _side_by_side(q, r, weights, seed, dim)
+        leaf = _side_by_side(q, r, weights, seed, dim, lexicon)
         return Fact(key, weight, leaf, 0.0, leaf, "both", q, r, [])
     children = []
     for k in sorted(set(q) | set(r)):
         own, inner = _weight(weights.get(k) if weights else None)
-        children.append(_explain(k, own, q.get(k, _ABSENT), r.get(k, _ABSENT), inner, seed, dim, glyphs))
-    glyph_sim = _side_by_side(q, r, weights, seed, dim) if glyphs else 0.0
+        children.append(_explain(k, own, q.get(k, _ABSENT), r.get(k, _ABSENT), inner, seed, dim, glyphs, lexicon))
+    glyph_sim = _side_by_side(q, r, weights, seed, dim, lexicon) if glyphs else 0.0
     return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both", q, r, children)
 
 
-def explain(query: Any, record: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM) -> Fact:
+def explain(
+    query: Any,
+    record: Any,
+    weights: dict[str, Any] | None = None,
+    seed: int = 42,
+    dim: int = DIM,
+    lexicon: bool = True,
+) -> Fact:
     """The fact tree for one query against one record: per key, how
     close, with what weight, and its share of the whole. root.score is
     the weighted sim. A key on one side only scores 0 at full weight,
     so give it weight 0 if its absence shouldn't count."""
-    root = _explain("", 1.0, query, record, weights, seed, dim)
+    root = _explain("", 1.0, query, record, weights, seed, dim, True, lexicon)
     root.share = root.score
     return root
 
@@ -789,12 +849,24 @@ class Space:
         path: str | None = None,
         tau: float | None = None,
         readonly: bool = False,
+        store: Store | None = None,
+        lexicon: bool = True,
+        load: bool = True,
     ):
         """readonly: open the file read-only. Reads work as ever; every write raises ReadOnlyError before the
         file is touched; nothing is created (no schema, no folder, no journal or WAL files); a store from an older
-        encoding is re-encoded in memory only. A path with no file yet reads as an empty store."""
+        encoding is re-encoded in memory only. A path with no file yet reads as an empty store.
+        store: where the precedents live (a Store: SqliteStore, glyphh_postgres.PostgresStore); path= is
+        store=SqliteStore(path). lexicon: read text roles' words through the lexicon (this Space's own setting).
+        load=False leaves the precedents where they lie until a read needs them: writes go straight to the store,
+        and query, probabilities and facts read a shortlist when the store offers one and holds at least
+        exact_below precedents (Space.candidates); every other read loads the store first."""
+        if path and store is not None:
+            raise ValueError("a Space takes a path or a store, not both")
         self.readonly = bool(readonly)
-        self.path = str(Path(path).expanduser()) if path else None
+        self.path = str(Path(path).expanduser()) if path else getattr(store, "path", None)
+        self.lexicon = bool(lexicon)
+        self.shortlist, self.exact_below = SHORTLIST, EXACT_BELOW
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
         # temperature for probabilities: given, else the file's
         # calibrated one (calibrate()), else TAU
@@ -814,7 +886,9 @@ class Space:
         self._glyphs: list[np.ndarray] = []
         self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
         self._n = 0
-        self._db = None
+        self._at: dict[str, int] = {}  # a held precedent's row, by id
+        self._store: Store | None = None
+        self._loaded = True  # every precedent of the store is held in memory
         # the exact weighted score, fast: per leaf path, every distinct value's glyph once (a table and a
         # matrix), and per precedent the index of its value there (-1: the precedent has no such leaf)
         self._leaf_index: dict[str, dict[str, int]] = {}
@@ -824,7 +898,18 @@ class Space:
         self._epoch = 0  # moves when a held precedent changes or goes (not when one is added): a view rebuilds
         self._source: tuple[int, int] | None = None  # a view's: (id of the store it was made from, its epoch then)
         if path:
-            self._open(path)
+            store = _store_for(self.path, self.readonly, dim)
+        if store is not None:
+            self._attach(store, load)
+
+    @property
+    def loaded(self) -> bool:
+        """Every precedent of the store is held in memory (always, but for a Space opened with load=False)."""
+        return self._loaded
+
+    @property
+    def store(self) -> Store | None:
+        return self._store
 
     # leaves: the fast path's tables
 
@@ -851,7 +936,7 @@ class Space:
                 if key not in index:
                     index[key] = len(index)
                     self._leaf_vectors.setdefault(path, []).append(
-                        _encode(present[path], None, self.seed, self.dim).astype(np.float32)
+                        _leaf_glyph(key, present[path], self.seed, self.dim, self.lexicon).astype(np.float32)
                     )
                     self._leaf_matrix[path] = None  # rebuilt on the next read
                 rows.append(index[key])
@@ -917,7 +1002,7 @@ class Space:
 
         def node(q: Any, w: dict[str, Any] | None, at: str) -> np.ndarray:
             if not isinstance(q, dict):
-                sims = self._leaf_sims(at, _encode(q, None, self.seed, self.dim))
+                sims = self._leaf_sims(at, _encode(q, None, self.seed, self.dim, self.lexicon))
                 return np.zeros(n) if sims is None else sims
             owns = {k: _weight(w.get(k) if w else None) for k in q}
             numerator = np.zeros(n)
@@ -946,7 +1031,7 @@ class Space:
     ) -> np.ndarray:
         if not isinstance(situation, dict):
             raise TypeError("a situation is an object of attributes")
-        parts, ws = _keyed(situation, weights, self.seed, self.dim)
+        parts, ws = _keyed(situation, weights, self.seed, self.dim, self.lexicon)
         if events:
             parts.append(bind(symbol("trajectory", self.seed, self.dim), Strand(list(events)).state(self.decay)))
             ws.append(1.0)
@@ -968,6 +1053,7 @@ class Space:
         traj: np.ndarray | None,
         named: dict[str, str] | None = None,
     ) -> None:
+        self._at[rid] = self._n
         self._ids.append(rid)
         self._situations.append(situation)
         self._trajs.append(traj)
@@ -1005,6 +1091,7 @@ class Space:
 
     def outputs(self) -> list[str]:
         """The outputs this store holds outcomes for: the default output first when any precedent has one."""
+        self._ensure_loaded()
         named = sorted({name for row in self._named for name in row})
         return ([DEFAULT] if any(o is not None for o in self._outcomes) else []) + named
 
@@ -1018,9 +1105,8 @@ class Space:
             self.tau, self._tau_given = tau, False
         else:
             self._taus[name] = tau
-        if self._db is not None:
-            self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", ("tau" if name == DEFAULT else f"tau:{name}", repr(tau)))
-            self._db.commit()
+        if self._store is not None:
+            self._store.set_tau(name, tau)
 
     def view(self, fn: Callable[[Any], Any], into: Space | None = None) -> Space:
         """This store's precedents with every situation passed through fn, in memory only: the same ids, outcomes
@@ -1030,17 +1116,18 @@ class Space:
         precedents added since are appended, every outcome and temperature copied; when a held precedent changed
         or went since, it is made again. A view is for reads (and calibrate, whose tau its store keeps by
         set_tau); recording into it changes nothing in the store."""
+        self._ensure_loaded()
         fresh = (
             into is None
             or into._source != (id(self), self._epoch)
             or into._n > self._n
             or into._ids != self._ids[: into._n]
         )
-        out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author) if fresh else into
+        out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author, lexicon=self.lexicon) if fresh else into
         assert out is not None
         for i in range(out._n, self._n):
             situation = fn(self._situations[i])
-            parts, ws = _keyed(situation, None, self.seed, self.dim)
+            parts, ws = _keyed(situation, None, self.seed, self.dim, self.lexicon)
             traj = self._trajs[i]
             if traj is not None:
                 parts.append(bind(symbol("trajectory", self.seed, self.dim), traj))
@@ -1056,6 +1143,7 @@ class Space:
         return out
 
     def _drop(self, i: int) -> None:
+        del self._at[self._ids[i]]
         for column in (
             self._ids,
             self._situations,
@@ -1071,6 +1159,8 @@ class Space:
         self._leaf_drop(i)
         self._matrix[i : self._n - 1] = self._matrix[i + 1 : self._n]
         self._n -= 1
+        for j in range(i, self._n):
+            self._at[self._ids[j]] = j
 
     def record(
         self,
@@ -1085,6 +1175,47 @@ class Space:
         (`outcomes`, {output: value}; "default" there is the same as `outcome`). The same id again replaces the
         precedent, every outcome with it."""
         self._writes("record")
+        case = self._case(situation, outcome, events, rid, ts, outcomes)
+        self._put([case])
+        return case[0].id
+
+    def record_many(self, cases: Iterable[Mapping[str, Any]]) -> list[str]:
+        """Many precedents in one write (one transaction in the store): each case an object of record()'s
+        arguments ({"situation", "outcome"?, "outcomes"?, "events"?, "rid"?, "ts"?}). Every case is checked and
+        encoded before anything is written, so one bad case refuses them all. Within the batch, as across
+        batches, a later case with an id already held replaces it. Returns the ids, in order."""
+        self._writes("record")
+        prepared = []
+        for n, case in enumerate(cases):
+            if not isinstance(case, Mapping) or "situation" not in case:
+                raise ValueError(f"cases[{n}] is an object with a situation")
+            unknown = set(case) - {"situation", "outcome", "outcomes", "events", "rid", "ts"}
+            if unknown:
+                raise ValueError(f"cases[{n}]: unknown field(s) {', '.join(sorted(unknown))}")
+            prepared.append(
+                self._case(
+                    case["situation"],
+                    case.get("outcome"),
+                    case.get("events"),
+                    case.get("rid"),
+                    case.get("ts"),
+                    case.get("outcomes"),
+                )
+            )
+        self._put(prepared)
+        return [row.id for row, _, _ in prepared]
+
+    def _case(
+        self,
+        situation: dict[str, Any],
+        outcome: str | None,
+        events: list[np.ndarray] | None,
+        rid: str | None,
+        ts: float | None,
+        outcomes: dict[str, str] | None,
+    ) -> tuple[Row, dict[str, str], Any]:
+        """One case checked and encoded, nothing written: (the row a store keeps, its named outcomes, the
+        situation and trajectory held in memory)."""
         named = _named_outcomes(outcomes)
         if DEFAULT in named:
             if outcome not in (None, named[DEFAULT]):
@@ -1093,33 +1224,31 @@ class Space:
         rid = rid or str(uuid.uuid4())[:12]
         ts = time.time() if ts is None else float(ts)
         glyph = self.encode(situation, events)
-        if rid in self._ids:  # the same id again replaces the row
-            self._drop(self._ids.index(rid))
-        self._append(rid, outcome, glyph, self.author, ts, situation, self._traj(events), named)
-        if self._db is not None:
-            self._db.execute("DELETE FROM outcomes WHERE id = ?", (rid,))
-            self._db.executemany(
-                "INSERT INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)",
-                [(rid, name, value, ts) for name, value in named.items()],
-            )
-            blob = np.stack(events).astype(np.int8).tobytes() if events else None
-            self._db.execute(
-                "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
-                " dim, glyph, author, ts, events)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    rid,
-                    json.dumps(situation, ensure_ascii=False),
-                    outcome or "",
-                    self.dim,
-                    glyph.tobytes(),
-                    self.author,
-                    ts,
-                    blob,
-                ),
-            )
-            self._db.commit()
-        return rid
+        blob = np.stack(events).astype(np.int8).tobytes() if events else None
+        row = Row(rid, json.dumps(situation, ensure_ascii=False), outcome or "", self.dim, glyph, self.author, ts, blob)
+        return row, named, (situation, self._traj(events))
+
+    def _put(self, cases: list[tuple[Row, dict[str, str], Any]]) -> None:
+        for row, named, (situation, traj) in cases:
+            if self._loaded:
+                if row.id in self._at:  # the same id again replaces the row
+                    self._drop(self._at[row.id])
+                self._append(row.id, row.outcome or None, row.glyph, row.author, row.ts, situation, traj, named)
+        if self._store is not None:
+            self._store.put_many([(row, [(name, value, row.ts) for name, value in named.items()]) for row, named, _ in cases])
+
+    def forget(self, rid: str) -> None:
+        """Delete one precedent, every outcome with it, from memory and from the store. An id not held raises
+        KeyError. What was learned from it stays until the next learn()."""
+        self._writes("forget")
+        if self._loaded:
+            if rid not in self._at:
+                raise KeyError(f"no precedent {rid!r} here")
+            self._drop(self._at[rid])
+        elif self._store is None or not self._store.has(rid):
+            raise KeyError(f"no precedent {rid!r} here")
+        if self._store is not None:
+            self._store.forget(rid)
 
     def grade(self, rid: str, output: str | None, value: str | None) -> None:
         """One output's outcome on a precedent already held, added, replaced, or (None) taken away: a case
@@ -1128,26 +1257,20 @@ class Space:
         name = _output_name(output)
         if value is not None and (not isinstance(value, str) or not value):
             raise ValueError("an outcome is a non-empty string, or None to take it away")
-        if rid not in self._ids:
-            raise KeyError(f"no precedent {rid!r} here")
-        i = self._ids.index(rid)
-        if name == DEFAULT:
-            self._outcomes[i] = value
-        elif value is None:
-            self._named[i].pop(name, None)
-        else:
-            self._named[i][name] = value
-        if self._db is not None:
+        if self._loaded:
+            if rid not in self._at:
+                raise KeyError(f"no precedent {rid!r} here")
+            i = self._at[rid]
             if name == DEFAULT:
-                self._db.execute("UPDATE precedents SET outcome = ? WHERE id = ?", (value or "", rid))
+                self._outcomes[i] = value
             elif value is None:
-                self._db.execute("DELETE FROM outcomes WHERE id = ? AND output = ?", (rid, name))
+                self._named[i].pop(name, None)
             else:
-                self._db.execute(
-                    "INSERT OR REPLACE INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)",
-                    (rid, name, value, time.time()),
-                )
-            self._db.commit()
+                self._named[i][name] = value
+        elif self._store is None or not self._store.has(rid):
+            raise KeyError(f"no precedent {rid!r} here")
+        if self._store is not None:
+            self._store.grade(rid, name, value, time.time())
 
     def _sims(
         self, situation: dict[str, Any], events: list[np.ndarray] | None, weights: dict[str, Any] | None = None
@@ -1165,7 +1288,7 @@ class Space:
     ) -> Fact:
         """Precedent i explained against the situation; events, when
         either side has them, are one more key: "~events"."""
-        root = _explain("", 1.0, situation, self._situations[i], weights, self.seed, self.dim, glyphs)
+        root = _explain("", 1.0, situation, self._situations[i], weights, self.seed, self.dim, glyphs, self.lexicon)
         theirs = self._trajs[i]
         if (traj is not None or theirs is not None) and root.children:
             own, _ = _weight(weights.get("~events") if weights else None)
@@ -1236,6 +1359,8 @@ class Space:
         the similarity bar, support and receipts are unbiased.
         output: which output votes (default: the default output); a
         precedent without an outcome for it ranks but does not vote."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).query(situation, events, weights, bias, output)
         if self._n == 0:
             return Answer(False, 0.0, 0.0, 0, None, {}, [])
         outs = self._outs(output)
@@ -1282,6 +1407,7 @@ class Space:
         """Support for ONE candidate outcome, over every precedent (not
         just the top k), judged on its own: how many precedents with
         this outcome clear the bar, how close, how recent, by whom."""
+        self._ensure_loaded()
         if self._n == 0:
             return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
         bar = self.min_sim if min_sim is None else min_sim
@@ -1299,6 +1425,7 @@ class Space:
         strongest first. The read for situations that genuinely have
         several true outcomes: gate each on its own count, not on its
         share of a vote (see SPEC rule 4)."""
+        self._ensure_loaded()
         if self._n == 0:
             return []
         outs = self._outs(output)
@@ -1320,6 +1447,7 @@ class Space:
         none). The veto primitive: 'how close is the nearest recorded
         failure of this exact action?' — a direct check that no
         consensus vote can dilute."""
+        self._ensure_loaded()
         if self._n == 0:
             return 0.0
         mask = np.array([o == outcome for o in self._outs(output)[: self._n]])
@@ -1343,6 +1471,8 @@ class Space:
         events as "~events" — with the glyph sim beside it and a
         citation. Ranked by score, then glyph sim, newest, id; rows under
         min_score (if given) are left out."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).facts(situation, events, weights, top, min_score, output)
         if self._n == 0:
             return []
         sims = self._sims(situation, events)
@@ -1381,6 +1511,8 @@ class Space:
         scores at temperature tau, summed per outcome. Calibrated once
         calibrate() has fit tau to this store's own graded record.
         output: which output's outcomes, at that output's own tau."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).probabilities(situation, events, weights, bias, output)
         if self._n == 0:
             return {}
         scores = self._scores(situation, events, weights or {})
@@ -1428,6 +1560,7 @@ class Space:
         ties, so the fit serves the decision rather than the curve.
         output: fit that output's own tau (saved as 'tau:<output>')."""
         self._writes("calibrate")
+        self._ensure_loaded()
         name = _output_name(output)
         outs = self._outs(name)
         graded = [i for i in range(self._n) if outs[i] is not None]
@@ -1459,13 +1592,82 @@ class Space:
         else:
             self._taus[name] = best[2]
             key_name = f"tau:{name}"
-        if self._db is not None:
-            self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key_name, repr(best[2])))
-            self._db.commit()
+        if self._store is not None:
+            self._store.set_tau(name, best[2])
         return best[2]
 
     def __len__(self) -> int:
-        return self._n
+        return self._n if self._loaded else (self._store.count() if self._store is not None else 0)
+
+    def holds(self, ids: Iterable[str]) -> set[str]:
+        """Which of these ids the Space holds (asked of the store when not loaded)."""
+        ids = set(ids)
+        if self._loaded or self._store is None:
+            return {rid for rid in ids if rid in self._at}
+        many = getattr(self._store, "has_many", None)
+        return set(many(ids)) if many is not None else {rid for rid in ids if self._store.has(rid)}
+
+    def relexicon(self, lexicon: bool, persist: bool = True) -> int:
+        """Read words through the lexicon, or not, from now on: every held glyph and leaf made again from its
+        situation and events, and (persist) the store's glyphs with them. Returns how many were made again."""
+        lexicon = bool(lexicon)
+        if lexicon == self.lexicon:
+            return 0
+        if persist:
+            self._writes("rewrite")
+        self.lexicon = lexicon
+        if not self._loaded:  # nothing held; the store's glyphs are the job's to rewrite (load it, then this)
+            return 0
+        blobs: dict[str, bytes | None] = self._store.events() if self._store is not None else {}
+        updates: list[tuple[str, str, np.ndarray]] = []
+        for i in range(self._n):
+            glyph = self.encode(self._situations[i], _events_from_blob(blobs.get(self._ids[i]), self.dim))
+            self._glyphs[i] = glyph
+            self._matrix[i] = glyph.astype(np.float32)
+            updates.append((self._ids[i], json.dumps(self._situations[i], ensure_ascii=False), glyph))
+        self._epoch += 1
+        self._leaf_index, self._leaf_vectors, self._leaf_matrix, self._leaf_of = {}, {}, {}, {}
+        n, self._n = self._n, 0
+        for i in range(n):
+            self._leaf_add(self._situations[i])
+            self._n += 1
+        if self._store is not None and persist and updates:
+            self._store.rewrite(updates)
+        return n
+
+    def graded_count(self, output: str | None = None) -> int:
+        """How many precedents have an outcome for this output (counted by the store when not loaded)."""
+        if self._loaded or self._store is None:
+            return sum(o is not None for o in self._outs(output))
+        return self._store.count_graded(_output_name(output))
+
+    def candidates(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None = None, weights: dict[str, Any] | None = None
+    ) -> Space:
+        """The Space a read of this situation runs on. Loaded, or over a store that cannot shortlist, or under
+        exact_below precedents, or with shortlist 0: this Space itself, every precedent loaded (exact, the answer
+        it has always given). Else a small in-memory Space of the store's `shortlist` nearest precedents to the
+        situation's weighted glyph (by Hamming distance, the store's index), which the read re-ranks by its own
+        exact weighted score: the answer is the exact one whenever the shortlist holds the exact top precedents."""
+        store = self._store
+        if self._loaded or store is None or not hasattr(store, "shortlist") or self.shortlist <= 0:
+            self._ensure_loaded()
+            return self
+        if store.count() < self.exact_below:
+            self._ensure_loaded()
+            return self
+        rows, named = store.shortlist(self.encode(situation, events, weights), self.shortlist)
+        out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author, lexicon=self.lexicon)
+        out.tau, out._tau_given, out._taus = self.tau, self._tau_given, dict(self._taus)
+        for rid, text, outcome, dim, blob, author, ts, ev in rows:
+            glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            out._append(rid, outcome, glyph, author, ts, _situation_of(text), out._traj(_events_from_blob(ev, dim)))
+        held: list[dict[str, str]] = [{} for _ in out._ids]
+        for rid, output, value, _ in named:
+            if rid in out._at:
+                held[out._at[rid]][output] = value
+        out._named = held
+        return out
 
     def rewrite(self, fn: Callable[[dict[str, Any]], dict[str, Any]], persist: bool = True) -> int:
         """Every precedent's situation passed through fn and stored again, glyph and leaf tables rebuilt (its
@@ -1474,19 +1676,16 @@ class Space:
         allows)."""
         if persist:
             self._writes("rewrite")
-        blobs: dict[str, bytes | None] = {}
-        if self._db is not None:
-            try:
-                blobs = dict(self._db.execute("SELECT id, events FROM precedents").fetchall())
-            except sqlite3.OperationalError:  # a read-only store from before events were kept
-                blobs = {}
+        self._ensure_loaded()
+        blobs: dict[str, bytes | None] = self._store.events() if self._store is not None else {}
+        updates: list[tuple[str, str, np.ndarray]] = []
         changed = 0
         for i in range(self._n):
             new = fn(self._situations[i])
             if new == self._situations[i]:
                 continue
-            events = _events_from_blob(blobs.get(self._ids[i]), self.dim) if self._db is not None else None
-            parts, ws = _keyed(new, None, self.seed, self.dim)
+            events = _events_from_blob(blobs.get(self._ids[i]), self.dim) if self._store is not None else None
+            parts, ws = _keyed(new, None, self.seed, self.dim, self.lexicon)
             traj = self._trajs[i]
             if traj is not None:
                 parts.append(bind(symbol("trajectory", self.seed, self.dim), traj if events is None else Strand(events).state(self.decay)))
@@ -1494,11 +1693,8 @@ class Space:
             glyph = bundle(parts, ws)
             self._situations[i], self._glyphs[i] = new, glyph
             self._matrix[i] = glyph.astype(np.float32)
-            if self._db is not None and persist:
-                self._db.execute(
-                    "UPDATE precedents SET situation = ?, glyph = ? WHERE id = ?",
-                    (json.dumps(new, ensure_ascii=False), glyph.tobytes(), self._ids[i]),
-                )
+            if self._store is not None and persist:
+                updates.append((self._ids[i], json.dumps(new, ensure_ascii=False), glyph))
             changed += 1
         if changed:
             self._epoch += 1
@@ -1507,108 +1703,78 @@ class Space:
             for i in range(n):
                 self._leaf_add(self._situations[i])
                 self._n += 1
-            if self._db is not None and persist:
-                self._db.commit()
+            if self._store is not None and persist:
+                self._store.rewrite(updates)
         return changed
 
     def graded(self, output: str | None = None) -> list[tuple[dict[str, Any], str]]:
         """Every precedent with an outcome for this output: (situation, outcome), oldest first."""
+        self._ensure_loaded()
         outs = self._outs(output)
         return [(self._situations[i], outs[i]) for i in range(self._n) if outs[i] is not None]  # type: ignore[misc]
 
     def meta(self, key: str) -> Any:
         """A value kept with the store (JSON), or None: what a model learned from it, for one."""
-        if self._db is None:
+        if self._store is None:
             return self._meta.get(key)
-        if self.readonly and not _has_meta(self._db):
-            return None
-        row = self._db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
-        return json.loads(row[0]) if row else None
+        return self._store.meta(key)
 
     def set_meta(self, key: str, value: Any) -> None:
         self._writes("set_meta")
-        if self._db is None:
+        if self._store is None:
             self._meta[key] = value
             return
-        self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, json.dumps(value, sort_keys=True)))
-        self._db.commit()
+        self._store.set_meta(key, value)
 
-    # persistence: one portable file; WAL so several agents can share it
-    def _open(self, path: str) -> None:
-        if self.readonly:
-            return self._open_readonly(path)
-        p = Path(path).expanduser()
-        p.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(p), timeout=10.0)
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.execute("PRAGMA busy_timeout=10000")
-        _ensure_schema(self._db)
-        if _file_encoding(self._db) < ENCODING:
-            _reencode_rows(self._db, self)
-        self._db.commit()
+    # persistence: a Store (SqliteStore: one portable file, WAL so several agents can share it)
+    def _attach(self, store: Store, load: bool) -> None:
+        self._store = store
+        self.readonly = self.readonly or bool(getattr(store, "readonly", False))
+        if not self.readonly and store.encoding() < ENCODING:
+            store.reencode(self)
         self._load_taus()
-        self.refresh()
+        if load:
+            self.refresh()
+        else:
+            self._loaded = False
 
-    def _open_readonly(self, path: str) -> None:
-        self._ro_connect()
-        if self._db is not None and _has_meta(self._db):
-            self._load_taus()
-        self.refresh()
+    def load(self) -> Space:
+        """Hold every precedent of the store in memory, if the Space was opened with load=False (a job that
+        learns or calibrates, say); every read is then exact. Returns the Space."""
+        self._ensure_loaded()
+        return self
+
+    def _ensure_loaded(self) -> None:
+        """Hold every precedent of the store in memory (a Space opened with load=False, before a read that needs
+        them all)."""
+        if not self._loaded:
+            self._loaded = True
+            self.refresh()
 
     def _load_taus(self) -> None:
-        """The calibrated temperatures saved in the file: the default output's ('tau') and each named one's
+        """The calibrated temperatures saved in the store: the default output's ('tau') and each named one's
         ('tau:<output>'). A tau given to the Space wins over all of them."""
-        assert self._db is not None
-        for key, value in self._db.execute("SELECT key, value FROM meta WHERE key = 'tau' OR key LIKE 'tau:%'"):
+        assert self._store is not None
+        for key, value in self._store.taus():
             if key == "tau":
                 if not self._tau_given:
                     self.tau = float(value)
             else:
                 self._taus[key[4:]] = float(value)
 
-    def _ro_connect(self) -> None:
-        """(Re)connect a read-only store: mode=ro, no journal_mode pragma, no schema. A WAL store whose -wal and
-        -shm are not beside it (no writer has it open) is read immutable, since SQLite would otherwise make them,
-        or fail on a read-only folder; reconnecting on every refresh keeps that read current."""
-        if self._db is not None:
-            self._db.close()
-            self._db = None
-        p = Path(self.path or "")
-        if not self.path or not p.is_file():
-            return  # no store yet: an empty one, made nowhere
-        with open(p, "rb") as f:
-            header = f.read(20)
-        wal = len(header) == 20 and header[18] == 2
-        live = Path(f"{p}-wal").exists() and Path(f"{p}-shm").exists()
-        flags = "mode=ro&immutable=1" if wal and not live else "mode=ro"
-        self._db = sqlite3.connect(f"{p.resolve().as_uri()}?{flags}", uri=True, timeout=10.0)
-        self._db.execute("PRAGMA busy_timeout=10000")
-
     def refresh(self) -> int:
         """Pull in rows other agents wrote to this file since open.
         Returns how many new precedents arrived. A read-only store
         written under an older encoding is re-encoded on the way in, in
-        memory only."""
-        if self.readonly:
-            self._ro_connect()
-        if self._db is None:
+        memory only. A Space opened with load=False holds nothing to bring
+        up to date (its reads go to the store): 0."""
+        if self._store is None or not self._loaded:
             return 0
-        stale = False
-        select = "SELECT id, situation, outcome, dim, glyph, author, ts, events FROM precedents ORDER BY ts, rowid"
-        if self.readonly:  # the file as it is: no schema made, no migration written
-            cols = [r[1] for r in self._db.execute("PRAGMA table_info(precedents)")]
-            if not cols:
-                return 0
-            stale = _file_encoding(self._db) < ENCODING
-            select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents ORDER BY {o}rowid".format(
-                a="author" if "author" in cols else "'anon'",
-                t="ts" if "ts" in cols else "0.0",
-                e="events" if "events" in cols else "NULL",
-                o="ts, " if "ts" in cols else "",
-            )
-        known = set(self._ids)
+        rows = self._store.rows()
+        stale = self.readonly and self._store.encoding() < ENCODING
+        known = self._at
         added = 0
-        for rid, situation, outcome, dim, blob, author, ts, ev in self._db.execute(select):
+        for rid, situation, outcome, dim, blob, author, ts, ev in rows:
             if rid in known:
                 continue
             if dim != self.dim and not stale:
@@ -1637,41 +1803,36 @@ class Space:
         return added
 
     def _load_named(self) -> None:
-        """Every held precedent's named outcomes, as the file has them now (grades other agents gave
+        """Every held precedent's named outcomes, as the store has them now (grades other agents gave
         included). A file from before named outputs has none."""
-        assert self._db is not None
-        if not _has_table(self._db, "outcomes"):
+        assert self._store is not None
+        rows = self._store.named()
+        if rows is None:
             return
-        at = {rid: i for i, rid in enumerate(self._ids)}
+        at = self._at
         named: list[dict[str, str]] = [{} for _ in self._ids]
-        for rid, output, value in self._db.execute("SELECT id, output, value FROM outcomes ORDER BY ts, rowid"):
+        for rid, output, value, _ in rows:
             if rid in at:
                 named[at[rid]][output] = value
         self._named = named
 
-    def merge(self, other_path: str) -> int:
-        """Union another Space file into this one (by precedent id).
-        The exchange primitive between agents: ship the file, verify
-        its receipts against your own world, then merge. Rows from a
-        file written under an older encoding are re-encoded from their
-        situations on the way in. Returns how many precedents were
-        new."""
+    def merge(self, other: str | Store) -> int:
+        """Union another Space's store into this one (by precedent id): a file's path, or any Store (an
+        rrotor precedents.sqlite into a Postgres model, say). The exchange primitive between agents: ship the
+        file, verify its receipts against your own world, then merge. Rows from a store written under an older
+        encoding are re-encoded from their situations on the way in. Returns how many precedents were new."""
         self._writes("merge")
-        other = sqlite3.connect(str(Path(other_path).expanduser()))
-        cols = [r[1] for r in other.execute("PRAGMA table_info(precedents)")]
-        stale = _file_encoding(other) < ENCODING
-        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents".format(
-            a="author" if "author" in cols else "'anon'",
-            t="ts" if "ts" in cols else "0.0",
-            e="events" if "events" in cols else "NULL",
-        )
+        self._ensure_loaded()
+        given = not isinstance(other, (str, os.PathLike))
+        source: Store = other if given else _store_for(str(Path(other).expanduser()), True, self.dim)  # type: ignore[arg-type]
+        stale = source.encoding() < ENCODING
         named_of: dict[str, list[tuple[str, str, float]]] = {}
-        if _has_table(other, "outcomes"):
-            for rid, output, value, ots in other.execute("SELECT id, output, value, ts FROM outcomes ORDER BY ts, rowid"):
-                named_of.setdefault(rid, []).append((output, value, ots))
-        known = set(self._ids)
+        for rid, output, value, ots in source.named() or []:
+            named_of.setdefault(rid, []).append((output, value, ots))
+        known = self._at
         added = 0
-        for rid, situation, outcome, dim, blob, author, ts, ev in other.execute(select):
+        writes: list[tuple[Row, list[tuple[str, str, float]]]] = []
+        for rid, situation, outcome, dim, blob, author, ts, ev in source.rows(by_time=False):
             if rid in known:
                 continue
             if dim != self.dim:
@@ -1691,27 +1852,18 @@ class Space:
                 self._traj(_events_from_blob(ev, dim)),
                 {output: value for output, value, _ in rows},
             )
-            if self._db is not None:
-                self._db.execute(
-                    "INSERT OR REPLACE INTO precedents (id, situation,"
-                    " outcome, dim, glyph, author, ts, events)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (rid, situation, outcome, dim, glyph.tobytes(), author, ts, ev),
-                )
-                self._db.executemany(
-                    "INSERT OR REPLACE INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)",
-                    [(rid, output, value, ots) for output, value, ots in rows],
-                )
+            writes.append((Row(rid, situation, outcome, dim, glyph, author, ts, ev), rows))
             added += 1
-        if self._db is not None:
-            self._db.commit()
-        other.close()
+        if self._store is not None:
+            self._store.put_many(writes)
+        if not given:
+            source.close()
         return added
 
     def close(self) -> None:
-        if self._db is not None:
-            self._db.close()
-            self._db = None
+        if self._store is not None:
+            self._store.close()
+            self._store = None
 
     def __enter__(self) -> Space:
         return self
@@ -1787,6 +1939,269 @@ def decide(
     if answer.confidence < min_confidence:
         return Decision(False, top, "low_confidence", answer, veto if veto.count else None, lifted)
     return Decision(True, top, "reflex", answer, veto if veto.count else None, lifted)
+
+
+# ── stores: where a Space's precedents live ─────────────────────────
+
+
+class Row(NamedTuple):
+    """One precedent as a store keeps it. situation is its JSON text; outcome the default output's ("" for
+    none); glyph the bipolar int8 vector; events the trajectory's codons as int8 bytes, or None."""
+
+    id: str
+    situation: str
+    outcome: str
+    dim: int
+    glyph: np.ndarray
+    author: str
+    ts: float
+    events: bytes | None
+
+
+# a stored row as a store reads it back: (id, situation JSON, outcome, dim, glyph int8 bytes, author, ts, events)
+StoredRow = tuple[str, str, str, int, bytes, str, float, "bytes | None"]
+
+
+@runtime_checkable
+class Store(Protocol):
+    """Every read and write a Space makes of where its precedents live. SqliteStore is the file every Space has
+    always written; glyphh_postgres.PostgresStore keeps a model's precedents in Postgres (a schema per org, the
+    glyphs as pgvector bits) and adds shortlist(glyph, size): the nearest rows by Hamming distance, which a Space
+    opened with load=False reads and re-ranks exactly (Space.candidates).
+
+    A store's writes are its own transactions: put_many is one, whatever its size."""
+
+    path: str | None
+    readonly: bool
+
+    def encoding(self) -> int:
+        """The encoding the store's glyphs were written under (ENCODING for a new store)."""
+        ...
+
+    def reencode(self, space: Space) -> int:
+        """Every glyph made again from its situation and events by space.encode, the store stamped ENCODING."""
+        ...
+
+    def taus(self) -> Iterable[tuple[str, Any]]:
+        """The calibrated temperatures kept: ('tau', value) and ('tau:<output>', value)."""
+        ...
+
+    def rows(self, by_time: bool = True) -> Iterable[StoredRow]:
+        """Every precedent; by_time: oldest first (ts, then the order written)."""
+        ...
+
+    def named(self) -> list[tuple[str, str, str, float]] | None:
+        """Every named outcome as (id, output, value, ts), oldest first; None for a store from before them."""
+        ...
+
+    def put_many(self, rows: Sequence[tuple[Row, Sequence[tuple[str, str, float]]]]) -> None:
+        """Precedents written in one transaction, each with its named outcomes [(output, value, ts)]: an id
+        held already is replaced, outcomes and all, and moves to the end of the written order."""
+        ...
+
+    def grade(self, rid: str, output: str, value: str | None, ts: float) -> None:
+        """One output's outcome on a held precedent: set, or (None) taken away."""
+        ...
+
+    def forget(self, rid: str) -> None:
+        """Delete a precedent and its outcomes."""
+        ...
+
+    def has(self, rid: str) -> bool: ...
+
+    def count(self) -> int: ...
+
+    def count_graded(self, output: str) -> int:
+        """Precedents with an outcome for this output."""
+        ...
+
+    def set_tau(self, output: str, tau: float) -> None: ...
+
+    def meta(self, key: str) -> Any:
+        """A JSON value kept with the store, or None."""
+        ...
+
+    def set_meta(self, key: str, value: Any) -> None: ...
+
+    def events(self) -> dict[str, bytes | None]:
+        """Every precedent's events, by id."""
+        ...
+
+    def rewrite(self, rows: Sequence[tuple[str, str, np.ndarray]]) -> None:
+        """New situations (JSON text) and glyphs for held precedents, by id, in one transaction."""
+        ...
+
+    def close(self) -> None: ...
+
+
+class SqliteStore:
+    """A Space's precedents in one SQLite file: the store every Space has always written (Space(path=...)).
+    WAL, so several agents share a file live; readonly opens it without touching it (see Space)."""
+
+    def __init__(self, path: str, readonly: bool = False):
+        self.path = str(Path(path).expanduser())
+        self.readonly = bool(readonly)
+        self._db: sqlite3.Connection | None = None
+        if self.readonly:
+            self._ro_connect()
+            return
+        p = Path(self.path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        self._db = sqlite3.connect(str(p), timeout=10.0)
+        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA busy_timeout=10000")
+        _ensure_schema(self._db)
+        self._db.commit()
+
+    def _ro_connect(self) -> None:
+        """(Re)connect a read-only store: mode=ro, no journal_mode pragma, no schema. A WAL store whose -wal and
+        -shm are not beside it (no writer has it open) is read immutable, since SQLite would otherwise make them,
+        or fail on a read-only folder; reconnecting on every read of the rows keeps that read current."""
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+        p = Path(self.path)
+        if not p.is_file():
+            return  # no store yet: an empty one, made nowhere
+        with open(p, "rb") as f:
+            header = f.read(20)
+        wal = len(header) == 20 and header[18] == 2
+        live = Path(f"{p}-wal").exists() and Path(f"{p}-shm").exists()
+        flags = "mode=ro&immutable=1" if wal and not live else "mode=ro"
+        self._db = sqlite3.connect(f"{p.resolve().as_uri()}?{flags}", uri=True, timeout=10.0)
+        self._db.execute("PRAGMA busy_timeout=10000")
+
+    def _writable(self) -> sqlite3.Connection:
+        if self.readonly or self._db is None:
+            raise ReadOnlyError("write", self.path)
+        return self._db
+
+    def encoding(self) -> int:
+        return ENCODING if self._db is None else _file_encoding(self._db)
+
+    def reencode(self, space: Space) -> int:
+        db = self._writable()
+        n = _reencode_rows(db, space)
+        db.commit()
+        return n
+
+    def taus(self) -> list[tuple[str, Any]]:
+        if self._db is None or not _has_meta(self._db):
+            return []
+        return self._db.execute("SELECT key, value FROM meta WHERE key = 'tau' OR key LIKE 'tau:%'").fetchall()
+
+    def rows(self, by_time: bool = True) -> Iterable[StoredRow]:
+        if self.readonly:
+            self._ro_connect()
+        if self._db is None:
+            return []
+        cols = [r[1] for r in self._db.execute("PRAGMA table_info(precedents)")]
+        if not cols:
+            return []
+        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents".format(
+            a="author" if "author" in cols else "'anon'",
+            t="ts" if "ts" in cols else "0.0",
+            e="events" if "events" in cols else "NULL",
+        )
+        if by_time:  # the file as it is: no schema made, no migration written
+            select += " ORDER BY " + ("ts, " if "ts" in cols else "") + "rowid"
+        return self._db.execute(select)
+
+    def named(self) -> list[tuple[str, str, str, float]] | None:
+        if self._db is None or not _has_table(self._db, "outcomes"):
+            return None
+        return self._db.execute("SELECT id, output, value, ts FROM outcomes ORDER BY ts, rowid").fetchall()
+
+    def put_many(self, rows: Sequence[tuple[Row, Sequence[tuple[str, str, float]]]]) -> None:
+        db = self._writable()
+        for row, named in rows:
+            db.execute("DELETE FROM outcomes WHERE id = ?", (row.id,))
+            db.executemany(
+                "INSERT INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)",
+                [(row.id, output, value, ts) for output, value, ts in named],
+            )
+            db.execute(
+                "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
+                " dim, glyph, author, ts, events)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (row.id, row.situation, row.outcome, row.dim, row.glyph.tobytes(), row.author, row.ts, row.events),
+            )
+        db.commit()
+
+    def grade(self, rid: str, output: str, value: str | None, ts: float) -> None:
+        db = self._writable()
+        if output == DEFAULT:
+            db.execute("UPDATE precedents SET outcome = ? WHERE id = ?", (value or "", rid))
+        elif value is None:
+            db.execute("DELETE FROM outcomes WHERE id = ? AND output = ?", (rid, output))
+        else:
+            db.execute("INSERT OR REPLACE INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)", (rid, output, value, ts))
+        db.commit()
+
+    def forget(self, rid: str) -> None:
+        db = self._writable()
+        db.execute("DELETE FROM precedents WHERE id = ?", (rid,))
+        db.execute("DELETE FROM outcomes WHERE id = ?", (rid,))
+        db.commit()
+
+    def has(self, rid: str) -> bool:
+        if self._db is None:
+            return False
+        return self._db.execute("SELECT 1 FROM precedents WHERE id = ?", (rid,)).fetchone() is not None
+
+    def count(self) -> int:
+        if self._db is None or not _has_table(self._db, "precedents"):
+            return 0
+        return int(self._db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0])
+
+    def count_graded(self, output: str) -> int:
+        if self._db is None:
+            return 0
+        if output == DEFAULT:
+            return int(self._db.execute("SELECT COUNT(*) FROM precedents WHERE outcome != ''").fetchone()[0])
+        if not _has_table(self._db, "outcomes"):
+            return 0
+        return int(self._db.execute("SELECT COUNT(*) FROM outcomes WHERE output = ?", (output,)).fetchone()[0])
+
+    def set_tau(self, output: str, tau: float) -> None:
+        db = self._writable()
+        db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", ("tau" if output == DEFAULT else f"tau:{output}", repr(tau)))
+        db.commit()
+
+    def meta(self, key: str) -> Any:
+        if self._db is None or (self.readonly and not _has_meta(self._db)):
+            return None
+        row = self._db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def set_meta(self, key: str, value: Any) -> None:
+        db = self._writable()
+        db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, json.dumps(value, sort_keys=True)))
+        db.commit()
+
+    def events(self) -> dict[str, bytes | None]:
+        if self._db is None:
+            return {}
+        try:
+            return dict(self._db.execute("SELECT id, events FROM precedents").fetchall())
+        except sqlite3.OperationalError:  # a read-only store from before events were kept
+            return {}
+
+    def rewrite(self, rows: Sequence[tuple[str, str, np.ndarray]]) -> None:
+        db = self._writable()
+        for rid, situation, glyph in rows:
+            db.execute("UPDATE precedents SET situation = ?, glyph = ? WHERE id = ?", (situation, glyph.tobytes(), rid))
+        db.commit()
+
+    def close(self) -> None:
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+
+
+def _store_for(path: str, readonly: bool, dim: int) -> Store:
+    """The store a path names: its SQLite file."""
+    return SqliteStore(path, readonly)
 
 
 # ── store schema and migration ──────────────────────────────────────

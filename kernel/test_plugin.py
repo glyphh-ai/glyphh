@@ -10,6 +10,9 @@ from pathlib import Path
 
 import pytest
 
+# the plugin's hooks and server read the SQLite files themselves, in their own processes
+pytestmark = pytest.mark.sqlite_only
+
 REPO = Path(__file__).parent
 HOOKS = REPO / "plugin" / "hooks"
 
