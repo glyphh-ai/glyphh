@@ -33,7 +33,8 @@ TAUS = (0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
 ENCODING = 3  # bump when encode() changes; stores re-encode on open
 DEFAULT = "default"  # the output a precedent's own `outcome` is: every read without output= reads it
 SHORTLIST = 1000  # candidates a store that can shortlist hands a read, re-ranked exactly (Space.candidates)
-EXACT_BELOW = 20000  # a store holding fewer precedents than this is read whole, exactly, never shortlisted
+EXACT_BELOW = 1000  # a store holding fewer precedents than this is read whole, exactly, never shortlisted (read
+# whole per request, 800 precedents take 50 ms, 5,000 take 280 ms and 20,000 3 s: bench/shortlist.py)
 _OUTPUT = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-]{0,63}$")
 
 

@@ -47,6 +47,7 @@ except ImportError:  # pragma: no cover - the kernel without its Postgres extra
 
 _SCHEMA = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 EF_SEARCH_MAX = 1000  # pgvector's ceiling on hnsw.ef_search; a larger shortlist scans on (iterative_scan)
+HNSW_M, HNSW_EF_CONSTRUCTION = 64, 400  # the index's graph: see PostgresStore
 
 
 def pack(glyph: np.ndarray) -> bytes:
@@ -104,7 +105,10 @@ class PostgresStore:
     connection (the store then never closes it, and runs inside the caller's transaction when there is one).
     dim: the model's dimension (the partition's index is on bit(dim)). index=False makes no HNSW index (an import
     builds it once at the end: build_index). ef_search: pgvector's hnsw.ef_search for a shortlist (default: the
-    shortlist's size, at least 40, at most 1000)."""
+    shortlist's size, at least 40, at most 1000). hnsw_m and ef_construction: the index's graph (pgvector's m and
+    ef_construction), when this store makes it. pgvector's defaults (16, 64) lose most of the exact top for a
+    query that gives few of the roles its records carry (bench/shortlist.py: 49% at 100k precedents, against
+    99.7% at 64 and 400); the defaults here are those."""
 
     def __init__(
         self,
@@ -116,6 +120,8 @@ class PostgresStore:
         readonly: bool = False,
         index: bool = True,
         ef_search: int | None = None,
+        hnsw_m: int = HNSW_M,
+        ef_construction: int = HNSW_EF_CONSTRUCTION,
     ):
         if psycopg is None:
             raise ImportError("PostgresStore needs psycopg 3: pip install 'glyphh-kernel[postgres]'")
@@ -128,6 +134,7 @@ class PostgresStore:
         self.schema, self.model, self.dim = schema, model, dim
         self.readonly = bool(readonly)
         self.ef_search = ef_search
+        self.hnsw_m, self.ef_construction = int(hnsw_m), int(ef_construction)
         self.path = None  # no file: Space reads its errors' location from here
         self.name = f"{schema}/{model}"
         self._owned = isinstance(conninfo, str)
@@ -225,6 +232,7 @@ class PostgresStore:
             sql.SQL("CREATE INDEX IF NOT EXISTS {index} ON {part} USING hnsw ((glyph::bit({dim})) bit_hamming_ops)").format(
                 index=self._t["index"], part=self._t["part"], dim=sql.Literal(self.dim)
             )
+            + sql.SQL(" WITH (m = {m}, ef_construction = {efc})").format(m=sql.Literal(self.hnsw_m), efc=sql.Literal(self.ef_construction))
         )
 
     def build_index(self) -> None:
