@@ -108,6 +108,7 @@ def locked(tmp_path):
     unlock(folder)
 
 
+@pytest.mark.sqlite_only
 def test_every_read_works_on_a_read_only_folder_and_nothing_is_created(locked):
     folder, store, probe, seen = locked
     before = snapshot(folder)
@@ -139,6 +140,7 @@ def test_every_read_works_on_a_read_only_folder_and_nothing_is_created(locked):
     assert snapshot(folder) == before
 
 
+@pytest.mark.sqlite_only
 def test_every_write_is_refused_before_the_file_is_touched(locked, tmp_path):
     folder, store, probe, _ = locked
     before = snapshot(folder)
