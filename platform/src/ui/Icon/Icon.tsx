@@ -80,6 +80,14 @@ const paths = {
   plus: <path d="M12 5v14M5 12h14" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
+  pencil: <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4zM13.5 6.5l4 4" />,
+  moreVertical: (
+    <>
+      <circle cx="12" cy="5" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.2" fill="currentColor" />
+    </>
+  ),
   sidebar: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />

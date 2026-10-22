@@ -313,3 +313,23 @@
   color: var(--text);
   font-weight: 500;
 }
+
+/* A row that opens what it names when clicked anywhere; its name stays the link the keyboard reaches. */
+.rowLink {
+  cursor: pointer;
+}
+
+.rowLink:hover td {
+  background: var(--surface-hover);
+}
+
+.table .rowLink td {
+  vertical-align: middle;
+}
+
+.table td.rowMenu {
+  width: 1%;
+  padding: 4px 0;
+  text-align: right;
+  cursor: default;
+}

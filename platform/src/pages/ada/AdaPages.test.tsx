@@ -41,6 +41,55 @@ describe('Ada Models', () => {
     expect(row).toHaveTextContent('v2');
     expect(row).toHaveTextContent('1,240');
   });
+
+  it('opens the model from anywhere on its row', async () => {
+    on();
+    const { user, router } = renderApp('/models');
+    const row = (await screen.findByRole('link', { name: 'tickets' })).closest('tr')!;
+    await user.click(within(row).getByText('1,240'));
+    expect(router.state.location.pathname).toBe('/models/tickets');
+  });
+
+  it('offers Edit and Delete in each row’s menu, without opening the row', async () => {
+    on();
+    const { user, router } = renderApp('/models');
+    const actions = await screen.findByRole('button', { name: 'Actions for tickets' });
+    expect(actions).toHaveAttribute('aria-expanded', 'false');
+    await user.click(actions);
+    expect(router.state.location.pathname).toBe('/models');
+    const menu = screen.getByRole('menu', { name: 'Actions for tickets' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Edit', 'Delete']);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('edits the model on its Spec tab', async () => {
+    on();
+    const { user, router } = renderApp('/models');
+    await user.click(await screen.findByRole('button', { name: 'Actions for tickets' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(router.state.location.pathname).toBe('/models/tickets');
+    expect(router.state.location.search).toBe('?tab=spec');
+    expect(await screen.findByRole('tab', { name: 'Spec' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('deletes the model once its name is typed, then lists the rest and says so', async () => {
+    const fake = on();
+    const { user, router } = renderApp('/models');
+    await user.click(await screen.findByRole('button', { name: 'Actions for tickets' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete this model?' });
+    const remove = within(dialog).getByRole('button', { name: 'Delete' });
+    expect(within(dialog).getAllByRole('button').map((b) => b.textContent).slice(-2)).toEqual(['Cancel', 'Delete']);
+    expect(remove).toBeDisabled();
+    await user.type(within(dialog).getByRole('textbox', { name: 'Type the model’s name' }), 'tickets');
+    await user.click(remove);
+    expect(await screen.findByText('tickets is deleted.')).toBeInTheDocument();
+    expect(await screen.findByText('No models yet')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/models');
+    expect(fake.state.seen.some((s) => s.method === 'DELETE' && s.path === '/models/tickets')).toBe(true);
+  });
 });
 
 describe('New model', () => {
