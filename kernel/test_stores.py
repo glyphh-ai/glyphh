@@ -441,3 +441,30 @@ def test_a_precedent_is_found_by_its_id_through_an_index(pg) -> None:
         conn.execute("RESET enable_seqscan")
         assert f"{part}_id" in " ".join(r[0] for r in plan)
         PostgresStore(conn, schema, name, dim=256)  # opened again: the index is there already
+
+
+@pytest.mark.postgres
+def test_a_store_made_opens_without_waiting_for_its_writers(pg) -> None:
+    """Opening a store that is all there makes no DDL: it never waits on a write open on its partition (a CREATE
+    INDEX IF NOT EXISTS would, for its ShareLock), nor holds the schema's setup lock."""
+    import psycopg
+    from glyphh_postgres import PostgresStore
+
+    conn, schema = pg
+    store = PostgresStore(conn, schema, "busy", dim=256)
+    Space(dim=256, store=store).record({"x": "1"}, "o", rid="r1")
+    bare = PostgresStore(conn, schema, "bare", dim=256, index=False)  # its HNSW index still to make
+    writer = psycopg.connect(POSTGRES)
+    reader = psycopg.connect(POSTGRES, autocommit=True)
+    try:
+        for each in (store, bare):  # a write in flight on each, not committed
+            writer.execute(each._q("LOCK TABLE {part} IN ROW EXCLUSIVE MODE"))
+        reader.execute("SET lock_timeout = '500ms'")
+        assert PostgresStore(reader, schema, "busy", dim=256).count() == 1
+        with pytest.raises(psycopg.errors.LockNotAvailable):  # one with something to make waits, as before
+            PostgresStore(reader, schema, "bare", dim=256, index=True)
+    finally:
+        writer.rollback()
+        writer.close()
+        reader.close()
+    assert PostgresStore(conn, schema, "bare", dim=256, index=True).count() == 0  # and makes it once free
