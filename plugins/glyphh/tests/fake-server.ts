@@ -46,7 +46,7 @@ const plan = (name: string, price_cents: number | null, interval: string | null,
 }
 
 export const PLANS = [
-  plan('Free', 0, null, 5000, 10000, 5),
+  plan('Free', 0, null, 1000, 5000, 5),
   plan('Basic', 2000, 'month', 10000, 50000, 10),
   plan('Pro', 9900, 'month', 100000, 1000000, 50),
   plan('Team', 29900, 'month', 1000000, 5000000, 200),
@@ -70,7 +70,7 @@ const meOf = (s: State) => {
       month: '2026-10',
       resets_at: '2026-11-01',
       models: 2,
-      precedents: { used: 4321, max: p.cloud.precedents },
+      precedents: { used: 432, max: p.cloud.precedents },
       requests: { used: s.reads, max, over: max !== null && p.cloud.overage ? Math.max(0, s.reads - max) : 0, overage: p.cloud.overage },
       requests_per_second: p.cloud.requests_per_second,
     },

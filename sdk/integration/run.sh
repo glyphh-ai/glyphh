@@ -12,8 +12,9 @@
 #   docker build --target runtime --secret id=ada_deploy_key,src=$HOME/.ssh/glyphh_ada_deploy_key \
 #     -t glyphh-server:ada <server checkout at ada-cloud-connector>
 #
-# It makes two people, their Free orgs and an API key each straight in that throwaway database (setup_key.py; the
-# second org's month of requests already used), then runs test_cloud.py (Python) and cloud.test.mjs (TypeScript):
+# It makes two people, their orgs and an API key each straight in that throwaway database (setup_key.py; the first
+# org on Basic, as the whole way holds more than Free's 1,000 precedents; the second on Free, its month of requests
+# already used), then runs test_cloud.py (Python) and cloud.test.mjs (TypeScript):
 # create a model, import, learn, decide, backtest, activate, export, the usage, past the plan's calls a second (429
 # E_RATE) and past its month (403 E_LIMIT requests), every answer checked against contract/contract.json. Never
 # against production.

@@ -77,7 +77,7 @@ test('plan: /v1/me and the plans list load', async () => {
 
 test('plan: each plan by its price and Ada Cloud caps; Enterprise by contract, never a rate', () => {
   expect(PLANS.map(p => `${p.name} · ${priceText(p)} · ${cloudLimits(p)}`)).toEqual([
-    'Free · $0 · 5,000 precedents · 10,000 reads a month · none past the month',
+    'Free · $0 · 1,000 precedents · 5,000 reads a month · none past the month',
     'Basic · $20/month · 10,000 precedents · 50,000 reads a month · then $1 per 10,000',
     'Pro · $99/month · 100,000 precedents · 1,000,000 reads a month · then $1 per 10,000',
     'Team · $299/month · 1,000,000 precedents · 5,000,000 reads a month · then $1 per 10,000',
@@ -93,8 +93,8 @@ test("plan: the org's Ada Cloud use: precedents and reads of the plan's, the res
   await A.openSection(w.gh, 'plan')
   const at = (name: string) => PLANS.find(p => p.name === name)
   expect(usageLines(await w.gh.state.me.get(), at('Free'))).toEqual([
-    'Precedents: 4,321 of 5,000, in 2 models',
-    'Reads 2026-10: 1,234 of 10,000',
+    'Precedents: 432 of 1,000, in 2 models',
+    'Reads 2026-10: 1,234 of 5,000',
     "The month's reads start again 2026-11-01.",
   ])
 
@@ -106,7 +106,7 @@ test("plan: the org's Ada Cloud use: precedents and reads of the plan's, the res
   w.s.plan = 'Enterprise'
   await A.openSection(w.gh, 'plan')
   expect(usageLines(await w.gh.state.me.get(), at('Enterprise')).slice(0, 2)).toEqual([
-    'Precedents: 4,321 (by contract), in 2 models',
+    'Precedents: 432 (by contract), in 2 models',
     'Reads 2026-10: 62,000 (by contract)',
   ])
   expect(usageLines({ plan: { name: 'Free' } })).toEqual(['Ada Cloud usage: not available yet.'])

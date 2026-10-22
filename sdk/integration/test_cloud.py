@@ -10,6 +10,7 @@ import json
 import os
 import re
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -224,12 +225,13 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     out["usage"] = ada.usage()
 
     # refusals
-    # past the plan's calls a second (Free: 5): 429 E_RATE with Retry-After, raised by a client that does not wait
+    # past the plan's calls a second (Basic: 10): 429 E_RATE with Retry-After, raised by a client that does not wait;
+    # sent 20 at a time, so a slow laptop's reads still pass the rate
     quick = Ada(transport=rec, retry_deadline=0)
-    with pytest.raises(RateError) as rate:
-        for _ in range(60):
-            quick.decide("tickets", asked(1))
-    assert (rate.value.status, rate.value.max, rate.value.detail["reason"]) == (429, 5, "rate")
+    with pytest.raises(RateError) as rate, ThreadPoolExecutor(20) as pool:
+        for done in [pool.submit(quick.decide, "tickets", asked(1)) for _ in range(60)]:
+            done.result()
+    assert (rate.value.status, rate.value.max, rate.value.detail["reason"]) == (429, 10, "rate")
     assert rate.value.retry_after is not None and rate.value.retry_after >= 1
     out["rate"] = rate.value
     # a client that waits as Retry-After says goes on
@@ -239,11 +241,11 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     with pytest.raises(LimitError) as month:
         full.decide("tickets", asked(1))
     err = month.value
-    assert (err.status, err.reason, err.plan, err.upgrade, err.max, err.used) == (403, "requests", "Free", "Basic", 10_000, 10_000)
+    assert (err.status, err.reason, err.plan, err.upgrade, err.max, err.used) == (403, "requests", "Free", "Basic", 5_000, 5_000)
     assert err.resets_at == out["usage"].resets_at
     # a refused read is not counted
     left = full.usage()
-    assert (left.requests.used, left.requests.max, left.requests.over, left.requests.overage) == (10_000, 10_000, 0, False)
+    assert (left.requests.used, left.requests.max, left.requests.over, left.requests.overage) == (5_000, 5_000, 0, False)
     out["month"] = err
     with pytest.raises(AuthError) as wrong:
         Ada(key="glyphh_ak_not_a_key", transport=rec).decide("tickets", asked(1))
@@ -268,9 +270,9 @@ def test_the_whole_way(flow: Dict[str, Any]) -> None:
     validate(flow["query"].data, CONTRACT["answer"])
     usage = flow["usage"]
     validate(usage.data, CONTRACT["usage"])
-    assert (usage.plan, usage.models, usage.precedents.max, usage.requests_per_second) == ("Free", 3, 5_000, 5)
+    assert (usage.plan, usage.models, usage.precedents.max, usage.requests_per_second) == ("Basic", 3, 10_000, 10)
     assert usage.precedents.used >= 2480 and usage["models"] == 3
-    assert usage.requests.used > 0 and (usage.requests.max, usage.requests.over, usage.requests.overage) == (10_000, 0, False)
+    assert usage.requests.used > 0 and (usage.requests.max, usage.requests.over, usage.requests.overage) == (50_000, 0, True)
     assert re.fullmatch(r"\d{4}-\d{2}", usage.month) and re.fullmatch(r"\d{4}-\d{2}-01", usage.resets_at)
 
 
@@ -294,7 +296,7 @@ LIVE = {
     "past the plan's calls a second": ("POST", r"/v1/decide", 429, None),
     "past the plan's month of requests": ("POST", r"/v1/decide", 403, lambda b: b["error"].get("reason") == "requests"),
 }
-# Refusals a local run cannot reach cheaply: past the plan's 5,000 precedents, and a model over 100,000.
+# Refusals a local run cannot reach cheaply: past the plan's precedents (Free's 1,000), and a model over 100,000.
 NOT_LIVE = {"cases past the plan's precedents", "a big model asked with few of its roles"}
 
 

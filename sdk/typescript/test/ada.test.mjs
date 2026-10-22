@@ -277,10 +277,10 @@ for (const [name, error] of [
       assert.deepEqual(e.detail, detail);
       if (error === SpecReadingError) assert.ok(e instanceof SpecError);
       if (name === "cases past the plan's precedents") {
-        assert.deepEqual([e.reason, e.used, e.max, e.upgrade, e.resetsAt], ["precedents", 4995, 5000, undefined, undefined]);
+        assert.deepEqual([e.reason, e.used, e.max, e.upgrade, e.resetsAt], ["precedents", 995, 1000, undefined, undefined]);
       }
       if (name === "past the plan's month of requests") {
-        assert.deepEqual([e.reason, e.plan, e.upgrade, e.max], ["requests", "Free", "Basic", 10000]);
+        assert.deepEqual([e.reason, e.plan, e.upgrade, e.max], ["requests", "Free", "Basic", 5000]);
         assert.deepEqual([e.used, e.resetsAt], [sent.used, sent.resets_at]);
       }
       if (error === RateError) {
@@ -391,7 +391,7 @@ test("usage is the server's shape: the month, its reset, precedents, requests an
   const usage = await ada.usage();
   assert.equal(calls[0].path, "/v1/usage");
   assert.deepEqual(usage, sent);
-  assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.over, usage.requests.overage, usage.requests_per_second], ["Free", 5000, 10000, 0, false, 5]);
+  assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.over, usage.requests.overage, usage.requests_per_second], ["Free", 1000, 5000, 0, false, 5]);
   assert.match(usage.month, /^\d{4}-\d{2}$/);
   assert.match(usage.resets_at, /^\d{4}-\d{2}-01$/);
 });
