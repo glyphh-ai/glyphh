@@ -375,7 +375,12 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its steps 2 to 4). **O
 | `GET /v1/models/{name}/versions`; `POST …/versions/{n}/activate` | Versions; making one active again (a rollback) |
 | `POST /v1/models/{name}/backtest` `{candidates, holdout?, output?, clearance?}` | Candidates scored on held-out precedents, as a job |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | rrotor's call shape for SDK 3.0: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
+| `GET /v1/usage` | `{plan, models, precedents: {used, max}, requests}`: the precedents the org's models hold against its plan's cap (`max` null, none); `requests` null until metering |
 | `GET /v1/health` | As on the API |
+
+**The platform** calls the Ada host server-side with the OAuth access token its session holds (a Glyphh sign-in,
+full clearance), as it calls the account API; it shows Ada when the account API's `GET /v1/me` answers `ada_cloud:
+true`.
 
 ### Starting up, and migrations
 

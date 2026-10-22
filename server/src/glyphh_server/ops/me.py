@@ -31,6 +31,7 @@ class Me(BaseModel):
     plan: PlanView
     precedents: Precedents
     hosting: Hosting
+    ada_cloud: bool = Field(False, description="Ada Cloud is on (GLYPHH_ADA_CLOUD): the platform shows Ada")
 
 
 async def me(conn: AsyncConnection, who: Principal) -> Me:

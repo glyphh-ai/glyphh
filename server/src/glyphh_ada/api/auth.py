@@ -31,6 +31,7 @@ class AdaCaller:
     clearance: float
     key_id: uuid.UUID | None = None
     cap: int | None = None  # the precedents the org's plan allows across its models; None: no cap
+    plan: str | None = None  # the org's plan's name
 
     @property
     def author(self) -> str:
@@ -59,7 +60,7 @@ async def _resolve(request: Request, creds: HTTPAuthorizationCredentials) -> Ada
         if found is None:
             return None
         plan = await org_plan(conn, found.org_id)
-    return replace(found, cap=request.app.state.settings.ada_precedent_caps.get(plan.name))
+    return replace(found, cap=request.app.state.settings.ada_precedent_caps.get(plan.name), plan=plan.name)
 
 
 async def ada_caller(request: Request, creds: Bearer) -> AdaCaller:

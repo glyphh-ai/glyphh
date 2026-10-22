@@ -33,12 +33,13 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "markup_hidden": True,
     }
     assert me["precedents"] == {"used": 0, "limit": 500_000} and me["hosting"]["machines"] == []
+    assert me["ada_cloud"] is False  # off by default: the platform shows today's pages
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await person(engine)
     res = await client.patch("/v1/me", json={"name": "  Countess  "}, headers=ada.headers)
-    assert res.json()["name"] == "Countess"
+    assert res.json()["name"] == "Countess" and res.json()["ada_cloud"] is False
     assert (await client.patch("/v1/me", json={"name": ""}, headers=ada.headers)).status_code == 422
 
 
