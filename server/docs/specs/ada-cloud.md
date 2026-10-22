@@ -1,8 +1,9 @@
 # Ada Cloud: the build plan
 
-**Status:** decided; being built. Steps 0 and 1 are built (ada-private, kernel 3.12.0); **step 2 is built behind
-`GLYPHH_ADA_CLOUD` (off)**, and what building it changed in this plan is in [10.1](#101-step-2-as-built) (the
-sections below are corrected where the build proved them wrong). Written 2026-10-21 from `origin/main` of
+**Status:** decided; being built. Steps 0 and 1 are built (ada-private, kernel 3.12.0); **steps 2, 3 and 4 are built
+behind `GLYPHH_ADA_CLOUD` (off)**, and what building them changed in this plan is in
+[10.1](#101-steps-2-3-and-4-as-built) (the sections below are corrected where the build proved them wrong). Written
+2026-10-21 from `origin/main` of
 `ada-private` (kernel 3.11.0), `rrotor`, `server`, `glyphh`, `platform` and `web`; revised the same day to Chris's
 architecture (no new app or infrastructure: Python worker processes on the server's Redis, Postgres with a schema per
 org and pgvector). Every claim about today cites the file it comes from.
@@ -229,15 +230,17 @@ the symbol cache and the request in hand, not the stores.
 
 **Writes:** `record` encodes in the worker (the kernel's `Space.record` path, through the storage interface, 3.5)
 and upserts the row (a `key_part` id replaces its row, as `Space.record` does). `refresh_every` no longer runs
-inline (**built:** workers turn it off; enqueueing a `refresh` job on reaching it is not built yet). `learn` and
+inline (**built:** workers turn it off, and a write that takes the model past a multiple of it starts a `learn` job,
+unless one is open; counted in precedents held, not graded ones, which would cost a scan of the partition a write).
+`learn` and
 `calibrate` ~~read every graded row of the model~~ **read at most the newest 50,000 precedents** (`limits.JOB_SAMPLE`:
 a fully loaded 1M model needs about 16 GB, 20 to 25 KB a precedent in a `Space`) in a job worker, which loads them
 into an in-memory `Space` as today and writes the learned `meta` and taus back; a model of 50,000 or fewer learns
 exactly as rrotor does. When learned word weights or interactions change, the kernel rewrites the sampled glyphs
 (`Model._learn` → `Space.rewrite`) and the job restates every other precedent after it, in batches of 1,000
-(**built** in place, not yet into a new partition swapped in: reads go on meanwhile, against a mix of old and new
-glyphs until it ends). On Postgres a model is never restated when it is opened, so whatever changes what a case
-carries (learn now; settings and spec changes in step 4) must rewrite the store in its job.
+(**built** in place for `learn`: reads go on meanwhile, against a mix of old and new glyphs until it ends; a new
+version that changes what a case carries is written into a store of its own and swapped in, 5.2). On Postgres a model
+is never restated when it is opened, so whatever changes what a case carries must rewrite the store in its job.
 
 ### 3.5 The kernel's storage interface
 
@@ -266,7 +269,8 @@ cloud run one kernel.
 | A read (`query`, `probabilities`, `decide`, `facts`) | 10 s end to end, then `504 E_TIMEOUT` |
 | `learn`, `calibrate`, `backtest`, imports, exports | Always jobs |
 | Rate | Per org per plan (section 7), `429 E_RATE` with `Retry-After` |
-| Imports | 200 MB a file, one running per model |
+| Imports | 200 MB a file, one running per model (**built:** `GLYPHH_ADA_IMPORT_BYTES`; one import or re-encode open per model, `409 E_BUSY`; a file in the request's body 5 MB) |
+| Backtests | **Built:** 10 candidates; the held-out from the newest `limits.JOB_SAMPLE` |
 | Spec | `dimension` at most 8,192 (the kernel allows 65,536, `_parse_spec`), 64 roles, 20 named outputs, 200 values per output, `k` at most 200; **built:** 64 KB of JSON (`413 E_SPEC_LIMIT`), each bound `422 E_SPEC_LIMIT` with `limit` and `max` |
 | Strings | **Built:** no string, key or value, may hold NUL (`\u0000`): Postgres's `jsonb` refuses it, so the API answers `400 E_INVALID` `nul` before a worker sees it |
 | A query's roles | **Built:** over 100,000 precedents, at least half the roles that vote (3.4), else `422 E_FEW_ROLES` |
@@ -317,10 +321,10 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | Call | Does | How |
 |---|---|---|
 | `POST /v1/decide` `{model, data, output?, outputs?, clearance?, include?}` | The headline: the kernel's `decide` (or `decide_all` for `outputs`): `{outcome, expected_cost, probabilities, ask, receipts, model, version}`; `include: ["facts"]` adds the nearest fact tree | sync |
-| `GET /v1/models`, `POST /v1/models` `{name, spec}`, `GET /v1/models/{name}`, `DELETE /v1/models/{name}?confirm=<name>` | The org's models; make one (version 1, its partition and index); one with its active version, size and settings; delete it | API (Postgres only); delete is a job |
-| `PUT /v1/models/{name}/spec` `{spec, note?}` | A new spec version, made active (5.2) | API; a job if it re-encodes |
-| `GET /v1/models/{name}/versions`, `POST …/versions/{n}/activate` | Every version, who made it and why; roll back | API |
-| `GET`, `PATCH /v1/models/{name}/settings` `{changes, note?}` | Every lever as it stands; a change is a new version (section 5) | API; relearns as a job |
+| `GET /v1/models`, `POST /v1/models` `{name, spec}`, `GET /v1/models/{name}`, `DELETE /v1/models/{name}?confirm=<name>` | The org's models; make one (version 1, its partition and index); one with its active version, size and settings; delete it | API (Postgres only); ~~delete is a job~~ **built:** delete is sync (dropping partitions is quick) |
+| `PUT /v1/models/{name}/spec` `{spec, note?, backtest?}` | A new spec version (5.2): **built,** `{version, active, job}` | sync; a job if it re-encodes |
+| `GET /v1/models/{name}/versions`, `POST …/versions/{n}/activate` | Every version, who made it and why; roll back | sync; a job when the version reads another store |
+| `GET`, `PATCH /v1/models/{name}/settings` `{changes, note?, backtest?}` | Every lever as it stands; a change is a new version (section 5) | sync; ~~relearns as a job~~ a job when it re-encodes or recalibrates |
 | `POST /v1/models/{name}/record` `{data, outcome?, outcomes?, ts?}` | One case: `{id, precedents}` | sync |
 | `POST /v1/models/{name}/record_many` `{cases}`, `Idempotency-Key` | Up to 1,000, one transaction: `{ids, added, replaced, precedents}` | sync |
 | `POST /v1/models/{name}/grade` `{id, output?, value}` | One output's outcome on a case already recorded | sync |
@@ -328,8 +332,8 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | `POST /v1/models/{name}/query`, `/probabilities`, `/facts`, `/decide` | The kernel's own, `{data, output?, clearance?}` (`facts`: `top`, `min_score`): the `Answer` shape of `contract/contract.json` unchanged | sync |
 | `POST /v1/models/{name}/learn`, `/calibrate`, `/refresh` | Weights and temperature from the store | job |
 | `POST /v1/models/{name}/backtest` | Score candidates before they go live (5.3) | job |
-| `POST /v1/models/{name}/imports`, `GET …/imports/{id}` | Bulk load (section 6) | job |
-| `GET /v1/models/{name}/export` | Everything back out (section 6) | job |
+| `POST /v1/models/{name}/imports`, `GET …/imports/{id}`; **built:** `PUT /v1/uploads/{link}` | Bulk load (section 6): the job and its upload link, or the file in the body (5 MB) | job |
+| ~~`GET /v1/models/{name}/export`~~ **built:** `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | Everything back out (section 6): a job (so not a GET), whose done state carries the download link | job |
 | `GET /v1/jobs/{id}` | Any job's state and progress | API |
 | `GET /v1/usage` | Precedents, requests this period, against the plan | API |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** rrotor's call shape (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
@@ -367,26 +371,29 @@ change goes live. Claude does the tuning conversationally through the connector 
 
 From `glyphh_spec.py` (`Settings.RANGES`, `Role`, `Output`, `_parse_spec`), plus one of the cloud's own:
 
+**Built** (step 4): the last column is what a change does to the stored cases, as built (`situations.py`): "live" is
+a new version active at once on the same store; "re-encodes" a job writing a new store, which then learns (5.2).
+
 | Lever | Where | Range or kind | What it changes | Relearns |
 |---|---|---|---|---|
-| `k` | `settings` | 1 to 1,000 (cloud: 200) | Nearest precedents a query votes over | No |
-| `min_sim` | `settings` | 0 to 1 | The weighted similarity a precedent needs to vote: higher, "say nothing rather than guess" | No |
-| `word_weights` | `settings` | bool | Learn a weight per word of a text role | Yes |
-| `word_floor` | `settings` | 0 to 1 | The least a learned word weighs | Yes |
-| `interactions`, `max_interactions` | `settings` | bool; 0 to 50 | Learn pairs of roles that tell more together | Yes |
-| `rare` | `settings` | 1 to 100,000 | Values, words and pairs seen fewer times are not learned from | Yes |
-| `word_pairs`, `max_word_pairs` | `settings` | bool; 0 to 200 | Learn pairs of words (phrase intents) | Yes |
-| `word_evidence` | `settings` | 0 to 5 | How much a case's words, by what each says of each outcome, weigh on the vote | No |
-| `lexicon` | `settings` | bool | Read words through WordNet and Moby | Re-encodes text roles |
-| `calibrate_by`, `calibrate_sample` | `settings` | `loss` or `cost`; 10 to 1,000,000 | Probabilities that mean what they say, or that decide best by `costs` | Recalibrates |
-| `refresh_every` | `settings` | 10 to 1,000,000, or none | Learn and calibrate again every so many graded records (a job, in the cloud) | — |
-| `shortlist` (cloud) | `settings` | 0 (exact) or 100 to 10,000 | How many candidates pgvector hands the kernel (3.4) | No |
-| Role `similarity_weight`, `security_weight` | spec | 0 to 1 | A role's voice; the clearance needed to see it | Yes (learned weights override similarity) |
-| `numeric_config`, `text_encoding`, `lexicons`, `key_part` | spec | per role | How a value is read | Re-encodes |
-| Declared `interactions` | spec | role pairs | Pairs always read together | Yes |
-| `output.costs`, `output.ask`, `output.ask_below`; each named output's `values`, `costs`, `ask` | spec | numbers | What each mistake costs; when to ask a person | No (`calibrate_by: cost` recalibrates) |
-| `output.report` | spec | paths | What a fact tree shows | No |
-| Layer and segment weights, `seed`, `dimension` | spec | 0 to 1; ints | Voices; the encoding (`seed`, `dimension` re-encode every glyph and rebuild the index) | Re-encodes |
+| `k` | `settings` | 1 to 1,000 (cloud: 200) | Nearest precedents a query votes over | No (live) |
+| `min_sim` | `settings` | 0 to 1 | The weighted similarity a precedent needs to vote: higher, "say nothing rather than guess" | No (live) |
+| `word_weights` | `settings` | bool | Learn a weight per word of a text role | Yes (re-encodes) |
+| `word_floor` | `settings` | 0 to 1 | The least a learned word weighs | Yes (re-encodes) |
+| `interactions`, `max_interactions` | `settings` | bool; 0 to 50 | Learn pairs of roles that tell more together | Yes (re-encodes) |
+| `rare` | `settings` | 1 to 100,000 | Values, words and pairs seen fewer times are not learned from | Yes (re-encodes) |
+| `word_pairs`, `max_word_pairs` | `settings` | bool; 0 to 200 | Learn pairs of words (phrase intents) | Yes (re-encodes) |
+| `word_evidence` | `settings` | 0 to 5 | How much a case's words, by what each says of each outcome, weigh on the vote | No (live) |
+| `lexicon` | `settings` | bool | Read words through WordNet and Moby | Re-encodes text roles (the whole store) |
+| `calibrate_by`, `calibrate_sample` | `settings` | `loss` or `cost`; 10 to 1,000,000 | Probabilities that mean what they say, or that decide best by `costs` | Recalibrates (live, then a `calibrate` job) |
+| `refresh_every` | `settings` | 10 to 1,000,000, or none | Learn and calibrate again every so many graded records (a job, in the cloud: **built,** counted in precedents held) | — (live) |
+| `shortlist` (cloud) | `settings` | 0 (exact) or 100 to 10,000 | How many candidates pgvector hands the kernel (3.4) | No (live) |
+| Role `similarity_weight`, `security_weight` | spec | 0 to 1 | A role's voice; the clearance needed to see it | ~~Yes (learned weights override similarity)~~ No (live): a glyph is the unweighted bundle, so the store reads as it is; learned weights override similarity until the next `learn` |
+| ~~`numeric_config`, `text_encoding`, `lexicons`, `key_part`~~ `numeric_config`, `text_encoding`, `key_part` | spec | per role | How a value is read | ~~Re-encodes~~ **Refused** (`422 E_SPEC_READING`): the store keeps each case's situation in the kernel's terms (a number's bins, a text's words, the id its key parts made), never the data sent, so it cannot be read again another way; a new model and an import. (`lexicons`, a role's other names in data, changes nothing stored: live) |
+| Declared `interactions` | spec | role pairs | Pairs always read together | Yes (re-encodes) |
+| `output.costs`, `output.ask`, `output.ask_below`; each named output's `values`, `costs`, `ask` | spec | numbers | What each mistake costs; when to ask a person | No (live; `calibrate_by: cost` recalibrates) |
+| `output.report` | spec | paths | What a fact tree shows | No (live) |
+| Layer and segment weights, `seed`, `dimension` | spec | 0 to 1; ints | Voices; the encoding (`seed`, `dimension` re-encode every glyph and rebuild the index) | Re-encodes (`seed`, `dimension`, roles added or taken away); weights live |
 | `clearance` | per key and request | 0 to 1 | What a reader may see and what votes for them | — |
 | Learned weights (`value_weights`, `~interactions`, `~evidence`) | the model's `meta` | learned, not set | What the precedents say each role, value, word and pair is worth | — |
 
@@ -397,8 +404,19 @@ From `glyphh_spec.py` (`Settings.RANGES`, `Role`, `Output`, `_parse_spec`), plus
   the only truth:** a settings change writes a new row in `spec_versions` with those `settings`; workers see the
   version counter move and reload; there are no `meta` overrides.
 - Each version keeps the learned weights and taus it went live with, so a rollback restores them without relearning.
-- A change of the encoding (`seed`, `dimension`, a role's reading) is a job that writes the new glyphs into a new
-  partition beside the old and switches at the end; rollback switches back while the old partition is kept (7 days).
+  **Built:** a version keeps the learned weights and taus its store had when it stopped being active (`spec_versions.
+  learned`), and gets them back when made active again.
+- A change of the encoding (`seed`, `dimension`, ~~a role's reading~~ roles, declared pairs, learning levers, the
+  lexicon) is a job that writes the new glyphs into a new partition beside the old and switches at the end; rollback
+  switches back while the old partition is kept (7 days). **Built** (`reencode.py`): the job restates each stored
+  situation for the new spec (cut to its roles, its words and pairs weighed again), encodes and writes it, a batch at a
+  time; the new store learns and its index is built; then what was written meanwhile is copied, first freely, then
+  under the model's write lock (every write to its cases takes it shared) together with forgets, grades and the switch,
+  so no write is lost; the version counter moves before the lock is let go. A rollback to a version on the active
+  store is at once; to one on another store, a job that brings that store up to date (the store left behind keeps how
+  far it was copied, `synced_seq`) and then switches. A store no version has read for 7 days is dropped at the next
+  re-encode (`410 E_VERSION_GONE`). A change of how a role reads its values is refused (5.1). One import or
+  re-encode at a time per model (`409 E_BUSY`); a version still being made cannot be made active (`409 E_NOT_READY`).
 
 ### 5.3 Backtest: before it goes live
 
@@ -413,13 +431,20 @@ From `glyphh_spec.py` (`Settings.RANGES`, `Role`, `Output`, `_parse_spec`), plus
 
 - For the active version and each candidate (up to 10): an in-memory `Model` in the job worker, built from the
   model's graded precedents minus the held-out ones, `learn` and `calibrate` on that training part only, then every
-  held-out case scored, through the same shortlist-and-re-rank path the live model uses. The live model is never
-  touched. This is what the benchmarks' `tune_*.py` scripts do by hand (rrotor `benchmarks/banking77/`), and what the
-  Ada skill's Tuning section asks of Claude.
+  held-out case scored, ~~through the same shortlist-and-re-rank path the live model uses~~ **as built,** exactly,
+  over the in-memory model (it holds at most `limits.JOB_SAMPLE` precedents). So a backtest scores the exact read: the
+  same as the live one below 1,000 precedents, and, above, as the shortlist recalls it (step 1: 100% at Banking77's
+  10,003 for `S` ≥ 250; less for queries that give few roles, 3.4). The live model is never touched. This is what the benchmarks' `tune_*.py`
+  scripts do by hand (rrotor `benchmarks/banking77/`), and what the Ada skill's Tuning section asks of Claude.
 - Answers per candidate: accuracy, log-loss, total and mean cost by the output's `costs`, ask rate (and accuracy on
   the cases it did not ask about), coverage (`sufficient`), a confusion table, and the change against the active
-  version.
+  version. **Built,** with two more: the vote's own accuracy (`top_accuracy`, what the benchmarks' plain `query`
+  scores) beside decide's, and the expected calibration error over ten bins of confidence; the confusion table is the
+  mistakes only (`{truth: {decided: count}}`: 77 outcomes make a full one 5,929 cells). A candidate whose spec reads a
+  role differently is answered with its refusal; one with too few cases to learn from is scored unlearned, and says so.
 - `PATCH settings` and `PUT spec` take `"backtest": <job id>`, kept on the version.
+- **Measured** (`scripts/ada-backtest-bench.py`, 10.1): the backtest reproduces both benchmarks' held-out numbers for
+  the live settings, to the digit.
 
 ### 5.4 Claude, tuning
 
@@ -466,6 +491,21 @@ kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all 
   moves to the cloud.
 - **During an import `refresh_every` is off,** and the index is dropped and rebuilt at the end (building HNSW once
   is far faster than inserting into it row by row).
+- **Built** (step 3, `importer.py`, `sqlite_import.py`): ~~a staging table~~ the file itself is kept in the org's
+  `files` table in 1 MB chunks (streamed in by the upload, `PUT /v1/uploads/{link}`, a one-hour HMAC-signed link that
+  is its own credential; or sent in the body of `POST …/imports`, up to 5 MB), and the job reads it twice: once to
+  check every row and count the ids it would add (6.3), then to record, a batch of 1,000 a transaction, with how far
+  it got kept on the job, so a worker that dies leaves the rest to another (rows without key parts get ids made from
+  the job and the row, so a row written twice is one row). Refused rows are named and the rest go in. Then `learn`
+  and `calibrate` once, then the index, built `CONCURRENTLY` so writes to the model go on meanwhile (a plain build
+  holds them for minutes at a million). JSON Lines takes `{data, outcome?, outcomes?, ts?, id?}`; CSV as above, a
+  `null` target skipping a column, an empty cell nothing, a bad number refusing its row, a header the spec cannot
+  take refusing the import (`E_MAPPING`). A model's own export (a zip) is a JSON Lines import whose cases are stored
+  situations. `ada_sqlite`: when a sample of the file's cases encodes, by this model's seed, dimension and lexicon,
+  to the glyphs the file holds (and names only its roles), the kernel's `Space.merge` unions it a batch at a time,
+  glyphs copied, an id the model holds keeping its row as merge does; else each case is restated, as an export's.
+  What the file's (or the export's) model learned is kept when the model reads its cases the same way and held
+  nothing before; otherwise the model learns. One import or re-encode at a time per model (`409 E_BUSY`).
 - **Cost at scale:** 10,003 Banking77 cases encode and record in about 4 s, 7 s with `learn` (rrotor
   `benchmarks/banking77/README.md`), in memory. In the cloud add the batched `COPY` into Postgres and the index build:
   target 10,000 cases in under 15 s end to end, 1M in under 30 minutes on two job workers; step 1 measures it.
@@ -477,23 +517,38 @@ kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all 
   pass its plan's cap, unless sent with `"partial": true`, which records up to the cap and reports the rest refused.
 - The count is the org's total across its models (`models.precedent_count`, kept by each write in the same
   transaction), not per node.
+- **Built:** the count is the kernel's own `counts` of each live model's active store (an old version's store kept
+  for a rollback does not count), summed when a write asks. The caps are a setting until step 6 puts them in
+  `plan_versions` (`GLYPHH_ADA_PRECEDENT_CAPS`, by the plan's name: Free 5,000, Pro 100,000, Team 1,000,000;
+  Enterprise none), resolved with the caller's key and carried in the worker's message. `record` and `record_many`
+  are held to the cap too (no `partial`: refused whole). An `ada_sqlite` file is merged whole: no `partial`.
 
 ### 6.4 Export: never locked in
 
-`GET /v1/models/{name}/export?format=jsonl|ada_sqlite`, a job answering a one-hour download link:
+~~`GET /v1/models/{name}/export?format=jsonl|ada_sqlite`~~ **Built:** `POST /v1/models/{name}/export {format:
+jsonl|ada_sqlite}`, a job whose done state carries a one-hour download link (`GET /v1/downloads/{link}`); the file is
+kept in the org's `files` while the link works:
 
-- `jsonl`: one line per precedent `{id, data, outcome, outcomes, ts, author}`, plus `spec.json` (every version) and
-  `learned.json` (the active learned weights and taus), zipped.
+- `jsonl`: one line per precedent ~~`{id, data, outcome, outcomes, ts, author}`~~ `{id, situation, outcome, outcomes,
+  ts, author}`, plus `spec.json` (every version) and `learned.json` (the active learned weights and taus), zipped.
+  **As built, `situation` not `data`:** the store never kept the data a case was sent as, only its situation in the
+  kernel's terms (5.1), so that is what an export can give. Imported into a model of the same spec it answers exactly
+  as the exported one does (receipts, hashes and authors included).
 - `ada_sqlite`: a kernel store written through `SqliteStore`, which a self-hosted rrotor opens as
-  `precedents.sqlite` unchanged.
-- Org-wide export on the platform's Settings page: every model, one archive.
+  `precedents.sqlite` unchanged. **Built,** glyphs, named outcomes, learned weights and taus included; the kernel's
+  `Model(path=…)` over it answers as the cloud model does.
+- Org-wide export on the platform's Settings page: every model, one archive. (Not built.)
 
 ### 6.5 Deletion
 
 - **One case:** `DELETE …/precedents/{id}` deletes its row and outcomes; learned weights still reflect it until the
   next `learn`, which the service schedules.
-- **A model:** its partition, versions, meta and jobs (`DROP TABLE` of the partition).
-- **An org:** `DROP SCHEMA ada_<org> CASCADE`, then the org as today.
+- **A model:** its partition, versions, meta and jobs (`DROP TABLE` of the partition). **Built:** every store its
+  versions read (a re-encode leaves more than one), its outcomes, meta and counts, its versions, jobs and files, in
+  one transaction; its `models` row is kept, marked deleted.
+- **An org:** `DROP SCHEMA ada_<org> CASCADE`, then the org as today. **Built** in the transaction that removes the
+  org (`ops/joining.py`, the only place an org is removed today: its last person joins another org). A worker holding
+  one of its models finds the tables gone and answers `E_MODEL_MISSING`.
 - **Backups:** gone from the managed database's backups when they age out; the window is Fly Managed Postgres's (to
   confirm) and is stated in the privacy policy.
 
@@ -599,8 +654,8 @@ Claude, honest rather than hopeful.
 | 0 | **Kernel 3.12 fixes** (`ada-private`) | Per-model `lexicon`; an LRU `_SYMBOLS`; `forget`; `record_many` with an id index; `output.ask_below`; packaging of `glyphh_lexicon` and `lexicon/` | The kernel's tests; Banking77 and credit results unchanged | 2 to 3 |
 | 1 | **The kernel's storage interface** (3.5) | `Store`, `SqliteStore`, `PostgresStore` with `bit` glyphs and `shortlist`; shortlist-and-re-rank reads; `CREATE EXTENSION vector` checked on production; a recall and latency benchmark (credit, Banking77, synthetic 1M) choosing `S` and the exact threshold | The kernel's suite on both stores; rrotor's suite on the new kernel; recall of the exact top `k` within `S` at least 99% on the benchmarks | 7 to 11 |
 | 2 | **Workers, queues and storage in the server** | `src/glyphh_ada/`: org schemas made and migrated at start; the `ada` and `adajobs` process groups in `fly.toml`; Redis Streams with consumer groups, reply lists, timeouts, claims; jobs with progress; the worker's model cache and version counter; `cloud` keys with clearance; models, spec, record, record_many, grade, forget, the reads, learn, calibrate; `ada.glyphh.ai` as a second host; the `/v1/runs` shim | 100% coverage as the server keeps; a two-org isolation test; SDK 3.0's suite against it; killing a worker mid-request loses nothing kept; load: 200 reads a second on 100 models, p99 under 150 ms (**built; measured in 10.1:** 155 a second on eight workers at 1,000 precedents a model, p99 71 ms) | 8 to 11 |
-| 3 | **In and out** | Imports (JSONL, CSV with mapping, `ada_sqlite`) as jobs; the cap at import; export (JSONL, SQLite); model and org deletion | A 1M-row import end to end; an export re-imported answers the same | 3 to 5 |
-| 4 | **Tuning** | Settings as versions; activate and rollback; re-encode jobs into a new partition; backtest with candidates | Backtest on credit and Banking77 reproduces the benchmarks' held-out numbers | 4 to 5 |
+| 3 | **In and out** | Imports (JSONL, CSV with mapping, `ada_sqlite`) as jobs; the cap at import; export (JSONL, SQLite); model and org deletion | A 1M-row import end to end; an export re-imported answers the same (**built; measured in 10.1:** a million checked, recorded and learned in 17 minutes, 93 with its HNSW index; an export re-imported answers identically, tested) | 3 to 5 |
+| 4 | **Tuning** | Settings as versions; activate and rollback; re-encode jobs into a new partition; backtest with candidates | Backtest on credit and Banking77 reproduces the benchmarks' held-out numbers (**built; measured in 10.1:** every number reproduced) | 4 to 5 |
 | 5 | **The connector** | `mcp/tools/ada.py`; `create_api_key`; upload and download links | The MCP test suite; a Claude session that builds a model from a CSV, tunes one lever and decides | 2 |
 | 6 | **Plans and metering** | Cloud caps in `plan_versions`; Redis counting and rate limits; `ada_requests` meter and price; `plan`, `plans`, `usage` updated | Stripe test mode: a Pro org over its requests is invoiced the overage; Free is refused at its cap | 3 to 4 |
 | 7 | **SDKs, contract, skill** | SDK 3.1 (Python, TypeScript), contract 4 with fixtures, the rewritten Ada skill | The SDKs' suites against a local server; the skill tried end to end in Claude Code | 3 to 4 |
@@ -613,11 +668,13 @@ Against the first draft: no new app, volumes, Litestream or placement (about 6 d
 interface and the pgvector read path are new (about 9 days): the total is about the same, and Glyphh runs one app,
 one database and one Redis.
 
-### 10.1 Step 2, as built
+### 10.1 Steps 2, 3 and 4, as built
 
 Built on 2026-10-21 in `server` (`src/glyphh_ada/`, `tests/ada/`), against kernel 3.12.0 (ada-private 334a605),
-behind `GLYPHH_ADA_CLOUD` (off). `docs/architecture.md` (Ada Cloud) describes what is there; this is what building it
-changed in the plan, and what it measured.
+behind `GLYPHH_ADA_CLOUD` (off). `docs/architecture.md` (Ada Cloud) describes what is there; this is what building
+them changed in the plan, and what they measured. Step 2 first; steps 3 and 4 [after it](#steps-3-and-4).
+
+#### Step 2
 
 **What the build changed**
 
@@ -630,11 +687,11 @@ changed in the plan, and what it measured.
 | `SET LOCAL search_path` to the org's schema alone | The schema then `public` (pgvector's operators), per message; every statement names its schema; and row-level security on every table of the schema that **fails closed** (a session without the org sees nothing) |
 | Claimed after 30 s | Claimed once a worker has stopped heartbeating 5 s (sync) or 60 s (jobs); a write is made once (the `requests` table: the caller's `Idempotency-Key` or the message's id, in the write's transaction), so a write taken over after its worker died after committing answers and writes nothing |
 | `cloud` keys in `runtime_keys` | As planned (`scope`, `clearance`), filtered out of everything a runtime holds; made at the Ada host, `POST /v1/keys`, by a signed-in person (the connector's `create_api_key` is step 5); a resolved key is kept 10 s in the process, so revoking takes up to 10 s |
-| Models, spec versions, settings | Make, read, list, delete; a spec version is 1 until step 4 (no `PUT …/spec`, no settings changes): on Postgres a model is never restated when opened, so a spec or settings change must be a job that rewrites the store, which is step 4's re-encode |
-| `refresh_every` enqueues a `refresh` job | Off in workers; not enqueued yet (step 4) |
+| Models, spec versions, settings | Make, read, list, delete; a spec version is 1 until step 4 (no `PUT …/spec`, no settings changes): on Postgres a model is never restated when opened, so a spec or settings change must be a job that rewrites the store, which is step 4's re-encode (**step 4: built**) |
+| `refresh_every` enqueues a `refresh` job | Off in workers; not enqueued yet (step 4) (**step 4: built,** a `learn` job, counted in precedents held) |
 | The worker's model cache | As planned, plus: at most 256 models, a minute old at most (a lost bump costs a minute), and a model read whole (under 1,000) is dropped after the read |
 | `ada.glyphh.ai` routes by Host | As planned (`GLYPHH_ADA_HOSTS`); its paths are the Ada API's own (`/v1/models` there is not the account API's) |
-| Bulk imports drop and rebuild the HNSW index | Step 3 (imports); `record_many` inserts into the index (m 64, about seven times slower to write than m 16: 100,000 precedents loaded in 157 s through the API) |
+| Bulk imports drop and rebuild the HNSW index | Step 3 (imports) (**step 3: built**); `record_many` inserts into the index (m 64, about seven times slower to write than m 16: 100,000 precedents loaded in 157 s through the API) |
 | `jsonb` and NUL | `400 E_INVALID` `nul` at the API |
 
 **Found while building** (each fixed, each with a test): numpy's OpenBLAS started a thread per CPU in every worker
@@ -668,12 +725,92 @@ page); `ada.glyphh.ai` a certificate on `glyphh-ai-server` (`fly certs add ada.g
 `GLYPHH_ADA_CLOUD=on` (`fly secrets set`); the `ada` and `adajobs` groups on performance VMs and counted for the load
 (`fly scale vm performance-2x --process-group ada`, `fly scale count ada=5 adajobs=1`).
 
+#### Steps 3 and 4
+
+**What the build changed** (sections 4.2, 5 and 6 carry each in place)
+
+| Plan | As built, and why |
+|---|---|
+| A spec role's reading (`numeric_config`, `text_encoding`, `key_part`) changed by a re-encode | **Refused** (`E_SPEC_READING`): the store keeps each case as the kernel holds it (a number's bins, a text's words, the id its key parts made), never the data it was sent as, so nothing can be read again another way. A new model and an import |
+| Export lines `{id, data, …}` | `{id, situation, …}`, for the same reason: the data is not kept. A model's export imported into a model of the same spec answers exactly as it did |
+| Only an encoding change writes a new partition; settings changes relearn in place | Every change of what a stored case carries (the seed, the dimension, roles added or taken away, declared pairs, the learning levers, the lexicon) writes a store of its own, learned before it goes live, so a rollback finds the old store as it was; every other change (read levers, outputs and costs, weights, security) is live at once on the same store. Role weights are live because a glyph is the unweighted bundle |
+| Rollback restores the learned weights "it went live with" | What its store had when it stopped being active; a rollback to a version on another store brings that store up to date first (a job), so no write made since is lost |
+| A staging table for uploads | The file itself, in the org's `files`, 1 MB a row, by a one-hour HMAC-signed upload link (its own credential, no key) or in the request's body (5 MB); read twice by the job, never held whole |
+| The precedent cap at import and `record_many` | Also at `record`. The caps are a setting by plan name until step 6 (`GLYPHH_ADA_PRECEDENT_CAPS`); the count is the kernel's `counts` of each live model's active store |
+| The index built once at the end | `CREATE INDEX CONCURRENTLY` (a plain build holds the model's writes for the whole build: tens of minutes at a million), with `maintenance_work_mem` 512 MB; a failed concurrent build's invalid index dropped |
+| `GET …/export` | `POST …/export`, a job; the done job carries the download link |
+| A model's deletion is a job | Sync, as step 2 built it, now every store its versions read, its versions, jobs and files |
+| Backtests through the live shortlist path | Exactly, in memory (5.3); two more numbers (the vote's accuracy, the calibration error), and the confusion table cut to the mistakes |
+
+**Found while building** (each fixed, each with a test):
+
+- **The kernel looked precedents up by id with no index for it.** `PostgresStore` finds a precedent by `id` alone
+  (`grade`, `forget`, `has`, `rewrite`), but its partition's only index is the primary key `(model, id)`, whose
+  leading column such a lookup does not give: every lookup scanned the whole index (Postgres's plan: 51,000 cost
+  units at a million precedents, against 8 with an index). Step 2's load test, at 1,000 precedents a model, never saw
+  it; the first 1M import stalled on it for minutes in its `learn`, which rewrites 50,000 glyphs by id (it would have
+  run for over an hour). The server now gives every partition an index on its ids (`catalog.BY_ID`; migration 2 adds
+  it to the partitions step 2 made). The kernel should make it itself (ada-private, `PostgresStore._setup`).
+- **A `learn` that died midway left the store stated by the old tables under the new.** The kernel keeps what it
+  learned (`meta.learned`) before it rewrites the precedents, so a job killed between, and run again by another
+  worker, learned the same tables, found nothing changed and restated nothing. The store is now marked `restating`
+  until the restatement ends, and a learn that finds the mark restates every precedent.
+- **A `calibrate` of fewer than ten graded precedents was `E_INTERNAL`.** The kernel raises a plain `ValueError` there,
+  not its `SpecError`; it is `E_SPEC` now (and a backtest candidate with too few to learn from is scored unlearned).
+- **An import's own `Idempotency-Key` refused its second write.** The upload's queueing is a second write of the same
+  request: it now goes unkeyed (it is once by itself), so the same request sent twice answers the import as it stands.
+- **A resumed import that had nothing left to record reset how far it had got** to the start; it keeps it now.
+
+**Measured** (Docker on an M2 Max, 12 CPUs, 8 GB for all containers: Postgres 17 with pgvector 0.8 at its defaults,
+`/dev/shm` 1 GB; the app, one sync worker process and one jobs worker process):
+
+*The backtest against the benchmarks* (`scripts/ada-backtest-bench.py`: each benchmark's own data, from its
+`fetch.sh`, and split, imported as one model with the held-out cases the newest, then `POST …/backtest` holding out
+the newest; the live settings are the benchmark's): every number reproduces.
+
+| | Benchmark (README) | Backtest, live settings |
+|---|---|---|
+| Credit, learned spec with interactions, calibrated, `decide` | 70.0%, the bank's cost 100 | **70.0%, cost 100** |
+| the same, asking where every answer costs over 0.5 | 111 of 200 decided, 81.1% right | **ask rate 44.5% (111 decided), 81.1%** |
+| the same, the plain vote | 77.5% | **77.5%** (`top_accuracy`) |
+| without the pairs (candidate `interactions: false`) | 66.0%, cost 108 | **66.0%, cost 108** (vote 78.5%, as the README's) |
+| Banking77, learned from its own store, word evidence 2 | 88.2% of the 3,080 | **88.2%** (`top_accuracy` 0.8818; `decide`, calibrated, 88.7%) |
+| word evidence 0 (candidate) | 83.3% | **83.3%** (0.8328) |
+
+Credit's backtest (800 recorded and learned and calibrated twice, 200 scored twice) took 16 s; Banking77's (10,003
+and 3,080, two candidates) 112 s.
+
+*The 1M import* (`scripts/ada-import.py`: a 1,000,000-line JSON Lines file, 101 MB, of a five-role spec with a key part
+and two outcomes, sent to its upload link; the org on Team, so exactly at its cap):
+
+| Phase | Time | Rate |
+|---|---|---|
+| The file to its upload link (101 MB, streamed into `files`) | 0.6 s | |
+| Every row checked, the new ids counted against the cap (Team: a million, so exactly at it) | 18 s | 55,000 rows a second |
+| Recorded, the index dropped, 1,000 a transaction | 4 min 35 s | 3,600 a second |
+| `learn` on the newest 50,000 (it learned a pair, product × size), the other 950,000 restated, `calibrate` | 11 min 45 s | restating about 1,450 a second |
+| The HNSW index (`m` 64, `ef_construction` 400), `CONCURRENTLY`, `maintenance_work_mem` 512 MB, two parallel workers | 76 min | 1,300 a second until the graph outgrew its memory (about 320,000 in), then about 190 |
+| **End to end** | **93 min** | |
+| Then `POST /v1/decide` on it (one sync worker) | p50 109 ms, p95 231 ms | |
+
+So the import itself (check, record, learn) takes 17 minutes for a million on one job worker, inside the plan's 30;
+the index is the rest, and it is the HNSW parameters step 1 chose for recall. The same build with the whole graph in
+memory (3 GB, serial: this host's 1 GB `/dev/shm` forbids a parallel build that large) ran at about 485 a second, about
+35 minutes for a million (extrapolated from its first 150,000). Before Team's million is sold: `maintenance_work_mem`
+sized to the graph (about 3 GB at a million with `m` 64) on a database with the RAM, building in parallel; or a
+cheaper graph (`ef_construction` 200, `m` 32), its recall measured first with ada-private's `bench/shortlist.py`; or
+the import answered done before its index, reads scanning meanwhile (about 0.7 s a read at a million, step 1).
+
+The first 1M run found the two learn faults above: it stalled in `learn` on the unindexed lookups, and its worker,
+stopped there and started again, went on from where it was (pass 1 again in 15 s, then nothing left to record) but
+restated nothing. The run in the table is a fresh one with both fixed.
+
 ### Risks and unknowns
 
 | Risk | What would show it | Answer |
 |---|---|---|
 | The shortlist misses precedents the exact weighted score would rank in the top `k` | Step 1's recall benchmark | Raise `S`; read small and medium models exactly; per-model `shortlist: 0` |
-| `learn` on a big model is slow: it reads every graded row and, when word weights or pairs change, rewrites every glyph and rebuilds the index | Step 1 and 3's 1M runs | It is a job; batches; the index built once at the end; the old partition serves until the new one is ready |
+| `learn` on a big model is slow: it reads every graded row and, when word weights or pairs change, rewrites every glyph and rebuilds the index | Step 1 and 3's 1M runs (**measured, 10.1:** learning a million's newest 50,000 and restating the rest, 12 minutes; its HNSW index, 76 minutes at 512 MB of build memory) | It is a job; batches; the index built once at the end; the old partition serves until the new one is ready. The index build needs memory sized to its graph (about 3 GB a million) or a cheaper graph |
 | Postgres grows with every customer's precedents and indexes, and the HNSW indexes want RAM | Database size and cache hit rate | A bigger managed plan, priced into Team; free orgs' cold partitions without an index (exact reads, they are small) |
 | Many org schemas slow migrations and the catalog | Org count past about 5,000 | Free orgs to shared tables with RLS (3.3) |
 | Redis is on the request path now; an outage stops reads | Redis health | The server already depends on it; a managed Redis with failover; requests fail fast with `503 E_UNAVAILABLE` rather than hang |
