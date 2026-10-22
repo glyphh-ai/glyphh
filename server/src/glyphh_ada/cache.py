@@ -3,13 +3,13 @@ the active spec, the learned weights and the temperatures, never the precedents 
 partitions). An entry is good while the model's version counter in Redis (protocol.version_key) is the one it was
 loaded at, and for at most TTL seconds, so a lost bump costs a minute at most. Least recently used entries go first.
 
-Inline refresh (the spec's settings.refresh_every) is off in a worker: a record never learns in a request."""
+Inline refresh (the spec's settings.refresh_every) is off in a worker: a record never learns in a request; a write
+that passes a multiple of it starts a learn job instead (handlers.py)."""
 
 import time
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any
 
 import glyphh_spec
 import psycopg
@@ -57,18 +57,22 @@ class Models:
             self._lru.popitem(last=False)
         return entry
 
-    def load(self, schema: str, found: tuple[uuid.UUID, int, Any, Any], stamp: str = "0") -> Entry:
-        """A Model over the store, opened as a worker opens it: no index made, no precedent loaded, no inline
-        refresh."""
-        model_id, version, spec_json, _ = found
-        spec = glyphh_spec.Spec.from_json(spec_json)
+    def load(self, schema: str, found: catalog.Live, stamp: str = "0") -> Entry:
+        """A Model over the active version's store, opened as a worker opens it: no index made, no precedent
+        loaded, no inline refresh."""
+        spec = glyphh_spec.Spec.from_json(found.spec)
         # Opened read-only, the store only checks the model is there: no DDL and no lock on the org's schema (its
         # partition and index were made with the model); then made writable, for this worker's writes to it.
-        store = PostgresStore(self.conn, schema, model_id.hex, dim=spec.dimension, readonly=True)
+        store = PostgresStore(self.conn, schema, found.store, dim=spec.dimension, readonly=True)
         store.readonly = False
         model = glyphh_spec.Model(spec, store=store)
         model.refresh_every = None
-        return Entry(model_id, version, stamp, time.monotonic(), model)
+        return Entry(found.id, found.version, stamp, time.monotonic(), model)
+
+    def drop_org(self, org: str) -> None:
+        """Every model of this org out of the cache (its schema went: the org was deleted)."""
+        for key in [k for k in self._lru if k[0] == org]:
+            del self._lru[key]
 
     def settle(self, org: str, name: str, entry: Entry) -> None:
         """After a read: a model read whole (under exact_below precedents) holds its precedents in memory now, which

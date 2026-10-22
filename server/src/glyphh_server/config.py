@@ -18,6 +18,11 @@ class AdaCloudSettings(BaseSettings):
     ada_write_timeout: float = Field(30.0, gt=0, le=120)
     # Worker processes per machine of a group; 0: one per vCPU.
     ada_workers: int = Field(0, ge=0, le=64)
+    # The precedents an org may hold across its models, by its plan's name (docs/specs/ada-cloud.md, section 7); a
+    # plan not named here (Enterprise) has none. Checked by every import (the whole file, up front) and every record.
+    ada_precedent_caps: dict[str, int] = {"Free": 5_000, "Pro": 100_000, "Team": 1_000_000}
+    # The largest file an import takes, in bytes.
+    ada_import_bytes: int = Field(200 << 20, ge=1 << 20)
 
     @property
     def ada_host_set(self) -> set[str]:

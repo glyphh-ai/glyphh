@@ -70,7 +70,9 @@ and classes under 120. Lint with `uv run ruff check . && uv run ruff format --ch
 `tests/ada/` runs Ada Cloud with real workers (threads, and processes where a worker is killed): pgvector in the
 suite's database, SDK 3.0 (PyPI `glyphh` 3.0.0) against `/v1/runs`, the contract it was built to
 (`tests/ada/contract.json` and `fixtures.json`, from `glyphh-ai/glyphh` `contract/`), and the two-org isolation test.
-`scripts/ada-load.py` measures reads a second and latency against a server and its workers on a private network.
+`scripts/ada-load.py` measures reads a second and latency against a server and its workers on a private network;
+`scripts/ada-import.py` a 1M-row import end to end, and `scripts/ada-backtest-bench.py` the backtest against rrotor's
+credit and Banking77 benchmarks (their own data and split).
 
 ## Builds
 

@@ -2,6 +2,7 @@
 loops running in threads (the ordinary role the server connects as, so the org schemas' row-level security holds),
 pgvector made in the suite's database by its superuser (as Fly's Extensions page does in production)."""
 
+import asyncio
 import hashlib
 import json
 import multiprocessing
@@ -154,10 +155,29 @@ async def an_org(engine: AsyncEngine, ada: httpx.AsyncClient, clearance: float =
     return who, await key_for(ada, who, clearance)
 
 
-async def a_model(ada: httpx.AsyncClient, key: dict[str, str], name: str = "shapes", n: int = 0) -> dict[str, Any]:
-    made = await ada.post("/v1/models", json={"name": name, "spec": SHAPES}, headers=key)
+async def a_model(
+    ada: httpx.AsyncClient, key: dict[str, str], name: str = "shapes", n: int = 0, spec: dict[str, Any] = SHAPES
+) -> dict[str, Any]:
+    made = await ada.post("/v1/models", json={"name": name, "spec": spec}, headers=key)
     assert made.status_code == 201, made.text
     if n:
         done = await ada.post(f"/v1/models/{name}/record_many", json={"cases": cases(n)}, headers=key)
         assert done.status_code == 200, done.text
     return dict(made.json())
+
+
+async def finished(
+    ada: httpx.AsyncClient, key: dict[str, str], job: dict[str, Any], tries: int = 600
+) -> dict[str, Any]:
+    """The job once it is done or failed (a jobs worker must be running)."""
+    for _ in range(tries):
+        got = (await ada.get(f"/v1/jobs/{job['id']}", headers=key)).json()
+        if got["state"] in ("done", "failed"):
+            return dict(got)
+        await asyncio.sleep(0.1)
+    raise AssertionError(f"job {job['id']} never finished: {got}")
+
+
+def path_of(url: str) -> str:
+    """A link's path, for the test client (its host is the Ada host)."""
+    return "/" + url.split("://", 1)[1].split("/", 1)[1]

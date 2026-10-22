@@ -291,7 +291,7 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 
 ### Ada Cloud (built, off: `GLYPHH_ADA_CLOUD`)
 
-Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by default:** off, no request reaches it
+Ada as an API inside this app (`docs/specs/ada-cloud.md`, its steps 2 to 4). **Off by default:** off, no request reaches it
 (no host is routed to it), the schema step adds only the two `runtime_keys` columns below, and the `ada` and
 `adajobs` process groups idle without touching Postgres or Redis.
 
@@ -301,7 +301,8 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
   signed-in person at `POST /v1/keys`) or a Glyphh sign-in (full clearance). A request may ask for less clearance,
   never more. A resolved caller is kept 10 s in the process, so a revoked key stops within that. Refusals: `E_AUTH`
   (401), `E_MODEL_MISSING` (404), the server's shape otherwise.
-- **Processes and queues.** The `app` process authenticates, bounds the body (1 MB, `record_many` 5 MB; a string
+- **Processes and queues.** The `app` process authenticates, bounds the body (1 MB, `record_many` 5 MB, an import
+  with its file in the body 5 MB of file; a string
   holding NUL is a 400), puts one message on the Redis stream `ada:sync` and waits on its reply list (10 s for reads,
   30 s for `record_many`, `create`, `delete`; then `504 E_TIMEOUT`; Redis down: `503 E_UNAVAILABLE`). Workers
   (`python -m glyphh_ada.worker --queue sync|jobs`, one single-threaded process per vCPU, numpy's BLAS held to one
@@ -327,6 +328,35 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
   old.
 - **Jobs.** `learn` (weights, then the temperature) and `calibrate` read at most the newest 50,000 precedents
   (`limits.JOB_SAMPLE`); when learning changes what a stored case carries, every other precedent is restated after.
+  A write that takes a model past a multiple of its `refresh_every` (precedents held) starts a `learn` job.
+- **In and out.** An import is a job (`glyphh_ada/importer.py`): `POST …/imports` answers it waiting for its file and
+  a one-hour signed upload link (`PUT /v1/uploads/{link}`, no key: the link is the credential, HMAC with
+  `GLYPHH_SECRET_KEY`), or takes a file of up to 5 MB in its body. The file (JSON Lines; CSV with a header→role
+  mapping; a model's export; `ada_sqlite`, a kernel store) is kept in the org's `files` table in 1 MB chunks (no
+  volumes, no object storage), up to `GLYPHH_ADA_IMPORT_BYTES`. The job reads it twice: once to check every row and
+  count the ids it would add against the org's cap (its plan's, `GLYPHH_ADA_PRECEDENT_CAPS`; refused whole unless
+  `partial`), then, with the model's HNSW index dropped, recording 1,000 a transaction (bad rows named, the rest in;
+  how far it got kept, so a worker that dies leaves the rest to another), then learns once and builds the index again
+  (`CREATE INDEX CONCURRENTLY`, so writes go on). An `ada_sqlite` file whose glyphs are the model's goes in by the
+  kernel's `Space.merge`; any other is restated. Every record is held to the cap too. An export (`POST
+  …/export {format: jsonl|ada_sqlite}`) is a job whose file is fetched by a one-hour download link on the job
+  (`GET /v1/downloads/{link}`): a zip of the precedents as stored, every spec version and what was learned, or a
+  kernel SQLite store a self-hosted runtime opens; either imported into a model of the same spec answers the same.
+- **Versions.** Every spec or settings change is a new row of `spec_versions` (who, why, the backtest it was chosen
+  by). One that reads the stored cases as they are is active at once; one that changes what a case carries (seed,
+  dimension, roles, declared pairs, learning levers, lexicon) is a `reencode` job writing a store of its own beside
+  the live one, learning, then switching under the model's write lock (every write to its cases holds it shared)
+  after copying what was written meanwhile; one that reads a role's values differently is refused (`E_SPEC_READING`).
+  A version keeps the learned weights and temperatures it had when it stopped being active; making it active again
+  restores them, at once or by a job that brings its store up to date. A store no version has read for 7 days is
+  dropped (`E_VERSION_GONE`).
+- **Backtests.** A job: the active version and up to ten candidates, each an in-memory model of the model's graded
+  precedents minus the held-out ones (the newest `n`, or a seeded fraction), learned and calibrated, scored on the
+  held-out: accuracy (decide's and the vote's), log-loss, cost by the output's costs, ask rate and accuracy where it
+  did not ask, coverage, calibration error, mistakes, and the change against the active version.
+- **Deletion.** A model's every store, version, job and file go at once (`DELETE /v1/models/{name}`); an org's whole
+  schema is dropped in the transaction that removes the org. The managed database's backups keep them until they age
+  out (Fly Managed Postgres's window).
 - **The kernel is private.** ada-private at a pinned commit (`uv.lock`), read at build time with a read-only deploy
   key (the build secret `ada_deploy_key`: GitHub's `ADA_DEPLOY_KEY` secret, passed to Fly's builder by CI); the image
   is pushed only to private registries.
@@ -339,6 +369,11 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
 | `POST /v1/models/{name}/query`, `/probabilities`, `/facts` (`top` 50), `/decide` (`outputs`, `include: ["facts"]`) | The kernel's answers; `clearance` lower than the key's |
 | `POST /v1/decide` `{model, data, …}` | `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
 | `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}` | Jobs |
+| `POST /v1/models/{name}/imports` `{format, mapping?, partial?, learn?, content?, content_base64?}`; `GET …/imports/{id}`; `PUT /v1/uploads/{link}` | An import: the job and its upload link, or the file in the body (5 MB) |
+| `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | An export: the job, then its download link |
+| `PUT /v1/models/{name}/spec` `{spec, note?, backtest?}`; `GET`, `PATCH …/settings` `{changes, note?, backtest?}` | A new version: `{version, active, job}` |
+| `GET /v1/models/{name}/versions`; `POST …/versions/{n}/activate` | Versions; making one active again (a rollback) |
+| `POST /v1/models/{name}/backtest` `{candidates, holdout?, output?, clearance?}` | Candidates scored on held-out precedents, as a job |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | rrotor's call shape for SDK 3.0: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
 | `GET /v1/health` | As on the API |
 
@@ -382,8 +417,10 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_TELEMETRY_RETENTION_DAYS` | `7` | Days server-side logging is kept (1 to 90), every plan alike; the minute tick purges what is older ([Server-side logging](#server-side-logging)) |
 | `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
 | `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
-| `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model |
+| `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model, a new version |
 | `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups; 0, one per vCPU |
+| `GLYPHH_ADA_PRECEDENT_CAPS` | `{"Free": 5000, "Pro": 100000, "Team": 1000000}` | The precedents an org may hold across its models, by its plan's name (JSON); a plan not named has no cap |
+| `GLYPHH_ADA_IMPORT_BYTES` | `209715200` | The largest file an import takes (200 MB) |
 
 ### API
 
@@ -1105,7 +1142,7 @@ Nothing in this section works today.
 | Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
 | Rate limiting | None anywhere, the OAuth endpoints included |
 | OAuth client ID metadata documents | Registration is RFC 7591 only |
-| Ada Cloud past its step 2 | Behind the flag, not built: imports and exports, a model's deletion as a job, spec and settings changes (versions, rollback, re-encodes, backtests), the connector's `ada_*` tools, plans and metering (cloud caps, request counting, rate limits), inline `refresh_every` (off in workers), SDK 3.1, the platform's pages; `docs/specs/ada-cloud.md` section 10 |
+| Ada Cloud past its step 4 | Behind the flag, not built: the connector's `ada_*` tools, plans and metering (the caps in `plan_versions`, request counting, rate limits; the precedent cap is a setting today), an org-wide export, a page to delete an org's Ada data alone, SDK 3.1, the platform's pages; `docs/specs/ada-cloud.md` section 10 |
 | Programs, then the gateway | Programs (coding-agent CLIs on the runtime), then the gateway. Remote Control needs a full claude.ai login on the machine, which [Anthropic's terms](#anthropics-terms) rule out |
 
 **Open**

@@ -17,12 +17,11 @@ import psycopg
 from psycopg.types.json import Jsonb
 from redis import Redis
 
-from glyphh_ada import catalog, jobs, orgschema, pg, reads
+from glyphh_ada import catalog, jobs, orgschema, pg, reads, versions, writeops
 from glyphh_ada.cache import Models
 from glyphh_ada.catalog import q
-from glyphh_ada.errors import Refusal
-from glyphh_ada.protocol import JOBS, STREAM_MAX, STREAMS, WRITES, Message
-from glyphh_ada.writes import WRITERS
+from glyphh_ada.errors import Refusal, model_missing
+from glyphh_ada.protocol import CASES, VERSIONS, WRITES, Message
 
 PRUNE_ONE_IN: int = 500  # one write in so many also deletes the org's request keys older than a day
 Answer = tuple[Any, int | None]
@@ -39,7 +38,11 @@ class Context:
 def handle(ctx: Context, msg: Message) -> Answer:
     schema = pg.enter(ctx.conn, msg.org)
     ctx.after.clear()
-    answer = _once(ctx, schema, msg) if msg.op in WRITES else _look(ctx, schema, msg)
+    try:
+        answer = _once(ctx, schema, msg) if msg.op in WRITES else _look(ctx, schema, msg)
+    except psycopg.errors.UndefinedTable:  # the org's schema went (the org was deleted) under a cached model
+        ctx.models.drop_org(msg.org)
+        raise model_missing(msg.model) from None
     for then in ctx.after:
         then()
     return answer
@@ -53,20 +56,16 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
         return found, found["version"]
     if msg.op == "job":
         return jobs.view(ctx.conn, schema, str(msg.args.get("id"))), None
+    if msg.op == "versions":
+        if msg.args.get("levers"):
+            levers = versions.levers(ctx.conn, schema, msg.model)
+            return levers, levers["version"]
+        return versions.listing(ctx.conn, schema, msg.model), None
     entry = ctx.models.get(msg.org, schema, msg.model)
     try:
         return reads.read(entry.model, msg.op, msg.args, msg.clearance), entry.version
     finally:
         ctx.models.settle(msg.org, msg.model, entry)
-
-
-def _job(ctx: Context, schema: str, msg: Message) -> Answer:
-    entry = ctx.models.get(msg.org, schema, msg.model)
-    kind = msg.args["kind"]
-    job_id = jobs.add(ctx.conn, schema, entry.model_id, kind, msg.args.get("args") or {}, msg.author)
-    work = Message(msg.org, msg.model, kind, {"job": job_id}, author=msg.author)
-    ctx.after.append(lambda: ctx.redis.xadd(STREAMS[JOBS], work.fields(), maxlen=STREAM_MAX, approximate=True))
-    return jobs.view(ctx.conn, schema, job_id), entry.version
 
 
 def _write(ctx: Context, schema: str, msg: Message) -> Answer:
@@ -78,11 +77,13 @@ def _write(ctx: Context, schema: str, msg: Message) -> Answer:
         catalog.delete(ctx.conn, schema, msg.model)
         ctx.after.append(lambda: ctx.models.bump(msg.org, msg.model))
         return {"name": msg.model, "deleted": True}, None
-    if msg.op == "job_start":
-        return _job(ctx, schema, msg)
-    entry = ctx.models.get(msg.org, schema, msg.model)
-    entry.model.space.author = msg.author
-    return WRITERS[msg.op](entry.model, msg.args), entry.version
+    if msg.op in CASES:
+        return writeops.cases(ctx, schema, msg)
+    if msg.op in VERSIONS:
+        return writeops.version(ctx, schema, msg)
+    return {"job_start": writeops.job_start, "import_start": writeops.import_start, "import_go": writeops.import_go}[
+        msg.op
+    ](ctx, schema, msg)
 
 
 def _seen(ctx: Context, schema: str, key: str, body: str) -> Any:

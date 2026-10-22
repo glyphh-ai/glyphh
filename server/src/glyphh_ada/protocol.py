@@ -2,7 +2,8 @@
 list per synchronous request, and a version counter per model that tells a worker its cached model is stale.
 
 A message is a flat Redis hash: `id`, `org`, `model`, `op`, `args` (JSON), `clearance`, `author`, `deadline` (epoch
-seconds; a worker that takes it later drops it) and `key` (an Idempotency-Key, or the id). The worker answers a sync
+seconds; a worker that takes it later drops it), `key` (an Idempotency-Key, or the id) and `cap` (the precedents the
+org's plan allows across its models; empty for no cap). The worker answers a sync
 message by LPUSHing `{"ok": true, "data": ..., "version": ...}` or `{"ok": false, "error": {...}}` to its reply
 list, which expires."""
 
@@ -23,10 +24,13 @@ HEARTBEAT: dict[str, float] = {SYNC: 1.0, JOBS: 10.0}
 MAX_DELIVERIES: int = 3  # a message that killed this many workers is answered E_INTERNAL and dropped
 
 READS: frozenset[str] = frozenset({"query", "probabilities", "facts", "decide"})
-WRITES: frozenset[str] = frozenset({"create", "delete", "record", "record_many", "grade", "forget", "job_start"})
-LOOKS: frozenset[str] = frozenset({"models", "model", "job"})
+# The writes to a model's precedents, each under the model's write lock (versions.write_lock)
+CASES: frozenset[str] = frozenset({"record", "record_many", "grade", "forget"})
+VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate"})  # a new version, or another made active
+WRITES: frozenset[str] = frozenset({"create", "delete", "job_start", "import_start", "import_go"}) | CASES | VERSIONS
+LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions"})
 SYNC_OPS: frozenset[str] = READS | WRITES | LOOKS
-JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate"})
+JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate", "import", "export", "reencode", "backtest"})
 
 
 def reply_key(request_id: str) -> str:
@@ -34,7 +38,8 @@ def reply_key(request_id: str) -> str:
 
 
 def version_key(org: str, name: str) -> str:
-    """Bumped by every write that changes what a worker caches of a model: made, deleted, learned, calibrated."""
+    """Bumped by every write that changes what a worker caches of a model: made, deleted, learned, calibrated, a
+    version made active, an import ended."""
     return f"ada:ver:{org}:{name}"
 
 
@@ -49,10 +54,12 @@ class Message:
     deadline: float = 0.0
     key: str = ""
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    cap: int | None = None
 
     def fields(self) -> dict[str, str]:
         out = {k: str(v) for k, v in asdict(self).items()}
         out["args"] = json.dumps(self.args, separators=(",", ":"))
+        out["cap"] = "" if self.cap is None else str(self.cap)
         return out
 
     @classmethod
@@ -67,6 +74,7 @@ class Message:
             deadline=float(raw["deadline"]),
             key=raw["key"],
             id=raw["id"],
+            cap=int(raw["cap"]) if raw.get("cap") else None,
         )
 
     @property

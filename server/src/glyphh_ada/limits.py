@@ -27,6 +27,16 @@ FEW_ROLES_ABOVE: int = 100_000
 # needs about 16 GB (20 to 25 KB a precedent in a Space). A model this size or smaller learns exactly as rrotor does.
 JOB_SAMPLE: int = 50_000
 
+IMPORT_FORMATS: tuple[str, ...] = ("jsonl", "csv", "ada_sqlite")
+EXPORT_FORMATS: tuple[str, ...] = ("jsonl", "ada_sqlite")
+IMPORT_BODY_MAX: int = 5 << 20  # a file sent in the body of POST …/imports; larger ones go to the upload link
+BATCH: int = 1000  # cases an import records, or a re-encode restates, in one transaction
+REFUSALS_SHOWN: int = 100  # an import's first refused rows, each named
+LINK_TTL: int = 3600  # seconds an upload or download link works
+CHUNK: int = 1 << 20  # bytes of a file in one row of the org's `files`
+CANDIDATES_MAX: int = 10  # a backtest's candidate settings or specs
+KEPT_DAYS: int = 7  # an old version's partition is kept this long after it stops being active, for a rollback
+
 
 def no_nul(value: Any, at: str = "body") -> None:
     """Postgres's jsonb refuses the NUL character (\\u0000) in any string: refused here, as a 400, before a worker."""

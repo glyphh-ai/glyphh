@@ -15,8 +15,11 @@ from glyphh_ada.errors import BadRequest, Refused, Timeout
 from glyphh_ada.limits import no_nul
 from glyphh_server.errors import Unavailable
 
-SLOW: frozenset[str] = frozenset({"record_many", "create", "delete"})
+SLOW: frozenset[str] = frozenset({"record_many", "create", "delete", "spec", "settings", "activate"})
 IDEMPOTENCY_MAX: int = 200
+# Writes a request makes after its first (an import queued once its file is in): each is once by itself, and the
+# caller's Idempotency-Key is its first write's.
+SECOND: frozenset[str] = frozenset({"import_go"})
 
 
 def idempotency(request: Request) -> str:
@@ -41,7 +44,7 @@ async def versioned(
     cfg = request.app.state.settings
     no_nul(args)
     timeout = cfg.ada_write_timeout if op in SLOW else cfg.ada_read_timeout
-    key = idempotency(request) if op in protocol.WRITES else ""
+    key = idempotency(request) if op in protocol.WRITES - SECOND else ""
     msg = protocol.Message(
         org=str(who.org_id),
         model=model,
@@ -51,6 +54,7 @@ async def versioned(
         author=who.author,
         deadline=time.time() + timeout,
         key=key,
+        cap=who.cap,
     )
     redis = request.app.state.redis
     try:

@@ -11,7 +11,7 @@ import pytest
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, worker
+from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, runner, worker
 from glyphh_ada.errors import Refusal
 from glyphh_ada.process import Worker, work
 from glyphh_ada.protocol import JOBS, SYNC, Message
@@ -84,21 +84,22 @@ async def test_jobs_that_are_done_crash_or_lose_their_model(
     assert idle.dispatch(Message(org, "shapes", "calibrate", {"job": job["id"]})) == (None, None)
     assert jobs.view(idle.ctx.conn, schema, job["id"])["result"] == {"kept": True}
     crash = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
-    monkeypatch.setattr(jobs, "run", lambda *_: 1 / 0)
+    monkeypatch.setattr(runner, "run", lambda *_: 1 / 0)
     with pytest.raises(ZeroDivisionError):
         work(idle.ctx, Message(org, "shapes", "learn", {"job": crash["id"]}))
     assert jobs.view(idle.ctx.conn, schema, crash["id"])["error"]["code"] == "E_INTERNAL"
     again = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
-    monkeypatch.setattr(jobs, "run", lambda *_: (idle.ctx.conn.close(), 1 / 0))  # its connection gone with it
+    monkeypatch.setattr(runner, "run", lambda *_: (idle.ctx.conn.close(), 1 / 0))  # its connection gone with it
     with pytest.raises(ZeroDivisionError):
         work(idle.ctx, Message(org, "shapes", "learn", {"job": again["id"]}))
     monkeypatch.undo()
     idle.ctx = idle._connect()
     schema = pg.enter(idle.ctx.conn, org)
     lost = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
-    await ada.delete("/v1/models/shapes?confirm=shapes", headers=key)
-    work(idle.ctx, Message(org, "shapes", "learn", {"job": lost["id"]}))
-    assert jobs.view(idle.ctx.conn, schema, lost["id"])["error"]["code"] == "E_MODEL_MISSING"
+    await ada.delete("/v1/models/shapes?confirm=shapes", headers=key)  # its jobs go with it
+    assert work(idle.ctx, Message(org, "shapes", "learn", {"job": lost["id"]})) is None
+    with pytest.raises(Refusal, match="No job"):
+        jobs.view(idle.ctx.conn, schema, lost["id"])
 
 
 async def test_the_cache_keeps_few_and_briefly(
@@ -147,6 +148,25 @@ async def test_every_org_schema_is_migrated_at_start(
     assert orgschema.exists(idle.ctx.conn, str(who.org_id)) and not orgschema.exists(idle.ctx.conn, str(uuid.uuid4()))
 
 
+async def test_step_3s_migration_gives_a_step_2_model_its_id_index(
+    engine: AsyncEngine, ada: httpx.AsyncClient, worker: Worker, idle: Worker
+) -> None:
+    """A model made before step 3 has a partition keyed (model, id) alone; the migration indexes its ids, and runs
+    again on a schema that has it without harm."""
+    who, key = await an_org(engine, ada)
+    await a_model(ada, key, n=5)
+    org = str(who.org_id)
+    schema = pg.enter(idle.ctx.conn, org)
+    ids = f"SELECT count(*) FROM pg_indexes WHERE schemaname = '{schema}' AND indexname LIKE 'p\\_%\\_id'"
+    assert idle.ctx.conn.execute(ids).fetchone()[0] == 1
+    for (name,) in idle.ctx.conn.execute(ids.replace("count(*)", "indexname")).fetchall():
+        idle.ctx.conn.execute(f'DROP INDEX "{schema}"."{name}"')
+    idle.ctx.conn.execute(f'DELETE FROM "{schema}".ada_schema WHERE version = 2')
+    assert orgschema.migrate_all(idle.ctx.conn) == 1
+    assert idle.ctx.conn.execute(ids).fetchone()[0] == 1
+    assert (await ada.post("/v1/models/shapes/record", json={"data": shape(1)}, headers=key)).status_code == 200
+
+
 TEXT: dict[str, Any] = {
     "name": "words",
     "seed": 3,
@@ -179,3 +199,17 @@ async def test_learning_past_the_sample_restates_every_precedent(
     result = jobs.run(idle.ctx.conn, schema, "words", "learn", seen.append)
     assert (result["precedents"], result["sampled"]) == (61, 20)
     assert result["restated"] == 40 and seen[-1] == 90.0
+    # A learn that died after the kernel kept what it learned, before every precedent was restated: when the next
+    # learn learns the same, the kernel restates nothing, and the job restates them all.
+    found = catalog.live(idle.ctx.conn, schema, "words")
+    plain = '{"m": {"b": {"kind": "k", "text": ["card", "lost", "stolen"]}}}'
+    idle.ctx.conn.execute(
+        f'UPDATE "{schema}".precedents SET situation = %s WHERE seq = (SELECT min(seq) FROM "{schema}".precedents)',
+        (plain,),
+    )
+    monkeypatch.setattr(jobs, "_tables", lambda model: "the same")
+    idle.ctx.conn.execute(
+        f'UPDATE "{schema}".meta SET value = %s WHERE model = %s AND key = %s', ("true", found.store, "restating")
+    )
+    again = jobs.run(idle.ctx.conn, schema, "words", "learn", seen.append)
+    assert again["restated"] == 1

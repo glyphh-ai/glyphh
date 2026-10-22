@@ -10,7 +10,7 @@ from typing import Any
 
 from redis import Redis
 
-from glyphh_ada import jobs, orgschema, pg
+from glyphh_ada import files, jobs, orgschema, pg, runner
 from glyphh_ada.cache import Models
 from glyphh_ada.errors import Refusal
 from glyphh_ada.handlers import Context, handle
@@ -55,15 +55,21 @@ class Worker:
 
 
 def work(ctx: Context, msg: Message) -> None:
-    """One job, its row moved through running to done or failed; the model's workers reload it after."""
+    """One job, its row moved through running to done or failed; the model's workers reload it after. Files no job
+    needs any more go first."""
     schema = pg.enter(ctx.conn, msg.org)
     job_id = str(msg.args["job"])
-    if jobs.view(ctx.conn, schema, job_id)["state"] in ("done", "failed"):
+    try:
+        job = jobs.view(ctx.conn, schema, job_id)
+    except Refusal:  # its model was deleted, and its jobs with it
         return
+    if job["state"] in ("done", "failed"):
+        return
+    files.prune(ctx.conn, schema)
     jobs.mark(ctx.conn, schema, job_id, "running", percent=0)
     try:
         progress = lambda p: jobs.mark(ctx.conn, schema, job_id, "running", percent=round(p, 1))  # noqa: E731
-        result = jobs.run(ctx.conn, schema, msg.model, msg.op, progress)
+        result = runner.run(ctx.conn, schema, job, progress, lambda: ctx.models.bump(msg.org, msg.model))
     except Refusal as r:
         jobs.mark(ctx.conn, schema, job_id, "failed", error={"code": r.code, "message": r.message, **r.detail})
         return
