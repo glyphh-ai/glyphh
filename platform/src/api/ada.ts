@@ -47,7 +47,29 @@ export type AdaModelRow = { name: string; id: Uuid; version: number; precedents:
 /** One model with its active spec. */
 export type AdaModel = AdaModelRow & { spec: Spec };
 
-/** A version: who made it and why, active or not, made on a store of its own (re-encoded), dropped after 7 days unread (gone). */
+/** One change of spec or settings: where (`settings.k`, `layers[a].segments[s].roles[color]`), from and to (null: not there), and whether it rewrites the stored cases. */
+export type SpecChange = { path: string; from: unknown; to: unknown; restates: boolean };
+/** What a store had learned, per output (`default` and each named one): roles' weights, words per text role, pairs, the temperature. */
+export type LearnedSummary = Record<string, { roles?: Record<string, number>; words?: Record<string, number>; pairs?: unknown[]; tau?: number }>;
+/** The newest backtest that scored a version. */
+export type VersionScores = {
+  job: string;
+  at: IsoDate | null;
+  output: string | null;
+  n?: number;
+  accuracy?: number;
+  top_accuracy?: number;
+  log_loss?: number;
+  ask_rate?: number;
+  accuracy_answered?: number | null;
+  coverage?: number;
+  calibration_error?: number;
+  cost_mean?: number;
+};
+/** A version's stored cases: the live store, kept for a rollback (from `drop_after` the next re-encode may drop it), being made, or dropped. */
+export type VersionStore = { status: 'active' | 'kept' | 'making' | 'dropped'; drop_after: IsoDate | null };
+
+/** A version: who made it and why, active or not, what changed against the one before, what it learned, its newest backtest, its store. */
 export type AdaVersion = {
   version: number;
   note: string;
@@ -59,7 +81,20 @@ export type AdaVersion = {
   gone: boolean;
   retired_at: IsoDate | null;
   reencoded: boolean;
+  /** Made a store of its own (a re-encode) where the version before read another. */
+  new_store: boolean;
+  /** Against the version before; null for the first. */
+  changes: SpecChange[] | null;
+  /** The precedents the model held when it was made; null when made before this was kept. */
+  precedents_at: number | null;
+  learned: LearnedSummary | null;
+  scores: VersionScores | null;
+  store: VersionStore;
 };
+/** One version whole: its spec and every lever its settings stand at. */
+export type AdaVersionDetail = AdaVersion & { spec: Spec; settings: Record<string, LeverValue> };
+/** What making `version` live would change from `against`. */
+export type VersionDiff = { version: number; against: number; changes: SpecChange[] };
 
 export type JobState = 'awaiting' | 'queued' | 'running' | 'done' | 'failed';
 export type AdaJob = {
@@ -217,6 +252,19 @@ export const useAdaModels = () =>
 export const useAdaModel = (name: string) => useQuery({ queryKey: [...adaKeys.model(name), 'view'], queryFn: () => adaApi.get<AdaModel>(path(name)) });
 export const useAdaVersions = (name: string) =>
   useQuery({ queryKey: [...adaKeys.model(name), 'versions'], queryFn: async () => (await adaApi.get<{ versions: AdaVersion[] }>(`${path(name)}/versions`)).versions });
+export const useAdaVersion = (name: string, version: number | null) =>
+  useQuery({
+    queryKey: [...adaKeys.model(name), 'versions', version ?? 0],
+    enabled: version !== null,
+    queryFn: () => adaApi.get<AdaVersionDetail>(`${path(name)}/versions/${version}`),
+  });
+/** What making `version` live would change from the live one. */
+export const useVersionDiff = (name: string, version: number | null) =>
+  useQuery({
+    queryKey: [...adaKeys.model(name), 'versions', version ?? 0, 'diff'],
+    enabled: version !== null,
+    queryFn: () => adaApi.get<VersionDiff>(`${path(name)}/versions/${version}/diff`),
+  });
 export const useAdaLevers = (name: string) => useQuery({ queryKey: [...adaKeys.model(name), 'settings'], queryFn: () => adaApi.get<Levers>(`${path(name)}/settings`) });
 export const useAdaStats = (name: string) => useQuery({ queryKey: [...adaKeys.model(name), 'stats'], queryFn: () => adaApi.get<ModelStats>(`${path(name)}/stats`) });
 export const useAdaMap = (name: string, layer: string | null) =>
@@ -270,6 +318,12 @@ export const usePatchSettings = (name: string) =>
   );
 export const useActivate = (name: string) =>
   useAdaWrite((version: number) => adaApi.post<VersionChange>(`${path(name)}/versions/${version}/activate`), () => modelReads(name));
+/** A version's note (its release notes) written again. */
+export const useVersionNote = (name: string) =>
+  useAdaWrite(
+    (body: { version: number; note: string }) => adaApi.patch<{ version: number; note: string }>(`${path(name)}/versions/${body.version}`, { note: body.note }),
+    () => [[...adaKeys.model(name), 'versions']],
+  );
 /** A decide is a read: the model's dashboard and the month's usage count it. */
 export const useDecide = () =>
   useAdaWrite(

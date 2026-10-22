@@ -77,7 +77,13 @@ function SettingsForm({ model, levers, change, setChange }: FormProps) {
             );
           })}
         </div>
-        <TextField label="Why" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Kept with the version" />
+        <TextField
+          label="Release notes"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+          placeholder="What this version is for (left empty, the Versions tab shows what changed)"
+        />
         <AdaErrorNotice error={patch.error} />
         {change && <ChangeResult model={model.name} change={change} />}
         <div className={styles.actions}>

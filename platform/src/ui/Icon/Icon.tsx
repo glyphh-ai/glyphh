@@ -73,6 +73,14 @@ const paths = {
     </>
   ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  undo: <path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" />,
+  diff: <path d="M8 3v12M2 9h12M10 21h12M18 9v12" />,
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
   arrowLeft: <path d="M19 12H5M11 18l-6-6 6-6" />,

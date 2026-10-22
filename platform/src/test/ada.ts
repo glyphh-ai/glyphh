@@ -150,10 +150,69 @@ export const modelMap = (layer: string | null): ModelMap => ({
   ],
 });
 
-export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro', requests = 0, stats = modelStats, map = modelMap } = {}) {
+/** A version as the server lists it, with what is not given as a version on the live store would have it. */
+export const versionOf = (given: Partial<AdaVersion> & { version: number }): AdaVersion => ({
+  note: '',
+  made_by: 'u-chris',
+  made_at: at,
+  active: false,
+  backtest: null,
+  ready: true,
+  gone: false,
+  retired_at: null,
+  reencoded: false,
+  new_store: false,
+  changes: null,
+  precedents_at: null,
+  learned: null,
+  scores: null,
+  store: { status: 'active', drop_after: null },
+  ...given,
+});
+
+/**
+ * Three versions of tickets: the first, its stored cases dropped; the second, re-encoded for another seed, kept apart,
+ * learned and backtested; the third live, k raised, with notes.
+ */
+export const ticketHistory = (): AdaVersion[] => [
+  versionOf({ version: 1, note: 'made', made_at: '2026-10-01T09:00:00Z', precedents_at: 0, gone: true, reencoded: false, store: { status: 'dropped', drop_after: null } }),
+  versionOf({
+    version: 2,
+    made_at: '2026-10-10T09:00:00Z',
+    reencoded: true,
+    new_store: true,
+    changes: [{ path: 'seed', from: 5, to: 11, restates: true }],
+    precedents_at: 900,
+    retired_at: '2026-10-20T09:00:00Z',
+    learned: { default: { roles: { 'ticket.about.subject': 0.9, 'ticket.about.product': 0.4 }, words: { 'ticket.about.subject': 120 }, pairs: [['a', 'b']], tau: 0.81 } },
+    scores: { job: 'job-0', at: '2026-10-19T09:00:00Z', output: 'default', n: 200, accuracy: 0.81, log_loss: 0.52, ask_rate: 0.1 },
+    store: { status: 'kept', drop_after: '2026-10-27T09:00:00Z' },
+  }),
+  versionOf({
+    version: 3,
+    note: 'More voters',
+    made_at: '2026-10-20T09:00:00Z',
+    active: true,
+    reencoded: true,
+    changes: [{ path: 'settings.k', from: 15, to: 20, restates: false }],
+    precedents_at: 1_200,
+  }),
+];
+
+export function adaFake({
+  models = [] as AdaModel[],
+  jobSteps = 2,
+  plan = 'Pro',
+  requests = 0,
+  stats = modelStats,
+  map = modelMap,
+  history = {} as Record<string, AdaVersion[]>,
+} = {}) {
   const state = {
     models: structuredClone(models),
     versions: new Map<string, AdaVersion[]>(),
+    /** Each version's spec, by `<model>:<version>`; the model's own when not kept. */
+    specs: new Map<string, Spec>(),
     keys: [] as CloudKey[],
     jobs: new Map<string, { job: AdaJob; reads: number; result: Record<string, unknown> | null; download?: AdaJob['download'] }>(),
     seen: [] as Seen[],
@@ -178,8 +237,18 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
     };
   };
   for (const model of state.models) {
-    state.versions.set(model.name, [{ version: model.version, note: 'made', made_by: 'u-chris', made_at: at, active: true, backtest: null, ready: true, gone: false, retired_at: null, reencoded: false }]);
+    state.versions.set(model.name, structuredClone(history[model.name]) ?? [versionOf({ version: model.version, note: 'made', active: true, precedents_at: 0 })]);
   }
+  const specOf = (name: string, version: number): Spec => state.specs.get(`${name}:${version}`) ?? found(name)!.spec;
+  /** What the server's diff says from one spec to another, for the parts the platform's tests change. */
+  const diffOf = (from: Spec, to: Spec) => {
+    const changes: Array<{ path: string; from: unknown; to: unknown; restates: boolean }> = [];
+    for (const key of ['seed', 'dimension'] as const) if (from[key] !== to[key]) changes.push({ path: key, from: from[key] ?? null, to: to[key] ?? null, restates: true });
+    const before = { ...levers, ...from.settings } as Record<string, unknown>;
+    const after = { ...levers, ...to.settings } as Record<string, unknown>;
+    for (const key of Object.keys(after)) if (before[key] !== after[key]) changes.push({ path: `settings.${key}`, from: before[key], to: after[key], restates: false });
+    return changes;
+  };
   let next = 1;
 
   const record = async (request: Request, path: string) => {
@@ -204,12 +273,17 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
   const found = (name: string) => state.models.find((m) => m.name === name);
   const missing = (name: string) => apiError(404, 'E_MODEL_MISSING', `No model ${name} in this org.`);
 
-  const newVersion = (name: string, active: boolean, note: string) => {
+  const newVersion = (name: string, active: boolean, note: string, spec: Spec) => {
     const list = state.versions.get(name)!;
     const version = Math.max(...list.map((v) => v.version)) + 1;
+    const live = found(name)!;
+    state.specs.set(`${name}:${live.version}`, live.spec);
+    state.specs.set(`${name}:${version}`, spec);
     if (active) for (const v of list) v.active = false;
-    list.push({ version, note, made_by: 'u-chris', made_at: at, active, backtest: null, ready: active, gone: false, retired_at: null, reencoded: !active });
-    if (active) found(name)!.version = version;
+    const store: AdaVersion['store'] = { status: active ? 'active' : 'making', drop_after: null };
+    const changes = diffOf(live.spec, spec);
+    list.push(versionOf({ version, note, active, ready: active, reencoded: !active, new_store: !active, changes, precedents_at: live.precedents, store }));
+    if (active) live.version = version;
     return version;
   };
 
@@ -230,7 +304,7 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
       if (found(name)) return apiError(409, 'E_CONFLICT', `This org has a model named ${name} already.`);
       const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: at, spec };
       state.models.push(model);
-      state.versions.set(name, [{ version: 1, note: 'made', made_by: 'u-chris', made_at: at, active: true, backtest: null, ready: true, gone: false, retired_at: null, reencoded: false }]);
+      state.versions.set(name, [versionOf({ version: 1, note: 'made', active: true, precedents_at: 0 })]);
       return HttpResponse.json(model, { status: 201 });
     }),
     http.get(ada('/models/:name'), ({ params }) => {
@@ -257,19 +331,43 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
       }),
     ),
     http.get(ada('/models/:name/versions'), ({ params }) => HttpResponse.json({ versions: state.versions.get(String(params.name)) ?? [] })),
+    http.get(ada('/models/:name/versions/:version'), ({ params }) => {
+      const name = String(params.name);
+      const entry = state.versions.get(name)?.find((v) => v.version === Number(params.version));
+      if (!entry) return apiError(404, 'E_VERSION_MISSING', `This model has no version ${String(params.version)}.`);
+      const spec = specOf(name, entry.version);
+      return HttpResponse.json({ ...entry, spec, settings: { ...levers, ...spec.settings } });
+    }),
+    http.get(ada('/models/:name/versions/:version/diff'), ({ params }) => {
+      const name = String(params.name);
+      const live = found(name)!.version;
+      return HttpResponse.json({ version: Number(params.version), against: live, changes: diffOf(specOf(name, live), specOf(name, Number(params.version))) });
+    }),
+    http.patch(ada('/models/:name/versions/:version'), async ({ params, request }) => {
+      const { note } = (await request.json()) as { note: string };
+      state.versions.get(String(params.name))!.find((v) => v.version === Number(params.version))!.note = note;
+      return HttpResponse.json({ version: Number(params.version), note });
+    }),
     http.post(ada('/models/:name/versions/:version/activate'), ({ params }) => {
       const name = String(params.name);
+      const version = Number(params.version);
       const list = state.versions.get(name)!;
-      for (const v of list) v.active = v.version === Number(params.version);
-      found(name)!.version = Number(params.version);
-      return HttpResponse.json({ version: Number(params.version), active: true, job: null });
+      const entry = list.find((v) => v.version === version)!;
+      if (entry.gone) return apiError(410, 'E_VERSION_GONE', `Version ${version}'s store was dropped after 7 days.`);
+      const spec = specOf(name, version);
+      // A version whose cases are stored apart is brought up to date by a job, then live.
+      if (entry.store.status === 'kept') return HttpResponse.json({ version, active: false, job: addJob(name, 'reencode', { version, spec }) });
+      state.specs.set(`${name}:${found(name)!.version}`, found(name)!.spec);
+      for (const v of list) v.active = v.version === version;
+      Object.assign(found(name)!, { version, spec });
+      return HttpResponse.json({ version, active: true, job: null });
     }),
     http.put(ada('/models/:name/spec'), async ({ params, request }) => {
       const name = String(params.name);
       const { spec, note } = (await request.json()) as { spec: Spec; note?: string };
       // A role added rewrites the cases: a re-encode job, then live.
       const reencode = JSON.stringify(spec.layers) !== JSON.stringify(found(name)!.spec.layers);
-      const version = newVersion(name, !reencode, note ?? '');
+      const version = newVersion(name, !reencode, note ?? '', spec);
       if (!reencode) found(name)!.spec = spec;
       const job = reencode ? addJob(name, 'reencode', { version }) : null;
       if (job) state.jobs.get(job.id)!.result = { version, spec } as Record<string, unknown>;
@@ -280,8 +378,10 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
       const name = String(params.name);
       const { changes, note } = (await request.json()) as { changes: Record<string, unknown>; note?: string };
       const model = found(name)!;
-      model.spec = { ...model.spec, settings: { ...model.spec.settings, ...changes } };
-      return HttpResponse.json({ version: newVersion(name, true, note ?? ''), active: true, job: null });
+      const spec = { ...model.spec, settings: { ...model.spec.settings, ...changes } };
+      const version = newVersion(name, true, note ?? '', spec);
+      model.spec = spec;
+      return HttpResponse.json({ version, active: true, job: null });
     }),
     http.post(ada('/decide'), async ({ request }) => {
       const body = (await request.json()) as { model: string; outputs?: string[] };
@@ -323,7 +423,7 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
           const { version, spec } = held.result as { version: number; spec: Spec };
           const list = state.versions.get(held.job.model)!;
           for (const v of list) v.active = v.version === version;
-          list.find((v) => v.version === version)!.ready = true;
+          Object.assign(list.find((v) => v.version === version)!, { ready: true, store: { status: 'active', drop_after: null } });
           Object.assign(found(held.job.model)!, { version, spec });
         }
       } else if (held.job.state !== 'awaiting') {

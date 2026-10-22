@@ -14,10 +14,11 @@ import { ImportTab } from './ImportTab';
 import { SettingsTab } from './SettingsTab';
 import { SpecTab } from './SpecTab';
 import { TryTab } from './TryTab';
+import { VersionsTab } from './VersionsTab';
 import styles from '../ada.module.css';
 
-type TabId = 'dashboard' | 'view' | 'try' | 'import' | 'backtest' | 'settings' | 'export' | 'spec';
-// His order, 2026-10-22: the dashboard first, the spec last.
+type TabId = 'dashboard' | 'view' | 'try' | 'import' | 'backtest' | 'settings' | 'versions' | 'export' | 'spec';
+// His order, 2026-10-22: the dashboard first, the spec last; Versions after Settings.
 const tabs: ReadonlyArray<Tab<TabId>> = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'view', label: '3D view' },
@@ -25,13 +26,14 @@ const tabs: ReadonlyArray<Tab<TabId>> = [
   { id: 'import', label: 'Import' },
   { id: 'backtest', label: 'Backtest' },
   { id: 'settings', label: 'Settings' },
+  { id: 'versions', label: 'Versions' },
   { id: 'export', label: 'Export' },
   { id: 'spec', label: 'Spec' },
 ];
 
 /**
- * One model, a tab each (`?tab=`): its dashboard, its 3D view, Try it, Import, Backtest, Settings, Export, and its
- * spec and versions; the way back to the models above its name.
+ * One model, a tab each (`?tab=`): its dashboard, its 3D view, Try it, Import, Backtest, Settings, Versions, Export,
+ * and its spec; the way back to the models above its name.
  */
 export function ModelPage() {
   const { name = '' } = useParams();
@@ -70,6 +72,7 @@ export function ModelPage() {
             {tab === 'import' && <ImportTab model={model.data} />}
             {tab === 'backtest' && <BacktestTab model={model.data} />}
             {tab === 'settings' && <SettingsTab model={model.data} />}
+            {tab === 'versions' && <VersionsTab model={model.data} />}
             {tab === 'export' && <ExportTab model={model.data} />}
             {tab === 'spec' && <SpecTab model={model.data} />}
           </div>
