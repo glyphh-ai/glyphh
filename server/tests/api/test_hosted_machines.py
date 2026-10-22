@@ -92,15 +92,17 @@ async def test_a_machine_is_only_its_owners(engine: AsyncEngine) -> None:
 
 async def test_names_sizes_and_the_plans_machines_are_checked(engine: AsyncEngine) -> None:
     fly = FakeFly()
-    free, pro = await person(engine), await person(engine, "Pro")
+    free, basic, pro = await person(engine), await person(engine, "Basic"), await person(engine, "Pro")
     async for client in _client(create_app(FLY_SETTINGS, http=fake_http(fly=fly))):
-        for made in (  # Free's one runtime node is self-hosted: the managed cloud is Pro's and Team's
-            await client.post("/v1/runtimes", json={"name": "one", "size": "small"}, headers=free.headers),
-            await client.post("/v1/runtime/start", headers=free.headers),
+        for made, plan in (  # Free's and Basic's one runtime node is self-hosted: the managed cloud is Pro's and Team's
+            (await client.post("/v1/runtimes", json={"name": "one", "size": "small"}, headers=free.headers), "Free"),
+            (await client.post("/v1/runtime/start", headers=free.headers), "Free"),
+            (await client.post("/v1/runtimes", json={"name": "one", "size": "small"}, headers=basic.headers), "Basic"),
         ):
             refused = _error(made, 403)
-            assert (refused["code"], refused["reason"], refused["plan"]) == ("E_NOT_IN_PLAN", "hosting", "Free")
-            assert refused["message"] == "Glyphh's managed cloud is on Pro and Team; on Free, run rrotor yourself."
+            assert (refused["code"], refused["reason"], refused["plan"]) == ("E_NOT_IN_PLAN", "hosting", plan)
+            said = "Glyphh's managed cloud is on Pro and Team; on Free and Basic, run rrotor yourself."
+            assert refused["message"] == said
         assert fly.calls == []
         await _made(client, pro, "a")
         taken = await client.post("/v1/runtimes", json={"name": "a", "size": "large"}, headers=pro.headers)

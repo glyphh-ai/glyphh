@@ -536,8 +536,8 @@ wheels = [
 
 [[package]]
 name = "glyphh-kernel"
-version = "3.12.0"
-source = { git = "https://github.com/glyphh-ai/ada-private?rev=334a605a5a0021d699fe28c0f3858b2e34af0aa8#334a605a5a0021d699fe28c0f3858b2e34af0aa8" }
+version = "3.12.2"
+source = { git = "https://github.com/glyphh-ai/ada-private?rev=f28212c414a7ce031cdb5253f5c4e2258141401d#f28212c414a7ce031cdb5253f5c4e2258141401d" }
 dependencies = [
     { name = "numpy" },
 ]
@@ -586,7 +586,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "cryptography", specifier = ">=44" },
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "glyphh-kernel", extras = ["postgres"], git = "https://github.com/glyphh-ai/ada-private?rev=334a605a5a0021d699fe28c0f3858b2e34af0aa8" },
+    { name = "glyphh-kernel", extras = ["postgres"], git = "https://github.com/glyphh-ai/ada-private?rev=f28212c414a7ce031cdb5253f5c4e2258141401d" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "opentelemetry-proto", specifier = "==1.45.1" },
     { name = "pydantic-settings", specifier = ">=2.6" },

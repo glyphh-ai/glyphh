@@ -31,11 +31,12 @@ def form(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
 
 
 class StripeClient:
-    def __init__(self, http: httpx.AsyncClient, secret_key: str, meter: str = "") -> None:
-        """meter: the hosting Billing Meter's event name; empty, nothing is reported to it."""
+    def __init__(self, http: httpx.AsyncClient, secret_key: str, meter: str = "", ada_meter: str = "") -> None:
+        """meter: the hosting Billing Meter's event name; ada_meter: Ada Cloud's reads' (ada_requests); empty,
+        nothing is reported to that one."""
         if not secret_key:
             raise Unavailable("Billing isn't set up on this server.", reason="billing_off")
-        self.http, self.secret_key, self.meter = http, secret_key, meter
+        self.http, self.secret_key, self.meter, self.ada_meter = http, secret_key, meter, ada_meter
 
     async def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
         """A call to Stripe; a DELETE's parameters ride the query, as Stripe reads them."""
@@ -83,10 +84,11 @@ class StripeClient:
         """Cancel the subscription now: what is owed (the unused time credited) invoiced at once."""
         return await self.call("DELETE", f"/subscriptions/{subscription_id}", {"invoice_now": True, "prorate": True})
 
-    async def meter_event(self, customer: str, cents: int, identifier: str, at: int) -> None:
-        """Hosting cents for a customer on the Billing Meter; Stripe counts an identifier once."""
+    async def meter_event(self, customer: str, cents: int, identifier: str, at: int, event: str | None = None) -> None:
+        """Hosting cents (or, with `event`, that meter's units) for a customer on a Billing Meter; Stripe counts an
+        identifier once."""
         body = {
-            "event_name": self.meter,
+            "event_name": event or self.meter,
             "identifier": identifier,
             "timestamp": at,
             "payload": {"stripe_customer_id": customer, "value": cents},

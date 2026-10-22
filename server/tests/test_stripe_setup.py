@@ -56,13 +56,27 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         made = list(account.made)
         assert script["setup"](stripe) == first and account.made == made  # again: nothing new
     assert first == {
-        "GLYPHH_STRIPE_PRICE_PRO": "price_1",
-        "GLYPHH_STRIPE_PRICE_TEAM": "price_2",
-        "GLYPHH_STRIPE_PRICE_HOSTING": "price_3",
+        "GLYPHH_STRIPE_PRICE_BASIC": "price_1",
+        "GLYPHH_STRIPE_PRICE_PRO": "price_2",
+        "GLYPHH_STRIPE_PRICE_TEAM": "price_3",
+        "GLYPHH_STRIPE_PRICE_HOSTING": "price_4",
         "GLYPHH_STRIPE_METER_HOSTING": "glyphh_hosting",
+        "GLYPHH_STRIPE_PRICE_ADA": "price_5",
+        "GLYPHH_STRIPE_METER_ADA": "ada_requests",
     }
-    assert account.products == {"glyphh_pro", "glyphh_team", "glyphh_hosting"}
-    pro, team, hosting = account.prices
+    products = {"glyphh_basic", "glyphh_pro", "glyphh_team", "glyphh_hosting", "glyphh_ada_requests"}
+    assert account.products == products
+    basic, pro, team, hosting, reads = account.prices
+    assert (basic["unit_amount"], basic["product"], basic["lookup_key"]) == (
+        "2000",
+        "glyphh_basic",
+        "glyphh_basic_month_2000",
+    )
+    assert (reads["unit_amount_decimal"], reads["recurring[usage_type]"], reads["lookup_key"]) == (
+        "0.01",
+        "metered",
+        "glyphh_ada_requests_10k_100",
+    )  # a hundredth of a cent a read: $1 per 10,000
     assert (pro["unit_amount"], pro["recurring[interval]"], pro["lookup_key"]) == (
         "9900",
         "month",
@@ -74,7 +88,8 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         "metered",
         "mtr_1",
     )
-    (meter,) = account.meters
+    meter, ada = account.meters
+    assert (ada["event_name"], ada["display_name"]) == ("ada_requests", "Ada Cloud reads")
     assert (meter["event_name"], meter["default_aggregation[formula]"]) == ("glyphh_hosting", "sum")
     assert (meter["customer_mapping[event_payload_key]"], meter["value_settings[event_payload_key]"]) == (
         "stripe_customer_id",
@@ -95,5 +110,5 @@ def test_it_needs_a_key_and_prints_the_settings(
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_setup")
     runpy.run_path(str(SCRIPT), run_name="__main__")
     out = capsys.readouterr().out
-    assert "GLYPHH_STRIPE_PRICE_PRO=price_1\n" in out and "GLYPHH_STRIPE_METER_HOSTING=glyphh_hosting\n" in out
-    assert "fly secrets set GLYPHH_STRIPE_PRICE_PRO=price_1 GLYPHH_STRIPE_PRICE_TEAM=price_2" in out
+    assert "GLYPHH_STRIPE_PRICE_BASIC=price_1\n" in out and "GLYPHH_STRIPE_METER_HOSTING=glyphh_hosting\n" in out
+    assert "fly secrets set GLYPHH_STRIPE_PRICE_BASIC=price_1 GLYPHH_STRIPE_PRICE_PRO=price_2" in out

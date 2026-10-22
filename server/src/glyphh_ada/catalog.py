@@ -30,10 +30,6 @@ _LIVE = """
 """
 _LIST = "SELECT m.name, m.id, m.active_version, coalesce(c.n, 0), m.created_at" + _LIVE + " ORDER BY m.name"
 _TOTAL = "SELECT coalesce(sum(c.n), 0)" + _LIVE
-# An index on a partition's ids alone. The kernel finds a precedent by `id` (grade, forget, has, rewrite), and its
-# partition's primary key is (model, id), whose leading column such a lookup does not give: without this each is a
-# scan of the whole index (51,000 cost units at a million precedents: a learn rewriting 50,000 glyphs ran for hours).
-BY_ID = "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (id)"
 
 
 class Live(NamedTuple):
@@ -84,12 +80,10 @@ def live(conn: psycopg.Connection, schema: str, name: str) -> Live:
 
 
 def store(conn: psycopg.Connection, schema: str, key: str, dim: int, index: bool = False) -> PostgresStore:
-    """The kernel's store under this key (made, with its partition and the partition's id index, when it is not
-    there yet)."""
-    made = PostgresStore(conn, schema, key, dim=dim, index=index)
-    part = _part(key)
-    conn.execute(sql.SQL(BY_ID).format(sql.Identifier(part + "_id"), sql.Identifier(schema, part)))
-    return made
+    """The kernel's store under this key (made, with its partition, when it is not there yet). The kernel indexes
+    each partition's ids itself (3.12.1): it finds a precedent by `id` alone (grade, forget, has, rewrite), which the
+    partition's primary key (model, id) cannot lead with."""
+    return PostgresStore(conn, schema, key, dim=dim, index=index)
 
 
 def _part(key: str) -> str:

@@ -1,8 +1,8 @@
 # Ada Cloud: the build plan
 
-**Status:** decided; being built. Steps 0 and 1 are built (ada-private, kernel 3.12.0); **steps 2, 3 and 4 are built
-behind `GLYPHH_ADA_CLOUD` (off)**, and what building them changed in this plan is in
-[10.1](#101-steps-2-3-and-4-as-built) (the sections below are corrected where the build proved them wrong). Written
+**Status:** decided; being built. Steps 0 and 1 are built (ada-private, kernel 3.12.0, now 3.12.2); **steps 2 to 6
+are built behind `GLYPHH_ADA_CLOUD` (off)**, and what building them changed in this plan is in
+[10.1](#101-steps-2-to-6-as-built) (the sections below are corrected where the build proved them wrong). Written
 2026-10-21 from `origin/main` of
 `ada-private` (kernel 3.11.0), `rrotor`, `server`, `glyphh`, `platform` and `web`; revised the same day to Chris's
 architecture (no new app or infrastructure: Python worker processes on the server's Redis, Postgres with a schema per
@@ -135,7 +135,7 @@ flowchart LR
 - **No public image.** The kernel is installed into the server's own image, which is pushed only to Fly's registry
   for `glyphh-ai-server` (and `ghcr.io/glyphh-ai/server`, private). **Chosen and built:** the server's
   `pyproject.toml` depends on `glyphh-kernel[postgres] @ git+https://github.com/glyphh-ai/ada-private@<commit>` (pinned
-  in `uv.lock`, today 334a605, kernel 3.12.0); every build reads it over SSH with a read-only deploy key on
+  in `uv.lock`, today f28212c, kernel 3.12.2); every build reads it over SSH with a read-only deploy key on
   ada-private, given to Docker as the build secret `ada_deploy_key` (never in a layer): CI writes it from the repo
   secret `ADA_DEPLOY_KEY`, and the deploy passes the same to Fly's builder (`flyctl deploy --build-secret`). Moving
   the kernel is a new commit in `pyproject.toml` and `uv lock`. Kernel step 0 packaged `glyphh_lexicon`,
@@ -335,7 +335,7 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | `POST /v1/models/{name}/imports`, `GET …/imports/{id}`; **built:** `PUT /v1/uploads/{link}` | Bulk load (section 6): the job and its upload link, or the file in the body (5 MB) | job |
 | ~~`GET /v1/models/{name}/export`~~ **built:** `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | Everything back out (section 6): a job (so not a GET), whose done state carries the download link | job |
 | `GET /v1/jobs/{id}` | Any job's state and progress | API |
-| `GET /v1/usage` | Precedents, requests this period, against the plan | API |
+| `GET /v1/usage` | Precedents, requests this period, against the plan. **Built:** `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}` (`max` null: by contract), the one shape the platform, SDK 3.2 and the connector's `usage` read | API |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** rrotor's call shape (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
 
 `decide` never answers `needs_input`: the cloud has no runs to continue. `ask: true` is the signal.
@@ -344,6 +344,17 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 
 The Ada tools join the existing Glyphh connector at `https://api.glyphh.ai/mcp` (`mcp/tools/registry.py`), as a new
 module `mcp/tools/ada.py`. They are the same app, so a tool enqueues exactly as a REST call does: no forwarding.
+
+**Built** (step 5): four modules, `mcp/tools/ada_models.py`, `ada_cases.py`, `ada_jobs.py`, `ada_keys.py` (the
+server's 200-line files), listed and callable only with the flag on. Every tool calls the workers through the API's
+own `send` (`glyphh_ada/api/call.py`: the plan's checks, the message, the reply), as the person signed in with full
+clearance (a tool may ask for less). Beyond the table: `ada_grade`, `ada_calibrate`, `api_keys` and `revoke_api_key`;
+`ada_settings` with no changes reads every lever; `ada_activate` is the rollback (`ada_versions` lists what to roll
+back to); `ada_import` also takes the file's text (`content`) or its cases (`rows`) inline up to 5 MB, its upload
+link at `GLYPHH_ADA_URL`; `ada_export` is a job whose download link `ada_job` answers once done; `ada_job` waits up to
+50 s (`wait_seconds`); `ada_record`, `ada_record_many` take an `idempotency_key`. **A tool that waits on a worker runs
+after the request's transaction has ended** (`registry.DETACHED`; 10.1): the connector's one-transaction-per-request
+held a snapshot through the wait, and an import's `CREATE INDEX CONCURRENTLY` waits out every such transaction.
 
 | Tool | Does |
 |---|---|
@@ -518,9 +529,9 @@ kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all 
 - The count is the org's total across its models (`models.precedent_count`, kept by each write in the same
   transaction), not per node.
 - **Built:** the count is the kernel's own `counts` of each live model's active store (an old version's store kept
-  for a rollback does not count), summed when a write asks. The caps are a setting until step 6 puts them in
-  `plan_versions` (`GLYPHH_ADA_PRECEDENT_CAPS`, by the plan's name: Free 5,000, Pro 100,000, Team 1,000,000;
-  Enterprise none), resolved with the caller's key and carried in the worker's message. `record` and `record_many`
+  for a rollback does not count), summed when a write asks. The cap is the org's plan version's `cloud_precedents`
+  (step 6; it was the setting `GLYPHH_ADA_PRECEDENT_CAPS` until then, now gone: Free 5,000, Pro 100,000, Team
+  1,000,000, Enterprise none), resolved with the caller and carried in the worker's message. `record` and `record_many`
   are held to the cap too (no `partial`: refused whole). An `ada_sqlite` file is merged whole: no `partial`.
 
 ### 6.4 Export: never locked in
@@ -564,16 +575,22 @@ seats, models or installs (`docs/pricing.md`, the 2026-10-18 ruling).
 with a read function). Writes, learns, backtests, imports and exports are not counted as requests: they are bounded by
 the precedent cap and the rate limit. A `decide` with `outputs` counts once per output.
 
-| | Free | Pro | Team | Enterprise |
-|---|---|---|---|---|
-| Price | $0 | $99 a month | $299 a month | By contract, from $10k a year |
-| Precedents, the org's total | 5,000 | 100,000 | 1,000,000 | By contract, or self-hosted rrotor |
-| Requests a month | 10,000 | 1,000,000 | 5,000,000 | By contract |
-| Over the requests | Refused until the month turns (`E_LIMIT` `requests`) | $1 per 10,000 more (metered) | $1 per 10,000 more | By contract |
-| Rate | 5 a second | 50 a second | 200 a second | By contract |
-| Models, members, keys | Unlimited | Unlimited | Unlimited | Unlimited |
-| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes, plus SSO when built |
-| Self-hosted rrotor | No | No | No | Yes (registry credentials, licence key) |
+| | Free | Basic | Pro | Team | Enterprise |
+|---|---|---|---|---|---|
+| Price | $0 | $20 a month | $99 a month | $299 a month | By contract, from $10k a year |
+| Precedents, the org's total | 5,000 | 10,000 | 100,000 | 1,000,000 | By contract, or self-hosted rrotor |
+| Requests a month | 10,000 | 50,000 | 1,000,000 | 5,000,000 | By contract |
+| Over the requests | Refused until the month turns (`E_LIMIT` `requests`) | $1 per 10,000 more (metered) | $1 per 10,000 more (metered) | $1 per 10,000 more | By contract |
+| Rate | 5 a second | 10 a second | 50 a second | 200 a second | By contract |
+| Models, members, keys | Unlimited | Unlimited | Unlimited | Unlimited | Unlimited |
+| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes | Yes, plus SSO when built |
+| Self-hosted rrotor | No | No | No | No | Yes (registry credentials, licence key) |
+
+**Basic** (Chris, 2026-10-22) sits between Free and Pro: self-serve, never per seat, no sync, HA, offline or SSO. It
+has no licence key (rrotor's tiers are free, pro, team and enterprise), so a self-hosted node on Basic runs as Free's,
+and no hosting. Its flat price is `GLYPHH_STRIPE_PRICE_BASIC`, beside `_PRO` and `_TEAM`. A Free org past its month
+is now told to upgrade to Basic (the first self-serve plan that reads more). Plans are ordered Free, Basic, Pro,
+Team, Enterprise (`plans.sort`, set from `db/seed.py`'s order at every boot).
 
 Why these numbers: at 2 to 4 KB a precedent in Postgres, Team's million is 2 to 4 GB of database, which $299 covers.
 A read is a few milliseconds of worker CPU (5.9 ms a message on Banking77, rrotor `benchmarks/banking77/README.md`,
@@ -590,6 +607,39 @@ natural; they are not there to recover cost.
   10,000) on Pro and Team subscriptions, reported daily by the pattern in `ops/billing/meter.py` (each report written
   before it is sent, its id the identifier Stripe counts once). `scripts/stripe-setup.py` makes them.
 - The connector's `plan`, `plans` and `usage` show the cloud numbers; the licence key is shown only to Enterprise.
+
+**Built** (step 6), and what building it changed:
+
+- `plan_versions` gains a fourth column, **`cloud_overage`**: whether reads past the month are metered (Basic, Pro, Team) or
+  refused (Free). It cannot be read off the price. Each is null for unlimited (Enterprise, by contract). Migration
+  `0002_ada_cloud_plans.sql`. **A version that changes only the cloud limits takes over the Stripe price and the orgs
+  of the one before** (`db/seed.py` `_carry`): `stripe_price_id` is unique (a price sells one version), and an org
+  left on a version without cloud limits would read without any. Production's first boot with this makes Free 2,
+  Pro and Team their next versions, Enterprise unchanged (its limits are none, as before). An org pinned to an older,
+  differently priced version than its plan's newest keeps it, and with it no cloud limits: there is none in
+  production today (no paying customer), and there must be none when the flag goes on.
+- Counting: before a call is enqueued, by the API and the connector alike (`glyphh_ada/api/meter.py`), the org's
+  token bucket (`cloud_rps` a second, burst the same; every call, a job poll included, `429 E_RATE` with
+  `Retry-After`), then a read is counted (`INCRBY` the month's total and its pending count; a month's total Redis
+  does not have starts from `ada_usage`, so losing Redis loses at most a minute). Past the month a refused read is
+  not counted, and the refusal is `403 E_LIMIT` `{reason: requests, used, max, plan, upgrade, resets_at}`, naming the
+  first self-serve plan that reads more. A read of a model that is not there still counts (it is counted before it
+  is asked). The month is the calendar month, UTC.
+- The minute tick adds what is pending to `ada_usage` (an org removed since leaves its count behind), and with
+  Stripe reports each subscribed metered org's reads past its plan's month to the meter `ada_requests` (one unit a
+  read; the price `unit_amount_decimal` 0.01 cents, $1 per 10,000), by calendar month, once a day and at once when a
+  month has ended, and when the org goes down to Free (`ops/billing/ada_meter.py`, `ada_meter_events`). **Stripe's
+  billing period is not the calendar month:** a report is stamped when it is sent, so the last day's reads of a month
+  land on the invoice whose period holds the day after. **A subscription made before Ada Cloud has no metered item:**
+  the first report gives it one. Checkout sells the metered price beside the plan's with the flag on
+  (`GLYPHH_STRIPE_PRICE_ADA`; unset, Checkout of Basic, Pro or Team is `503 E_UNAVAILABLE` `billing_off`).
+- `GET /v1/plans`, `/v1/billing`, `/v1/me`, the Ada host's `GET /v1/usage` and the connector's `plan`, `plans` and
+  `usage` show the cloud numbers (`cloud` on a plan; `cloud` usage: the shape in 4.2) with the flag on, and `null`
+  with it off.
+- **Team's 1,000,000 precedents are not to be sold until the HNSW build memory is decided** (10.1: a million's index
+  took 76 minutes at 512 MB of `maintenance_work_mem`; about 3 GB of build memory on a database with the RAM, or a
+  cheaper graph with its recall measured, or the import answered before its index). The cap is in `plan_versions`
+  as decided; selling it is the gate.
 
 ---
 
@@ -656,8 +706,8 @@ Claude, honest rather than hopeful.
 | 2 | **Workers, queues and storage in the server** | `src/glyphh_ada/`: org schemas made and migrated at start; the `ada` and `adajobs` process groups in `fly.toml`; Redis Streams with consumer groups, reply lists, timeouts, claims; jobs with progress; the worker's model cache and version counter; `cloud` keys with clearance; models, spec, record, record_many, grade, forget, the reads, learn, calibrate; `ada.glyphh.ai` as a second host; the `/v1/runs` shim | 100% coverage as the server keeps; a two-org isolation test; SDK 3.0's suite against it; killing a worker mid-request loses nothing kept; load: 200 reads a second on 100 models, p99 under 150 ms (**built; measured in 10.1:** 155 a second on eight workers at 1,000 precedents a model, p99 71 ms) | 8 to 11 |
 | 3 | **In and out** | Imports (JSONL, CSV with mapping, `ada_sqlite`) as jobs; the cap at import; export (JSONL, SQLite); model and org deletion | A 1M-row import end to end; an export re-imported answers the same (**built; measured in 10.1:** a million checked, recorded and learned in 17 minutes, 93 with its HNSW index; an export re-imported answers identically, tested) | 3 to 5 |
 | 4 | **Tuning** | Settings as versions; activate and rollback; re-encode jobs into a new partition; backtest with candidates | Backtest on credit and Banking77 reproduces the benchmarks' held-out numbers (**built; measured in 10.1:** every number reproduced) | 4 to 5 |
-| 5 | **The connector** | `mcp/tools/ada.py`; `create_api_key`; upload and download links | The MCP test suite; a Claude session that builds a model from a CSV, tunes one lever and decides | 2 |
-| 6 | **Plans and metering** | Cloud caps in `plan_versions`; Redis counting and rate limits; `ada_requests` meter and price; `plan`, `plans`, `usage` updated | Stripe test mode: a Pro org over its requests is invoiced the overage; Free is refused at its cap | 3 to 4 |
+| 5 | **The connector** | `mcp/tools/ada.py`; `create_api_key`; upload and download links | The MCP test suite; a Claude session that builds a model from a CSV, tunes one lever and decides (**built; tested in 10.1:** the scripted session as a test, `tests/ada/test_connector.py`) | 2 |
+| 6 | **Plans and metering** | Cloud caps in `plan_versions`; Redis counting and rate limits; `ada_requests` meter and price; `plan`, `plans`, `usage` updated | Stripe test mode: a Pro org over its requests is invoiced the overage; Free is refused at its cap (**built; tested in 10.1** with Stripe faked at the HTTP layer, as the suite does: the meter event of the reads over, the metered price added; Free refused) | 3 to 4 |
 | 7 | **SDKs, contract, skill** | SDK 3.1 (Python, TypeScript), contract 4 with fixtures, the rewritten Ada skill | The SDKs' suites against a local server; the skill tried end to end in Claude Code | 3 to 4 |
 | 8 | **The platform** | Home, Models (spec editor, versions, settings, Import, Try it, Backtest, Export), API Keys with clearance, Usage; Runtimes behind Enterprise | The platform's tests; a person new to Glyphh gets from sign-in to a first decision in under ten minutes | 6 to 8 |
 | 9 | **Launch** | Image private; self-hosting docs marked Enterprise; website and pricing; privacy policy and terms (with a lawyer); `docs/architecture.md` and `pricing.md` rewritten; a security review (keys, schemas, worker messages, upload links, spec bounds); a week's beta with three design partners; the flag on | The review's findings closed | 4 to 6 + legal |
@@ -668,11 +718,12 @@ Against the first draft: no new app, volumes, Litestream or placement (about 6 d
 interface and the pgvector read path are new (about 9 days): the total is about the same, and Glyphh runs one app,
 one database and one Redis.
 
-### 10.1 Steps 2, 3 and 4, as built
+### 10.1 Steps 2 to 6, as built
 
-Built on 2026-10-21 in `server` (`src/glyphh_ada/`, `tests/ada/`), against kernel 3.12.0 (ada-private 334a605),
-behind `GLYPHH_ADA_CLOUD` (off). `docs/architecture.md` (Ada Cloud) describes what is there; this is what building
-them changed in the plan, and what they measured. Step 2 first; steps 3 and 4 [after it](#steps-3-and-4).
+Built on 2026-10-21 and 22 in `server` (`src/glyphh_ada/`, `tests/ada/`), steps 2 to 4 against kernel 3.12.0
+(ada-private 334a605), 5 and 6 against 3.12.2 (f28212c), behind `GLYPHH_ADA_CLOUD` (off). `docs/architecture.md`
+(Ada Cloud) describes what is there; this is what building them changed in the plan, and what they measured. Step 2
+first; steps 3 and 4 [after it](#steps-3-and-4); steps 5 and 6 [last](#steps-5-and-6).
 
 #### Step 2
 
@@ -749,8 +800,9 @@ page); `ada.glyphh.ai` a certificate on `glyphh-ai-server` (`fly certs add ada.g
   leading column such a lookup does not give: every lookup scanned the whole index (Postgres's plan: 51,000 cost
   units at a million precedents, against 8 with an index). Step 2's load test, at 1,000 precedents a model, never saw
   it; the first 1M import stalled on it for minutes in its `learn`, which rewrites 50,000 glyphs by id (it would have
-  run for over an hour). The server now gives every partition an index on its ids (`catalog.BY_ID`; migration 2 adds
-  it to the partitions step 2 made). The kernel should make it itself (ada-private, `PostgresStore._setup`).
+  run for over an hour). The server gave every partition an index on its ids (`catalog.BY_ID`; migration 2 adds it
+  to the partitions step 2 made). **Since kernel 3.12.1 `PostgresStore._setup` makes it itself** (the same name,
+  `<partition>_id`), and the server no longer does.
 - **A `learn` that died midway left the store stated by the old tables under the new.** The kernel keeps what it
   learned (`meta.learned`) before it rewrites the precedents, so a job killed between, and run again by another
   worker, learned the same tables, found nothing changed and restated nothing. The store is now marked `restating`
@@ -805,6 +857,45 @@ The first 1M run found the two learn faults above: it stalled in `learn` on the 
 stopped there and started again, went on from where it was (pass 1 again in 15 s, then nothing left to record) but
 restated nothing. The run in the table is a fresh one with both fixed.
 
+#### Steps 5 and 6
+
+**What the build changed** (sections 4.2, 4.3, 6.3 and 7 carry each in place)
+
+| Plan | As built, and why |
+|---|---|
+| "The same app, so a tool enqueues exactly as a REST call does" | It does (the API's own `send`), but the connector ran each request in one transaction, and a tool waits on a worker for up to 30 s (a job up to 50). Postgres kept that idle transaction's snapshot, and an import's `CREATE INDEX CONCURRENTLY` waits out every older snapshot: the first scripted session's import never finished while Claude polled it. A tool that waits on a worker now runs after the request's transaction has ended, on short ones of its own |
+| `mcp/tools/ada.py` | Four modules (the server keeps files under 200 lines); also `ada_grade`, `ada_calibrate`, `api_keys`, `revoke_api_key`; `ada_import` takes `content` or `rows` inline; `ada_job` waits |
+| `plan_versions` gains `cloud_precedents`, `cloud_requests`, `cloud_rps` | And `cloud_overage` (metered or refused past the month: not derivable). New versions cannot sell on the same Stripe price (it is unique), so a cloud-limits-only version takes over the price and the orgs of the one before |
+| `GET /v1/usage`: precedents, requests | One nested shape for the API, the platform (PR platform#19), SDK 3.2 and the connector: `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`, extending step 4's `{plan, models, precedents, requests: null}` (server #18) |
+| Reported daily by the hosting meter's pattern | And as soon as a month ends; by calendar month, stamped when sent, so a month's last day lands on the next Stripe period's invoice. A subscription made before Ada Cloud is given the metered price at its first report |
+| The rate limit for reads | For every call (writes and job polls too), as 3.6 says; a Free org polling a job twice a second spends two of its five |
+| (not in the plan) | Workers start one process per CPU they may use (affinity and the container's `cpu.max` quota), not the host's count |
+
+**Found while building** (each fixed, each with a test):
+
+- **Opening a store waited out every write to it, and made the whole org wait** (kernel 3.12.2). `PostgresStore._setup`
+  ran its `CREATE … IF NOT EXISTS` statements on every open, under the schema's advisory lock; a `CREATE INDEX IF NOT
+  EXISTS` takes a ShareLock on the partition even when the index is there (checked: it waited 3 s behind an
+  uncommitted insert), so a worker opening a model (a cache miss, a version bump after every learn, a small model
+  after every read) waited for every write open on it while holding the lock every other store of the org needs to
+  open; inside a write's transaction, to its commit. Under load that convoyed reads and writes for tens of seconds:
+  the SDK integration run's 100-case `record_many` at 28.7 s and its reads past 10 s at about 1,200 precedents. A
+  store already made now opens with no DDL and no lock.
+- **The integration run's "three deliveries".** A message is taken over only when its worker stops heartbeating for
+  5 s: the heartbeat thread runs while its worker waits on Postgres (checked: psycopg lets go of the GIL), so the
+  convoy alone does not cause it. Each worker container there started one process per *host* CPU (`os.cpu_count()`:
+  three containers, 36 kernel processes on a 12-CPU laptop's Docker VM, which other stacks shared; this build's own
+  suite was killed for memory in the same hour), so processes were killed or stalled past 5 s, three times, and the
+  fourth delivery answered `E_INTERNAL`. Fixed in part (the count now honours a container's `--cpus`); the run
+  should start its workers with `--processes 2` (or `GLYPHH_ADA_WORKERS`). Not reproduced here: the cause is
+  inferred.
+- **The minute tick's flush failed on an org removed mid-month** (its `ada_usage` row's foreign key); its count goes
+  with it now.
+
+**Before the flag goes on in production**, beyond step 2's list: `scripts/stripe-setup.py` against the live account
+and `GLYPHH_STRIPE_PRICE_ADA`, `GLYPHH_STRIPE_METER_ADA` set; no org pinned to a plan version without cloud limits
+but Enterprise's; Team's million not sold before its index build memory is decided (above).
+
 ### Risks and unknowns
 
 | Risk | What would show it | Answer |
@@ -840,7 +931,7 @@ recommended; decision 12 does not arise (there are no paying self-hosted custome
 |---|---|---|
 | 1 | The shortlist: its size and the size below which a model is read exactly | ~~`S` = 1,000 and exact below 20,000~~ **`S` = 1,000 and exact below 1,000**, as step 1's numbers set them (10.1) |
 | 2 | Free orgs in their own schemas, or in shared tables with RLS | **Their own schemas until about 5,000 orgs,** then shared tables for Free only |
-| 3 | The cloud caps (section 7) | **Free 5k / 10k requests, Pro 100k / 1M, Team 1M / 5M** |
+| 3 | The cloud caps (section 7) | **Free 5k / 10k requests, Pro 100k / 1M, Team 1M / 5M**; Basic ($20) 10k / 50k added 2026-10-22 |
 | 4 | What a billable request is | **Reads only;** writes bounded by the precedent cap |
 | 5 | Bill through Stripe (built) or through Vercel's AI Gateway like Jev | **Stripe first** (the meter pattern exists, `ops/billing/meter.py`); list on Vercel's marketplace later if it brings customers |
 | 6 | Make `ghcr.io/glyphh-ai/rrotor` private, ending Free self-hosting | **Yes, now;** Free moves to the cloud; this reverses the 2026-10-18/19 Free-local ruling |

@@ -14,30 +14,32 @@ from fastapi.responses import StreamingResponse
 from glyphh_ada import limits, links
 from glyphh_ada.api import blobs
 from glyphh_ada.api.auth import AdaCaller
-from glyphh_ada.api.call import call
+from glyphh_ada.api.call import send
 
 router = APIRouter(tags=["files"])
 TYPES: dict[str, str] = {".zip": "application/zip", ".sqlite": "application/vnd.sqlite3"}
 
 
-def url(request: Request, link: links.Link) -> dict[str, Any]:
-    """The link as a URL at this host, by the scheme the caller used (Fly's proxy says it: X-Forwarded-Proto), and
-    when it stops working."""
+def base_of(request: Request) -> str:
+    """This host's address, by the scheme the caller used (Fly's proxy says it: X-Forwarded-Proto)."""
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
-    base = f"{scheme}://{request.url.netloc}"
+    return f"{scheme}://{request.url.netloc}"
+
+
+def link_url(base: str, secret: str, link: links.Link) -> dict[str, Any]:
+    """The link as a URL at the Ada API's address, and when it stops working."""
     path = "uploads" if link.kind == links.UP else "downloads"
-    token = links.sign(request.app.state.settings.secret_key, link)
-    return {"url": f"{base}/v1/{path}/{token}", "expires_at": link.expires}
+    return {"url": f"{base}/v1/{path}/{links.sign(secret, link)}", "expires_at": link.expires}
 
 
 def link_for(org: uuid.UUID, model: str, job: str, kind: str, since: float | None = None, name: str = "") -> links.Link:
     return links.Link(str(org), model, job, kind, int((since or time.time()) + limits.LINK_TTL), name)
 
 
-async def queue(request: Request, link: links.Link) -> dict[str, Any]:
+async def queue(state: Any, link: links.Link) -> dict[str, Any]:
     """The import's file is in: the worker queues its job."""
     who = AdaCaller(uuid.UUID(link.org), uuid.UUID(int=0), 1.0)
-    return dict(await call(request, who, link.model, "import_go", {"job": link.job}))
+    return dict((await send(state, who, link.model, "import_go", {"job": link.job}))[0])
 
 
 @router.put("/v1/uploads/{token}", operation_id="uploadAdaImport", status_code=202)
@@ -46,7 +48,7 @@ async def upload(token: str, request: Request) -> dict[str, Any]:
     state = request.app.state
     link = links.check(state.settings.secret_key, token, links.UP)
     await blobs.store(state.engine, link.org, link.job, request.stream(), state.settings.ada_import_bytes)
-    return await queue(request, link)
+    return await queue(state, link)
 
 
 @router.get("/v1/downloads/{token}", operation_id="downloadAdaExport")

@@ -1,7 +1,7 @@
 """`python -m glyphh_ada.worker --queue sync|jobs`: a process group's command in fly.toml (`ada`, `adajobs`). It
-starts one single-threaded worker process per vCPU (or GLYPHH_ADA_WORKERS, or --processes), and starts again any that
-dies. With GLYPHH_ADA_CLOUD off it does nothing at all, touching neither Postgres nor Redis, and waits to be stopped,
-so a deploy with the flag off runs exactly what ran before."""
+starts one single-threaded worker process per vCPU it may use (cpus; or GLYPHH_ADA_WORKERS, or --processes), and
+starts again any that dies. With GLYPHH_ADA_CLOUD off it does nothing at all, touching neither Postgres nor Redis,
+and waits to be stopped, so a deploy with the flag off runs exactly what ran before."""
 
 import argparse
 import logging
@@ -11,6 +11,7 @@ import signal
 import threading
 from collections.abc import Callable
 from multiprocessing.process import BaseProcess
+from pathlib import Path
 
 from glyphh_ada.process import Worker
 from glyphh_ada.protocol import JOBS, SYNC
@@ -19,6 +20,7 @@ from glyphh_server.obs.logs import configure, fields
 
 log = logging.getLogger("glyphh.ada")
 RESTART_EVERY: float = 1.0
+CPU_MAX: Path = Path("/sys/fs/cgroup/cpu.max")
 
 
 def serve(queue: str) -> None:
@@ -69,9 +71,21 @@ def main(argv: list[str] | None = None) -> None:
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     if not settings.ada_cloud:
         return idle(stop)
-    count = args.processes or settings.ada_workers or os.cpu_count() or 1
+    count = args.processes or settings.ada_workers or cpus()
     log.info("starting workers", extra=fields(queue=args.queue, processes=count))
     supervise(count, args.queue, stop)
+
+
+def cpus(quota: Path = CPU_MAX) -> int:
+    """The CPUs this process may use: those it is allowed to run on, cut to its container's CPU quota (cgroup v2
+    cpu.max, as `docker run --cpus` and Fly set it). os.cpu_count() alone is the host's: in a container on a 12-CPU
+    laptop it starts twelve kernel processes per group, which then contend for the CPUs and the memory."""
+    n = os.process_cpu_count() or 1
+    try:
+        limit, period = quota.read_text().split()
+    except (OSError, ValueError):
+        return n
+    return n if limit == "max" else max(1, min(n, int(limit) // int(period)))
 
 
 if __name__ == "__main__":  # pragma: no cover

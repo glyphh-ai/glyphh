@@ -1,5 +1,6 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
+from glyphh_server.models.ada_usage import AdaMeterEvent, AdaUsage
 from glyphh_server.models.approval import Approval
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
@@ -44,6 +45,8 @@ __all__ = [
     "TIERS",
     "TOKEN_KINDS",
     "TRIGGER_STATUSES",
+    "AdaMeterEvent",
+    "AdaUsage",
     "Approval",
     "Base",
     "ConnectorGrant",

@@ -1,6 +1,6 @@
-"""Subscribing (Stripe Checkout: the plan's flat monthly price, and with hosting on the metered hosting price) and
-Stripe's own portal for the card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by
-contract."""
+"""Subscribing (Stripe Checkout: the plan's flat monthly price, with hosting on the metered hosting price, and with Ada
+Cloud on, for a plan whose reads past its month are metered, the metered reads' price) and Stripe's own portal for the
+card, invoices and cancelling. Only self-serve plans are bought here; Enterprise is by contract."""
 
 import uuid
 
@@ -44,15 +44,28 @@ def sold(version: Row) -> str:
     return str(version.stripe_price_id)
 
 
+def metered(settings: Settings, version: Row) -> list[dict[str, str]]:
+    """The metered prices a subscription to this version carries: hosting's with hosting on and the plan hosting
+    (a markup on Fly's rates: not Basic); Ada Cloud's reads past the month with it on and the plan metering them.
+    Unpriced on this server, E_UNAVAILABLE."""
+    lines = []
+    if settings.hosting and version.hosting_markup_pct is not None:
+        if not settings.stripe_price_hosting:
+            raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
+        lines.append({"price": settings.stripe_price_hosting})
+    if settings.ada_cloud and version.cloud_overage:
+        if not settings.stripe_price_ada:
+            raise Unavailable("Ada Cloud's reads aren't priced on this server.", reason="billing_off")
+        lines.append({"price": settings.stripe_price_ada})
+    return lines
+
+
 async def checkout(
     conn: AsyncConnection, who: Principal, stripe: StripeClient, settings: Settings, plan: str
 ) -> StripePage:
     require_admin(who)
-    lines = [{"price": sold(await newest_version(conn, plan)), "quantity": 1}]
-    if settings.hosting:
-        if not settings.stripe_price_hosting:
-            raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
-        lines.append({"price": settings.stripe_price_hosting})
+    version = await newest_version(conn, plan)
+    lines = [{"price": sold(version), "quantity": 1}, *metered(settings, version)]
     org = await billing_row(conn, who.org_id)
     if org.stripe_subscription_id is not None:
         raise Conflict("Your org is already subscribed: change plan instead.", reason="subscribed")
