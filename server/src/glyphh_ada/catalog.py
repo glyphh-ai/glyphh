@@ -1,11 +1,14 @@
 """An org's models, in its schema (worker side): made from a JSON spec (checked by the kernel, then against the cloud's
-bounds), listed, read and deleted. A model's precedents live in the kernel's store under the model's id (hex), a
-partition of their own with its HNSW index (glyphh_postgres.PostgresStore); its name is the caller's handle. Every
-statement names the org's schema: public has tables of the same names (the server's own `models`)."""
+bounds), listed, read and deleted. A model's precedents live in the kernel's store under a key of their own, a
+partition with its HNSW index (glyphh_postgres.PostgresStore): the model's id (hex) for its first version, and a new
+key for each version a re-encode made (versions.py); the active version names the store it reads. Its name is the
+caller's handle. Every statement names the org's schema: public has tables of the same names (the server's own
+`models`)."""
 
+import hashlib
 import json
 import uuid
-from typing import Any
+from typing import Any, NamedTuple
 
 import glyphh_spec
 import psycopg
@@ -17,15 +20,26 @@ from glyphh_ada import limits, orgschema
 from glyphh_ada.errors import Refusal, model_missing
 
 _ACTIVE = """
-    SELECT m.id, m.active_version, v.spec, m.created_at FROM {s}.models m
+    SELECT m.id, m.active_version, v.spec, m.created_at, v.store FROM {s}.models m
     JOIN {s}.spec_versions v ON v.model_id = m.id AND v.version = m.active_version
     WHERE m.name = %s AND m.deleted_at IS NULL
 """
-_LIST = """
-    SELECT m.name, m.id, m.active_version, coalesce(c.n, 0), m.created_at FROM {s}.models m
-    LEFT JOIN {s}.counts c ON c.model = replace(m.id::text, '-', '')
-    WHERE m.deleted_at IS NULL ORDER BY m.name
+_LIVE = """
+    FROM {s}.models m JOIN {s}.spec_versions v ON v.model_id = m.id AND v.version = m.active_version
+    LEFT JOIN {s}.counts c ON c.model = v.store WHERE m.deleted_at IS NULL
 """
+_LIST = "SELECT m.name, m.id, m.active_version, coalesce(c.n, 0), m.created_at" + _LIVE + " ORDER BY m.name"
+_TOTAL = "SELECT coalesce(sum(c.n), 0)" + _LIVE
+
+
+class Live(NamedTuple):
+    """A live model: its id, active version, that version's spec (JSON), when it was made, the store it reads."""
+
+    id: uuid.UUID
+    version: int
+    spec: Any
+    made: Any
+    store: str
 
 
 def q(schema: str, text: str) -> sql.Composed:
@@ -50,16 +64,45 @@ def has(conn: psycopg.Connection, schema: str, table: str) -> bool:
     return found is not None and found[0] is not None
 
 
-def active(conn: psycopg.Connection, schema: str, name: str) -> tuple[uuid.UUID, int, Any, Any] | None:
-    """(id, active version, spec JSON, made at) of the org's live model by this name; None when there is none."""
+def active(conn: psycopg.Connection, schema: str, name: str) -> Live | None:
+    """The org's live model by this name; None when there is none."""
     if not has(conn, schema, "counts"):  # no model was ever made: no schema, or the kernel's tables not yet
         return None
     found = conn.execute(q(schema, _ACTIVE), (name,)).fetchone()
-    return None if found is None else (found[0], found[1], found[2], found[3])
+    return None if found is None else Live(*found)
 
 
-def store(conn: psycopg.Connection, schema: str, model_id: uuid.UUID, dim: int, index: bool = False) -> PostgresStore:
-    return PostgresStore(conn, schema, model_id.hex, dim=dim, index=index)
+def live(conn: psycopg.Connection, schema: str, name: str) -> Live:
+    found = active(conn, schema, name)
+    if found is None:
+        raise model_missing(name)
+    return found
+
+
+def store(conn: psycopg.Connection, schema: str, key: str, dim: int, index: bool = False) -> PostgresStore:
+    """The kernel's store under this key (made, with its partition, when it is not there yet). The kernel indexes
+    each partition's ids itself (3.12.1): it finds a precedent by `id` alone (grade, forget, has, rewrite), which the
+    partition's primary key (model, id) cannot lead with."""
+    return PostgresStore(conn, schema, key, dim=dim, index=index)
+
+
+def _part(key: str) -> str:
+    """A store's partition, as glyphh_postgres names it."""
+    return "p_" + hashlib.sha256(key.encode()).hexdigest()[:24]
+
+
+def drop_store(conn: psycopg.Connection, schema: str, key: str) -> None:
+    """A store gone, as PostgresStore.drop does it, whether or not its partition was ever made."""
+    part = _part(key)
+    with conn.transaction():
+        conn.execute(sql.SQL("DROP TABLE IF EXISTS {}").format(sql.Identifier(schema, part)))
+        for table in ("outcomes", "meta", "counts"):
+            conn.execute(sql.SQL("DELETE FROM {} WHERE model = %s").format(sql.Identifier(schema, table)), (key,))
+
+
+def total(conn: psycopg.Connection, schema: str) -> int:
+    """The precedents the org holds, its live models' active stores together (what its plan's cap counts)."""
+    return int(conn.execute(q(schema, _TOTAL)).fetchone()[0])  # type: ignore[index]
 
 
 def listing(conn: psycopg.Connection, schema: str) -> list[dict[str, Any]]:
@@ -70,28 +113,39 @@ def listing(conn: psycopg.Connection, schema: str) -> list[dict[str, Any]]:
     return [dict(zip(keys, r, strict=True)) for r in rows]
 
 
+def count(conn: psycopg.Connection, schema: str, key: str) -> int:
+    """The precedents a store holds."""
+    held = conn.execute(q(schema, "SELECT n FROM {s}.counts WHERE model = %s"), (key,)).fetchone()
+    return int(held[0]) if held else 0
+
+
 def view(conn: psycopg.Connection, schema: str, name: str) -> dict[str, Any]:
-    found = active(conn, schema, name)
-    if found is None:
-        raise model_missing(name)
-    model_id, version, spec, made = found
-    held = conn.execute(q(schema, "SELECT n FROM {s}.counts WHERE model = %s"), (model_id.hex,)).fetchone()
-    count = held[0] if held else 0
-    return {"name": name, "id": model_id, "version": version, "precedents": count, "created_at": made, "spec": spec}
+    found = live(conn, schema, name)
+    return {
+        "name": name,
+        "id": found.id,
+        "version": found.version,
+        "precedents": count(conn, schema, found.store),
+        "created_at": found.made,
+        "spec": found.spec,
+    }
 
 
 def create(conn: psycopg.Connection, org: str, name: str, spec_json: Any, author: str) -> dict[str, Any]:
     spec = parse(spec_json)
     schema = orgschema.ensure(conn, org)
     model_id = uuid.uuid4()
-    insert = "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by) VALUES (%s, 1, %s, 'made', %s)"
+    insert = (
+        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store)"
+        " VALUES (%s, 1, %s, 'made', %s, %s)"
+    )
     try:
         with conn.transaction():
             conn.execute(
                 q(schema, "INSERT INTO {s}.models (id, name, created_by) VALUES (%s, %s, %s)"), (model_id, name, author)
             )
-            conn.execute(q(schema, insert), (model_id, Jsonb(spec_json), author))
-            store(conn, schema, model_id, spec.dimension, index=True)  # its partition and HNSW index
+            conn.execute(q(schema, insert), (model_id, Jsonb(spec_json), author, model_id.hex))
+            store(conn, schema, model_id.hex, spec.dimension, index=True)  # its partition and HNSW index
             orgschema.fence(conn, schema, org)
     except psycopg.errors.UniqueViolation:
         raise Refusal("E_CONFLICT", f"This org has a model named {name} already.", 409, model=name) from None
@@ -99,12 +153,16 @@ def create(conn: psycopg.Connection, org: str, name: str, spec_json: Any, author
 
 
 def delete(conn: psycopg.Connection, schema: str, name: str) -> uuid.UUID:
-    """The model gone: its partition, outcomes, learned meta and count; its row kept, marked deleted."""
-    found = active(conn, schema, name)
-    if found is None:
-        raise model_missing(name)
-    model_id, _, spec, _ = found
+    """The model gone from the live store at once: every store its versions read (partitions, outcomes, learned
+    meta, counts), its versions, its jobs and their files; its row kept, marked deleted."""
+    found = live(conn, schema, name)
     with conn.transaction():
-        conn.execute(q(schema, "UPDATE {s}.models SET deleted_at = now() WHERE id = %s"), (model_id,))
-        store(conn, schema, model_id, glyphh_spec.Spec.from_json(spec).dimension).drop()
-    return model_id
+        conn.execute(q(schema, "UPDATE {s}.models SET deleted_at = now() WHERE id = %s"), (found.id,))
+        stores = q(schema, "SELECT DISTINCT store FROM {s}.spec_versions WHERE model_id = %s")
+        for (key,) in conn.execute(stores, (found.id,)).fetchall():
+            drop_store(conn, schema, key)
+        jobs = "DELETE FROM {s}.files WHERE id IN (SELECT id FROM {s}.jobs WHERE model_id = %s)"
+        conn.execute(q(schema, jobs), (found.id,))
+        for table in ("jobs", "spec_versions"):
+            conn.execute(q(schema, f"DELETE FROM {{s}}.{table} WHERE model_id = %s"), (found.id,))
+    return found.id

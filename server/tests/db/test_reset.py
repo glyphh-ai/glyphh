@@ -38,7 +38,7 @@ async def test_a_reset_drops_every_table_and_makes_the_schema_again(own: AsyncEn
         await conn.execute(insert(Plan).values(name="Trial", sort=9))
         await conn.execute(text("CREATE TABLE left_over (id int)"))
     assert await main(SETTINGS_HERE.model_copy(update={"reset_database": True})) is True
-    assert await _plans(own) == ["Free", "Pro", "Team", "Enterprise"]
+    assert await _plans(own) == ["Free", "Basic", "Pro", "Team", "Enterprise"]
     async with own.connect() as conn:
         assert (await conn.execute(text("SELECT to_regclass('public.left_over')"))).scalar() is None
 

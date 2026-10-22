@@ -9,11 +9,11 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from glyphh_ada.api import cases, jobs, keys, models, reads, runs
+from glyphh_ada.api import cases, files, imports, jobs, keys, models, reads, runs, tuning, usage
 from glyphh_server.api import errors, health
 from glyphh_server.config import Settings
 
-ROUTERS = (health, keys, models, cases, reads, jobs, runs)
+ROUTERS = (health, keys, models, cases, reads, jobs, runs, imports, files, tuning, usage)
 
 
 def make_app(cfg: Settings, engine: AsyncEngine) -> FastAPI:

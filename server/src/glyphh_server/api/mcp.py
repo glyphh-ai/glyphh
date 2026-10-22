@@ -7,14 +7,15 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncConnection
 from starlette.responses import Response
 
-from glyphh_server.api.auth import Conn
 from glyphh_server.api.errors import error_body
 from glyphh_server.api.oauth_meta import resource_metadata_url
 from glyphh_server.db import tenancy
 from glyphh_server.mcp import protocol, server
 from glyphh_server.mcp.protocol import INVALID_REQUEST, RpcError
+from glyphh_server.mcp.tools import registry
 from glyphh_server.mcp.tools.base import Context
 from glyphh_server.obs import context
 from glyphh_server.ops.auth.principal import Principal
@@ -39,7 +40,7 @@ def origin_allowed(request: Request) -> bool:
     return origin is None or origin.rstrip("/") in {settings.base_url, *settings.mcp_origin_list}
 
 
-async def caller(request: Request, conn: Conn) -> Principal | None:
+async def caller(request: Request, conn: AsyncConnection) -> Principal | None:
     scheme, _, token = request.headers.get("authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not token:
         return None
@@ -55,28 +56,37 @@ def rpc_refusal(err: RpcError) -> JSONResponse:
     return JSONResponse(protocol.failure(err), err.status)
 
 
-@router.post("/mcp", operation_id="mcp", response_model=None)
-async def mcp(request: Request, conn: Conn) -> Response:
-    """The Glyphh connector: MCP 2026-07-28 and the earlier initialize revisions, with a connector access token."""
-    if not origin_allowed(request):
-        return rpc_refusal(RpcError(INVALID_REQUEST, "This origin may not call the Glyphh connector.", 403))
-    who = await caller(request, conn)
-    if who is None:
-        return challenge(request, "authorization" in request.headers)
-    try:
-        call = protocol.read(await request.body(), request.headers)
-    except RpcError as err:
-        return rpc_refusal(err)
-    if call.id is None:
-        return Response(status_code=202)
-    state = request.app.state
-    ctx = Context(conn, who, state.settings, state.http, state.hub, state.signing_key)
+async def respond(ctx: Context, call: protocol.Call) -> Response:
     try:
         result: dict[str, Any] = await server.handle(ctx, call)
     except RpcError as err:
         err.id = call.id
         return rpc_refusal(err)
     return JSONResponse(protocol.answer(call, result, server.server_info(ctx)))
+
+
+@router.post("/mcp", operation_id="mcp", response_model=None)
+async def mcp(request: Request) -> Response:
+    """The Glyphh connector: MCP 2026-07-28 and the earlier initialize revisions, with a connector access token. One
+    transaction per request, but for a tool that waits on an Ada worker (registry.DETACHED), which runs once it has
+    ended."""
+    if not origin_allowed(request):
+        return rpc_refusal(RpcError(INVALID_REQUEST, "This origin may not call the Glyphh connector.", 403))
+    state = request.app.state
+    async with state.engine.begin() as conn:
+        who = await caller(request, conn)
+        if who is None:
+            return challenge(request, "authorization" in request.headers)
+        try:
+            call = protocol.read(await request.body(), request.headers)
+        except RpcError as err:
+            return rpc_refusal(err)
+        if call.id is None:
+            return Response(status_code=202)
+        ctx = Context(conn, who, state.settings, state.http, state.hub, state.signing_key, state.ada)
+        if not registry.detached(ctx, call.method, call.params):
+            return await respond(ctx, call)
+    return await respond(ctx, call)
 
 
 @router.get("/mcp", include_in_schema=False)

@@ -5,8 +5,9 @@ its worker died, or a request sent again with the same Idempotency-Key, is answe
 from typing import Any
 
 import glyphh_spec
+import psycopg
 
-from glyphh_ada import limits
+from glyphh_ada import catalog, limits
 from glyphh_ada.errors import Refusal
 
 
@@ -49,3 +50,38 @@ def forget(model: glyphh_spec.Model, args: dict[str, Any]) -> dict[str, Any]:
 
 
 WRITERS = {"record": record, "record_many": record_many, "grade": grade, "forget": forget}
+
+
+def adding(model: glyphh_spec.Model, cases: list[Any]) -> int:
+    """How many precedents these cases would add: a case whose key parts name a held precedent replaces it."""
+    keys: list[str | None] = []
+    for case in cases:
+        try:
+            keys.append(model.spec.key(model.spec.situation(case["data"])))
+        except (glyphh_spec.SpecError, KeyError, TypeError):  # the kernel refuses it when it is written
+            keys.append(None)
+    named = {k for k in keys if k}
+    held = model.space.store.has_many(named) if named else set()  # type: ignore[union-attr]
+    return keys.count(None) + len(named - held)
+
+
+def within_cap(
+    conn: psycopg.Connection, schema: str, model: glyphh_spec.Model, cases: list[Any], cap: int | None
+) -> None:
+    """Refused (403 E_LIMIT `precedents`) when these cases would take the org past its plan's cap."""
+    if cap is None:
+        return
+    more = adding(model, cases)
+    used = catalog.total(conn, schema)
+    if more and used + more > cap:
+        message = f"These cases add {more:,} precedents to the {used:,} the org holds: its plan allows {cap:,}."
+        raise Refusal("E_LIMIT", message, 403, reason="precedents", used=used, max=cap, adding=more)
+
+
+def refresh_due(model: glyphh_spec.Model, op: str, answer: dict[str, Any]) -> bool:
+    """Whether this write took the model past a multiple of its refresh_every (precedents held, in the cloud)."""
+    every = model.settings.refresh_every
+    if not every or op not in ("record", "record_many"):
+        return False
+    added = answer.get("added", 1)
+    return bool(added) and answer["precedents"] % every < added

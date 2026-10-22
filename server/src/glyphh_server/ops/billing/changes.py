@@ -10,6 +10,7 @@ from glyphh_server.db.seed import FREE, SALES
 from glyphh_server.errors import Conflict
 from glyphh_server.ops import limits
 from glyphh_server.ops.auth.principal import Principal
+from glyphh_server.ops.billing import ada_meter
 from glyphh_server.ops.billing.checkout import billing_row, sold
 from glyphh_server.ops.billing.items import classify
 from glyphh_server.ops.billing.meter import report
@@ -38,13 +39,21 @@ async def room_for(conn: AsyncConnection, who: Principal, version: Row) -> None:
     raise Conflict(f"Delete your hosted machines first.{said}", reason="machines", held=held, max=allowed)
 
 
-async def to_free(conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row) -> None:
-    """The subscription cancelled now, once the hosting due is reported, so the last invoice carries it."""
+async def to_free(
+    conn: AsyncConnection, who: Principal, stripe: StripeClient, org: Row, ada_price: str | None = None
+) -> None:
+    """The subscription cancelled now, once the hosting due and Ada Cloud's reads past the month are reported, so the
+    last invoice carries them."""
     await report(conn.engine, stripe, only=who.org_id)
+    await ada_meter.report(conn.engine, stripe, ada_price, only=who.org_id)
     await sync_subscription(conn, who.org_id, await stripe.cancel(org.stripe_subscription_id))
 
 
-async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClient, plan: str) -> OrgView:
+async def change_plan(
+    conn: AsyncConnection, who: Principal, stripe: StripeClient, plan: str, ada_price: str | None = None
+) -> OrgView:
+    """ada_price: Ada Cloud's metered reads' price (GLYPHH_STRIPE_PRICE_ADA), which a last report needs on the
+    subscription."""
     org = await subscribed(conn, who)
     current = await org_version(conn, who.org_id)
     if not current.self_serve:
@@ -52,7 +61,7 @@ async def change_plan(conn: AsyncConnection, who: Principal, stripe: StripeClien
     version = await newest_version(conn, plan)
     await room_for(conn, who, version)
     if version.name == FREE:
-        await to_free(conn, who, stripe, org)
+        await to_free(conn, who, stripe, org, ada_price)
         return await org_view(conn, who.org_id)
     price = sold(version)
     if version.id != current.id:

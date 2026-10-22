@@ -291,9 +291,10 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 
 ### Ada Cloud (built, off: `GLYPHH_ADA_CLOUD`)
 
-Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by default:** off, no request reaches it
-(no host is routed to it), the schema step adds only the two `runtime_keys` columns below, and the `ada` and
-`adajobs` process groups idle without touching Postgres or Redis.
+Ada as an API inside this app, and through the connector (`docs/specs/ada-cloud.md`, its steps 2 to 6). **Off by
+default:** off, no request reaches it (no host is routed to it, the connector lists none of its tools, plans show no
+cloud limits), the schema step adds only the two `runtime_keys` columns, the plans' cloud columns and two empty
+tables below, and the `ada` and `adajobs` process groups idle without touching Postgres or Redis.
 
 - **Its own host.** A request whose `Host` is one of `GLYPHH_ADA_HOSTS` (`ada.glyphh.ai`) goes to the Ada app
   (`glyphh_ada/api/`), with its own paths; every other host reaches the API as before.
@@ -301,7 +302,8 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
   signed-in person at `POST /v1/keys`) or a Glyphh sign-in (full clearance). A request may ask for less clearance,
   never more. A resolved caller is kept 10 s in the process, so a revoked key stops within that. Refusals: `E_AUTH`
   (401), `E_MODEL_MISSING` (404), the server's shape otherwise.
-- **Processes and queues.** The `app` process authenticates, bounds the body (1 MB, `record_many` 5 MB; a string
+- **Processes and queues.** The `app` process authenticates, bounds the body (1 MB, `record_many` 5 MB, an import
+  with its file in the body 5 MB of file; a string
   holding NUL is a 400), puts one message on the Redis stream `ada:sync` and waits on its reply list (10 s for reads,
   30 s for `record_many`, `create`, `delete`; then `504 E_TIMEOUT`; Redis down: `503 E_UNAVAILABLE`). Workers
   (`python -m glyphh_ada.worker --queue sync|jobs`, one single-threaded process per vCPU, numpy's BLAS held to one
@@ -327,6 +329,52 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
   old.
 - **Jobs.** `learn` (weights, then the temperature) and `calibrate` read at most the newest 50,000 precedents
   (`limits.JOB_SAMPLE`); when learning changes what a stored case carries, every other precedent is restated after.
+  A write that takes a model past a multiple of its `refresh_every` (precedents held) starts a `learn` job.
+- **In and out.** An import is a job (`glyphh_ada/importer.py`): `POST …/imports` answers it waiting for its file and
+  a one-hour signed upload link (`PUT /v1/uploads/{link}`, no key: the link is the credential, HMAC with
+  `GLYPHH_SECRET_KEY`), or takes a file of up to 5 MB in its body. The file (JSON Lines; CSV with a header→role
+  mapping; a model's export; `ada_sqlite`, a kernel store) is kept in the org's `files` table in 1 MB chunks (no
+  volumes, no object storage), up to `GLYPHH_ADA_IMPORT_BYTES`. The job reads it twice: once to check every row and
+  count the ids it would add against the org's cap (its plan version's `cloud_precedents`; refused whole unless
+  `partial`), then, with the model's HNSW index dropped, recording 1,000 a transaction (bad rows named, the rest in;
+  how far it got kept, so a worker that dies leaves the rest to another), then learns once and builds the index again
+  (`CREATE INDEX CONCURRENTLY`, so writes go on). An `ada_sqlite` file whose glyphs are the model's goes in by the
+  kernel's `Space.merge`; any other is restated. Every record is held to the cap too. An export (`POST
+  …/export {format: jsonl|ada_sqlite}`) is a job whose file is fetched by a one-hour download link on the job
+  (`GET /v1/downloads/{link}`): a zip of the precedents as stored, every spec version and what was learned, or a
+  kernel SQLite store a self-hosted runtime opens; either imported into a model of the same spec answers the same.
+- **Versions.** Every spec or settings change is a new row of `spec_versions` (who, why, the backtest it was chosen
+  by). One that reads the stored cases as they are is active at once; one that changes what a case carries (seed,
+  dimension, roles, declared pairs, learning levers, lexicon) is a `reencode` job writing a store of its own beside
+  the live one, learning, then switching under the model's write lock (every write to its cases holds it shared)
+  after copying what was written meanwhile; one that reads a role's values differently is refused (`E_SPEC_READING`).
+  A version keeps the learned weights and temperatures it had when it stopped being active; making it active again
+  restores them, at once or by a job that brings its store up to date. A store no version has read for 7 days is
+  dropped (`E_VERSION_GONE`).
+- **Backtests.** A job: the active version and up to ten candidates, each an in-memory model of the model's graded
+  precedents minus the held-out ones (the newest `n`, or a seeded fraction), learned and calibrated, scored on the
+  held-out: accuracy (decide's and the vote's), log-loss, cost by the output's costs, ask rate and accuracy where it
+  did not ask, coverage, calibration error, mistakes, and the change against the active version.
+- **Deletion.** A model's every store, version, job and file go at once (`DELETE /v1/models/{name}`); an org's whole
+  schema is dropped in the transaction that removes the org. The managed database's backups keep them until they age
+  out (Fly Managed Postgres's window).
+- **Plans and metering.** Each plan version carries the org's cloud limits (`cloud_precedents`, `cloud_requests` a
+  calendar month, `cloud_rps`, `cloud_overage`): Free 5,000 / 10,000 / 5, Pro 100,000 / 1,000,000 / 50, Team
+  1,000,000 / 5,000,000 / 200, Enterprise none (by contract); never per seat, model or key. Before a call is
+  enqueued (by the API or the connector alike, `glyphh_ada/api/meter.py`) the org's calls a second are held to the
+  plan by a token bucket in Redis (`429 E_RATE`, `Retry-After`), and a read (`decide`, `query`, `probabilities`,
+  `facts`; a decide once per output) is counted in Redis (`ada:req:<org>:<month>`). Past the month a Free org's
+  reads are refused (`403 E_LIMIT` `requests`, with `used`, `max`, `plan`, `upgrade` and `resets_at`); a Pro or Team
+  org's go on, and the minute tick adds the month's count to `ada_usage` and reports the reads past it to Stripe's
+  `ada_requests` meter ($1 per 10,000, `GLYPHH_STRIPE_PRICE_ADA`, written before sent like the hosting meter;
+  `ada_meter_events`), giving a subscription made before it the metered price first. Checkout sells that price beside
+  the plan's with Ada Cloud on.
+- **The connector.** Its `ada_*` tools (models, spec, settings, versions, activate, record, record_many, grade,
+  forget, decide, query, probabilities, facts, learn, calibrate, backtest, import with a one-hour upload link or rows
+  inline, export with a download link, job with a wait) and `create_api_key`, `api_keys`, `revoke_api_key` call the
+  workers exactly as the API does (`glyphh_ada/api/call.py`), as the person signed in with full clearance. A tool that
+  waits on a worker runs after the request's transaction has ended, on short transactions of its own: an open
+  transaction would hold back the database's oldest snapshot, which an import's concurrent index build waits out.
 - **The kernel is private.** ada-private at a pinned commit (`uv.lock`), read at build time with a read-only deploy
   key (the build secret `ada_deploy_key`: GitHub's `ADA_DEPLOY_KEY` secret, passed to Fly's builder by CI); the image
   is pushed only to private registries.
@@ -339,8 +387,18 @@ Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by 
 | `POST /v1/models/{name}/query`, `/probabilities`, `/facts` (`top` 50), `/decide` (`outputs`, `include: ["facts"]`) | The kernel's answers; `clearance` lower than the key's |
 | `POST /v1/decide` `{model, data, …}` | `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
 | `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}` | Jobs |
+| `POST /v1/models/{name}/imports` `{format, mapping?, partial?, learn?, content?, content_base64?}`; `GET …/imports/{id}`; `PUT /v1/uploads/{link}` | An import: the job and its upload link, or the file in the body (5 MB) |
+| `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | An export: the job, then its download link |
+| `PUT /v1/models/{name}/spec` `{spec, note?, backtest?}`; `GET`, `PATCH …/settings` `{changes, note?, backtest?}` | A new version: `{version, active, job}` |
+| `GET /v1/models/{name}/versions`; `POST …/versions/{n}/activate` | Versions; making one active again (a rollback) |
+| `POST /v1/models/{name}/backtest` `{candidates, holdout?, output?, clearance?}` | Candidates scored on held-out precedents, as a job |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | rrotor's call shape for SDK 3.0: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
+| `GET /v1/usage` | `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`: the org's models, the precedents they hold and its reads this month against its plan (`max` null: by contract; `over`: reads past the month, metered when `overage`) |
 | `GET /v1/health` | As on the API |
+
+**The platform** calls the Ada host server-side with the OAuth access token its session holds (a Glyphh sign-in,
+full clearance), as it calls the account API; it shows Ada when the account API's `GET /v1/me` answers `ada_cloud:
+true`.
 
 ### Starting up, and migrations
 
@@ -367,9 +425,11 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_LICENSE_SIGNING_KEY` | none | Base64 of a raw 32-byte Ed25519 private key; signs every licence and licence key. Required in `prod`; elsewhere one is made at start (licences and keys then don't verify after a restart). `GLYPHH_LICENSE_KEY` is its old name, still read: to rrotor that name is now the customer's key string |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | none | Sign-in providers; one without both is not offered |
 | `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | none | Billing; without them it answers `E_UNAVAILABLE` `billing_off` |
-| `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | none | The flat monthly prices Pro and Team sell on; a price a plan's newest version doesn't sell on becomes a new version at the next boot |
+| `GLYPHH_STRIPE_PRICE_BASIC`, `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | none | The flat monthly prices Basic, Pro and Team sell on; a price a plan's newest version doesn't sell on becomes a new version at the next boot |
 | `GLYPHH_STRIPE_PRICE_HOSTING` | none | The metered hosting price (a cent a unit), with hosting on the second item on every paid subscription; without it, with hosting on, Checkout is `billing_off` |
 | `GLYPHH_STRIPE_METER_HOSTING` | none | The meter's event name (`glyphh_hosting`); without it nothing is reported |
+| `GLYPHH_STRIPE_PRICE_ADA`, `GLYPHH_STRIPE_METER_ADA` | none | Ada Cloud's reads past a Pro or Team month: the metered price ($1 per 10,000) Checkout sells with Ada Cloud on (without it, `E_UNAVAILABLE`), and its meter's event name (`ada_requests`; without it nothing is reported) |
+| `GLYPHH_ADA_URL` | `https://ada.glyphh.ai` | The Ada API's address in the links the connector hands out |
 | `GLYPHH_GITHUB_APP_ID`, `_PRIVATE_KEY`, `_SLUG` | none | The Glyphh GitHub App: its id, its PEM key (line breaks may be written `\n`) and its slug (install page `https://github.com/apps/<slug>/installations/new`; set the App's Setup URL to `{public_url}/v1/github/callback`); without all three, `E_UNAVAILABLE` `github_off` |
 | `GLYPHH_SECRETS_KEY` | none | Base64 of 32 bytes; encrypts routine trigger tokens (AES-256-GCM); without it routine triggers are `E_UNAVAILABLE` `secrets_off`; changing it makes the stored tokens unreadable |
 | `GLYPHH_INVITE_URL` | `{public_url}/join` | Where an invite's link points |
@@ -382,8 +442,9 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_TELEMETRY_RETENTION_DAYS` | `7` | Days server-side logging is kept (1 to 90), every plan alike; the minute tick purges what is older ([Server-side logging](#server-side-logging)) |
 | `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
 | `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
-| `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model |
+| `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model, a new version |
 | `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups; 0, one per vCPU |
+| `GLYPHH_ADA_IMPORT_BYTES` | `209715200` | The largest file an import takes (200 MB) |
 
 ### API
 
@@ -470,7 +531,7 @@ The key rrotor runs on (rrotor's `docs/specs/licensing.md`; [pricing.md](pricing
 ```
 
 - **From the plan version the org is on:** `tier` the plan's name in lower case (`pro`, `team`, `enterprise`), `max_nodes` its `max_machines`, `max_precedents` its `precedents` (per node), `cluster_sync_enabled` its `sync`; `null` is unlimited. `customer_id` is the org's id (no name or address); times are RFC 3339 UTC to the second.
-- **Issued** on Stripe's `checkout.session.completed` and `invoice.payment_succeeded` (the invoice's subscription on it, or under `parent.subscription_details`), once the subscription is read and synced, when it is the org's own and `active` or `trialing`: a key expiring at the paid period's end (`current_period_end`; a subscription that says none, 31 days). An Enterprise grant issues one through its last day (`plan_until`), and its deal's invoices issue that one again. The same terms to the same expiry already live are that key, not another (a checkout and its first invoice; an event delivered twice). **Free gets none:** rrotor's default with no key is Community, Free's limits.
+- **Issued** on Stripe's `checkout.session.completed` and `invoice.payment_succeeded` (the invoice's subscription on it, or under `parent.subscription_details`), once the subscription is read and synced, when it is the org's own and `active` or `trialing`: a key expiring at the paid period's end (`current_period_end`; a subscription that says none, 31 days). An Enterprise grant issues one through its last day (`plan_until`), and its deal's invoices issue that one again. The same terms to the same expiry already live are that key, not another (a checkout and its first invoice; an event delivered twice). **Free and Basic get none:** rrotor's default with no key is Community, Free's limits (rrotor has no basic tier; Basic is an Ada Cloud plan).
 - **Revoked** when the subscription ends (`customer.subscription.deleted`, or any sync that finds it `canceled` or `incomplete_expired`, so a change to Free too) and when a grant is revoked or lapses: every key of the org's is marked `revoked_at` and no longer delivered. A node holding one runs it to its `expires_at` and rrotor's 14 days' grace, then Community.
 - **Delivered:** `license_key`, the org's newest live key (not revoked, not expired: the latest `issued_at`, ties to the later `expires_at`, as rrotor picks), or `null`:
   - in **every** runtime's `welcome`, local, hosted and self-hosted: `{"type": "welcome", "id": "…", "accepted": true, "licence": {…} | null, "license_key": "<key>" | null, "keys": ["<sha256>", …] | null}`;
@@ -507,7 +568,7 @@ rrotor keeps its logs, metrics, traces and audit events on the runtime unless it
 
 A paid plan is one Stripe subscription: the plan's flat price and, with hosting on, the shared metered hosting price. Writes are the admin's.
 
-- **`GET /v1/plans`** (open): each active plan's newest version, `[{name, version, price_cents, interval, self_serve, limits: {machines, precedents}, features: {sync, ha, offline, sso}, built: {sync, ha, offline, sso}, markup_hidden: true}]`; `built` says which features work today, the same on every plan (`offline` only: `BUILT` in `ops/plans.py`), so an unbuilt one is never shown as included; `interval` is `month`, `year` or `null` (Free), `price_cents` `null` for Enterprise (each contract's), `limits.machines` the runtime nodes (Free 1, Pro 3, Team 10, Enterprise `null`). Never the markup.
+- **`GET /v1/plans`** (open): each active plan's newest version, `[{name, version, price_cents, interval, self_serve, limits: {machines, precedents}, features: {sync, ha, offline, sso}, built: {sync, ha, offline, sso}, markup_hidden: true, hosting, cloud}]`; `hosting` says whether Glyphh hosts machines on it while hosting is on (Pro, Team, Enterprise; not Free or Basic); `built` says which features work today, the same on every plan (`offline` only: `BUILT` in `ops/plans.py`), so an unbuilt one is never shown as included; `interval` is `month`, `year` or `null` (Free), `price_cents` `null` for Enterprise (each contract's), `limits.machines` the runtime nodes (Free 1, Basic 1, Pro 3, Team 10, Enterprise `null`). Never the markup.
 - **`GET /v1/rates`** (open): `{effective_from, region, sizes: [{size, cpu_kind, cpus, memory_mb, volume_gb}], plans: {"Pro": {sizes: [{size, cpu_kind, cpus, memory_mb, volume_gb, usd_per_month, usd_per_second}], volume_usd_per_gb_month}, "Team": …}}`: each size's machine, and each plan's whose newest version has a markup (Pro and Team), Fly's × (1 + its markup), to the cent a month and per second (a size's `usd_per_month` is a 30-day month started; its volume is apart, billed always). Never Fly's own rates, their source or the markup, from which the markup could be worked out; Enterprise's are its contract's. The region is `GLYPHH_FLY_REGION`, `effective_from` the newest date among the rates in force. A region with no rates is `E_UNAVAILABLE` `no_rates`; with hosting off, any request is `E_UNAVAILABLE` `hosting_off`.
 - **`GET /v1/billing`** (anyone in the org): `{plan (as in `/v1/plans`), billing_status, renews_at, plan_until, precedents: {used, limit}, hosting: {month, month_to_date_cents, machines: [{id, name, size, cents}]}}`: `used` is what the org's hosted runtimes last said they hold, `limit` the plan's bucket; `hosting` the month so far, all in, each machine's own (a deleted one too), in whole cents (each floored on its own, so the machines may sum to a cent or so less than the total). `GET /v1/me` carries the same `precedents` and `hosting`.
 - **`POST /v1/billing/checkout` `{plan}`**: Stripe Checkout for Pro or Team (the flat price, quantity 1, and with hosting on the metered hosting price). A plan with no Stripe price here (Free, or Pro and Team before their prices are set) is `E_INVALID` `not_sold`, Enterprise `E_INVALID` `not_self_serve` ("talk to us at sales@glyphh.ai"), an unknown plan `E_INVALID`, a subscribed org `E_CONFLICT` `subscribed`, a server without Stripe, or with hosting on and no hosting price, `E_UNAVAILABLE` `billing_off`.
@@ -549,7 +610,7 @@ sequenceDiagram
 
 **Metering.** Fly's rates are the `fly_rates` table: each size's and a GB of volume's, per region, a 30-day month's worth, dated (`effective_from`) with their source; the rate in force is the newest that has come, a second is a 2,592,000th of it (seeded for `iad`, read 2026-10-18: small $6.70, medium $25.39, large $90.00, volume $0.15 a GB). Every minute each hosted machine's month (`machine_months`) adds the whole seconds since it was last metered (`rrotors.metered_at`; its `created_at` the first time), and `metered_at` moves on by exactly those seconds, the fraction carried, the machine's row locked: its size's rate for those seconds when its link is online at the tick and its volume's GB for all of them, online or not: the cost, and the charge (the cost × (1 + the markup): the org's own `markup_pct` when set, else its plan's; nothing on a plan with no hosting, Free, where only the cost of held machines' disks is kept), both in micro-dollars. A machine with no region is metered in the server's (`GLYPHH_FLY_REGION`); one in a region with no rates is logged and costs nothing for those seconds. The seconds go to the month of the tick. A tick late, missed, run twice or in two server processes, or the server restarting, meters each second once.
 
-**The meter.** The hosting price is on the Stripe Billing Meter `glyphh_hosting` (`GLYPHH_STRIPE_METER_HOSTING`; a unit is a US cent, summed, the customer by its id). With Stripe set up, every minute each subscribed org's hosting due (all it has charged, across every month, to the cent, less all it has reported; the rest carried) is reported once a day (the first as soon as a cent is due) and as its period ends (ten minutes before `renews_at`); the webhook reports it too, before every subscription event it applies, and so does a change to Free. Each report is a `meter_events` row written before it is sent, its id the event's identifier, worked out with the org's row locked, so two servers report it once; one Stripe refused is sent again with the same identifier at the next tick.
+**The meter.** The hosting price is on the Stripe Billing Meter `glyphh_hosting` (`GLYPHH_STRIPE_METER_HOSTING`; a unit is a US cent, summed, the customer by its id). With Stripe set up, every minute each subscribed org's hosting due (all it has charged, across every month, to the cent, less all it has reported; the rest carried) is reported once a day (the first as soon as a cent is due) and as its period ends (ten minutes before `renews_at`); the webhook reports it too, before every subscription event it applies, and so does a change to Free. Each report is a `meter_events` row written before it is sent, its id the event's identifier, worked out with the org's row locked, so two servers report it once; one Stripe refused is sent again with the same identifier at the next tick. Ada Cloud's reads past a Pro or Team month go the same way to the meter `ada_requests` (`GLYPHH_STRIPE_METER_ADA`, a unit a read, $1 per 10,000), by calendar month, once a day and as soon as the month has ended (`ada_meter_events`).
 
 **Enterprise** is granted by staff, never bought (`ops/enterprise.py`, `grant` and `revoke`: [pricing.md](pricing.md#the-control-plane)). The org's `plan_until`, deal subscription and, with hosting on, `markup_pct` (`--markup`, optional) are recorded on it; its hosting goes to that subscription, and before a grant is revoked or lapses the hosting due is reported there first, as the webhook does.
 
@@ -1023,7 +1084,7 @@ Every table and column is drawn, as `db/schema.sql` has them (33 tables); the ta
 - **Mods:** every plan includes every active mod; a retired mod (`active` false) is in no license.
 - **A limit left empty is unlimited.** `max_machines` is the runtime nodes the org may have, its people's together (refused on hosted machines only; every node is counted, softly, in `GET /v1/license/nodes`); `precedents` what one node may hold across its Ada models (Free 5,000, Pro 50,000, Team 500,000 TBD, Enterprise unlimited; it was the managed bucket, what the hosted runtimes held together). Both are signed into the licence key as `max_nodes` and `max_precedents`, `sync` as `cluster_sync_enabled`. `hosting_markup_pct` is the markup on Fly's rates (null where there is no hosting or it is each customer's); an org's own `markup_pct` is over it.
 - **Fly's rates** (`fly_rates`): never changed; a new rate is a new row, the newest whose `effective_from` has come in force. Not an org's: no row-level security.
-- **Machine months** (`machine_months`): a hosted machine's cost and charge for a month, in micro-dollars, by its id (no foreign key, so a deleted machine's month stays), its name and size copied. **Meter events** (`meter_events`): each report of an org's hosting cents to Stripe's meter, written before it is sent; `sent_at` once Stripe took it. Both row-level secure on the org.
+- **Machine months** (`machine_months`): a hosted machine's cost and charge for a month, in micro-dollars, by its id (no foreign key, so a deleted machine's month stays), its name and size copied. **Meter events** (`meter_events`): each report of an org's hosting cents to Stripe's meter, written before it is sent; `sent_at` once Stripe took it. Both row-level secure on the org. **Ada usage** (`ada_usage`): an org's Ada Cloud reads by calendar month, added by the minute tick from Redis; **Ada meter events** (`ada_meter_events`): each report of reads past a metered month to Stripe, as `meter_events` are.
 - **Runtimes** (`rrotors`): hosted machines (`mode: hosted`, each with its `name`, unique per person, `size`, its Fly machine and volume (`fly_machine_id`, `fly_volume_id`), `region`, and its month's online seconds, up to the plan's `max_machines`, the org's together), one local per install that started one (`mode: local`, keyed by its install), and any self-hosted ones (`mode: self`, each with its `name` and `public_url`, one per address per person, and from its heartbeat `last_heartbeat_at`, `image_version`, `active_runs` and `machine_hash`, never an address of its caller's); each its own token. `state` is `stopped` until its first link, `online` while its link is up, `offline` after; `seq` is the last result or event sequence number applied from its link, so a replay is applied once (a new token starts it again). `precedents` is the total across its Ada models it last reported.
 - **Installs are machines:** `INSTALLS.machine_id` is the id the plugin sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked) or makes a new one: installs are never limited.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
@@ -1049,7 +1110,7 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 |---|---|---|---|---|
 | `mods` | PK `slug`; `active` true, `sort` 0 by default | none | none | none |
 | `plans` | PK `id`; `name` unique; `active` true, `sort` 0 by default | none | none | none |
-| `plan_versions` | PK `id`; `plan_versions_version` unique (`plan_id`, `version`); `stripe_price_id` unique; `plan_versions_price` `price_cents` ≥ 0; `plan_versions_interval` `billing_interval` in `month`, `year` (or null); `plan_versions_limits` `max_machines` and `precedents` ≥ 0; `plan_versions_markup` `hosting_markup_pct` ≥ 0; `self_serve` true, `sync`, `ha`, `offline`, `sso` false by default | `plan_id` → `plans` (restrict) | `ix_plan_versions_plan_id` | none |
+| `plan_versions` | PK `id`; `plan_versions_version` unique (`plan_id`, `version`); `stripe_price_id` unique; `plan_versions_price` `price_cents` ≥ 0; `plan_versions_interval` `billing_interval` in `month`, `year` (or null); `plan_versions_limits` `max_machines` and `precedents` ≥ 0; `plan_versions_markup` `hosting_markup_pct` ≥ 0; `plan_versions_cloud` `cloud_precedents`, `cloud_requests` ≥ 0 and `cloud_rps` > 0 (each null: unlimited); `self_serve` true, `sync`, `ha`, `offline`, `sso`, `cloud_overage` false by default | `plan_id` → `plans` (restrict) | `ix_plan_versions_plan_id` | none |
 | `fly_rates` | PK (`item`, `region`, `effective_from`); `fly_rates_item` `item` in `small`, `medium`, `large`, `volume`; `fly_rates_rate` `usd_per_30_days` ≥ 0 (numeric 12, 4) | none | none | none |
 | `orgs` | PK `id`; `stripe_customer_id` and `stripe_subscription_id` unique; `orgs_billing_status` `billing_status` in `none` (the default), `active`, `trialing`, `past_due`, `unpaid`, `canceled`, `incomplete`, `incomplete_expired`, `paused`; `orgs_markup` `markup_pct` ≥ 0 | `plan_version_id` → `plan_versions` (restrict); `admin_user_id` → `users` (set null; `orgs_admin_user_id_fkey`, added once both tables exist) | `ix_orgs_plan_version_id` | `id` is the org |
 | `users` | PK `id`; `users_role` `role` in `admin`, `member` | `org_id` → `orgs` (restrict) | `users_email` unique on `lower(email)`; `ix_users_org_id` | `org_id` is the org |
@@ -1067,6 +1128,8 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `telemetry_spans` | PK `id` | `org_id` → `orgs` (cascade); `rrotor_id` → `rrotors` (cascade) | `telemetry_spans_newest` on (`org_id`, `started_at`); `telemetry_spans_at` on `started_at`; `ix_telemetry_spans_rrotor_id` | `org_id` is the org |
 | `machine_months` | PK (`rrotor_id`, `month`), no foreign key on `rrotor_id`; `cost_micros` and `charge_micros` 0 by default | `org_id` → `orgs` (cascade) | `ix_machine_months_org_id` | `org_id` is the org |
 | `meter_events` | PK `id`; `meter_events_cents` `cents` > 0 | `org_id` → `orgs` (cascade) | `ix_meter_events_org_id` | `org_id` is the org |
+| `ada_usage` | PK (`org_id`, `period`); `ada_usage_requests` `requests` ≥ 0 (0 by default) | `org_id` → `orgs` (cascade) | | `org_id` is the org |
+| `ada_meter_events` | PK `id`; `ada_meter_events_requests` `requests` > 0 | `org_id` → `orgs` (cascade) | `ix_ada_meter_events_org_id` | `org_id` is the org |
 | `models` | PK `id` | `user_id` → `users` (cascade); `org_id` → `orgs` (restrict) | `ix_models_org_id`; `ix_models_user_id` | `org_id` is the org |
 | `model_versions` | PK `id`; `model_versions_version` unique (`model_id`, `version`); `model_versions_commit` unique (`model_id`, `commit_sha`) | `model_id` → `models` (cascade) | `ix_model_versions_model_id` | its model is visible |
 | `deployments` | PK (`rrotor_id`, `model_version_id`); `active` true by default | `rrotor_id` → `rrotors` (cascade); `model_version_id` → `model_versions` (cascade) | `ix_deployments_model_version_id` | its version is visible |
@@ -1080,7 +1143,7 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `connector_grants` | PK `id` | `user_id` → `users` (cascade); `client_id` → `oauth_clients` (cascade) | `connector_grants_user_client` unique on (`user_id`, `client_id`) where `revoked_at` is null; `ix_connector_grants_client_id`; `ix_connector_grants_user_id` | its user is visible |
 | `connector_tokens` | PK `id`; `token_hash` unique; `connector_tokens_kind` `kind` in `access`, `refresh` | `grant_id` → `connector_grants` (cascade) | `ix_connector_tokens_grant_id` | its grant is visible |
 
-**Row-level security.** Each of the 27 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat, introspection and server-side logging, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
+**Row-level security.** Each of the 29 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat, introspection and server-side logging, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
 
 **Ada Cloud's org schemas** (`ada_<org id>`, with the flag on) are outside `db/schema.sql`: made and migrated by
 the workers, every table fenced by a `tenant` policy that fails closed ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)).
@@ -1105,7 +1168,7 @@ Nothing in this section works today.
 | Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
 | Rate limiting | None anywhere, the OAuth endpoints included |
 | OAuth client ID metadata documents | Registration is RFC 7591 only |
-| Ada Cloud past its step 2 | Behind the flag, not built: imports and exports, a model's deletion as a job, spec and settings changes (versions, rollback, re-encodes, backtests), the connector's `ada_*` tools, plans and metering (cloud caps, request counting, rate limits), inline `refresh_every` (off in workers), SDK 3.1, the platform's pages; `docs/specs/ada-cloud.md` section 10 |
+| Ada Cloud past its step 6 | Behind the flag, not built: an org-wide export, a page to delete an org's Ada data alone, Enterprise's cloud numbers per contract (its plan has none: unlimited), the connector hiding the `runtime*` tools from orgs with no runtime; `docs/specs/ada-cloud.md` section 10 |
 | Programs, then the gateway | Programs (coding-agent CLIs on the runtime), then the gateway. Remote Control needs a full claude.ai login on the machine, which [Anthropic's terms](#anthropics-terms) rule out |
 
 **Open**

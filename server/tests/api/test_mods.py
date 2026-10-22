@@ -15,7 +15,7 @@ async def test_the_catalog_lists_each_mod_and_the_plans_that_include_it(client: 
     assert res.status_code == 200
     mods = res.json()
     assert [(m["slug"], m["name"], m["plans"]) for m in mods] == [
-        ("ada", "Ada", ["Free", "Pro", "Team", "Enterprise"]),
+        ("ada", "Ada", ["Free", "Basic", "Pro", "Team", "Enterprise"]),
     ]
     assert all(m["description"] for m in mods) and "addon" not in mods[0]
 

@@ -2,8 +2,9 @@
 migration once, under the schema's advisory lock, recorded in its `ada_schema` table), and fenced by row-level
 security that fails closed.
 
-The server's tables in it: `models`, `spec_versions`, `jobs`, and `requests` (what makes a write happen once: the
-caller's Idempotency-Key or the message's id, with its answer, kept a day). The kernel's own (glyphh_postgres:
+The server's tables in it: `models`, `spec_versions`, `jobs`, `requests` (what makes a write happen once: the
+caller's Idempotency-Key or the message's id, with its answer, kept a day) and `files` (imports' uploads and exports'
+archives, in chunks, kept while their links work). The kernel's own (glyphh_postgres:
 `precedents`, partitioned by model, `outcomes`, `meta`, `counts`) are made by PostgresStore beside them.
 
 Every table in the schema, the kernel's partitions included, gets the policy `tenant`: a row is seen or written only
@@ -33,6 +34,30 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE TABLE IF NOT EXISTS {s}.requests (
         key text PRIMARY KEY, body text NOT NULL, reply jsonb NOT NULL, at timestamptz NOT NULL DEFAULT now());
     CREATE INDEX IF NOT EXISTS requests_at ON {s}.requests (at);
+    """,
+    # Step 3: files (an import's upload, an export's archive), a chunk a row, named by their job's id. Step 4: each
+    # version names the store (the kernel's partition) it reads, keeps the learned weights and temperatures it went
+    # live with, the backtest it was chosen by, when it stopped being active, and whether its store is made (ready)
+    # or dropped after KEPT_DAYS (gone). And every partition step 2 made an index on its ids alone (a lookup by id
+    # cannot lead with the primary key (model, id)), which the kernel makes itself for every partition since 3.12.1.
+    """
+    DO $$ DECLARE r record; BEGIN
+        FOR r IN SELECT n.nspname AS s, c.relname AS t FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid
+            JOIN pg_namespace n ON n.oid = c.relnamespace WHERE i.inhparent = to_regclass('{s}.precedents') LOOP
+            EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I.%I (id)', r.t || '_id', r.s, r.t);
+        END LOOP;
+    END $$;
+    CREATE TABLE IF NOT EXISTS {s}.files (
+        id uuid NOT NULL, n integer NOT NULL, data bytea NOT NULL, at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (id, n));
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS store text;
+    UPDATE {s}.spec_versions SET store = replace(model_id::text, '-', '') WHERE store IS NULL;
+    ALTER TABLE {s}.spec_versions ALTER COLUMN store SET NOT NULL;
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS learned jsonb;
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS backtest uuid;
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS retired_at timestamptz;
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS ready boolean NOT NULL DEFAULT true;
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS gone boolean NOT NULL DEFAULT false;
     """,
 )
 
