@@ -162,8 +162,10 @@ export type Scores = {
 /** A done backtest's result. */
 export type BacktestResult = { version: number; trained: number; held_out: number; output: string; active: Scores; candidates: Scores[] };
 
-/** One UTC day of a model: its reads by kind, its decides answered and how many of them asked a person. */
+/** One UTC day of a model: its reads by kind, its decides answered (every output’s) and how many of them asked a person. */
 export type ModelDay = { day: string; reads: { decide: number; query: number; probabilities: number; facts: number }; decided: number; asked: number };
+/** One output’s decides in the window (output null: the default): how many, how many asked a person, how sure, and a day each. */
+export type OutputAnswers = { output: string | null; decided: number; asked: number; sure: number[]; days: Array<{ decided: number; asked: number }> };
 /** `GET /v1/models/{name}/stats`: the model's dashboard, from its store and its days counted as they happen. */
 export type ModelStats = {
   name: string;
@@ -175,6 +177,12 @@ export type ModelStats = {
   plan: { plan: string; precedents: { used: number; max: number | null } };
   /** Precedents by output (null: the default) and outcome (null: ungraded), the most common first. */
   outcomes: Array<{ output: string | null; value: string | null; n: number }>;
+  /** Each output’s values past the most common, together: how many values, how many precedents. */
+  others?: Array<{ output: string | null; values: number; n: number }>;
+  /** Outcomes and growth estimated from a sample: the model is too big to count on every look. */
+  estimated?: boolean;
+  /** Each output’s decides apart, the default first. */
+  answers?: OutputAnswers[];
   /** Precedents by the day of each case (its time, or when it was recorded). */
   growth: Array<{ day: string; n: number }>;
   jobs: AdaJob[];
@@ -262,8 +270,12 @@ export const usePatchSettings = (name: string) =>
   );
 export const useActivate = (name: string) =>
   useAdaWrite((version: number) => adaApi.post<VersionChange>(`${path(name)}/versions/${version}/activate`), () => modelReads(name));
+/** A decide is a read: the model's dashboard and the month's usage count it. */
 export const useDecide = () =>
-  useMutation({ mutationFn: (body: { model: string; data: Record<string, unknown>; output?: string }) => adaApi.post<Decision>('/decide', body) });
+  useAdaWrite(
+    (body: { model: string; data: Record<string, unknown>; output?: string }) => adaApi.post<Decision>('/decide', body),
+    (body) => [[...adaKeys.model(body.model), 'stats'], adaKeys.usage],
+  );
 export const useStartImport = (name: string) =>
   useMutation({
     mutationFn: (body: { format: ImportFormat; mapping?: Record<string, string | null> }) => adaApi.post<ImportStarted>(`${path(name)}/imports`, body),

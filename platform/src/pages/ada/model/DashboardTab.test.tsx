@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react';
-import { adaFake, emptyStats, tickets } from '@/test/ada';
+import type { AdaModel, Spec } from '@/api/ada';
+import { adaFake, emptyStats, modelStats, tickets, ticketSpec } from '@/test/ada';
 import { renderApp } from '@/test/render';
 import { apiError, http, server } from '@/test/server';
 
@@ -70,6 +71,86 @@ describe('a model’s dashboard', () => {
     server.use(...adaFake({ models: [tickets()], stats: ungraded }).handlers);
     renderApp('/models/tickets');
     expect(await screen.findByText('No precedent has an outcome yet.')).toBeInTheDocument();
+  });
+
+  it('shows the last 30 days for a model made today, the days before it empty', async () => {
+    server.use(...adaFake({ models: [{ ...tickets(), precedents: 0 }], stats: emptyStats }).handlers);
+    renderApp('/models/tickets');
+    expect(await screen.findByText('Reads, the last 30 days')).toBeInTheDocument();
+    expect(screen.getByText('Asked a person, the last 30 days')).toBeInTheDocument();
+  });
+
+  it('shows one output of 77 outcomes as its most common and the rest as one bar, and says when it is estimated', async () => {
+    const many = (model: AdaModel) => ({
+      ...modelStats(model),
+      outcomes: Array.from({ length: 50 }, (_, i) => ({ output: null, value: `intent-${i}`, n: 100 - i })),
+      others: [{ output: null, values: 27, n: 27 }],
+      estimated: true,
+    });
+    server.use(...adaFake({ models: [tickets()], stats: many }).handlers);
+    renderApp('/models/tickets');
+    const outcomes = await screen.findByRole('table', { name: 'Precedents by outcome' });
+    expect(within(outcomes).getAllByRole('row')).toHaveLength(14); // the header, 12 outcomes, the rest
+    expect(within(outcomes).getByRole('row', { name: 'Other (65 outcomes) 2,668' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Estimated from a sample/)).toHaveLength(2);
+  });
+
+  it('shows each named output’s decides apart, and when each asks a person', async () => {
+    const spec: Spec = { ...ticketSpec, output: undefined, outputs: { team: { values: ['billing', 'tech'] }, urgent: { values: ['yes', 'no'], ask: 0.3 } } };
+    const days = (decided: number, asked: number) => Array.from({ length: 7 }, (_, i) => (i === 6 ? { decided, asked } : { decided: 0, asked: 0 }));
+    const sure = (k: number) => Array.from({ length: 10 }, (_, i) => (i === k ? 5 : 0));
+    const two = (model: AdaModel) => ({
+      ...modelStats(model),
+      answers: [
+        { output: 'team', decided: 5, asked: 1, sure: sure(8), days: days(5, 1) },
+        { output: 'urgent', decided: 5, asked: 5, sure: sure(3), days: days(5, 5) },
+      ],
+    });
+    server.use(...adaFake({ models: [{ ...tickets(), spec }], stats: two }).handlers);
+    const { user } = renderApp('/models/tickets');
+    const pick = await screen.findByRole('combobox', { name: 'Output' });
+    expect(within(pick).getAllByRole('option').map((o) => o.textContent)).toEqual(['team', 'urgent']);
+    expect(screen.getByText(/sets neither ask nor ask_below/)).toBeInTheDocument();
+    const asked = () => screen.getByRole('table', { name: 'Share of decides that asked a person, a day' });
+    const sureTable = () => screen.getByRole('table', { name: 'Decides by how sure they were' });
+    expect(within(asked()).getByRole('row', { name: '22 Oct 20%' })).toBeInTheDocument();
+    expect(within(sureTable()).getByRole('row', { name: '80–90% 5' })).toBeInTheDocument();
+    await user.selectOptions(pick, 'urgent');
+    expect(screen.getByText('The share of a day’s decides that asked a person: every outcome’s expected cost was above 0.3.')).toBeInTheDocument();
+    expect(within(asked()).getByRole('row', { name: '22 Oct 100%' })).toBeInTheDocument();
+    expect(within(sureTable()).getByRole('row', { name: '30–40% 5' })).toBeInTheDocument();
+  });
+
+  it('says when a default output asks by both cost and confidence, and lists an output no longer in the spec', async () => {
+    const both: Spec = { ...ticketSpec, output: { ask: 0.5, ask_below: 0.7 } };
+    const gone = (model: AdaModel) => {
+      const stats = modelStats(model);
+      return { ...stats, answers: [...stats.answers!, { output: 'old', decided: 1, asked: 0, sure: Array<number>(10).fill(0), days: [] }] };
+    };
+    server.use(...adaFake({ models: [{ ...tickets(), spec: both }], stats: gone }).handlers);
+    renderApp('/models/tickets');
+    const pick = await screen.findByRole('combobox', { name: 'Output' });
+    expect(within(pick).getAllByRole('option').map((o) => o.textContent)).toEqual(['The outcome', 'old']);
+    expect(screen.getByText(/every outcome’s expected cost was above 0.5, or the top probability under 70%/)).toBeInTheDocument();
+  });
+
+  it('says when the one output asks by confidence, with nothing to pick', async () => {
+    server.use(...adaFake({ models: [tickets()] }).handlers);
+    renderApp('/models/tickets');
+    expect(await screen.findByText('The share of a day’s decides that asked a person: the top probability was under 60%.')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Output' })).not.toBeInTheDocument();
+  });
+
+  it('shows a model that is read but never asked to decide', async () => {
+    const reads = (model: AdaModel) => {
+      const stats = emptyStats(model);
+      return { ...stats, days: stats.days.map((d, i) => (i === 29 ? { ...d, reads: { ...d.reads, query: 3, facts: 2 } } : d)) };
+    };
+    server.use(...adaFake({ models: [tickets()], stats: reads }).handlers);
+    renderApp('/models/tickets');
+    expect(await screen.findByRole('table', { name: 'Reads a day: decides and other reads' })).toBeInTheDocument();
+    expect(screen.getByText('No decides yet')).toBeInTheDocument();
+    expect(screen.getAllByText('No decides in these days yet.')).toHaveLength(2);
   });
 
   it('shows the server’s refusal', async () => {
