@@ -63,14 +63,14 @@ describe('Ada Models', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('edits the model on its Spec tab', async () => {
+  it('edits the model from its Dashboard', async () => {
     on();
     const { user, router } = renderApp('/models');
     await user.click(await screen.findByRole('button', { name: 'Actions for tickets' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
     expect(router.state.location.pathname).toBe('/models/tickets');
-    expect(router.state.location.search).toBe('?tab=spec');
-    expect(await screen.findByRole('tab', { name: 'Spec' })).toHaveAttribute('aria-selected', 'true');
+    expect(router.state.location.search).toBe('');
+    expect(await screen.findByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('deletes the model once its name is typed, then lists the rest and says so', async () => {

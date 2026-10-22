@@ -78,7 +78,8 @@ export function AdaModelsPage() {
                         />
                       )}
                     >
-                      <MenuItem icon="pencil" onSelect={() => navigate(`${modelPath(model.name)}?tab=spec`)}>
+                      {/* Edit opens the model on its Dashboard, like the row (his order, 2026-10-22). */}
+                      <MenuItem icon="pencil" onSelect={() => navigate(modelPath(model.name))}>
                         Edit
                       </MenuItem>
                       <MenuItem icon="trash" onSelect={() => setDeleting(model)}>
