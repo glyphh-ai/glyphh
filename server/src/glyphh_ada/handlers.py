@@ -17,7 +17,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 from redis import Redis
 
-from glyphh_ada import catalog, jobs, orgschema, pg, reads, versions, writeops
+from glyphh_ada import catalog, dashboard, glyphmap, jobs, orgschema, pg, reads, seen, versions, writeops
 from glyphh_ada.cache import Models
 from glyphh_ada.catalog import q
 from glyphh_ada.errors import Refusal, model_missing
@@ -61,8 +61,16 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
             levers = versions.levers(ctx.conn, schema, msg.model)
             return levers, levers["version"]
         return versions.listing(ctx.conn, schema, msg.model), None
+    if msg.op == "stats":
+        found = dashboard.stats(ctx.conn, schema, msg.model)
+        return found, found["version"]
+    if msg.op == "precedent":
+        live = catalog.live(ctx.conn, schema, msg.model)
+        return seen.precedent(ctx.conn, schema, live, str(msg.args.get("id")), msg.clearance), live.version
     entry = ctx.models.get(msg.org, schema, msg.model)
     try:
+        if msg.op == "map":
+            return glyphmap.glyph_map(ctx.conn, schema, entry, msg.args, msg.clearance), entry.version
         return reads.read(entry.model, msg.op, msg.args, msg.clearance), entry.version
     finally:
         ctx.models.settle(msg.org, msg.model, entry)

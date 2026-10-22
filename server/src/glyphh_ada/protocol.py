@@ -28,7 +28,7 @@ READS: frozenset[str] = frozenset({"query", "probabilities", "facts", "decide"})
 CASES: frozenset[str] = frozenset({"record", "record_many", "grade", "forget"})
 VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate"})  # a new version, or another made active
 WRITES: frozenset[str] = frozenset({"create", "delete", "job_start", "import_start", "import_go"}) | CASES | VERSIONS
-LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions"})
+LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions", "stats", "map", "precedent"})
 SYNC_OPS: frozenset[str] = READS | WRITES | LOOKS
 JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate", "import", "export", "reencode", "backtest"})
 
