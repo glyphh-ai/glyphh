@@ -181,7 +181,7 @@ describe('Import', () => {
 
   it('shows an import refused past the plan’s precedents, with the way to the plans', async () => {
     on();
-    const message = 'These cases add 200 precedents to the 4,900 the org holds: its plan allows 5,000.';
+    const message = 'These cases add 200 precedents to the 900 the org holds: its plan allows 1,000.';
     server.use(
       http.get('*/api/ada/v1/jobs/:id', () =>
         Response.json({
@@ -190,7 +190,7 @@ describe('Import', () => {
           kind: 'import',
           state: 'failed',
           percent: 0,
-          error: { code: 'E_LIMIT', message, reason: 'precedents', used: 4_900, max: 5_000, adding: 200 },
+          error: { code: 'E_LIMIT', message, reason: 'precedents', used: 900, max: 1_000, adding: 200 },
         }),
       ),
     );
@@ -245,12 +245,12 @@ describe('Try it', () => {
   });
 
   it('says when Free’s month is used, when it starts again, and the plan to upgrade to', async () => {
-    const fake = adaFake({ models: [tickets()], plan: 'Free', requests: 10_000 });
+    const fake = adaFake({ models: [tickets()], plan: 'Free', requests: 5_000 });
     server.use(...fake.handlers);
     const { user, router } = renderApp('/models/tickets?tab=try');
     await user.click(await screen.findByRole('button', { name: 'Decide' }));
-    expect(await screen.findByText(/Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01\./)).toBeInTheDocument();
-    expect(fake.state.requests).toBe(10_000);
+    expect(await screen.findByText(/Your Free plan's 5,000 Ada reads this month are used: they start again on 2026-11-01\./)).toBeInTheDocument();
+    expect(fake.state.requests).toBe(5_000);
     await user.click(screen.getByRole('link', { name: 'Upgrade to Basic' }));
     expect(router.state.location.pathname).toBe('/settings/plans');
   });

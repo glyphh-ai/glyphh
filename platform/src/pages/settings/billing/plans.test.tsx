@@ -6,7 +6,7 @@ import { factText, hasHosting, machinesText, planFacts, precedentsText, priceTex
 describe('plan wording with Ada Cloud on', () => {
   it('shows each plan’s cloud caps in place of runtime nodes and precedents per node, and the price past a metered month', () => {
     const [free, basic, pro, , enterprise] = adaPlans;
-    expect(planFacts(free!, true).map(factText)).toEqual(['5,000 precedents', '10,000 requests a month', '5 requests a second']);
+    expect(planFacts(free!, true).map(factText)).toEqual(['1,000 precedents', '5,000 requests a month', '5 requests a second']);
     expect(planFacts(basic!, true).map(factText)).toEqual(['10,000 precedents', '50,000 requests a month', '10 requests a second', 'Then $1 per 10,000 requests']);
     expect(planFacts(pro!, true).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
     expect(planFacts(enterprise!, true).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'SSO and SAML', 'Roles', 'Audit logs']);

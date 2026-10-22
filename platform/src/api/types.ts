@@ -42,7 +42,7 @@ export type Plan = {
 };
 
 /**
- * A plan's Ada Cloud limits (the server's cloud_* on a plan version): Free 5,000 precedents, 10,000 requests a month,
+ * A plan's Ada Cloud limits (the server's cloud_* on a plan version): Free 1,000 precedents, 5,000 requests a month,
  * 5 a second; Basic 10,000, 50,000, 10; Pro 100,000, 1,000,000, 50; Team 1,000,000, 5,000,000, 200; Enterprise by
  * contract (null: unlimited). Past the month Basic, Pro and Team are metered (`overage`); Free is refused until the
  * month turns.

@@ -162,10 +162,10 @@ describe('Ada Usage', () => {
   it('says when Free’s requests stop, and once they are used, the way to more', async () => {
     server.use(...adaFake({ models: [tickets()], plan: 'Free', requests: 2_000 }).handlers);
     const first = renderApp('/usage');
-    expect(await screen.findByText('Past 10,000, requests stop until 1 Nov 2026.')).toBeInTheDocument();
+    expect(await screen.findByText('Past 5,000, requests stop until 1 Nov 2026.')).toBeInTheDocument();
     first.unmount();
 
-    server.use(...adaFake({ models: [tickets()], plan: 'Free', requests: 10_000 }).handlers);
+    server.use(...adaFake({ models: [tickets()], plan: 'Free', requests: 5_000 }).handlers);
     const { user, router } = renderApp('/usage');
     expect(await screen.findByText(/This month’s requests are used: they start again on 1 Nov 2026\./)).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Upgrade for more' }));
