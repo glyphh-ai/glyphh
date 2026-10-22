@@ -65,7 +65,7 @@ async def send(
     """One op of one model, through the org's plan checks to a worker and back: (answer, active version)."""
     cfg = state.settings
     no_nul(args)
-    await admit(state, who, op, args)
+    await admit(state, who, op, args, model)
     timeout = cfg.ada_write_timeout if op in SLOW else cfg.ada_read_timeout
     msg = protocol.Message(
         org=str(who.org_id),

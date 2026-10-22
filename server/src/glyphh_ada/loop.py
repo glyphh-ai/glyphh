@@ -12,7 +12,7 @@ from typing import Any
 from redis import Redis
 from redis.exceptions import ResponseError
 
-from glyphh_ada import protocol
+from glyphh_ada import days, protocol
 from glyphh_ada.errors import Refusal
 from glyphh_ada.protocol import GROUP, SYNC, Message
 from glyphh_server.obs.logs import fields
@@ -93,14 +93,18 @@ class Loop:
         if deliveries > protocol.MAX_DELIVERIES:
             log.error("dropped: it stopped too many workers", extra=about)
             return self._reply(msg, protocol.refused("E_INTERNAL", "This request could not be answered.", 500))
+        data: Any = None
         try:
-            answer = protocol.ok(*self.dispatch(msg))
+            data, version = self.dispatch(msg)
+            answer = protocol.ok(data, version)
         except Refusal as r:
             answer = protocol.refused(r.code, r.message, r.status, **r.detail)
         except Exception:  # a crash is the caller's E_INTERNAL; the worker goes on
             log.exception("failed", extra=about)
             answer = protocol.refused("E_INTERNAL", "Something went wrong on our side.", 500, request=msg.id)
         self._reply(msg, answer)
+        if msg.op == "decide" and isinstance(data, dict):  # its model's day, once the caller has its answer
+            days.decided(self.redis, msg.org, msg.model, data)
 
     def _reply(self, msg: Message, answer: str) -> None:
         if self.queue == SYNC:

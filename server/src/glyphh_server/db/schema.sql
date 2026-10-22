@@ -164,6 +164,17 @@ CREATE TABLE IF NOT EXISTS ada_usage (
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
 
+-- ada_model_days
+CREATE TABLE IF NOT EXISTS ada_model_days (
+    org_id UUID NOT NULL,
+    model TEXT NOT NULL,
+    day DATE NOT NULL,
+    metric TEXT NOT NULL,
+    n BIGINT DEFAULT 0 NOT NULL,
+    PRIMARY KEY (org_id, model, day, metric),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+
 -- ada_meter_events
 CREATE TABLE IF NOT EXISTS ada_meter_events (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -647,6 +658,10 @@ ALTER TABLE ada_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ada_usage FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON ada_usage;
 CREATE POLICY tenant ON ada_usage USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE ada_model_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ada_model_days FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON ada_model_days;
+CREATE POLICY tenant ON ada_model_days USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE ada_meter_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ada_meter_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON ada_meter_events;

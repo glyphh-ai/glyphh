@@ -3,8 +3,9 @@ at Fly's rates up to now, its online seconds this month tallied (ops/metering.py
 taken off their runtimes, the Enterprise grants past their date ended (their hosting due reported first) and server-
 side logging past its retention purged (ops/telemetry/retention.py); with hosting on, the idle machines and those
 held past their plan stopped; and the hosting due reported to Stripe's meter (ops/billing/meter.py). With Ada Cloud on
-(GLYPHH_ADA_CLOUD), its reads counted in Redis added to ada_usage (glyphh_ada/requests.py), and those past a metered
-plan's month reported to Stripe's ada_requests meter (ops/billing/ada_meter.py).
+(GLYPHH_ADA_CLOUD), its reads counted in Redis added to ada_usage (glyphh_ada/requests.py) and its models' days to
+ada_model_days (glyphh_ada/days.py), and the reads past a metered plan's month reported to Stripe's ada_requests meter
+(ops/billing/ada_meter.py).
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 on a connection it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -17,6 +18,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_ada import days
 from glyphh_ada.requests import flush
 from glyphh_server.config import Settings
 from glyphh_server.ops.billing import ada_meter
@@ -78,6 +80,7 @@ async def _tick(
             await hold(conn, fly)
     if settings.ada_cloud:
         await flush(engine, hub.redis)
+        await days.flush(engine, hub.redis)
     if stripe is not None:
         await report(engine, stripe)
         if settings.ada_cloud:

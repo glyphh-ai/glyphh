@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Text, func
+from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -37,3 +37,18 @@ class AdaMeterEvent(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # the event's timestamp
     created_at: Mapped[datetime] = created_at()
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AdaModelDay(Base):
+    """A model's day (UTC), for the platform's dashboard: its reads by kind (`read:decide`, `read:query`, ...) and its
+    decides' answers (`decided`, `asked`, and `sure:0` to `sure:9`, how sure in tenths), counted in Redis and added
+    here by the minute tick (glyphh_ada/days.py). A model is its name: one made again under a deleted model's name
+    reads its days from when it was made."""
+
+    __tablename__ = "ada_model_days"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"), primary_key=True)
+    model: Mapped[str] = mapped_column(Text, primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    metric: Mapped[str] = mapped_column(Text, primary_key=True)
+    n: Mapped[int] = mapped_column(BigInteger, server_default="0")

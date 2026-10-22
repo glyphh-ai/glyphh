@@ -10,7 +10,7 @@ from typing import Any
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
-from glyphh_ada import requests
+from glyphh_ada import days, requests
 from glyphh_ada.allowance import Allowance, upgrade_to
 from glyphh_ada.api.auth import AdaCaller
 from glyphh_ada.errors import RateLimited
@@ -48,13 +48,15 @@ async def _rate(redis: Redis, who: AdaCaller, rps: int) -> None:
         raise RateLimited(message, after, reason="rate", max=rps)
 
 
-async def _count(state: Any, who: AdaCaller, allowed: Allowance, n: int) -> None:
+async def _count(state: Any, who: AdaCaller, allowed: Allowance, n: int, read: tuple[str, str]) -> None:
+    """`read` is (model, op): the model's day counts it too (days.py), in the same round trip."""
     month, org, redis = requests.period(), who.org_id, state.redis
     total_key, pending_key = requests.total_key(org, month), requests.pending_key(org, month)
     async with redis.pipeline(transaction=True) as pipe:
         pipe.incrby(total_key, n).expire(total_key, requests.KEPT_SECONDS)
         pipe.incrby(pending_key, n).expire(pending_key, requests.KEPT_SECONDS)
         pipe.sadd(requests.orgs_key(month), str(org)).expire(requests.orgs_key(month), requests.KEPT_SECONDS)
+        days.count(pipe, org, *read, n)
         total = (await pipe.execute())[0]
     if total == n:  # the month's first read here, or Redis lost its count: the database's count under it
         async with state.engine.begin() as conn:
@@ -65,7 +67,7 @@ async def _count(state: Any, who: AdaCaller, allowed: Allowance, n: int) -> None
     if allowed.requests is None or allowed.overage or total <= allowed.requests:
         return
     async with redis.pipeline(transaction=True) as pipe:
-        await pipe.decrby(total_key, n).decrby(pending_key, n).execute()
+        await days.count(pipe.decrby(total_key, n).decrby(pending_key, n), org, *read, -n).execute()
     raise await _over(state, allowed, total - n, month)
 
 
@@ -86,8 +88,9 @@ async def _over(state: Any, allowed: Allowance, used: int, month: str) -> LimitR
     return LimitReached(message, **detail, upgrade=better, resets_at=again)
 
 
-async def admit(state: Any, who: AdaCaller, op: str, args: dict[str, Any]) -> None:
-    """The org's plan lets this call through, and a read is counted; else refused before anything is enqueued."""
+async def admit(state: Any, who: AdaCaller, op: str, args: dict[str, Any], model: str = "") -> None:
+    """The org's plan lets this call through, and a read is counted (against the month, and in its model's day);
+    else refused before anything is enqueued."""
     allowed = who.allowance
     if allowed is None:
         return
@@ -96,6 +99,6 @@ async def admit(state: Any, who: AdaCaller, op: str, args: dict[str, Any]) -> No
             await _rate(state.redis, who, allowed.rps)
         n = requests.reads(op, args)
         if n:
-            await _count(state, who, allowed, n)
+            await _count(state, who, allowed, n, (model, op))
     except RedisError:
         raise Unavailable("Ada is unreachable for a moment: try again.", reason="queue") from None
