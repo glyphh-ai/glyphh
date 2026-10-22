@@ -48,13 +48,13 @@ async def test_free_is_refused_past_its_month_saying_how_to_read_on(
     month = requests.period()
     counted = Redis.from_url(REDIS_URL, decode_responses=True)
     assert await counted.get(requests.total_key(who.org_id, month)) == "1"
-    await counted.set(requests.total_key(who.org_id, month), 10_000)
+    await counted.set(requests.total_key(who.org_id, month), 5_000)
     over = await ada.post("/v1/models/shapes/query", json={"data": shape(3)}, headers=key)
     error = over.json()["error"]
     assert (over.status_code, error["code"], error["reason"]) == (403, "E_LIMIT", "requests")
-    assert (error["used"], error["max"], error["plan"], error["upgrade"]) == (10_000, 10_000, "Free", "Basic")
+    assert (error["used"], error["max"], error["plan"], error["upgrade"]) == (5_000, 5_000, "Free", "Basic")
     assert error["resets_at"] == requests.turns(month) and "Upgrade to Basic" in error["message"]
-    assert await counted.get(requests.total_key(who.org_id, month)) == "10000"  # a refused read is not counted
+    assert await counted.get(requests.total_key(who.org_id, month)) == "5000"  # a refused read is not counted
     writes = await ada.post("/v1/models/shapes/record", json={"data": shape(90), "outcome": "good"}, headers=key)
     assert writes.status_code == 200  # writes are not requests
     await asyncio.sleep(1.2)  # Free's five calls a second
@@ -67,8 +67,8 @@ async def test_free_is_refused_past_its_month_saying_how_to_read_on(
         "month": month,
         "resets_at": requests.turns(month),
         "models": 1,
-        "precedents": {"used": 13, "max": 5_000},
-        "requests": {"used": 10_000, "max": 10_000, "over": 0, "overage": False},
+        "precedents": {"used": 13, "max": 1_000},
+        "requests": {"used": 5_000, "max": 5_000, "over": 0, "overage": False},
         "requests_per_second": 5,
     }
     await counted.aclose()
@@ -136,8 +136,8 @@ async def test_plans_and_usage_show_the_cloud_numbers_with_ada_cloud_on(
 ) -> None:
     plans = {p["name"]: p["cloud"] for p in (await ada.get(f"{API}/v1/plans")).json()}
     assert plans["Free"] == {
-        "precedents": 5_000,
-        "requests_per_month": 10_000,
+        "precedents": 1_000,
+        "requests_per_month": 5_000,
         "requests_per_second": 5,
         "overage": False,
         "overage_cents_per_10k": None,
@@ -171,7 +171,7 @@ async def test_plans_and_usage_show_the_cloud_numbers_with_ada_cloud_on(
     plan = text(await tool(ada, auth, "plan"))
     assert "Ada Cloud 1,000,000 precedents, 5,000,000 reads a month (then $1 per 10,000 more), 200 calls" in plan
     listed = text(await tool(ada, auth, "plans")).splitlines()
-    assert listed[0].endswith("Ada Cloud 5,000 precedents, 10,000 reads a month (then refused), 5 calls a second")
+    assert listed[0].endswith("Ada Cloud 1,000 precedents, 5,000 reads a month (then refused), 5 calls a second")
     assert listed[1].endswith(
         "Ada Cloud 10,000 precedents, 50,000 reads a month (then $1 per 10,000 more), 10 calls a second"
     )

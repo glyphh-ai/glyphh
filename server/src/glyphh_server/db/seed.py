@@ -81,15 +81,17 @@ SALES: str = "sales@glyphh.ai"
 # customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): Team's 500,000 precedents, and the markups
 # on Fly's rates, are placeholders until set.
 # Ada Cloud (Chris, 2026-10-21, decision 3): precedents per org and reads a month, never seats, models or keys: Free
-# 5,000 and 10,000 (refused past them), Pro 100,000 and 1,000,000, Team 1,000,000 and 5,000,000 (each read past the
-# month $1 per 10,000, metered); calls a second 5, 50, 200; Enterprise by contract. Team's million is not to be sold
-# before the HNSW build memory is decided (docs/specs/ada-cloud.md, 10.1).
+# 1,000 and 5,000 (refused past them; lowered from 5,000 and 10,000 by Chris, 2026-10-22), Pro 100,000 and
+# 1,000,000, Team 1,000,000 and 5,000,000 (each read past the month $1 per 10,000, metered); calls a second 5, 50,
+# 200; Enterprise by contract. Team's million is not to be sold before the HNSW build memory is decided
+# (docs/specs/ada-cloud.md, 10.1). Lowering a cap moves every org on the plan to the new version at the next boot
+# (_carry); an org already past it keeps its precedents, and only new ones are refused (glyphh_ada/writes.py).
 # Basic (Chris, 2026-10-22), between Free and Pro: $20 a month for Ada Cloud, 10,000 precedents and 50,000 reads a
 # month, 10 calls a second, reads past the month metered like Pro's and Team's. No sync, HA, offline or SSO, and no
 # licence key (rrotor's tiers are free, pro, team and enterprise): a self-hosted node runs as on Free, one node and
 # 5,000 precedents; no hosting (no markup).
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), None, Cloud(5_000, 10_000, 5)),
+    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), None, Cloud(1_000, 5_000, 5)),
     PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), None, Cloud(10_000, 50_000, 10, True)),
     PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), 30, Cloud(100_000, 1_000_000, 50, True)),
     PlanSeed(  # TBD: 500,000

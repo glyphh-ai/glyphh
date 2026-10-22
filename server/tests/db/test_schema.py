@@ -127,7 +127,7 @@ async def test_the_plans_carry_ada_clouds_limits_per_org_never_per_seat(engine: 
             select(Plan.name, *cloud).join(Plan).where(PlanVersion.version == 1, Plan.active).order_by(Plan.sort)
         )
         assert [tuple(r) for r in rows] == [
-            ("Free", 5_000, 10_000, 5, False),
+            ("Free", 1_000, 5_000, 5, False),
             ("Basic", 10_000, 50_000, 10, True),
             ("Pro", 100_000, 1_000_000, 50, True),
             ("Team", 1_000_000, 5_000_000, 200, True),

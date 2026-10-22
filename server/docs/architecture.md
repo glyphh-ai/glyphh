@@ -359,7 +359,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   schema is dropped in the transaction that removes the org. The managed database's backups keep them until they age
   out (Fly Managed Postgres's window).
 - **Plans and metering.** Each plan version carries the org's cloud limits (`cloud_precedents`, `cloud_requests` a
-  calendar month, `cloud_rps`, `cloud_overage`): Free 5,000 / 10,000 / 5, Pro 100,000 / 1,000,000 / 50, Team
+  calendar month, `cloud_rps`, `cloud_overage`): Free 1,000 / 5,000 / 5, Basic 10,000 / 50,000 / 10, Pro 100,000 / 1,000,000 / 50, Team
   1,000,000 / 5,000,000 / 200, Enterprise none (by contract); never per seat, model or key. Before a call is
   enqueued (by the API or the connector alike, `glyphh_ada/api/meter.py`) the org's calls a second are held to the
   plan by a token bucket in Redis (`429 E_RATE`, `Retry-After`), and a read (`decide`, `query`, `probabilities`,

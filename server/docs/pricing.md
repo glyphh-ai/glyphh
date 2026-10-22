@@ -15,14 +15,19 @@ infrastructure or compute. This is the strategy; where today's code differs is
 | Multi-node sync | No | No | Yes | Yes | Yes, with high availability |
 | Air-gapped | No | No | Optional | Optional | Yes |
 | Audit log | No | No | No | No | Yes |
-| Ada Cloud precedents, the org's | 5,000 | 10,000 | 100,000 | 1,000,000 | By contract |
-| Ada Cloud reads a month | 10,000, then refused | 50,000, then $1 per 10,000 | 1,000,000, then $1 per 10,000 | 5,000,000, then $1 per 10,000 | By contract |
+| Ada Cloud precedents, the org's | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract |
+| Ada Cloud reads a month | 5,000, then refused | 50,000, then $1 per 10,000 | 1,000,000, then $1 per 10,000 | 5,000,000, then $1 per 10,000 | By contract |
 | Ada Cloud calls a second | 5 | 10 | 50 | 200 | By contract |
 
 - **Basic is an Ada Cloud plan** (Chris, 2026-10-22), between Free and Pro: self-serve, its Stripe price
   `GLYPHH_STRIPE_PRICE_BASIC`. It has no licence key (rrotor's tiers are free, pro, team and enterprise), so a
   self-hosted node on Basic runs as Free; no hosting. Ada Cloud's caps are in
   [specs/ada-cloud.md](specs/ada-cloud.md#7-plans-and-metering).
+
+- **Free's Ada Cloud caps were lowered** (Chris, 2026-10-22) to 1,000 precedents and 5,000 reads a month (from
+  5,000 and 10,000), still 5 calls a second and refused at its caps. Every Free org moves to the new version at the
+  next boot; an org already holding more keeps every precedent, and only new ones are refused (`E_LIMIT`
+  `precedents`) until it is under the cap or upgrades.
 
 - **Free is the default.** rrotor with no key runs as Free (Community mode): one node, 5,000 precedents, no sync.
 - **A key unlocks the rest, locally,** verified on the node with no call to Glyphh.
