@@ -19,10 +19,6 @@ from tests.ada.conftest import ADA, SHAPES, a_model, an_org, shape
 from tests.conftest import SETTINGS
 
 
-def _quick(queue: str) -> None:
-    """A worker that stops at once, for the supervisor to start again."""
-
-
 @pytest.fixture
 def idle(streams: Redis) -> Iterator[Worker]:
     """A worker that is not serving: its parts called by the test, on its own connection."""
@@ -45,8 +41,8 @@ def test_the_command_idles_with_ada_cloud_off_and_supervises_with_it_on(monkeypa
 
 def test_the_supervisor_starts_again_a_worker_that_stops() -> None:
     stop = threading.Event()
-    threading.Timer(1.5, stop.set).start()
-    assert worker.supervise(2, SYNC, stop, target=_quick, every=0.05) > 2
+    threading.Timer(6.0, stop.set).start()  # spawning a process takes a second or more on a small CI runner
+    assert worker.supervise(2, SYNC, stop, target=print, every=0.05) > 2
 
 
 def test_idle_waits_to_be_stopped_and_serve_runs_one_worker(monkeypatch: pytest.MonkeyPatch) -> None:

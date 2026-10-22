@@ -48,7 +48,13 @@ async def test_a_worker_killed_mid_request_loses_nothing(
     answered = await load
     assert answered.status_code == 200 and answered.json()["added"] == 1000, answered.text
     assert (await ada.get("/v1/models/shapes", headers=key)).json()["precedents"] == 1000
-    assert second.is_alive() and streams.xpending_range("ada:sync", GROUP, min="-", max="+", count=10) == []
+    for _ in range(500):  # a worker acknowledges a message just after it answers
+        if streams.xpending_range("ada:sync", GROUP, min="-", max="+", count=10) == []:
+            break
+        await asyncio.sleep(0.01)
+    else:
+        raise AssertionError("a message was left unacknowledged")
+    assert second.is_alive()
 
 
 async def test_a_write_taken_again_is_answered_and_not_made_twice(
