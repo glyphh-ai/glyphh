@@ -23,7 +23,7 @@ and the Ada skill; your software through the SDKs with an API key.
 
 | Plan | Price | Precedents | Reads a month | Calls a second | Reads past the month |
 |---|---|---|---|---|---|
-| Free | $0 | 5,000 | 10,000 | 5 | Refused until the month turns |
+| Free | $0 | 1,000 | 5,000 | 5 | Refused until the month turns |
 | Basic | $20/month | 10,000 | 50,000 | 10 | $1 per 10,000 |
 | Pro | $99/month | 100,000 | 1,000,000 | 50 | $1 per 10,000 |
 | Team | $299/month | 1,000,000 | 5,000,000 | 200 | $1 per 10,000 |

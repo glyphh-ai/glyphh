@@ -33,9 +33,9 @@ test('client: refusals read as {error: {code, message, trace_id}}; E_LIMIT names
   expect(err).toMatchObject({ code: 'E_INVALID', status: 422, detail: { reason: 'not_self_serve' } })
   expect(describe(err)).toBe('Enterprise is by contract: talk to us at sales@glyphh.ai. (trace tr-1)')
   // The month's reads used up on Free, as glyphh_ada.api.meter says it.
-  const said = "Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01. Upgrade to Basic (the connector's upgrade tool, or Billing on the platform) to read on now."
-  const limit = new ApiError('E_LIMIT', said, 429, { reason: 'requests', used: 10000, max: 10000, plan: 'Free', upgrade: 'Basic', resets_at: '2026-11-01' }, 'tr-2')
-  expect(describe(limit)).toBe(`${said} (10,000 of 10,000 reads used) (trace tr-2)`)
+  const said = "Your Free plan's 5,000 Ada reads this month are used: they start again on 2026-11-01. Upgrade to Basic (the connector's upgrade tool, or Billing on the platform) to read on now."
+  const limit = new ApiError('E_LIMIT', said, 429, { reason: 'requests', used: 5000, max: 5000, plan: 'Free', upgrade: 'Basic', resets_at: '2026-11-01' }, 'tr-2')
+  expect(describe(limit)).toBe(`${said} (5,000 of 5,000 reads used) (trace tr-2)`)
   const missing = await api(w.gh, 'DELETE', '/v1/nothing/zzz').catch(e => e)
   expect(describe(missing)).toBe('No route DELETE /v1/nothing/zzz (trace tr-1)')
 })

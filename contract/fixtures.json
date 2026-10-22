@@ -1,6 +1,6 @@
 {
   "contract": 4,
-  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's 5,000 precedents; a model over 100,000) are written from the server's code.",
+  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code.",
   "cases": [
     {
       "name": "a model made from its spec",
@@ -453,7 +453,7 @@
           "state": "awaiting",
           "percent": 0.0,
           "args": {
-            "cap": 5000,
+            "cap": 1000,
             "learn": true,
             "format": "csv",
             "mapping": {
@@ -496,7 +496,7 @@
           "state": "queued",
           "percent": 0.0,
           "args": {
-            "cap": 5000,
+            "cap": 1000,
             "learn": true,
             "format": "csv",
             "mapping": {
@@ -534,7 +534,7 @@
           "state": "done",
           "percent": 100.0,
           "args": {
-            "cap": 5000,
+            "cap": 1000,
             "learn": true,
             "format": "csv",
             "mapping": {
@@ -793,12 +793,12 @@
           "resets_at": "2026-11-01",
           "models": 3,
           "precedents": {
-            "used": 2480,
-            "max": 5000
+            "used": 980,
+            "max": 1000
           },
           "requests": {
             "used": 7,
-            "max": 10000,
+            "max": 5000,
             "over": 0,
             "overage": false
           },
@@ -1062,11 +1062,11 @@
         "body": {
           "error": {
             "code": "E_LIMIT",
-            "message": "Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01. Upgrade to Basic (the connector's upgrade tool, or Billing on the platform) to read on now.",
+            "message": "Your Free plan's 5,000 Ada reads this month are used: they start again on 2026-11-01. Upgrade to Basic (the connector's upgrade tool, or Billing on the platform) to read on now.",
             "trace_id": "c67f348ec81043bbabb69e8fc1bf7b95",
             "reason": "requests",
-            "used": 10000,
-            "max": 10000,
+            "used": 5000,
+            "max": 5000,
             "plan": "Free",
             "upgrade": "Basic",
             "resets_at": "2026-11-01"
@@ -1089,11 +1089,11 @@
         "body": {
           "error": {
             "code": "E_LIMIT",
-            "message": "These cases add 10 precedents to the 4,995 the org holds: its plan allows 5,000.",
+            "message": "These cases add 10 precedents to the 995 the org holds: its plan allows 1,000.",
             "trace_id": "9e1d2c3b4a5f6e7d",
             "reason": "precedents",
-            "used": 4995,
-            "max": 5000,
+            "used": 995,
+            "max": 1000,
             "adding": 10
           }
         }

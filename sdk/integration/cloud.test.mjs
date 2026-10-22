@@ -130,23 +130,24 @@ test("create a model, import, learn, decide, backtest, activate, export", async 
   const usage = await ada.usage();
   shaped(usage, "usage");
   shaped(usage.requests, "usage_requests");
-  assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.overage, usage.requests_per_second], ["Free", 5000, 10000, false, 5]);
+  assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.overage, usage.requests_per_second], ["Basic", 10000, 50000, true, 10]);
   assert.ok(usage.requests.used > 0 && /^\d{4}-\d{2}$/.test(usage.month) && /^\d{4}-\d{2}-01$/.test(usage.resets_at));
 
-  // past the plan's calls a second (Free: 5): 429 E_RATE with Retry-After, thrown by a client that does not wait
+  // past the plan's calls a second (Basic: 10): 429 E_RATE with Retry-After, thrown by a client that does not wait;
+  // sent 20 at a time, so a slow laptop's reads still pass the rate
   const quick = new Ada({ retryDeadline: 0 });
   await assert.rejects(
     (async () => {
-      for (let i = 0; i < 60; i++) await quick.decide("ts-tickets", asked(1));
+      for (let i = 0; i < 3; i++) await Promise.all(Array.from({ length: 20 }, () => quick.decide("ts-tickets", asked(1))));
     })(),
-    (e) => e instanceof RateError && e.status === 429 && e.max === 5 && e.retryAfter >= 1,
+    (e) => e instanceof RateError && e.status === 429 && e.max === 10 && e.retryAfter >= 1,
   );
   assert.ok((await new Ada({ retryDeadline: 30 }).decide("ts-tickets", asked(1))).outcome); // waiting, it goes on
   // past the plan's month (the second org's, used already): 403 E_LIMIT requests, the plan to upgrade to, when it turns
   const full = new Ada({ key: process.env.ADA_FULL_KEY, retryDeadline: 0 });
   await assert.rejects(full.decide("ts-tickets", asked(1)), (e) => {
     assert.ok(e instanceof LimitError);
-    assert.deepEqual([e.status, e.reason, e.plan, e.upgrade, e.max, e.resetsAt], [403, "requests", "Free", "Basic", 10000, usage.resets_at]);
+    assert.deepEqual([e.status, e.reason, e.plan, e.upgrade, e.max, e.resetsAt], [403, "requests", "Free", "Basic", 5000, usage.resets_at]);
     return true;
   });
 

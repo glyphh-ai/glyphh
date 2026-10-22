@@ -143,11 +143,11 @@ models, import files, backtest, tune and export, with typed errors (`LimitError`
 
 ## Limits
 
-Precedents are counted across the org's models, against the plan: Free 5,000, Basic 10,000, Pro 100,000, Team 1,000,000. A write
+Precedents are counted across the org's models, against the plan: Free 1,000, Basic 10,000, Pro 100,000, Team 1,000,000. A write
 or import past it is refused whole (`E_LIMIT`, `reason: "precedents"`, with `used` and `max`); an import with
 `partial` records up to the cap. Tell the user nothing was recorded past it and that a plan with a higher cap lifts
 it (`plan` and `upgrade` on the connector). Reads (`decide`, `query`, `probabilities`, `facts`; a decide per output)
-count against the plan's month (Free 10,000, refused past it with `E_LIMIT` `reason: "requests"`; Basic
+count against the plan's month (Free 5,000, refused past it with `E_LIMIT` `reason: "requests"`; Basic
 50,000, Pro 1,000,000 and Team 5,000,000 go on past theirs, metered), and calls a second against its rate (`E_RATE`, wait as `Retry-After` says). A model over 100,000 precedents asked with under half its voting roles is
 refused (`E_FEW_ROLES`): ask with more of the case. A spec is at most 64 KB, 64 roles, 20 named outputs, 200 values
 an output, `k` 200, `dimension` 8,192. `ada_export` gives everything back (precedents, every spec version, what was

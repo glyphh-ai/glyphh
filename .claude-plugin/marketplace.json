@@ -10,7 +10,7 @@
       "name": "glyphh",
       "source": "./plugins/glyphh",
       "description": "Glyphh for Claude: your Glyphh account and the sign-in card, the Ada skill that builds, loads, tunes and asks typed models in Ada Cloud through the Glyphh connector, and the file ledger. Ada is in every plan.",
-      "version": "1.1.5"
+      "version": "1.1.6"
     }
   ]
 }
