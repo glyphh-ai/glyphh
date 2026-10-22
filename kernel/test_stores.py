@@ -417,3 +417,27 @@ def test_the_index_is_dropped_and_built_again(pg) -> None:
     assert found == 1 and model.probabilities(q).keys() == without.keys()
     store.drop()
     assert conn.execute("SELECT to_regclass(%s)", (f'"{schema}".{store._t["part_name"].as_string(conn)}',)).fetchone()[0] is None
+
+
+@pytest.mark.postgres
+def test_a_precedent_is_found_by_its_id_through_an_index(pg) -> None:
+    """grade, forget, has and rewrite look a precedent up by id alone: each partition indexes its ids, so a lookup
+    is an index probe, not a scan of the primary key (model, id) it cannot lead with. With or without the HNSW
+    index, and kept when that one is dropped."""
+    from glyphh_postgres import PostgresStore
+
+    conn, schema = pg
+    for name, index in (("with", True), ("without", False)):
+        store = PostgresStore(conn, schema, name, dim=256, index=index)
+        Space(dim=256, store=store).record({"x": "1"}, "o", rid="r1")
+        store.drop_index()
+        part = store._t["part_name"].as_string(conn).strip('"')
+        found = conn.execute(
+            "SELECT indexdef FROM pg_indexes WHERE schemaname = %s AND indexname = %s", (schema, f"{part}_id")
+        ).fetchone()
+        assert found is not None and found[0].startswith("CREATE UNIQUE INDEX") and found[0].endswith("(id)")
+        conn.execute("SET enable_seqscan = off")
+        plan = conn.execute(f'EXPLAIN SELECT 1 FROM "{schema}"."{part}" WHERE id = %s', ("r1",)).fetchall()
+        conn.execute("RESET enable_seqscan")
+        assert f"{part}_id" in " ".join(r[0] for r in plan)
+        PostgresStore(conn, schema, name, dim=256)  # opened again: the index is there already

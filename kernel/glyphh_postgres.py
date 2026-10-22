@@ -4,8 +4,8 @@ PostgresStore: a model's precedents in Postgres, for Ada Cloud. psycopg 3 and pg
 One schema per org (given at construction, never from a caller's input), holding:
 
     precedents  model, id, situation jsonb, outcome, dim, glyph bit varying, author, ts, events, seq;
-                PRIMARY KEY (model, id); PARTITION BY LIST (model), a partition per model, each with an HNSW
-                index on its glyphs as bit(dim) (bit_hamming_ops)
+                PRIMARY KEY (model, id); PARTITION BY LIST (model), a partition per model, each with a unique
+                index on its ids and an HNSW index on its glyphs as bit(dim) (bit_hamming_ops)
     outcomes    model, id, output, value, ts, seq (a precedent's named outcomes)
     meta        model, key, value jsonb (learned weights, temperatures, settings, the encoding)
     counts      model, n (precedents held, kept by every write in the same transaction)
@@ -150,6 +150,7 @@ class PostgresStore:
             "part": sql.SQL("{}.{}").format(s, sql.Identifier(part)),
             "part_name": sql.Identifier(part),
             "index": sql.Identifier(f"{part}_glyph"),
+            "by_id": sql.Identifier(f"{part}_id"),
             "outcomes": sql.SQL("{}.outcomes").format(s),
             "meta": sql.SQL("{}.meta").format(s),
             "counts": sql.SQL("{}.counts").format(s),
@@ -215,6 +216,9 @@ class PostgresStore:
                     part=self._t["part"], precedents=self._t["precedents"], model=sql.Literal(self.model)
                 )
             )
+            # The partition's ids indexed alone: grade, forget, has and rewrite find a precedent by id, which the
+            # primary key (model, id) cannot lead with, so without it each lookup scans the partition's whole index.
+            cur.execute(self._q("CREATE UNIQUE INDEX IF NOT EXISTS {by_id} ON {part} (id)"))
             if index:
                 self._create_index(cur)
             cur.execute(self._q("INSERT INTO {counts} (model, n) VALUES (%s, 0) ON CONFLICT (model) DO NOTHING"), (self.model,))

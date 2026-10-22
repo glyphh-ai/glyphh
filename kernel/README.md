@@ -581,8 +581,10 @@ read and write the kernel makes of them). `Space(path=...)` is
 Ada Cloud: a schema per org, given at construction; a `precedents` table
 partitioned by model, each partition with an HNSW index on its glyphs as
 pgvector `bit(dim)` (`bit_hamming_ops`; a bipolar glyph is its bits, +1 as 1,
-and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096); `outcomes`,
-`meta` and `counts` keyed by model.
+and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096) and a unique
+index on its ids (a lookup by id, as `grade`, `forget` and `rewrite` make,
+cannot lead with the primary key `(model, id)`: 3.12.1); `outcomes`, `meta`
+and `counts` keyed by model.
 
 ```python
 from glyphh_postgres import PostgresStore
