@@ -1,0 +1,37 @@
+# The SDKs' checks on every push to main and every pull request: both
+# packages' tests against contract/, and one version in both.
+name: sdks
+
+on:
+  push:
+    branches: [main]
+    paths: ["sdk/**", "contract/**", ".github/workflows/sdks.yml"]
+  pull_request:
+    paths: ["sdk/**", "contract/**", ".github/workflows/sdks.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  sdks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "TypeScript: @glyphh-ai/glyphh"
+        working-directory: sdk/typescript
+        run: npm ci && npm test
+      - name: "Python: glyphh"
+        working-directory: sdk/python
+        run: python -m pip install '.[dev]' && python -m pytest -q
+      - name: The two packages carry one version, and the Python module says it
+        run: |
+          ts="$(node -p "require('./sdk/typescript/package.json').version")"
+          py="$(python -c "import tomllib; print(tomllib.load(open('sdk/python/pyproject.toml', 'rb'))['project']['version'])")"
+          mod="$(python -c "import glyphh; print(glyphh.__version__)")"
+          [ "$ts" = "$py" ] && [ "$py" = "$mod" ] || { echo "npm $ts, PyPI $py, glyphh.__version__ $mod"; exit 1; }

@@ -1,0 +1,85 @@
+# A session's memory: what a turn needs from the turns before it, and what carrying all of them costs
+
+> **Running these scripts.** `mine.py`, `spend.py`, `spend2.py` and `measure.py` need only Python and your own Claude
+> Code transcripts; `recall.py` also runs against the Ada kernel inside rrotor (Glyphh's runtime), which is not in
+> this repository. The numbers are one machine's and will differ on yours.
+
+The idea under test: a Claude Code session carries its whole transcript into every call; a precedent store could
+carry only the turns a new turn needs, and the bill would fall by the difference. Two questions, both answered on
+real data: 180 Claude Code sessions from one developer's machine, read from the transcripts the harness keeps
+(`~/.claude/projects`). No transcript text is in this folder; the scripts read the transcripts in place and print
+aggregates.
+
+## The table
+
+**Where the bill goes**, by the API's own token counts, at list prices, over the sessions with 20 or more calls:
+
+| | |
+|---|---|
+| re-reading the context on every call | 70% of the bill |
+| context per call, average | 484,985 tokens |
+| of which the fixed preamble (system prompt, tools, memory, skills) | ~51,000 |
+| of which history carried from earlier in the session | ~430,000 (89%) |
+| the same calls with history replaced by five precedents of ~400 tokens | **70% less** |
+
+**What a turn needs from history.** After the fact the label is known: for each file a turn edits or reads, the last
+earlier turn that touched it (1,928 turns in 44 sessions of 10+ turns; median 2 earlier turns needed, 3 files
+touched). Before the fact a retriever has only the new request, the folder and the branch. Recall of those needed
+turns, carrying k of them:
+
+| Retriever | recall@5 | recall@10 |
+|---|---|---|
+| The last k turns (what compaction keeps) | **36.4%** | **47.3%** |
+| TF-IDF over the request text | 11.2% | 17.3% |
+| Ada: a precedent per turn, queried by the request | 14.2% | 21.7% |
+| Ada plus the last 2 turns | 30.6% | 35.7% |
+| Oracle | 91.8% | 98.5% |
+
+**How far back a need reaches:** within the last turn 14%, 5 turns 36%, 10 turns 47%, 20 turns 59%, 50 turns 74%;
+median 12 turns, the ninetieth percentile 141.
+
+## What it says
+
+- **The money is real and it is history.** Nine tenths of every call's context is the session so far, and it is
+  re-read on every call. Replace it with a few hundred tokens of what the turn needs and the bill falls by about
+  seventy percent, with the fixed preamble as the floor.
+- **The request does not say what is needed; what was done last does.** Similarity over the request text, Ada's or
+  TF-IDF's, recovers a seventh of the needed turns. Recency recovers a third to a half. The needed turns are the last
+  touch of each file the turn works on, and nothing in "fix the flaky test" names which turn that was.
+- **So the mechanism is a ledger, not a search.** A precedent per file, the last thing done to it and why, fetched
+  when the model touches the file again: by construction that recovers every file-keyed need, at a median of three
+  files a turn and a hundred tokens a precedent. Recency on top for the last few turns. Ada's similarity is not
+  the lever here; its record, receipts and learning are, keyed by path.
+- **What this label misses.** A turn also needs decisions, constraints and errors from earlier turns that touched no
+  file in common ("don't start servers", "the user chose option C"). Those are not in this label and they are
+  where a semantic recall could still earn its place; measuring that needs a person to say what was needed, not a
+  script.
+
+So: a file ledger and the recent turns, not a memory keyed by the request; a semantic store, if any, for
+decisions, which is a different and smaller store.
+
+## The ledger, deployed, and the measurement that follows
+
+Built from this page: the file ledger, in the `glyphh` plugin (`glyphh-ai/glyphh`,
+`plugins/glyphh/hooks/ledger.py`), installed on this machine on 2026-10-17. Every change to a file is recorded with
+the request it served; when the file is read again the last changes come back as context; every prompt lists the files
+the session changed in its last turns. Local SQLite, nothing sent.
+
+`measure.py` is the test: per week, from the transcripts, calls, context per call, the tokens spent finding before
+the first edit per turn, and the share of reads that re-read a file already read in the session. The weeks before
+2026-W42 are the baseline (re-reads 6% to 72% of reads, median about 45%; finding 200 to 4,300 tokens a turn). If
+the ledger works, re-reads and finding fall and context per call does not rise by more than the ledger's few hundred
+tokens. If they do not move, this page says so.
+
+## Reproduce
+
+```sh
+uv run python benchmarks/session/mine.py      # every turn of every session on this machine -> turns.jsonl (not committed)
+uv run python benchmarks/session/spend.py     # the bill by token kind; finding before the first edit
+uv run python benchmarks/session/spend2.py    # each find's result costed by size and life in context
+uv run python benchmarks/session/recall.py 5  # recall of the needed turns, k=5 (10 for k=10)
+uv run python benchmarks/session/measure.py   # your usage by week: the ledger's effect, over time
+```
+
+The transcripts are the harness's own (`~/.claude/projects/*/*.jsonl`); the numbers above are this machine's and
+will differ on another.

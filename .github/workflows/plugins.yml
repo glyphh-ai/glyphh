@@ -1,0 +1,67 @@
+# Checks on every push to main and every pull request: the marketplace and
+# each plugin. A plugin whose hooks/hooks.json names a hooks module
+# ("modules") has its function-hook tests run (claude plugin test); every
+# plugin is validated, warnings as errors. Nothing is published: this
+# repository is the marketplace, and a merge to main is the release.
+name: plugins
+
+on:
+  push:
+    branches: [main]
+    paths: ["plugins/**", ".claude-plugin/**", ".github/workflows/plugins.yml"]
+  pull_request:
+    paths: ["plugins/**", ".claude-plugin/**", ".github/workflows/plugins.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  plugins:
+    runs-on: macos-latest
+    env:
+      CLAUDE_CODE_ENABLE_FUNCTION_HOOKS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: The marketplace
+        run: claude plugin validate --strict .
+      - name: Each plugin's tests and validation
+        run: |
+          for dir in plugins/*/; do
+            [ -d "$dir" ] || continue
+            echo "::group::${dir}"
+            if grep -qs '"modules"' "$dir/hooks/hooks.json"; then claude plugin test "$dir"; else echo "no hooks module: command hooks or a skill-only plugin, no function-hook tests to run"; fi
+            claude plugin validate --strict "$dir"
+            echo "::endgroup::"
+          done
+      - name: Each marketplace entry is its plugin's name and version
+        run: |
+          node -e '
+            const fs = require("fs")
+            const m = JSON.parse(fs.readFileSync(".claude-plugin/marketplace.json", "utf8"))
+            let bad = 0
+            for (const e of m.plugins) {
+              const p = JSON.parse(fs.readFileSync(`${e.source}/.claude-plugin/plugin.json`, "utf8"))
+              if (p.name !== e.name || p.version !== e.version) { console.log(`${e.name}: marketplace ${e.version}, plugin.json ${p.name} ${p.version}`); bad = 1 }
+            }
+            process.exit(bad)'
+      - name: "glyphh: the MCP server type-checks and its committed build is up to date"
+        working-directory: plugins/glyphh
+        run: |
+          GLYPHH_MCP_BUILD="$RUNNER_TEMP/glyphh-mcp" sh mcp/build.sh
+          git diff --exit-code -- mcp/dist || { echo "::error::mcp/dist/server.mjs is not the build of mcp/src: run mcp/build.sh and commit it"; exit 1; }
+      - name: "glyphh: the MCP server's own tests"
+        working-directory: plugins/glyphh
+        run: node --test mcp/test/*.test.*
+      - name: "glyphh: the ledger's command hooks"
+        working-directory: plugins/glyphh
+        run: |
+          python3 -m py_compile hooks/ledger.py
+          export GLYPHH_HOME="$RUNNER_TEMP/ledger-home"
+          echo '{"session_id":"ci","tool_name":"Edit","tool_input":{"file_path":"/src/app.py","old_string":"a","new_string":"b"}}' | python3 hooks/ledger.py record
+          echo '{"session_id":"ci","tool_input":{"file_path":"/src/app.py"}}' | python3 hooks/ledger.py recall | grep -q 'replaced \\"a\\" with \\"b\\"'
+          echo '{"session_id":"ci"}' | python3 hooks/ledger.py prompt | grep -q '/src/app.py'

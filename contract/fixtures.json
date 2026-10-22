@@ -1,0 +1,1165 @@
+{
+  "contract": 4,
+  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's 5,000 precedents; a model over 100,000) are written from the server's code.",
+  "cases": [
+    {
+      "name": "a model made from its spec",
+      "schema": null,
+      "request": {
+        "method": "POST",
+        "path": "/v1/models",
+        "body": {
+          "name": "routing",
+          "spec": {
+            "name": "routing",
+            "seed": 4,
+            "dimension": 1024,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "w",
+                    "roles": [
+                      {
+                        "name": "product"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      },
+                      {
+                        "name": "ref",
+                        "key_part": true,
+                        "similarity_weight": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "outputs": {
+              "team": {
+                "values": [
+                  "billing",
+                  "tech"
+                ]
+              },
+              "urgent": {
+                "values": [
+                  "yes",
+                  "no"
+                ]
+              }
+            },
+            "settings": {
+              "rare": 1
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "name": "routing",
+          "id": "a1400fbd-6139-4b28-bd61-0541d8ddc904",
+          "version": 1,
+          "precedents": 0,
+          "created_at": "2026-10-22 04:42:44.094847+00:00",
+          "spec": {
+            "name": "routing",
+            "seed": 4,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "w",
+                    "roles": [
+                      {
+                        "name": "product"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      },
+                      {
+                        "name": "ref",
+                        "key_part": true,
+                        "similarity_weight": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "outputs": {
+              "team": {
+                "values": [
+                  "billing",
+                  "tech"
+                ]
+              },
+              "urgent": {
+                "values": [
+                  "yes",
+                  "no"
+                ]
+              }
+            },
+            "settings": {
+              "rare": 1
+            },
+            "dimension": 1024
+          }
+        }
+      }
+    },
+    {
+      "name": "a decision",
+      "schema": "decision",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "free",
+                "channel": "chat",
+                "age": 21,
+                "text": "refund late",
+                "owner": "o1"
+              }
+            }
+          },
+          "include": [
+            "facts"
+          ],
+          "clearance": 0.5
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "outcome": "keep",
+          "expected_cost": 0.0,
+          "probabilities": {
+            "keep": 1.0
+          },
+          "ask": false,
+          "receipts": [
+            {
+              "id": "baff85d87312",
+              "sim": 1.0,
+              "outcome": "keep",
+              "hash": "d3b0a55e8ed3268d",
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+            },
+            {
+              "id": "6ca58952bcb8",
+              "sim": 1.0,
+              "outcome": "keep",
+              "hash": "6d4f58931d302436",
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+            }
+          ],
+          "facts": [
+            {
+              "id": "f6943b8762de",
+              "outcome": "keep",
+              "probability": 1.0,
+              "score": 1.0,
+              "sim": 0.4512,
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af",
+              "ts": 1792644121.3098993,
+              "hash": "cff0d319bd51f441",
+              "tree": {
+                "key": "",
+                "weight": 1.0,
+                "score": 1.0,
+                "share": 1.0,
+                "sim": 1.0,
+                "status": "both",
+                "children": [
+                  {
+                    "key": "t",
+                    "weight": 1.0,
+                    "score": 1.0,
+                    "share": 0.7858,
+                    "sim": 1.0,
+                    "status": "both",
+                    "children": [
+                      {
+                        "key": "s",
+                        "weight": 1.0,
+                        "score": 1.0,
+                        "share": 1.0,
+                        "sim": 1.0,
+                        "status": "both",
+                        "children": [
+                          {
+                            "key": "age",
+                            "weight": 0.9386384,
+                            "score": 1.0,
+                            "share": 0.4606,
+                            "sim": 1.0,
+                            "status": "both",
+                            "query": [
+                              "0",
+                              "3",
+                              "6",
+                              "9",
+                              "12",
+                              "15",
+                              "18",
+                              "21"
+                            ],
+                            "record": [
+                              "0",
+                              "3",
+                              "6",
+                              "9",
+                              "12",
+                              "15",
+                              "18",
+                              "21"
+                            ]
+                          },
+                          {
+                            "key": "channel",
+                            "weight": 0.0324,
+                            "score": 1.0,
+                            "share": 0.0159,
+                            "sim": 1.0,
+                            "status": "both",
+                            "query": "chat",
+                            "record": "chat"
+                          },
+                          {
+                            "key": "id",
+                            "weight": 0.0,
+                            "score": 0.0,
+                            "share": 0.0,
+                            "sim": 0.0,
+                            "status": "record_only",
+                            "record": "c21"
+                          },
+                          {
+                            "key": "plan",
+                            "weight": 0.0668,
+                            "score": 1.0,
+                            "share": 0.0328,
+                            "sim": 1.0,
+                            "status": "both",
+                            "query": "free",
+                            "record": "free"
+                          },
+                          {
+                            "key": "text",
+                            "weight": 1.0,
+                            "score": 1.0,
+                            "share": 0.4907,
+                            "sim": 1.0,
+                            "status": "both",
+                            "query": [
+                              [
+                                "late",
+                                1.0
+                              ],
+                              [
+                                "refund",
+                                1.0
+                              ]
+                            ],
+                            "record": [
+                              [
+                                "late",
+                                1.0
+                              ],
+                              [
+                                "refund",
+                                1.0
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "tickets",
+          "version": 1
+        }
+      }
+    },
+    {
+      "name": "a decision that asks a person",
+      "schema": "decision",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "channel": "chat"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "outcome": "keep",
+          "expected_cost": 0.44,
+          "probabilities": {
+            "keep": 0.56,
+            "refund": 0.44
+          },
+          "ask": true,
+          "receipts": [
+            {
+              "id": "41681b18a4a0",
+              "sim": 1.0,
+              "outcome": "keep",
+              "hash": "4848e701a5b70030",
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+            },
+            {
+              "id": "092241509520",
+              "sim": 1.0,
+              "outcome": "refund",
+              "hash": "4a13e294594a9256",
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+            }
+          ],
+          "model": "tickets",
+          "version": 3
+        }
+      }
+    },
+    {
+      "name": "a decision of several outputs",
+      "schema": "decision",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "routing",
+          "data": {
+            "t": {
+              "w": {
+                "product": "app",
+                "text": "refund now"
+              }
+            }
+          },
+          "outputs": [
+            "team",
+            "urgent"
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "outputs": {
+            "team": {
+              "outcome": "billing",
+              "expected_cost": 0.0,
+              "probabilities": {
+                "billing": 1.0,
+                "tech": 0.0
+              },
+              "ask": false,
+              "receipts": [
+                {
+                  "id": "4e402bc89c2d",
+                  "sim": 0.7451,
+                  "outcome": "billing",
+                  "hash": "7712ee390141adc1",
+                  "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+                },
+                {
+                  "id": "1e5a4ed9f85f",
+                  "sim": 0.7451,
+                  "outcome": "billing",
+                  "hash": "5549fb52567c9484",
+                  "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+                }
+              ]
+            },
+            "urgent": {
+              "outcome": "no",
+              "expected_cost": 0.2,
+              "probabilities": {
+                "no": 0.8,
+                "yes": 0.2
+              },
+              "ask": false,
+              "receipts": [
+                {
+                  "id": "4e402bc89c2d",
+                  "sim": 0.6182,
+                  "outcome": "no",
+                  "hash": "7712ee390141adc1",
+                  "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+                },
+                {
+                  "id": "1e5a4ed9f85f",
+                  "sim": 0.6182,
+                  "outcome": "yes",
+                  "hash": "5549fb52567c9484",
+                  "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+                }
+              ]
+            }
+          },
+          "model": "routing",
+          "version": 1
+        }
+      }
+    },
+    {
+      "name": "an import, waiting for its file",
+      "schema": "job",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/routing/imports",
+        "body": {
+          "format": "csv",
+          "mapping": {
+            "product": "t.w.product",
+            "text": "t.w.text",
+            "ref": "t.w.ref",
+            "team": "outcome.team",
+            "urgent": "outcome.urgent"
+          }
+        }
+      },
+      "response": {
+        "status": 202,
+        "body": {
+          "id": "9bfaff33-5de1-4b5e-aca9-e32ed246e014",
+          "model": "routing",
+          "kind": "import",
+          "state": "awaiting",
+          "percent": 0.0,
+          "args": {
+            "cap": 5000,
+            "learn": true,
+            "format": "csv",
+            "mapping": {
+              "ref": "t.w.ref",
+              "team": "outcome.team",
+              "text": "t.w.text",
+              "urgent": "outcome.urgent",
+              "product": "t.w.product"
+            },
+            "partial": false
+          },
+          "result": null,
+          "error": null,
+          "created_at": "2026-10-22 04:42:45.051708+00:00",
+          "started_at": null,
+          "finished_at": null,
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af",
+          "upload": {
+            "url": "https://ada.glyphh.ai/v1/uploads/eyJvIjoiNGM5Zi5leGFtcGxlIn0.c2lnbmVk",
+            "expires_at": 1792647765
+          }
+        }
+      }
+    },
+    {
+      "name": "the import's file, sent to its upload link",
+      "schema": "job",
+      "request": {
+        "method": "PUT",
+        "path": "/v1/uploads/eyJvIjoiNGM5Zi5leGFtcGxlIn0.c2lnbmVk",
+        "body": null,
+        "note": "the file's bytes, application/octet-stream, no key: the link is the credential"
+      },
+      "response": {
+        "status": 202,
+        "body": {
+          "id": "04211965-1a28-4079-9ee6-ca19f9f5f1df",
+          "model": "routing",
+          "kind": "import",
+          "state": "queued",
+          "percent": 0.0,
+          "args": {
+            "cap": 5000,
+            "learn": true,
+            "format": "csv",
+            "mapping": {
+              "ref": "t.w.ref",
+              "team": "outcome.team",
+              "text": "t.w.text",
+              "urgent": "outcome.urgent",
+              "product": "t.w.product"
+            },
+            "partial": false
+          },
+          "result": null,
+          "error": null,
+          "created_at": "2026-10-22 04:42:44.110471+00:00",
+          "started_at": null,
+          "finished_at": null,
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+        }
+      }
+    },
+    {
+      "name": "an import, done",
+      "schema": "job",
+      "request": {
+        "method": "GET",
+        "path": "/v1/jobs/04211965-1a28-4079-9ee6-ca19f9f5f1df",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "04211965-1a28-4079-9ee6-ca19f9f5f1df",
+          "model": "routing",
+          "kind": "import",
+          "state": "done",
+          "percent": 100.0,
+          "args": {
+            "cap": 5000,
+            "learn": true,
+            "format": "csv",
+            "mapping": {
+              "ref": "t.w.ref",
+              "team": "outcome.team",
+              "text": "t.w.text",
+              "urgent": "outcome.urgent",
+              "product": "t.w.product"
+            },
+            "partial": false
+          },
+          "result": {
+            "rows": 60,
+            "added": 60,
+            "learned": {
+              "tau": {
+                "team": 0.01,
+                "urgent": 1.5
+              },
+              "learned": {
+                "team": {
+                  "pairs": [],
+                  "roles": {},
+                  "words": {
+                    "t.w.text": 5
+                  }
+                },
+                "urgent": {
+                  "pairs": [],
+                  "roles": {},
+                  "words": {}
+                }
+              },
+              "sampled": 60,
+              "precedents": 60
+            },
+            "refused": 0,
+            "seconds": {
+              "total": 0.73,
+              "recorded": 0.66
+            },
+            "recorded": 60,
+            "refusals": [],
+            "replaced": 0
+          },
+          "error": null,
+          "created_at": "2026-10-22 04:42:44.110471+00:00",
+          "started_at": "2026-10-22 04:42:44.843479+00:00",
+          "finished_at": "2026-10-22 04:42:44.858710+00:00",
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+        }
+      }
+    },
+    {
+      "name": "a backtest, done",
+      "schema": "job",
+      "request": {
+        "method": "GET",
+        "path": "/v1/jobs/27744c18-ea1c-4a91-a43e-a7b0a512bbd4",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "27744c18-ea1c-4a91-a43e-a7b0a512bbd4",
+          "model": "tickets",
+          "kind": "backtest",
+          "state": "done",
+          "percent": 100.0,
+          "args": {
+            "holdout": {
+              "seed": 0,
+              "newest": 100
+            },
+            "clearance": 1.0,
+            "candidates": [
+              {
+                "name": "no word evidence",
+                "settings": {
+                  "word_evidence": 0
+                }
+              },
+              {
+                "settings": {
+                  "k": 5
+                }
+              }
+            ]
+          },
+          "result": {
+            "active": {
+              "n": 100,
+              "cost": 0.0,
+              "learn": true,
+              "accuracy": 1.0,
+              "ask_rate": 0.0,
+              "coverage": 1.0,
+              "log_loss": 0.0,
+              "mistakes": {},
+              "calibrate": true,
+              "candidate": {
+                "name": "active",
+                "settings": {}
+              },
+              "cost_mean": 0.0,
+              "top_accuracy": 1.0,
+              "accuracy_answered": 1.0,
+              "calibration_error": 0.0
+            },
+            "output": "default",
+            "trained": 1110,
+            "version": 1,
+            "held_out": 100,
+            "candidates": [
+              {
+                "n": 100,
+                "cost": 0.0,
+                "learn": true,
+                "change": {
+                  "accuracy": 0.0,
+                  "ask_rate": 0.0,
+                  "log_loss": 0.0,
+                  "cost_mean": 0.0,
+                  "top_accuracy": 0.0,
+                  "calibration_error": 0.0
+                },
+                "accuracy": 1.0,
+                "ask_rate": 0.0,
+                "coverage": 1.0,
+                "log_loss": 0.0,
+                "mistakes": {},
+                "calibrate": true,
+                "candidate": {
+                  "name": "no word evidence",
+                  "settings": {
+                    "word_evidence": 0
+                  }
+                },
+                "cost_mean": 0.0,
+                "top_accuracy": 1.0,
+                "accuracy_answered": 1.0,
+                "calibration_error": 0.0
+              },
+              {
+                "n": 100,
+                "cost": 0.0,
+                "learn": true,
+                "change": {
+                  "accuracy": 0.0,
+                  "ask_rate": 0.0,
+                  "log_loss": 0.0,
+                  "cost_mean": 0.0,
+                  "top_accuracy": 0.0,
+                  "calibration_error": 0.0
+                },
+                "accuracy": 1.0,
+                "ask_rate": 0.0,
+                "coverage": 1.0,
+                "log_loss": 0.0,
+                "mistakes": {},
+                "calibrate": true,
+                "candidate": {
+                  "settings": {
+                    "k": 5
+                  }
+                },
+                "cost_mean": 0.0,
+                "top_accuracy": 1.0,
+                "accuracy_answered": 1.0,
+                "calibration_error": 0.0
+              }
+            ]
+          },
+          "error": null,
+          "created_at": "2026-10-22 04:42:16.791325+00:00",
+          "started_at": "2026-10-22 04:42:23.451317+00:00",
+          "finished_at": "2026-10-22 04:42:23.452920+00:00",
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+        }
+      }
+    },
+    {
+      "name": "a settings change, live at once",
+      "schema": null,
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/models/tickets/settings",
+        "body": {
+          "changes": {
+            "word_evidence": 0
+          },
+          "note": "fewer asks on the last 100",
+          "backtest": "27744c18-ea1c-4a91-a43e-a7b0a512bbd4"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "version": 2,
+          "active": true,
+          "job": null
+        }
+      }
+    },
+    {
+      "name": "an export, done, with its download link",
+      "schema": "job",
+      "request": {
+        "method": "GET",
+        "path": "/v1/jobs/9fe10349-18f0-46ab-a4ce-6cd5e86cc278",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "9fe10349-18f0-46ab-a4ce-6cd5e86cc278",
+          "model": "tickets",
+          "kind": "export",
+          "state": "done",
+          "percent": 100.0,
+          "args": {
+            "format": "jsonl"
+          },
+          "result": {
+            "bytes": 31768,
+            "format": "jsonl",
+            "version": 3,
+            "filename": "tickets.v3.zip",
+            "precedents": 1210
+          },
+          "error": null,
+          "created_at": "2026-10-22 04:42:29.141975+00:00",
+          "started_at": "2026-10-22 04:42:29.168619+00:00",
+          "finished_at": "2026-10-22 04:42:29.170941+00:00",
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af",
+          "download": {
+            "url": "https://ada.glyphh.ai/v1/downloads/eyJvIjoiNGM5Zi5leGFtcGxlIn0.c2lnbmVk",
+            "expires_at": 1792647749
+          }
+        }
+      }
+    },
+    {
+      "name": "the org's usage",
+      "schema": "usage",
+      "request": {
+        "method": "GET",
+        "path": "/v1/usage",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "plan": "Free",
+          "month": "2026-10",
+          "resets_at": "2026-11-01",
+          "models": 3,
+          "precedents": {
+            "used": 2480,
+            "max": 5000
+          },
+          "requests": {
+            "used": 7,
+            "max": 10000,
+            "over": 0,
+            "overage": false
+          },
+          "requests_per_second": 5
+        }
+      }
+    },
+    {
+      "name": "a query through POST /v1/runs, as SDK 3.0 calls it",
+      "schema": "result",
+      "data_schema": "answer",
+      "request": {
+        "method": "POST",
+        "path": "/v1/runs",
+        "body": {
+          "model": "tickets",
+          "function": "query",
+          "inputs": {
+            "data": {
+              "t": {
+                "s": {
+                  "plan": "free",
+                  "channel": "chat",
+                  "age": 21,
+                  "text": "refund late",
+                  "owner": "o1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "run_id": "8bd3791f0564",
+          "model": "tickets",
+          "version": 3,
+          "function": "query",
+          "status": "done",
+          "data": {
+            "sufficient": true,
+            "confidence": 1.0,
+            "support": 1.0,
+            "count": 15,
+            "top": "keep",
+            "outcomes": {
+              "keep": 1.0
+            },
+            "receipts": [
+              {
+                "id": "baff85d87312",
+                "sim": 1.0,
+                "outcome": "keep",
+                "hash": "d3b0a55e8ed3268d",
+                "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+              },
+              {
+                "id": "6ca58952bcb8",
+                "sim": 1.0,
+                "outcome": "keep",
+                "hash": "6d4f58931d302436",
+                "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+              }
+            ]
+          },
+          "step": null,
+          "prompt": null,
+          "seconds": 0.1236
+        }
+      }
+    },
+    {
+      "name": "a wrong key",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "pro",
+                "channel": "chat",
+                "age": 7,
+                "text": "card lost",
+                "owner": "o1"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "E_AUTH",
+            "message": "That key is not a live Glyphh API key or sign-in.",
+            "trace_id": "6e2957751697440490357959349a1e7b"
+          }
+        }
+      }
+    },
+    {
+      "name": "a model that is not there",
+      "schema": "error",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models/nope",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "code": "E_MODEL_MISSING",
+            "message": "No model named nope in this org.",
+            "trace_id": "a2ce37721cad49d4a680653c458ce0f2",
+            "model": "nope"
+          }
+        }
+      }
+    },
+    {
+      "name": "a spec that reads a role another way",
+      "schema": "error",
+      "request": {
+        "method": "PUT",
+        "path": "/v1/models/tickets/spec",
+        "body": {
+          "spec": {
+            "name": "tickets",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "age",
+                        "text_encoding": "bag_of_words"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      },
+                      {
+                        "name": "owner",
+                        "security_weight": 0.9
+                      },
+                      {
+                        "name": "id",
+                        "key_part": true,
+                        "similarity_weight": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 422,
+        "body": {
+          "error": {
+            "code": "E_SPEC_READING",
+            "message": "These roles would read their values differently (numeric_config, text_encoding, key_part), which the stored cases cannot be read again by: make a new model and import the cases into it.",
+            "trace_id": "1f4d6b89c7ab4594932b5e94f517cf18",
+            "roles": [
+              "t.s.age"
+            ],
+            "at": "spec"
+          }
+        }
+      }
+    },
+    {
+      "name": "past the plan's calls a second",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "pro",
+                "channel": "chat",
+                "age": 7,
+                "text": "card lost",
+                "owner": "o1"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "error": {
+            "code": "E_RATE",
+            "message": "Your plan allows 5 Ada calls a second: try again in 1 second.",
+            "trace_id": "8e04e1268ab24a0cb43afa78f9d39e44",
+            "retry_after": 1,
+            "reason": "rate",
+            "max": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "past the plan's month of requests",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "pro",
+                "channel": "chat",
+                "age": 7,
+                "text": "card lost",
+                "owner": "o1"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "error": {
+            "code": "E_LIMIT",
+            "message": "Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01. Upgrade to Basic (the connector's upgrade tool, or Billing on the platform) to read on now.",
+            "trace_id": "c67f348ec81043bbabb69e8fc1bf7b95",
+            "reason": "requests",
+            "used": 10000,
+            "max": 10000,
+            "plan": "Free",
+            "upgrade": "Basic",
+            "resets_at": "2026-11-01"
+          }
+        }
+      }
+    },
+    {
+      "name": "cases past the plan's precedents",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/tickets/record_many",
+        "body": {
+          "cases": []
+        }
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "error": {
+            "code": "E_LIMIT",
+            "message": "These cases add 10 precedents to the 4,995 the org holds: its plan allows 5,000.",
+            "trace_id": "9e1d2c3b4a5f6e7d",
+            "reason": "precedents",
+            "used": 4995,
+            "max": 5000,
+            "adding": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "a big model asked with few of its roles",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "tickets",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "free"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 422,
+        "body": {
+          "error": {
+            "code": "E_FEW_ROLES",
+            "message": "This model holds over 100,000 precedents, and a query giving 1 of its 4 voting roles is answered badly from a shortlist: give at least half of them.",
+            "trace_id": "1a2b3c4d5e6f7081",
+            "given": [
+              "t.s.plan"
+            ],
+            "roles": [
+              "t.s.plan",
+              "t.s.age",
+              "t.s.text",
+              "t.s.owner"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "another import open on the model",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/routing/imports",
+        "body": {
+          "format": "csv",
+          "partial": false,
+          "learn": true
+        }
+      },
+      "response": {
+        "status": 409,
+        "body": {
+          "error": {
+            "code": "E_BUSY",
+            "message": "This model has a import job open (9bfaff33-5de1-4b5e-aca9-e32ed246e014): wait for it to end.",
+            "trace_id": "ddd1392c438741f9836518a2c9c2a1d5",
+            "job": "9bfaff33-5de1-4b5e-aca9-e32ed246e014",
+            "kind": "import"
+          }
+        }
+      }
+    }
+  ]
+}

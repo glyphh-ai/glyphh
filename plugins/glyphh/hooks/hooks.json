@@ -1,0 +1,12 @@
+{
+  "modules": ["./register.tsx"],
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit|Write|MultiEdit", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" record", "timeout": 10 }] },
+      { "matcher": "Read", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" recall", "timeout": 10 }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" prompt", "timeout": 10 }] }
+    ]
+  }
+}

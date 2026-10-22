@@ -1,0 +1,185 @@
+{
+  "contract": 4,
+  "decision": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Decision",
+    "description": "What POST /v1/decide answers: the outcome of least expected cost under the spec's costs, the calibrated probabilities, whether a person should decide instead (ask: the outcome is then the best guess), the precedents it stands on, and the model and active version that answered. include: [\"facts\"] adds the nearest fact tree; outputs: [...] answers {outputs: {name: decided}, model, version} instead",
+    "type": "object",
+    "required": ["model", "version"],
+    "properties": {
+      "model": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 }
+    },
+    "oneOf": [
+      { "$ref": "#/$defs/decided" },
+      {
+        "type": "object",
+        "required": ["outputs"],
+        "properties": { "outputs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/decided" } } }
+      }
+    ],
+    "$defs": {
+      "decided": {
+        "type": "object",
+        "required": ["outcome", "expected_cost", "probabilities", "ask", "receipts"],
+        "properties": {
+          "outcome": { "type": ["string", "null"] },
+          "expected_cost": { "type": ["number", "null"], "minimum": 0 },
+          "probabilities": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+          "ask": { "type": "boolean" },
+          "receipts": { "type": "array", "items": { "$ref": "#/$defs/receipt" } },
+          "facts": { "type": "array" }
+        }
+      },
+      "receipt": {
+        "type": "object",
+        "required": ["id", "sim", "outcome", "hash", "author"],
+        "properties": {
+          "id": { "type": "string" },
+          "sim": { "type": "number" },
+          "outcome": { "type": ["string", "null"] },
+          "hash": { "type": "string" },
+          "author": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "job": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Job",
+    "description": "Work too long for a request, from GET /v1/jobs/{id} and every call that starts one (learn, calibrate, imports, export, backtest; a spec or settings change, or an activation, that re-encodes answers one as its job): its state and percent, then its result or error. A done export carries download {url, expires_at}; an import waiting for its file, upload {url, expires_at}: one-hour signed links, each its own credential",
+    "type": "object",
+    "required": ["id", "model", "kind", "state", "percent", "args", "result", "error", "created_at", "started_at", "finished_at", "made_by"],
+    "properties": {
+      "id": { "type": "string" },
+      "model": { "type": "string" },
+      "kind": { "enum": ["learn", "calibrate", "import", "export", "reencode", "backtest"] },
+      "state": { "enum": ["awaiting", "queued", "running", "done", "failed"] },
+      "percent": { "type": "number", "minimum": 0, "maximum": 100 },
+      "args": { "type": "object" },
+      "result": {},
+      "error": {
+        "oneOf": [
+          { "type": "null" },
+          { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } }
+        ]
+      },
+      "created_at": { "type": "string" },
+      "started_at": { "type": ["string", "null"] },
+      "finished_at": { "type": ["string", "null"] },
+      "made_by": { "type": ["string", "null"] },
+      "download": { "$ref": "#/$defs/link" },
+      "upload": { "$ref": "#/$defs/link" }
+    },
+    "$defs": {
+      "link": {
+        "type": "object",
+        "required": ["url", "expires_at"],
+        "properties": { "url": { "type": "string" }, "expires_at": { "type": "integer" } }
+      }
+    }
+  },
+  "usage": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Usage",
+    "description": "GET /v1/usage (the same object is `cloud` on the account API's /v1/me and /v1/billing): the org's plan, the calendar month counted (UTC) and the day it starts again, its live models, the precedents they hold against the plan's, its requests this month against the plan's (reads: decide, query, probabilities, facts; a decide of several outputs once per output; `over`: past the month, metered on Basic, Pro and Team; `overage` false: refused past it, E_LIMIT requests), and the plan's calls a second. A null max is by contract: no cap",
+    "type": "object",
+    "required": ["plan", "month", "resets_at", "models", "precedents", "requests", "requests_per_second"],
+    "properties": {
+      "plan": { "type": "string" },
+      "month": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" },
+      "resets_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+      "models": { "type": "integer", "minimum": 0 },
+      "precedents": { "$ref": "#/$defs/used" },
+      "requests": {
+        "allOf": [
+          { "$ref": "#/$defs/used" },
+          {
+            "type": "object",
+            "required": ["over", "overage"],
+            "properties": { "over": { "type": "integer", "minimum": 0 }, "overage": { "type": "boolean" } }
+          }
+        ]
+      },
+      "requests_per_second": { "type": ["integer", "null"], "minimum": 1 }
+    },
+    "$defs": {
+      "used": {
+        "type": "object",
+        "required": ["used", "max"],
+        "properties": { "used": { "type": "integer", "minimum": 0 }, "max": { "type": ["integer", "null"], "minimum": 0 } }
+      }
+    }
+  },
+  "answer": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Answer",
+    "description": "What an Ada model's query answers: POST /v1/models/{name}/query, and data of a done Result of query",
+    "type": "object",
+    "required": ["sufficient", "confidence", "support", "count", "top", "outcomes", "receipts"],
+    "properties": {
+      "sufficient": { "type": "boolean" },
+      "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+      "support": { "type": "number", "minimum": 0, "maximum": 1 },
+      "count": { "type": "integer", "minimum": 0 },
+      "top": { "type": ["string", "null"] },
+      "outcomes": { "type": "object", "additionalProperties": { "type": "number" } },
+      "receipts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "sim", "outcome", "hash", "author"],
+          "properties": {
+            "id": { "type": "string" },
+            "sim": { "type": "number" },
+            "outcome": { "type": ["string", "null"] },
+            "hash": { "type": "string" },
+            "author": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Result",
+    "description": "SDK 3.0's call shape: what POST /v1/runs {model, function, inputs, clearance?} answers. Ada Cloud answers record, query, facts, probabilities, decide, learn and settings at once, done, the function's answer as data",
+    "type": "object",
+    "required": ["run_id", "model", "version", "function", "status", "data", "step", "prompt", "seconds"],
+    "properties": {
+      "run_id": { "type": "string" },
+      "model": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 },
+      "function": { "type": "string" },
+      "status": { "enum": ["done", "needs_input", "needs_approval", "failed", "expired", "cancelled"] },
+      "data": {},
+      "step": { "type": ["string", "null"] },
+      "prompt": { "type": ["string", "null"] },
+      "seconds": { "type": "number", "minimum": 0 }
+    }
+  },
+  "error": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Error",
+    "description": "Every refusal: a stable code to branch on, a message for people, the trace id to quote to support, and the refusal's own detail beside them (E_LIMIT precedents: reason, used, max, adding; E_LIMIT requests, 403, the month's reads used on a plan that is not metered: reason, used, max, plan, upgrade (the self-serve plan that reads more, null: talk to sales), resets_at (YYYY-MM-DD); E_RATE, 429, past the plan's calls a second: reason, max, retry_after, and the Retry-After header; E_SPEC: path; E_SPEC_LIMIT: limit, max; E_SPEC_READING: roles; E_BUSY: job, kind; E_INVALID: problems or reason). A 429 or 503 may carry Retry-After",
+    "type": "object",
+    "required": ["error"],
+    "properties": {
+      "error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^E_[A-Z_]+$" },
+          "message": { "type": "string" },
+          "trace_id": { "type": "string" }
+        }
+      }
+    }
+  },
+  "codes": [
+    "E_AUTH", "E_INVALID", "E_TOO_LARGE", "E_LIMIT", "E_RATE", "E_MODEL_MISSING", "E_JOB_MISSING", "E_PRECEDENT_MISSING",
+    "E_VERSION_MISSING", "E_SPEC", "E_SPEC_LIMIT", "E_SPEC_READING", "E_FEW_ROLES", "E_MAPPING", "E_IMPORT", "E_BACKTEST",
+    "E_BUSY", "E_NOT_READY", "E_NO_CHANGE", "E_IDEMPOTENCY", "E_CONFLICT", "E_VERSION_GONE", "E_EXPIRED", "E_TIMEOUT",
+    "E_UNAVAILABLE"
+  ]
+}
