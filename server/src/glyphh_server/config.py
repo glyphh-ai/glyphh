@@ -5,7 +5,26 @@ from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class AdaCloudSettings(BaseSettings):
+    """Ada Cloud (docs/specs/ada-cloud.md): off by default. Off, nothing of it is reachable (no host routes to it) and
+    its worker processes idle without touching the database or Redis. On, requests whose Host is one of ada_hosts
+    (comma-separated) reach the Ada API, and the ada and adajobs process groups run the kernel
+    (python -m glyphh_ada.worker)."""
+
+    ada_cloud: bool = False
+    ada_hosts: str = "ada.glyphh.ai"
+    # How long the API waits on a worker's answer: reads, then writes (record_many), before 504 E_TIMEOUT.
+    ada_read_timeout: float = Field(10.0, gt=0, le=60)
+    ada_write_timeout: float = Field(30.0, gt=0, le=120)
+    # Worker processes per machine of a group; 0: one per vCPU.
+    ada_workers: int = Field(0, ge=0, le=64)
+
+    @property
+    def ada_host_set(self) -> set[str]:
+        return {h.strip().lower() for h in self.ada_hosts.split(",") if h.strip()}
+
+
+class Settings(AdaCloudSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"

@@ -289,6 +289,59 @@ The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (as
 - **Server-side logging** (rrotor's `RROTOR_SERVER_LOGS=on`, opt-in): a runtime's logs, audit events, metrics and spans by OTLP, kept for its org a week and shown on the platform ([Server-side logging](#server-side-logging)).
 - **Hosting** (off by default, `GLYPHH_HOSTING`): each machine and volume made in Glyphh's one Fly app, stopped when idle, metered every minute ([Reaching a runtime](#reaching-a-runtime)).
 
+### Ada Cloud (built, off: `GLYPHH_ADA_CLOUD`)
+
+Ada as an API inside this app (`docs/specs/ada-cloud.md`, its step 2). **Off by default:** off, no request reaches it
+(no host is routed to it), the schema step adds only the two `runtime_keys` columns below, and the `ada` and
+`adajobs` process groups idle without touching Postgres or Redis.
+
+- **Its own host.** A request whose `Host` is one of `GLYPHH_ADA_HOSTS` (`ada.glyphh.ai`) goes to the Ada app
+  (`glyphh_ada/api/`), with its own paths; every other host reaches the API as before.
+- **Callers.** An API key (`glyphh_ak_…`, `runtime_keys` with `scope` `cloud` and a `clearance` from 0 to 1, made by a
+  signed-in person at `POST /v1/keys`) or a Glyphh sign-in (full clearance). A request may ask for less clearance,
+  never more. A resolved caller is kept 10 s in the process, so a revoked key stops within that. Refusals: `E_AUTH`
+  (401), `E_MODEL_MISSING` (404), the server's shape otherwise.
+- **Processes and queues.** The `app` process authenticates, bounds the body (1 MB, `record_many` 5 MB; a string
+  holding NUL is a 400), puts one message on the Redis stream `ada:sync` and waits on its reply list (10 s for reads,
+  30 s for `record_many`, `create`, `delete`; then `504 E_TIMEOUT`; Redis down: `503 E_UNAVAILABLE`). Workers
+  (`python -m glyphh_ada.worker --queue sync|jobs`, one single-threaded process per vCPU, numpy's BLAS held to one
+  thread) read the streams `ada:sync` and `ada:jobs` as one consumer group: a message a worker took is claimed by
+  another once it stops heartbeating (5 s sync, 60 s jobs), one that stopped three workers is answered `E_INTERNAL`,
+  and a sync message past its deadline is dropped. Learn and calibrate are jobs: a row in the org's `jobs`, `202`, then
+  `GET /v1/jobs/{id}`.
+- **Storage: a schema per org.** `ada_<org id>`, made with its first model and migrated by every worker at start
+  (`glyphh_ada/orgschema.py`, its own version table `ada_schema`): the server's `models`, `spec_versions`, `jobs` and
+  `requests`, and the kernel's `precedents` (a partition per model, an HNSW index on its glyphs, `m` 64,
+  `ef_construction` 400), `outcomes`, `meta`, `counts` (ada-private's `glyphh_postgres.PostgresStore`). Every table
+  there, each partition included, has row-level security forced with a policy that **fails closed**: a row is seen or
+  written only by a session whose `glyphh.org_id` is that org, so no org set means no rows (unlike the public tables'
+  policies, below). A worker sets the org and a `search_path` of the schema and `public` for each message; every
+  statement names the schema.
+- **Writes happen once.** A write runs in one transaction with a row in `requests` keyed by the caller's
+  `Idempotency-Key` or the message's id, holding its answer: a message taken again after its worker died, or a request
+  sent again, is answered and not written again (the same key with another body: `409 E_IDEMPOTENCY`).
+- **Reads.** The kernel's own (`glyphh_spec.Model` over the store): a model under 1,000 precedents is read whole; a
+  bigger one through a shortlist of its 1,000 nearest glyphs (pgvector), re-ranked exactly. Over 100,000 precedents a
+  query giving under half the roles that vote is refused, `422 E_FEW_ROLES`. A worker keeps up to 256 models (spec,
+  learned weights, temperatures; never precedents) checked against a version counter in Redis and at most a minute
+  old.
+- **Jobs.** `learn` (weights, then the temperature) and `calibrate` read at most the newest 50,000 precedents
+  (`limits.JOB_SAMPLE`); when learning changes what a stored case carries, every other precedent is restated after.
+- **The kernel is private.** ada-private at a pinned commit (`uv.lock`), read at build time with a read-only deploy
+  key (the build secret `ada_deploy_key`: GitHub's `ADA_DEPLOY_KEY` secret, passed to Fly's builder by CI); the image
+  is pushed only to private registries.
+
+| Call (at the Ada host) | Does |
+|---|---|
+| `GET`, `POST /v1/keys`, `DELETE /v1/keys/{id}` | API keys, signed in only: `{name, expires_in_days?, clearance?}`, shown once |
+| `GET`, `POST /v1/models`, `GET /v1/models/{name}`, `DELETE /v1/models/{name}?confirm=<name>` | The org's models: `{name, spec}` (checked by the kernel, then the cloud's bounds: spec 64 KB, `dimension` 8,192, 64 roles, 20 outputs, 200 values, `k` 200) |
+| `POST /v1/models/{name}/record`, `/record_many` (1,000 cases, all or none), `/grade`; `DELETE …/precedents/{id}` | Writes, each taking an `Idempotency-Key` |
+| `POST /v1/models/{name}/query`, `/probabilities`, `/facts` (`top` 50), `/decide` (`outputs`, `include: ["facts"]`) | The kernel's answers; `clearance` lower than the key's |
+| `POST /v1/decide` `{model, data, …}` | `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
+| `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}` | Jobs |
+| `POST /v1/runs` `{model, function, inputs, clearance?}` | rrotor's call shape for SDK 3.0: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
+| `GET /v1/health` | As on the API |
+
 ### Starting up, and migrations
 
 The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it brings the database to `db/schema.sql`'s shape (migrations, below), runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (the fix: the migration that was missed; a dev database can instead be made again with `docker compose down -v`), then seeds the mods (`ada`; a mod no longer seeded is retired, never deleted), the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version), Fly's rates (`db/seed_rates.py`; a row there is never changed) and the platform's OAuth client (`db/seed_clients.py`, [The connector](#the-connector)). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more, or in `prod` without `GLYPHH_LICENSE_SIGNING_KEY`.
@@ -304,7 +357,7 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_ENV` | `dev` | `dev`, `test` or `prod` |
 | `GLYPHH_DATABASE_URL` | `postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh` | Postgres; a plain `postgres://…?sslmode=` URL is made asyncpg's |
 | `GLYPHH_RESET_DATABASE` | off | Lets `db/reset.py`, run by hand, drop every table and make the schema again (above); never set on deploy |
-| `GLYPHH_REDIS_URL` | `redis://localhost:6379/0` | Redis, for live signals only; in production on the server's own Fly machine |
+| `GLYPHH_REDIS_URL` | `redis://localhost:6379/0` | Redis, for live signals and, with Ada Cloud on, its work in flight (never anything kept); in production on the server's own Fly machine |
 | `GLYPHH_VERSION` | `dev` | The version the API and the connector report (set by the image build) |
 | `GLYPHH_LOG_LEVEL` | `INFO` | The JSON logs' level |
 | `GLYPHH_PUBLIC_URL` | `http://localhost:8080` | The server's own address: the issuer, the connector's resource, the provider callbacks |
@@ -327,6 +380,10 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_FLY_PUBLIC_DOMAIN` | `glyphh.app` | Each runtime is `https://<machine>.<domain>` |
 | `GLYPHH_RUNTIME_IDLE_MINUTES` | `10` | A hosted machine idle this long is stopped |
 | `GLYPHH_TELEMETRY_RETENTION_DAYS` | `7` | Days server-side logging is kept (1 to 90), every plan alike; the minute tick purges what is older ([Server-side logging](#server-side-logging)) |
+| `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
+| `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
+| `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model |
+| `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups; 0, one per vCPU |
 
 ### API
 
@@ -1002,7 +1059,7 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `tokens` | PK `id`; `token_hash` unique | `install_id` → `installs` (cascade) | `ix_tokens_install_id` | its install is visible |
 | `device_codes` | PK `device_code_hash`; `user_code` unique; `device_codes_surface` `surface` in `desktop`, `cli`; `device_codes_one_answer` not both `approved_at` and `denied_at`; `interval` 5 by default | `install_id` → `installs` (cascade) | none | none: read before anyone is signed in |
 | `rrotors` | PK `id`; `install_id` unique; `token_hash` unique; `rrotors_mode` `mode` in `hosted`, `local`, `self`; `rrotors_local_install` an install exactly when `local`; `rrotors_self_address` `public_url` and `name` exactly when `self`; `rrotors_hosted_machine` `size` and `name` exactly when `hosted`; `rrotors_size` `size` in `small`, `medium`, `large`; `month_seconds` and `seq` 0 by default; `metered_at` a hosted machine's metered-up-to instant, empty until its first tick | `user_id` → `users` (cascade); `install_id` → `installs` (cascade) | `rrotors_hosted_name` unique on (`user_id`, `name`) where hosted; `rrotors_self_url` unique on (`user_id`, `public_url`) where self; `rrotors_self_host` on `public_url` where self; `ix_rrotors_user_id` | its user is visible |
-| `runtime_keys` | PK `id`; `key_hash` unique; `calls` 0 by default | `rrotor_id` → `rrotors` (cascade); `user_id` → `users` (cascade) | `ix_runtime_keys_rrotor_id`; `ix_runtime_keys_user_id` | its user is visible |
+| `runtime_keys` | PK `id`; `key_hash` unique; `calls` 0 by default; `runtime_keys_scope` `scope` in `runtime` (the default), `cloud` (an Ada Cloud API key, never sent to a runtime); `runtime_keys_clearance` `clearance` from 0 to 1 (numeric 4, 3; 1 by default) | `rrotor_id` → `rrotors` (cascade); `user_id` → `users` (cascade) | `ix_runtime_keys_rrotor_id`; `ix_runtime_keys_user_id` | its user is visible |
 | `licenses` | PK `id` (the key's `license_id`); `licenses_tier` `tier` in `free`, `pro`, `team`, `enterprise`; `licenses_limits` `max_nodes` ≥ 1 and `max_precedents` ≥ 0 (or null) | `org_id` → `orgs` (cascade) | `licenses_newest` on (`org_id`, `issued_at`) | `org_id` is the org |
 | `nodes` | PK (`rrotor_id`, `node_id`); `nodes_role` `role` in `standalone`, `head`, `follower` (or null) | `rrotor_id` → `rrotors` (cascade) | none beyond the key | its runtime is visible |
 | `telemetry_logs` | PK `id` | `org_id` → `orgs` (cascade); `rrotor_id` → `rrotors` (cascade) | `telemetry_logs_newest` on (`org_id`, `at`, `id`); `telemetry_logs_at` on `at`; `ix_telemetry_logs_rrotor_id` | `org_id` is the org |
@@ -1025,6 +1082,11 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 
 **Row-level security.** Each of the 27 tables marked above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat, introspection and server-side logging, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant, a model, a version or a run). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `fly_rates`, `device_codes`, `oauth_clients`) belong to no org.
 
+**Ada Cloud's org schemas** (`ada_<org id>`, with the flag on) are outside `db/schema.sql`: made and migrated by
+the workers, every table fenced by a `tenant` policy that fails closed ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)).
+`tests/ada/test_isolation.py` proves two orgs see none of each other's rows through their keys, a worker's message or
+the database itself (no org set, another org set, an org that is no one).
+
 ## Not built yet
 
 Nothing in this section works today.
@@ -1043,6 +1105,7 @@ Nothing in this section works today.
 | Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
 | Rate limiting | None anywhere, the OAuth endpoints included |
 | OAuth client ID metadata documents | Registration is RFC 7591 only |
+| Ada Cloud past its step 2 | Behind the flag, not built: imports and exports, a model's deletion as a job, spec and settings changes (versions, rollback, re-encodes, backtests), the connector's `ada_*` tools, plans and metering (cloud caps, request counting, rate limits), inline `refresh_every` (off in workers), SDK 3.1, the platform's pages; `docs/specs/ada-cloud.md` section 10 |
 | Programs, then the gateway | Programs (coding-agent CLIs on the runtime), then the gateway. Remote Control needs a full claude.ai login on the machine, which [Anthropic's terms](#anthropics-terms) rule out |
 
 **Open**

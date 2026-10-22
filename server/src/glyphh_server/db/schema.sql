@@ -488,10 +488,14 @@ CREATE TABLE IF NOT EXISTS runtime_keys (
     revoked_at TIMESTAMP WITH TIME ZONE,
     calls BIGINT DEFAULT 0 NOT NULL,
     last_used_at TIMESTAMP WITH TIME ZONE,
+    scope TEXT DEFAULT 'runtime' NOT NULL,
+    clearance NUMERIC(4, 3) DEFAULT 1 NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE (key_hash)
+    UNIQUE (key_hash),
+    CONSTRAINT runtime_keys_scope CHECK (scope IN ('runtime', 'cloud')),
+    CONSTRAINT runtime_keys_clearance CHECK (clearance >= 0 AND clearance <= 1)
 );
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);

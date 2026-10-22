@@ -69,8 +69,19 @@ async def baseline(own: AsyncEngine) -> AsyncEngine:
     return own
 
 
+REAL: list[tuple[int, Path]] = migrations(schema.MIGRATIONS)
+
+
+def _next(n: int, name: str) -> str:
+    """A test migration's file name, numbered after the real ones."""
+    return f"{len(REAL) + n:04d}_{name}.sql"
+
+
 @pytest.fixture
 def folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A migrations folder of the real ones, for a test to add its own after."""
+    for _, path in REAL:
+        (tmp_path / path.name).write_text(path.read_text())
     monkeypatch.setattr(schema, "MIGRATIONS", tmp_path)
     return tmp_path
 
@@ -85,21 +96,25 @@ async def test_the_baseline_and_every_migration_make_what_schema_sql_makes(
 
 
 async def test_a_new_database_records_every_migration_without_running_it(own: AsyncEngine, folder: Path) -> None:
-    (folder / "0001_never_run.sql").write_text("SELECT 1 / 0;")
-    (folder / "0002_nor_this.sql").write_text("SELECT 1 / 0;")
+    (folder / _next(1, "never_run")).write_text("SELECT 1 / 0;")
+    (folder / _next(2, "nor_this")).write_text("SELECT 1 / 0;")
     await apply_schema(own, SETTINGS_HERE)
-    assert await _recorded(own) == [(0, "baseline"), (1, "0001_never_run"), (2, "0002_nor_this")]
+    real = [(n, p.stem) for n, p in REAL]
+    mine = [(len(REAL) + 1, _next(1, "never_run")[:-4]), (len(REAL) + 2, _next(2, "nor_this")[:-4])]
+    assert await _recorded(own) == [(0, "baseline"), *real, *mine]
 
 
 async def test_a_kept_database_runs_each_migration_once_in_order(baseline: AsyncEngine, folder: Path) -> None:
     async with baseline.begin() as conn:
         await conn.execute(text("INSERT INTO mods (slug, name, description) VALUES ('kept', 'Kept', 'Kept data')"))
-    (folder / "0001_mods_note.sql").write_text("ALTER TABLE mods ADD COLUMN note TEXT;")
+    (folder / _next(1, "mods_note")).write_text("ALTER TABLE mods ADD COLUMN note TEXT;")
     await apply_schema(baseline, SETTINGS_HERE)
     await apply_schema(baseline, SETTINGS_HERE)  # run again, the ALTER would fail
-    (folder / "0002_mods_note_set.sql").write_text("UPDATE mods SET note = 'noted' WHERE slug = 'kept';")
+    (folder / _next(2, "mods_note_set")).write_text("UPDATE mods SET note = 'noted' WHERE slug = 'kept';")
     await apply_schema(baseline, SETTINGS_HERE)
-    assert await _recorded(baseline) == [(0, "baseline"), (1, "0001_mods_note"), (2, "0002_mods_note_set")]
+    real = [(n, p.stem) for n, p in REAL]
+    mine = [(len(REAL) + 1, _next(1, "mods_note")[:-4]), (len(REAL) + 2, _next(2, "mods_note_set")[:-4])]
+    assert await _recorded(baseline) == [(0, "baseline"), *real, *mine]
     async with baseline.connect() as conn:
         assert (await conn.execute(text("SELECT note FROM mods WHERE slug = 'kept'"))).scalar() == "noted"
 

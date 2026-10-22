@@ -14,6 +14,11 @@ platform, `glyphh-ai/platform`) and is never on the data path: a model is called
 
     docker compose up --build
 
+Every build needs read access to the private `glyphh-ai/ada-private` repo, Ada Cloud's kernel (pinned in
+`uv.lock`): point `ADA_DEPLOY_KEY_FILE` at an SSH key that can read it (default `~/.ssh/glyphh_ada_deploy_key`;
+CI uses the `ADA_DEPLOY_KEY` secret, a read-only deploy key). Ada Cloud itself is off unless `GLYPHH_ADA_CLOUD=on`;
+its workers run with `docker compose --profile ada up` ([Ada Cloud](docs/architecture.md#ada-cloud-built-off-glyphh_ada_cloud)).
+
 Compose runs Postgres, Redis and the server; the API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the
 docs at `/docs`). Before the server starts, the image runs the schema step, `python -m glyphh_server.db.schema`
 ([starting up](docs/architecture.md#starting-up-and-migrations)), which also runs the migrations a database has not
@@ -61,6 +66,11 @@ The suite runs against a real Postgres (its own `glyphh_test` database, fresh ea
 under 100% line and branch coverage. Google, GitHub, Stripe and Anthropic's routines are faked at the HTTP layer; the
 keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40
 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
+
+`tests/ada/` runs Ada Cloud with real workers (threads, and processes where a worker is killed): pgvector in the
+suite's database, SDK 3.0 (PyPI `glyphh` 3.0.0) against `/v1/runs`, the contract it was built to
+(`tests/ada/contract.json` and `fixtures.json`, from `glyphh-ai/glyphh` `contract/`), and the two-org isolation test.
+`scripts/ada-load.py` measures reads a second and latency against a server and its workers on a private network.
 
 ## Builds
 
