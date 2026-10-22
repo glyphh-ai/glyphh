@@ -15,7 +15,7 @@ describe('a model’s page', () => {
     const { user, router } = renderApp('/models/tickets');
     expect(await screen.findByText('Version 2 is live · 1,240 precedents')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaModelstickets');
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Dashboard', '3D view', 'Try it', 'Import', 'Backtest', 'Settings', 'Export', 'Spec']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Dashboard', '3D view', 'Try it', 'Import', 'Backtest', 'Settings', 'Versions', 'Export', 'Spec']);
     expect(screen.getByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
     await user.click(screen.getByRole('tab', { name: 'Spec' }));
     expect(screen.getByText(/"bag_of_words"/)).toBeInTheDocument();
@@ -39,12 +39,15 @@ describe('a model’s page', () => {
     await user.clear(editor);
     await user.click(editor);
     await user.paste(JSON.stringify(spec));
-    await user.type(screen.getByRole('textbox', { name: 'Why' }), 'Ask more');
+    await user.type(screen.getByRole('textbox', { name: 'Release notes' }), 'Ask more');
     await user.click(screen.getByRole('button', { name: 'Save as a new version' }));
     expect(await screen.findByText('Version 3 is live.')).toBeInTheDocument();
     expect(fake.state.seen.find((s) => s.method === 'PUT')!.body).toMatchObject({ note: 'Ask more', spec: { output: { ask_below: 0.7 } } });
-    const versions = screen.getAllByRole('row').map((r) => r.textContent);
-    expect(versions.some((text) => text?.startsWith('v3Ask more'))).toBe(true);
+    // The versions are the Versions tab's, no longer the spec's.
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Versions' }));
+    const versions = (await screen.findAllByRole('row')).map((r) => r.textContent);
+    expect(versions.some((text) => text?.startsWith('v3LiveAsk more'))).toBe(true);
   });
 
   it('follows a re-encode’s job until the new version is live', async () => {
@@ -72,9 +75,15 @@ describe('a model’s page', () => {
     await user.type(k, '25');
     await user.click(screen.getByRole('button', { name: 'Save 1 change as a new version' }));
     expect(await screen.findByText('Version 3 is live.')).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Spec' }));
+    await user.click(screen.getByRole('tab', { name: 'Versions' }));
     const row = (await screen.findByText('v2')).closest('tr')!;
-    await user.click(within(row).getByRole('button', { name: 'Make live' }));
+    await user.click(within(row).getByRole('button', { name: 'Actions for version 2' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Make live' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Make version 2 live?' });
+    expect(dialog).toHaveTextContent('Version 2’s spec, settings and learned weights become live, in place of version 3.');
+    expect(dialog).toHaveTextContent('Precedents recorded since stay in the model: cases are not versioned.');
+    expect(dialog).not.toHaveTextContent('stored apart');
+    await user.click(within(dialog).getByRole('button', { name: 'Make live' }));
     expect(await screen.findByText('Version 2 is live.')).toBeInTheDocument();
     expect(fake.state.seen.some((s) => s.path === '/models/tickets/versions/2/activate')).toBe(true);
   });
@@ -108,7 +117,7 @@ describe('Settings', () => {
     await user.type(k, '25');
     await user.click(screen.getByRole('switch', { name: 'Lexicon' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Calibrate by' }), 'cost');
-    await user.type(screen.getByRole('textbox', { name: 'Why' }), 'Fewer mistakes');
+    await user.type(screen.getByRole('textbox', { name: 'Release notes' }), 'Fewer mistakes');
     await user.click(screen.getByRole('button', { name: 'Save 3 changes as a new version' }));
     expect(await screen.findByText('Version 3 is live.')).toBeInTheDocument();
     expect(fake.state.seen.find((s) => s.method === 'PATCH')!.body).toEqual({ changes: { k: 25, lexicon: false, calibrate_by: 'cost' }, note: 'Fewer mistakes' });

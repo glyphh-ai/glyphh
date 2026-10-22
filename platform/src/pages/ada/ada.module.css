@@ -286,6 +286,62 @@
   color: var(--text-secondary);
 }
 
+/* The Versions tab: a version's number with its badge, and a description written by no one. */
+.versionCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.auto {
+  color: var(--text-secondary);
+}
+
+/* A version whole: its facts, label beside value, and its changes a line each. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-3);
+}
+
+.fact dt {
+  color: var(--text-muted);
+}
+
+.fact dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.line {
+  display: block;
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.changes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .check {
   display: flex;
   align-items: center;

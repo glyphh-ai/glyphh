@@ -25,11 +25,30 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     jobs.set(made.id, made);
     return made;
   };
+  // Every version reads the one store and keeps no spec of its own: its diff is empty, its spec the model's.
+  const first = (precedents: number): AdaVersion => ({
+    version: 1,
+    note: 'made',
+    made_by: 'u-chris',
+    made_at: now(),
+    active: true,
+    backtest: null,
+    ready: true,
+    gone: false,
+    retired_at: null,
+    reencoded: false,
+    new_store: false,
+    changes: null,
+    precedents_at: precedents,
+    learned: null,
+    scores: null,
+    store: { status: 'active', drop_after: null },
+  });
   const version = (name: string, note: string): number => {
     const list = versions.get(name)!;
     const v = list.length + 1;
     for (const old of list) old.active = false;
-    list.push({ version: v, note, made_by: 'u-chris', made_at: now(), active: true, backtest: null, ready: true, gone: false, retired_at: null, reencoded: false });
+    list.push({ ...first(found(name)!.precedents), version: v, note, changes: [] });
     found(name)!.version = v;
     return v;
   };
@@ -68,7 +87,7 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     if (found(name)) return refuse(409, 'E_CONFLICT', `This org has a model named ${name} already.`);
     const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: now(), spec };
     models.push(model);
-    versions.set(name, [{ version: 1, note: 'made', made_by: 'u-chris', made_at: now(), active: true, backtest: null, ready: true, gone: false, retired_at: null, reencoded: false }]);
+    versions.set(name, [first(0)]);
     outcomes.set(name, []);
     return c.json(model, 201);
   });
@@ -131,6 +150,20 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
   app.get('/ada/v1/models/:name/settings', (c) => {
     const model = found(c.req.param('name'))!;
     return c.json({ version: model.version, settings: { k: 15, min_sim: 0.1, word_evidence: 2, lexicon: true, calibrate_by: 'loss', refresh_every: null, ...model.spec.settings } });
+  });
+  app.get('/ada/v1/models/:name/versions/:version', (c) => {
+    const model = found(c.req.param('name'))!;
+    const entry = versions.get(model.name)!.find((v) => v.version === Number(c.req.param('version')));
+    if (!entry) return refuse(404, 'E_VERSION_MISSING', `This model has no version ${c.req.param('version')}.`);
+    return c.json({ ...entry, spec: model.spec, settings: model.spec.settings ?? {} });
+  });
+  app.get('/ada/v1/models/:name/versions/:version/diff', (c) =>
+    c.json({ version: Number(c.req.param('version')), against: found(c.req.param('name'))!.version, changes: [] }),
+  );
+  app.patch('/ada/v1/models/:name/versions/:version', async (c) => {
+    const { note } = (await c.req.json()) as { note: string };
+    versions.get(c.req.param('name'))!.find((v) => v.version === Number(c.req.param('version')))!.note = note;
+    return c.json({ version: Number(c.req.param('version')), note });
   });
   app.patch('/ada/v1/models/:name/settings', async (c) => {
     const { changes, note } = (await c.req.json()) as { changes: Record<string, unknown>; note?: string };
