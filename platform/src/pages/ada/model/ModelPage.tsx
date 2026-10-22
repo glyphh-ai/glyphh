@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAdaModel, useDeleteAdaModel, type AdaModel } from '@/api/ada';
 import { AdaErrorNotice } from '../AdaErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { plural } from '@/lib/format';
 import { Button, Dialog, LoadingCard, panelId, tabId, Tabs, TextField, type Tab } from '@/ui';
 import { BacktestTab } from './BacktestTab';
+import { DashboardTab } from './DashboardTab';
+import { ViewTab } from './ViewTab';
 import { ExportTab } from './ExportTab';
 import { ImportTab } from './ImportTab';
 import { SettingsTab } from './SettingsTab';
@@ -13,27 +15,36 @@ import { SpecTab } from './SpecTab';
 import { TryTab } from './TryTab';
 import styles from '../ada.module.css';
 
-type TabId = 'spec' | 'settings' | 'import' | 'try' | 'backtest' | 'export';
+type TabId = 'dashboard' | 'view' | 'try' | 'import' | 'backtest' | 'settings' | 'export' | 'spec';
+// His order, 2026-10-22: the dashboard first, the spec last.
 const tabs: ReadonlyArray<Tab<TabId>> = [
-  { id: 'spec', label: 'Spec' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'import', label: 'Import' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'view', label: '3D view' },
   { id: 'try', label: 'Try it' },
+  { id: 'import', label: 'Import' },
   { id: 'backtest', label: 'Backtest' },
+  { id: 'settings', label: 'Settings' },
   { id: 'export', label: 'Export' },
+  { id: 'spec', label: 'Spec' },
 ];
 
-/** One model: its spec and versions, settings, Import, Try it, Backtest and Export, a tab each (`?tab=`). */
+/**
+ * One model, a tab each (`?tab=`): its dashboard, its 3D view, Try it, Import, Backtest, Settings, Export, and its
+ * spec and versions; the way back to the models above its name.
+ */
 export function ModelPage() {
   const { name = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const model = useAdaModel(name);
   const [deleting, setDeleting] = useState(false);
   const asked = params.get('tab') as TabId | null;
-  const tab: TabId = tabs.some((t) => t.id === asked) ? asked! : 'spec';
+  const tab: TabId = tabs.some((t) => t.id === asked) ? asked! : 'dashboard';
 
   return (
     <>
+      <Link to="/models" className={styles.back}>
+        ← Models
+      </Link>
       <PageHeader
         title={name}
         description={model.data && `Version ${model.data.version} is live · ${plural(model.data.precedents, 'precedent')}`}
@@ -51,12 +62,14 @@ export function ModelPage() {
         <div className={styles.stack}>
           <Tabs label="Model" tabs={tabs} value={tab} onChange={(id) => setParams({ tab: id }, { replace: true })} />
           <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} className={styles.stack}>
-            {tab === 'spec' && <SpecTab model={model.data} />}
-            {tab === 'settings' && <SettingsTab model={model.data} />}
-            {tab === 'import' && <ImportTab model={model.data} />}
+            {tab === 'dashboard' && <DashboardTab model={model.data} />}
+            {tab === 'view' && <ViewTab model={model.data} />}
             {tab === 'try' && <TryTab model={model.data} />}
+            {tab === 'import' && <ImportTab model={model.data} />}
             {tab === 'backtest' && <BacktestTab model={model.data} />}
+            {tab === 'settings' && <SettingsTab model={model.data} />}
             {tab === 'export' && <ExportTab model={model.data} />}
+            {tab === 'spec' && <SpecTab model={model.data} />}
           </div>
         </div>
       )}

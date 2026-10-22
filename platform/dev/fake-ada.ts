@@ -1,5 +1,5 @@
 import type { Hono } from 'hono';
-import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Spec } from '../src/api/ada.js';
+import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, ModelStats, Spec } from '../src/api/ada.js';
 import { cloudLimits } from '../src/test/fixtures.js';
 
 /**
@@ -79,6 +79,42 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
   app.delete('/ada/v1/models/:name', (c) => {
     models.splice(models.indexOf(found(c.req.param('name'))!), 1);
     return c.json({ name: c.req.param('name'), deleted: true });
+  });
+  // The dashboard and the 3D view, from what this fake holds: no read is counted by day here, and a precedent's glyph
+  // is made up from its outcome (the same outcome, nearly the same bits), so the view has something to lay out.
+  app.get('/ada/v1/models/:name/stats', (c) => {
+    const model = found(c.req.param('name'));
+    if (!model) return refuse(404, 'E_MODEL_MISSING', `No model ${c.req.param('name')} in this org.`);
+    const counts = new Map<string, number>();
+    for (const o of outcomes.get(model.name) ?? []) counts.set(o, (counts.get(o) ?? 0) + 1);
+    const today = now().slice(0, 10);
+    const stats: ModelStats = {
+      name: model.name,
+      version: model.version,
+      precedents: model.precedents,
+      created_at: model.created_at,
+      active: { version: model.version, note: versions.get(model.name)!.find((v) => v.active)?.note ?? '', made_by: 'u-chris', made_at: model.created_at },
+      plan: { plan: plan(), precedents: usage().precedents },
+      outcomes: [...counts].map(([value, n]) => ({ output: null, value: value || null, n })),
+      growth: model.precedents ? [{ day: today, n: model.precedents }] : [],
+      jobs: [...jobs.values()].filter((j) => j.model === model.name).reverse().slice(0, 8),
+      days: [{ day: today, reads: { decide: 0, query: 0, probabilities: 0, facts: 0 }, decided: 0, asked: 0 }],
+      sure: Array(10).fill(0),
+    };
+    return c.json(stats);
+  });
+  app.get('/ada/v1/models/:name/map', (c) => {
+    const seen = (outcomes.get(c.req.param('name')) ?? []).slice(0, 2000);
+    const bits = (o: string, i: number) => btoa(String.fromCharCode(...Array.from({ length: 8 }, (_, k) => (o.charCodeAt(k % Math.max(1, o.length)) * (k + 1) + (i % 3 === k ? 1 : 0)) & 255)));
+    const points = seen.map((o, i) => ({ id: `case-${i + 1}`, outcome: o || null, outcomes: {}, bits: bits(o, i) }));
+    const edges = points.slice(1).map((_, i) => [i, i + 1, seen[i] === seen[i + 1] ? 0.8 : 0.3] as [number, number, number]);
+    return c.json({ version: found(c.req.param('name'))?.version ?? 1, dim: 64, layers: [], layer: null, total: seen.length, points, edges });
+  });
+  app.get('/ada/v1/models/:name/precedents/:id', (c) => {
+    const at = Number(c.req.param('id').replace('case-', '')) - 1;
+    const outcome = outcomes.get(c.req.param('name'))?.[at];
+    if (outcome === undefined) return refuse(404, 'E_PRECEDENT_MISSING', `This model holds no precedent ${c.req.param('id')}.`);
+    return c.json({ id: c.req.param('id'), situation: {}, outcome: outcome || null, outcomes: {}, author: 'u-chris', ts: Date.now() / 1000 });
   });
   app.get('/ada/v1/models/:name/versions', (c) => c.json({ versions: versions.get(c.req.param('name')) ?? [] }));
   app.post('/ada/v1/models/:name/versions/:version/activate', (c) => {

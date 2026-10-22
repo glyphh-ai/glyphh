@@ -1,0 +1,18 @@
+.figure {
+  margin: 0;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+}
+
+/* The chart's numbers, for screen readers only. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

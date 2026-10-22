@@ -1,4 +1,40 @@
 /* Ada's pages: the same stacks, cards, tables and forms as the rest of the platform. */
+
+/* A model's way back to the list, above its title, as the site's crumbs sit. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+/* The dashboard's numbers, four a row on a wide screen. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+/* The dashboard's charts, two a row on a wide screen. */
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: var(--space-4);
+}
+
+.nothing {
+  padding: var(--space-6) 0;
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
 .stack {
   display: flex;
   flex-direction: column;

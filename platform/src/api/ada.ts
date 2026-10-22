@@ -162,6 +162,33 @@ export type Scores = {
 /** A done backtest's result. */
 export type BacktestResult = { version: number; trained: number; held_out: number; output: string; active: Scores; candidates: Scores[] };
 
+/** One UTC day of a model: its reads by kind, its decides answered and how many of them asked a person. */
+export type ModelDay = { day: string; reads: { decide: number; query: number; probabilities: number; facts: number }; decided: number; asked: number };
+/** `GET /v1/models/{name}/stats`: the model's dashboard, from its store and its days counted as they happen. */
+export type ModelStats = {
+  name: string;
+  version: number;
+  precedents: number;
+  created_at: IsoDate;
+  active: { version: number; note: string; made_by: string; made_at: IsoDate };
+  /** The org's precedents, all models together, against the plan's (null: no limit). */
+  plan: { plan: string; precedents: { used: number; max: number | null } };
+  /** Precedents by output (null: the default) and outcome (null: ungraded), the most common first. */
+  outcomes: Array<{ output: string | null; value: string | null; n: number }>;
+  /** Precedents by the day of each case (its time, or when it was recorded). */
+  growth: Array<{ day: string; n: number }>;
+  jobs: AdaJob[];
+  days: ModelDay[];
+  /** The window's decides by how sure they were (the decided outcome's probability), in tenths: 0–0.1 up to 0.9–1. */
+  sure: number[];
+};
+/** One precedent in the 3D view: its glyph's bits packed (base64), null when it has nothing in the layer shown. */
+export type MapPoint = { id: string; outcome: string | null; outcomes: Record<string, string>; bits: string | null };
+/** `GET /v1/models/{name}/map`: a sample of the model's precedents and each one's nearest in it, [i, j, similarity]. */
+export type ModelMap = { version: number; dim: number; layers: string[]; layer: string | null; total: number; points: MapPoint[]; edges: Array<[number, number, number]> };
+/** `GET /v1/models/{name}/precedents/{id}`: one case, as stored, cut to the caller's clearance. */
+export type Precedent = { id: string; situation: Record<string, unknown>; outcome: string | null; outcomes: Record<string, string>; author: string; ts: number };
+
 const jobPoll = 1000;
 
 export const adaKeys = {
@@ -183,6 +210,19 @@ export const useAdaModel = (name: string) => useQuery({ queryKey: [...adaKeys.mo
 export const useAdaVersions = (name: string) =>
   useQuery({ queryKey: [...adaKeys.model(name), 'versions'], queryFn: async () => (await adaApi.get<{ versions: AdaVersion[] }>(`${path(name)}/versions`)).versions });
 export const useAdaLevers = (name: string) => useQuery({ queryKey: [...adaKeys.model(name), 'settings'], queryFn: () => adaApi.get<Levers>(`${path(name)}/settings`) });
+export const useAdaStats = (name: string) => useQuery({ queryKey: [...adaKeys.model(name), 'stats'], queryFn: () => adaApi.get<ModelStats>(`${path(name)}/stats`) });
+export const useAdaMap = (name: string, layer: string | null) =>
+  useQuery({
+    queryKey: [...adaKeys.model(name), 'map', layer ?? ''],
+    queryFn: () => adaApi.get<ModelMap>(`${path(name)}/map${layer ? `?layer=${encodeURIComponent(layer)}` : ''}`),
+    staleTime: 60_000,
+  });
+export const useAdaPrecedent = (name: string, id: string | null) =>
+  useQuery({
+    queryKey: [...adaKeys.model(name), 'precedent', id ?? ''],
+    enabled: Boolean(id),
+    queryFn: () => adaApi.get<Precedent>(`${path(name)}/precedents/${encodeURIComponent(id ?? '')}`),
+  });
 export const useAdaUsage = () => useQuery({ queryKey: adaKeys.usage, queryFn: () => adaApi.get<AdaUsage>('/usage') });
 export const useCloudKeys = () => useQuery({ queryKey: adaKeys.keys, queryFn: () => adaApi.get<CloudKey[]>('/keys') });
 
