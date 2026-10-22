@@ -12,6 +12,9 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+// jsdom draws nothing: a canvas has no context, so charts are their tables and the 3D view says WebGL is off.
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+
 // jsdom has no matchMedia or modal dialog; user-event brings its own clipboard.
 window.matchMedia ??= ((query: string) =>
   ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList) as typeof window.matchMedia;

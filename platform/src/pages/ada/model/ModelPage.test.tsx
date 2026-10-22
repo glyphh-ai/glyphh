@@ -10,13 +10,17 @@ function on(jobSteps = 2) {
 }
 
 describe('a model’s page', () => {
-  it('shows the live version, its precedents and its spec, with the name in the crumbs', async () => {
+  it('opens on its dashboard, the spec the last tab, with the name in the crumbs and the way back above it', async () => {
     on();
-    renderApp('/models/tickets');
+    const { user, router } = renderApp('/models/tickets');
     expect(await screen.findByText('Version 2 is live · 1,240 precedents')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaModelstickets');
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Dashboard', '3D view', 'Try it', 'Import', 'Backtest', 'Settings', 'Export', 'Spec']);
+    expect(screen.getByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: 'Spec' }));
     expect(screen.getByText(/"bag_of_words"/)).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Spec', 'Settings', 'Import', 'Try it', 'Backtest', 'Export']);
+    await user.click(screen.getByRole('link', { name: '← Models' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/models'));
   });
 
   it('says so when there is no such model', async () => {
@@ -27,7 +31,7 @@ describe('a model’s page', () => {
 
   it('saves an edited spec as a new version, live at once when it reads the cases as they are', async () => {
     const fake = on();
-    const { user } = renderApp('/models/tickets');
+    const { user } = renderApp('/models/tickets?tab=spec');
     await user.click(await screen.findByRole('button', { name: 'Edit spec' }));
     const editor = screen.getByRole('textbox', { name: 'Spec' });
     const spec = JSON.parse((editor as HTMLTextAreaElement).value);
@@ -45,7 +49,7 @@ describe('a model’s page', () => {
 
   it('follows a re-encode’s job until the new version is live', async () => {
     on(3);
-    const { user } = renderApp('/models/tickets');
+    const { user } = renderApp('/models/tickets?tab=spec');
     await user.click(await screen.findByRole('button', { name: 'Edit spec' }));
     const editor = screen.getByRole('textbox', { name: 'Spec' });
     const spec = JSON.parse((editor as HTMLTextAreaElement).value);

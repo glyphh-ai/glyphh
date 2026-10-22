@@ -1,5 +1,5 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Decision, Spec } from '@/api/ada';
+import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Decision, ModelMap, ModelStats, Spec } from '@/api/ada';
 import { examples } from '@/lib/spec';
 import { adaPlans, cloudLimits, me } from './fixtures';
 import { apiError, sessionHandler, v1 } from './server';
@@ -76,7 +76,61 @@ export const backtestResult = {
 
 type Seen = { method: string; path: string; body: unknown };
 
-export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro', requests = 0 } = {}) {
+const day = (n: number) => `2026-10-${String(n).padStart(2, '0')}`;
+
+/** A model's dashboard with a week of reads and decides, as `GET /v1/models/{name}/stats` answers it. */
+export const modelStats = (model: AdaModel): ModelStats => ({
+  name: model.name,
+  version: model.version,
+  precedents: model.precedents,
+  created_at: model.created_at,
+  active: { version: model.version, note: 'Ask more', made_by: 'u-chris', made_at: at },
+  plan: { plan: 'Pro', precedents: { used: model.precedents, max: 100_000 } },
+  outcomes: [
+    { output: null, value: 'billing', n: 700 },
+    { output: null, value: 'auth', n: 400 },
+    { output: null, value: null, n: 140 },
+  ],
+  growth: [
+    { day: day(1), n: 1_000 },
+    { day: day(15), n: 240 },
+  ],
+  jobs: [{ id: 'job-9', model: model.name, kind: 'import', state: 'done', percent: 100, args: {}, result: null, error: null, created_at: at, started_at: at, finished_at: at, made_by: 'u-chris' }],
+  days: Array.from({ length: 7 }, (_, i) => ({ day: day(16 + i), reads: { decide: 10 * i, query: i, probabilities: 0, facts: 1 }, decided: 10 * i, asked: i })),
+  sure: [0, 0, 0, 0, 1, 2, 5, 20, 80, 102],
+});
+
+/** A model's dashboard before anything was read or recorded. */
+export const emptyStats = (model: AdaModel): ModelStats => ({
+  ...modelStats({ ...model, precedents: 0 }),
+  plan: { plan: 'Pro', precedents: { used: 0, max: 100_000 } },
+  outcomes: [],
+  growth: [],
+  jobs: [],
+  days: [{ day: day(22), reads: { decide: 0, query: 0, probabilities: 0, facts: 0 }, decided: 0, asked: 0 }],
+  sure: Array(10).fill(0),
+});
+
+/** Four precedents at dimension 16, two joined by an edge of the same outcome and one of different outcomes. */
+export const modelMap = (layer: string | null): ModelMap => ({
+  version: 2,
+  dim: 16,
+  layers: ['ticket'],
+  layer,
+  total: 1_240,
+  points: [
+    { id: 'c1a2b3', outcome: 'billing', outcomes: {}, bits: btoa('\xff\x00') },
+    { id: 'd4e5f6', outcome: 'billing', outcomes: {}, bits: btoa('\xf0\x0f') },
+    { id: 'a9b8c7', outcome: 'auth', outcomes: {}, bits: btoa('\x0f\xf0') },
+    { id: 'e1e2e3', outcome: null, outcomes: {}, bits: layer ? null : btoa('\x00\xff') },
+  ],
+  edges: [
+    [0, 1, 0.33],
+    [1, 2, 0.14],
+  ],
+});
+
+export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro', requests = 0, stats = modelStats, map = modelMap } = {}) {
   const state = {
     models: structuredClone(models),
     versions: new Map<string, AdaVersion[]>(),
@@ -167,6 +221,21 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
       state.models = state.models.filter((m) => m.name !== params.name);
       return HttpResponse.json({ name: params.name, deleted: true });
     }),
+    http.get(ada('/models/:name/stats'), ({ params }) => {
+      const model = found(String(params.name));
+      return model ? HttpResponse.json(stats(model)) : missing(String(params.name));
+    }),
+    http.get(ada('/models/:name/map'), ({ request }) => HttpResponse.json(map(new URL(request.url).searchParams.get('layer')))),
+    http.get(ada('/models/:name/precedents/:id'), ({ params }) =>
+      HttpResponse.json({
+        id: params.id,
+        situation: { ticket: { about: { subject: [['refund', 1], ['twice', 0.4]], product: 'web' } } },
+        outcome: 'billing',
+        outcomes: {},
+        author: 'u-chris',
+        ts: 1_792_400_000,
+      }),
+    ),
     http.get(ada('/models/:name/versions'), ({ params }) => HttpResponse.json({ versions: state.versions.get(String(params.name)) ?? [] })),
     http.post(ada('/models/:name/versions/:version/activate'), ({ params }) => {
       const name = String(params.name);
