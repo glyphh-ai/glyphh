@@ -67,7 +67,9 @@ async def _glyphh_error(request: Request, err: Exception) -> Response:
         "refused",
         extra=fields(code=err.code, status=err.status, reason=err.message),
     )
-    return refusal(cfg(request), request.method, request.url.path, err.code, err.message, err.status, **err.detail)
+    answer = refusal(cfg(request), request.method, request.url.path, err.code, err.message, err.status, **err.detail)
+    answer.headers.update(getattr(err, "headers", {}))  # a refusal's own (429's Retry-After)
+    return answer
 
 
 async def _invalid(request: Request, err: Exception) -> Response:

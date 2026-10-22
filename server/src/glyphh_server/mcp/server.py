@@ -14,10 +14,21 @@ INSTRUCTIONS: str = (
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
     "members and invites, your runtimes, and the apps allowed to use this connector (connector_grants)."
 )
+ADA_INSTRUCTIONS: str = (
+    " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "
+    "history (ada_record_many, or ada_import with an upload link), learn (ada_learn), ask (ada_decide, ada_query, "
+    "ada_probabilities, ada_facts), tune one lever at a time with a backtest first (ada_backtest, ada_settings, "
+    "ada_versions, ada_activate), follow jobs (ada_job), export (ada_export), and make API keys for your code "
+    "(create_api_key). Reads count against your plan's month (usage)."
+)
 
 
 def server_info(ctx: Context) -> dict[str, str]:
     return {"name": "glyphh", "title": "Glyphh", "version": ctx.settings.version}
+
+
+def instructions(ctx: Context) -> str:
+    return INSTRUCTIONS + (ADA_INSTRUCTIONS if ctx.ada is not None else "")
 
 
 def initialize(ctx: Context, call: Call) -> dict[str, Any]:
@@ -28,12 +39,12 @@ def initialize(ctx: Context, call: Call) -> dict[str, Any]:
         "protocolVersion": asked if asked in LEGACY else LEGACY[0],
         "capabilities": CAPABILITIES,
         "serverInfo": server_info(ctx),
-        "instructions": INSTRUCTIONS,
+        "instructions": instructions(ctx),
     }
 
 
-def discover() -> dict[str, Any]:
-    return {"supportedVersions": [MODERN, *LEGACY], "capabilities": CAPABILITIES, "instructions": INSTRUCTIONS}
+def discover(ctx: Context) -> dict[str, Any]:
+    return {"supportedVersions": [MODERN, *LEGACY], "capabilities": CAPABILITIES, "instructions": instructions(ctx)}
 
 
 def read_resource(call: Call) -> dict[str, Any]:
@@ -51,9 +62,9 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "ping":
             return {}
         case "server/discover":
-            return discover()
+            return discover(ctx)
         case "tools/list":
-            return {"tools": [registry.listed(t, panel.shown(call)) for t in registry.TOOLS.values()]}
+            return {"tools": [registry.listed(t, panel.shown(call)) for t in registry.available(ctx).values()]}
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":

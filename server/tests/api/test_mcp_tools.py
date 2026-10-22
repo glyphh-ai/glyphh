@@ -46,9 +46,10 @@ async def test_whoami_and_plan_show_the_account_its_limits_and_features(
 async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     _, auth = await granted(engine, await person(engine))
     plans = await tool(client, auth, "plans")
-    assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Pro", "Team", "Enterprise"]
+    assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Basic", "Pro", "Team", "Enterprise"]
     assert plans["content"][0]["text"].splitlines() == [
         "Free: free; runtime nodes 1, precedents per node 5000; features: none",
+        "Basic: $20 a month; runtime nodes 1, precedents per node 5000; features: none",
         "Pro: $99 a month; runtime nodes 3, precedents per node 50000; features: sync",
         "Team: $299 a month; runtime nodes 10, precedents per node 500000; features: sync",
         "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; runtime nodes unlimited, precedents per node "

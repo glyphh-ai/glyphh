@@ -97,7 +97,9 @@ def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[N
     fly = Fly(app.state.http, cfg) if cfg.hosting_on else None
     if fly is not None:
         app.state.hub.waker = waker(engine, fly)
-    meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting)
+    meter = cfg.stripe_secret_key and StripeClient(
+        app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada
+    )
     return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None))
 
 
@@ -133,6 +135,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.state.signing_key = load_key(cfg)
     app.state.secrets_key = vault.load_key(cfg)
     app.state.github_key = github_app.load_key(cfg)
+    app.state.ada = None if ada is None else ada.state  # the connector's Ada tools call the workers through it
     errors.install(app)
     for module in ROUTERS:
         app.include_router(module.router)

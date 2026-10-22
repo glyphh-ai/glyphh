@@ -6,9 +6,10 @@ network and holds the newest good one.
 The payload is the org's plan as signed now: `tier` the plan's name in lower case, `max_nodes` its runtime nodes,
 `max_precedents` its precedents per node, `cluster_sync_enabled` its sync; `customer_id` the org's id (no name or
 address). One is issued for each paid period, expiring at its end (ops/billing/webhook.py), and for an Enterprise
-grant, through its last day (ops/enterprise.py); never on Free, which is rrotor's default with no key (Community).
-Each is kept in `licenses`. Delivered: the org's newest live key (not revoked, not expired) in the link's `welcome`
-and the heartbeat's answer, and to the platform (`GET /v1/license/keys`); the connector shows it masked."""
+grant, through its last day (ops/enterprise.py); never on Free, which is rrotor's default with no key (Community),
+nor on Basic, an Ada Cloud plan whose self-hosted nodes run as Free's (rrotor has no basic tier). Each is kept in
+`licenses`. Delivered: the org's newest live key (not revoked, not expired) in the link's `welcome` and the heartbeat's
+answer, and to the platform (`GET /v1/license/keys`); the connector shows it masked."""
 
 import base64
 import json
@@ -20,7 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Row, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.db.seed import FREE
+from glyphh_server.db.seed import BASIC, FREE
 from glyphh_server.models import LicenseRecord
 from glyphh_server.ops.plans import org_version
 
@@ -74,10 +75,10 @@ def masked(key: str | None) -> str | None:
 async def issue(
     conn: AsyncConnection, signing_key: Ed25519PrivateKey, org_id: uuid.UUID, expires_at: datetime
 ) -> str | None:
-    """A key for the org's plan as it is now, expiring then; none on Free. The same terms to the same expiry already
-    live (an event delivered twice, a checkout and its first invoice) is that key again, not another."""
+    """A key for the org's plan as it is now, expiring then; none on Free or Basic. The same terms to the same expiry
+    already live (an event delivered twice, a checkout and its first invoice) is that key again, not another."""
     plan = await org_version(conn, org_id)
-    if plan.name == FREE:
+    if plan.name in (FREE, BASIC):
         return None
     terms = dict(zip(NAMES, (plan.name.lower(), plan.max_machines, plan.precedents, plan.sync), strict=True))
     expires_at = expires_at.astimezone(UTC).replace(microsecond=0)

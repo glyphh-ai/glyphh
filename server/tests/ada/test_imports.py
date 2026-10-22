@@ -12,9 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_ada import pg
 from glyphh_ada.process import Worker
-from glyphh_server.app import create_app
-from tests.ada.conftest import ADA, a_model, an_org, cases, finished, path_of, shape
-from tests.conftest import DATABASE_URL, _client
+from tests.ada.conftest import a_model, an_org, cases, finished, path_of, pinned, shape
+from tests.conftest import DATABASE_URL
 
 
 def jsonl(rows: list[dict[str, Any]]) -> bytes:
@@ -105,26 +104,23 @@ async def test_a_csv_file_in_the_body_with_a_mapping(
 
 
 async def test_the_plans_cap_is_checked_for_the_whole_file(
-    engine: AsyncEngine, worker: Worker, jobs_worker: Worker
+    engine: AsyncEngine, ada: httpx.AsyncClient, worker: Worker, jobs_worker: Worker
 ) -> None:
-    small = ADA.model_copy(update={"ada_precedent_caps": {"Team": 50}})
-    async for ada in _client(create_app(small)):
-        ada.base_url = httpx.URL("http://ada.test")
-        _, key = await an_org(engine, ada)
-        await a_model(ada, key, n=20)
-        body = {"format": "jsonl", "content": jsonl(cases(60))}
-        body["content"] = body["content"].decode()  # type: ignore[attr-defined]
-        whole = await finished(ada, key, (await ada.post("/v1/models/shapes/imports", json=body, headers=key)).json())
-        assert whole["error"]["code"] == "E_LIMIT" and (whole["error"]["used"], whole["error"]["adding"]) == (20, 40)
-        assert (await ada.get("/v1/models/shapes", headers=key)).json()["precedents"] == 20
-        part = {**body, "partial": True}
-        done = await finished(ada, key, (await ada.post("/v1/models/shapes/imports", json=part, headers=key)).json())
-        assert (done["result"]["added"], done["result"]["refused"], done["result"]["recorded"]) == (30, 10, 50)
-        assert (await ada.get("/v1/models/shapes", headers=key)).json()["precedents"] == 50
-        over = await ada.post("/v1/models/shapes/record", json={"data": shape(500)}, headers=key)
-        assert (over.status_code, over.json()["error"]["reason"]) == (403, "precedents")
-        same = await ada.post("/v1/models/shapes/record", json={"data": shape(5)}, headers=key)  # replaces: no more
-        assert same.status_code == 200
+    who, key = await an_org(engine, ada)
+    await pinned(engine, who.org_id, cloud_precedents=50)  # the plan version's own cap
+    await a_model(ada, key, n=20)
+    body = {"format": "jsonl", "content": jsonl(cases(60)).decode()}
+    whole = await finished(ada, key, (await ada.post("/v1/models/shapes/imports", json=body, headers=key)).json())
+    assert whole["error"]["code"] == "E_LIMIT" and (whole["error"]["used"], whole["error"]["adding"]) == (20, 40)
+    assert (await ada.get("/v1/models/shapes", headers=key)).json()["precedents"] == 20
+    part = {**body, "partial": True}
+    done = await finished(ada, key, (await ada.post("/v1/models/shapes/imports", json=part, headers=key)).json())
+    assert (done["result"]["added"], done["result"]["refused"], done["result"]["recorded"]) == (30, 10, 50)
+    assert (await ada.get("/v1/models/shapes", headers=key)).json()["precedents"] == 50
+    over = await ada.post("/v1/models/shapes/record", json={"data": shape(500)}, headers=key)
+    assert (over.status_code, over.json()["error"]["reason"]) == (403, "precedents")
+    same = await ada.post("/v1/models/shapes/record", json={"data": shape(5)}, headers=key)  # replaces: no more
+    assert same.status_code == 200
 
 
 async def test_imports_refuse_what_they_cannot_take(

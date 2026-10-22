@@ -29,9 +29,11 @@ class Context:
     http: httpx.AsyncClient
     hub: Hub
     signing_key: Ed25519PrivateKey
+    ada: Any = None  # the Ada app's state (glyphh_ada.api.make_app) while Ada Cloud is on: its tools call through it
 
     def stripe(self) -> StripeClient:
-        return StripeClient(self.http, self.settings.stripe_secret_key, self.settings.stripe_meter_hosting)
+        cfg = self.settings
+        return StripeClient(self.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada)
 
 
 @dataclass(frozen=True, slots=True)

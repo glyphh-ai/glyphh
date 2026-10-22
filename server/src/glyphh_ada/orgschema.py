@@ -38,7 +38,8 @@ MIGRATIONS: tuple[str, ...] = (
     # Step 3: files (an import's upload, an export's archive), a chunk a row, named by their job's id. Step 4: each
     # version names the store (the kernel's partition) it reads, keeps the learned weights and temperatures it went
     # live with, the backtest it was chosen by, when it stopped being active, and whether its store is made (ready)
-    # or dropped after KEPT_DAYS (gone). And every partition an index on its ids alone (catalog.BY_ID: why).
+    # or dropped after KEPT_DAYS (gone). And every partition step 2 made an index on its ids alone (a lookup by id
+    # cannot lead with the primary key (model, id)), which the kernel makes itself for every partition since 3.12.1.
     """
     DO $$ DECLARE r record; BEGIN
         FOR r IN SELECT n.nspname AS s, c.relname AS t FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid

@@ -50,5 +50,16 @@ class Timeout(GlyphhError):
     status = 504
 
 
+class RateLimited(GlyphhError):
+    """More calls a second than the org's plan allows: again after `retry_after` seconds (also its header)."""
+
+    code = "E_RATE"
+    status = 429
+
+    def __init__(self, message: str, retry_after: int, **detail: Any) -> None:
+        super().__init__(message, retry_after=retry_after, **detail)
+        self.headers = {"retry-after": str(retry_after)}
+
+
 def model_missing(name: str) -> Refusal:
     return Refusal("E_MODEL_MISSING", f"No model named {name} in this org.", 404, model=name)

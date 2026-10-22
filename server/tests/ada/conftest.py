@@ -15,6 +15,7 @@ import asyncpg
 import httpx
 import pytest
 from redis import Redis
+from sqlalchemy import insert, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -23,11 +24,20 @@ from glyphh_ada.process import Worker
 from glyphh_ada.protocol import JOBS, SYNC
 from glyphh_server.app import create_app
 from glyphh_server.config import Settings
+from glyphh_server.models import Org, Plan, PlanVersion
 from tests.conftest import ADMIN_URL, REDIS_URL, SETTINGS, _client
 from tests.db.helpers import Person, person
 
 HOST: str = "ada.test"
-ADA: Settings = SETTINGS.model_copy(update={"ada_cloud": True, "ada_hosts": f"{HOST}, other.test"})
+ADA: Settings = SETTINGS.model_copy(
+    update={
+        "ada_cloud": True,
+        "ada_hosts": f"{HOST}, other.test",
+        "ada_url": f"http://{HOST}",
+        "stripe_price_ada": "price_test_ada",
+        "stripe_meter_ada": "ada_requests",
+    }
+)
 
 SHAPES: dict[str, Any] = {
     "name": "shapes",
@@ -181,3 +191,15 @@ async def finished(
 def path_of(url: str) -> str:
     """A link's path, for the test client (its host is the Ada host)."""
     return "/" + url.split("://", 1)[1].split("/", 1)[1]
+
+
+async def pinned(engine: AsyncEngine, org_id: Any, **cloud: Any) -> None:
+    """The org on a plan version of its own with these cloud limits (as a contract, or a version since superseded,
+    would be): a retired plan's, so no other test's org finds it."""
+    async with engine.begin() as conn:
+        made = insert(Plan).values(name=f"Test {org_id}", active=False).returning(Plan.id)
+        plan_id = (await conn.execute(made)).scalar_one()
+        values = {"plan_id": plan_id, "version": 1, "price_cents": 9_900, "billing_interval": "month"}
+        version = insert(PlanVersion).values(**values, **cloud).returning(PlanVersion.id)
+        version_id = (await conn.execute(version)).scalar_one()
+        await conn.execute(update(Org).where(Org.id == org_id).values(plan_version_id=version_id))
