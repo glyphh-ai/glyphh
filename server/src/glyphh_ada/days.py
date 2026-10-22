@@ -1,12 +1,14 @@
 """A model day by day, for the platform's dashboard (GET /v1/models/{name}/stats): its reads by kind, and what its
-decides answered: how many, how many asked a person, and how sure they were (the decided outcome's probability, in
-tenths). Days are UTC.
+decides answered, each output apart: how many, how many asked a person, and how sure they were (the decided outcome's
+probability, in tenths). Days are UTC. A named output's metrics end `|<output>` (`decided|team`); the default
+output's have none.
 
 Counted in Redis as they happen, in one hash per org of what the database has not been told yet (`ada:days:<org>`,
 fields `<YYYY-MM-DD>|<model>|<metric>`, with the org in `ada:days:orgs`): a read where it is counted (api/meter.py,
 in the round trip that counts it against the month), a decide's answer by its worker once it has replied
 (loop.py), so neither read waits on it. The server's minute tick takes each org's hash whole and adds it to
-ada_model_days; losing Redis loses at most a minute of them."""
+ada_model_days; losing Redis loses at most a minute of them. The dashboard adds what Redis holds that the tick has
+not taken yet (daily), so a read shows the moment it is counted."""
 
 import uuid
 from datetime import UTC, date, datetime
@@ -48,16 +50,29 @@ def count(pipe: Any, org: object, model: str, op: str, n: int) -> Any:
     return pipe.hincrby(key(org), field(model, f"read:{op}"), n).sadd(ORGS, str(org))
 
 
-def decided(redis: Any, org: str, model: str, answer: dict[str, Any]) -> None:
-    """A decide's answer (each output's, when it decided several): decided, whether it asked, how sure, in tenths."""
+def of(metric: str, output: str | None) -> str:
+    """A metric of one output: the default's as it is, a named one's with `|<output>`."""
+    return metric if output is None else f"{metric}|{output}"
+
+
+def split(metric: str) -> tuple[str, str | None]:
+    """A metric and the output it is of (None: the default)."""
+    name, _, output = metric.partition("|")
+    return name, output or None
+
+
+def decided(redis: Any, org: str, model: str, answer: dict[str, Any], output: str | None = None) -> None:
+    """A decide's answer, each output's apart (`output`: the one it was asked for, when it decided one): decided,
+    whether it asked, how sure, in tenths."""
     pipe, h = redis.pipeline(transaction=False), key(org)
-    for out in answer["outputs"].values() if "outputs" in answer else [answer]:
-        pipe.hincrby(h, field(model, DECIDED), 1)
+    answers = answer["outputs"].items() if "outputs" in answer else [(output, answer)]
+    for name, out in answers:
+        pipe.hincrby(h, field(model, of(DECIDED, name)), 1)
         if out.get("ask"):
-            pipe.hincrby(h, field(model, ASKED), 1)
+            pipe.hincrby(h, field(model, of(ASKED, name)), 1)
         sure = (out.get("probabilities") or {}).get(out.get("outcome"))
         if sure is not None:
-            pipe.hincrby(h, field(model, f"{SURE}{min(9, int(float(sure) * 10))}"), 1)
+            pipe.hincrby(h, field(model, of(f"{SURE}{min(9, int(float(sure) * 10))}", name)), 1)
     pipe.sadd(ORGS, org).execute()
 
 
@@ -102,12 +117,24 @@ async def flush(engine: AsyncEngine, redis: Redis) -> int:
     return added
 
 
-async def daily(conn: AsyncConnection, org: uuid.UUID, model: str, since: date) -> dict[date, dict[str, int]]:
-    """The model's counts by day from `since`, on a connection that has entered its org."""
+async def pending(redis: Redis, org: uuid.UUID, model: str) -> list[tuple[date, str, int]]:
+    """The model's counts in Redis that the tick has not taken into the database yet."""
+    held = await redis.hgetall(key(org))  # type: ignore[misc]
+    rows = _rows(org, [x for pair in held.items() for x in pair])
+    return [(r["day"], r["metric"], r["n"]) for r in rows if r["model"] == model]
+
+
+async def daily(
+    conn: AsyncConnection, redis: Redis, org: uuid.UUID, model: str, since: date
+) -> dict[date, dict[str, int]]:
+    """The model's counts by day from `since`: the database's, on a connection that has entered its org, and Redis's
+    that the tick has not taken yet (a minute's, or more while the tick cannot reach the database)."""
     found = select(AdaModelDay.day, AdaModelDay.metric, AdaModelDay.n).where(
         AdaModelDay.org_id == org, AdaModelDay.model == model, AdaModelDay.day >= since
     )
     out: dict[date, dict[str, int]] = {}
-    for day, metric, n in await conn.execute(found):
-        out.setdefault(day, {})[metric] = int(n)
+    for day, metric, n in [*(await conn.execute(found)).all(), *await pending(redis, org, model)]:
+        if day >= since:
+            held = out.setdefault(day, {})
+            held[metric] = held.get(metric, 0) + int(n)
     return out

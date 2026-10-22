@@ -104,7 +104,7 @@ class Loop:
             answer = protocol.refused("E_INTERNAL", "Something went wrong on our side.", 500, request=msg.id)
         self._reply(msg, answer)
         if msg.op == "decide" and isinstance(data, dict):  # its model's day, once the caller has its answer
-            days.decided(self.redis, msg.org, msg.model, data)
+            days.decided(self.redis, msg.org, msg.model, data, msg.args.get("output"))
 
     def _reply(self, msg: Message, answer: str) -> None:
         if self.queue == SYNC:
