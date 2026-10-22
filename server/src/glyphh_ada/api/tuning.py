@@ -8,7 +8,7 @@ done (GET /v1/jobs/{id})."""
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from glyphh_ada import limits
@@ -34,6 +34,11 @@ class Changes(BaseModel):
     changes: dict[str, Any] = Field(description="Settings to change: {lever: value}, each checked by the kernel")
     note: str | None = NOTE
     backtest: str | None = BACKTEST
+
+
+class Notes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str = Field(max_length=500, description="Why it was made: its release notes (empty: none)")
 
 
 class Candidate(BaseModel):
@@ -89,8 +94,34 @@ async def patch_settings(name: str, body: Changes, who: AdaWho, request: Request
 
 @router.get("/versions", operation_id="listAdaVersions")
 async def list_versions(name: str, who: AdaWho, request: Request) -> dict[str, Any]:
-    """Every version: who made it and why, which is active, which were re-encoded, which can no longer be."""
+    """Every version, oldest first: who made it, when and why, which is active, which made a store of its own; what
+    changed against the version before; the precedents when it was made; what it had learned; the newest backtest of
+    it; its store (active, kept until it may be dropped, being made, or dropped)."""
     return {"versions": await call(request, who, name, "versions", {})}
+
+
+@router.get("/versions/{version}", operation_id="getAdaVersion")
+async def get_version(name: str, version: int, who: AdaWho, request: Request) -> dict[str, Any]:
+    """One version as the list answers it, with its whole spec and every lever its settings stand at."""
+    return dict(await call(request, who, name, "versions", {"version": version}))
+
+
+@router.get("/versions/{version}/diff", operation_id="diffAdaVersion")
+async def diff_version(
+    name: str,
+    version: int,
+    who: AdaWho,
+    request: Request,
+    against: int | None = Query(None, ge=1, description="The version to compare with; left out, the active one"),
+) -> dict[str, Any]:
+    """What making this version active would change: {version, against, changes: [{path, from, to, restates}]}."""
+    return dict(await call(request, who, name, "versions", {"version": version, "against": against}))
+
+
+@router.patch("/versions/{version}", operation_id="patchAdaVersion")
+async def patch_version(name: str, version: int, body: Notes, who: AdaWho, request: Request) -> dict[str, Any]:
+    """A version's note (why it was made, its release notes) written again: {version, note}."""
+    return dict(await call(request, who, name, "note", {"version": version, "note": body.note}))
 
 
 @router.post("/versions/{version}/activate", operation_id="activateAdaVersion")

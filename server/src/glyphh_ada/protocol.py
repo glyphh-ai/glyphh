@@ -27,7 +27,10 @@ READS: frozenset[str] = frozenset({"query", "probabilities", "facts", "decide"})
 # The writes to a model's precedents, each under the model's write lock (versions.write_lock)
 CASES: frozenset[str] = frozenset({"record", "record_many", "grade", "forget"})
 VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate"})  # a new version, or another made active
-WRITES: frozenset[str] = frozenset({"create", "delete", "job_start", "import_start", "import_go"}) | CASES | VERSIONS
+# note: a version's note written again
+WRITES: frozenset[str] = (
+    frozenset({"create", "delete", "job_start", "import_start", "import_go", "note"}) | CASES | VERSIONS
+)
 LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions", "stats", "map", "precedent"})
 SYNC_OPS: frozenset[str] = READS | WRITES | LOOKS
 JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate", "import", "export", "reencode", "backtest"})

@@ -59,6 +59,8 @@ MIGRATIONS: tuple[str, ...] = (
     ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS ready boolean NOT NULL DEFAULT true;
     ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS gone boolean NOT NULL DEFAULT false;
     """,
+    # The precedents the model held when each version was made (unknown for those made before).
+    "ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS precedents_at bigint;",
 )
 
 _UNFENCED = """

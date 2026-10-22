@@ -26,11 +26,6 @@ from glyphh_ada.errors import Refusal
 from glyphh_ada.situations import check_reading, learned_of, same_store, set_learned
 
 CALIBRATION: tuple[str, ...] = ("calibrate_by", "calibrate_sample")
-_LIST = """
-    SELECT v.version, v.note, v.made_by, v.made_at, v.version = m.active_version, v.store, v.backtest, v.ready,
-           v.gone, v.retired_at FROM {s}.spec_versions v JOIN {s}.models m ON m.id = v.model_id
-    WHERE v.model_id = %s ORDER BY v.version
-"""
 _ROW = "SELECT spec, store, ready, gone, learned FROM {s}.spec_versions WHERE model_id = %s AND version = %s"
 _STALE = """
     SELECT store FROM {s}.spec_versions v WHERE model_id = %(m)s AND NOT gone AND store <> %(keep)s GROUP BY store
@@ -43,13 +38,13 @@ def write_lock(schema: str, name: str) -> str:
     return f"glyphh:write:{schema}:{name}"
 
 
-def listing(conn: psycopg.Connection, schema: str, name: str) -> list[dict[str, Any]]:
+def annotate(conn: psycopg.Connection, schema: str, name: str, version: int, note: str) -> dict[str, Any]:
+    """A version's note (why it was made, its release notes) written again."""
     found = catalog.live(conn, schema, name)
-    keys = ("version", "note", "made_by", "made_at", "active", "store", "backtest", "ready", "gone", "retired_at")
-    rows = [dict(zip(keys, r, strict=True)) for r in conn.execute(q(schema, _LIST), (found.id,)).fetchall()]
-    for row in rows:
-        row["reencoded"] = row.pop("store") != found.id.hex
-    return rows
+    row(conn, schema, found, version)
+    update = "UPDATE {s}.spec_versions SET note = %s WHERE model_id = %s AND version = %s"
+    conn.execute(q(schema, update), (note, found.id, version))
+    return {"version": version, "note": note}
 
 
 def row(conn: psycopg.Connection, schema: str, found: catalog.Live, version: int) -> tuple[Any, ...]:
@@ -80,12 +75,13 @@ def _insert(
     top = conn.execute(q(schema, "SELECT max(version) FROM {s}.spec_versions WHERE model_id = %s"), (found.id,))
     version = int(top.fetchone()[0]) + 1  # type: ignore[index]
     insert = (
-        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, backtest, ready)"
-        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, backtest, ready, precedents_at)"
+        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
     )
     store = found.store if same else f"{found.id.hex}v{version}"
-    note, backtest = args.get("note") or "", args.get("backtest")
-    conn.execute(q(schema, insert), (found.id, version, Jsonb(spec_json), note, args["author"], store, backtest, same))
+    note, backtest, held = args.get("note") or "", args.get("backtest"), catalog.count(conn, schema, found.store)
+    values = (found.id, version, Jsonb(spec_json), note, args["author"], store, backtest, same, held)
+    conn.execute(q(schema, insert), values)
     return version
 
 

@@ -101,7 +101,7 @@ def mark(conn: psycopg.Connection, schema: str, job_id: str, state: str, **value
     conn.execute(q(schema, text), params)
 
 
-def _summary(table: dict[str, Any]) -> dict[str, Any]:
+def summary(table: dict[str, Any]) -> dict[str, Any]:
     """What learning found, shortly: each role's weight, how many words each text role weighs, the pairs."""
     roles = {p: v["similarity_weight"] for p, v in table.items() if not p.startswith("~") and "similarity_weight" in v}
     words = {p: len(v.get("value_weights", {})) for p, v in table.items() if not p.startswith("~") and p not in roles}
@@ -127,9 +127,7 @@ def _learn(
     except ValueError:  # refused before anything was learned: the store is as it was
         base.set_meta("restating", dirty)
         raise
-    out: dict[str, Any] = {
-        "learned": {k: _summary(v) for k, v in learned.items()} if spec.outputs else _summary(learned)
-    }
+    out: dict[str, Any] = {"learned": {k: summary(v) for k, v in learned.items()} if spec.outputs else summary(learned)}
     progress(60)
     changed = _tables(model) != before  # the kernel restated the precedents it holds (the newest JOB_SAMPLE)
     if dirty or (changed and total > limits.JOB_SAMPLE):
