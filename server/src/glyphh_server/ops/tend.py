@@ -8,12 +8,15 @@ ada_model_days (glyphh_ada/days.py), and the reads past a metered plan's month r
 (ops/billing/ada_meter.py).
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
-on a connection it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
-at once. Ticks one after another in different processes may both run in the same minute; every part is safe to run
-again: the meter counts the time since each machine was last metered, never a fixed step."""
+in a transaction it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
+at once. Each part runs whatever another does: one failing is logged by name and the rest go on. Ticks one after
+another in different processes may both run in the same minute; every part is safe to run again: the meter counts
+the time since each machine was last metered, never a fixed step."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -48,17 +51,29 @@ async def tally(engine: AsyncEngine, region: str, now: datetime | None = None) -
 async def tend(
     engine: AsyncEngine, hub: Hub, settings: Settings, step: int, fly: Fly | None, stripe: StripeClient | None
 ) -> bool:
-    """One tick, if no other process is ticking: answers whether it ran."""
-    async with engine.connect() as held:
-        if not (await held.execute(text("SELECT pg_try_advisory_lock(:lock)"), {"lock": TICK})).scalar_one():
+    """One tick, if no other process is ticking: answers whether it ran. The lock is the held transaction's, so it
+    goes when the transaction ends however it ends (through a connection pooler too), never left behind on a
+    connection gone back to a pool."""
+    async with engine.begin() as held:
+        if not (await held.execute(text("SELECT pg_try_advisory_xact_lock(:lock)"), {"lock": TICK})).scalar_one():
             log.info("tick skipped: another process is ticking")
             return False
-        await held.commit()  # a session lock: held past the transaction, until unlocked or the connection ends
-        try:
-            await _tick(engine, hub, settings, step, fly, stripe)
-        finally:
-            await held.execute(text("SELECT pg_advisory_unlock(:lock)"), {"lock": TICK})
+        await _tick(engine, hub, settings, step, fly, stripe)
     return True
+
+
+async def _each(parts: list[tuple[str, Callable[[], Awaitable[Any]]]]) -> None:
+    """Every part of the tick in turn, whatever another does: one that fails is logged by its name and the rest run
+    (Ada's counts reach the database even while the hosting meter fails); the first failure is raised after."""
+    failed: Exception | None = None
+    for name, part in parts:
+        try:
+            await part()
+        except Exception as e:
+            log.exception("tick part failed: %s", name)
+            failed = failed or e
+    if failed is not None:
+        raise failed
 
 
 async def _tick(
@@ -69,19 +84,25 @@ async def _tick(
     first), server-side logging past retention purged; with hosting on and Fly set up, the idle machines stopped and
     those held past their plan stopped; with Stripe, the hosting due reported to its meter. With Ada Cloud on, its
     reads flushed to the database, and with Stripe those past a metered plan's month reported."""
+    parts: list[tuple[str, Callable[[], Awaitable[Any]]]] = []
     if settings.hosting:
-        await tally(engine, settings.fly_region)
-    await push_expired(engine, hub, timedelta(seconds=2 * step))
-    await expire(engine, stripe)
-    await purge(engine, settings.telemetry_retention_days)
+        parts.append(("tally", lambda: tally(engine, settings.fly_region)))
+    parts.append(("expired keys", lambda: push_expired(engine, hub, timedelta(seconds=2 * step))))
+    parts.append(("enterprise grants", lambda: expire(engine, stripe)))
+    parts.append(("retention", lambda: purge(engine, settings.telemetry_retention_days)))
     if fly is not None:
-        await stop_idle(engine, fly, timedelta(minutes=settings.runtime_idle_minutes))
-        async with engine.begin() as conn:  # the connecting role: every org's
-            await hold(conn, fly)
+        parts.append(("idle", lambda: stop_idle(engine, fly, timedelta(minutes=settings.runtime_idle_minutes))))
+        parts.append(("held", lambda: _hold(engine, fly)))
     if settings.ada_cloud:
-        await flush(engine, hub.redis)
-        await days.flush(engine, hub.redis)
+        parts.append(("ada reads", lambda: flush(engine, hub.redis)))
+        parts.append(("ada days", lambda: days.flush(engine, hub.redis)))
     if stripe is not None:
-        await report(engine, stripe)
+        parts.append(("hosting meter", lambda: report(engine, stripe)))
         if settings.ada_cloud:
-            await ada_meter.report(engine, stripe, settings.stripe_price_ada)
+            parts.append(("ada meter", lambda: ada_meter.report(engine, stripe, settings.stripe_price_ada)))
+    await _each(parts)
+
+
+async def _hold(engine: AsyncEngine, fly: Fly) -> None:
+    async with engine.begin() as conn:  # the connecting role: every org's
+        await hold(conn, fly)

@@ -65,10 +65,10 @@ async def counts() -> AsyncIterator[Redis]:
 
 
 async def _decided(counts: Redis, org: uuid.UUID, n: int) -> None:
-    """Until the worker has counted n decides (it counts after it replies)."""
+    """Until the worker has counted n decides, every output's (it counts after it replies)."""
     for _ in range(100):
         held = await counts.hgetall(days.key(org))
-        if sum(int(v) for k, v in held.items() if k.endswith("|decided")) >= n:
+        if sum(int(v) for k, v in held.items() if days.split(k.split("|", 2)[2])[0] == days.DECIDED) >= n:
             return
         await asyncio.sleep(0.05)
     raise AssertionError(f"never counted {n} decides: {held}")
@@ -84,7 +84,8 @@ async def test_the_dashboard_counts_the_days_and_reads_the_store(
     got = empty.json()
     assert (got["precedents"], got["outcomes"], got["growth"], got["sure"]) == (0, [], [], [0] * 10)
     none = {"decide": 0, "query": 0, "probabilities": 0, "facts": 0}
-    assert len(got["days"]) == 1 and got["days"][0]["reads"] == none
+    assert len(got["days"]) == 30 and all(d["reads"] == none for d in got["days"]) and got["answers"] == []
+    assert (got["others"], got["estimated"]) == ([], False)
     assert got["plan"] == {"plan": "Team", "precedents": {"used": 0, "max": 1_000_000}}
     assert got["active"]["version"] == 1 and got["active"]["note"] == "made" and got["jobs"] == []
     await ada.post("/v1/models/shapes/record_many", json={"cases": cases(30)}, headers=key)
@@ -94,11 +95,16 @@ async def test_the_dashboard_counts_the_days_and_reads_the_store(
     await ada.post("/v1/models/shapes/query", json=ask, headers=key)
     await ada.post("/v1/models/shapes/learn", headers=key)
     await _decided(counts, who.org_id, 3)
+    unflushed = (await ada.get("/v1/models/shapes/stats?days=7", headers=key)).json()  # Redis's, before the tick
     assert await days.flush(engine, counts) >= 3
     got = (await ada.get("/v1/models/shapes/stats?days=7", headers=key)).json()
+    assert unflushed["days"] == got["days"] and unflushed["answers"] == got["answers"] and len(got["days"]) == 7
     today = got["days"][-1]
     assert today["reads"] == {"decide": 3, "query": 1, "probabilities": 0, "facts": 0}
     assert today["decided"] == 3 and sum(got["sure"]) == 3 and today["asked"] <= 3
+    [answer] = got["answers"]
+    assert answer["output"] is None and answer["decided"] == 3 and answer["sure"] == got["sure"]
+    assert answer["days"][-1] == {"decided": 3, "asked": today["asked"]} and len(answer["days"]) == 7
     assert got["precedents"] == 30 and sum(o["n"] for o in got["outcomes"]) == 30
     assert {o["value"] for o in got["outcomes"]} == {"good", "bad"} and got["outcomes"][0]["output"] is None
     assert sum(g["n"] for g in got["growth"]) == 30
@@ -185,7 +191,7 @@ async def test_the_days_go_back_to_redis_when_the_database_fails(
     sync = SyncRedis.from_url(REDIS_URL, decode_responses=True)
     days.decided(sync, org, "m", {"outputs": {"a": {"ask": True, "outcome": None, "probabilities": {}}}})
     sync.close()
-    assert await counts.hget(days.key(org), days.field("m", "asked")) == "1"
+    assert await counts.hget(days.key(org), days.field("m", "asked|a")) == "1"
 
     async def down(*_: Any) -> bool:
         raise RuntimeError("the database is down")
@@ -193,7 +199,7 @@ async def test_the_days_go_back_to_redis_when_the_database_fails(
     monkeypatch.setattr(days, "_add", down)
     with pytest.raises(RuntimeError):
         await days.flush(engine, counts)
-    assert await counts.hget(days.key(org), days.field("m", "decided")) == "1"
+    assert await counts.hget(days.key(org), days.field("m", "decided|a")) == "1"
     assert org in await counts.smembers(days.ORGS)
     monkeypatch.undo()
     await days.flush(engine, counts)
