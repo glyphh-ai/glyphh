@@ -176,8 +176,8 @@ async def test_step_3s_migration_gives_a_step_2_model_its_id_index(
     assert idle.ctx.conn.execute(ids).fetchone()[0] == 1
     for (name,) in idle.ctx.conn.execute(ids.replace("count(*)", "indexname")).fetchall():
         idle.ctx.conn.execute(f'DROP INDEX "{schema}"."{name}"')
-    idle.ctx.conn.execute(f'DELETE FROM "{schema}".ada_schema WHERE version = 2')
-    assert orgschema.migrate_all(idle.ctx.conn) == 1
+    idle.ctx.conn.execute(f'DELETE FROM "{schema}".ada_schema WHERE version >= 2')
+    assert orgschema.migrate_all(idle.ctx.conn) == len(orgschema.MIGRATIONS) - 1
     assert idle.ctx.conn.execute(ids).fetchone()[0] == 1
     assert (await ada.post("/v1/models/shapes/record", json={"data": shape(1)}, headers=key)).status_code == 200
 

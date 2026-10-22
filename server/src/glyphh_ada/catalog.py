@@ -136,8 +136,8 @@ def create(conn: psycopg.Connection, org: str, name: str, spec_json: Any, author
     schema = orgschema.ensure(conn, org)
     model_id = uuid.uuid4()
     insert = (
-        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store)"
-        " VALUES (%s, 1, %s, 'made', %s, %s)"
+        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, precedents_at)"
+        " VALUES (%s, 1, %s, 'made', %s, %s, 0)"
     )
     try:
         with conn.transaction():

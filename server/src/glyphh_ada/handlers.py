@@ -17,7 +17,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 from redis import Redis
 
-from glyphh_ada import catalog, dashboard, glyphmap, jobs, orgschema, pg, reads, seen, versions, writeops
+from glyphh_ada import catalog, dashboard, glyphmap, history, jobs, orgschema, pg, reads, seen, versions, writeops
 from glyphh_ada.cache import Models
 from glyphh_ada.catalog import q
 from glyphh_ada.errors import Refusal, model_missing
@@ -60,7 +60,11 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
         if msg.args.get("levers"):
             levers = versions.levers(ctx.conn, schema, msg.model)
             return levers, levers["version"]
-        return versions.listing(ctx.conn, schema, msg.model), None
+        if "against" in msg.args:  # what making the version active would change from another (None: the active)
+            return history.compare(ctx.conn, schema, msg.model, int(msg.args["version"]), msg.args["against"]), None
+        if "version" in msg.args:
+            return history.detail(ctx.conn, schema, msg.model, int(msg.args["version"])), None
+        return history.listing(ctx.conn, schema, msg.model), None
     if msg.op == "stats":
         found = dashboard.stats(ctx.conn, schema, msg.model)
         return found, found["version"]
@@ -89,6 +93,8 @@ def _write(ctx: Context, schema: str, msg: Message) -> Answer:
         return writeops.cases(ctx, schema, msg)
     if msg.op in VERSIONS:
         return writeops.version(ctx, schema, msg)
+    if msg.op == "note":
+        return versions.annotate(ctx.conn, schema, msg.model, int(msg.args["version"]), str(msg.args["note"])), None
     return {"job_start": writeops.job_start, "import_start": writeops.import_start, "import_go": writeops.import_go}[
         msg.op
     ](ctx, schema, msg)
