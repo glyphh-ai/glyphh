@@ -9,7 +9,13 @@ WORKDIR /app
 FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends git openssh-client && rm -rf /var/lib/apt/lists/*
 RUN git config --global url."ssh://git@github.com/glyphh-ai/ada-private".insteadOf "https://github.com/glyphh-ai/ada-private"
-ENV GIT_SSH_COMMAND="ssh -i /run/secrets/ada_deploy_key -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts"
+# ssh refuses a key file without its final newline ("error in libcrypto"), and flyctl's --build-secret NAME=VALUE drops
+# it: this wrapper copies the key to a private temporary file with the newline put back, for each ssh call only.
+RUN printf '%s\n' '#!/bin/sh' \
+      'key=$(mktemp) && { cat /run/secrets/ada_deploy_key; echo; } > "$key" && chmod 600 "$key"' \
+      'ssh -i "$key" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts "$@"; status=$?' \
+      'rm -f "$key"; exit $status' > /usr/local/bin/ssh-ada && chmod 755 /usr/local/bin/ssh-ada
+ENV GIT_SSH_COMMAND="/usr/local/bin/ssh-ada"
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-install-project --no-dev
 
