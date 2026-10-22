@@ -6,8 +6,8 @@ import { cloudLimits } from '../src/test/fixtures.js';
  * Ada Cloud's API for the fake server, at /ada/v1 (the platform's GLYPHH_ADA_URL=http://localhost:8080/ada), from a
  * store kept in memory: models and their versions, keys, and jobs that are done when first read. Not the kernel:
  * every decision is the most common outcome recorded, at its share. Each decide counts against the org's plan's month
- * (`plan()`, the fake server's); past it, Free is refused 403 E_LIMIT as the server refuses it, Pro and Team go on,
- * metered. Answers the usage, for /v1/me's and /v1/billing's `cloud`.
+ * (`plan()`, the fake server's); past it, Free is refused 403 E_LIMIT as the server refuses it, Basic, Pro and
+ * Team go on, metered. Answers the usage, for /v1/me's and /v1/billing's `cloud`.
  */
 export function mountAda(app: Hono, port: number, plan: () => string): () => AdaUsage {
   const models: AdaModel[] = [];
@@ -41,6 +41,13 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   };
   const limits = () => cloudLimits[plan()] ?? cloudLimits.Enterprise!;
+  // The upgrade named past the month, as allowance.py names it: the first plan, in order, that reads past this one's
+  // month (metered, or a bigger month). From Free, Basic.
+  const upgrade = () => {
+    const now = limits().requests_per_month ?? 0;
+    const roomier = Object.entries(cloudLimits).find(([name, c]) => name !== plan() && (c.overage || (c.requests_per_month ?? 0) > now));
+    return roomier?.[0] ?? null;
+  };
   const usage = (): AdaUsage => {
     const { precedents, requests_per_month: max, requests_per_second, overage } = limits();
     return {
@@ -100,7 +107,7 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     const reads = Math.max(1, asked?.length ?? 0);
     const { requests_per_month: max, overage } = limits();
     if (max !== null && !overage && requests + reads > max) {
-      const body = { code: 'E_LIMIT', message: `Your ${plan()} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on ${resetsAt()}. Upgrade to Pro (the connector's upgrade tool, or Billing on the platform) to read on now.`, trace_id: 'dev-trace', reason: 'requests', used: requests, max, plan: plan(), upgrade: 'Pro', resets_at: resetsAt() };
+      const body = { code: 'E_LIMIT', message: `Your ${plan()} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on ${resetsAt()}. Upgrade to ${upgrade()} (the connector's upgrade tool, or Billing on the platform) to read on now.`, trace_id: 'dev-trace', reason: 'requests', used: requests, max, plan: plan(), upgrade: upgrade(), resets_at: resetsAt() };
       return Response.json({ error: body }, { status: 403 });
     }
     requests += reads;

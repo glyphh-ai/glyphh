@@ -47,6 +47,7 @@ describe('with Ada Cloud on', () => {
     expect(await screen.findByText('Every plan has unlimited members, installs, models and keys. Never priced per seat.')).toBeInTheDocument();
     const facts = async (name: string) => within(await screen.findByRole('region', { name })).getAllByRole('listitem').map((li) => li.textContent);
     expect(await facts('Free')).toEqual(['5,000 precedents', '10,000 requests a month', '5 requests a second']);
+    expect(await facts('Basic')).toEqual(['10,000 precedents', '50,000 requests a month', '10 requests a second', 'Then $1 per 10,000 requests']);
     expect(await facts('Team')).toEqual(['1,000,000 precedents', '5,000,000 requests a month', '200 requests a second', 'Then $1 per 10,000 requests']);
     expect((await facts('Enterprise')).slice(0, 2)).toEqual(['Unlimited precedents', 'Unlimited requests']);
     const team = await screen.findByRole('region', { name: 'Team' });

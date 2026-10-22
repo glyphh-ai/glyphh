@@ -251,7 +251,7 @@ describe('Try it', () => {
     await user.click(await screen.findByRole('button', { name: 'Decide' }));
     expect(await screen.findByText(/Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01\./)).toBeInTheDocument();
     expect(fake.state.requests).toBe(10_000);
-    await user.click(screen.getByRole('link', { name: 'Upgrade to Pro' }));
+    await user.click(screen.getByRole('link', { name: 'Upgrade to Basic' }));
     expect(router.state.location.pathname).toBe('/settings/plans');
   });
 

@@ -8,14 +8,14 @@ import { apiError, sessionHandler, v1 } from './server';
  * Ada Cloud as the server answers it with GLYPHH_ADA_CLOUD on: the account API says so (`ada_cloud`, the plans' and
  * the org's `cloud`), and the Ada API (`/api/ada/v1/*` here) answers from a small store that each write changes,
  * counting each decide against the plan's month as the server does (refused 403 E_LIMIT past it on Free, metered on
- * Pro and Team). `seen` keeps every request made to it, with its body, for tests to read.
+ * Basic, Pro and Team). `seen` keeps every request made to it, with its body, for tests to read.
  */
 
 const ada = (path: string) => `*/api/ada/v1${path}`;
 const at = '2026-10-20T09:00:00Z';
 
 /** The upgrade the server names past a plan's month: the first self-serve plan that reads more (allowance.py). */
-const upgradeFrom = (name: string) => (name === 'Free' ? 'Pro' : null);
+const upgradeFrom = (name: string) => (name === 'Free' ? 'Basic' : null);
 
 export const ticketSpec: Spec = examples.find((e) => e.id === 'tickets')!.spec;
 
@@ -200,7 +200,7 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro',
       const max = limits.requests_per_month;
       if (max !== null && !limits.overage && state.requests + n > max) {
         // As api/meter.py refuses past an unmetered month: not counted, with when it turns and the plan to move to.
-        const message = `Your ${plan} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on 2026-11-01. Upgrade to Pro (the connector's upgrade tool, or Billing on the platform) to read on now.`;
+        const message = `Your ${plan} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on 2026-11-01. Upgrade to ${upgradeFrom(plan)} (the connector's upgrade tool, or Billing on the platform) to read on now.`;
         return apiError(403, 'E_LIMIT', message, { reason: 'requests', used: state.requests, max, plan, upgrade: upgradeFrom(plan), resets_at: '2026-11-01' });
       }
       state.requests += n;

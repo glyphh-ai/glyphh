@@ -26,22 +26,26 @@ export type Plan = {
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
   /**
-   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10).
-   * `precedents`: what one node may hold, across its models (Free 5,000, Pro 50,000, Team 500,000). Null is unlimited.
+   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Basic 1, Pro 3,
+   * Team 10). `precedents`: what one node may hold, across its models (Free and Basic 5,000, Pro 50,000, Team
+   * 500,000). Null is unlimited.
    */
   limits: { machines: number | null; precedents: number | null };
   features: PlanFeatures;
   /** Whether each feature is built; a feature not in it (or no map at all) is built. */
   built?: { [feature: string]: boolean | undefined };
   markup_hidden: true;
+  /** Whether Glyphh hosts machines on it while hosting is on: Pro, Team, Enterprise; never Free or Basic. */
+  hosting?: boolean;
   /** Ada Cloud's limits, the org's whatever its people, models or keys; null (or missing) while Ada Cloud is off. */
   cloud?: CloudLimits | null;
 };
 
 /**
  * A plan's Ada Cloud limits (the server's cloud_* on a plan version): Free 5,000 precedents, 10,000 requests a month,
- * 5 a second; Pro 100,000, 1,000,000, 50; Team 1,000,000, 5,000,000, 200; Enterprise by contract (null: unlimited).
- * Past the month Pro and Team are metered (`overage`); Free is refused until the month turns.
+ * 5 a second; Basic 10,000, 50,000, 10; Pro 100,000, 1,000,000, 50; Team 1,000,000, 5,000,000, 200; Enterprise by
+ * contract (null: unlimited). Past the month Basic, Pro and Team are metered (`overage`); Free is refused until the
+ * month turns.
  */
 export type CloudLimits = {
   precedents: number | null;

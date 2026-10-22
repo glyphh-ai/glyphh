@@ -93,7 +93,7 @@ describe('Billing', () => {
   it('on Enterprise, offers no plan above, and never shows a rate: the contract sets them', async () => {
     server.use(
       http.get(v1('/me'), () =>
-        HttpResponse.json({ ...me, plan: plans[3], org: { ...me.org, renews_at: null, plan_until: '2027-10-01T00:00:00Z' }, precedents: { used: 5, limit: null } }),
+        HttpResponse.json({ ...me, plan: plans[4], org: { ...me.org, renews_at: null, plan_until: '2027-10-01T00:00:00Z' }, precedents: { used: 5, limit: null } }),
       ),
     );
     renderApp('/settings/billing');
@@ -108,7 +108,7 @@ describe('Billing', () => {
 
   it('shows a plan not among those listed, and a dash for a size without a rate', async () => {
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[1], name: 'Legacy', interval: 'year' } })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...plans[2], name: 'Legacy', interval: 'year' } })),
       http.get(v1('/rates'), () => HttpResponse.json({ ...rates, plans: { Legacy: { sizes: [rates.plans.Pro!.sizes[0]], volume_usd_per_gb_month: '0.20' } } })),
     );
     renderApp('/settings/billing');
@@ -163,7 +163,7 @@ describe('Billing while Glyphh hosts nothing and some features are not built', (
   });
 
   it('shows an org on Pro no hosting this month', async () => {
-    const pro = hostingOff.plans[1]!;
+    const pro = hostingOff.plans[2]!;
     server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: pro })), ...hostingOffHandlers());
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();

@@ -124,9 +124,10 @@ app.post('/v1/runtimes', async (c) => {
   const off = hostingOff();
   if (off) return off;
   const { name, size } = await c.req.json();
-  const { name: plan, limits, price_cents } = state.me.plan;
-  // Hosted machines are on the paid plans; each counts as one of the plan's runtime nodes, as a self-hosted one does.
-  if (price_cents === 0) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
+  const { name: plan, limits } = state.me.plan;
+  // Hosted machines are on the plans with hosting (not Free or Basic); each counts as one of the plan's runtime nodes,
+  // as a self-hosted one does.
+  if (!(state.me.plan.hosting ?? state.me.plan.price_cents !== 0)) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
   if (limits.machines !== null && state.machines.length + state.selfRuntimes.length >= limits.machines) {
     return refuse(403, 'E_LIMIT', `${plan} allows ${limits.machines} runtime nodes.`, 'machines');
   }
@@ -267,13 +268,14 @@ app.get('/v1/billing', (c) => {
   return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting, cloud: cloudUsage() });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
-// A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free has none.
+// A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free and
+// Basic have none (rrotor has no basic tier: a node on Basic runs as Free's).
 const licenceFor = (plan: (typeof data.plans)[number]) => {
   const now = new Date();
   for (const key of state.licenceKeys.keys) if (key.state === 'live') Object.assign(key, { state: 'revoked', revoked_at: now.toISOString() });
   state.nodes.max_nodes = plan.limits.machines;
   state.nodes.over = plan.limits.machines !== null && state.nodes.count > plan.limits.machines;
-  if (plan.price_cents === 0) {
+  if (plan.price_cents === 0 || plan.name === 'Basic') {
     state.licenceKeys.license_key = null;
     return;
   }

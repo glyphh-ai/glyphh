@@ -26,7 +26,7 @@ describe('Usage', () => {
   });
 
   it('says there is no limit on a plan without one, and no machines this month', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
     renderApp('/usage');
     expect(await screen.findByText('on the fullest node, no limit')).toBeInTheDocument();
     expect(screen.getByText('2,500,000')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('Usage’s runtime nodes', () => {
 
   it('on a plan without a limit, says so; a node with no precedents reported says that', async () => {
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 10, limit: null } })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 10, limit: null } })),
       http.get(v1('/license/nodes'), () => HttpResponse.json({ count: 1, max_nodes: null, over: false, nodes: [{ ...nodes.nodes[0]!, precedents: null }] })),
     );
     renderApp('/usage');

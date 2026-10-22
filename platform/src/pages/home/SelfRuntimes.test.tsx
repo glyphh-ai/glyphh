@@ -85,7 +85,7 @@ describe('the self-hosted runtimes on Runtimes', () => {
   it('issues an offline licence on Enterprise, for a year by default, and says where it goes', async () => {
     let sent: unknown;
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] })),
       http.post(v1('/runtimes/:id/offline-licence'), async ({ request }) => {
         sent = await request.json();
         return HttpResponse.json({ token: 'eyJwYXlsb2FkIjp7fX0', expires_at: '2027-10-18T00:00:00Z' });
@@ -110,7 +110,7 @@ describe('the self-hosted runtimes on Runtimes', () => {
 
   it('takes from 1 to 365 days, and shows a refusal', async () => {
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] })),
       http.post(v1('/runtimes/:id/offline-licence'), () => apiError(403, 'E_NOT_IN_PLAN', 'Offline licences are on Enterprise.', { reason: 'offline' })),
     );
     const { user, client } = renderApp('/');

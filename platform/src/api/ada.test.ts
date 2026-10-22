@@ -20,8 +20,8 @@ describe('Ada’s plan refusals', () => {
   });
 
   it('reads a 403 E_LIMIT for the month’s requests: the plan, its upgrade and when they start again', () => {
-    const error = new ApiError(403, { code: 'E_LIMIT', message: 'Used.', reason: 'requests', used: 10_000, max: 10_000, plan: 'Free', upgrade: 'Pro', resets_at: '2026-11-01' });
-    expect(adaRefusal(error)).toEqual({ kind: 'requests', plan: 'Free', upgrade: 'Pro', resetsAt: '2026-11-01' });
+    const error = new ApiError(403, { code: 'E_LIMIT', message: 'Used.', reason: 'requests', used: 10_000, max: 10_000, plan: 'Free', upgrade: 'Basic', resets_at: '2026-11-01' });
+    expect(adaRefusal(error)).toEqual({ kind: 'requests', plan: 'Free', upgrade: 'Basic', resetsAt: '2026-11-01' });
   });
 
   it('reads a failed job’s E_LIMIT for precedents', () => {

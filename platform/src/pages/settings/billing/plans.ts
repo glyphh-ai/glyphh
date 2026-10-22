@@ -17,8 +17,8 @@ export function priceText(plan: Plan): string {
   return per ? `${amount} / ${per}` : amount;
 }
 
-/** Whether Glyphh hosts machines on the plan (while hosting is on): every plan but Free. */
-export const hasHosting = (plan: Plan) => plan.price_cents !== 0;
+/** Whether Glyphh hosts machines on the plan (while hosting is on), as the server says: not Free or Basic. */
+export const hasHosting = (plan: Plan) => plan.hosting ?? plan.price_cents !== 0;
 
 /** The self-serve plans with hosting, as words: "Pro and Team". */
 export function hostingPlansText(plans: Plan[] | undefined): string {
@@ -81,7 +81,7 @@ export function cloudFacts(cloud: CloudLimits): PlanFact[] {
  * What a plan includes, as the server states it: its runtime nodes and its precedents per node, and
  * what it turns on, each feature not yet built marked as coming soon. With Ada Cloud on (`ada`) there are no runtimes:
  * no nodes, no precedents per node and none of the runtimes' own features; its cloud limits instead (the org's
- * precedents, requests a month and a second, and the price past the month on Pro and Team).
+ * precedents, requests a month and a second, and the price past the month on Basic, Pro and Team).
  */
 export function planFacts(plan: Plan, ada = false): PlanFact[] {
   const facts: PlanFact[] = [];

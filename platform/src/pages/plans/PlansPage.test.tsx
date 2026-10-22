@@ -29,6 +29,13 @@ describe('Choosing a plan', () => {
     expect(within(free).getByText('5,000 precedents per node')).toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
+    // Basic, between Free and Pro: one self-hosted node as on Free, and no hosting.
+    const basic = card('Basic');
+    expect(within(basic).getByText('$20')).toBeInTheDocument();
+    expect(within(basic).getByText('per month')).toBeInTheDocument();
+    expect(within(basic).getByText('1 runtime node')).toBeInTheDocument();
+    expect(within(basic).getByRole('button', { name: 'Switch to Basic' })).toBeInTheDocument();
+
     const team = card('Team');
     expect(within(team).getByText('Recommended')).toBeInTheDocument();
     expect(within(team).getByText('$299')).toBeInTheDocument();
@@ -60,7 +67,7 @@ describe('Choosing a plan', () => {
   it('shows a contract plan with a floor price as from that price a year, and a yearly self-serve plan', async () => {
     server.use(
       http.get(v1('/plans'), () =>
-        HttpResponse.json([...plans.slice(0, 2), { ...plans[2], interval: 'year' }, { ...plans[3], price_cents: 1_000_000, interval: 'year' }]),
+        HttpResponse.json([...plans.slice(0, 3), { ...plans[3], interval: 'year' }, { ...plans[4], price_cents: 1_000_000, interval: 'year' }]),
       ),
     );
     renderApp('/settings/plans');
@@ -146,7 +153,7 @@ describe('Choosing a plan', () => {
   });
 
   it('on a plan by contract, offers no change here: talk to us', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], org: { ...me.org, plan_until: '2027-10-01T00:00:00Z' } })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], org: { ...me.org, plan_until: '2027-10-01T00:00:00Z' } })));
     renderApp('/settings/plans');
     expect(await screen.findByText(/Your plan is by contract\. To change it,/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
@@ -167,12 +174,12 @@ describe('Choosing a plan', () => {
     );
     try {
       const { user } = renderApp('/settings/plans');
-      // The next plan up is the one recommended.
-      expect(await within(await screen.findByRole('region', { name: 'Pro' })).findByText('Recommended')).toBeInTheDocument();
-      expect(within(card('Team')).queryByText('Recommended')).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Upgrade to Pro' }));
+      // The next plan up is the one recommended: from Free, Basic.
+      expect(await within(await screen.findByRole('region', { name: 'Basic' })).findByText('Recommended')).toBeInTheDocument();
+      expect(within(card('Pro')).queryByText('Recommended')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Upgrade to Basic' }));
       await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/c/1'));
-      expect(body).toEqual({ plan: 'Pro' });
+      expect(body).toEqual({ plan: 'Basic' });
     } finally {
       location.restore();
     }
