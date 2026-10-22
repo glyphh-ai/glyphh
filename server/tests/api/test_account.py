@@ -31,6 +31,7 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "features": {"sync": True, "ha": False, "offline": False, "sso": False},
         "built": {"sync": False, "ha": False, "offline": True, "sso": False},
         "markup_hidden": True,
+        "hosting": True,
         "cloud": None,  # Ada Cloud is off
     }
     assert me["precedents"] == {"used": 0, "limit": 500_000} and me["hosting"]["machines"] == []

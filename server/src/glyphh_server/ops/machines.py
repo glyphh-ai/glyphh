@@ -20,7 +20,7 @@ from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.held import check_start
 from glyphh_server.ops.hosted import provision, require_hosting
 from glyphh_server.ops.link.presence import ONLINE
-from glyphh_server.ops.plans import org_version
+from glyphh_server.ops.plans import hosts, org_version
 from glyphh_server.ops.runtimes import FIRST, NOT_LINKED, month_of
 
 DEFAULT_NAME: str = "default"  # the machine the routes made for one runtime make
@@ -78,7 +78,7 @@ async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, siz
     require_hosting(fly.settings)
     await limits.lock_org(conn, who.org_id)
     version = await org_version(conn, who.org_id)
-    if version.self_serve and version.hosting_markup_pct is None:  # Free, Basic: no hosting
+    if not hosts(version):  # Free, Basic
         raise NotInPlan(ON_FREE, reason="hosting", plan=version.name)
     await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), version)
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)
