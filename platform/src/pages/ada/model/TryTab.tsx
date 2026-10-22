@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react';
 import { useDecide, type AdaModel, type Decision } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { caseFrom, outputOf, outputsOf, rolesOf, type RolePath } from '@/lib/spec';
 import { Button, Card, Chip, ProgressBar, Select, TextField } from '@/ui';
 import styles from '../ada.module.css';
@@ -66,7 +66,7 @@ export function TryTab({ model }: { model: AdaModel }) {
           {outputs.length > 1 && (
             <Select label="Decide" value={output} onChange={(e) => setOutput(e.target.value)} options={outputs.map((o) => ({ value: o, label: o === 'default' ? 'The outcome' : o }))} />
           )}
-          <ApiErrorNotice error={decide.error} />
+          <AdaErrorNotice error={decide.error} />
           <div className={styles.actions}>
             <Button variant="primary" type="submit" loading={decide.isPending}>
               Decide

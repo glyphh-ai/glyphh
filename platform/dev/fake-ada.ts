@@ -1,12 +1,15 @@
 import type { Hono } from 'hono';
-import type { AdaJob, AdaModel, AdaVersion, CloudKey, Spec } from '../src/api/ada.js';
+import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Spec } from '../src/api/ada.js';
+import { cloudLimits } from '../src/test/fixtures.js';
 
 /**
  * Ada Cloud's API for the fake server, at /ada/v1 (the platform's GLYPHH_ADA_URL=http://localhost:8080/ada), from a
  * store kept in memory: models and their versions, keys, and jobs that are done when first read. Not the kernel:
- * every decision is the most common outcome recorded, at its share.
+ * every decision is the most common outcome recorded, at its share. Each decide counts against the org's plan's month
+ * (`plan()`, the fake server's); past it, Free is refused 403 E_LIMIT as the server refuses it, Pro and Team go on,
+ * metered. Answers the usage, for /v1/me's and /v1/billing's `cloud`.
  */
-export function mountAda(app: Hono, port: number) {
+export function mountAda(app: Hono, port: number, plan: () => string): () => AdaUsage {
   const models: AdaModel[] = [];
   const versions = new Map<string, AdaVersion[]>();
   const outcomes = new Map<string, string[]>();
@@ -31,9 +34,27 @@ export function mountAda(app: Hono, port: number) {
     return v;
   };
 
-  app.get('/ada/v1/usage', (c) =>
-    c.json({ plan: 'Pro', models: models.length, precedents: { used: models.reduce((n, m) => n + m.precedents, 0), max: 100_000 }, requests: null }),
-  );
+  let requests = 0;
+  const month = () => new Date().toISOString().slice(0, 7);
+  const resetsAt = () => {
+    const d = new Date();
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  };
+  const limits = () => cloudLimits[plan()] ?? cloudLimits.Enterprise!;
+  const usage = (): AdaUsage => {
+    const { precedents, requests_per_month: max, requests_per_second, overage } = limits();
+    return {
+      plan: plan(),
+      month: month(),
+      resets_at: resetsAt(),
+      models: models.length,
+      precedents: { used: models.reduce((n, m) => n + m.precedents, 0), max: precedents },
+      requests: { used: requests, max, over: max !== null && overage ? Math.max(0, requests - max) : 0, overage },
+      requests_per_second,
+    };
+  };
+
+  app.get('/ada/v1/usage', (c) => c.json(usage()));
   app.get('/ada/v1/models', (c) => c.json({ models: models.map(({ spec: _spec, ...row }) => row) }));
   app.post('/ada/v1/models', async (c) => {
     const { name, spec } = (await c.req.json()) as { name: string; spec: Spec };
@@ -75,7 +96,14 @@ export function mountAda(app: Hono, port: number) {
     return c.json({ version: version(model.name, note ?? ''), active: true, job: null });
   });
   app.post('/ada/v1/decide', async (c) => {
-    const { model } = (await c.req.json()) as { model: string };
+    const { model, outputs: asked } = (await c.req.json()) as { model: string; outputs?: string[] };
+    const reads = Math.max(1, asked?.length ?? 0);
+    const { requests_per_month: max, overage } = limits();
+    if (max !== null && !overage && requests + reads > max) {
+      const body = { code: 'E_LIMIT', message: `Your ${plan()} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on ${resetsAt()}. Upgrade to Pro (the connector's upgrade tool, or Billing on the platform) to read on now.`, trace_id: 'dev-trace', reason: 'requests', used: requests, max, plan: plan(), upgrade: 'Pro', resets_at: resetsAt() };
+      return Response.json({ error: body }, { status: 403 });
+    }
+    requests += reads;
     const seen = outcomes.get(model) ?? [];
     const counts = new Map<string, number>();
     for (const o of seen) counts.set(o, (counts.get(o) ?? 0) + 1);
@@ -120,4 +148,5 @@ export function mountAda(app: Hono, port: number) {
     return c.json({ ...key, key: `glyphh_ak_${crypto.randomUUID().replaceAll('-', '')}` }, 201);
   });
   app.delete('/ada/v1/keys/:id', (c) => c.json(Object.assign(keys.find((k) => k.id === c.req.param('id'))!, { revoked_at: now() })));
+  return usage;
 }

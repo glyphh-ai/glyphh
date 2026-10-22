@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAdaLevers, usePatchSettings, type AdaModel, type LeverValue, type Levers, type VersionChange } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { effectText, leverFromText, leverProblem, levers as known } from '@/lib/spec';
 import { Button, Card, Chip, LoadingCard, TextField } from '@/ui';
 import { ChangeResult } from './ChangeResult';
@@ -34,7 +34,7 @@ export function SettingsTab({ model }: { model: AdaModel }) {
   // Kept here: the form starts afresh on the new version.
   const [change, setChange] = useState<VersionChange | null>(null);
   if (levers.isPending) return <LoadingCard lines={6} />;
-  if (levers.error) return <ApiErrorNotice error={levers.error} />;
+  if (levers.error) return <AdaErrorNotice error={levers.error} />;
   return <SettingsForm key={levers.data.version} model={model} levers={levers.data} change={change} setChange={setChange} />;
 }
 
@@ -78,7 +78,7 @@ function SettingsForm({ model, levers, change, setChange }: FormProps) {
           })}
         </div>
         <TextField label="Why" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Kept with the version" />
-        <ApiErrorNotice error={patch.error} />
+        <AdaErrorNotice error={patch.error} />
         {change && <ChangeResult model={model.name} change={change} />}
         <div className={styles.actions}>
           <Button variant="primary" type="submit" loading={patch.isPending} disabled={changed === 0 || Object.keys(problems).length > 0}>

@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useActivate, useAdaVersions, usePutSpec, type AdaModel, type AdaVersion, type VersionChange } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { date } from '@/lib/format';
 import { checkSpec, specText } from '@/lib/spec';
 import { Button, Card, Chip, CodeBlock, LoadingCard, TextField } from '@/ui';
@@ -62,7 +62,7 @@ function EditSpec({ model, onDone, onCancel }: { model: AdaModel; onDone: (chang
         A change that only reads the cases differently is live at once. Adding or taking away roles, or changing the seed, dimension or lexicon,
         rewrites the cases first while this version serves.
       </p>
-      <ApiErrorNotice error={put.error} />
+      <AdaErrorNotice error={put.error} />
       <div className={styles.actions}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
@@ -92,7 +92,7 @@ function Versions({ model }: { model: AdaModel }) {
     <Card>
       <h2 className={styles.cardTitle}>Versions</h2>
       {versions.isPending && <LoadingCard lines={3} />}
-      <ApiErrorNotice error={versions.error ?? activate.error} />
+      <AdaErrorNotice error={versions.error ?? activate.error} />
       {change && <ChangeResult model={model.name} change={change} />}
       {versions.data && (
         <div className={styles.tableBox}>

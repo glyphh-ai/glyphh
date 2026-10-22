@@ -36,11 +36,19 @@ describe('with Ada Cloud on', () => {
     for (const name of ['General', 'Billing', 'Members', 'Profile', 'Installs']) expect(within(rail).getByRole('link', { name })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.queryByText(/runtime node|per node|Sync across runtimes/)).not.toBeInTheDocument();
+    for (const fact of ['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']) {
+      expect(screen.getByText(fact)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Requests this month').nextElementSibling).toHaveTextContent('0 of 1,000,000');
   });
 
-  it('chooses a plan with no runtimes in it', async () => {
+  it('chooses a plan by its cloud caps, with no runtimes in it', async () => {
     renderApp('/settings/plans');
     expect(await screen.findByText('Every plan has unlimited members, installs, models and keys. Never priced per seat.')).toBeInTheDocument();
+    const facts = async (name: string) => within(await screen.findByRole('region', { name })).getAllByRole('listitem').map((li) => li.textContent);
+    expect(await facts('Free')).toEqual(['5,000 precedents', '10,000 requests a month', '5 requests a second']);
+    expect(await facts('Team')).toEqual(['1,000,000 precedents', '5,000,000 requests a month', '200 requests a second', 'Then $1 per 10,000 requests']);
+    expect((await facts('Enterprise')).slice(0, 2)).toEqual(['Unlimited precedents', 'Unlimited requests']);
     const team = await screen.findByRole('region', { name: 'Team' });
     expect(within(team).queryByText(/runtime|per node/i)).not.toBeInTheDocument();
   });

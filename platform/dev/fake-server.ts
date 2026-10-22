@@ -26,9 +26,12 @@ const serverLogs = process.env.FAKE_SERVER_LOGS === 'on';
 const adaCloud = process.env.FAKE_ADA === 'on';
 const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
 const app = new Hono();
+// With Ada Cloud on each plan carries its cloud limits, and /v1/me and /v1/billing the org's use of them (`cloud`).
+if (adaCloud) data.plans = data.plans.map((plan) => ({ ...plan, cloud: fixtures.cloudLimits[plan.name] ?? null }));
 const state = structuredClone(data);
 state.me.ada_cloud = adaCloud;
-if (adaCloud) mountAda(app, port);
+if (adaCloud) state.me.plan = data.plans.find((plan) => plan.name === state.me.plan.name) ?? state.me.plan;
+const cloudUsage = adaCloud ? mountAda(app, port, () => state.me.plan.name) : () => null;
 let nextKey = 10;
 let nextSelf = 10;
 let nextMachine = 10;
@@ -66,7 +69,7 @@ app.post('/oauth/token', (c) => c.json({ access_token: 'dev-access', token_type:
 app.post('/oauth/revoke', (c) => c.body(null, 200));
 
 // /v1
-app.get('/v1/me', (c) => c.json(state.me));
+app.get('/v1/me', (c) => c.json({ ...state.me, cloud: cloudUsage() }));
 app.patch('/v1/me', async (c) => c.json(Object.assign(state.me, { name: (await c.req.json()).name })));
 app.post('/v1/me/identities', async (c) => c.json({ url: `http://localhost:${port}/auth/${(await c.req.json()).provider}/start?link=1` }));
 app.delete('/v1/me/identities/:provider', (c) => {
@@ -261,7 +264,7 @@ app.delete('/v1/org/invites/:id', (c) => {
 });
 app.get('/v1/billing', (c) => {
   const { plan, org, precedents, hosting } = state.me;
-  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting });
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting, cloud: cloudUsage() });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
 // A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free has none.

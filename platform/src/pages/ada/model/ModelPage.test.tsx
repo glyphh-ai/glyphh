@@ -178,6 +178,29 @@ describe('Import', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }));
     expect(await screen.findByText('The spec has no role notes.')).toBeInTheDocument();
   });
+
+  it('shows an import refused past the plan’s precedents, with the way to the plans', async () => {
+    on();
+    const message = 'These cases add 200 precedents to the 4,900 the org holds: its plan allows 5,000.';
+    server.use(
+      http.get('*/api/ada/v1/jobs/:id', () =>
+        Response.json({
+          id: 'job-1',
+          model: 'tickets',
+          kind: 'import',
+          state: 'failed',
+          percent: 0,
+          error: { code: 'E_LIMIT', message, reason: 'precedents', used: 4_900, max: 5_000, adding: 200 },
+        }),
+      ),
+    );
+    const { user, router } = renderApp('/models/tickets?tab=import');
+    await user.upload(await screen.findByLabelText('File'), new File(['{"data":{}}\n'], 'cases.jsonl'));
+    await user.click(screen.getByRole('button', { name: 'Import' }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'See plans' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
 });
 
 describe('Try it', () => {
@@ -211,6 +234,52 @@ describe('Try it', () => {
     server.use(http.post('*/api/ada/v1/decide', () => Response.json({ outcome: null, expected_cost: null, probabilities: {}, ask: true, receipts: [], model: 'tickets', version: 2 })));
     await user.click(screen.getByRole('button', { name: 'Decide' }));
     expect(await screen.findByText(/Nothing is known yet/)).toBeInTheDocument();
+  });
+
+  it('counts each decide against the month', async () => {
+    const fake = on();
+    const { user } = renderApp('/models/tickets?tab=try');
+    await user.click(await screen.findByRole('button', { name: 'Decide' }));
+    await screen.findByRole('region', { name: 'Answer' });
+    expect(fake.state.requests).toBe(1);
+  });
+
+  it('says when Free’s month is used, when it starts again, and the plan to upgrade to', async () => {
+    const fake = adaFake({ models: [tickets()], plan: 'Free', requests: 10_000 });
+    server.use(...fake.handlers);
+    const { user, router } = renderApp('/models/tickets?tab=try');
+    await user.click(await screen.findByRole('button', { name: 'Decide' }));
+    expect(await screen.findByText(/Your Free plan's 10,000 Ada reads this month are used: they start again on 2026-11-01\./)).toBeInTheDocument();
+    expect(fake.state.requests).toBe(10_000);
+    await user.click(screen.getByRole('link', { name: 'Upgrade to Pro' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('offers to talk to us when no plan reads more', async () => {
+    on();
+    server.use(
+      http.post('*/api/ada/v1/decide', () =>
+        apiError(403, 'E_LIMIT', 'Your Team plan’s reads are used.', { reason: 'requests', used: 10, max: 10, plan: 'Team', upgrade: null, resets_at: '2026-11-01' }),
+      ),
+    );
+    const { user } = renderApp('/models/tickets?tab=try');
+    await user.click(await screen.findByRole('button', { name: 'Decide' }));
+    expect(await screen.findByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
+  });
+
+  it('says to wait when the plan’s calls a second are used', async () => {
+    on();
+    server.use(
+      http.post('*/api/ada/v1/decide', () =>
+        Response.json(
+          { error: { code: 'E_RATE', message: 'Your plan allows 50 Ada calls a second: try again in 2 seconds.', trace_id: 't', retry_after: 2, reason: 'rate', max: 50 } },
+          { status: 429, headers: { 'retry-after': '2' } },
+        ),
+      ),
+    );
+    const { user } = renderApp('/models/tickets?tab=try');
+    await user.click(await screen.findByRole('button', { name: 'Decide' }));
+    expect(await screen.findByText('Your plan allows 50 Ada calls a second: try again in 2 seconds.')).toBeInTheDocument();
   });
 });
 

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useCloudKeys, useCreateCloudKey, useRevokeCloudKey, type CloudKey, type NewCloudKey } from '@/api/ada';
 import { useSession } from '@/api/session';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from './AdaErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -50,7 +50,7 @@ export function AdaKeysPage() {
         actions={newKey}
       />
       {keys.isPending && <LoadingCard />}
-      <ApiErrorNotice error={keys.error} />
+      <AdaErrorNotice error={keys.error} />
       {keys.data?.length === 0 && (
         <EmptyState icon="key" title="No API keys yet" action={newKey}>
           Make one for each app that calls Ada, so you can revoke one without the others.
@@ -169,7 +169,7 @@ function NewKeyDialog({ onClose }: { onClose: () => void }) {
         {days === 'never' && (
           <ErrorNotice message="This key never expires. If it leaks, it works until you revoke it. Choose an expiry unless you must." />
         )}
-        <ApiErrorNotice error={create.error} />
+        <AdaErrorNotice error={create.error} />
       </form>
     </Dialog>
   );

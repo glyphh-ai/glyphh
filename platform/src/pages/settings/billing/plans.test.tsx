@@ -1,7 +1,21 @@
 import { render, screen, within } from '@testing-library/react';
-import { hostingOff, plans, rates } from '@/test/fixtures';
+import { adaPlans, hostingOff, plans, rates } from '@/test/fixtures';
 import { HostingRates } from './HostingRates';
 import { factText, machinesText, planFacts, precedentsText, priceText } from './plans';
+
+describe('plan wording with Ada Cloud on', () => {
+  it('shows each plan’s cloud caps in place of runtime nodes and precedents per node, and the price past a metered month', () => {
+    const [free, pro, , enterprise] = adaPlans;
+    expect(planFacts(free!, true).map(factText)).toEqual(['5,000 precedents', '10,000 requests a month', '5 requests a second']);
+    expect(planFacts(pro!, true).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
+    expect(planFacts(enterprise!, true).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'SSO and SAML', 'Roles', 'Audit logs']);
+  });
+
+  it('says nothing of the cloud with Ada Cloud off, or when an older server sends no cloud limits', () => {
+    expect(planFacts(adaPlans[1]!).map(factText)).toEqual(['3 runtime nodes', '50,000 precedents per node', 'Sync across runtimes']);
+    expect(planFacts(plans[0]!, true)).toEqual([]);
+  });
+});
 
 describe('plan wording', () => {
   it.each([

@@ -35,6 +35,19 @@ export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; h
       </div>
       {hosting && !plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
 
+      {/* With Ada Cloud on, the month's requests in place of hosting: the count, and what is past it on a metered plan. */}
+      {me.ada_cloud === true && me.cloud && (
+        <div className={styles.usageLine}>
+          <span>Requests this month</span>
+          <span>
+            {me.cloud.requests.max === null
+              ? me.cloud.requests.used.toLocaleString('en-GB')
+              : `${me.cloud.requests.used.toLocaleString('en-GB')} of ${me.cloud.requests.max.toLocaleString('en-GB')}`}
+            {me.cloud.requests.over > 0 && ` · ${me.cloud.requests.over.toLocaleString('en-GB')} over`}
+          </span>
+        </div>
+      )}
+
       {hosting && hasHosting(plan) && (
         <div className={styles.usageLine}>
           <span>Hosting this month</span>

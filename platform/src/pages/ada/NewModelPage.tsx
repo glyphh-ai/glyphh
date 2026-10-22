@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useCreateAdaModel } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from './AdaErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { checkSpec, examples, modelNamePattern, specText } from '@/lib/spec';
 import { Button, Card, Select, TextField } from '@/ui';
@@ -44,7 +44,7 @@ export function NewModelPage() {
             <Select label="Start from" value={start} onChange={(e) => pick(e.target.value)} options={starts} />
           </div>
           <SpecEditor value={text} onChange={setText} checked={checked} />
-          <ApiErrorNotice error={create.error} />
+          <AdaErrorNotice error={create.error} />
           <div className={styles.actions}>
             <Button variant="ghost" onClick={() => navigate('/models')}>
               Cancel

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAdaModel, useDeleteAdaModel, type AdaModel } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { plural } from '@/lib/format';
 import { Button, Dialog, LoadingCard, panelId, tabId, Tabs, TextField, type Tab } from '@/ui';
@@ -46,7 +46,7 @@ export function ModelPage() {
         }
       />
       {model.isPending && <LoadingCard />}
-      <ApiErrorNotice error={model.error} />
+      <AdaErrorNotice error={model.error} />
       {model.data && (
         <div className={styles.stack}>
           <Tabs label="Model" tabs={tabs} value={tab} onChange={(id) => setParams({ tab: id }, { replace: true })} />
@@ -97,7 +97,7 @@ function DeleteModelDialog({ model, onClose }: { model: AdaModel; onClose: () =>
       }
     >
       <TextField label="Type the model’s name" mono value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus />
-      <ApiErrorNotice error={remove.error} />
+      <AdaErrorNotice error={remove.error} />
     </Dialog>
   );
 }

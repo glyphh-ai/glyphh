@@ -113,10 +113,13 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
   const forbidden = (c: Context) => c.json(errorBody('E_FORBIDDEN', 'That request did not come from this site.'), 403);
   const noSession = (c: Context) => c.json(errorBody('E_SIGNED_OUT', 'You are signed out. Log in again.'), 401);
 
-  /** The answer passed back as the server gave it, keeping any cookie set on the way (a renewed session). */
+  /**
+   * The answer passed back as the server gave it, keeping any cookie set on the way (a renewed session), and a 429's
+   * Retry-After (Ada's E_RATE), so the page knows when to ask again.
+   */
   const passBack = (c: Context, upstream: Response) => {
     const headers: Record<string, string> = { 'cache-control': 'no-store' };
-    for (const name of ['content-type', 'x-request-id']) {
+    for (const name of ['content-type', 'x-request-id', 'retry-after']) {
       const value = upstream.headers.get(name);
       if (value) headers[name] = value;
     }

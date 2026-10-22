@@ -1,17 +1,21 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { AdaJob, AdaModel, AdaVersion, CloudKey, Decision, Spec } from '@/api/ada';
+import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Decision, Spec } from '@/api/ada';
 import { examples } from '@/lib/spec';
-import { me } from './fixtures';
+import { adaPlans, cloudLimits, me } from './fixtures';
 import { apiError, sessionHandler, v1 } from './server';
 
 /**
- * Ada Cloud as the server answers it with GLYPHH_ADA_CLOUD on: the account API says so (`ada_cloud`), and the Ada
- * API (`/api/ada/v1/*` here) answers from a small store that each write changes. `seen` keeps every request made to
- * it, with its body, for tests to read.
+ * Ada Cloud as the server answers it with GLYPHH_ADA_CLOUD on: the account API says so (`ada_cloud`, the plans' and
+ * the org's `cloud`), and the Ada API (`/api/ada/v1/*` here) answers from a small store that each write changes,
+ * counting each decide against the plan's month as the server does (refused 403 E_LIMIT past it on Free, metered on
+ * Pro and Team). `seen` keeps every request made to it, with its body, for tests to read.
  */
 
 const ada = (path: string) => `*/api/ada/v1${path}`;
 const at = '2026-10-20T09:00:00Z';
+
+/** The upgrade the server names past a plan's month: the first self-serve plan that reads more (allowance.py). */
+const upgradeFrom = (name: string) => (name === 'Free' ? 'Pro' : null);
 
 export const ticketSpec: Spec = examples.find((e) => e.id === 'tickets')!.spec;
 
@@ -72,7 +76,7 @@ export const backtestResult = {
 
 type Seen = { method: string; path: string; body: unknown };
 
-export function adaFake({ models = [] as AdaModel[], jobSteps = 2 } = {}) {
+export function adaFake({ models = [] as AdaModel[], jobSteps = 2, plan = 'Pro', requests = 0 } = {}) {
   const state = {
     models: structuredClone(models),
     versions: new Map<string, AdaVersion[]>(),
@@ -80,6 +84,24 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2 } = {}) {
     jobs: new Map<string, { job: AdaJob; reads: number; result: Record<string, unknown> | null; download?: AdaJob['download'] }>(),
     seen: [] as Seen[],
     precedents: 0,
+    /** Requests this month (decides; a decide of several outputs counts once per output). */
+    requests,
+  };
+  const limits = cloudLimits[plan]!;
+  const planView = { ...adaPlans.find((p) => p.name === plan)! };
+
+  /** `GET /v1/usage`, and `cloud` on /v1/me, as the server answers them. */
+  const usage = (): AdaUsage => {
+    const max = limits.requests_per_month;
+    return {
+      plan,
+      month: '2026-10',
+      resets_at: '2026-11-01',
+      models: state.models.length,
+      precedents: { used: state.models.reduce((n, m) => n + m.precedents, 0), max: limits.precedents },
+      requests: { used: state.requests, max, over: max !== null && limits.overage ? Math.max(0, state.requests - max) : 0, overage: limits.overage },
+      requests_per_second: limits.requests_per_second,
+    };
   };
   for (const model of state.models) {
     state.versions.set(model.name, [{ version: model.version, note: 'made', made_by: 'u-chris', made_at: at, active: true, backtest: null, ready: true, gone: false, retired_at: null, reencoded: false }]);
@@ -119,16 +141,15 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2 } = {}) {
 
   const handlers: HttpHandler[] = [
     sessionHandler(),
-    http.get(v1('/me'), () => HttpResponse.json({ ...me, ada_cloud: true })),
+    http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: planView, ada_cloud: true, cloud: usage() })),
+    http.get(v1('/plans'), () => HttpResponse.json(adaPlans)),
     // Glyphh hosts no machines with Ada Cloud on.
     http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })),
     http.all(ada('/*'), async ({ request }) => {
       await record(request, new URL(request.url).pathname.replace('/api/ada/v1', ''));
       return undefined;
     }),
-    http.get(ada('/usage'), () =>
-      HttpResponse.json({ plan: 'Pro', models: state.models.length, precedents: { used: state.models.reduce((n, m) => n + m.precedents, 0), max: 100_000 }, requests: null }),
-    ),
+    http.get(ada('/usage'), () => HttpResponse.json(usage())),
     http.get(ada('/models'), () => HttpResponse.json({ models: state.models.map(({ spec: _spec, ...row }) => row) })),
     http.post(ada('/models'), async ({ request }) => {
       const { name, spec } = (await request.json()) as { name: string; spec: Spec };
@@ -174,7 +195,15 @@ export function adaFake({ models = [] as AdaModel[], jobSteps = 2 } = {}) {
       return HttpResponse.json({ version: newVersion(name, true, note ?? ''), active: true, job: null });
     }),
     http.post(ada('/decide'), async ({ request }) => {
-      const body = (await request.json()) as { model: string };
+      const body = (await request.json()) as { model: string; outputs?: string[] };
+      const n = Math.max(1, body.outputs?.length ?? 0);
+      const max = limits.requests_per_month;
+      if (max !== null && !limits.overage && state.requests + n > max) {
+        // As api/meter.py refuses past an unmetered month: not counted, with when it turns and the plan to move to.
+        const message = `Your ${plan} plan's ${max.toLocaleString('en-US')} Ada reads this month are used: they start again on 2026-11-01. Upgrade to Pro (the connector's upgrade tool, or Billing on the platform) to read on now.`;
+        return apiError(403, 'E_LIMIT', message, { reason: 'requests', used: state.requests, max, plan, upgrade: upgradeFrom(plan), resets_at: '2026-11-01' });
+      }
+      state.requests += n;
       return HttpResponse.json({ ...decision, model: body.model, version: found(body.model)?.version ?? 1 });
     }),
     http.post(ada('/models/:name/imports'), ({ params }) => {

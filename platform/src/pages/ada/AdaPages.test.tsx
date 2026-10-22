@@ -20,6 +20,8 @@ describe('Ada Home', () => {
     expect(screen.getByRole('button', { name: 'Copy connector URL' })).toBeInTheDocument();
     expect(await screen.findByText('of 100,000 precedents')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Precedents' })).toHaveAttribute('aria-valuenow', '1240');
+    expect(screen.getByText('of 1,000,000 requests')).toBeInTheDocument();
+    expect(await screen.findByText('Past 1,000,000, requests go on at $1 per 10,000. The count starts again on 1 Nov 2026.')).toBeInTheDocument();
   });
 
   it('starts a first model from the empty state', async () => {
@@ -136,22 +138,47 @@ describe('Ada API Keys', () => {
 });
 
 describe('Ada Usage', () => {
-  it('shows precedents against the plan, requests not counted yet, and each model’s precedents', async () => {
-    on();
+  it('shows precedents and requests against the plan, the month counted, its price past it, and each model’s precedents', async () => {
+    const fake = adaFake({ models: [tickets()], requests: 4_200 });
+    server.use(...fake.handlers);
     renderApp('/usage');
-    expect(await screen.findByText('On Pro.')).toBeInTheDocument();
+    expect(await screen.findByText('On Pro. October 2026, counted in UTC: requests start again on 1 Nov 2026.')).toBeInTheDocument();
     expect(screen.getByText('of 100,000 precedents')).toBeInTheDocument();
-    expect(screen.getByText('Not counted yet.')).toBeInTheDocument();
+    expect(screen.getByText('Across 1 model.')).toBeInTheDocument();
+    expect(screen.getByText('of 1,000,000 requests')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Requests this month' })).toHaveAttribute('aria-valuenow', '4200');
+    expect(await screen.findByText('Past 1,000,000, requests go on at $1 per 10,000. The count starts again on 1 Nov 2026.')).toBeInTheDocument();
+    expect(screen.getByText('Up to 50 calls a second.')).toBeInTheDocument();
     expect(within(await screen.findByRole('list', { name: 'Precedents by model' })).getByText('1,240 precedents')).toBeInTheDocument();
   });
 
-  it('shows requests against the plan once the server counts them, and no cap when there is none', async () => {
-    on();
-    server.use(http.get('*/api/ada/v1/usage', () => Response.json({ plan: 'Enterprise', models: 1, precedents: { used: 10, max: null }, requests: { used: 4_200, max: 1_000_000 } })));
+  it('shows the requests past a metered month, as billed', async () => {
+    server.use(...adaFake({ models: [tickets()], plan: 'Team', requests: 5_012_345 }).handlers);
     renderApp('/usage');
-    expect(await screen.findByText('of 1,000,000')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Requests this month' })).toHaveAttribute('aria-valuenow', '4200');
+    expect(await screen.findByText('12,345 past the month, billed at $1 per 10,000. The count starts again on 1 Nov 2026.')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Requests this month' })).toHaveAttribute('aria-valuenow', '5000000');
+  });
+
+  it('says when Free’s requests stop, and once they are used, the way to more', async () => {
+    server.use(...adaFake({ models: [tickets()], plan: 'Free', requests: 2_000 }).handlers);
+    const first = renderApp('/usage');
+    expect(await screen.findByText('Past 10,000, requests stop until 1 Nov 2026.')).toBeInTheDocument();
+    first.unmount();
+
+    server.use(...adaFake({ models: [tickets()], plan: 'Free', requests: 10_000 }).handlers);
+    const { user, router } = renderApp('/usage');
+    expect(await screen.findByText(/This month’s requests are used: they start again on 1 Nov 2026\./)).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Upgrade for more' }));
+    expect(router.state.location.pathname).toBe('/settings/plans');
+  });
+
+  it('shows no cap when the plan has none (by contract)', async () => {
+    server.use(...adaFake({ models: [tickets()], plan: 'Enterprise', requests: 4_200 }).handlers);
+    renderApp('/usage');
+    expect(await screen.findByText('requests, no limit')).toBeInTheDocument();
     expect(screen.getByText('precedents, no limit')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Requests this month' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/calls a second/)).not.toBeInTheDocument();
   });
 
   it('shows the refusal when usage cannot be read', async () => {

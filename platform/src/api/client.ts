@@ -6,15 +6,25 @@ export class ApiError extends Error {
   readonly code: string;
   readonly traceId: string | undefined;
   readonly detail: Record<string, unknown>;
+  /** Seconds to wait before asking again, from a 429's Retry-After header. */
+  readonly retryAfter: number | undefined;
 
-  constructor(status: number, body: ApiErrorBody['error']) {
+  constructor(status: number, body: ApiErrorBody['error'], retryAfter?: number) {
     super(body.message);
     this.name = 'ApiError';
     this.status = status;
     this.code = body.code;
     this.traceId = body.trace_id;
     this.detail = body;
+    this.retryAfter = retryAfter;
   }
+}
+
+/** Retry-After as seconds; the server sends no HTTP date, so anything but a number is none. */
+function retryAfter(response: Response): number | undefined {
+  const header = response.headers.get('retry-after');
+  const value = header === null ? Number.NaN : Number(header);
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 /** The platform's own sign-in has ended; the page should go to /login. */
@@ -42,7 +52,7 @@ export async function readResponse<T>(response: Response): Promise<T> {
   const data: unknown = text ? JSON.parse(text) : undefined;
   if (!response.ok) {
     const error = (data as ApiErrorBody | undefined)?.error;
-    throw new ApiError(response.status, error ?? { code: 'E_HTTP', message: 'Something went wrong. Try again.' });
+    throw new ApiError(response.status, error ?? { code: 'E_HTTP', message: 'Something went wrong. Try again.' }, retryAfter(response));
   }
   return data as T;
 }

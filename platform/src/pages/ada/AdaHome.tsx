@@ -1,12 +1,13 @@
 import { Link, useNavigate } from 'react-router';
 import { useAdaModels, useAdaUsage } from '@/api/ada';
+import { useMe } from '@/api/queries';
 import { useSession } from '@/api/session';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date, plural } from '@/lib/format';
 import { Button, Card, Chip, CopyField, EmptyState, LoadingCard } from '@/ui';
-import { PrecedentsMeter } from './AdaUsagePage';
+import { AdaErrorNotice } from './AdaErrorNotice';
+import { PrecedentsMeter, RequestsMeter, RequestsNote } from './AdaUsagePage';
 import styles from './ada.module.css';
 
 /** Home, with Ada Cloud on: the org's models, what they use of the plan, and the connector to add in Claude. */
@@ -15,6 +16,7 @@ export function AdaHome() {
   const session = useSession();
   const models = useAdaModels();
   const usage = useAdaUsage();
+  const me = useMe();
   const connector = session.data ? `${session.data.serverUrl}/mcp` : null;
 
   const newModel = (
@@ -39,8 +41,14 @@ export function AdaHome() {
               {usage.data?.plan && <Chip tone="violet">{usage.data.plan}</Chip>}
             </div>
             {usage.isPending && <LoadingCard lines={2} />}
-            <ApiErrorNotice error={usage.error} />
-            {usage.data && <PrecedentsMeter usage={usage.data} />}
+            <AdaErrorNotice error={usage.error} />
+            {usage.data && (
+              <>
+                <PrecedentsMeter usage={usage.data} />
+                <RequestsMeter usage={usage.data} />
+                <RequestsNote usage={usage.data} centsPer10k={me.data?.plan.cloud?.overage_cents_per_10k} />
+              </>
+            )}
             <Link to="/usage" className={styles.meta}>
               See usage
             </Link>
@@ -48,7 +56,7 @@ export function AdaHome() {
         </div>
 
         {models.isPending && <LoadingCard />}
-        <ApiErrorNotice error={models.error} />
+        <AdaErrorNotice error={models.error} />
         {models.data?.length === 0 && (
           <EmptyState icon="model" title="No models yet" action={newModel}>
             Describe your cases once as a spec, load your history, and ask. Or ask Claude to make one with the connector.

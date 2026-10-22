@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router';
 import { useAdaModels } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from './AdaErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
 import { Button, Card, EmptyState, LoadingCard } from '@/ui';
@@ -20,7 +20,7 @@ export function AdaModelsPage() {
     <>
       <PageHeader title="Models" description="Each model decides from its own precedents. Open one to change it, load cases, try it or tune it." actions={newModel} />
       {models.isPending && <LoadingCard />}
-      <ApiErrorNotice error={models.error} />
+      <AdaErrorNotice error={models.error} />
       {models.data?.length === 0 && (
         <EmptyState icon="model" title="No models yet" action={newModel}>
           Describe your cases once as a spec. Claude can write it with you through the connector.

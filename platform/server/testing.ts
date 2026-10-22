@@ -73,7 +73,24 @@ export function fakeServer() {
   server.patch('/v1/me', async (c) => c.json({ id: 'u1', name: (await c.req.json()).name }));
   server.delete('/v1/installs/:id', (c) => c.body(null, 204));
   server.get('/v1/org/members', (c) => c.json([], 200));
-  server.get('/v1/usage', (c) => c.json({ plan: 'Pro', models: 0, precedents: { used: 0, max: 100_000 }, requests: null }));
+  server.get('/v1/usage', (c) =>
+    c.json({
+      plan: 'Pro',
+      month: '2026-10',
+      resets_at: '2026-11-01',
+      models: 0,
+      precedents: { used: 0, max: 100_000 },
+      requests: { used: 0, max: 1_000_000, over: 0, overage: true },
+      requests_per_second: 50,
+    }),
+  );
+  // Ada's 429 for more calls a second than the plan allows, with when to ask again.
+  server.post('/v1/decide', () =>
+    Response.json(
+      { error: { code: 'E_RATE', message: 'Your plan allows 5 Ada calls a second: try again in 1 second.', trace_id: 't-rate', retry_after: 1, reason: 'rate', max: 5 } },
+      { status: 429, headers: { 'retry-after': '1' } },
+    ),
+  );
   server.post('/v1/org/invites', () =>
     Response.json({ error: { code: 'E_LIMIT', message: 'Your plan allows 1 member.', trace_id: 't-lim', limit: 'members' } }, { status: 403 }),
   );

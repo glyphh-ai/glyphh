@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import { modelReads, uploadFile, useStartImport, type AdaModel, type ImportFormat, type Imported } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { csvHeader, guessMapping, type Target } from '@/lib/csv';
 import { plural } from '@/lib/format';
 import { outputsOf, rolesOf } from '@/lib/spec';
@@ -128,7 +128,7 @@ export function ImportTab({ model }: { model: AdaModel }) {
           </p>
         )}
 
-        <ApiErrorNotice error={start.error ?? uploadError} />
+        <AdaErrorNotice error={start.error ?? uploadError} />
         {uploading && (
           <p className={styles.meta} role="status">
             Sending {file?.name}…

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useAdaJob, type AdaJob } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ErrorNotice, ProgressBar } from '@/ui';
+import { AdaErrorNotice } from './AdaErrorNotice';
 import styles from './ada.module.css';
 
 const stateText: Record<string, string> = {
@@ -28,9 +28,10 @@ export function JobProgress({ id, label, onDone, children }: { id: string; label
     }
   }, [data, onDone]);
 
-  if (job.error) return <ApiErrorNotice error={job.error} />;
+  if (job.error) return <AdaErrorNotice error={job.error} />;
   if (!data) return <p className={styles.meta}>{label}…</p>;
-  if (data.state === 'failed') return <ErrorNotice message={data.error?.message ?? 'The job failed.'} />;
+  // A job refused by the plan (an import past its precedents) says so with the way on, as a call's refusal does.
+  if (data.state === 'failed') return data.error ? <AdaErrorNotice error={data.error} /> : <ErrorNotice message="The job failed." />;
   if (data.state === 'done') return <>{children?.(data)}</>;
   const percent = data.percent ?? 0;
   return (

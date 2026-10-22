@@ -1,5 +1,6 @@
 import type {
   AuditEvent,
+  CloudLimits,
   HostingOff,
   Install,
   Invite,
@@ -46,6 +47,17 @@ export const plans: Plan[] = [
     markup_hidden: true,
   },
 ];
+
+/** Each plan's Ada Cloud limits, as the server seeds them (glyphh_server/db/seed.py): a version's cloud_*. */
+export const cloudLimits: Record<string, CloudLimits> = {
+  Free: { precedents: 5_000, requests_per_month: 10_000, requests_per_second: 5, overage: false, overage_cents_per_10k: null },
+  Pro: { precedents: 100_000, requests_per_month: 1_000_000, requests_per_second: 50, overage: true, overage_cents_per_10k: 100 },
+  Team: { precedents: 1_000_000, requests_per_month: 5_000_000, requests_per_second: 200, overage: true, overage_cents_per_10k: 100 },
+  Enterprise: { precedents: null, requests_per_month: null, requests_per_second: null, overage: false, overage_cents_per_10k: null },
+};
+
+/** The plans as `GET /v1/plans` lists them with Ada Cloud on: each with its cloud limits. */
+export const adaPlans: Plan[] = plans.map((plan) => ({ ...plan, cloud: cloudLimits[plan.name]! }));
 
 const pro = plans[1]!;
 

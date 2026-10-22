@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useStartExport, type AdaModel } from '@/api/ada';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { AdaErrorNotice } from '../AdaErrorNotice';
 import { ButtonLink, Card, Select, Button } from '@/ui';
 import { JobProgress } from '../JobProgress';
 import styles from '../ada.module.css';
@@ -26,7 +26,7 @@ export function ExportTab({ model }: { model: AdaModel }) {
       <form className={styles.form} onSubmit={submit}>
         <p className={styles.about}>Your model is yours: export it whenever you like. A JSON Lines export imports into a model of the same spec and answers the same.</p>
         <Select label="Format" value={format} onChange={(e) => setFormat(e.target.value as 'jsonl' | 'ada_sqlite')} options={formats} />
-        <ApiErrorNotice error={start.error} />
+        <AdaErrorNotice error={start.error} />
         {job && (
           <JobProgress key={job} id={job} label="Exporting">
             {(done) =>

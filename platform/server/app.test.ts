@@ -355,6 +355,14 @@ describe('/api/ada/v1/*', () => {
     const res = await ctx.request('/api/ada/v1/models', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site', cookie: sessionCookie() }, body: '{}' });
     expect(res.status).toBe(403);
   });
+
+  it('passes back a 429 with its Retry-After, so the page knows when to ask again', async () => {
+    const ctx = setup();
+    const res = await ctx.request('/api/ada/v1/decide', { method: 'POST', headers: { ...origin, cookie: sessionCookie(), 'content-type': 'application/json' }, body: '{}' });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('1');
+    expect(((await body(res)).error as { code: string }).code).toBe('E_RATE');
+  });
 });
 
 describe('PUT /api/ada/v1/uploads/:link', () => {

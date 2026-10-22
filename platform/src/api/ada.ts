@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adaApi, readResponse } from './client';
+import { adaApi, ApiError, readResponse } from './client';
 import { useMe } from './queries';
-import type { IsoDate, Uuid } from './types';
+import type { CloudUsage, IsoDate, Uuid } from './types';
 
 /**
  * Ada Cloud's API (`glyphh_ada/api` in the server, at https://ada.glyphh.ai), reached through /api/ada/v1 with the
@@ -99,13 +99,40 @@ export type Decision = {
   version: number;
 };
 
-/** `GET /v1/usage`: the precedents the org's models hold against its plan's cap (null: none); requests null until counted. */
-export type AdaUsage = {
-  plan: string | null;
-  models: number;
-  precedents: { used: number; max: number | null };
-  requests: { used: number; max: number | null } | null;
-};
+/**
+ * `GET /v1/usage`: the org's models, the precedents they hold and the requests this month, against the plan's (the
+ * same shape as `cloud` on /v1/me and /v1/billing).
+ */
+export type AdaUsage = CloudUsage;
+
+/**
+ * Ada's plan refusals, with what the platform says beside the server's words: 429 E_RATE (more calls a second than the
+ * plan allows; again after Retry-After), and 403 E_LIMIT, `requests` (the month's are used, on a plan that is not
+ * metered: `upgrade` names the plan that reads more, null for talk to us, `resets_at` when they start again) or
+ * `precedents` (a write past the plan's precedents).
+ */
+export type AdaRefusal =
+  | { kind: 'rate'; retryAfter: number | null }
+  | { kind: 'requests'; plan: string | null; upgrade: string | null; resetsAt: string | null }
+  | { kind: 'precedents'; used: number | null; max: number | null };
+
+const numberOr = (value: unknown) => (typeof value === 'number' ? value : null);
+const stringOr = (value: unknown) => (typeof value === 'string' ? value : null);
+
+/** Which plan refusal this is, if it is one: from a call's ApiError, or a failed job's error. */
+export function adaRefusal(error: unknown): AdaRefusal | null {
+  const detail: Record<string, unknown> | null =
+    error instanceof ApiError ? error.detail : typeof error === 'object' && error !== null && 'code' in error ? (error as Record<string, unknown>) : null;
+  if (!detail) return null;
+  if (detail.code === 'E_RATE') {
+    const header = error instanceof ApiError ? error.retryAfter : undefined;
+    return { kind: 'rate', retryAfter: header ?? numberOr(detail.retry_after) };
+  }
+  if (detail.code !== 'E_LIMIT') return null;
+  if (detail.reason === 'requests') return { kind: 'requests', plan: stringOr(detail.plan), upgrade: stringOr(detail.upgrade), resetsAt: stringOr(detail.resets_at) };
+  if (detail.reason === 'precedents') return { kind: 'precedents', used: numberOr(detail.used), max: numberOr(detail.max) };
+  return null;
+}
 
 export type CloudKey = { id: Uuid; name: string; clearance: number; created_at: IsoDate; expires_at: IsoDate | null; revoked_at: IsoDate | null };
 export type NewCloudKey = CloudKey & { key: string };

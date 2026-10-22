@@ -1,5 +1,5 @@
 import { feature, featureNames } from '@/api/plans';
-import type { FeatureName, Plan } from '@/api/types';
+import type { CloudLimits, FeatureName, Plan } from '@/api/types';
 import { listText, money } from '@/lib/format';
 import type { IconName } from '@/ui';
 
@@ -58,14 +58,36 @@ export type PlanFact = { icon: IconName; text: string; soon?: boolean };
 /** A fact as one line: "Sync across runtimes", or "Coming soon: Sync across runtimes". */
 export const factText = (fact: PlanFact) => (fact.soon ? `Coming soon: ${fact.text}` : fact.text);
 
+const count = (value: number) => value.toLocaleString('en-GB');
+
+/**
+ * A plan's Ada Cloud limits as lines: its precedents, its requests a month and a second, and on a metered plan what
+ * requests past the month cost ("Then $1 per 10,000 requests"). Null is by contract: unlimited (Enterprise), and no
+ * line for the calls a second.
+ */
+export function cloudFacts(cloud: CloudLimits): PlanFact[] {
+  const facts: PlanFact[] = [
+    { icon: 'model', text: cloud.precedents === null ? 'Unlimited precedents' : `${count(cloud.precedents)} precedents` },
+    { icon: 'monitor', text: cloud.requests_per_month === null ? 'Unlimited requests' : `${count(cloud.requests_per_month)} requests a month` },
+  ];
+  if (cloud.requests_per_second !== null) facts.push({ icon: 'monitor', text: `${count(cloud.requests_per_second)} requests a second` });
+  if (cloud.overage && cloud.requests_per_month !== null && cloud.overage_cents_per_10k) {
+    facts.push({ icon: 'card', text: `Then ${money(cloud.overage_cents_per_10k)} per 10,000 requests` });
+  }
+  return facts;
+}
+
 /**
  * What a plan includes, as the server states it: its runtime nodes and its precedents per node, and
  * what it turns on, each feature not yet built marked as coming soon. With Ada Cloud on (`ada`) there are no runtimes:
- * no nodes, no precedents per node and none of the runtimes' own features.
+ * no nodes, no precedents per node and none of the runtimes' own features; its cloud limits instead (the org's
+ * precedents, requests a month and a second, and the price past the month on Pro and Team).
  */
 export function planFacts(plan: Plan, ada = false): PlanFact[] {
   const facts: PlanFact[] = [];
-  if (!ada) {
+  if (ada) {
+    if (plan.cloud) facts.push(...cloudFacts(plan.cloud));
+  } else {
     facts.push({ icon: 'chip', text: machinesText(plan.limits.machines) });
     const precedents = precedentsText(plan.limits.precedents);
     if (precedents) facts.push({ icon: 'model', text: precedents });
