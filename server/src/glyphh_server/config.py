@@ -5,7 +5,40 @@ from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class AdaCloudSettings(BaseSettings):
+    """Ada Cloud (docs/specs/ada-cloud.md): off by default. Off, nothing of it is reachable (no host routes to it) and
+    its worker processes idle without touching the database or Redis. On, requests whose Host is one of ada_hosts
+    (comma-separated) reach the Ada API, and the ada and adajobs process groups run the kernel
+    (python -m glyphh_ada.worker)."""
+
+    ada_cloud: bool = False
+    ada_hosts: str = "ada.glyphh.ai"
+    # How long the API waits on a worker's answer: reads, then writes (record_many), before 504 E_TIMEOUT.
+    ada_read_timeout: float = Field(10.0, gt=0, le=60)
+    ada_write_timeout: float = Field(30.0, gt=0, le=120)
+    # Worker processes per machine of a group; 0: one per vCPU.
+    ada_workers: int = Field(0, ge=0, le=64)
+    # The largest file an import takes, in bytes.
+    ada_import_bytes: int = Field(200 << 20, ge=1 << 20)
+    # The Ada API's address, as the connector hands out its upload and download links.
+    ada_url: str = "https://ada.glyphh.ai"
+    # Requests past Basic's, Pro's and Team's month, metered (docs/specs/ada-cloud.md, section 7): the price on the
+    # ada_requests Billing Meter ($1 per 10,000), on every Basic, Pro and Team subscription, and the meter's event
+    # name. Without the price, Checkout answers E_UNAVAILABLE while Ada Cloud is on; without the name, nothing is
+    # reported to the meter. scripts/stripe-setup.py makes them and prints these.
+    stripe_price_ada: str | None = None
+    stripe_meter_ada: str = ""
+
+    @property
+    def ada_host_set(self) -> set[str]:
+        return {h.strip().lower() for h in self.ada_hosts.split(",") if h.strip()}
+
+    @property
+    def ada_base(self) -> str:
+        return self.ada_url.rstrip("/")
+
+
+class Settings(AdaCloudSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
@@ -39,6 +72,7 @@ class Settings(BaseSettings):
     github_client_secret: str = ""
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
     # Hosting, metered: the price on the Billing Meter (a unit is a US cent), second on every paid subscription, and the

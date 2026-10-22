@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_ada import orgdrop
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, Forbidden, Invalid
 from glyphh_server.models import Invite, Org, User
@@ -44,6 +45,7 @@ async def accept_invite(conn: AsyncConnection, who: Principal, token: str) -> Jo
     await conn.execute(update(Invite).where(Invite.id == invite.id).values(accepted_at=func.now()))
     await conn.execute(update(User).where(User.id == who.user_id).values(org_id=invite.org_id, role="member"))
     await conn.execute(delete(Invite).where(Invite.org_id == who.org_id))
+    await orgdrop.drop(conn, who.org_id)  # its Ada Cloud data, if it had any, gone with it
     await conn.execute(delete(Org).where(Org.id == who.org_id))
     return Joined(org_id=invite.org_id, org=invite.name)
 

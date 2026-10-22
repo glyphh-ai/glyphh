@@ -7,6 +7,8 @@ import httpx
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_ada.api import HostRouter
+from glyphh_ada.api import make_app as make_ada
 from glyphh_server.api import (
     approvals,
     billing,
@@ -95,7 +97,9 @@ def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[N
     fly = Fly(app.state.http, cfg) if cfg.hosting_on else None
     if fly is not None:
         app.state.hub.waker = waker(engine, fly)
-    meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting)
+    meter = cfg.stripe_secret_key and StripeClient(
+        app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada
+    )
     return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None))
 
 
@@ -106,6 +110,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
         raise RuntimeError("GLYPHH_SECRET_KEY must be set, 32 characters or more: it signs every sign-in step.")
     engine = make_engine(cfg.database_url)
     redis = make_redis(cfg.redis_url)
+    ada = make_ada(cfg, engine) if cfg.ada_cloud else None  # off, nothing of Ada Cloud is reachable
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -118,6 +123,8 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
         await app.state.hub.close_all()
         await app.state.http.aclose()
         await redis.aclose()
+        if ada is not None:
+            await ada.state.redis.aclose()
         await engine.dispose()
 
     app = FastAPI(title="Glyphh", version=cfg.version, lifespan=lifespan)
@@ -128,14 +135,18 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.state.signing_key = load_key(cfg)
     app.state.secrets_key = vault.load_key(cfg)
     app.state.github_key = github_app.load_key(cfg)
+    app.state.ada = None if ada is None else ada.state  # the connector's Ada tools call the workers through it
     errors.install(app)
     for module in ROUTERS:
         app.include_router(module.router)
-    _wrap(app, cfg)
+    _wrap(app, cfg, ada)
     return app
 
 
-def _wrap(app: FastAPI, cfg: Settings) -> None:
-    """The outer layers, innermost first: CORS for the platform's read of a consent, then the trace."""
+def _wrap(app: FastAPI, cfg: Settings, ada: FastAPI | None) -> None:
+    """The outer layers, innermost first: Ada Cloud's host (when on), CORS for the platform's read of a consent, then
+    the trace."""
+    if ada is not None:
+        app.add_middleware(HostRouter, ada=ada, hosts=cfg.ada_host_set)
     app.add_middleware(ConsentCorsMiddleware, platform_origin=cfg.platform_base)
     app.add_middleware(TraceMiddleware)

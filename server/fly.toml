@@ -17,7 +17,18 @@ primary_region = "iad"
   GLYPHH_PUBLIC_URL = "https://api.glyphh.ai"
   GLYPHH_PLATFORM_URL = "https://platform.glyphh.ai"
 
+# Three process groups, one image (docs/specs/ada-cloud.md, 3.1). `app` serves HTTP and MCP as ever, at api.glyphh.ai
+# and, with GLYPHH_ADA_CLOUD on, at ada.glyphh.ai (a second certificate on this app). `ada` answers Ada's synchronous
+# calls (reads, records); `adajobs` its jobs (learn, calibrate): one single-threaded worker process per vCPU each,
+# scaled on their own (`fly scale count ada=2 adajobs=1`, `fly scale vm performance-2x --process-group ada`). With
+# GLYPHH_ADA_CLOUD off the two worker groups idle, touching neither Postgres nor Redis.
+[processes]
+  app = "sh -c 'python -m glyphh_server.db.schema && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080'"
+  ada = "python -m glyphh_ada.worker --queue sync"
+  adajobs = "python -m glyphh_ada.worker --queue jobs"
+
 [http_service]
+  processes = ["app"]
   internal_port = 8080
   force_https = true
   auto_stop_machines = "off"
@@ -32,5 +43,18 @@ primary_region = "iad"
     path = "/v1/health"
 
 [[vm]]
+  processes = ["app"]
   size = "shared-cpu-1x"
   memory = "1024mb"
+
+# Small while the flag is off; before turning it on, performance VMs (shared CPUs are throttled under steady load).
+# A job worker holds up to limits.JOB_SAMPLE precedents (about 1.3 GB), so 2 GB per vCPU.
+[[vm]]
+  processes = ["ada"]
+  size = "shared-cpu-2x"
+  memory = "2048mb"
+
+[[vm]]
+  processes = ["adajobs"]
+  size = "shared-cpu-2x"
+  memory = "4096mb"

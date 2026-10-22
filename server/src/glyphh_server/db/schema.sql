@@ -68,6 +68,10 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     offline BOOLEAN DEFAULT false NOT NULL,
     sso BOOLEAN DEFAULT false NOT NULL,
     hosting_markup_pct INTEGER,
+    cloud_precedents INTEGER,
+    cloud_requests INTEGER,
+    cloud_rps INTEGER,
+    cloud_overage BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT plan_versions_version UNIQUE (plan_id, version),
@@ -75,6 +79,7 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     CONSTRAINT plan_versions_interval CHECK (billing_interval IN ('month', 'year')),
     CONSTRAINT plan_versions_limits CHECK (coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0),
     CONSTRAINT plan_versions_markup CHECK (coalesce(hosting_markup_pct, 0) >= 0),
+    CONSTRAINT plan_versions_cloud CHECK (coalesce(cloud_precedents, 0) >= 0 AND coalesce(cloud_requests, 0) >= 0 AND coalesce(cloud_rps, 1) > 0),
     FOREIGN KEY(plan_id) REFERENCES plans (id) ON DELETE RESTRICT,
     UNIQUE (stripe_price_id)
 );
@@ -147,6 +152,33 @@ CREATE TABLE IF NOT EXISTS meter_events (
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS ix_meter_events_org_id ON meter_events (org_id);
+
+-- ada_usage
+CREATE TABLE IF NOT EXISTS ada_usage (
+    org_id UUID NOT NULL,
+    period TEXT NOT NULL,
+    requests BIGINT DEFAULT 0 NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (org_id, period),
+    CONSTRAINT ada_usage_requests CHECK (requests >= 0),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+
+-- ada_meter_events
+CREATE TABLE IF NOT EXISTS ada_meter_events (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    customer TEXT NOT NULL,
+    period TEXT NOT NULL,
+    requests INTEGER NOT NULL,
+    at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    CONSTRAINT ada_meter_events_requests CHECK (requests > 0),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_ada_meter_events_org_id ON ada_meter_events (org_id);
 
 -- licenses
 CREATE TABLE IF NOT EXISTS licenses (
@@ -488,10 +520,14 @@ CREATE TABLE IF NOT EXISTS runtime_keys (
     revoked_at TIMESTAMP WITH TIME ZONE,
     calls BIGINT DEFAULT 0 NOT NULL,
     last_used_at TIMESTAMP WITH TIME ZONE,
+    scope TEXT DEFAULT 'runtime' NOT NULL,
+    clearance NUMERIC(4, 3) DEFAULT 1 NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE (key_hash)
+    UNIQUE (key_hash),
+    CONSTRAINT runtime_keys_scope CHECK (scope IN ('runtime', 'cloud')),
+    CONSTRAINT runtime_keys_clearance CHECK (clearance >= 0 AND clearance <= 1)
 );
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);
@@ -607,6 +643,14 @@ ALTER TABLE meter_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meter_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON meter_events;
 CREATE POLICY tenant ON meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE ada_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ada_usage FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON ada_usage;
+CREATE POLICY tenant ON ada_usage USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE ada_meter_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ada_meter_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON ada_meter_events;
+CREATE POLICY tenant ON ada_meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;

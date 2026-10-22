@@ -82,6 +82,8 @@ async def test_a_key_is_the_payload_and_its_signature_exactly_and_never_on_free(
         key = await license_keys.issue(conn, signer, ada.org_id, until)
         assert key is not None and await license_keys.issue(conn, signer, ada.org_id, until) == key  # same terms
         assert await license_keys.issue(conn, signer, (await person(engine)).org_id, until) is None  # Free: none
+        basic = (await person(engine, "Basic")).org_id  # Basic: none either (rrotor has no basic tier)
+        assert await license_keys.issue(conn, signer, basic, until) is None
     payload = read(key, signer.public_key())
     assert list(payload) == FIELDS
     assert uuid.UUID(payload["license_id"]) and payload["customer_id"] == str(ada.org_id)

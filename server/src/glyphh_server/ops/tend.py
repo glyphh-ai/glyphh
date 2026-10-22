@@ -2,7 +2,9 @@
 at Fly's rates up to now, its online seconds this month tallied (ops/metering.py); always, the keys that expired
 taken off their runtimes, the Enterprise grants past their date ended (their hosting due reported first) and server-
 side logging past its retention purged (ops/telemetry/retention.py); with hosting on, the idle machines and those
-held past their plan stopped; and the hosting due reported to Stripe's meter (ops/billing/meter.py).
+held past their plan stopped; and the hosting due reported to Stripe's meter (ops/billing/meter.py). With Ada Cloud on
+(GLYPHH_ADA_CLOUD), its reads counted in Redis added to ada_usage (glyphh_ada/requests.py), and those past a metered
+plan's month reported to Stripe's ada_requests meter (ops/billing/ada_meter.py).
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 on a connection it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -15,7 +17,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_ada.requests import flush
 from glyphh_server.config import Settings
+from glyphh_server.ops.billing import ada_meter
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.enterprise import expire
@@ -61,7 +65,8 @@ async def _tick(
     """With hosting on, the month tallied and metered; the keys that expired since the last tick (with a tick to spare)
     taken off their runtimes, the Enterprise grants past their date ended (with Stripe, their hosting due reported
     first), server-side logging past retention purged; with hosting on and Fly set up, the idle machines stopped and
-    those held past their plan stopped; with Stripe, the hosting due reported to its meter."""
+    those held past their plan stopped; with Stripe, the hosting due reported to its meter. With Ada Cloud on, its
+    reads flushed to the database, and with Stripe those past a metered plan's month reported."""
     if settings.hosting:
         await tally(engine, settings.fly_region)
     await push_expired(engine, hub, timedelta(seconds=2 * step))
@@ -71,5 +76,9 @@ async def _tick(
         await stop_idle(engine, fly, timedelta(minutes=settings.runtime_idle_minutes))
         async with engine.begin() as conn:  # the connecting role: every org's
             await hold(conn, fly)
+    if settings.ada_cloud:
+        await flush(engine, hub.redis)
     if stripe is not None:
         await report(engine, stripe)
+        if settings.ada_cloud:
+            await ada_meter.report(engine, stripe, settings.stripe_price_ada)

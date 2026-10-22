@@ -1,6 +1,6 @@
 """Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
-(runtime nodes and precedents per node) and its features. The markup on Fly's rates is a version's own and is
-never shown."""
+(runtime nodes and precedents per node), its features, and with Ada Cloud on its cloud limits (precedents and reads
+a month per org, calls a second). The markup on Fly's rates is a version's own and is never shown."""
 
 import uuid
 from typing import Literal
@@ -34,6 +34,21 @@ class Features(BaseModel):
 
 # What works today, one source of truth: only offline licences; the other features are licence flags, not built.
 BUILT: Features = Features(sync=False, ha=False, offline=True, sso=False)
+OVERAGE_CENTS_PER_10K: int = 100  # a metered plan's reads past its month: $1 per 10,000 (the ada_requests price)
+
+
+class CloudLimits(BaseModel):
+    """Ada Cloud's limits, the org's whatever its people, models or keys (never per seat)."""
+
+    precedents: int | None = Field(description="Precedents the org may hold across its models; null = by contract")
+    requests_per_month: int | None = Field(
+        description="Reads (decide, query, probabilities, facts) a calendar month, UTC; null = by contract"
+    )
+    requests_per_second: int | None = Field(description="Calls a second, the org's together; null = by contract")
+    overage: bool = Field(
+        description="Reads past the month are metered (overage_cents_per_10k); false: refused until the month turns"
+    )
+    overage_cents_per_10k: int | None = Field(description="What 10,000 reads past the month cost; null: none sold")
 
 
 class PlanView(BaseModel):
@@ -49,6 +64,11 @@ class PlanView(BaseModel):
         description="Which features work today, the same on every plan: never show one as included that is not built",
     )
     markup_hidden: Literal[True] = Field(True, description="The hosted rates already carry the plan's markup")
+    hosting: bool = Field(
+        description="Glyphh hosts machines on it while hosting is on (GLYPHH_HOSTING): Pro, Team, Enterprise; never "
+        "Free or Basic, whose runtime node is self-hosted"
+    )
+    cloud: CloudLimits | None = Field(None, description="Ada Cloud's limits; null while Ada Cloud is off")
 
 
 COLUMNS = (
@@ -66,6 +86,10 @@ COLUMNS = (
     PlanVersion.offline,
     PlanVersion.sso,
     PlanVersion.hosting_markup_pct,
+    PlanVersion.cloud_precedents,
+    PlanVersion.cloud_requests,
+    PlanVersion.cloud_rps,
+    PlanVersion.cloud_overage,
 )
 
 
@@ -78,7 +102,23 @@ def features(row: Row) -> Features:
     return Features(sync=row.sync, ha=row.ha, offline=row.offline, sso=row.sso)
 
 
-def view(row: Row) -> PlanView:
+def cloud_limits(row: Row) -> CloudLimits:
+    return CloudLimits(
+        precedents=row.cloud_precedents,
+        requests_per_month=row.cloud_requests,
+        requests_per_second=row.cloud_rps,
+        overage=row.cloud_overage,
+        overage_cents_per_10k=OVERAGE_CENTS_PER_10K if row.cloud_overage else None,
+    )
+
+
+def hosts(row: Row) -> bool:
+    """Whether Glyphh hosts machines on this version: a markup on Fly's rates, or a contract's (an org's own)."""
+    return not row.self_serve or row.hosting_markup_pct is not None
+
+
+def view(row: Row, cloud: bool = False) -> PlanView:
+    """A version as callers see it; its cloud limits only with Ada Cloud on."""
     return PlanView(
         name=row.name,
         version=row.version,
@@ -87,12 +127,14 @@ def view(row: Row) -> PlanView:
         self_serve=row.self_serve,
         limits=Limits(machines=row.max_machines, precedents=row.precedents),
         features=features(row),
+        hosting=hosts(row),
+        cloud=cloud_limits(row) if cloud else None,
     )
 
 
-async def org_plan(conn: AsyncConnection, org_id: uuid.UUID) -> PlanView:
+async def org_plan(conn: AsyncConnection, org_id: uuid.UUID, cloud: bool = False) -> PlanView:
     """The org's pinned version as callers see it."""
-    return view(await org_version(conn, org_id))
+    return view(await org_version(conn, org_id), cloud)
 
 
 def _newest():  # type: ignore[no-untyped-def]
@@ -115,8 +157,8 @@ async def newest_versions(conn: AsyncConnection) -> list[Row]:
     return list(await conn.execute(_newest()))
 
 
-async def list_plans(conn: AsyncConnection) -> list[PlanView]:
-    return [view(r) for r in await newest_versions(conn)]
+async def list_plans(conn: AsyncConnection, cloud: bool = False) -> list[PlanView]:
+    return [view(r, cloud) for r in await newest_versions(conn)]
 
 
 async def newest_version(conn: AsyncConnection, name: str) -> Row:

@@ -58,6 +58,7 @@ _COLUMNS = (
 
 
 _unexpired = or_(RuntimeKey.expires_at.is_(None), RuntimeKey.expires_at > func.now())
+_runtime = RuntimeKey.scope == "runtime"  # Ada Cloud's keys (scope cloud) are never a runtime's
 
 
 def key_hash(key: str) -> str:
@@ -67,7 +68,8 @@ def key_hash(key: str) -> str:
 def held_by(runtime_id: uuid.UUID) -> ColumnElement[bool]:
     """The keys a runtime holds: those naming it, and, for a hosted machine, its owner's that name none."""
     owner = select(Rrotor.user_id).where(Rrotor.id == runtime_id, Rrotor.mode == "hosted").scalar_subquery()
-    return or_(RuntimeKey.rrotor_id == runtime_id, and_(RuntimeKey.rrotor_id.is_(None), RuntimeKey.user_id == owner))
+    named = or_(RuntimeKey.rrotor_id == runtime_id, and_(RuntimeKey.rrotor_id.is_(None), RuntimeKey.user_id == owner))
+    return and_(_runtime, named)
 
 
 async def hashes_for(conn: AsyncConnection, runtime_id: uuid.UUID) -> list[str]:
@@ -109,7 +111,9 @@ async def _push_all(conn: AsyncConnection, hub: Hub, user_id: uuid.UUID, runtime
 
 async def list_keys(conn: AsyncConnection, who: Principal) -> list[KeyView]:
     rows = await conn.execute(
-        select(*_COLUMNS).where(RuntimeKey.user_id == who.user_id).order_by(RuntimeKey.created_at, RuntimeKey.id)
+        select(*_COLUMNS)
+        .where(RuntimeKey.user_id == who.user_id, _runtime)
+        .order_by(RuntimeKey.created_at, RuntimeKey.id)
     )
     return [KeyView(**r._mapping) for r in rows]
 
@@ -139,7 +143,7 @@ async def create_key(
 async def revoke_key(conn: AsyncConnection, hub: Hub, who: Principal, key_id: uuid.UUID) -> KeyView:
     mine = (
         update(RuntimeKey)
-        .where(RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id, RuntimeKey.revoked_at.is_(None))
+        .where(RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id, RuntimeKey.revoked_at.is_(None), _runtime)
         .values(revoked_at=func.now())
         .returning(*_COLUMNS)
     )
@@ -152,7 +156,9 @@ async def revoke_key(conn: AsyncConnection, hub: Hub, who: Principal, key_id: uu
 
 async def delete_key(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -> None:
     """A revoked or expired key's record gone from the list; a live key is refused: revoke it first."""
-    mine = select(RuntimeKey.revoked_at, _unexpired).where(RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id)
+    mine = select(RuntimeKey.revoked_at, _unexpired).where(
+        RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id, _runtime
+    )
     row = (await conn.execute(mine)).first()
     if row is None:
         raise NotFound("You have no such runtime key.", key_id=str(key_id))
@@ -165,7 +171,7 @@ async def delete_key(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -
 EXPIRED = (
     select(RuntimeKey.rrotor_id, RuntimeKey.user_id, User.org_id)
     .join(User, User.id == RuntimeKey.user_id)
-    .where(RuntimeKey.revoked_at.is_(None), RuntimeKey.expires_at <= func.now())
+    .where(RuntimeKey.revoked_at.is_(None), RuntimeKey.expires_at <= func.now(), _runtime)
     .distinct()
 )
 
