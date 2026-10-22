@@ -98,7 +98,26 @@ export const modelStats = (model: AdaModel): ModelStats => ({
   jobs: [{ id: 'job-9', model: model.name, kind: 'import', state: 'done', percent: 100, args: {}, result: null, error: null, created_at: at, started_at: at, finished_at: at, made_by: 'u-chris' }],
   days: Array.from({ length: 7 }, (_, i) => ({ day: day(16 + i), reads: { decide: 10 * i, query: i, probabilities: 0, facts: 1 }, decided: 10 * i, asked: i })),
   sure: [0, 0, 0, 0, 1, 2, 5, 20, 80, 102],
+  others: [],
+  estimated: false,
+  answers: [
+    {
+      output: null,
+      decided: 210,
+      asked: 21,
+      sure: [0, 0, 0, 0, 1, 2, 5, 20, 80, 102],
+      days: Array.from({ length: 7 }, (_, i) => ({ decided: 10 * i, asked: i })),
+    },
+  ],
 });
+
+/** Thirty days with nothing read, as the server answers a model made today. */
+const quietDays = Array.from({ length: 30 }, (_, i) => ({
+  day: new Date(Date.UTC(2026, 8, 23 + i)).toISOString().slice(0, 10),
+  reads: { decide: 0, query: 0, probabilities: 0, facts: 0 },
+  decided: 0,
+  asked: 0,
+}));
 
 /** A model's dashboard before anything was read or recorded. */
 export const emptyStats = (model: AdaModel): ModelStats => ({
@@ -107,8 +126,9 @@ export const emptyStats = (model: AdaModel): ModelStats => ({
   outcomes: [],
   growth: [],
   jobs: [],
-  days: [{ day: day(22), reads: { decide: 0, query: 0, probabilities: 0, facts: 0 }, decided: 0, asked: 0 }],
+  days: quietDays,
   sure: Array(10).fill(0),
+  answers: [],
 });
 
 /** Four precedents at dimension 16, two joined by an edge of the same outcome and one of different outcomes. */
