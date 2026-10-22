@@ -584,7 +584,9 @@ pgvector `bit(dim)` (`bit_hamming_ops`; a bipolar glyph is its bits, +1 as 1,
 and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096) and a unique
 index on its ids (a lookup by id, as `grade`, `forget` and `rewrite` make,
 cannot lead with the primary key `(model, id)`: 3.12.1); `outcomes`, `meta`
-and `counts` keyed by model.
+and `counts` keyed by model. A store already made opens with no DDL and no
+lock (3.12.2): a `CREATE INDEX IF NOT EXISTS` waits out every write open on
+the partition, even when the index is there.
 
 ```python
 from glyphh_postgres import PostgresStore

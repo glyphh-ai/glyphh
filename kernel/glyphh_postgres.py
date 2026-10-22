@@ -142,7 +142,7 @@ class PostgresStore:
         self._conn.adapters.register_dumper(Bits, _BitsDumper)
         self._conn.adapters.register_loader("varbit", _BitsLoader)
         self._conn.adapters.register_loader("bit", _BitsLoader)
-        part = "p_" + hashlib.sha256(model.encode()).hexdigest()[:24]
+        part = self._part = "p_" + hashlib.sha256(model.encode()).hexdigest()[:24]
         s = sql.Identifier(schema)
         self._t = {
             "schema": s,
@@ -176,9 +176,29 @@ class PostgresStore:
             cur.execute(self._q("SELECT 1 FROM {counts} WHERE model = %s"), (self.model,))
             return cur.fetchone() is not None
 
+    def _made(self, index: bool) -> bool:
+        """Everything _setup makes is there already, so the store opens with no DDL and no lock. A `CREATE INDEX IF
+        NOT EXISTS` takes a ShareLock on the partition even when the index exists: it waits out every open write to
+        the model, holding the schema's setup lock meanwhile (to the end of a caller's transaction), so every other
+        store of the org opening then waits too."""
+        part = self._t["part"].as_string(self._conn)
+        names = [f'"{self.schema}".counts', part, f'"{self.schema}"."{self._part}_id"']
+        if index:
+            names.append(f'"{self.schema}"."{self._part}_glyph"')
+        with self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("SELECT bool_and(to_regclass(n) IS NOT NULL) FROM unnest(%s::text[]) n", (names,))
+            if not cur.fetchone()[0]:
+                return False
+            cur.execute(self._q("SELECT count(*) FROM {meta} WHERE model = %s AND key = 'encoding'"), (self.model,))
+            encoded = cur.fetchone()[0] == 1
+            cur.execute(self._q("SELECT count(*) FROM {counts} WHERE model = %s"), (self.model,))
+            return encoded and cur.fetchone()[0] == 1
+
     def _setup(self, index: bool) -> None:
         """The org's schema, its tables and this model's partition (with its index), made once; concurrent
-        workers making the same wait on an advisory lock."""
+        workers making the same wait on an advisory lock. A store already made opens without either (_made)."""
+        if self._made(index):
+            return
         with self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"glyphh:{self.schema}",))
             cur.execute("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
