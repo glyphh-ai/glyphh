@@ -6,7 +6,8 @@ from typing import Literal
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
-from glyphh_server.api.auth import Caller, Cfg, Conn
+from glyphh_server.api.auth import Caller, Conn
+from glyphh_server.api.billing import cloud_redis
 from glyphh_server.api.link_pages import link_url
 from glyphh_server.ops import identities, installs, me
 from glyphh_server.ops.auth.providers import provider as configured
@@ -32,15 +33,16 @@ class LinkOut(BaseModel):
 
 
 @router.get("/me", operation_id="me")
-async def get_me(caller: Caller, conn: Conn, cfg: Cfg) -> Me:
+async def get_me(caller: Caller, conn: Conn, request: Request) -> Me:
     """The user, their org and role, the plan version with its limits and features, the precedents its hosted runtimes
-    hold and its hosting this month, and whether Ada Cloud is on (the platform shows Ada then)."""
-    return (await me.me(conn, caller)).model_copy(update={"ada_cloud": cfg.ada_cloud})
+    hold and its hosting this month, and whether Ada Cloud is on (the platform shows Ada then); with it on, the plan's
+    cloud limits and what the org uses of them."""
+    return await me.me(conn, caller, cloud_redis(request))
 
 
 @router.patch("/me", operation_id="renameMe")
-async def rename_me(body: Rename, caller: Caller, conn: Conn, cfg: Cfg) -> Me:
-    return (await me.rename_me(conn, caller, body.name)).model_copy(update={"ada_cloud": cfg.ada_cloud})
+async def rename_me(body: Rename, caller: Caller, conn: Conn, request: Request) -> Me:
+    return await me.rename_me(conn, caller, body.name, cloud_redis(request))
 
 
 @router.post("/me/identities", operation_id="linkIdentity")

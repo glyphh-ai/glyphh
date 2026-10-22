@@ -18,15 +18,24 @@ class AdaCloudSettings(BaseSettings):
     ada_write_timeout: float = Field(30.0, gt=0, le=120)
     # Worker processes per machine of a group; 0: one per vCPU.
     ada_workers: int = Field(0, ge=0, le=64)
-    # The precedents an org may hold across its models, by its plan's name (docs/specs/ada-cloud.md, section 7); a
-    # plan not named here (Enterprise) has none. Checked by every import (the whole file, up front) and every record.
-    ada_precedent_caps: dict[str, int] = {"Free": 5_000, "Pro": 100_000, "Team": 1_000_000}
     # The largest file an import takes, in bytes.
     ada_import_bytes: int = Field(200 << 20, ge=1 << 20)
+    # The Ada API's address, as the connector hands out its upload and download links.
+    ada_url: str = "https://ada.glyphh.ai"
+    # Requests past Pro's and Team's month, metered (docs/specs/ada-cloud.md, section 7): the price on the ada_requests
+    # Billing Meter ($1 per 10,000), on every Pro and Team subscription, and the meter's event name. Without the price,
+    # Checkout answers E_UNAVAILABLE while Ada Cloud is on; without the name, nothing is reported to the meter.
+    # scripts/stripe-setup.py makes them and prints these.
+    stripe_price_ada: str | None = None
+    stripe_meter_ada: str = ""
 
     @property
     def ada_host_set(self) -> set[str]:
         return {h.strip().lower() for h in self.ada_hosts.split(",") if h.strip()}
+
+    @property
+    def ada_base(self) -> str:
+        return self.ada_url.rstrip("/")
 
 
 class Settings(AdaCloudSettings):

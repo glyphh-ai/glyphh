@@ -35,7 +35,7 @@ async def test_the_plans_are_free_pro_team_and_enterprise_and_never_name_the_mar
     assert all(p["markup_hidden"] is True and "markup_pct" not in p for p in plans)
     assert all(p["built"] == FEATURES_OFF | {"offline": True} for p in plans)  # only offline licences work today
     keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built", "markup_hidden"}
-    assert keys == set(plans[0])
+    assert keys | {"cloud"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud is off
 
 
 async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(

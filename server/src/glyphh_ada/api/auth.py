@@ -14,11 +14,11 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_ada import keys
+from glyphh_ada.allowance import Allowance, allowance
 from glyphh_ada.errors import NoKey
 from glyphh_server.api.auth import Bearer, authenticate
 from glyphh_server.errors import Unauthorized
 from glyphh_server.obs import context
-from glyphh_server.ops.plans import org_plan
 
 KEY_TTL: float = 10.0
 KEPT_MAX: int = 10_000
@@ -30,8 +30,12 @@ class AdaCaller:
     user_id: uuid.UUID
     clearance: float
     key_id: uuid.UUID | None = None
-    cap: int | None = None  # the precedents the org's plan allows across its models; None: no cap
-    plan: str | None = None  # the org's plan's name
+    allowance: Allowance | None = None  # what the org's plan allows; None: nothing counted (an upload's own link)
+
+    @property
+    def cap(self) -> int | None:
+        """The precedents the org's plan allows across its models; None: no cap."""
+        return None if self.allowance is None else self.allowance.precedents
 
     @property
     def author(self) -> str:
@@ -54,13 +58,12 @@ async def _found(request: Request, conn: AsyncConnection, creds: HTTPAuthorizati
 
 
 async def _resolve(request: Request, creds: HTTPAuthorizationCredentials) -> AdaCaller | None:
-    """The caller, with the cap its org's plan puts on precedents (GLYPHH_ADA_PRECEDENT_CAPS, by the plan's name)."""
+    """The caller, with what its org's plan allows (its version's cloud limits)."""
     async with request.app.state.engine.begin() as conn:
         found = await _found(request, conn, creds)
         if found is None:
             return None
-        plan = await org_plan(conn, found.org_id)
-    return replace(found, cap=request.app.state.settings.ada_precedent_caps.get(plan.name), plan=plan.name)
+        return replace(found, allowance=await allowance(conn, found.org_id))
 
 
 async def ada_caller(request: Request, creds: Bearer) -> AdaCaller:

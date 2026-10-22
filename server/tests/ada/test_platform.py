@@ -24,7 +24,8 @@ async def test_the_platforms_sign_in_reads_usage_against_the_plan(
     who = await person(engine, "Pro")
     _, platform = await granted(engine, who)
     empty = (await ada.get("/v1/usage", headers=platform)).json()
-    assert empty == {"plan": "Pro", "models": 0, "precedents": {"used": 0, "max": 100_000}, "requests": None}
+    assert (empty["plan"], empty["models"], empty["precedents"]) == ("Pro", 0, {"used": 0, "max": 100_000})
+    assert empty["requests"] == {"used": 0, "max": 1_000_000, "over": 0, "overage": True}
     await a_model(ada, platform, n=12)
     await a_model(ada, platform, name="other", n=3)
     used = (await ada.get("/v1/usage", headers=platform)).json()

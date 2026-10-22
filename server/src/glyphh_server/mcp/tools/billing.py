@@ -16,7 +16,7 @@ async def upgrade(ctx: Context, args: UpgradeArgs) -> Done:
     org = await checkout.billing_row(ctx.conn, ctx.who.org_id)
     stripe = ctx.stripe()
     if org.stripe_subscription_id is not None:
-        changed = await changes.change_plan(ctx.conn, ctx.who, stripe, args.plan)
+        changed = await changes.change_plan(ctx.conn, ctx.who, stripe, args.plan, ctx.settings.stripe_price_ada)
         return Done(f"Your org is on {changed.plan.name} now, prorated.", {"org": dump(changed)})
     page = await checkout.checkout(ctx.conn, ctx.who, stripe, ctx.settings, args.plan)
     return Done(f"Open Stripe Checkout to subscribe to {args.plan}: {page.url}", dump(page))

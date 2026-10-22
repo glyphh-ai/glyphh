@@ -39,6 +39,21 @@ def test_the_command_idles_with_ada_cloud_off_and_supervises_with_it_on(monkeypa
     assert calls[:2] == ["idle", (3, "jobs")] and calls[2][0] >= 1
 
 
+def test_workers_are_counted_by_the_cpus_the_container_may_use(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(worker.os, "process_cpu_count", lambda: 12)
+    quota = tmp_path / "cpu.max"
+    assert worker.cpus(quota) == 12  # no cgroup file: every CPU it may run on
+    quota.write_text("max 100000\n")
+    assert worker.cpus(quota) == 12
+    quota.write_text("200000 100000\n")  # docker run --cpus 2
+    assert worker.cpus(quota) == 2
+    quota.write_text("50000 100000\n")  # half a CPU: still one process
+    assert worker.cpus(quota) == 1
+    monkeypatch.setattr(worker.os, "process_cpu_count", lambda: None)
+    quota.write_text("junk")
+    assert worker.cpus(quota) == 1
+
+
 def test_the_supervisor_starts_again_a_worker_that_stops() -> None:
     stop = threading.Event()
     threading.Timer(6.0, stop.set).start()  # spawning a process takes a second or more on a small CI runner

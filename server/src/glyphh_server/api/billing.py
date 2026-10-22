@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis
 from sqlalchemy import select
 
 from glyphh_server.api.auth import Caller, Conn
@@ -23,7 +24,9 @@ router = APIRouter(tags=["plans and billing"])
 
 def stripe_client(request: Request) -> StripeClient:
     settings = request.app.state.settings
-    return StripeClient(request.app.state.http, settings.stripe_secret_key, settings.stripe_meter_hosting)
+    return StripeClient(
+        request.app.state.http, settings.stripe_secret_key, settings.stripe_meter_hosting, settings.stripe_meter_ada
+    )
 
 
 Stripe = Annotated[StripeClient, Depends(stripe_client)]
@@ -46,14 +49,21 @@ class BillingView(Usage):
     plan_until: datetime | None = Field(description="When an Enterprise grant ends; null on any other plan")
 
 
+def cloud_redis(request: Request) -> Redis | None:
+    """The Redis Ada Cloud's reads are counted on, while it is on."""
+    return request.app.state.redis if request.app.state.settings.ada_cloud else None
+
+
 @router.get("/v1/billing", operation_id="billing")
-async def get_billing(caller: Caller, conn: Conn) -> BillingView:
+async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingView:
     """The org's billing: its plan and price, the precedents its fullest runtime holds of the plan's per node, and
-    its hosting this month, all in, machine by machine."""
+    its hosting this month, all in, machine by machine; with Ada Cloud on, its plan's cloud limits and what the org
+    uses of them (precedents, reads this month)."""
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
-    return BillingView(**(await usage(conn, caller.org_id)).model_dump(), **row._mapping)
+    used = await usage(conn, caller.org_id, cloud_redis(request))
+    return BillingView(**used.model_dump(), **row._mapping)
 
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")
@@ -64,10 +74,11 @@ async def start_checkout(body: CheckoutIn, caller: Caller, conn: Conn, stripe: S
 
 
 @router.post("/v1/billing/plan", operation_id="changePlan")
-async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe) -> OrgView:
+async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> OrgView:
     """Change plan: the newest version of another self-serve plan, prorated; or Free, which cancels the subscription
     now once the org has no hosted machines."""
-    return await changes.change_plan(conn, caller, stripe, body.plan)
+    ada_price = request.app.state.settings.stripe_price_ada
+    return await changes.change_plan(conn, caller, stripe, body.plan, ada_price)
 
 
 @router.post("/v1/billing/portal", operation_id="openBillingPortal")

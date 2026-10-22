@@ -60,9 +60,16 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         "GLYPHH_STRIPE_PRICE_TEAM": "price_2",
         "GLYPHH_STRIPE_PRICE_HOSTING": "price_3",
         "GLYPHH_STRIPE_METER_HOSTING": "glyphh_hosting",
+        "GLYPHH_STRIPE_PRICE_ADA": "price_4",
+        "GLYPHH_STRIPE_METER_ADA": "ada_requests",
     }
-    assert account.products == {"glyphh_pro", "glyphh_team", "glyphh_hosting"}
-    pro, team, hosting = account.prices
+    assert account.products == {"glyphh_pro", "glyphh_team", "glyphh_hosting", "glyphh_ada_requests"}
+    pro, team, hosting, reads = account.prices
+    assert (reads["unit_amount_decimal"], reads["recurring[usage_type]"], reads["lookup_key"]) == (
+        "0.01",
+        "metered",
+        "glyphh_ada_requests_10k_100",
+    )  # a hundredth of a cent a read: $1 per 10,000
     assert (pro["unit_amount"], pro["recurring[interval]"], pro["lookup_key"]) == (
         "9900",
         "month",
@@ -74,7 +81,8 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         "metered",
         "mtr_1",
     )
-    (meter,) = account.meters
+    meter, ada = account.meters
+    assert (ada["event_name"], ada["display_name"]) == ("ada_requests", "Ada Cloud reads")
     assert (meter["event_name"], meter["default_aggregation[formula]"]) == ("glyphh_hosting", "sum")
     assert (meter["customer_mapping[event_payload_key]"], meter["value_settings[event_payload_key]"]) == (
         "stripe_customer_id",
