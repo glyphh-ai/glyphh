@@ -1,4 +1,5 @@
-"""The mods and plans every Glyphh database starts with, each plan with its first version. A Stripe price set for a
+"""The mods and plans every Glyphh database starts with, each plan with its first version, in PLANS'
+order (a plan added between two takes its place at the next boot). A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
 versions). A change of only a plan's Ada Cloud limits becomes a new version too, at the same price: it takes over the
 version before it's Stripe price and its orgs, so every org on the plan has the limits. A mod no longer seeded is
@@ -67,6 +68,7 @@ class PlanSeed:
 
 
 FREE: str = "Free"
+BASIC: str = "Basic"
 ENTERPRISE: str = "Enterprise"
 SALES: str = "sales@glyphh.ai"
 
@@ -82,8 +84,13 @@ SALES: str = "sales@glyphh.ai"
 # 5,000 and 10,000 (refused past them), Pro 100,000 and 1,000,000, Team 1,000,000 and 5,000,000 (each read past the
 # month $1 per 10,000, metered); calls a second 5, 50, 200; Enterprise by contract. Team's million is not to be sold
 # before the HNSW build memory is decided (docs/specs/ada-cloud.md, 10.1).
+# Basic (Chris, 2026-10-22), between Free and Pro: $20 a month for Ada Cloud, 10,000 precedents and 50,000 reads a
+# month, 10 calls a second, reads past the month metered like Pro's and Team's. No sync, HA, offline or SSO, and no
+# licence key (rrotor's tiers are free, pro, team and enterprise): a self-hosted node runs as on Free, one node and
+# 5,000 precedents; no hosting (no markup).
 PLANS: tuple[PlanSeed, ...] = (
     PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), None, Cloud(5_000, 10_000, 5)),
+    PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), None, Cloud(10_000, 50_000, 10, True)),
     PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), 30, Cloud(100_000, 1_000_000, 50, True)),
     PlanSeed(  # TBD: 500,000
         "Team", 29_900, "month", True, 10, 500_000, Features(sync=True), 30, Cloud(1_000_000, 5_000_000, 200, True)
@@ -94,7 +101,13 @@ PLANS: tuple[PlanSeed, ...] = (
 
 def stripe_prices(settings: Settings) -> dict[str, str | None]:
     """Which Stripe price each self-serve paid plan sells on: per environment, so read from settings."""
-    return {FREE: None, "Pro": settings.stripe_price_pro, "Team": settings.stripe_price_team, ENTERPRISE: None}
+    return {
+        FREE: None,
+        BASIC: settings.stripe_price_basic,
+        "Pro": settings.stripe_price_pro,
+        "Team": settings.stripe_price_team,
+        ENTERPRISE: None,
+    }
 
 
 async def seed_mods(conn: AsyncConnection) -> None:
@@ -108,7 +121,9 @@ async def seed_plans(conn: AsyncConnection, settings: Settings) -> None:
     prices = stripe_prices(settings)
     for sort, seed in enumerate(PLANS):
         await conn.execute(
-            upsert(Plan).values(name=seed.name, sort=sort).on_conflict_do_nothing(index_elements=[Plan.name])
+            upsert(Plan)
+            .values(name=seed.name, sort=sort)
+            .on_conflict_do_update(index_elements=[Plan.name], set_={"sort": sort})
         )
         await _seed_version(conn, seed, prices[seed.name])
 

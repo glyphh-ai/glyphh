@@ -45,10 +45,11 @@ def sold(version: Row) -> str:
 
 
 def metered(settings: Settings, version: Row) -> list[dict[str, str]]:
-    """The metered prices a subscription to this version carries: hosting's with hosting on; Ada Cloud's reads past
-    the month with it on and the plan metering them. Unpriced on this server, E_UNAVAILABLE."""
+    """The metered prices a subscription to this version carries: hosting's with hosting on and the plan hosting
+    (a markup on Fly's rates: not Basic); Ada Cloud's reads past the month with it on and the plan metering them.
+    Unpriced on this server, E_UNAVAILABLE."""
     lines = []
-    if settings.hosting:
+    if settings.hosting and version.hosting_markup_pct is not None:
         if not settings.stripe_price_hosting:
             raise Unavailable("Hosting isn't priced on this server.", reason="billing_off")
         lines.append({"price": settings.stripe_price_hosting})

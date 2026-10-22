@@ -575,16 +575,22 @@ seats, models or installs (`docs/pricing.md`, the 2026-10-18 ruling).
 with a read function). Writes, learns, backtests, imports and exports are not counted as requests: they are bounded by
 the precedent cap and the rate limit. A `decide` with `outputs` counts once per output.
 
-| | Free | Pro | Team | Enterprise |
-|---|---|---|---|---|
-| Price | $0 | $99 a month | $299 a month | By contract, from $10k a year |
-| Precedents, the org's total | 5,000 | 100,000 | 1,000,000 | By contract, or self-hosted rrotor |
-| Requests a month | 10,000 | 1,000,000 | 5,000,000 | By contract |
-| Over the requests | Refused until the month turns (`E_LIMIT` `requests`) | $1 per 10,000 more (metered) | $1 per 10,000 more | By contract |
-| Rate | 5 a second | 50 a second | 200 a second | By contract |
-| Models, members, keys | Unlimited | Unlimited | Unlimited | Unlimited |
-| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes, plus SSO when built |
-| Self-hosted rrotor | No | No | No | Yes (registry credentials, licence key) |
+| | Free | Basic | Pro | Team | Enterprise |
+|---|---|---|---|---|---|
+| Price | $0 | $20 a month | $99 a month | $299 a month | By contract, from $10k a year |
+| Precedents, the org's total | 5,000 | 10,000 | 100,000 | 1,000,000 | By contract, or self-hosted rrotor |
+| Requests a month | 10,000 | 50,000 | 1,000,000 | 5,000,000 | By contract |
+| Over the requests | Refused until the month turns (`E_LIMIT` `requests`) | $1 per 10,000 more (metered) | $1 per 10,000 more (metered) | $1 per 10,000 more | By contract |
+| Rate | 5 a second | 10 a second | 50 a second | 200 a second | By contract |
+| Models, members, keys | Unlimited | Unlimited | Unlimited | Unlimited | Unlimited |
+| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes | Yes, plus SSO when built |
+| Self-hosted rrotor | No | No | No | No | Yes (registry credentials, licence key) |
+
+**Basic** (Chris, 2026-10-22) sits between Free and Pro: self-serve, never per seat, no sync, HA, offline or SSO. It
+has no licence key (rrotor's tiers are free, pro, team and enterprise), so a self-hosted node on Basic runs as Free's,
+and no hosting. Its flat price is `GLYPHH_STRIPE_PRICE_BASIC`, beside `_PRO` and `_TEAM`. A Free org past its month
+is now told to upgrade to Basic (the first self-serve plan that reads more). Plans are ordered Free, Basic, Pro,
+Team, Enterprise (`plans.sort`, set from `db/seed.py`'s order at every boot).
 
 Why these numbers: at 2 to 4 KB a precedent in Postgres, Team's million is 2 to 4 GB of database, which $299 covers.
 A read is a few milliseconds of worker CPU (5.9 ms a message on Banking77, rrotor `benchmarks/banking77/README.md`,
@@ -604,7 +610,7 @@ natural; they are not there to recover cost.
 
 **Built** (step 6), and what building it changed:
 
-- `plan_versions` gains a fourth column, **`cloud_overage`**: whether reads past the month are metered (Pro, Team) or
+- `plan_versions` gains a fourth column, **`cloud_overage`**: whether reads past the month are metered (Basic, Pro, Team) or
   refused (Free). It cannot be read off the price. Each is null for unlimited (Enterprise, by contract). Migration
   `0002_ada_cloud_plans.sql`. **A version that changes only the cloud limits takes over the Stripe price and the orgs
   of the one before** (`db/seed.py` `_carry`): `stripe_price_id` is unique (a price sells one version), and an org
@@ -626,7 +632,7 @@ natural; they are not there to recover cost.
   billing period is not the calendar month:** a report is stamped when it is sent, so the last day's reads of a month
   land on the invoice whose period holds the day after. **A subscription made before Ada Cloud has no metered item:**
   the first report gives it one. Checkout sells the metered price beside the plan's with the flag on
-  (`GLYPHH_STRIPE_PRICE_ADA`; unset, Checkout of Pro or Team is `503 E_UNAVAILABLE` `billing_off`).
+  (`GLYPHH_STRIPE_PRICE_ADA`; unset, Checkout of Basic, Pro or Team is `503 E_UNAVAILABLE` `billing_off`).
 - `GET /v1/plans`, `/v1/billing`, `/v1/me`, the Ada host's `GET /v1/usage` and the connector's `plan`, `plans` and
   `usage` show the cloud numbers (`cloud` on a plan; `cloud` usage: the shape in 4.2) with the flag on, and `null`
   with it off.
@@ -925,7 +931,7 @@ recommended; decision 12 does not arise (there are no paying self-hosted custome
 |---|---|---|
 | 1 | The shortlist: its size and the size below which a model is read exactly | ~~`S` = 1,000 and exact below 20,000~~ **`S` = 1,000 and exact below 1,000**, as step 1's numbers set them (10.1) |
 | 2 | Free orgs in their own schemas, or in shared tables with RLS | **Their own schemas until about 5,000 orgs,** then shared tables for Free only |
-| 3 | The cloud caps (section 7) | **Free 5k / 10k requests, Pro 100k / 1M, Team 1M / 5M** |
+| 3 | The cloud caps (section 7) | **Free 5k / 10k requests, Pro 100k / 1M, Team 1M / 5M**; Basic ($20) 10k / 50k added 2026-10-22 |
 | 4 | What a billable request is | **Reads only;** writes bounded by the precedent cap |
 | 5 | Bill through Stripe (built) or through Vercel's AI Gateway like Jev | **Stripe first** (the meter pattern exists, `ops/billing/meter.py`); list on Vercel's marketplace later if it brings customers |
 | 6 | Make `ghcr.io/glyphh-ai/rrotor` private, ending Free self-hosting | **Yes, now;** Free moves to the cloud; this reverses the 2026-10-18/19 Free-local ruling |

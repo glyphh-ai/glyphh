@@ -13,7 +13,7 @@ router = APIRouter(tags=["usage"])
 @router.get("/v1/usage", operation_id="getAdaUsage")
 async def get_usage(who: AdaWho, request: Request) -> CloudUsage:
     """The plan, the org's models, the precedents they hold and the reads this month, against the plan's (reads past
-    the month: metered on Pro and Team, refused on Free until it turns)."""
+    the month: metered on Basic, Pro and Team, refused on Free until it turns)."""
     state = request.app.state
     async with state.engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)

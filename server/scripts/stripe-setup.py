@@ -3,11 +3,12 @@
     STRIPE_SECRET_KEY=sk_test_… uv run python scripts/stripe-setup.py
 
 Safe to run again: products have Glyphh's own ids, prices are found by their lookup keys and the meter by its event
-name, so nothing is made twice. It makes the products Pro, Team, Hosting and Ada Cloud reads; Pro's and Team's flat
-monthly prices (from db/seed.py); the Billing Meter glyphh_hosting (summed, one unit a US cent, the customer by its
-id) and the hosting price on that meter, a cent a unit, monthly; and the Billing Meter ada_requests (summed, one unit
-an Ada Cloud read past a Pro or Team month) and its price, $1 per 10,000 (a hundredth of a cent a unit), monthly.
-Enterprise has no price here: each deal is its own. A price already made is never changed: a plan's lookup key
+name, so nothing is made twice. It makes the products Basic, Pro, Team, Hosting and Ada Cloud reads; Basic's,
+Pro's and Team's flat monthly prices (from db/seed.py; GLYPHH_STRIPE_PRICE_BASIC, _PRO, _TEAM); the Billing Meter
+glyphh_hosting (summed, one unit a US cent, the customer by its id) and the hosting price on that meter, a cent a
+unit, monthly; and the Billing Meter ada_requests (summed, one unit an Ada Cloud read past a Basic, Pro or Team month)
+and its price, $1 per 10,000 (a hundredth of a cent a unit), monthly. Enterprise has no price here: each deal is its
+own. A price already made is never changed: a plan's lookup key
 carries its amount, so a new amount in db/seed.py is a new price (and, once set, a new plan version at the next boot).
 """
 

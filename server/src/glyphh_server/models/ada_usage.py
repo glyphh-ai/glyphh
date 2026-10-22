@@ -22,7 +22,7 @@ class AdaUsage(Base):
 
 
 class AdaMeterEvent(Base):
-    """Reads past a metered plan's month (Pro, Team) reported to Stripe's ada_requests Billing Meter for an org's
+    """Reads past a metered plan's month (Basic, Pro, Team) reported to Stripe's ada_requests Billing Meter for an org's
     customer, by the month they were made in: written before it is sent, its id the event's identifier, so a send
     retried after a failure is counted once; sent_at once Stripe took it (ops/billing/ada_meter.py)."""
 

@@ -52,8 +52,8 @@ async def test_free_is_refused_past_its_month_saying_how_to_read_on(
     over = await ada.post("/v1/models/shapes/query", json={"data": shape(3)}, headers=key)
     error = over.json()["error"]
     assert (over.status_code, error["code"], error["reason"]) == (403, "E_LIMIT", "requests")
-    assert (error["used"], error["max"], error["plan"], error["upgrade"]) == (10_000, 10_000, "Free", "Pro")
-    assert error["resets_at"] == requests.turns(month) and "Upgrade to Pro" in error["message"]
+    assert (error["used"], error["max"], error["plan"], error["upgrade"]) == (10_000, 10_000, "Free", "Basic")
+    assert error["resets_at"] == requests.turns(month) and "Upgrade to Basic" in error["message"]
     assert await counted.get(requests.total_key(who.org_id, month)) == "10000"  # a refused read is not counted
     writes = await ada.post("/v1/models/shapes/record", json={"data": shape(90), "outcome": "good"}, headers=key)
     assert writes.status_code == 200  # writes are not requests
@@ -142,6 +142,13 @@ async def test_plans_and_usage_show_the_cloud_numbers_with_ada_cloud_on(
         "overage": False,
         "overage_cents_per_10k": None,
     }
+    assert plans["Basic"] == {
+        "precedents": 10_000,
+        "requests_per_month": 50_000,
+        "requests_per_second": 10,
+        "overage": True,
+        "overage_cents_per_10k": 100,
+    }
     assert (plans["Pro"]["precedents"], plans["Pro"]["requests_per_month"], plans["Pro"]["requests_per_second"]) == (
         100_000,
         1_000_000,
@@ -165,7 +172,10 @@ async def test_plans_and_usage_show_the_cloud_numbers_with_ada_cloud_on(
     assert "Ada Cloud 1,000,000 precedents, 5,000,000 reads a month (then $1 per 10,000 more), 200 calls" in plan
     listed = text(await tool(ada, auth, "plans")).splitlines()
     assert listed[0].endswith("Ada Cloud 5,000 precedents, 10,000 reads a month (then refused), 5 calls a second")
-    assert listed[3].endswith("Ada Cloud by contract")
+    assert listed[1].endswith(
+        "Ada Cloud 10,000 precedents, 50,000 reads a month (then $1 per 10,000 more), 10 calls a second"
+    )
+    assert listed[4].endswith("Ada Cloud by contract")
     usage = await tool(ada, auth, "usage")
     lines = text(usage).splitlines()
     assert lines[0].startswith(f"Ada Cloud reads {requests.period()}: 1 of 5,000,000; the count starts again")

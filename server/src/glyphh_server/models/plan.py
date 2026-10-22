@@ -10,7 +10,8 @@ INTERVALS: tuple[str, ...] = ("month", "year")
 
 
 class Plan(Base):
-    """A plan an org can be on: Free, Pro, Team, Enterprise. Retired with active=false, never deleted."""
+    """A plan an org can be on: Free, Basic, Pro, Team, Enterprise (in `sort` order). Retired with active=false,
+    never deleted."""
 
     __tablename__ = "plans"
 
@@ -32,7 +33,8 @@ class PlanVersion(Base):
 
     Ada Cloud's limits (docs/specs/ada-cloud.md, section 7), the org's whatever its people, models or keys:
     cloud_precedents across its models, cloud_requests (reads) a calendar month, cloud_rps calls a second; past
-    cloud_requests, cloud_overage meters the rest (Pro, Team) or the reads are refused until the month turns (Free).
+    cloud_requests, cloud_overage meters the rest (Basic, Pro, Team) or the reads are refused until the month turns
+    (Free).
     A version that changes only these takes over the Stripe price and the orgs of the one before it (db/seed.py)."""
 
     __tablename__ = "plan_versions"

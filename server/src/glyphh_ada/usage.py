@@ -33,7 +33,7 @@ class Held(BaseModel):
 class Reads(BaseModel):
     used: int = Field(description="Reads this month: decide, query, probabilities, facts (a decide per output)")
     max: int | None = Field(description="The plan's reads a month; null = by contract")
-    over: int = Field(description="Reads past the month's, metered (Pro, Team)")
+    over: int = Field(description="Reads past the month's, metered (Basic, Pro, Team)")
     overage: bool = Field(description="Reads past the month are metered; false: refused until it turns")
 
 

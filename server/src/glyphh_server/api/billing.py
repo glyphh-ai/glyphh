@@ -68,8 +68,8 @@ async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingVi
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")
 async def start_checkout(body: CheckoutIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
-    """Stripe Checkout's address for a self-serve plan (Pro or Team), to open in the browser pane; with hosting on,
-    the metered hosting price is its second item."""
+    """Stripe Checkout's address for a self-serve plan (Basic, Pro or Team), to open in the browser pane; with
+    hosting on, the metered hosting price is its second item (not on Basic, which has no hosting)."""
     return await checkout.checkout(conn, caller, stripe, request.app.state.settings, body.plan)
 
 

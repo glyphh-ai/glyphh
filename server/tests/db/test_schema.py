@@ -113,6 +113,7 @@ async def test_the_plans_carry_their_price_limits_features_and_hidden_markup(eng
         )
         assert [tuple(r) for r in rows] == [
             ("Free", 0, 1, 5_000, False, None),
+            ("Basic", 2_000, 1, 5_000, False, None),
             ("Pro", 9_900, 3, 50_000, False, 30),
             ("Team", 29_900, 10, 500_000, False, 30),
             ("Enterprise", None, None, None, True, None),
@@ -127,6 +128,7 @@ async def test_the_plans_carry_ada_clouds_limits_per_org_never_per_seat(engine: 
         )
         assert [tuple(r) for r in rows] == [
             ("Free", 5_000, 10_000, 5, False),
+            ("Basic", 10_000, 50_000, 10, True),
             ("Pro", 100_000, 1_000_000, 50, True),
             ("Team", 1_000_000, 5_000_000, 200, True),
             ("Enterprise", None, None, None, False),  # by contract

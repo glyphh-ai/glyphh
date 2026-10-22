@@ -54,7 +54,7 @@ async def test_with_hosting_off_no_machine_is_made_or_started_and_none_is_shown(
     fly.machines["m_old"] = {"id": "m_old", "state": "started"}
     async for client in _client(create_app(HOSTING_OFF, http=fake_http(fly=fly))):
         plans = (await client.get("/v1/plans")).json()
-        assert [p["limits"]["machines"] for p in plans] == [1, 3, 10, None]  # runtime nodes, hosting or not
+        assert [p["limits"]["machines"] for p in plans] == [1, 1, 3, 10, None]  # runtime nodes, hosting or not
         _off(await client.get("/v1/rates"))
         _off(await client.post("/v1/runtimes", json={"name": "research", "size": "small"}, headers=ada.headers))
         _off(await client.post("/v1/runtime/start", headers=ada.headers))

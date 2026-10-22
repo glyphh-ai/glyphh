@@ -161,6 +161,10 @@ async def test_checkout_sells_the_metered_reads_and_going_free_reports_them(
     assert opened.status_code == 200, opened.text
     lines = {v for k, v in stripe.calls[-1][2].items() if k.endswith("[price]")}
     assert lines == {"price_test_team", "price_test_hosting", "price_test_ada"}
+    basic = await billed.post("/v1/billing/checkout", json={"plan": "Basic"}, headers=buyer.headers)
+    assert basic.status_code == 200, basic.text  # Basic's reads past its month are metered too; it has no hosting
+    lines = {v for k, v in stripe.calls[-1][2].items() if k.endswith("[price]")}
+    assert lines == {"price_test_basic", "price_test_ada"}
     unpriced = ADA.model_copy(update={"stripe_price_ada": None})
     async for other in _client(create_app(unpriced, http=fake_http(stripe))):
         refused = await other.post(f"{API}/v1/billing/checkout", json={"plan": "Pro"}, headers=buyer.headers)

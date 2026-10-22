@@ -25,7 +25,7 @@ from glyphh_server.ops.runtimes import FIRST, NOT_LINKED, month_of
 
 DEFAULT_NAME: str = "default"  # the machine the routes made for one runtime make
 DEFAULT_SIZE: SizeName = "small"
-ON_FREE: str = "Glyphh's managed cloud is on Pro and Team; on Free, run rrotor yourself."
+ON_FREE: str = "Glyphh's managed cloud is on Pro and Team; on Free and Basic, run rrotor yourself."
 
 
 class Machine(BaseModel):
@@ -73,11 +73,12 @@ async def machine(conn: AsyncConnection, who: Principal, runtime_id: uuid.UUID, 
 async def create(conn: AsyncConnection, fly: Fly, who: Principal, name: str, size: SizeName) -> Machine:
     """A new machine, made and started (the app's doorman with the first one); past the plan's machines, or
     with a name the person has given another, refused; with hosting off, E_UNAVAILABLE `hosting_off`; on Free (its one
-    runtime node is self-hosted), E_NOT_IN_PLAN `hosting`."""
+    runtime node is self-hosted) or Basic, E_NOT_IN_PLAN
+    `hosting`."""
     require_hosting(fly.settings)
     await limits.lock_org(conn, who.org_id)
     version = await org_version(conn, who.org_id)
-    if version.price_cents == 0:
+    if version.self_serve and version.hosting_markup_pct is None:  # Free, Basic: no hosting
         raise NotInPlan(ON_FREE, reason="hosting", plan=version.name)
     await limits.check_machines(conn, await limits.org_machines(conn, who.org_id), version)
     taken = _MINE.where(Rrotor.user_id == who.user_id, Rrotor.name == name)

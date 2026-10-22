@@ -22,10 +22,10 @@ class AdaCloudSettings(BaseSettings):
     ada_import_bytes: int = Field(200 << 20, ge=1 << 20)
     # The Ada API's address, as the connector hands out its upload and download links.
     ada_url: str = "https://ada.glyphh.ai"
-    # Requests past Pro's and Team's month, metered (docs/specs/ada-cloud.md, section 7): the price on the ada_requests
-    # Billing Meter ($1 per 10,000), on every Pro and Team subscription, and the meter's event name. Without the price,
-    # Checkout answers E_UNAVAILABLE while Ada Cloud is on; without the name, nothing is reported to the meter.
-    # scripts/stripe-setup.py makes them and prints these.
+    # Requests past Basic's, Pro's and Team's month, metered (docs/specs/ada-cloud.md, section 7): the price on the
+    # ada_requests Billing Meter ($1 per 10,000), on every Basic, Pro and Team subscription, and the meter's event
+    # name. Without the price, Checkout answers E_UNAVAILABLE while Ada Cloud is on; without the name, nothing is
+    # reported to the meter. scripts/stripe-setup.py makes them and prints these.
     stripe_price_ada: str | None = None
     stripe_meter_ada: str = ""
 
@@ -72,6 +72,7 @@ class Settings(AdaCloudSettings):
     github_client_secret: str = ""
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
     # Hosting, metered: the price on the Billing Meter (a unit is a US cent), second on every paid subscription, and the

@@ -1,8 +1,8 @@
 """A call's plan checks before it is enqueued (docs/specs/ada-cloud.md, section 7), by the API and the connector alike:
 the org's calls a second (a token bucket in Redis, refused 429 E_RATE with Retry-After), then a read counted against
-its month (requests.py). Past the month, a metered plan (Pro, Team) goes on, each read over billed; any other (Free) is
-refused, 403 E_LIMIT `requests`, saying when it starts again and which plan reads more. A refused read is not counted.
-A caller with no allowance (an upload's own link) is neither limited nor counted."""
+its month (requests.py). Past the month, a metered plan (Basic, Pro, Team) goes on, each read over billed; any other
+(Free) is refused, 403 E_LIMIT `requests`, saying when it starts again and which plan reads more (from Free, Basic). A
+refused read is not counted. A caller with no allowance (an upload's own link) is neither limited nor counted."""
 
 import math
 from typing import Any

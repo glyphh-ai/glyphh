@@ -48,6 +48,7 @@ SETTINGS: Settings = Settings(
     secret_key=SECRET_KEY,
     stripe_secret_key="sk_test_not_a_real_key",
     stripe_webhook_secret=WEBHOOK_SECRET,
+    stripe_price_basic="price_test_basic",
     stripe_price_pro="price_test_pro",
     stripe_price_team="price_test_team",
     stripe_price_hosting="price_test_hosting",

@@ -12,21 +12,26 @@ from tests.link import hosted_runtime
 FEATURES_OFF = {"sync": False, "ha": False, "offline": False, "sso": False}
 
 
-async def test_the_plans_are_free_pro_team_and_enterprise_and_never_name_the_markup(client: httpx.AsyncClient) -> None:
+async def test_the_plans_are_free_basic_pro_team_and_enterprise_never_naming_the_markup(
+    client: httpx.AsyncClient,
+) -> None:
     plans = (await client.get("/v1/plans")).json()
     assert [(p["name"], p["price_cents"], p["interval"], p["self_serve"]) for p in plans] == [
         ("Free", 0, None, True),
+        ("Basic", 2_000, "month", True),
         ("Pro", 9_900, "month", True),
         ("Team", 29_900, "month", True),
         ("Enterprise", None, "year", False),
     ]
     assert [p["limits"] for p in plans] == [
         {"machines": 1, "precedents": 5_000},
+        {"machines": 1, "precedents": 5_000},  # Basic: no licence key, a self-hosted node runs as Free's
         {"machines": 3, "precedents": 50_000},
         {"machines": 10, "precedents": 500_000},
         {"machines": None, "precedents": None},
     ]
     assert [p["features"] for p in plans] == [
+        FEATURES_OFF,
         FEATURES_OFF,
         FEATURES_OFF | {"sync": True},
         FEATURES_OFF | {"sync": True},
