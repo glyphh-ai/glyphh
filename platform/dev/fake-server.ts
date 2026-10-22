@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { feature } from '../src/api/plans.js';
 import * as fixtures from '../src/test/fixtures.js';
+import { mountAda } from './fake-ada.js';
 
 /**
  * A stand-in Glyphh server for working on the platform without the real one: the OAuth steps (which
@@ -12,6 +13,8 @@ import * as fixtures from '../src/test/fixtures.js';
  * 503 E_UNAVAILABLE reason hosting_off), each plan's runtime nodes as they are, and each feature saying whether it is
  * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does. Its runtimes send no telemetry, as rrotor
  * sends none by default; FAKE_SERVER_LOGS=on has them send logs, audit events and metrics, as RROTOR_SERVER_LOGS=on does.
+ * FAKE_ADA=on turns Ada Cloud on, as GLYPHH_ADA_CLOUD=on does: /v1/me says so and Ada's API answers at /ada/v1
+ * (dev/fake-ada.ts; the platform's GLYPHH_ADA_URL=http://localhost:8080/ada).
  *
  *   npm run fake-server   → http://localhost:8080
  */
@@ -20,9 +23,15 @@ const platform = process.env.PLATFORM_URL ?? 'http://localhost:3000';
 const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
 const hosting = process.env.FAKE_HOSTING === 'on';
 const serverLogs = process.env.FAKE_SERVER_LOGS === 'on';
+const adaCloud = process.env.FAKE_ADA === 'on';
 const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
 const app = new Hono();
+// With Ada Cloud on each plan carries its cloud limits, and /v1/me and /v1/billing the org's use of them (`cloud`).
+if (adaCloud) data.plans = data.plans.map((plan) => ({ ...plan, cloud: fixtures.cloudLimits[plan.name] ?? null }));
 const state = structuredClone(data);
+state.me.ada_cloud = adaCloud;
+if (adaCloud) state.me.plan = data.plans.find((plan) => plan.name === state.me.plan.name) ?? state.me.plan;
+const cloudUsage = adaCloud ? mountAda(app, port, () => state.me.plan.name) : () => null;
 let nextKey = 10;
 let nextSelf = 10;
 let nextMachine = 10;
@@ -60,7 +69,7 @@ app.post('/oauth/token', (c) => c.json({ access_token: 'dev-access', token_type:
 app.post('/oauth/revoke', (c) => c.body(null, 200));
 
 // /v1
-app.get('/v1/me', (c) => c.json(state.me));
+app.get('/v1/me', (c) => c.json({ ...state.me, cloud: cloudUsage() }));
 app.patch('/v1/me', async (c) => c.json(Object.assign(state.me, { name: (await c.req.json()).name })));
 app.post('/v1/me/identities', async (c) => c.json({ url: `http://localhost:${port}/auth/${(await c.req.json()).provider}/start?link=1` }));
 app.delete('/v1/me/identities/:provider', (c) => {
@@ -115,9 +124,10 @@ app.post('/v1/runtimes', async (c) => {
   const off = hostingOff();
   if (off) return off;
   const { name, size } = await c.req.json();
-  const { name: plan, limits, price_cents } = state.me.plan;
-  // Hosted machines are on the paid plans; each counts as one of the plan's runtime nodes, as a self-hosted one does.
-  if (price_cents === 0) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
+  const { name: plan, limits } = state.me.plan;
+  // Hosted machines are on the plans with hosting (not Free or Basic); each counts as one of the plan's runtime nodes,
+  // as a self-hosted one does.
+  if (!(state.me.plan.hosting ?? state.me.plan.price_cents !== 0)) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
   if (limits.machines !== null && state.machines.length + state.selfRuntimes.length >= limits.machines) {
     return refuse(403, 'E_LIMIT', `${plan} allows ${limits.machines} runtime nodes.`, 'machines');
   }
@@ -255,16 +265,17 @@ app.delete('/v1/org/invites/:id', (c) => {
 });
 app.get('/v1/billing', (c) => {
   const { plan, org, precedents, hosting } = state.me;
-  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting });
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting, cloud: cloudUsage() });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
-// A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free has none.
+// A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free and
+// Basic have none (rrotor has no basic tier: a node on Basic runs as Free's).
 const licenceFor = (plan: (typeof data.plans)[number]) => {
   const now = new Date();
   for (const key of state.licenceKeys.keys) if (key.state === 'live') Object.assign(key, { state: 'revoked', revoked_at: now.toISOString() });
   state.nodes.max_nodes = plan.limits.machines;
   state.nodes.over = plan.limits.machines !== null && state.nodes.count > plan.limits.machines;
-  if (plan.price_cents === 0) {
+  if (plan.price_cents === 0 || plan.name === 'Basic') {
     state.licenceKeys.license_key = null;
     return;
   }

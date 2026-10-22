@@ -22,6 +22,7 @@ describe('Logs', () => {
   it('opens from the settings rail, after Usage', async () => {
     const { user, router } = renderApp('/usage');
     const rail = await screen.findByRole('complementary', { name: 'Main' });
+    await within(rail).findByRole('link', { name: 'Logs' });
     const links = within(rail).getAllByRole('link').map((link) => link.textContent);
     expect(links.indexOf('Logs')).toBe(links.indexOf('Usage') + 1);
     await user.click(within(rail).getByRole('link', { name: 'Logs' }));

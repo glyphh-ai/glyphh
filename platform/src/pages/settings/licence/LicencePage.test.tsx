@@ -95,6 +95,6 @@ describe('Licence', () => {
   it('opens from the main sidebar', async () => {
     renderApp('/');
     const rail = await screen.findByRole('complementary', { name: 'Main' });
-    expect(within(rail).getByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
+    expect(await within(rail).findByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
   });
 });

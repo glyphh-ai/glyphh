@@ -138,7 +138,7 @@ describe('Machines', () => {
   });
 
   it('on Enterprise, each size card says its rate is set in the contract', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] })));
     const { user, client } = renderApp('/machines');
     await vi.waitFor(() => expect(client.getQueryData(['me'])).toBeDefined());
     await user.click(await screen.findByRole('button', { name: 'New machine' }));

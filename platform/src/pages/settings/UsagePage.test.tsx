@@ -26,7 +26,7 @@ describe('Usage', () => {
   });
 
   it('says there is no limit on a plan without one, and no machines this month', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
     renderApp('/usage');
     expect(await screen.findByText('on the fullest node, no limit')).toBeInTheDocument();
     expect(screen.getByText('2,500,000')).toBeInTheDocument();
@@ -38,6 +38,7 @@ describe('Usage', () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/usage');
     expect(await screen.findByText('On Free.')).toBeInTheDocument();
+    expect(await screen.findByText('of 5,000 on the fullest node')).toBeInTheDocument();
     expect(within(meter('Precedents')).getByText('of 5,000 on the fullest node')).toBeInTheDocument();
     expect(await within(meter('Hosting')).findByText(/Hosting is on Pro and Team\./)).toBeInTheDocument();
     expect(within(meter('Hosting')).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
@@ -56,7 +57,7 @@ describe('Usage', () => {
 
   it('shows the usage loading until it is known, and no keys yet', async () => {
     server.use(
-      http.get(v1('/me'), () => new Promise<never>(() => {})),
+      http.get(v1('/rates'), () => new Promise<never>(() => {})),
       http.get(v1('/runtime/keys'), () => HttpResponse.json([])),
     );
     renderApp('/usage');
@@ -117,7 +118,7 @@ describe('Usage’s runtime nodes', () => {
 
   it('on a plan without a limit, says so; a node with no precedents reported says that', async () => {
     server.use(
-      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3], precedents: { used: 10, limit: null } })),
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 10, limit: null } })),
       http.get(v1('/license/nodes'), () => HttpResponse.json({ count: 1, max_nodes: null, over: false, nodes: [{ ...nodes.nodes[0]!, precedents: null }] })),
     );
     renderApp('/usage');

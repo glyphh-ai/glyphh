@@ -157,7 +157,7 @@ describe('Add a runtime', () => {
       const { client } = await openAdd();
       const form = await screen.findByRole('form', { name: 'Make your machine' });
       expect(await within(form).findByText('$8.71 / month')).toBeInTheDocument();
-      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[3] })));
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] })));
       await client.invalidateQueries({ queryKey: ['me'] });
       expect(await within(form).findAllByText('Set in your contract.')).toHaveLength(3);
       expect(within(form).queryByText(/\/ month/)).not.toBeInTheDocument();

@@ -26,14 +26,56 @@ export type Plan = {
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
   /**
-   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Pro 3, Team 10).
-   * `precedents`: what one node may hold, across its models (Free 5,000, Pro 50,000, Team 500,000). Null is unlimited.
+   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Basic 1, Pro 3,
+   * Team 10). `precedents`: what one node may hold, across its models (Free and Basic 5,000, Pro 50,000, Team
+   * 500,000). Null is unlimited.
    */
   limits: { machines: number | null; precedents: number | null };
   features: PlanFeatures;
   /** Whether each feature is built; a feature not in it (or no map at all) is built. */
   built?: { [feature: string]: boolean | undefined };
   markup_hidden: true;
+  /** Whether Glyphh hosts machines on it while hosting is on: Pro, Team, Enterprise; never Free or Basic. */
+  hosting?: boolean;
+  /** Ada Cloud's limits, the org's whatever its people, models or keys; null (or missing) while Ada Cloud is off. */
+  cloud?: CloudLimits | null;
+};
+
+/**
+ * A plan's Ada Cloud limits (the server's cloud_* on a plan version): Free 5,000 precedents, 10,000 requests a month,
+ * 5 a second; Basic 10,000, 50,000, 10; Pro 100,000, 1,000,000, 50; Team 1,000,000, 5,000,000, 200; Enterprise by
+ * contract (null: unlimited). Past the month Basic, Pro and Team are metered (`overage`); Free is refused until the
+ * month turns.
+ */
+export type CloudLimits = {
+  precedents: number | null;
+  /** Reads (decide, query, probabilities, facts) a calendar month, UTC. */
+  requests_per_month: number | null;
+  /** Calls a second, the org's together. */
+  requests_per_second: number | null;
+  overage: boolean;
+  /** What 10,000 requests past the month cost; null when none are sold. */
+  overage_cents_per_10k: number | null;
+};
+
+/**
+ * What the org uses of Ada Cloud against its plan: one shape for Ada's `GET /v1/usage` and `cloud` on /v1/me and
+ * /v1/billing. Requests are reads (a decide of several outputs counts once per output), by calendar month, UTC.
+ */
+export type CloudUsage = {
+  plan: string;
+  /** YYYY-MM, UTC. */
+  month: string;
+  /** When the month's count starts again, YYYY-MM-DD. */
+  resets_at: string;
+  /** The org's live models. */
+  models: number;
+  /** A null max is by contract: unlimited. */
+  precedents: { used: number; max: number | null };
+  /** `over`: requests past the month, metered; `overage`: past it is metered (Pro, Team), else refused (Free). */
+  requests: { used: number; max: number | null; over: number; overage: boolean };
+  /** Calls a second; null: by contract. */
+  requests_per_second: number | null;
 };
 
 /** One hosted machine's cost this month, in cents, as billed. */
@@ -52,6 +94,10 @@ export type Me = {
   precedents: { used: number; limit: number | null };
   /** Hosted machines this month so far. */
   hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
+  /** Ada Cloud is on (`GLYPHH_ADA_CLOUD`): the platform is Ada's, with no runtimes. Missing on an older server: off. */
+  ada_cloud?: boolean;
+  /** Ada Cloud's use against the plan; null (or missing) while it is off. */
+  cloud?: CloudUsage | null;
 };
 
 export type Install = {

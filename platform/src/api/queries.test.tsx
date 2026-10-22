@@ -58,7 +58,7 @@ describe('whether Glyphh hosts machines', () => {
     expect(hostingOn(null)).toBe(false);
     expect(hostingOn(rates)).toBe(true);
     expect(hostingOn(undefined)).toBe(true);
-    expect(hostingOff.plans.map((plan) => plan.limits.machines)).toEqual([1, 3, 10, null]);
+    expect(hostingOff.plans.map((plan) => plan.limits.machines)).toEqual([1, 1, 3, 10, null]);
   });
 
   it('is on while the rates are read, even with every plan at no runtime nodes', async () => {

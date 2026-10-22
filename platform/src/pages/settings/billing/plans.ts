@@ -1,5 +1,5 @@
 import { feature, featureNames } from '@/api/plans';
-import type { FeatureName, Plan } from '@/api/types';
+import type { CloudLimits, FeatureName, Plan } from '@/api/types';
 import { listText, money } from '@/lib/format';
 import type { IconName } from '@/ui';
 
@@ -17,8 +17,8 @@ export function priceText(plan: Plan): string {
   return per ? `${amount} / ${per}` : amount;
 }
 
-/** Whether Glyphh hosts machines on the plan (while hosting is on): every plan but Free. */
-export const hasHosting = (plan: Plan) => plan.price_cents !== 0;
+/** Whether Glyphh hosts machines on the plan (while hosting is on), as the server says: not Free or Basic. */
+export const hasHosting = (plan: Plan) => plan.hosting ?? plan.price_cents !== 0;
 
 /** The self-serve plans with hosting, as words: "Pro and Team". */
 export function hostingPlansText(plans: Plan[] | undefined): string {
@@ -49,22 +49,52 @@ const featureText: Record<FeatureName, string> = {
   audit: 'Audit logs',
 };
 
+/** What only a runtime does: sync across runtimes, high availability, offline licences. */
+const runtimeFeatures = ['sync', 'ha', 'offline'];
+
 /** One line of what a plan includes; `soon` when Glyphh has not built it yet, so it is never shown as included. */
 export type PlanFact = { icon: IconName; text: string; soon?: boolean };
 
 /** A fact as one line: "Sync across runtimes", or "Coming soon: Sync across runtimes". */
 export const factText = (fact: PlanFact) => (fact.soon ? `Coming soon: ${fact.text}` : fact.text);
 
+const count = (value: number) => value.toLocaleString('en-GB');
+
+/**
+ * A plan's Ada Cloud limits as lines: its precedents, its requests a month and a second, and on a metered plan what
+ * requests past the month cost ("Then $1 per 10,000 requests"). Null is by contract: unlimited (Enterprise), and no
+ * line for the calls a second.
+ */
+export function cloudFacts(cloud: CloudLimits): PlanFact[] {
+  const facts: PlanFact[] = [
+    { icon: 'model', text: cloud.precedents === null ? 'Unlimited precedents' : `${count(cloud.precedents)} precedents` },
+    { icon: 'monitor', text: cloud.requests_per_month === null ? 'Unlimited requests' : `${count(cloud.requests_per_month)} requests a month` },
+  ];
+  if (cloud.requests_per_second !== null) facts.push({ icon: 'monitor', text: `${count(cloud.requests_per_second)} requests a second` });
+  if (cloud.overage && cloud.requests_per_month !== null && cloud.overage_cents_per_10k) {
+    facts.push({ icon: 'card', text: `Then ${money(cloud.overage_cents_per_10k)} per 10,000 requests` });
+  }
+  return facts;
+}
+
 /**
  * What a plan includes, as the server states it: its runtime nodes and its precedents per node, and
- * what it turns on, each feature not yet built marked as coming soon.
+ * what it turns on, each feature not yet built marked as coming soon. With Ada Cloud on (`ada`) there are no runtimes:
+ * no nodes, no precedents per node and none of the runtimes' own features; its cloud limits instead (the org's
+ * precedents, requests a month and a second, and the price past the month on Basic, Pro and Team).
  */
-export function planFacts(plan: Plan): PlanFact[] {
-  const facts: PlanFact[] = [{ icon: 'chip', text: machinesText(plan.limits.machines) }];
-  const precedents = precedentsText(plan.limits.precedents);
-  if (precedents) facts.push({ icon: 'model', text: precedents });
+export function planFacts(plan: Plan, ada = false): PlanFact[] {
+  const facts: PlanFact[] = [];
+  if (ada) {
+    if (plan.cloud) facts.push(...cloudFacts(plan.cloud));
+  } else {
+    facts.push({ icon: 'chip', text: machinesText(plan.limits.machines) });
+    const precedents = precedentsText(plan.limits.precedents);
+    if (precedents) facts.push({ icon: 'model', text: precedents });
+  }
   const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
   for (const name of names) {
+    if (ada && runtimeFeatures.includes(name)) continue;
     const { included, built } = feature(plan, name);
     if (included) facts.push({ icon: 'check', text: featureText[name as FeatureName] ?? name, soon: !built });
   }

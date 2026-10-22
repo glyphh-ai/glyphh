@@ -1,5 +1,6 @@
 import type {
   AuditEvent,
+  CloudLimits,
   HostingOff,
   Install,
   Invite,
@@ -30,10 +31,13 @@ import type {
 const none = { sync: false, ha: false, offline: false, sso: false };
 const built = { sync: true, ha: true, offline: true, sso: true };
 
+// In the server's order: Free, Basic, Pro, Team, Enterprise. Basic ($20, an Ada Cloud plan) has no licence key, so a
+// self-hosted node on it runs as Free's, and no hosting.
 export const plans: Plan[] = [
-  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 1, precedents: 5_000 }, features: none, built, markup_hidden: true },
-  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 50_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
-  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 500_000 }, features: { ...none, sync: true }, built, markup_hidden: true },
+  { name: 'Free', version: 1, price_cents: 0, interval: null, self_serve: true, limits: { machines: 1, precedents: 5_000 }, features: none, built, markup_hidden: true, hosting: false },
+  { name: 'Basic', version: 1, price_cents: 2000, interval: 'month', self_serve: true, limits: { machines: 1, precedents: 5_000 }, features: none, built, markup_hidden: true, hosting: false },
+  { name: 'Pro', version: 1, price_cents: 9900, interval: 'month', self_serve: true, limits: { machines: 3, precedents: 50_000 }, features: { ...none, sync: true }, built, markup_hidden: true, hosting: true },
+  { name: 'Team', version: 1, price_cents: 29900, interval: 'month', self_serve: true, limits: { machines: 10, precedents: 500_000 }, features: { ...none, sync: true }, built, markup_hidden: true, hosting: true },
   {
     name: 'Enterprise',
     version: 1,
@@ -44,10 +48,23 @@ export const plans: Plan[] = [
     features: { sync: true, ha: true, offline: true, sso: true },
     built,
     markup_hidden: true,
+    hosting: true,
   },
 ];
 
-const pro = plans[1]!;
+/** Each plan's Ada Cloud limits, as the server seeds them (glyphh_server/db/seed.py): a version's cloud_*. */
+export const cloudLimits: Record<string, CloudLimits> = {
+  Free: { precedents: 5_000, requests_per_month: 10_000, requests_per_second: 5, overage: false, overage_cents_per_10k: null },
+  Basic: { precedents: 10_000, requests_per_month: 50_000, requests_per_second: 10, overage: true, overage_cents_per_10k: 100 },
+  Pro: { precedents: 100_000, requests_per_month: 1_000_000, requests_per_second: 50, overage: true, overage_cents_per_10k: 100 },
+  Team: { precedents: 1_000_000, requests_per_month: 5_000_000, requests_per_second: 200, overage: true, overage_cents_per_10k: 100 },
+  Enterprise: { precedents: null, requests_per_month: null, requests_per_second: null, overage: false, overage_cents_per_10k: null },
+};
+
+/** The plans as `GET /v1/plans` lists them with Ada Cloud on: each with its cloud limits. */
+export const adaPlans: Plan[] = plans.map((plan) => ({ ...plan, cloud: cloudLimits[plan.name]! }));
+
+const pro = plans[2]!;
 
 export const me: Me = {
   id: 'u-chris',
@@ -297,12 +314,7 @@ export const metrics: MetricPoint[] = [
 const unbuilt = { sync: false, ha: false, offline: true, sso: false };
 // The runtime nodes stay as they are: they count self-hosted runtimes too.
 const off = (plan: Plan, change: Partial<Plan>): Plan => ({ ...plan, ...change, built: unbuilt });
-const offPlans: Plan[] = [
-  off(plans[0]!, {}),
-  off(plans[1]!, {}),
-  off(plans[2]!, {}),
-  off(plans[3]!, {}),
-];
+const offPlans: Plan[] = plans.map((plan) => off(plan, {}));
 const offMe: Me = {
   ...me,
   org: { ...me.org, billing_status: 'none', renews_at: null },

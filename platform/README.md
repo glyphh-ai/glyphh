@@ -61,6 +61,32 @@ The server's `GLYPHH_HOSTING` is off by default. The platform reads it from the 
   does not name them. A plan's `limits.precedents` is per node, hosted or self-hosted (Free 5,000, Pro 50,000, Team
   500,000), shown as "precedents per node" with hosting on or off. Plans are listed, priced and bought as before.
 
+## Ada Cloud
+
+With the server's `GLYPHH_ADA_CLOUD` on, `GET /v1/me` answers `ada_cloud: true` and the platform is Ada's: no
+runtimes, machines, licence, rrotor's logs, Add a runtime or self-hosting (`/logs`, `/licence`, `/machines`,
+`/getting-started` go Home). Off, or on an older server without the field, every page is as below. The browser calls
+`/api/ada/v1/*` here; the route handler adds the session's token and passes the call to Ada's host
+(`GLYPHH_ADA_URL`, `https://ada.glyphh.ai`), which takes a Glyphh sign-in as the account API does. An import's file goes
+`PUT /api/ada/v1/uploads/<link>`, streamed to the upload link without a token (the link is its own credential).
+
+| Route | Page | Ada calls | Does |
+|---|---|---|---|
+| `/` | Home | `GET /v1/models`, `GET /v1/usage` | The models, the precedents and this month's requests against the plan (and what happens past the month), the connector URL (`{server}/mcp`) to add in Claude |
+| `/models` | Models | `GET /v1/models` | Each model's live version and precedents |
+| `/models/new` | New model | `POST /v1/models {name, spec}` | A spec editor, checked as typed (the cloud's bounds), from an example or blank |
+| `/models/:name` | A model, a tab each (`?tab=`) | `GET /v1/models/{name}`, `…/versions`, `…/settings`, `GET /v1/jobs/{id}` | **Spec**: the live spec, a new version (`PUT …/spec`), versions and Make live (`POST …/versions/{n}/activate`). **Settings**: every lever, saved as a version (`PATCH …/settings`). **Import**: a CSV (each column mapped to a role, an outcome, ts, id or skipped) or JSON Lines (`POST …/imports`, then the file to its link), with progress. **Try it**: a form from the spec, `POST /v1/decide`: the answer, confidence, whether a person should decide, the precedents. **Backtest**: candidates (settings changed, or another version) on the newest held-out cases (`POST …/backtest`), the results and Make live (with the backtest kept on the version). **Export**: JSON Lines or SQLite (`POST …/export`), then its download link. Delete after typing the name |
+| `/keys` | API Keys | `GET`, `POST /v1/keys`, `DELETE /v1/keys/{id}` | Cloud keys: name, expiry, clearance (0 to 1); shown once; revoke |
+| `/usage` | Usage | `GET /v1/usage`, `GET /v1/models`, `GET /v1/me` | `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`: precedents and the month's requests against the plan's (the month, UTC, and when it starts again); past it, Pro and Team are billed ($1 per 10,000, the plan's `overage_cents_per_10k`), Free stops until it turns, with the way to upgrade; the calls a second; each model's precedents |
+
+Ada's plan refusals are shown on every Ada page in the server's words with the way on (`AdaErrorNotice`): 429 `E_RATE` (the
+plan's calls a second; Retry-After, passed back by the route handlers), 403 `E_LIMIT` `requests` (Upgrade to the plan the
+server names, or Talk to us) and `precedents` (the plans). With Ada Cloud on the plan cards show each plan's cloud caps
+(`cloud` on `GET /v1/plans`) in place of runtime nodes and precedents per node.
+
+Billing, Plans, Members, Profile, Installs and General stay; a plan's runtime nodes, precedents per node and runtime
+features (sync, HA, offline licences) are not shown.
+
 ## Pages
 
 The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
@@ -89,6 +115,7 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | Variable | What |
 |---|---|
 | `GLYPHH_SERVER_URL` | The server: `https://api.glyphh.ai` |
+| `GLYPHH_ADA_URL` | Ada Cloud's host of the server (default `https://ada.glyphh.ai`) |
 | `PLATFORM_URL` | This app's own address; the server's `GLYPHH_PLATFORM_URL` must match |
 | `PLATFORM_CLIENT_ID`, `PLATFORM_CLIENT_SECRET` | The platform's OAuth client at the server |
 | `PLATFORM_CLIENT_NAME` | The `client_name` it registered with (default `Glyphh`), so its own consent pages are recognised |
@@ -107,7 +134,8 @@ npm ci
 cp .env.example .env        # then set PLATFORM_CLIENT_ID, PLATFORM_CLIENT_SECRET and SESSION_SECRET
 npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080); hosting off as
                             # the server has it, FAKE_HOSTING=on to turn it on; no telemetry, as rrotor sends none by
-                            # default, FAKE_SERVER_LOGS=on for sample logs, audit events and metrics
+                            # default, FAKE_SERVER_LOGS=on for sample logs, audit events and metrics; FAKE_ADA=on
+                            # for Ada Cloud (its API at /ada/v1)
 npm run dev                 # the platform on PLATFORM_URL (default http://localhost:3000), hot reload
 npm test                    # route handlers, API calls and every page, against fake servers
 npm run typecheck
