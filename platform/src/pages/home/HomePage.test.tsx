@@ -100,11 +100,13 @@ describe('Home', () => {
     expect(screen.queryByRole('button', { name: 'Copy connector URL' })).not.toBeInTheDocument();
   });
 
-  it('shows a dash for the cost until the hosting is read', async () => {
+  it('waits for the account, which says whether Ada Cloud is on, before showing either Home', async () => {
     server.use(http.get(v1('/me'), () => new Promise<never>(() => {})));
     renderApp('/');
-    expect(await screen.findByText('hosting so far')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Loading')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Runtimes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Home' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('complementary', { name: 'Main' })).queryAllByRole('link')).toHaveLength(0);
   });
 
   it('says so when Glyphh cannot be reached', async () => {

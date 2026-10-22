@@ -52,6 +52,8 @@ export type Me = {
   precedents: { used: number; limit: number | null };
   /** Hosted machines this month so far. */
   hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
+  /** Ada Cloud is on (`GLYPHH_ADA_CLOUD`): the platform is Ada's, with no runtimes. Missing on an older server: off. */
+  ada_cloud?: boolean;
 };
 
 export type Install = {

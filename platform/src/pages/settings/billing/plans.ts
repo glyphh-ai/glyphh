@@ -49,6 +49,9 @@ const featureText: Record<FeatureName, string> = {
   audit: 'Audit logs',
 };
 
+/** What only a runtime does: sync across runtimes, high availability, offline licences. */
+const runtimeFeatures = ['sync', 'ha', 'offline'];
+
 /** One line of what a plan includes; `soon` when Glyphh has not built it yet, so it is never shown as included. */
 export type PlanFact = { icon: IconName; text: string; soon?: boolean };
 
@@ -57,14 +60,19 @@ export const factText = (fact: PlanFact) => (fact.soon ? `Coming soon: ${fact.te
 
 /**
  * What a plan includes, as the server states it: its runtime nodes and its precedents per node, and
- * what it turns on, each feature not yet built marked as coming soon.
+ * what it turns on, each feature not yet built marked as coming soon. With Ada Cloud on (`ada`) there are no runtimes:
+ * no nodes, no precedents per node and none of the runtimes' own features.
  */
-export function planFacts(plan: Plan): PlanFact[] {
-  const facts: PlanFact[] = [{ icon: 'chip', text: machinesText(plan.limits.machines) }];
-  const precedents = precedentsText(plan.limits.precedents);
-  if (precedents) facts.push({ icon: 'model', text: precedents });
+export function planFacts(plan: Plan, ada = false): PlanFact[] {
+  const facts: PlanFact[] = [];
+  if (!ada) {
+    facts.push({ icon: 'chip', text: machinesText(plan.limits.machines) });
+    const precedents = precedentsText(plan.limits.precedents);
+    if (precedents) facts.push({ icon: 'model', text: precedents });
+  }
   const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
   for (const name of names) {
+    if (ada && runtimeFeatures.includes(name)) continue;
     const { included, built } = feature(plan, name);
     if (included) facts.push({ icon: 'check', text: featureText[name as FeatureName] ?? name, soon: !built });
   }

@@ -44,7 +44,7 @@ describe('safeReturnTo', () => {
 describe('GET /auth/session', () => {
   it('is signed out with no cookie, and names the server', async () => {
     const res = await setup().request('/auth/session');
-    expect(await body(res)).toEqual({ signedIn: false, serverUrl: 'https://api.test', clientName: 'Glyphh' });
+    expect(await body(res)).toEqual({ signedIn: false, serverUrl: 'https://api.test', adaUrl: 'https://ada.test', clientName: 'Glyphh' });
   });
 
   it('is signed in with a sealed session', async () => {
@@ -336,5 +336,44 @@ describe('/api/v1/*, more', () => {
     expect(res.status).toBe(401);
     expect((await body(res)).error.code).toBe('E_SIGNED_OUT');
     expect(server.state.seen.filter((r) => r.path === '/oauth/token')).toHaveLength(1);
+  });
+});
+
+describe('/api/ada/v1/*', () => {
+  it('calls Ada Cloud’s host with the session’s token', async () => {
+    const ctx = setup();
+    const res = await ctx.request('/api/ada/v1/usage?x=1', { headers: { cookie: sessionCookie() } });
+    expect(res.status).toBe(200);
+    expect((await body(res)).plan).toBe('Pro');
+    const call = ctx.server.state.seen.find((r) => r.path === '/v1/usage')!;
+    expect([call.host, call.search, call.headers.get('authorization')]).toEqual(['ada.test', '?x=1', 'Bearer access-1']);
+  });
+
+  it('is signed out without a session, and refuses a write from another site', async () => {
+    const ctx = setup();
+    expect((await ctx.request('/api/ada/v1/usage')).status).toBe(401);
+    const res = await ctx.request('/api/ada/v1/models', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site', cookie: sessionCookie() }, body: '{}' });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('PUT /api/ada/v1/uploads/:link', () => {
+  const put = (ctx: ReturnType<typeof setup>, headers: Record<string, string>) =>
+    ctx.request('/api/ada/v1/uploads/signed.link', { method: 'PUT', headers, body: 'a,b\n1,2\n' });
+
+  it('streams the file to the upload link with no token, the link being its own credential', async () => {
+    const ctx = setup();
+    const res = await put(ctx, { ...origin, cookie: sessionCookie(), 'content-type': 'text/csv' });
+    expect(res.status).toBe(202);
+    expect(await body(res)).toEqual({ id: 'job-1', state: 'queued', bytes: 8 });
+    const call = ctx.server.state.seen.find((r) => r.path === '/v1/uploads/signed.link')!;
+    expect([call.host, call.body, call.headers.get('authorization'), call.headers.get('content-type')]).toEqual(['ada.test', 'a,b\n1,2\n', null, 'text/csv']);
+  });
+
+  it('takes files from this site’s signed-in pages only', async () => {
+    const ctx = setup();
+    expect((await put(ctx, { 'sec-fetch-site': 'cross-site', cookie: sessionCookie() })).status).toBe(403);
+    expect((await put(ctx, origin)).status).toBe(401);
+    expect(ctx.server.state.seen).toHaveLength(0);
   });
 });

@@ -3,6 +3,7 @@ import type { Config } from './config.js';
 
 export const testConfig: Config = {
   serverUrl: 'https://api.test',
+  adaUrl: 'https://ada.test',
   platformUrl: 'https://app.test',
   clientId: 'platform-client',
   clientSecret: 's3cret',
@@ -11,7 +12,7 @@ export const testConfig: Config = {
   secureCookies: true,
 };
 
-export type Seen = { method: string; path: string; search: string; headers: Headers; body: string };
+export type Seen = { method: string; host: string; path: string; search: string; headers: Headers; body: string };
 
 /**
  * A fake Glyphh server: the OAuth token and revoke endpoints and a small /v1, recording every request.
@@ -31,7 +32,7 @@ export function fakeServer() {
 
   server.use('*', async (c, next) => {
     const url = new URL(c.req.url);
-    seen.push({ method: c.req.method, path: url.pathname, search: url.search, headers: c.req.raw.headers, body: await c.req.raw.clone().text() });
+    seen.push({ method: c.req.method, host: url.host, path: url.pathname, search: url.search, headers: c.req.raw.headers, body: await c.req.raw.clone().text() });
     await next();
   });
 
@@ -58,6 +59,9 @@ export function fakeServer() {
   server.post('/oauth/revoke', (c) => c.body(null, 200));
   server.get('/auth/providers', (c) => c.json({ providers: ['google', 'github'] }));
 
+  // Ada Cloud's upload links are their own credential: no bearer.
+  server.put('/v1/uploads/:token', async (c) => c.json({ id: 'job-1', state: 'queued', bytes: (await c.req.arrayBuffer()).byteLength }, 202));
+
   server.use('/v1/*', async (c, next) => {
     const token = c.req.header('authorization')?.replace(/^Bearer /, '');
     if (!token || !state.accessTokens.has(token)) {
@@ -69,6 +73,7 @@ export function fakeServer() {
   server.patch('/v1/me', async (c) => c.json({ id: 'u1', name: (await c.req.json()).name }));
   server.delete('/v1/installs/:id', (c) => c.body(null, 204));
   server.get('/v1/org/members', (c) => c.json([], 200));
+  server.get('/v1/usage', (c) => c.json({ plan: 'Pro', models: 0, precedents: { used: 0, max: 100_000 }, requests: null }));
   server.post('/v1/org/invites', () =>
     Response.json({ error: { code: 'E_LIMIT', message: 'Your plan allows 1 member.', trace_id: 't-lim', limit: 'members' } }, { status: 403 }),
   );

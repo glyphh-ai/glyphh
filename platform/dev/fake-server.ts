@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { feature } from '../src/api/plans.js';
 import * as fixtures from '../src/test/fixtures.js';
+import { mountAda } from './fake-ada.js';
 
 /**
  * A stand-in Glyphh server for working on the platform without the real one: the OAuth steps (which
@@ -12,6 +13,8 @@ import * as fixtures from '../src/test/fixtures.js';
  * 503 E_UNAVAILABLE reason hosting_off), each plan's runtime nodes as they are, and each feature saying whether it is
  * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does. Its runtimes send no telemetry, as rrotor
  * sends none by default; FAKE_SERVER_LOGS=on has them send logs, audit events and metrics, as RROTOR_SERVER_LOGS=on does.
+ * FAKE_ADA=on turns Ada Cloud on, as GLYPHH_ADA_CLOUD=on does: /v1/me says so and Ada's API answers at /ada/v1
+ * (dev/fake-ada.ts; the platform's GLYPHH_ADA_URL=http://localhost:8080/ada).
  *
  *   npm run fake-server   → http://localhost:8080
  */
@@ -20,9 +23,12 @@ const platform = process.env.PLATFORM_URL ?? 'http://localhost:3000';
 const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
 const hosting = process.env.FAKE_HOSTING === 'on';
 const serverLogs = process.env.FAKE_SERVER_LOGS === 'on';
+const adaCloud = process.env.FAKE_ADA === 'on';
 const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
 const app = new Hono();
 const state = structuredClone(data);
+state.me.ada_cloud = adaCloud;
+if (adaCloud) mountAda(app, port);
 let nextKey = 10;
 let nextSelf = 10;
 let nextMachine = 10;

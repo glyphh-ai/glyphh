@@ -1,6 +1,13 @@
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { AdaOnly, AdaOr, OffOnly } from '@/components/AdaGate';
 import { HostedOnly } from '@/components/HostedOnly';
 import { RequireSession } from '@/components/RequireSession';
+import { AdaHome } from '@/pages/ada/AdaHome';
+import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
+import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
+import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
+import { ModelPage } from '@/pages/ada/model/ModelPage';
+import { NewModelPage } from '@/pages/ada/NewModelPage';
 import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { MachinesPage } from '@/pages/machines/MachinesPage';
@@ -41,23 +48,84 @@ export const routes: RouteObject[] = [
       </RequireSession>
     ),
     children: [
+      // With Ada Cloud on (the server's ada_cloud), the platform is Ada's: Home, Models, API Keys and Usage are Ada's,
+      // and nothing of runtimes, machines, the licence, rrotor's logs or self-hosting is reached (each goes Home).
       // Getting started became the Add a runtime dialog on Runtimes (2026-10-20); old links open it there.
-      { path: 'getting-started', element: <Navigate to="/?add=1" replace /> },
+      {
+        path: 'getting-started',
+        element: (
+          <OffOnly>
+            <Navigate to="/?add=1" replace />
+          </OffOnly>
+        ),
+      },
       {
         path: 'machines',
         element: (
-          <HostedOnly>
-            <MachinesPage />
-          </HostedOnly>
+          <OffOnly>
+            <HostedOnly>
+              <MachinesPage />
+            </HostedOnly>
+          </OffOnly>
         ),
         handle: { crumbs: [{ label: 'Machines' }] },
       },
-      { index: true, element: <HomePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Runtimes' }] } },
-      { path: 'keys', element: <KeysPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }] } },
-      { path: 'models', element: <ModelsPage />, handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] } },
-      { path: 'usage', element: <UsagePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Usage' }] } },
-      { path: 'logs', element: <LogsPage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Logs' }] } },
-      { path: 'licence', element: <LicencePage />, handle: { crumbs: [{ label: 'Runtime' }, { label: 'Licence' }] } },
+      {
+        index: true,
+        element: <AdaOr ada={<AdaHome />} off={<HomePage />} />,
+        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Runtimes' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Home' }] },
+      },
+      {
+        path: 'keys',
+        element: <AdaOr ada={<AdaKeysPage />} off={<KeysPage />} />,
+        handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }], adaCrumbs: [{ label: 'Ada' }, { label: 'API Keys' }] },
+      },
+      {
+        path: 'models',
+        element: <AdaOr ada={<AdaModelsPage />} off={<ModelsPage />} />,
+        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] },
+      },
+      {
+        path: 'models/new',
+        element: (
+          <AdaOnly otherwise="/models">
+            <NewModelPage />
+          </AdaOnly>
+        ),
+        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: 'New model' }] },
+      },
+      {
+        path: 'models/:name',
+        element: (
+          <AdaOnly otherwise="/models">
+            <ModelPage />
+          </AdaOnly>
+        ),
+        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: ':name' }] },
+      },
+      {
+        path: 'usage',
+        element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
+        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Usage' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Usage' }] },
+      },
+      {
+        path: 'logs',
+        element: (
+          <OffOnly>
+            <LogsPage />
+          </OffOnly>
+        ),
+        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Logs' }] },
+      },
+      {
+        path: 'licence',
+        element: (
+          <OffOnly>
+            <LicencePage />
+          </OffOnly>
+        ),
+        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Licence' }] },
+      },
     ],
   },
   {

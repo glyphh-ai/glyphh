@@ -29,7 +29,7 @@ export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; h
         {org.plan_until && <Chip>Until {date(org.plan_until)}</Chip>}
       </div>
       <div className={styles.chips}>
-        {planFacts(plan).map((fact) => (
+        {planFacts(plan, me.ada_cloud === true).map((fact) => (
           <Chip key={fact.text}>{factText(fact)}</Chip>
         ))}
       </div>

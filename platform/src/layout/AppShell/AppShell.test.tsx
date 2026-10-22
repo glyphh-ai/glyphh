@@ -35,6 +35,8 @@ describe('the main sidebar', () => {
   it('has the logo, the runtime and Ada, and no organisation group: settings is in the account menu', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
+    // The links come once the account says Ada Cloud is off.
+    await within(main).findByRole('link', { name: 'Runtimes' });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
     for (const name of ['Runtimes', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
     expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();

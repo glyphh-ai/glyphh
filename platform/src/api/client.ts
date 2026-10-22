@@ -20,14 +20,14 @@ export class ApiError extends Error {
 /** The platform's own sign-in has ended; the page should go to /login. */
 export const signedOutCode = 'E_SIGNED_OUT';
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
- * Calls the server's /v1 API through the platform's own route handlers (/api/v1/...),
+ * Calls the server's /v1 API through the platform's own route handlers (/api/v1/...), or Ada Cloud's (/api/ada/v1/...),
  * which add the session's token. The browser never sees a token.
  */
-export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
+export async function request<T>(method: Method, path: string, body?: unknown, base = '/api/v1'): Promise<T> {
+  const response = await fetch(`${base}${path}`, {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
@@ -52,4 +52,14 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   delete: <T = void>(path: string) => request<T>('DELETE', path),
+};
+
+/** Ada Cloud's API, at its own host, called with the same sign-in. */
+const ada = '/api/ada/v1';
+export const adaApi = {
+  get: <T>(path: string) => request<T>('GET', path, undefined, ada),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}, ada),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body, ada),
+  patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body, ada),
+  delete: <T = void>(path: string) => request<T>('DELETE', path, undefined, ada),
 };

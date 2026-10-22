@@ -38,6 +38,7 @@ describe('Usage', () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/usage');
     expect(await screen.findByText('On Free.')).toBeInTheDocument();
+    expect(await screen.findByText('of 5,000 on the fullest node')).toBeInTheDocument();
     expect(within(meter('Precedents')).getByText('of 5,000 on the fullest node')).toBeInTheDocument();
     expect(await within(meter('Hosting')).findByText(/Hosting is on Pro and Team\./)).toBeInTheDocument();
     expect(within(meter('Hosting')).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
@@ -56,7 +57,7 @@ describe('Usage', () => {
 
   it('shows the usage loading until it is known, and no keys yet', async () => {
     server.use(
-      http.get(v1('/me'), () => new Promise<never>(() => {})),
+      http.get(v1('/rates'), () => new Promise<never>(() => {})),
       http.get(v1('/runtime/keys'), () => HttpResponse.json([])),
     );
     renderApp('/usage');
