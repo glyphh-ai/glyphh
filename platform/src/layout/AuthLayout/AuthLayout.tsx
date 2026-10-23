@@ -16,7 +16,7 @@ type AuthLayoutProps = {
 export function AuthLayout({ title, children, footer }: AuthLayoutProps) {
   return (
     <div className={styles.page} data-theme="dark-hc">
-      <Logo height={44} />
+      <Logo height={76} />
       <div className={styles.card}>
         <div className={styles.body}>
           <h1 className={styles.title}>{title}</h1>
