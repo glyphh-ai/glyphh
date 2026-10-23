@@ -109,13 +109,13 @@ async def test_a_schema_before_the_kernels_counts_holds_none(engine: AsyncEngine
         s = f'"{pg.schema_for(str(org.org_id))}"'
         model = uuid.uuid4()
         conn.execute(f"INSERT INTO {s}.models (id, name, created_by) VALUES (%s, 'early', 't')", (model,))
+        made = "(model_id, version, spec, made_by, store, ada, kernel)"
         conn.execute(
-            f"INSERT INTO {s}.spec_versions (model_id, version, spec, made_by, store) VALUES (%s, 1, '{{}}', 't', 'x')",
-            (model,),
+            f"INSERT INTO {s}.spec_versions {made} VALUES (%s, 1, '{{}}', 't', 'x', 'ada-1-0', '3.12.2')", (model,)
         )
     async with engine.begin() as conn:
         found = await adascan.one(conn, org.org_id)
-    assert [(m.name, m.precedents, m.ada) for m in found.models] == [("early", 0, None)]
+    assert [(m.name, m.precedents, m.ada, m.kernel) for m in found.models] == [("early", 0, "ada-1-0", "3.12.2")]
 
 
 async def _org_of(conn: AsyncConnection) -> uuid.UUID:

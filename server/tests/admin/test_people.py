@@ -70,20 +70,32 @@ async def test_sign_ups_and_conversions_by_source(admin: Admin, engine: AsyncEng
 async def test_models_by_ada_version(admin: Admin, engine: AsyncEngine, redis: Redis) -> None:
     old, new = await person(engine), await person(engine)
     ada_org(old.org_id, [{"name": "early", "precedents": 5}])
-    ada_org(new.org_id, [{"name": "a", "precedents": 2, "ada": "ada-1-1-beta", "kernel": "3.13.0"}])
+    ada_org(new.org_id, [{"name": "a", "precedents": 2, "ada": "ada-9-9-test", "kernel": "9.9.9"}])  # its own version
     await redis.delete(adascan.SCAN_KEY)
     body = (await admin.get("/ada-versions")).json()
     shown = {v["ada"]: v for v in body["versions"]}
     assert body["versioned"] is True
-    assert shown["ada-1-1-beta"] == {
-        "ada": "ada-1-1-beta",
-        "kernels": ["3.13.0"],
+    assert shown["ada-9-9-test"] == {
+        "ada": "ada-9-9-test",
+        "kernels": ["9.9.9"],
         "models": 1,
         "orgs": 1,
         "precedents": 2,
     }
-    assert body["versions"][-1]["ada"] is None and shown[None]["models"] >= 1
+    assert shown["ada-1-0"]["models"] >= 1 and "3.12.2" in shown["ada-1-0"]["kernels"]
     assert by_version([]).model_dump() == {"versioned": False, "versions": []}
+    legacy = adascan.OrgAda(
+        org_id=old.org_id,
+        models=[
+            adascan.AdaModel(name="m", created_at="2026-10-01T00:00:00Z", deleted=False, active_version=1, precedents=3)
+        ],
+        jobs=[],
+    )
+    before = by_version([legacy]).model_dump()  # a schema without Ada versions: its models count apart
+    assert before == {
+        "versioned": False,
+        "versions": [{"ada": None, "kernels": [], "models": 1, "orgs": 1, "precedents": 3}],
+    }
 
 
 async def test_the_audit_log_is_filtered_and_paged(admin: Admin, monkeypatch: object) -> None:

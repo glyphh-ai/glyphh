@@ -13,8 +13,8 @@ from tests.conftest import DATABASE_URL
 
 
 def ada_org(org_id: uuid.UUID, models: list[dict[str, Any]], jobs: list[dict[str, Any]] | None = None) -> None:
-    """Each model: name, precedents, and optionally created_at, deleted (bool), ada and kernel (columns the Ada
-    versions add); each job: kind, state, seconds (or None), model (a model's name)."""
+    """Each model: name, precedents, and optionally created_at, deleted (bool), ada and kernel (its Ada version, by
+    default ada-1-0 on kernel 3.12.2); each job: kind, state, seconds (or None), model (a model's name)."""
     org = str(org_id)
     with psycopg.connect(pg.libpq_url(DATABASE_URL), autocommit=True) as conn:
         schema = orgschema.ensure(conn, org)
@@ -22,9 +22,6 @@ def ada_org(org_id: uuid.UUID, models: list[dict[str, Any]], jobs: list[dict[str
         with conn.transaction():
             orgschema.lock(conn, schema, org)
             conn.execute(f"CREATE TABLE IF NOT EXISTS {s}.counts (model text PRIMARY KEY, n bigint NOT NULL)")
-            if any("ada" in m for m in models):
-                conn.execute(f"ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS ada text")
-                conn.execute(f"ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS kernel text")
             orgschema.fence(conn, schema, org)
         pg.enter(conn, org)
         ids = {m["name"]: _model(conn, s, m) for m in models}
@@ -40,13 +37,13 @@ def _model(conn: psycopg.Connection, s: str, m: dict[str, Any]) -> uuid.UUID:
         f"INSERT INTO {s}.models (id, name, created_by, created_at, deleted_at) VALUES (%s, %s, 'test', %s, %s)",
         (model_id, m["name"], made, deleted),
     )
-    extra = ", ada, kernel" if "ada" in m else ""
-    values = ", %s, %s" if "ada" in m else ""
-    args = (model_id, json.dumps({"secret": "never shown"}), store) + (
-        (m["ada"], m.get("kernel")) if "ada" in m else ()
+    spec = json.dumps({"secret": "never shown"})
+    ada, kernel = m.get("ada", "ada-1-0"), m.get("kernel", "3.12.2")
+    conn.execute(
+        f"""INSERT INTO {s}.spec_versions (model_id, version, spec, made_by, store, ada, kernel)
+        VALUES (%s, 1, %s, 't', %s, %s, %s)""",
+        (model_id, spec, store, ada, kernel),
     )
-    columns = f"model_id, version, spec, made_by, store{extra}"
-    conn.execute(f"INSERT INTO {s}.spec_versions ({columns}) VALUES (%s, 1, %s, 't', %s{values})", args)
     conn.execute(f"INSERT INTO {s}.counts (model, n) VALUES (%s, %s)", (store, m["precedents"]))
     return model_id
 
