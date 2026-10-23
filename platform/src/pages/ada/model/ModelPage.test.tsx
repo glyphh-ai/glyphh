@@ -47,7 +47,8 @@ describe('a model’s page', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Versions' }));
     const versions = (await screen.findAllByRole('row')).map((r) => r.textContent);
-    expect(versions.some((text) => text?.startsWith('v3LiveAsk more'))).toBe(true);
+    // A new version keeps its model's Ada.
+    expect(versions.some((text) => text?.startsWith('v3Liveada-1-0Ask more'))).toBe(true);
   });
 
   it('follows a re-encode’s job until the new version is live', async () => {

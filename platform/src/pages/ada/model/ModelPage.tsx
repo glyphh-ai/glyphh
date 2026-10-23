@@ -5,6 +5,7 @@ import { AdaErrorNotice } from '../AdaErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { plural } from '@/lib/format';
 import { Button, LoadingCard, panelId, tabId, Tabs, type Tab } from '@/ui';
+import { AdaHeader } from './AdaHeader';
 import { BacktestTab } from './BacktestTab';
 import { DashboardTab } from './DashboardTab';
 import { DeleteModelDialog } from './DeleteModelDialog';
@@ -60,6 +61,7 @@ export function ModelPage() {
           )
         }
       />
+      {model.data && <AdaHeader model={model.data} />}
       {model.isPending && <LoadingCard />}
       <AdaErrorNotice error={model.error} />
       {model.data && (

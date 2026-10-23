@@ -22,12 +22,12 @@ describe('Versions', () => {
     on();
     renderApp('/models/tickets?tab=versions');
     const table = await screen.findByRole('table', { name: 'Versions' });
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Version', 'Description', 'Date', 'Actions']);
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Version', 'Ada', 'Description', 'Date', 'Actions']);
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows.map((r) => r.textContent)).toEqual([
-      'v3LiveMore voters20 Oct 2026',
-      'v2Re-encoded: seed 5 → 1110 Oct 2026',
-      'v1Droppedmade1 Oct 2026',
+      'v3Liveada-1-0More voters20 Oct 2026',
+      'v2ada-1-0Re-encoded: seed 5 → 1110 Oct 2026',
+      'v1Droppedada-1-0made1 Oct 2026',
     ]);
   });
 
@@ -35,7 +35,7 @@ describe('Versions', () => {
     on();
     const { user } = renderApp('/models/tickets?tab=versions');
     const live = await menuFor(user, 3);
-    expect(within(live).getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['View', 'Edit notes', 'Copy spec']);
+    expect(within(live).getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['View', 'Upgrade Ada', 'Edit notes', 'Copy spec']);
     await user.keyboard('{Escape}');
     const old = await menuFor(user, 2);
     expect(within(old).getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['View', 'Make live', 'Edit notes', 'Compare with live', 'Copy spec']);

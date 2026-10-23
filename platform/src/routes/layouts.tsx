@@ -46,6 +46,10 @@ function AdaNav() {
       <NavItem to="/models" icon="model">
         Models
       </NavItem>
+      {/* Ada's own versions, after Models (his order, 2026-10-23). */}
+      <NavItem to="/ada" icon="layers">
+        Ada
+      </NavItem>
       <NavItem to="/keys" icon="key">
         API Keys
       </NavItem>

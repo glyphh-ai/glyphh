@@ -5,6 +5,7 @@ import { RequireSession } from '@/components/RequireSession';
 import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
+import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
@@ -102,6 +103,15 @@ export const routes: RouteObject[] = [
           </AdaOnly>
         ),
         handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: ':name' }] },
+      },
+      {
+        path: 'ada',
+        element: (
+          <AdaOnly otherwise="/">
+            <AdaReleasesPage />
+          </AdaOnly>
+        ),
+        handle: { crumbs: [{ label: 'Ada' }, { label: 'Ada versions' }] },
       },
       {
         path: 'usage',

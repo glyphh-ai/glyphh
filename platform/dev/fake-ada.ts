@@ -1,6 +1,40 @@
 import type { Hono } from 'hono';
-import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, ModelStats, Spec } from '../src/api/ada.js';
+import type { AdaJob, AdaModel, AdaRelease, AdaUsage, AdaVersion, CloudKey, ModelStats, Spec } from '../src/api/ada.js';
 import { cloudLimits } from '../src/test/fixtures.js';
+
+/** Ada's versions as the registry lists them at launch: ada-1-0 the latest stable, ada-1-1-beta to try. */
+const releases: Array<Omit<AdaRelease, 'models'>> = [
+  {
+    name: 'ada-1-1-beta',
+    kernel: '3.13.0',
+    status: 'beta',
+    beta: true,
+    open: true,
+    released: '2026-10-23',
+    deprecated: null,
+    ends: null,
+    changes_answers: true,
+    aliases: [],
+    summary: 'A pair value a model never learned weighs nothing.',
+    notes: 'Once a model has learned pairs, a pair value it never saw weighs the pair **0**, so the roles’ own weights decide.\n\nOn German Credit it is within noise of `ada-1-0`: backtest it on your own cases.',
+  },
+  {
+    name: 'ada-1-0',
+    kernel: '3.12.2',
+    status: 'stable',
+    beta: false,
+    open: true,
+    released: '2026-10-20',
+    deprecated: null,
+    ends: null,
+    changes_answers: true,
+    aliases: [],
+    summary: 'The cloud’s launch.',
+    notes: 'The version Ada Cloud launched with.',
+  },
+];
+const latest = 'ada-1-0';
+const kernelOf = (ada: string) => releases.find((r) => r.name === ada)?.kernel ?? '3.12.2';
 
 /**
  * Ada Cloud's API for the fake server, at /ada/v1 (the platform's GLYPHH_ADA_URL=http://localhost:8080/ada), from a
@@ -26,7 +60,9 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     return made;
   };
   // Every version reads the one store and keeps no spec of its own: its diff is empty, its spec the model's.
-  const first = (precedents: number): AdaVersion => ({
+  const first = (precedents: number, ada = latest): AdaVersion => ({
+    ada,
+    kernel: kernelOf(ada),
     version: 1,
     note: 'made',
     made_by: 'u-chris',
@@ -48,7 +84,7 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     const list = versions.get(name)!;
     const v = list.length + 1;
     for (const old of list) old.active = false;
-    list.push({ ...first(found(name)!.precedents), version: v, note, changes: [] });
+    list.push({ ...first(found(name)!.precedents, found(name)!.ada), version: v, note, changes: [] });
     found(name)!.version = v;
     return v;
   };
@@ -82,18 +118,36 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
 
   app.get('/ada/v1/usage', (c) => c.json(usage()));
   app.get('/ada/v1/models', (c) => c.json({ models: models.map(({ spec: _spec, ...row }) => row) }));
+  app.get('/ada/v1/ada', (c) =>
+    c.json({ latest_stable: latest, contract: 5, versions: releases.map((r) => ({ ...r, models: models.filter((m) => m.ada === r.name).length })) }),
+  );
   app.post('/ada/v1/models', async (c) => {
-    const { name, spec } = (await c.req.json()) as { name: string; spec: Spec };
+    const { name, spec, ada = latest } = (await c.req.json()) as { name: string; spec: Spec; ada?: string };
     if (found(name)) return refuse(409, 'E_CONFLICT', `This org has a model named ${name} already.`);
-    const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: now(), spec };
+    if (!releases.some((r) => r.name === ada)) return refuse(422, 'E_ADA_UNKNOWN', `There is no Ada version ${ada}. The latest stable is ${latest}.`);
+    const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: now(), spec, ada };
     models.push(model);
-    versions.set(name, [first(0)]);
+    versions.set(name, [first(0, ada)]);
     outcomes.set(name, []);
     return c.json(model, 201);
   });
   app.get('/ada/v1/models/:name', (c) => {
     const model = found(c.req.param('name'));
-    return model ? c.json(model) : refuse(404, 'E_MODEL_MISSING', `No model ${c.req.param('name')} in this org.`);
+    if (!model) return refuse(404, 'E_MODEL_MISSING', `No model ${c.req.param('name')} in this org.`);
+    const beta = model.ada === latest ? releases.find((r) => r.beta && r.open) : undefined;
+    const notice = beta ? { kind: 'beta', message: `${beta.name} is in beta: try it on a backtest.`, to: beta.name } : null;
+    return c.json({ ...model, ada_status: releases.find((r) => r.name === model.ada)?.status ?? 'stable', ada_notice: notice });
+  });
+  // An upgrade, done when its job is first read: a new version of the live spec on the Ada chosen.
+  app.post('/ada/v1/models/:name/upgrade', async (c) => {
+    const model = found(c.req.param('name'))!;
+    const { ada = latest } = (await c.req.json()) as { ada?: string };
+    if (!releases.some((r) => r.name === ada)) return refuse(422, 'E_ADA_UNKNOWN', `There is no Ada version ${ada}. The latest stable is ${latest}.`);
+    if (ada === model.ada) return refuse(409, 'E_NO_CHANGE', `${model.name} runs on ${ada} already.`);
+    const from = model.ada;
+    model.ada = ada;
+    const v = version(model.name, `Upgraded from ${from} to ${ada}`);
+    return c.json({ version: v, active: false, job: job(model.name, 'reencode', { version: v }), ada, from });
   });
   app.delete('/ada/v1/models/:name', (c) => {
     models.splice(models.indexOf(found(c.req.param('name'))!), 1);
@@ -140,6 +194,7 @@ export function mountAda(app: Hono, port: number, plan: () => string): () => Ada
     const n = Number(c.req.param('version'));
     for (const v of versions.get(c.req.param('name'))!) v.active = v.version === n;
     found(c.req.param('name'))!.version = n;
+    found(c.req.param('name'))!.ada = versions.get(c.req.param('name'))!.find((v) => v.version === n)!.ada;
     return c.json({ version: n, active: true, job: null });
   });
   app.put('/ada/v1/models/:name/spec', async (c) => {
