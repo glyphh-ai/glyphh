@@ -47,6 +47,7 @@ from glyphh_server.obs import events, metrics
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops import github_app, tend, vault
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
@@ -86,26 +87,33 @@ IDLE_EVERY: float = 60.0
 
 
 async def tend_forever(
-    engine: AsyncEngine, hub: Hub, cfg: Settings, fly: Fly | None, stripe: StripeClient | None
+    engine: AsyncEngine,
+    hub: Hub,
+    cfg: Settings,
+    fly: Fly | None,
+    stripe: StripeClient | None,
+    cloudflare: Cloudflare | None = None,
 ) -> None:
     """Every minute, the server's tick (ops/tend.py); a failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), fly, stripe)
+            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), fly, stripe, cloudflare)
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
 
 
 def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
-    """The minute tick, always; with hosting on, Fly and the hub's waker; with billing set up, Stripe's meter."""
+    """The minute tick, always; with hosting on, Fly and the hub's waker; with billing set up, Stripe's meter; with a
+    Cloudflare token, the hourly traffic pull."""
     fly = Fly(app.state.http, cfg) if cfg.hosting_on else None
     if fly is not None:
         app.state.hub.waker = waker(engine, fly)
     meter = cfg.stripe_secret_key and StripeClient(
         app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada
     )
-    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None))
+    cloudflare = Cloudflare(app.state.http, cfg.cloudflare_api_token) if cfg.cloudflare_api_token else None
+    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None, cloudflare))
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
