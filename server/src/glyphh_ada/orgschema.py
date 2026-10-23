@@ -61,6 +61,13 @@ MIGRATIONS: tuple[str, ...] = (
     """,
     # The precedents the model held when each version was made (unknown for those made before).
     "ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS precedents_at bigint;",
+    # Ada versions (docs/specs/ada-cloud.md, 12): the Ada version each was made with (its name) and the exact kernel
+    # it was made and learned with. Every version before was ada-1-0, kernel 3.12.2: the cloud's only one until then.
+    """
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS ada text NOT NULL DEFAULT 'ada-1-0';
+    ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS kernel text NOT NULL DEFAULT '3.12.2';
+    ALTER TABLE {s}.spec_versions ALTER COLUMN ada DROP DEFAULT, ALTER COLUMN kernel DROP DEFAULT;
+    """,
 )
 
 _UNFENCED = """

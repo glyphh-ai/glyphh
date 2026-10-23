@@ -46,12 +46,16 @@ class Candidate(BaseModel):
     settings: dict[str, Any] | None = Field(None, description="The active version's settings with these changed")
     spec_version: int | None = Field(None, ge=1, description="Another version of the model")
     spec: dict[str, Any] | None = Field(None, description="A whole spec")
+    ada: str | None = Field(None, max_length=40, description="Scored on this Ada version; alone, the active spec on it")
     name: str | None = Field(None, max_length=80, description="What to call it in the answer")
 
     @model_validator(mode="after")
     def _one(self) -> "Candidate":
-        if sum(x is not None for x in (self.settings, self.spec_version, self.spec)) != 1:
-            raise ValueError("a candidate is one of settings, spec_version or spec")
+        given = sum(x is not None for x in (self.settings, self.spec_version, self.spec))
+        if given > 1 or (given == 0 and self.ada is None):
+            raise ValueError(
+                "a candidate is one of settings, spec_version or spec, an Ada version, or one and the other"
+            )
         return self
 
 
@@ -64,10 +68,19 @@ class Holdout(BaseModel):
 
 class NewBacktest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    candidates: list[Candidate] = Field(max_length=limits.CANDIDATES_MAX)
+    candidates: list[Candidate] = Field(default_factory=list, max_length=limits.CANDIDATES_MAX)
+    ada: str | None = Field(None, max_length=40, description='Shorthand for one more candidate, {"ada": ...}')
     holdout: Holdout = Field(default_factory=lambda: Holdout(newest=200))
     output: str | None = Field(None, description="A named output; left out, the default one")
     clearance: float = Field(1.0, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def _ada(self) -> "NewBacktest":
+        if self.ada is not None:
+            self.candidates = [*self.candidates, Candidate(ada=self.ada)]
+        if len(self.candidates) > limits.CANDIDATES_MAX:
+            raise ValueError(f"a backtest scores at most {limits.CANDIDATES_MAX} candidates")
+        return self
 
 
 def _changed(body: BaseModel) -> dict[str, Any]:
@@ -132,7 +145,23 @@ async def activate(name: str, version: int, who: AdaWho, request: Request) -> di
 
 @router.post("/backtest", operation_id="backtestAdaModel", status_code=202)
 async def backtest(name: str, body: NewBacktest, who: AdaWho, request: Request) -> dict[str, Any]:
-    """Score the active version and up to ten candidates on the model's own held-out precedents, as a job."""
-    args = body.model_dump(exclude_none=True)
+    """Score the active version and up to ten candidates on the model's own held-out precedents, as a job; a
+    candidate naming an Ada version (or `ada`, for one more) is learned and scored by that version's kernel."""
+    args = body.model_dump(exclude_none=True, exclude={"ada"})
     args["candidates"] = [c.model_dump(exclude_none=True) for c in body.candidates]
     return await start(request, who, name, "backtest", args)
+
+
+class Upgrade(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ada: str | None = Field(None, max_length=40, description="The Ada version to move to; left out, the latest stable")
+    note: str | None = NOTE
+    backtest: str | None = BACKTEST
+
+
+@router.post("/upgrade", operation_id="upgradeAdaModel", status_code=202)
+async def upgrade(name: str, body: Upgrade, who: AdaWho, request: Request) -> dict[str, Any]:
+    """The active spec as a new version on another Ada version (any supported one, an older one too): {version,
+    active: false, job, ada, from}. The job re-encodes the cases into a store of its own with that version's kernel,
+    learns and calibrates, then makes it active; roll back by activating the version before."""
+    return dict(await call(request, who, name, "upgrade", _changed(body)))

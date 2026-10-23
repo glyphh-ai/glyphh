@@ -2,18 +2,34 @@
 GLYPHH_ADA_CLOUD on. It is a second host of glyphh-ai-server, not a second service: the same process, the same
 database and Redis, its own clean paths (`/v1/models`, `/v1/decide`, `/v1/runs`) beside the account API's."""
 
+from collections.abc import Awaitable, Callable
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from glyphh_ada.api import cases, dashboard, files, imports, jobs, keys, models, reads, runs, tuning, usage
+from glyphh_ada import registry
+from glyphh_ada.api import adaversions, cases, dashboard, files, imports, jobs, keys, models, reads, runs, tuning, usage
 from glyphh_server.api import errors, health
 from glyphh_server.config import Settings
 
-ROUTERS = (health, keys, models, cases, reads, jobs, runs, imports, files, tuning, usage, dashboard)
+ROUTERS = (health, keys, models, cases, reads, jobs, runs, imports, files, tuning, usage, dashboard, adaversions)
+
+
+async def ada_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Every answer says the contract it speaks (Glyphh-Contract), so a client too old for it can say so; an answer
+    about one model says its Ada version (Glyphh-Ada) and, when it runs a deprecated or retired one or was just moved
+    off one, what the caller should know (Glyphh-Ada-Notice: <kind>: <message>). docs/specs/ada-cloud.md, 12.3."""
+    response = await call_next(request)
+    response.headers["Glyphh-Contract"] = str(registry.CONTRACT)
+    about = getattr(request.state, "ada", None)
+    if about:
+        response.headers["Glyphh-Ada"] = about["name"]
+        if about.get("notice"):
+            response.headers["Glyphh-Ada-Notice"] = f"{about['notice']['kind']}: {about['notice']['message']}"
+    return response
 
 
 def make_app(cfg: Settings, engine: AsyncEngine) -> FastAPI:
@@ -26,6 +42,7 @@ def make_app(cfg: Settings, engine: AsyncEngine) -> FastAPI:
     )
     ada.state.ada_callers = {}  # api/auth.py's few seconds of resolved keys
     errors.install(ada)
+    ada.middleware("http")(ada_headers)
     for module in ROUTERS:
         ada.include_router(module.router)
     return ada

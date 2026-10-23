@@ -67,6 +67,6 @@ async def decide_model(name: str, body: DecideAsk, who: AdaWho, request: Request
 @router.post("/v1/decide", operation_id="decide")
 async def decide(body: Decide, who: AdaWho, request: Request) -> dict[str, Any]:
     """The headline: one call, one typed answer: {outcome, probabilities, expected_cost, ask, receipts, model,
-    version}."""
+    version, ada}."""
     answer, version = await versioned(request, who, body.model, "decide", _args(body), body.clearance)
-    return {**answer, "model": body.model, "version": version}
+    return {**answer, "model": body.model, "version": version, "ada": request.state.ada["name"]}

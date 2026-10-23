@@ -11,7 +11,11 @@ from the active one while that one goes on serving, then made active (versions.p
 
 `sync` (a rollback to a version on another store): the same from step 2, into that version's own store, which first
 gets back what it had learned. The store left behind remembers how far it was copied (meta `synced_seq`), so a
-rollback to it copies only what changed after."""
+rollback to it copies only what changed after.
+
+A re-encode runs on the kernel of the version it makes active (process.py routes it there): an upgrade to another Ada
+version restates, encodes, learns and calibrates with the new kernel, reading the old store, and a rollback across Ada
+versions copies with the old one (every installed kernel reads the same store format, registry.py)."""
 
 import json
 from collections.abc import Callable, Iterator
@@ -112,7 +116,7 @@ class Job:
         self.conn, self.schema, self.name = conn, schema, job["model"]
         self.found = catalog.live(conn, schema, self.name)
         self.version, self.sync = int(job["args"]["version"]), bool(job["args"].get("sync"))
-        spec_json, self.key, _, gone, self.learned = versions.row(conn, schema, self.found, self.version)
+        spec_json, self.key, _, gone, self.learned, _ = versions.row(conn, schema, self.found, self.version)
         if gone:
             raise Refusal("E_VERSION_GONE", f"Version {self.version}'s store was dropped.", 410)
         self.spec = glyphh_spec.Spec.from_json(spec_json)

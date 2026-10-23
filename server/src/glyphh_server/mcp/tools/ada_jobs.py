@@ -82,7 +82,7 @@ async def calibrate(ctx: Context, args: Named) -> Done:
 
 
 async def backtest(ctx: Context, args: Backtest) -> Done:
-    body = args.model_dump(exclude_none=True, exclude={"name"})
+    body = args.model_dump(exclude_none=True, exclude={"name", "ada"})  # `ada` is a candidate by now
     body["candidates"] = [c.model_dump(exclude_none=True) for c in args.candidates]
     return await _job(ctx, args.name, "backtest", body)
 
@@ -137,9 +137,10 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "ada_backtest",
         "Ada backtest",
-        "Score the active version and up to ten candidates ({settings}, {spec_version} or {spec}) on the model's own "
-        "held-out precedents (the newest 200 by default), never touching the live model: accuracy, log-loss, cost, "
-        "ask rate and the change against the active version. A job (ada_job).",
+        "Score the active version and up to ten candidates ({settings}, {spec_version} or {spec}, each optionally "
+        "with {ada}, an Ada version to score it on; `ada` alone compares the active spec on that version) on the "
+        "model's own held-out precedents (the newest 200 by default), never touching the live model: accuracy, "
+        "log-loss, cost, ask rate and the change against the active version. A job (ada_job).",
         Backtest,
         backtest,
     ),

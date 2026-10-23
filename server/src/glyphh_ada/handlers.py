@@ -83,7 +83,7 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
 def _write(ctx: Context, schema: str, msg: Message) -> Answer:
     if msg.op == "create":
         ctx.after.append(lambda: ctx.models.bump(msg.org, msg.model))
-        made = catalog.create(ctx.conn, msg.org, msg.model, msg.args["spec"], msg.author)
+        made = catalog.create(ctx.conn, msg.org, msg.model, msg.args["spec"], msg.author, msg.args.get("ada"))
         return made, made["version"]
     if msg.op == "delete":
         catalog.delete(ctx.conn, schema, msg.model)

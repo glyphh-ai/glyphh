@@ -8,13 +8,15 @@ One shape for the Ada API's GET /v1/usage, the account API's usage (`cloud`) and
 requests_per_second}."""
 
 import uuid
+from collections import Counter
+from typing import Any
 
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_ada import requests
+from glyphh_ada import registry, requests
 from glyphh_ada.allowance import allowance
 from glyphh_ada.pg import schema_for
 
@@ -22,6 +24,10 @@ HELD: str = """
     SELECT count(*), coalesce(sum(c.n), 0) FROM {s}.models m
     JOIN {s}.spec_versions v ON v.model_id = m.id AND v.version = m.active_version
     LEFT JOIN {s}.counts c ON c.model = v.store WHERE m.deleted_at IS NULL
+"""
+ON_EACH: str = """
+    SELECT v.ada, count(*) FROM {s}.models m JOIN {s}.spec_versions v ON v.model_id = m.id
+    AND v.version = m.active_version WHERE m.deleted_at IS NULL GROUP BY v.ada
 """
 
 
@@ -45,6 +51,21 @@ class CloudUsage(BaseModel):
     precedents: Held
     requests: Reads
     requests_per_second: int | None = Field(description="The plan's calls a second; null = by contract")
+    ada: dict[str, Any] | None = Field(
+        None, description="The Ada versions, as GET /v1/ada answers them: each with how many of the org's models run it"
+    )
+
+
+async def running(conn: AsyncConnection, org_id: uuid.UUID) -> dict[str, Any]:
+    """Every Ada version with how many of the org's live models run it (an alias counted as its version), the latest
+    stable, and the contract: GET /v1/ada's shape, for the account API and the plugin's panel."""
+    reg, day, schema = registry.registry(), registry.today(), f'"{schema_for(str(org_id))}"'
+    counts: Counter[str] = Counter()
+    if (await conn.execute(text("SELECT to_regclass(:t)"), {"t": f"{schema}.counts"})).scalar() is not None:
+        for ada, n in (await conn.execute(text(ON_EACH.format(s=schema)))).all():
+            counts[getattr(reg.find(ada), "name", ada)] += int(n)
+    versions = [{**reg.view(v, day), "models": counts[v.name]} for v in reg.versions]
+    return {"latest_stable": reg.latest(day).name, "contract": registry.CONTRACT, "versions": versions}
 
 
 async def held(conn: AsyncConnection, org_id: uuid.UUID) -> tuple[int, int]:
@@ -69,4 +90,5 @@ async def cloud_usage(conn: AsyncConnection, redis: Redis, org_id: uuid.UUID) ->
         precedents=Held(used=precedents, max=plan.precedents),
         requests=Reads(used=made, max=plan.requests, over=over, overage=plan.overage),
         requests_per_second=plan.rps,
+        ada=await running(conn, org_id),
     )

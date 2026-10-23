@@ -11,7 +11,7 @@ import pytest
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, runner, worker
+from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, routing, runner, worker
 from glyphh_ada.errors import Refusal
 from glyphh_ada.process import Worker, work
 from glyphh_ada.protocol import JOBS, SYNC, Message
@@ -30,13 +30,23 @@ def idle(streams: Redis) -> Iterator[Worker]:
 def test_the_command_idles_with_ada_cloud_off_and_supervises_with_it_on(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[Any] = []
     monkeypatch.setattr(worker, "idle", lambda stop: calls.append("idle"))
-    monkeypatch.setattr(worker, "supervise", lambda count, queue, stop: calls.append((count, queue)))
+    monkeypatch.setattr(worker, "supervise", lambda slots, queue, stop: calls.append((slots, queue)))
     monkeypatch.setattr(worker, "get_settings", lambda: SETTINGS)
     worker.main(["--queue", "sync"])
     monkeypatch.setattr(worker, "get_settings", lambda: ADA)
     worker.main(["--queue", "jobs", "--processes", "3"])
     worker.main(["--queue", "sync"])
-    assert calls[:2] == ["idle", (3, "jobs")] and calls[2][0] >= 1
+    here = routing.installed()  # the venv's, the latest stable's; the beta's folder is not in this image
+    assert calls[:2] == ["idle", ([worker.Slot(here, None, 3)], "jobs")] and calls[2][0][0].count >= 1
+
+
+def test_each_installed_kernel_gets_its_slot(tmp_path: Any) -> None:
+    (tmp_path / "3.13.0").mkdir()
+    settings = ADA.model_copy(update={"ada_kernels_dir": str(tmp_path), "ada_kernel_workers": 2})
+    assert worker.plan(settings, 4) == [
+        worker.Slot("3.13.0", str(tmp_path / "3.13.0"), 2),
+        worker.Slot("3.12.2", None, 4),
+    ]
 
 
 def test_workers_are_counted_by_the_cpus_the_container_may_use(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -54,10 +64,43 @@ def test_workers_are_counted_by_the_cpus_the_container_may_use(tmp_path: Any, mo
     assert worker.cpus(quota) == 1
 
 
-def test_the_supervisor_starts_again_a_worker_that_stops() -> None:
+class _Process:
+    def __init__(self, alive: bool) -> None:
+        self.alive, self.stopped = alive, False
+
+    def is_alive(self) -> bool:
+        return self.alive
+
+    def terminate(self) -> None:
+        self.stopped = True
+
+    def join(self, timeout: float) -> None:
+        pass
+
+
+def test_the_supervisor_starts_again_a_worker_that_stops(monkeypatch: pytest.MonkeyPatch) -> None:
+    started: list[_Process] = []
+
+    def start(spawn: Any, slot: worker.Slot, queue: str, target: Any) -> _Process:
+        started.append(_Process(alive=slot.kernel == "lives"))
+        return started[-1]
+
+    monkeypatch.setattr(worker, "start", start)
     stop = threading.Event()
-    threading.Timer(6.0, stop.set).start()  # spawning a process takes a second or more on a small CI runner
-    assert worker.supervise(2, SYNC, stop, target=print, every=0.05) > 2
+    threading.Timer(0.3, stop.set).start()
+    slots = [worker.Slot("lives", None, 1), worker.Slot("dies", None, 1)]
+    count = worker.supervise(slots, SYNC, stop, every=0.05)
+    assert count == len(started) > 3 and sum(p.alive for p in started) == 1  # the live one started once
+    assert started[0].stopped and started[-1].stopped  # those running at the end were stopped
+
+
+def test_a_kernel_s_process_starts_with_its_folder_first_on_its_path(tmp_path: Any) -> None:
+    spawn = worker.multiprocessing.get_context("spawn")
+    before = list(worker.sys.path)
+    for path in (None, str(tmp_path)):
+        process = worker.start(spawn, worker.Slot("3.13.0", path, 1), SYNC, print)
+        process.join(30)
+        assert process.exitcode == 0 and worker.sys.path == before
 
 
 def test_idle_waits_to_be_stopped_and_serve_runs_one_worker(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,7 +110,7 @@ def test_idle_waits_to_be_stopped_and_serve_runs_one_worker(monkeypatch: pytest.
     served: list[str] = []
 
     class Fake:
-        def __init__(self, settings: Any, queue: str) -> None:
+        def __init__(self, settings: Any, queue: str, kernel: str) -> None:
             served.append(queue)
 
         def serve(self, stop: threading.Event) -> None:
@@ -75,15 +118,18 @@ def test_idle_waits_to_be_stopped_and_serve_runs_one_worker(monkeypatch: pytest.
 
     monkeypatch.setattr(worker, "Worker", Fake)
     monkeypatch.setattr(worker, "get_settings", lambda: ADA)
-    worker.serve(JOBS)
-    assert served == [JOBS, "served"]
+    worker.serve(JOBS, routing.installed())
+    monkeypatch.setattr(worker, "idle", lambda stop: served.append("idle"))
+    worker.serve(JOBS, "9.9.9")  # it imported another kernel than it was started for: it serves nothing
+    assert served == [JOBS, "served", "idle"]
 
 
 async def test_a_broken_connection_is_made_again(engine: AsyncEngine, ada: httpx.AsyncClient, idle: Worker) -> None:
     who, _key = await an_org(engine, ada)
     idle.queue = SYNC
     idle.ctx.conn.close()
-    found, _ = idle.dispatch(Message(str(who.org_id), "", "models", {}))
+    found, _, about = idle.dispatch(Message(str(who.org_id), "", "models", {}))
+    assert about is None  # about no one model
     assert found == [] and not idle.ctx.conn.closed
 
 
@@ -101,18 +147,18 @@ async def test_jobs_that_are_done_crash_or_lose_their_model(
     crash = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
     monkeypatch.setattr(runner, "run", lambda *_: 1 / 0)
     with pytest.raises(ZeroDivisionError):
-        work(idle.ctx, Message(org, "shapes", "learn", {"job": crash["id"]}))
+        work(idle.ctx, Message(org, "shapes", "learn", {"job": crash["id"]}), idle)
     assert jobs.view(idle.ctx.conn, schema, crash["id"])["error"]["code"] == "E_INTERNAL"
     again = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
     monkeypatch.setattr(runner, "run", lambda *_: (idle.ctx.conn.close(), 1 / 0))  # its connection gone with it
     with pytest.raises(ZeroDivisionError):
-        work(idle.ctx, Message(org, "shapes", "learn", {"job": again["id"]}))
+        work(idle.ctx, Message(org, "shapes", "learn", {"job": again["id"]}), idle)
     monkeypatch.undo()
     idle.ctx = idle._connect()
     schema = pg.enter(idle.ctx.conn, org)
     lost = (await ada.post("/v1/models/shapes/learn", headers=key)).json()
     await ada.delete("/v1/models/shapes?confirm=shapes", headers=key)  # its jobs go with it
-    assert work(idle.ctx, Message(org, "shapes", "learn", {"job": lost["id"]})) is None
+    assert work(idle.ctx, Message(org, "shapes", "learn", {"job": lost["id"]}), idle) is None
     with pytest.raises(Refusal, match="No job"):
         jobs.view(idle.ctx.conn, schema, lost["id"])
 

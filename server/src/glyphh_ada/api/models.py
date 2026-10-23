@@ -18,6 +18,9 @@ class NewModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(pattern=limits.NAME_PATTERN, description="Lower case letters, digits, _ . -; at most 63")
     spec: dict[str, Any] = Field(description="The model's spec: layers, segments, roles, output, settings")
+    ada: str | None = Field(
+        None, max_length=40, description="Its Ada version (GET /v1/ada); left out, the latest stable"
+    )
 
 
 @router.get("", operation_id="listAdaModels")
@@ -28,13 +31,15 @@ async def list_models(who: AdaWho, request: Request) -> dict[str, Any]:
 
 @router.post("", operation_id="createAdaModel", status_code=201)
 async def create_model(body: NewModel, who: AdaWho, request: Request) -> dict[str, Any]:
-    """A model from its spec, checked by the kernel and against the cloud's bounds: version 1, empty."""
-    return dict(await call(request, who, body.name, "create", {"spec": body.spec}))
+    """A model from its spec, checked by the kernel and against the cloud's bounds: version 1, empty, on the Ada
+    version named (left out, the latest stable; an unknown, retired, deprecated or closed one is refused)."""
+    return dict(await call(request, who, body.name, "create", body.model_dump(exclude={"name"}, exclude_none=True)))
 
 
 @router.get("/{name}", operation_id="getAdaModel")
 async def get_model(name: str, who: AdaWho, request: Request) -> dict[str, Any]:
-    """One model: its active spec and version, and how many precedents it holds."""
+    """One model: its active spec and version, how many precedents it holds, and its Ada version (`ada`,
+    `ada_status`, `ada_notice`: a newer stable or beta out, its version deprecated or retired, or moved)."""
     return dict(await call(request, who, name, "model", {}))
 
 

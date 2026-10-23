@@ -7,7 +7,11 @@ the active version, another version, or a whole spec), an in-memory model of the
 live one would, then decides every held-out case. Each answers: accuracy (of decide's outcome, and of the vote's top),
 log-loss, the cost by the output's costs when it has them, how often it asks a person and its accuracy where it
 does not, coverage (a sufficient vote), calibration (the expected calibration error over ten bins of confidence), the
-mistakes it makes (truth: {decided: count}), and each number's change against the active version."""
+mistakes it makes (truth: {decided: count}), and each number's change against the active version.
+
+A candidate may name an Ada version (`ada`, docs/specs/ada-cloud.md 12.6): it is learned, calibrated and scored by
+that version's kernel. A job worker scores the candidates of its own kernel and hands the job on (Handoff) to the next
+kernel's, with the split it made, until every candidate is scored; the last one compares them."""
 
 import json
 import random
@@ -19,7 +23,7 @@ import glyphh_spec
 import psycopg
 from glyphh_postgres import PostgresStore
 
-from glyphh_ada import catalog, limits, versions
+from glyphh_ada import catalog, limits, registry, routing, versions
 from glyphh_ada.errors import Refusal
 from glyphh_ada.sample import Sampled
 from glyphh_ada.scoring import Scores, compare
@@ -65,10 +69,13 @@ def _truth(case: Case, output: str) -> str | None:
 
 
 def spec_of(conn: psycopg.Connection, schema: str, found: catalog.Live, candidate: dict[str, Any]) -> glyphh_spec.Spec:
-    """A candidate's spec: the active one with settings changed, another version's, or one given whole."""
+    """A candidate's spec: the active one with settings changed, another version's, one given whole, or the active
+    one as it is (a candidate naming only an Ada version)."""
     active = glyphh_spec.Spec.from_json(found.spec)
     try:
-        if "settings" in candidate:
+        if not {"settings", "spec_version", "spec"} & set(candidate):
+            spec = active
+        elif "settings" in candidate:
             spec = active.with_settings(active.settings.with_changes(candidate["settings"]))
         elif "spec_version" in candidate:
             spec = glyphh_spec.Spec.from_json(versions.row(conn, schema, found, int(candidate["spec_version"]))[0])
@@ -109,29 +116,78 @@ def score(model: Held, held: list[tuple[Case, str]], output: str, clearance: flo
     return scores.result()
 
 
-def run(conn: psycopg.Connection, schema: str, job: dict[str, Any], progress: Progress) -> dict[str, Any]:
-    args = job["args"]
+class Handoff(Exception):  # noqa: N818: not an error, the job passed on
+    """The candidates this kernel could score are scored (`partial`); the rest are another kernel's: the job goes on
+    on that kernel's jobs stream (process.py), with the cases it held out, so every candidate is scored on the same
+    split."""
+
+    def __init__(self, kernel: str, partial: dict[str, Any]) -> None:
+        super().__init__(kernel)
+        self.kernel, self.partial = kernel, partial
+
+
+def ada_of(found: catalog.Live, candidate: dict[str, Any]) -> registry.Version:
+    """The Ada version a candidate is scored on: its own `ada`, else the active version's. A retired or unknown one is
+    refused (each candidate's own refusal)."""
+    reg, name = registry.registry(), candidate.get("ada") or found.ada
+    known = reg.find(name)
+    latest = reg.latest(registry.today()).name
+    if known is None:
+        raise Refusal("E_ADA_UNKNOWN", f"There is no Ada version {name}.", 422, ada=name, latest=latest)
+    if known.status(registry.today()) == "retired" and name != found.ada:
+        raise Refusal("E_ADA_RETIRED", f"{name} was retired.", 410, ada=name, latest=latest)
+    return known
+
+
+def _split(store: PostgresStore, args: dict[str, Any], partial: dict[str, Any]) -> tuple[list[Case], list[Any]]:
+    """The split: made here on the first kernel, the same cases again (by id) on each kernel after."""
+    output = args.get("output") or "default"
+    found = cases(store)
+    if "held" not in partial:
+        return split(found, output, args.get("holdout") or {"newest": 200})
+    by = {c[0]: c for c in found}
+    train = [by[i] for i in partial["train"] if i in by]
+    held = [(by[i], _truth(by[i], output)) for i in partial["held"] if i in by]
+    return train, held
+
+
+def run(conn: psycopg.Connection, schema: str, job: dict[str, Any], progress: Progress, kernel: str) -> dict[str, Any]:
+    args, partial = job["args"], dict(job.get("result") or {})
     found = catalog.live(conn, schema, job["model"])
     dim = glyphh_spec.Spec.from_json(found.spec).dimension
     store = PostgresStore(conn, schema, found.store, dim=dim, readonly=True)
     output, clearance = args.get("output") or "default", float(args.get("clearance", 1.0))
-    train, held = split(cases(store), output, args.get("holdout") or {"newest": 200})
+    train, held = _split(store, args, partial)
     if not held:
         raise Refusal("E_BACKTEST", "The model has no graded precedents to hold out for this output.", 422)
     runs = [{"name": "active", "settings": {}}, *list(args["candidates"])]
-    results = []
+    done: dict[int, Any] = {int(i): r for i, r in (partial.get("done") or {}).items()}
+    kernels: dict[int, str] = {}
     for n, candidate in enumerate(runs):
+        if n in done:
+            continue
         try:
+            ada = ada_of(found, candidate)
+            routing.check(ada.kernel)
+            kernels[n] = ada.kernel
+            if ada.kernel != kernel:
+                continue
             spec = spec_of(conn, schema, found, candidate)
             model, notes = build(spec, train)
-            results.append({"candidate": candidate, **notes, **score(model, held, output, clearance)})
+            done[n] = {"candidate": candidate, "ada": ada.name, **notes, **score(model, held, output, clearance)}
         except Refusal as r:
-            results.append({"candidate": candidate, "error": {"code": r.code, "message": r.message, **r.detail}})
-        progress(100 * (n + 1) / len(runs))
+            error = {"code": r.code, "message": r.message, **r.detail}
+            done[n] = {"candidate": candidate, "ada": candidate.get("ada") or found.ada, "error": error}
+        progress(100 * len(done) / len(runs))
+    left = sorted({kernels[n] for n in range(len(runs)) if n not in done})
+    if left:
+        ids = {"train": [c[0] for c in train], "held": [c[0] for c, _ in held]}
+        raise Handoff(left[0], {"done": done, **ids, "next": left[0]})
     return {
         "version": found.version,
+        "ada": found.ada,
         "trained": len(train),
         "held_out": len(held),
         "output": output,
-        **compare(results),
+        **compare([done[n] for n in range(len(runs))]),
     }

@@ -946,3 +946,191 @@ recommended; decision 12 does not arise (there are no paying self-hosted custome
 | 10 | A confidence bar (`output.ask_below`) beside cost-based `ask` | **Yes:** it is how people think before they think in costs (both examples use 0.6) |
 | 11 | Retire Glyphh-hosted machines once Ada Cloud ships | **Yes:** remove the code, not just the flag, a month after launch |
 | 12 | Existing paid self-hosted customers, if any | Keep their keys to the end of their period; offer `ada_sqlite` import to the cloud or an Enterprise contract |
+
+---
+
+## 12. Ada versions
+
+**Status:** decided 2026-10-23 (Chris: "each model needs to carry the version, with an option to change the version
+or upgrade"; names, betas, the Ada page and the latest-stable fallback the same day); built as described here
+([12.10](#1210-as-built-and-measured) says what building changed and what it measured).
+
+A change to Ada's maths changes what models already built answer. So every model version carries the Ada version
+it was made and learned with, its answers are always computed by that version, and moving to another is a choice the
+customer makes with a backtest in front of them, or, when a version reaches its end, a move Glyphh makes for them
+and tells them about.
+
+### 12.1 Releases of the kernel
+
+- **Semver, tagged, with a CHANGELOG** (ada-private `CHANGELOG.md`, tags `v3.11.0` to `v3.13.0`). Each release says
+  whether it is **answer-changing** (the same spec, precedents and learned state can answer differently: the maths,
+  the encoding, learning, calibration, bug fixes that move an answer) or **compatible** (speed, memory, storage,
+  packaging, a crash fixed, things a spec must ask for). **A patch is never answer-changing; an answer-changing
+  release is at least a minor; a change of the store's layout (`glyphh_postgres.STORE_FORMAT`) is a major,** which
+  reads the layout before it. `glyphh_kernel.__version__`, `pyproject.toml` and the CHANGELOG's top agree, by test.
+- **Customers see names, not semver** (Chris): `ada-<major>-<minor>`, lower case, hyphenated, `-beta` for a beta:
+  `ada-1-0` is kernel 3.12.2 (the cloud's launch), `ada-1-1-beta` is 3.13.0. Each name maps to one kernel release.
+  The kernel's semver is shown only in a release's details. A new name for every answer-changing release; a
+  compatible fix of a release may replace its kernel under the same name (3.12.2 to 3.12.3 would stay `ada-1-0`),
+  because by the rule it answers the same.
+
+### 12.2 The registry
+
+`src/glyphh_ada/ada_versions.json` is the one list, in the server's repo, changed by a PR with the deploy that ships
+the kernel:
+
+| Field | |
+|---|---|
+| `name` | `ada-1-0`; `aliases`: other names that resolve to it (a promoted beta's) |
+| `kernel`, `commit` | The release, and the ada-private commit it is installed from |
+| `status` | `stable` or `beta`; `open: false` closes a beta to new models (one found wrong) while its models run |
+| `released`, `deprecated`, `ends` | Dates; deprecated from `deprecated`, **retired** from `ends` |
+| `changes_answers` | Against the version before it in the list |
+| `store_format` | The kernel's `STORE_FORMAT` |
+| `summary`, `notes` | One line, and the release notes in prose (from the CHANGELOG entry, written for customers) |
+
+A version's status is computed from the dates: `stable` / `beta`, then `deprecated` (still answering, with its end
+date), then `retired`. **The latest stable** is the newest stable that is neither deprecated nor retired. The
+registry is checked when it is loaded (and by a test): names unique and well formed, every beta named `-beta`, one
+latest stable, at most three versions installed, one store format among them, every deprecated version with an end.
+
+### 12.3 Each model version carries its Ada
+
+`spec_versions` gains `ada` (the name chosen) and `kernel` (the exact release it was made and learned with);
+migration 4 gives every existing version `ada-1-0`, `3.12.2`. A new version (a spec or settings change) keeps its
+model's Ada; only an upgrade (12.6) changes it. Answers, learning, calibration, imports, exports and re-encodes of a
+version are computed by its Ada's kernel (its name resolved through the registry, aliases included), never another.
+
+Shown: `GET /v1/models` (`ada` per model), `GET /v1/models/{name}` (`ada`, `ada_status`, `ada_notice`: null or
+`{kind: upgrade | beta | deprecated | moved | retired, message, to?, ends?}`), each version in `…/versions` (`ada`,
+`kernel`), `POST /v1/decide` and every read (`ada` beside `model` and `version` in `/v1/decide`; the header
+`Glyphh-Ada` on every answer about one model, and `Glyphh-Ada-Notice` when it runs a deprecated version or was just
+moved). Every answer of the Ada host carries `Glyphh-Contract: 5`.
+
+### 12.4 Several kernels at once: an install and workers per kernel
+
+**Chosen:** each kernel release the registry lists is installed in the image on its own (the latest stable in the
+venv from `uv.lock`, as today; each other one with `pip install --no-deps --target /opt/ada/<kernel>` at its commit,
+over the same deploy key), and the worker groups run processes per kernel: a process puts `/opt/ada/<kernel>` first
+on its path (`PYTHONPATH`) and imports only that copy, and checks at start that the kernel it imported is the one it
+was started for.
+
+- **Streams per kernel:** `ada:sync:<kernel>` and `ada:jobs:<kernel>` beside today's `ada:sync` and `ada:jobs`, which
+  stay the front door and are read by the latest stable's workers. A front worker finds the model's Ada (its active
+  version's, cached with the model's version counter) and, when it is another kernel's, puts the message unchanged
+  (same id, reply list and deadline) on that kernel's stream; the API is unchanged and the caller's reply comes from
+  the worker that answered. Jobs go straight to their kernel's stream (the worker that makes a job knows it). A
+  message for a kernel no longer installed is answered `503 E_ADA_UNAVAILABLE`.
+- **How many processes:** the latest stable gets one per vCPU as today; every other installed kernel gets
+  `GLYPHH_ADA_KERNEL_WORKERS` (default 1) per machine of each group. A worker holds the lexicon and its caches, not
+  stores, so a kernel's process costs about what one worker costs today; three kernels at most (12.5) bound it.
+- **Image:** a kernel is about 0.5 MB of Python plus its 3.4 MB lexicon; three are under 12 MB on a 200 MB image.
+- **Stores:** every installed kernel must read the same store format (`STORE_FORMAT` 1 for all of 3.x), checked by the
+  registry. A move between Ada versions reads the old store with the new kernel, and a rollback reads the new store
+  with the old; a future major with a new layout reads the one before it, and the move to it is a one-way upgrade.
+- **Rejected: one kernel keeping old behaviour behind a per-model flag.** Every answer-changing change would live on
+  as a branch, forever, in one file, and "computed by that version" would be a promise that a refactor elsewhere
+  could quietly break. Separate installs answer with the exact code the model was made with, and the kernel stays one
+  clean file. The cost (a process and a few MB per kept version) is bounded by the support policy.
+
+### 12.5 Support policy
+
+| | |
+|---|---|
+| Kept at once | **At most three versions:** the latest stable, the stable before it while it is deprecated, and one beta |
+| A new stable ships | It becomes the default. The stable before it is **deprecated** the same day and **ends 180 days later** |
+| A beta | Never the default; chosen only by name (a new model, an upgrade, a backtest), labelled Beta everywhere. Promoted, it gets the stable name (same kernel, or a compatible fix) and its beta name stays an alias while models are pinned to it; superseded by another beta, it is deprecated and ends 30 days later. `open: false` closes it to new models |
+| Deprecated | Answers, learns and can be backtested and moved from as ever; cannot be chosen for a new model or as an upgrade target (`422 E_ADA_DEPRECATED`); every answer carries `Glyphh-Ada-Notice`; the platform, SDKs and plugin warn |
+| Retired (from `ends`) | **No model is ever left unanswerable.** The job workers move every model whose active version runs it to the latest stable: an upgrade (12.6) made by `ada-retirement`, noted "Moved from ada-1-0 (retired) to ada-1-1"; until its job ends the model answers on its old kernel. A retired kernel leaves the image only in a later release, once no model is active on it (its entry `installed: false`). Versions on it stay listed, and their stores kept as any (5.2), but cannot be made live again (`410 E_ADA_RETIRED`) |
+| No `ada` given | The latest stable: a new model, an upgrade, a backtest's target |
+| An unknown or retired name given | Refused, never substituted: `422 E_ADA_UNKNOWN` or `410 E_ADA_RETIRED`, each naming the latest stable as the fix (`latest`) |
+
+### 12.6 Upgrade, change, downgrade
+
+`POST /v1/models/{name}/upgrade {ada?, note?, backtest?}` (no `ada`: the latest stable) makes a new version of the
+active spec on that Ada: **always a re-encode** into a store of its own, by a job on the target kernel (it restates
+every stored case, encodes it with the target kernel, learns and calibrates with it, builds the index, copies what was
+written meanwhile and switches, 5.2), so the old version serves untouched until the switch and a rollback finds its
+store exactly as it was. Answers `{version, active: false, job, ada, from}`. Any supported version may be chosen,
+older ones included (a downgrade); the same version is `409 E_NO_CHANGE`. Rollback is as today:
+`POST …/versions/{n}/activate` (a job that brings the old store up to date, on the old version's kernel).
+
+**Backtest first.** A backtest candidate may name an Ada: `{"ada": "ada-1-1-beta"}` alone (the active spec on that
+Ada) or with `settings`, `spec_version` or `spec`; a backtest body's `ada` is shorthand for that candidate. Each
+candidate is learned, calibrated and scored by its own Ada's kernel: a backtest across kernels is relayed, each
+kernel's job worker scoring its candidates and handing the job to the next, the last one comparing them all against
+the active version (12.4).
+
+### 12.7 What each place shows
+
+- **API:** `GET /v1/ada`: `{latest_stable, contract, versions: [{name, kernel, status, beta, open, released,
+  deprecated, ends, changes_answers, aliases, summary, notes, models}]}` (`models`: how many of the org's models run
+  it); `ada` on `POST /v1/models`; upgrade and backtest above.
+- **Connector:** `ada_releases` (the Ada versions; `ada_versions` is a model's own), `ada_upgrade {name, ada?,
+  note?}`, `ada` on `ada_model_create` and `ada_backtest`;
+  `ada_model` shows the Ada and its notice.
+- **Platform:** an **Ada** page in the sidebar after Models: every version with its status (Stable, Beta, Deprecated
+  with its end, Retired), release date, whether it changes answers, its notes, the org's models on it and a link to
+  each one's upgrade. A model's header shows its Ada ("ada-1-0") with a notice when a newer stable exists ("ada-1-1 is
+  available: see what changes") and a quieter one for a beta; its Versions tab an Ada column and an "Upgrade Ada"
+  flow: choose a version, backtest against it, see the score change, upgrade.
+- **SDKs (contract 5):** `create_model(…, ada=)`, `model.ada`, each version's `ada`, `ada.versions()`,
+  `model.backtest(ada=…)`, `model.upgrade(ada=…, wait=)`; typed errors for unknown, retired, deprecated and closed
+  betas; a warning when a model runs a deprecated version or was moved; each SDK states the contract it speaks and
+  fails clearly, asking to be upgraded, when the server's is newer.
+- **Plugin:** the Ada skill tells the person which Ada a model runs, offers an upgrade when a newer stable exists
+  (backtest, then upgrade, then how to roll back), explains betas, and uses the latest stable for new models unless
+  asked; the account panel shows the org's models by Ada and any deprecations.
+- **Docs:** glyphh.ai/docs, "Ada versions".
+
+### 12.8 Proving it: a second version
+
+`ada-1-1-beta` is kernel 3.13.0, the experiment's cheapest improvement (research/compile REPORT.md): once a model
+has learned pairs, a query's pair value it never learned weighs the pair 0, so the roles' own weights decide. On
+German Credit it is within noise of 3.12.2 (decide 70.5%, cost 99 against 70.0%, 100), so it ships as a beta and
+**`ada-1-0` stays the default** until it is shown better on customers' own backtests.
+
+### 12.9 Errors
+
+| Code | Status | When |
+|---|---|---|
+| `E_ADA_UNKNOWN` | 422 | A name the registry does not know (`latest` names the fix) |
+| `E_ADA_RETIRED` | 410 | A retired version chosen, or a version on one made live again |
+| `E_ADA_DEPRECATED` | 422 | A deprecated version chosen for a new model or as an upgrade target |
+| `E_ADA_BETA` | 422 | A beta closed to new models (`open: false`) chosen |
+| `E_ADA_UNAVAILABLE` | 503 | A message for a kernel this deploy does not have |
+
+### 12.10 As built, and measured
+
+Built 2026-10-23: ada-private PR #12 (kernel 3.13.0, the CHANGELOG, tags `v3.11.0` to `v3.13.0`); the server
+(`registry.py`, `routing.py`, `retirement.py`, `api/adaversions.py`, the worker's slots, migration 4); the platform's
+Ada page and upgrade flow; contract 5, SDKs 3.3 and the plugin; the docs page.
+
+| Plan | As built |
+|---|---|
+| The API needs no change to route | It needs none: the front workers pass messages on. The worker answering also returns the model's Ada version, which the API turns into the headers |
+| A worker per kernel per machine | A process group's supervisor starts slots per kernel: the latest stable's `GLYPHH_ADA_WORKERS` (or a vCPU each), every other kernel `GLYPHH_ADA_KERNEL_WORKERS`; a spawned process gets the kernel's folder first on its `sys.path`, and one that imported another kernel than it was started for idles rather than answer |
+| `GET /v1/ada` | Also as `ada` on the Ada host's `GET /v1/usage` and the account API's `/v1/me` `cloud` (the plugin's panel) |
+| A backtest across kernels | The job is relayed: each kernel's job worker scores its candidates and puts the job, with its split (the ids it trained on and held out), on the next kernel's stream; the last compares |
+| The connector's `ada_versions` lists the Ada versions | That name was a model's versions already: the Ada versions are `ada_releases` |
+| The move off a retired version | A re-encode like any upgrade; a model with an import or a re-encode open is moved by a later sweep |
+
+**Measured, end to end in Docker** (`scripts/ada-versions-e2e.py`: the app and both worker groups as processes, each
+group running two 3.12.2 processes and one 3.13.0 process, the 3.13.0 one importing only `/opt/ada/3.13.0`; Postgres
+17 with pgvector, Redis 8; German Credit, 800 cases recorded and learned, the benchmark's 200 held out):
+
+| | |
+|---|---|
+| The same 800 cases as two models, one on each version, side by side | Every answer about the ada-1-0 model came from ada-1-0, every one about the beta's from ada-1-1-beta (`Glyphh-Ada`); 48 of the 200 held-out answers' probabilities differ, 1 decision |
+| Backtest, the active version against ada-1-1-beta (the model's newest 200 held out, 600 learned) | 13 s. Accuracy 64.5% both, the vote 72.0% both, mean cost 0.475 both; log-loss 0.533 to 0.524; ask rate 42.5% to 44.5% |
+| Upgrade to ada-1-1-beta (re-encode, learn and calibrate on 3.13.0) | 8 s; version 2 on ada-1-1-beta, kernel 3.13.0, active; 1 of the 200 decisions changed |
+| Rollback to version 1 (a job on 3.12.2 bringing its store up to date) | 14 s; all 200 decisions and all 200 sets of probabilities exactly as before the upgrade |
+
+A worker process holds 150 to 195 MB (the lexicon, numpy and its caches) whatever its kernel; a kernel's install is
+3.9 MB. So a second kernel costs one process a machine of each group, about 190 MB: on today's `shared-cpu-2x`
+machines (2 GB `ada`, 4 GB `adajobs`) it fits beside the two latest-stable processes.
+
+**Built without the deploy key:** this machine has no read key for ada-private, so the Dockerfile's new step
+(`scripts/ada-kernels.py`, installing 3.13.0 into `/opt/ada/3.13.0` over the same key) runs first in CI and Fly's
+builder; the local proof used an image built from an earlier local server image with 3.13.0 installed from the
+`v3.13.0` tag by the same command.

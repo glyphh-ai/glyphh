@@ -351,6 +351,23 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   A version keeps the learned weights and temperatures it had when it stopped being active; making it active again
   restores them, at once or by a job that brings its store up to date. A store no version has read for 7 days is
   dropped (`E_VERSION_GONE`).
+- **Ada versions** (`docs/specs/ada-cloud.md`, 12). Customers see the kernel as named versions (`ada-1-0` = kernel
+  3.12.2, stable; `ada-1-1-beta` = 3.13.0), listed with their dates and release notes in
+  `glyphh_ada/ada_versions.json` (`registry.py`, checked against the support policy at start: at most three kernels,
+  one store format). Every version of a model records its Ada version and the exact kernel (`spec_versions.ada`,
+  `kernel`; migration 4 gave every earlier one `ada-1-0`, `3.12.2`), and is answered, learned and re-encoded only by
+  that kernel: the latest stable's is the venv's, every other one is installed in `/opt/ada/<kernel>`
+  (`GLYPHH_ADA_KERNELS_DIR`; the Dockerfile's `scripts/ada-kernels.py`), and each worker group runs processes per
+  kernel (`GLYPHH_ADA_KERNEL_WORKERS`, default 1, for the others), each importing only its own copy. Each kernel
+  reads its own streams (`ada:sync:<kernel>`, `ada:jobs:<kernel>`); the latest stable's also read the front door
+  (`ada:sync`, `ada:jobs`) and pass a message for another kernel's model on, unchanged. A new model gets the latest
+  stable unless `ada` names another (`E_ADA_UNKNOWN`, `E_ADA_RETIRED`, `E_ADA_DEPRECATED`, `E_ADA_BETA`,
+  `E_ADA_UNAVAILABLE`, each naming the latest stable); `POST …/upgrade {ada?}` is a re-encode on the target's kernel
+  (`202`); a backtest candidate may name an `ada`, scored by its kernel's job worker, the job handed from kernel to
+  kernel. Every Ada-host answer carries `Glyphh-Contract: 5`, and one about a model `Glyphh-Ada` (and
+  `Glyphh-Ada-Notice` on a deprecated, retired or just-moved version). The latest stable's job workers move every
+  model of a retired version to the latest stable, hourly (`retirement.py`). `GET /v1/ada` lists them with the org's
+  models on each; the connector's `ada_releases` and `ada_upgrade`.
 - **Backtests.** A job: the active version and up to ten candidates, each an in-memory model of the model's graded
   precedents minus the held-out ones (the newest `n`, or a seeded fraction), learned and calibrated, scored on the
   held-out: accuracy (decide's and the vote's), log-loss, cost by the output's costs, ask rate and accuracy where it
@@ -454,7 +471,9 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
 | `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
 | `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model, a new version |
-| `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups; 0, one per vCPU |
+| `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups for the latest stable Ada version's kernel; 0, one per vCPU |
+| `GLYPHH_ADA_KERNEL_WORKERS` | `1` | Worker processes per machine of each group for every other kernel Ada versions list (a beta, a deprecated stable) |
+| `GLYPHH_ADA_KERNELS_DIR` | `/opt/ada` | Where every kernel but the latest stable's is installed, one folder per kernel |
 | `GLYPHH_ADA_IMPORT_BYTES` | `209715200` | The largest file an import takes (200 MB) |
 
 ### API

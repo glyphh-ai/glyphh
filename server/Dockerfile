@@ -18,6 +18,11 @@ RUN printf '%s\n' '#!/bin/sh' \
 ENV GIT_SSH_COMMAND="/usr/local/bin/ssh-ada"
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-install-project --no-dev
+# Ada versions (docs/specs/ada-cloud.md, 12.4): the latest stable's kernel is the venv's (uv.lock); every other kernel
+# the list names goes into /opt/ada/<kernel>, at its commit, where its own worker processes import it from.
+COPY src/glyphh_ada/ada_versions.json scripts/ada-kernels.py /tmp/ada/
+RUN --mount=type=secret,id=ada_deploy_key,required=true \
+    /opt/venv/bin/python /tmp/ada/ada-kernels.py /tmp/ada/ada_versions.json /opt/ada
 
 FROM deps AS test
 RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-install-project

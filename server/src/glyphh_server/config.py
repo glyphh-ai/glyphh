@@ -18,6 +18,10 @@ class AdaCloudSettings(BaseSettings):
     ada_write_timeout: float = Field(30.0, gt=0, le=120)
     # Worker processes per machine of a group; 0: one per vCPU.
     ada_workers: int = Field(0, ge=0, le=64)
+    # Ada versions (docs/specs/ada-cloud.md, 12.4): where each kernel but the latest stable's is installed
+    # (<dir>/<kernel>), and how many worker processes each of those kernels gets per machine of a group.
+    ada_kernels_dir: str = "/opt/ada"
+    ada_kernel_workers: int = Field(1, ge=1, le=64)
     # The largest file an import takes, in bytes.
     ada_import_bytes: int = Field(200 << 20, ge=1 << 20)
     # The Ada API's address, as the connector hands out its upload and download links.

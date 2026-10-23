@@ -26,7 +26,8 @@ MAX_DELIVERIES: int = 3  # a message that killed this many workers is answered E
 READS: frozenset[str] = frozenset({"query", "probabilities", "facts", "decide"})
 # The writes to a model's precedents, each under the model's write lock (versions.write_lock)
 CASES: frozenset[str] = frozenset({"record", "record_many", "grade", "forget"})
-VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate"})  # a new version, or another made active
+# A new version, another made active, or the active spec on another Ada version (upgrade)
+VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate", "upgrade"})
 # note: a version's note written again
 WRITES: frozenset[str] = (
     frozenset({"create", "delete", "job_start", "import_start", "import_go", "note"}) | CASES | VERSIONS
@@ -34,6 +35,13 @@ WRITES: frozenset[str] = (
 LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions", "stats", "map", "precedent"})
 SYNC_OPS: frozenset[str] = READS | WRITES | LOOKS
 JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate", "import", "export", "reencode", "backtest"})
+# What any worker answers, whatever kernel the model runs: no kernel reads or writes the model's cases or spec
+ANY_KERNEL: frozenset[str] = frozenset({"models", "model", "job", "note", "delete", "activate", "upgrade"})
+
+
+def kernel_stream(queue: str, kernel: str) -> str:
+    """The stream of one kernel's workers (docs/specs/ada-cloud.md, 12.4): `ada:sync:3.12.2`, `ada:jobs:3.13.0`."""
+    return f"{STREAMS[queue]}:{kernel}"
 
 
 def reply_key(request_id: str) -> str:
@@ -90,9 +98,11 @@ class Message:
         return self.key or self.id
 
 
-def ok(data: Any, version: int | None = None) -> str:
-    """An answer; `version` is the model's active spec version when the answer came from a model."""
-    return json.dumps({"ok": True, "data": data, "version": version}, separators=(",", ":"), default=str)
+def ok(data: Any, version: int | None = None, ada: dict[str, Any] | None = None) -> str:
+    """An answer; `version` is the model's active spec version when the answer came from a model, `ada` its Ada
+    version and what the caller should be told of it ({name, notice}), for the API's headers."""
+    out = {"ok": True, "data": data, "version": version} | ({"ada": ada} if ada else {})
+    return json.dumps(out, separators=(",", ":"), default=str)
 
 
 def refused(code: str, message: str, status: int, **detail: Any) -> str:

@@ -17,6 +17,7 @@ from glyphh_server.mcp.tools import (
     ada_jobs,
     ada_keys,
     ada_models,
+    ada_releases,
     billing,
     grants,
     logs,
@@ -27,11 +28,12 @@ from glyphh_server.mcp.tools import (
 )
 from glyphh_server.mcp.tools.base import Context, Tool
 
-ADA: dict[str, Tool] = {t.name: t for t in (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_jobs.TOOLS, *ada_keys.TOOLS)}
+_WORKERS = (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_jobs.TOOLS, *ada_releases.TOOLS)
+ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS)}
 # Tools that wait on an Ada worker (up to 30 s, a job up to 50): run after the request's transaction has ended, on
 # short transactions of their own. A transaction open across the wait holds back the database's oldest snapshot, and an
 # import's concurrent index build waits out every such transaction.
-DETACHED: frozenset[str] = frozenset(t.name for t in (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_jobs.TOOLS))
+DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS)
 TOOLS: dict[str, Tool] = {
     t.name: t
     for t in (

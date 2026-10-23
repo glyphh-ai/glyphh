@@ -21,7 +21,7 @@ from glyphh_ada.situations import STORED_SETTINGS, learned_of
 Change = dict[str, Any]
 _ROWS = """
     SELECT v.version, v.note, v.made_by, v.made_at, v.version = m.active_version, v.store, v.backtest, v.ready,
-           v.gone, v.retired_at, v.precedents_at, v.spec, v.learned FROM {s}.spec_versions v
+           v.gone, v.retired_at, v.precedents_at, v.spec, v.learned, v.ada, v.kernel FROM {s}.spec_versions v
     JOIN {s}.models m ON m.id = v.model_id WHERE v.model_id = %s ORDER BY v.version
 """
 _KEYS = ("version", "note", "made_by", "made_at", "active", "store", "backtest", "ready", "gone", "retired_at")
@@ -119,7 +119,10 @@ def store(row: dict[str, Any], active_store: str, retired: dict[str, Any]) -> di
 def _entries(conn: psycopg.Connection, schema: str, found: catalog.Live) -> list[tuple[dict[str, Any], Any]]:
     """Every version, oldest first, as listing answers it, with its spec."""
     rows = [
-        {**dict(zip(_KEYS, r[:10], strict=True)), "store": r[5], "precedents_at": r[10], "spec": r[11], "kept": r[12]}
+        {
+            **dict(zip(_KEYS, r[:10], strict=True)),
+            **{"store": r[5], "precedents_at": r[10], "spec": r[11], "kept": r[12], "ada": r[13], "kernel": r[14]},
+        }
         for r in conn.execute(q(schema, _ROWS), (found.id,)).fetchall()
     ]
     tests = conn.execute(q(schema, _BACKTESTS), (found.id,)).fetchall()
@@ -135,6 +138,7 @@ def _entries(conn: psycopg.Connection, schema: str, found: catalog.Live) -> list
         entry["new_store"] = before is not None and row["store"] != before["store"]
         entry["changes"] = None if before is None else diff(before["spec"], row["spec"])
         entry["precedents_at"] = row["precedents_at"]
+        entry["ada"], entry["kernel"] = row["ada"], row["kernel"]  # the Ada version it was made and learned with
         entry["learned"] = learned(live if row["active"] else row["kept"])
         entry["scores"] = scores(tests, row["version"])
         entry["store"] = store(row, found.store, retired)

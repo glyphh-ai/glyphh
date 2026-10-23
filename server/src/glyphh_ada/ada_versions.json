@@ -1,0 +1,35 @@
+{
+  "comment": "Ada versions (docs/specs/ada-cloud.md, 12): newest first. Each name maps to one release of ada-private's kernel (its CHANGELOG.md); `commit` is what the image installs (the latest stable's from uv.lock into the venv, every other one into /opt/ada/<kernel> by the Dockerfile). Dates are UTC days: deprecated from `deprecated`, retired from `ends`.",
+  "versions": [
+    {
+      "name": "ada-1-1-beta",
+      "kernel": "3.13.0",
+      "commit": "61e1456ed378019d1871d3e478ae4e96c4aa6f08",
+      "status": "beta",
+      "open": true,
+      "released": "2026-10-23",
+      "deprecated": null,
+      "ends": null,
+      "changes_answers": true,
+      "store_format": 1,
+      "aliases": [],
+      "summary": "Learned pairs of roles stay out of a vote when the query's pair is one the model never learned.",
+      "notes": "When a model learns that two roles tell more together than apart (a pair, such as how long a loan runs and how much is saved), it weighs each combination of their values it has learned from. Until now, a query bringing a combination the model had never learned from still gave that pair its full weight, and since the combination matched nothing stored, the pair pulled the vote toward no one in particular.\n\nIn ada-1-1-beta such a pair weighs nothing for that query, so the two roles' own weights decide, as they would in a model that had learned no pair. Nothing stored changes, so moving to it and back is safe.\n\n**Who it changes:** only models that learned pairs (`interactions`, on by default), and only queries whose pair of values is new to the model. On German Credit it is within noise of ada-1-0 (deciding with costs: 70.5% right at a cost of 99, against 70.0% at 100). Backtest your own model against it before you upgrade.\n\n- A beta: chosen only by name, never the default.\n- Kernel 3.13.0."
+    },
+    {
+      "name": "ada-1-0",
+      "kernel": "3.12.2",
+      "commit": "f28212c414a7ce031cdb5253f5c4e2258141401d",
+      "status": "stable",
+      "open": true,
+      "released": "2026-10-22",
+      "deprecated": null,
+      "ends": null,
+      "changes_answers": true,
+      "store_format": 1,
+      "aliases": [],
+      "summary": "Ada Cloud's first version.",
+      "notes": "The version Ada Cloud launched with: typed answers with calibrated probabilities, the expected cost of each choice, asking a person when the spec prices it or the confidence is under its bar, and the precedents behind every answer. Models learn their roles', values', words' and pairs' weights from their own precedents, and big models are read through a shortlist and re-ranked exactly.\n\n- Kernel 3.12.2."
+    }
+  ]
+}
