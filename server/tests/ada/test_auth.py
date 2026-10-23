@@ -41,6 +41,36 @@ async def test_keys_are_made_listed_and_revoked_by_a_person(
     assert (gone.status_code, gone.json()["error"]["code"]) == (401, "E_AUTH")
 
 
+async def test_a_key_is_deleted_only_once_it_no_longer_works(
+    engine: AsyncEngine, ada: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch, worker: Worker
+) -> None:
+    monkeypatch.setattr(auth, "KEY_TTL", 0.0)
+    who = await person(engine, "Team")
+    other = await person(engine, "Team")
+    live = (await ada.post("/v1/keys", json={"name": "live"}, headers=who.headers)).json()
+    old = (await ada.post("/v1/keys", json={"name": "old"}, headers=who.headers)).json()
+    late = (await ada.post("/v1/keys", json={"name": "late", "expires_in_days": 1}, headers=who.headers)).json()
+
+    refused = await ada.delete(f"/v1/keys/{live['id']}/forever", headers=who.headers)
+    assert (refused.status_code, refused.json()["error"]["code"]) == (409, "E_CONFLICT")  # revoke it first
+
+    await ada.delete(f"/v1/keys/{old['id']}", headers=who.headers)
+    stranger = await ada.delete(f"/v1/keys/{old['id']}/forever", headers=other.headers)
+    assert stranger.status_code == 404  # only its maker deletes it
+    bearer = {"authorization": f"Bearer {old['key']}"}
+    assert (await ada.delete(f"/v1/keys/{old['id']}/forever", headers=bearer)).status_code == 401  # never by a key
+    assert (await ada.delete(f"/v1/keys/{old['id']}/forever", headers=who.headers)).status_code == 204
+    assert (await ada.delete(f"/v1/keys/{old['id']}/forever", headers=who.headers)).status_code == 404
+
+    async with engine.begin() as conn:
+        past = datetime(2020, 1, 1, tzinfo=UTC)
+        await conn.execute(update(RuntimeKey).where(RuntimeKey.name == "late").values(expires_at=past))
+    assert (await ada.delete(f"/v1/keys/{late['id']}/forever", headers=who.headers)).status_code == 204  # expired
+
+    listed = (await ada.get("/v1/keys", headers=who.headers)).json()
+    assert [k["name"] for k in listed] == ["live"]
+
+
 async def test_an_expired_or_wrong_key_or_none_is_401(
     engine: AsyncEngine, ada: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch, worker: Worker
 ) -> None:
