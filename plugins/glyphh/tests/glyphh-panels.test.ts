@@ -2,11 +2,12 @@ import { expect, test } from 'claude-code/testing'
 
 import { signedIn } from '../hooks/glyphh/account'
 import * as A from '../hooks/glyphh/actions'
+import { ADA_CONTRACT, adaLines, tooNew } from '../hooks/glyphh/ada'
 import { usageLines } from '../hooks/glyphh/sections/plan'
 import { cloudLimits, count, money, priceText } from '../hooks/glyphh/shape'
 import { isLinkable } from '../hooks/glyphh/ui'
 import { HOME, fakeHost } from './fake-host'
-import { PLANS } from './fake-server'
+import { ADA_LATER, PLANS } from './fake-server'
 
 async function signedInHost(surface: 'desktop' | 'terminal' = 'desktop') {
   const w = fakeHost({ surface })
@@ -110,6 +111,48 @@ test("plan: the org's Ada Cloud use: precedents and reads of the plan's, the res
     'Reads 2026-10: 62,000 (by contract)',
   ])
   expect(usageLines({ plan: { name: 'Free' } })).toEqual(['Ada Cloud usage: not available yet.'])
+})
+
+test("plan: the org's models by Ada version, the latest stable named, a beta labelled", async () => {
+  const w = await signedInHost()
+  await A.openSection(w.gh, 'plan')
+  expect(adaLines(await w.gh.state.me.get())).toEqual([
+    { text: 'Ada versions: the latest stable is ada-1-0.' },
+    { text: 'ada-1-1-beta · Beta, opt in by name · 1 model' },
+    { text: 'ada-1-0 · Stable, the default · 2 models' },
+  ])
+})
+
+test('plan: a deprecated Ada says when it ends and what to do; a retired one without models is left out', async () => {
+  const w = await signedInHost()
+  w.s.ada = ADA_LATER
+  await A.openSection(w.gh, 'plan')
+  expect(adaLines(await w.gh.state.me.get())).toEqual([
+    { text: 'Ada versions: the latest stable is ada-1-1.' },
+    { text: 'ada-1-1 · Stable, the default · 1 model' },
+    { text: 'ada-1-0 · Deprecated, ends 2027-04-21 · 2 models' },
+    {
+      text: '2 models on ada-1-0: it answers until 2027-04-21, then they move to ada-1-1 by themselves. Upgrade sooner: ask Claude to backtest ada-1-1 and upgrade.',
+      tone: 'warning',
+    },
+  ])
+  const closed = { ...ADA_LATER, versions: [{ ...ADA_LATER.versions[0], name: 'ada-1-2-beta', status: 'beta', beta: true, open: false, models: 0 }] }
+  expect(adaLines({ cloud: { ada: closed } })[1]).toEqual({ text: 'ada-1-2-beta · Beta, closed to new models · 0 models' })
+})
+
+test('plan: a server of a newer contract is said plainly, with how to update; none yet is said too', async () => {
+  expect(ADA_CONTRACT).toBe(5)
+  const w = await signedInHost()
+  w.s.ada = { ...ADA_LATER, contract: 6 }
+  await A.openSection(w.gh, 'plan')
+  expect(adaLines(await w.gh.state.me.get())).toEqual([
+    { text: 'Ada Cloud speaks contract 6; this plugin speaks contract 5. Update it: /plugin update glyphh@glyphh, then reload.', tone: 'error' },
+  ])
+  expect(tooNew(5)).toBeUndefined()
+  expect(tooNew('4')).toBeUndefined()
+  w.s.ada = null
+  await A.openSection(w.gh, 'plan')
+  expect(adaLines(await w.gh.state.me.get())).toEqual([{ text: 'Ada versions: not available yet.', tone: 'dim' }])
 })
 
 test('billing: Stripe pages open in the browser pane on the desktop, as links in a terminal', async () => {

@@ -1,9 +1,12 @@
 // Plan: the org's plan, what it uses of Ada Cloud this month (`cloud` on
 // /v1/me: precedents held, reads, when the count starts again, reads past the
-// month), and every plan by price with its cloud caps (/v1/plans). Members,
-// installs and models are unlimited on every plan, so none is counted here.
+// month), the org's models by the Ada version they run with any deprecation
+// (`cloud.ada`), and every plan by price with its cloud caps (/v1/plans).
+// Members, installs and models are unlimited on every plan, so none is
+// counted here.
 
 import type { Json } from '../../../types'
+import { adaLines } from '../ada'
 import { cloudLimits, cloudOf, count, many, money, obj, planName, priceText, str } from '../shape'
 import type { Ctx } from '../ui'
 
@@ -40,6 +43,15 @@ export function Plan(ctx: Ctx) {
         {usageLines(me, current).map((line, i) => (
           <Text key={`use-${i}`}>{line}</Text>
         ))}
+      </Box>
+      <Box flexDirection="column">
+        {adaLines(me).map((line, i) =>
+          line.tone === 'dim' ? (
+            <Text key={`ada-${i}`} dimColor>{line.text}</Text>
+          ) : (
+            <Text key={`ada-${i}`} color={line.tone}>{line.text}</Text>
+          ),
+        )}
       </Box>
       <Box flexDirection="column">
         <Text bold>Plans</Text>

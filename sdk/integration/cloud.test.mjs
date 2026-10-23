@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const sdk = await import(process.env.SDK ?? "../typescript/dist/index.js");
-const { Ada, AuthError, BusyError, LimitError, ModelMissingError, RateError, SpecReadingError } = sdk;
+const { Ada, AdaVersionUnknownError, AuthError, BusyError, LimitError, ModelMissingError, NoChangeError, RateError, SpecReadingError } = sdk;
 const contract = JSON.parse(readFileSync("/contract/contract.json", "utf8"));
 
 /** The schema's required keys are there (the Python suite validates the full JSON Schemas). */
@@ -120,6 +120,38 @@ test("create a model, import, learn, decide, backtest, activate, export", async 
   const q = await m.query(asked(3));
   shaped(q, "result");
   shaped(q.data, "answer");
+
+  // Ada versions (contract 5): the list, a model's Ada, a backtest on another, an upgrade, a rollback, the refusals
+  const listed = await ada.ada.versions();
+  shaped(listed, "ada_versions");
+  for (const v of listed.versions) for (const key of contract.ada_versions.$defs.version.required) assert.ok(key in v, `an Ada version lacks ${key}`);
+  const latest = listed.latest_stable;
+  assert.equal(listed.contract, 5);
+  const beta = listed.versions.find((v) => v.beta && v.open && v.status === "beta")?.name;
+  assert.ok(beta, "the registry lists a beta open to new models (ada-1-1-beta)");
+  assert.equal(m.created.ada, latest); // made with no ada: the latest stable
+  const info = await m.info();
+  shaped(info, "model");
+  assert.deepEqual([info.ada, info.ada_status, info.ada_notice], [latest, "stable", null]);
+  const before = info.version;
+  for (const v of await m.versions()) assert.ok(v.ada === latest && v.kernel);
+  assert.equal((await ada.models()).find((x) => x.name === "ts-tickets").ada, latest);
+  assert.equal((await m.decide(asked(3))).ada, latest);
+  const tried = await m.backtest([], { ada: beta, holdout: { newest: 50 } });
+  shaped(tried.result, "backtest");
+  assert.deepEqual([tried.result.active.ada, tried.result.candidates.map((c) => c.ada)], [latest, [beta]]);
+  const moved = await m.upgrade({ ada: beta, note: `${beta}: on the last 50`, backtest: tried.id });
+  shaped(moved, "upgrade");
+  assert.deepEqual([moved.ada, moved.from, moved.active, moved.job.state, moved.job.kind], [beta, latest, true, "done", "reencode"]);
+  const onBeta = await m.info();
+  assert.deepEqual([onBeta.ada, onBeta.ada_status, onBeta.version, onBeta.ada_notice?.kind], [beta, "beta", moved.version, "beta"]);
+  const versions = await m.versions();
+  assert.deepEqual(versions.filter((v) => v.active).map((v) => v.ada), [beta]);
+  assert.equal((await m.decide(asked(3))).ada, beta);
+  await assert.rejects(m.upgrade({ ada: beta }), NoChangeError);
+  await m.activate(before); // the rollback: on the Ada it ran before
+  assert.deepEqual([(await m.info()).ada, (await m.info()).version], [latest, before]);
+  await assert.rejects(m.upgrade({ ada: "ada-9-9" }), (e) => e instanceof AdaVersionUnknownError && e.status === 422 && e.latest === latest);
 
   await assert.rejects(new Ada({ key: "glyphh_ak_not_a_key" }).decide("ts-tickets", asked(1)), (e) => e instanceof AuthError && e.status === 401);
   await assert.rejects(ada.model("nope").info(), ModelMissingError);

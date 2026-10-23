@@ -19,12 +19,16 @@ from jsonschema import validate
 
 from glyphh import (
     Ada,
+    AdaVersions,
+    AdaVersionUnknownError,
     AuthError,
     BusyError,
     Decision,
     Job,
     LimitError,
+    ModelInfo,
     ModelMissingError,
+    NoChangeError,
     RateError,
     Result,
     SpecReadingError,
@@ -98,28 +102,27 @@ def asked(i: int) -> Dict[str, Any]:
 
 
 class Recorder:
-    """The SDK's transport, recording every exchange: (method, path, status, answer, request body)."""
+    """The SDK's transport, recording every exchange: (method, path, status, answer, request body), and the headers the
+    contract names (Retry-After, Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) by its place in `seen`."""
 
     def __init__(self) -> None:
         self.seen: List[Tuple[str, str, int, Any, Any]] = []
-        self.retry_after: Dict[int, str] = {}  # an exchange's Retry-After, by its place in `seen`
+        self.headers: Dict[int, Dict[str, str]] = {}
 
     def __call__(self, method: str, url: str, headers: Any, body: Optional[bytes]) -> Any:
         status, content, got = _urllib(method, url, headers, body)
         path = re.sub(r"^https?://[^/]+", "", url)
-        after = {k.lower(): v for k, v in got.items()}.get("retry-after")
-        if after is not None:
-            self.retry_after[len(self.seen)] = after
+        named = {k.lower(): v for k, v in got.items() if k.lower() == "retry-after" or k.lower().startswith("glyphh-")}
+        self.headers[len(self.seen)] = named
         self.seen.append((method, path, status, _json(content), _json(body)))
         return status, content, got
 
     def last(self, method: str, path: str, status: int, where: Any = None) -> Tuple[Any, Any, str, Dict[str, str]]:
-        """The latest answer to such a request: (answer, request body, path, its Retry-After header if any)."""
+        """The latest answer to such a request: (answer, request body, path, the headers the contract names)."""
         for i in range(len(self.seen) - 1, -1, -1):
             m, p, s, answer, sent = self.seen[i]
             if m == method and re.fullmatch(path, p.split("?")[0]) and s == status and (where is None or where(answer)):
-                after = self.retry_after.get(i)
-                return answer, sent, p, ({"retry-after": after} if after is not None else {})
+                return answer, sent, p, self.headers.get(i, {})
         raise AssertionError(f"no live answer to {method} {path} {status}")
 
 
@@ -136,7 +139,7 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     rec = Recorder()
     ada = Ada(transport=rec, retry_deadline=120)  # a laptop's one or two sync workers can be slower than 10 s a read
     out: Dict[str, Any] = {"rec": rec, "ada": ada}
-    for name in ("tickets", "tickets-copy", "routing"):
+    for name in ("tickets", "tickets-copy", "routing", "tickets-beta"):
         try:
             ada.delete_model(name)
         except ModelMissingError:
@@ -221,6 +224,44 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     assert isinstance(q, Result) and q.done and q.data["count"] > 0
     out["query"] = q
 
+    # Ada versions (contract 5): the list, a model's Ada, a backtest on another, an upgrade, a rollback, the refusals
+    listed = ada.ada.versions()
+    assert isinstance(listed, AdaVersions) and listed.contract == 5 and len(listed) >= 1
+    latest = listed.latest_stable
+    assert listed.get(latest) is not None and listed.get(latest).status == "stable"
+    out["ada_versions"] = listed
+    beta = next((v.name for v in listed if v.beta and v.open and v.status == "beta"), None)
+    assert beta is not None, "the registry lists a beta open to new models (ada-1-1-beta)"
+    assert m.created is not None and m.created.ada == latest  # made with no ada: the latest stable
+    info = m.info()
+    assert isinstance(info, ModelInfo) and (info.ada, info.ada_status, info.ada_notice) == (latest, "stable", None)
+    before = info.version
+    assert all(v.ada == latest and v.kernel for v in m.versions())
+    assert {x.name: x.ada for x in ada.models()}["tickets"] == latest
+    assert m.decide(asked(3)).ada == latest
+    tried = m.backtest(ada=beta, holdout={"newest": 100})
+    assert tried.result["active"]["ada"] == latest and [c["ada"] for c in tried.result["candidates"]] == [beta]
+    out["ada_backtest"] = tried
+    moved = m.upgrade(beta, note=f"{beta}: on the last 100", backtest=tried.id)
+    assert (moved["ada"], moved["from"], moved["active"]) == (beta, latest, True) and moved["job"].done
+    assert moved["job"].kind == "reencode" and moved["version"] > before
+    on_beta = m.info()
+    assert (on_beta.ada, on_beta.ada_status, on_beta.version) == (beta, "beta", moved["version"])
+    assert on_beta.ada_notice is not None and on_beta.ada_notice.kind == "beta"
+    versions = m.versions()
+    assert [v.ada for v in versions if v.active] == [beta] and {v.ada for v in versions} == {latest, beta}
+    assert m.decide(asked(3)).ada == beta
+    with pytest.raises(NoChangeError):
+        m.upgrade(beta)
+    back = m.activate(before)  # the rollback: on the Ada it ran before
+    assert back["version"] == before and (m.info().ada, m.info().version) == (latest, before)
+    with pytest.raises(AdaVersionUnknownError) as unknown:
+        m.upgrade("ada-9-9")
+    assert (unknown.value.status, unknown.value.ada, unknown.value.latest) == (422, "ada-9-9", latest)
+    trial = ada.create_model("tickets-beta", {**ROUTING, "name": "tickets-beta"}, ada=beta)
+    assert trial.created is not None and (trial.created.ada, trial.created.ada_status) == (beta, "beta")
+    trial.delete()
+
     # usage: GET /v1/usage, the final shape (server's ada-cloud-connector)
     out["usage"] = ada.usage()
 
@@ -274,17 +315,38 @@ def test_the_whole_way(flow: Dict[str, Any]) -> None:
     assert usage.precedents.used >= 2480 and usage["models"] == 3
     assert usage.requests.used > 0 and (usage.requests.max, usage.requests.over, usage.requests.overage) == (50_000, 0, True)
     assert re.fullmatch(r"\d{4}-\d{2}", usage.month) and re.fullmatch(r"\d{4}-\d{2}-01", usage.resets_at)
+    validate(flow["ada_versions"].data, CONTRACT["ada_versions"])
+    validate(flow["ada_backtest"].data, CONTRACT["job"])
+    validate(flow["ada_backtest"].result, CONTRACT["backtest"])
+    # every answer of the Ada host says the contract it speaks (the signed upload and download links are not its API)
+    rec = flow["rec"]
+    for i, (method, path, status, _, _) in enumerate(rec.seen):
+        if path.startswith("/v1/") and "upload" not in path and "download" not in path:
+            assert rec.headers[i].get("glyphh-contract") == "5", (method, path, status, rec.headers[i])
+
+
+def _plain_backtest(b: Any) -> bool:
+    return b["kind"] == "backtest" and b["state"] == "done" and '"ada"' not in json.dumps(b["args"])
 
 
 LIVE = {
-    "a model made from its spec": ("POST", r"/v1/models", 201, None),
+    "a model made from its spec": ("POST", r"/v1/models", 201, lambda b: b["name"] != "tickets-beta"),
+    "a model made on a beta Ada": ("POST", r"/v1/models", 201, lambda b: b["name"] == "tickets-beta"),
+    "the Ada versions": ("GET", r"/v1/ada", 200, None),
+    "the org's models, each with its Ada": ("GET", r"/v1/models", 200, None),
+    "a model and its Ada": ("GET", r"/v1/models/[^/]+", 200, lambda b: b.get("ada_status") == "beta"),
+    "a model's versions, each with its Ada": ("GET", r"/v1/models/[^/]+/versions", 200, None),
+    "a backtest against another Ada, done": ("GET", r"/v1/jobs/.+", 200, lambda b: b["kind"] == "backtest" and b["state"] == "done" and not _plain_backtest(b)),
+    "an upgrade to another Ada": ("POST", r"/v1/models/[^/]+/upgrade", 202, None),
+    "an Ada that does not exist": ("POST", r"/v1/models/[^/]+/upgrade", 422, None),
+    "an upgrade to the Ada the model runs": ("POST", r"/v1/models/[^/]+/upgrade", 409, None),
     "a decision": ("POST", r"/v1/decide", 200, lambda b: "facts" in b),
     "a decision that asks a person": ("POST", r"/v1/decide", 200, lambda b: b.get("ask") is True),
     "a decision of several outputs": ("POST", r"/v1/decide", 200, lambda b: "outputs" in b),
     "an import, waiting for its file": ("POST", r"/v1/models/[^/]+/imports", 202, None),
     "the import's file, sent to its upload link": ("PUT", r"/v1/uploads/.+", 202, None),
     "an import, done": ("GET", r"/v1/jobs/.+", 200, lambda b: b["kind"] == "import" and b["state"] == "done"),
-    "a backtest, done": ("GET", r"/v1/jobs/.+", 200, lambda b: b["kind"] == "backtest" and b["state"] == "done"),
+    "a backtest, done": ("GET", r"/v1/jobs/.+", 200, _plain_backtest),
     "a settings change, live at once": ("PATCH", r"/v1/models/[^/]+/settings", 200, lambda b: b["job"] is None),
     "an export, done, with its download link": ("GET", r"/v1/jobs/.+", 200, lambda b: b["kind"] == "export" and b["state"] == "done"),
     "the org's usage": ("GET", r"/v1/usage", 200, lambda b: b["models"] > 0),  # the first org's, not the full one's
@@ -296,8 +358,18 @@ LIVE = {
     "past the plan's calls a second": ("POST", r"/v1/decide", 429, None),
     "past the plan's month of requests": ("POST", r"/v1/decide", 403, lambda b: b["error"].get("reason") == "requests"),
 }
-# Refusals a local run cannot reach cheaply: past the plan's precedents (Free's 1,000), and a model over 100,000.
-NOT_LIVE = {"cases past the plan's precedents", "a big model asked with few of its roles"}
+# Refusals a local run cannot reach cheaply: past the plan's precedents (Free's 1,000), and a model over 100,000; and
+# what only a registry with a deprecated, retired or closed Ada (or a kernel the deploy lacks) answers.
+NOT_LIVE = {
+    "cases past the plan's precedents",
+    "a big model asked with few of its roles",
+    "a model on a deprecated Ada",
+    "a decision just after its model was moved off a retired Ada",
+    "a retired Ada",
+    "a deprecated Ada as an upgrade's target",
+    "a beta closed to new models",
+    "an Ada this deploy does not have",
+}
 
 
 @pytest.mark.parametrize("fixture", FIXTURES["cases"], ids=lambda c: c["name"])
@@ -310,13 +382,20 @@ def test_each_fixture_is_what_the_server_answers(flow: Dict[str, Any], fixture: 
     live, sent, at, headers = flow["rec"].last(method, path, status, where)
     body = fixture["response"]["body"]
     if status == 429:  # when to ask again, as the header and as the body say
-        assert set(headers) == set(fixture["response"].get("headers", {})) == {"retry-after"}
+        assert "retry-after" in headers and "retry-after" in fixture["response"].get("headers", {})
         assert float(headers["retry-after"]) == live["error"]["retry_after"] >= 1
+    for header, value in fixture["response"].get("headers", {}).items():  # the headers the fixture shows, live too
+        assert header in headers, (name, header, headers)
+        if header == "glyphh-contract":
+            assert headers[header] == value
     if fixture["schema"]:
         validate(live, CONTRACT[fixture["schema"]])
         validate(body, CONTRACT[fixture["schema"]])
     if fixture.get("data_schema"):
         validate(live["data"], CONTRACT[fixture["data_schema"]])
+    if fixture.get("result_schema"):
+        validate(live["result"], CONTRACT[fixture["result_schema"]])
+        validate(body["result"], CONTRACT[fixture["result_schema"]])
     if status >= 400:
         assert live["error"]["code"] == body["error"]["code"]
         assert set(live["error"]) == set(body["error"])

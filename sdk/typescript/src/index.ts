@@ -10,6 +10,18 @@
 
 /** Where Ada answers. GLYPHH_ADA_URL (or 3.0's GLYPHH_RUNTIME_URL) moves it, e.g. to a local server under test. */
 export const DEFAULT_URL = "https://ada.glyphh.ai";
+/**
+ * The contract (contract/contract.json) this SDK speaks. A server that speaks a newer one (its Glyphh-Contract header,
+ * or /v1/ada's `contract`) is refused with ClientTooOldError, asking for the SDK to be upgraded.
+ */
+export const SUPPORTED_CONTRACT = 5;
+/**
+ * The Ada versions this release was made and tested against. Any other name the server lists is sent as it is: the
+ * server's registry decides (`ada.ada.versions()`); an unknown one is refused there, never substituted.
+ */
+export const SUPPORTED_ADA: readonly string[] = ["ada-1-0", "ada-1-1-beta"];
+const CONTRACT_HEADER = "glyphh-contract";
+const NOTICE_HEADER = "glyphh-ada-notice";
 /** How long, in seconds, a call keeps retrying what is safe to send again before it throws. */
 export const RETRY_DEADLINE = 30;
 /** How long, in seconds, waiting for a job lasts before it throws (the job goes on; wait for it again by its id). */
@@ -89,6 +101,8 @@ export interface Decided {
 export interface Decision extends Decided {
   model: string;
   version: number;
+  /** The Ada version that answered (contract 5); "" from an older server. */
+  ada: string;
   outputs?: Record<string, Decided>;
   status: "done";
   data: Data;
@@ -148,9 +162,92 @@ export interface Usage {
   requests_per_second: number | null;
 }
 
+export type AdaStatus = "stable" | "beta" | "deprecated" | "retired";
+
+/**
+ * What to tell the person about a model's Ada version: `upgrade` (a newer stable exists, `to`), `beta` (it runs a
+ * beta), `deprecated` (its version ends on `ends`; it moves to `to` then), `moved` (it was moved off a retired one, to
+ * `to`), `retired`.
+ */
+export interface AdaNotice {
+  kind: "upgrade" | "beta" | "deprecated" | "moved" | "retired";
+  message: string;
+  to?: string;
+  ends?: string;
+}
+
+/** A model as the server lists it (`models()`): its active version, precedents and the Ada version it runs. */
 export interface ModelInfo {
   name: string;
+  version?: number;
+  precedents?: number;
+  /** The Ada version its active version runs, e.g. ada-1-0 (contract 5). */
+  ada?: string;
   [key: string]: unknown;
+}
+
+/** One model (`info()`, `createModel`'s `created`), with its Ada version, its status and what to tell the person. */
+export interface Model extends ModelInfo {
+  id: string;
+  version: number;
+  precedents: number;
+  created_at: string;
+  spec: Data;
+  ada: string;
+  ada_status: AdaStatus;
+  ada_notice: AdaNotice | null;
+}
+
+/** One version of a model (`versions()`): who made it and why, which is active, and the Ada it was made with. */
+export interface ModelVersion {
+  version: number;
+  active: boolean;
+  note?: string | null;
+  made_by?: string | null;
+  /** The Ada version it was made and learned with (the name), and the exact kernel release. */
+  ada: string;
+  kernel: string;
+  [key: string]: unknown;
+}
+
+/** One Ada version (`GET /v1/ada`). */
+export interface AdaVersion {
+  name: string;
+  /** The kernel release: shown only in a release's details. */
+  kernel: string;
+  status: AdaStatus;
+  beta: boolean;
+  /** A beta still open to new models. */
+  open: boolean;
+  released: string;
+  deprecated: string | null;
+  ends: string | null;
+  /** Against the version before it. */
+  changes_answers: boolean;
+  aliases: string[];
+  summary: string;
+  notes: string;
+  /** How many of the org's models run it. */
+  models: number;
+}
+
+/** `GET /v1/ada`: every Ada version, newest first, the latest stable (the default) and the server's contract. */
+export interface AdaVersions {
+  latest_stable: string;
+  contract: number;
+  versions: AdaVersion[];
+}
+
+/** An upgrade: a new version of the active spec on another Ada, re-encoded by `job`; active once it is done. */
+export interface Upgrade extends Change {
+  ada: string;
+  from: string;
+}
+
+/** A model on a deprecated Ada version, or just moved off a retired one (the server's Glyphh-Ada-Notice). */
+export interface AdaWarning {
+  kind: string;
+  message: string;
 }
 
 /**
@@ -176,6 +273,11 @@ export interface AdaOptions {
   retryDeadline?: number;
   /** A self-hosted cluster's read-your-writes (Rrotor-Min-Seq); nothing to the cloud. Default true. */
   readYourWrites?: boolean;
+  /**
+   * Told when a model runs a deprecated Ada version, or was just moved off a retired one: once per client and notice.
+   * Default `console.warn`.
+   */
+  onWarning?: (warning: AdaWarning) => void;
   /** @internal The tests' clock: seconds now, and a wait of so many seconds. */
   clock?: { now(): number; sleep(seconds: number): Promise<void> };
 }
@@ -351,6 +453,52 @@ export class UnavailableError extends AdaError {
 export class JobFailedError extends AdaError {
   override name = "JobFailedError";
 }
+/**
+ * An Ada version refused (contract 5). `ada` is the name asked for, `latest` the latest stable, which the server names
+ * as the fix: `ada.ada.versions()` lists them all.
+ */
+export class AdaVersionError extends AdaError {
+  override name = "AdaVersionError";
+  get ada(): string | undefined {
+    return str(this.detail.ada);
+  }
+  get latest(): string | undefined {
+    return str(this.detail.latest);
+  }
+}
+/** E_ADA_UNKNOWN (422): no Ada version has that name. Never substituted. */
+export class AdaVersionUnknownError extends AdaVersionError {
+  override name = "AdaVersionUnknownError";
+}
+/** E_ADA_RETIRED (410): retired, so it cannot be chosen or made live again (its models were moved to `latest`). */
+export class AdaVersionRetiredError extends AdaVersionError {
+  override name = "AdaVersionRetiredError";
+}
+/** E_ADA_DEPRECATED (422): still answers for its models, but cannot be chosen for a new model or as an upgrade's target. */
+export class AdaVersionDeprecatedError extends AdaVersionError {
+  override name = "AdaVersionDeprecatedError";
+}
+/** E_ADA_BETA (422): that beta is closed to new models (its models run on). */
+export class AdaBetaClosedError extends AdaVersionError {
+  override name = "AdaBetaClosedError";
+}
+/** E_ADA_UNAVAILABLE (503): the model's Ada version is not on this deploy. Not retried: tell support, quoting `traceId`. */
+export class AdaVersionUnavailableError extends AdaVersionError {
+  override name = "AdaVersionUnavailableError";
+}
+/**
+ * E_CLIENT_TOO_OLD: the server speaks a newer contract (`contract`) than this SDK (`supported`): upgrade the SDK. Thrown
+ * rather than reading answers whose shape the SDK does not know.
+ */
+export class ClientTooOldError extends AdaError {
+  override name = "ClientTooOldError";
+  get contract(): number | undefined {
+    return num(this.detail.contract);
+  }
+  get supported(): number | undefined {
+    return num(this.detail.supported);
+  }
+}
 /** E_NO_HEAD (503): a self-hosted cluster has no head. */
 export class NoHeadError extends AdaError {
   override name = "NoHeadError";
@@ -399,6 +547,12 @@ export const TYPED: Record<string, typeof AdaError> = {
   E_EXPIRED: ExpiredError,
   E_TIMEOUT: AdaTimeoutError,
   E_UNAVAILABLE: UnavailableError,
+  E_ADA_UNKNOWN: AdaVersionUnknownError,
+  E_ADA_RETIRED: AdaVersionRetiredError,
+  E_ADA_DEPRECATED: AdaVersionDeprecatedError,
+  E_ADA_BETA: AdaBetaClosedError,
+  E_ADA_UNAVAILABLE: AdaVersionUnavailableError,
+  E_CLIENT_TOO_OLD: ClientTooOldError,
   E_NO_HEAD: NoHeadError,
   E_HEAD_LOST: HeadLostError,
   E_NOT_COMMITTED: NotCommittedError,
@@ -408,6 +562,20 @@ export const TYPED: Record<string, typeof AdaError> = {
 
 const BY_STATUS: Record<number, string> = { 401: "E_AUTH", 402: "E_LIMIT", 404: "E_NOT_FOUND", 429: "E_RATE" };
 const TRANSIENT = ["E_UNREACHABLE", "E_UNAVAILABLE", "E_TIMEOUT"];
+/** Refusals that asking again cannot change: a kernel this deploy lacks (503), a server newer than the SDK. */
+const NEVER_AGAIN = ["E_ADA_UNAVAILABLE", "E_CLIENT_TOO_OLD"];
+
+/** The refusal to read a newer contract than this SDK's, or undefined. */
+export function tooOld(contract: unknown): ClientTooOldError | undefined {
+  const n = typeof contract === "string" && contract.trim() !== "" ? Number(contract) : contract;
+  if (typeof n !== "number" || !Number.isInteger(n) || n <= SUPPORTED_CONTRACT) return undefined;
+  return new ClientTooOldError(
+    "E_CLIENT_TOO_OLD",
+    `Ada Cloud speaks contract ${n}; this @glyphh-ai/glyphh speaks contract ${SUPPORTED_CONTRACT}. Upgrade it: npm install @glyphh-ai/glyphh@latest.`,
+    0,
+    { contract: n, supported: SUPPORTED_CONTRACT },
+  );
+}
 
 /** Retry-After as seconds: a number of them, or an HTTP date. */
 export function retryAfter(value: string | undefined): number | undefined {
@@ -424,6 +592,7 @@ export function retryAfter(value: string | undefined): number | undefined {
  * carrying an Idempotency-Key.
  */
 function retryable(err: AdaError, safe: boolean): boolean {
+  if (NEVER_AGAIN.includes(err.code)) return false;
   if (err.code === "E_NO_HEAD" || err.status === 429) return true;
   return safe && (TRANSIENT.includes(err.code) || [502, 503, 504].includes(err.status));
 }
@@ -456,6 +625,7 @@ export function asDecision(body: Data): Decision {
     ...asDecided(body),
     model: String(body.model ?? ""),
     version: Number(body.version ?? 0),
+    ada: String(body.ada ?? ""),
     status: "done",
     data: body,
   };
@@ -487,7 +657,10 @@ function refusal(status: number, text: string, headers: Record<string, string>):
   );
 }
 
+/** An answer's JSON, or its refusal thrown as the typed error; an answer of a newer contract is refused first. */
 function parsed<T>(status: number, text: string, headers: Record<string, string>): T {
+  const old = tooOld(headers[CONTRACT_HEADER]);
+  if (old) throw old;
   if (status >= 400) throw refusal(status, text, headers);
   try {
     return (text ? JSON.parse(text) : {}) as T;
@@ -542,7 +715,11 @@ export class Ada {
   readonly #key: string;
   readonly #send: Transport;
   readonly #clock: { now(): number; sleep(seconds: number): Promise<void> };
+  readonly #onWarning: (warning: AdaWarning) => void;
+  readonly #noticed = new Set<string>();
   #seq = 0;
+  /** Ada's versions: `ada.versions()`. */
+  readonly ada: AdaReleases;
 
   constructor(options: AdaOptions = {}) {
     this.url = (options.url ?? env("GLYPHH_ADA_URL") ?? env("GLYPHH_RUNTIME_URL") ?? DEFAULT_URL).replace(/\/+$/, "");
@@ -557,6 +734,8 @@ export class Ada {
     this.retryDeadline = options.retryDeadline ?? RETRY_DEADLINE;
     this.readYourWrites = options.readYourWrites ?? true;
     this.#clock = options.clock ?? realClock;
+    this.#onWarning = options.onWarning ?? ((w) => console.warn(`Glyphh Ada: ${w.kind}: ${w.message}`));
+    this.ada = new AdaReleases(this);
   }
 
   /** A self-hosted cluster's highest `Rrotor-Cluster-Seq` answered (0: none; always 0 against the cloud). */
@@ -622,12 +801,27 @@ export class Ada {
     const answer = await this.exchange(method, `${this.url}${path}`, headers, raw);
     const seq = Number(answer.headers[CLUSTER_SEQ]);
     if (Number.isInteger(seq) && seq > this.#seq) this.#seq = seq;
-    return parsed<T>(answer.status, answer.body, answer.headers);
+    const body = parsed<T>(answer.status, answer.body, answer.headers);
+    this.#notice(answer.headers[NOTICE_HEADER]);
+    return body;
+  }
+
+  /** The server's Glyphh-Ada-Notice (`deprecated: ...`, `moved: ...`), told once per client and notice. */
+  #notice(notice: string | undefined): void {
+    if (!notice || this.#noticed.has(notice)) return;
+    this.#noticed.add(notice);
+    const at = notice.indexOf(": ");
+    const warning = at > 0 ? { kind: notice.slice(0, at), message: notice.slice(at + 2) } : { kind: "notice", message: notice };
+    try {
+      this.#onWarning(warning);
+    } catch {
+      // a caller's handler never breaks the call
+    }
   }
 
   // models
 
-  /** The org's models: each one's name, active version and how many precedents it holds. */
+  /** The org's models: each one's name, active version, how many precedents it holds and its `ada`. */
   async models(): Promise<ModelInfo[]> {
     return (await this.call<{ models: ModelInfo[] }>("GET", "/v1/models")).models;
   }
@@ -636,9 +830,13 @@ export class Ada {
     return new AdaModel(this, name);
   }
 
-  /** A model from its JSON spec, checked by the kernel and the cloud's bounds: version 1, empty. `created` is the answer. */
-  async createModel(name: string, spec: Data, options: { idempotencyKey?: string } = {}): Promise<AdaModel> {
-    const made = await this.write<Data>("POST", "/v1/models", { name, spec }, options.idempotencyKey);
+  /**
+   * A model from its JSON spec, checked by the kernel and the cloud's bounds: version 1, empty. `ada`: the Ada version it
+   * runs (`ada.versions()`); left out, the latest stable. A beta only by its name; a deprecated, retired, unknown or
+   * closed one is refused (`AdaVersionError`). `created` is the answer.
+   */
+  async createModel(name: string, spec: Data, options: { ada?: string; idempotencyKey?: string } = {}): Promise<AdaModel> {
+    const made = await this.write<Model>("POST", "/v1/models", drop({ name, spec, ada: options.ada }), options.idempotencyKey);
     return new AdaModel(this, name, made);
   }
 
@@ -732,6 +930,27 @@ export class Ada {
   }
 }
 
+/** Ada's versions, as `ada.ada`. */
+export class AdaReleases {
+  constructor(readonly client: Ada) {}
+
+  /**
+   * `GET /v1/ada`: every Ada version (name, status, dates, whether it changes answers, notes, the org's models on it),
+   * newest first, and the latest stable. A server of a newer contract than the SDK's: `ClientTooOldError`.
+   */
+  async versions(): Promise<AdaVersions> {
+    const body = await this.client.call<AdaVersions>("GET", "/v1/ada");
+    const old = tooOld(body.contract);
+    if (old) throw old;
+    return body;
+  }
+
+  /** The name of the latest stable Ada version: the default for a new model, an upgrade and a backtest. */
+  async latestStable(): Promise<string> {
+    return (await this.versions()).latest_stable;
+  }
+}
+
 export interface CallOptions {
   version?: number;
   /** Who asks, 0 to 1: the model's secured roles are cut from the answer below their weight. */
@@ -766,16 +985,21 @@ export interface Candidate {
   settings?: Data;
   spec_version?: number;
   spec?: Data;
+  /** Scored on this Ada version: alone, the active spec on it. */
+  ada?: string;
   name?: string;
 }
 
-/** One model of the org. 3.0's calls (`call`, `record`, `query`, `facts`, `probabilities`, `learn`) answer a Result. */
+/**
+ * One model of the org. 3.0's calls (`call`, `record`, `query`, `facts`, `probabilities`, `learn`) answer a Result.
+ * `model.ada` is the client; the Ada version a model runs is `(await model.info()).ada`, each version's in `versions()`.
+ */
 export class AdaModel {
   constructor(
     readonly ada: Ada,
     readonly name: string,
     /** createModel's answer. */
-    readonly created?: Data,
+    readonly created?: Model,
   ) {}
 
   #path(rest = ""): string {
@@ -794,8 +1018,11 @@ export class AdaModel {
 
   // the model
 
-  /** The model: its active version and spec, and how many precedents it holds. */
-  info(): Promise<{ name: string; id: string; version: number; precedents: number; created_at: string; spec: Data }> {
+  /**
+   * The model: its active version and spec, how many precedents it holds, and its Ada version (`ada`, `ada_status`,
+   * `ada_notice`: a newer stable exists, it runs a beta, or its version ends).
+   */
+  info(): Promise<Model> {
     return this.ada.call("GET", this.#path());
   }
 
@@ -826,14 +1053,32 @@ export class AdaModel {
     return this.#change(await this.ada.write<Change>("PATCH", this.#path("/settings"), body, options.idempotencyKey), options);
   }
 
-  /** Every version: who made it and why, which is active. */
-  async versions(): Promise<Data[]> {
-    return (await this.ada.call<{ versions: Data[] }>("GET", this.#path("/versions"))).versions;
+  /** Every version: who made it and why, which is active, and the Ada version it was made with (`ada`, `kernel`). */
+  async versions(): Promise<ModelVersion[]> {
+    return (await this.ada.call<{ versions: ModelVersion[] }>("GET", this.#path("/versions"))).versions;
   }
 
-  /** Make another version active (a rollback): at once, or by a job bringing its store up to date first. */
+  /**
+   * Make another version active (a rollback, an upgrade's too: it answers on that version's Ada again): at once, or by a
+   * job bringing its store up to date first. A version on a retired Ada: `AdaVersionRetiredError`.
+   */
   async activate(version: number, options: WaitOptions = {}): Promise<Change> {
     return this.#change(await this.ada.write<Change>("POST", this.#path(`/versions/${Math.trunc(version)}/activate`), {}), options);
+  }
+
+  /**
+   * Move the model to another Ada version: `ada` (left out, the latest stable; any supported version, an older one too, a
+   * downgrade). A new version of the active spec on it, always re-encoded by a job while the old version serves, waited
+   * for unless `wait: false`; once its job is done the new version is active (`active` true). Backtest first
+   * (`backtest([], { ada })`) and pass its job's id as `backtest`; roll back with `activate(<the version before>)`. The
+   * Ada it runs already: `NoChangeError`; a deprecated, retired, unknown or closed one: `AdaVersionError`.
+   */
+  async upgrade(options: ChangeOptions & { ada?: string } = {}): Promise<Upgrade> {
+    const body = drop({ ada: options.ada, note: options.note, backtest: options.backtest });
+    const made = await this.ada.write<Upgrade>("POST", this.#path("/upgrade"), body, options.idempotencyKey);
+    const out = (await this.#change(made, options)) as Upgrade;
+    if (out.job?.state === "done") out.active = true;
+    return out;
   }
 
   // cases
@@ -904,14 +1149,16 @@ export class AdaModel {
   }
 
   /**
-   * Score the active version and up to ten candidates on the model's own held-out precedents (`holdout` {newest: n},
-   * 200 by default, or {fraction, seed}), each learned on the rest. The live model is never touched.
+   * Score the active version and up to ten candidates (each may name an `ada`: scored on that Ada version) on the
+   * model's own held-out precedents (`holdout` {newest: n}, 200 by default, or {fraction, seed}), each learned on the
+   * rest by its own Ada. `ada` is shorthand for the candidate {ada}: the active spec on that Ada, before an upgrade. The
+   * live model is never touched. The result's active run and each candidate carry their `ada`.
    */
   backtest(
     candidates: Candidate[] = [],
-    options: WaitOptions & { holdout?: { newest?: number; fraction?: number; seed?: number }; output?: string; clearance?: number } = {},
+    options: WaitOptions & { ada?: string; holdout?: { newest?: number; fraction?: number; seed?: number }; output?: string; clearance?: number } = {},
   ): Promise<Job> {
-    const body = drop({ candidates, holdout: options.holdout, output: options.output, clearance: options.clearance });
+    const body = drop({ candidates, ada: options.ada, holdout: options.holdout, output: options.output, clearance: options.clearance });
     return this.#job("/backtest", body, options);
   }
 

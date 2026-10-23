@@ -1,14 +1,177 @@
 {
-  "contract": 4,
+  "contract": 5,
+  "headers": {
+    "Glyphh-Contract": "On every answer of the Ada host: the contract it speaks (5). A client that speaks an older one fails, asking to be upgraded, rather than read shapes it does not know",
+    "Glyphh-Ada": "On every answer about one model (its info, versions, decide and every read): the Ada version its active version runs, e.g. ada-1-0",
+    "Glyphh-Ada-Notice": "When the model runs a deprecated Ada version, or was just moved off a retired one: `<kind>: <message>`, kind deprecated or moved. The SDKs warn with it"
+  },
+  "ada_versions": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "AdaVersions",
+    "description": "GET /v1/ada: every Ada version the cloud lists, newest first, with the latest stable (the default for a new model, an upgrade and a backtest's target) and the contract the server speaks. A customer sees names (ada-<major>-<minor>, -beta for a beta); the kernel's semver only in a release's details. status: stable or beta, then deprecated (still answering, until ends), then retired (its models moved to the latest stable). A beta is never the default and is chosen only by name; open false closes it to new models. changes_answers: against the version before it. models: how many of the org's models run it",
+    "type": "object",
+    "required": ["latest_stable", "contract", "versions"],
+    "properties": {
+      "latest_stable": { "$ref": "#/$defs/name" },
+      "contract": { "type": "integer", "minimum": 1 },
+      "versions": { "type": "array", "items": { "$ref": "#/$defs/version" } }
+    },
+    "$defs": {
+      "name": { "type": "string", "pattern": "^ada-[0-9]+-[0-9]+(-beta)?$" },
+      "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+      "version": {
+        "type": "object",
+        "required": ["name", "kernel", "status", "beta", "open", "released", "deprecated", "ends", "changes_answers", "aliases", "summary", "notes", "models"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" },
+          "kernel": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+          "status": { "enum": ["stable", "beta", "deprecated", "retired"] },
+          "beta": { "type": "boolean" },
+          "open": { "type": "boolean" },
+          "released": { "$ref": "#/$defs/date" },
+          "deprecated": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date" }] },
+          "ends": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date" }] },
+          "changes_answers": { "type": "boolean" },
+          "aliases": { "type": "array", "items": { "type": "string" } },
+          "summary": { "type": "string" },
+          "notes": { "type": "string" },
+          "models": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  },
+  "model": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Model",
+    "description": "GET /v1/models/{name} (and what POST /v1/models {name, spec, ada?} answers, the model made, version 1 on the Ada asked for, else the latest stable): the model, its active version and spec, how many precedents it holds, and the Ada version that version runs. ada_status is that version's status; ada_notice what to tell the person: upgrade (a newer stable exists), beta (it runs a beta), deprecated (its version ends: to, ends), moved (it was moved off a retired one: to), retired; null when there is nothing to say",
+    "type": "object",
+    "required": ["name", "version", "precedents", "ada", "ada_status", "ada_notice"],
+    "properties": {
+      "name": { "type": "string" },
+      "id": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 },
+      "precedents": { "type": "integer", "minimum": 0 },
+      "created_at": { "type": "string" },
+      "spec": { "type": "object" },
+      "ada": { "type": "string" },
+      "ada_status": { "enum": ["stable", "beta", "deprecated", "retired"] },
+      "ada_notice": {
+        "oneOf": [
+          { "type": "null" },
+          {
+            "type": "object",
+            "required": ["kind", "message"],
+            "properties": {
+              "kind": { "enum": ["upgrade", "beta", "deprecated", "moved", "retired"] },
+              "message": { "type": "string" },
+              "to": { "type": "string" },
+              "ends": { "type": "string" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "models": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Models",
+    "description": "GET /v1/models: the org's models, each with its active version, its precedents and the Ada version it runs",
+    "type": "object",
+    "required": ["models"],
+    "properties": {
+      "models": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "version", "precedents", "ada"],
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "type": "integer", "minimum": 1 },
+            "precedents": { "type": "integer", "minimum": 0 },
+            "ada": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "versions": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Versions",
+    "description": "GET /v1/models/{name}/versions: every version, oldest first: who made it, when and why, which is active, and the Ada version it was made and learned with (ada, the name chosen; kernel, the exact release). A new version from a spec or settings change keeps its model's Ada; only an upgrade changes it. Rollback to a version on another Ada (POST .../versions/{n}/activate) answers on that version's Ada",
+    "type": "object",
+    "required": ["versions"],
+    "properties": {
+      "versions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["version", "active", "ada", "kernel"],
+          "properties": {
+            "version": { "type": "integer", "minimum": 1 },
+            "active": { "type": "boolean" },
+            "note": { "type": ["string", "null"] },
+            "made_by": { "type": ["string", "null"] },
+            "ada": { "type": "string" },
+            "kernel": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+          }
+        }
+      }
+    }
+  },
+  "upgrade": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Upgrade",
+    "description": "POST /v1/models/{name}/upgrade {ada?, note?, backtest?} (no ada: the latest stable; any supported version, an older one too, a downgrade): a new version of the active spec on that Ada, always re-encoded by a job on its kernel while the old version serves; when the job is done the new version is active. from: the Ada it ran. The same Ada: 409 E_NO_CHANGE. Rollback: POST .../versions/{n}/activate",
+    "type": "object",
+    "required": ["version", "active", "job", "ada", "from"],
+    "properties": {
+      "version": { "type": "integer", "minimum": 2 },
+      "active": { "const": false },
+      "job": { "type": "object", "required": ["id", "kind", "state"], "properties": { "kind": { "const": "reencode" } } },
+      "ada": { "type": "string" },
+      "from": { "type": "string" }
+    }
+  },
+  "backtest": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Backtest",
+    "description": "A done backtest job's result (POST /v1/models/{name}/backtest {candidates?, holdout?, output?, clearance?, ada?}): the active version and each candidate scored on the same held-out precedents, each learned on the rest by its own Ada's kernel. A candidate may name an Ada ({\"ada\": \"ada-1-1-beta\"} alone, the active spec on that Ada, or with settings, spec_version or spec); a body's ada is shorthand for that candidate. ada on the active run and on each candidate says which scored it; change is each candidate against the active",
+    "type": "object",
+    "required": ["active", "candidates", "held_out"],
+    "properties": {
+      "active": { "$ref": "#/$defs/run" },
+      "candidates": { "type": "array", "items": { "$ref": "#/$defs/run" } },
+      "held_out": { "type": "integer", "minimum": 0 },
+      "trained": { "type": "integer", "minimum": 0 },
+      "version": { "type": "integer", "minimum": 1 },
+      "output": { "type": "string" }
+    },
+    "$defs": {
+      "run": {
+        "type": "object",
+        "required": ["ada", "accuracy", "cost", "ask_rate", "log_loss"],
+        "properties": {
+          "ada": { "type": "string" },
+          "accuracy": { "type": "number" },
+          "cost": { "type": "number" },
+          "ask_rate": { "type": "number" },
+          "log_loss": { "type": "number" },
+          "change": { "type": "object" },
+          "candidate": { "type": "object" }
+        }
+      }
+    }
+  },
   "decision": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Decision",
-    "description": "What POST /v1/decide answers: the outcome of least expected cost under the spec's costs, the calibrated probabilities, whether a person should decide instead (ask: the outcome is then the best guess), the precedents it stands on, and the model and active version that answered. include: [\"facts\"] adds the nearest fact tree; outputs: [...] answers {outputs: {name: decided}, model, version} instead",
+    "description": "What POST /v1/decide answers: the outcome of least expected cost under the spec's costs, the calibrated probabilities, whether a person should decide instead (ask: the outcome is then the best guess), the precedents it stands on, and the model, active version and Ada version that answered. include: [\"facts\"] adds the nearest fact tree; outputs: [...] answers {outputs: {name: decided}, model, version, ada} instead",
     "type": "object",
-    "required": ["model", "version"],
+    "required": ["model", "version", "ada"],
     "properties": {
       "model": { "type": "string" },
-      "version": { "type": "integer", "minimum": 1 }
+      "version": { "type": "integer", "minimum": 1 },
+      "ada": { "type": "string" }
     },
     "oneOf": [
       { "$ref": "#/$defs/decided" },
@@ -161,7 +324,7 @@
   "error": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Error",
-    "description": "Every refusal: a stable code to branch on, a message for people, the trace id to quote to support, and the refusal's own detail beside them (E_LIMIT precedents: reason, used, max, adding; E_LIMIT requests, 403, the month's reads used on a plan that is not metered: reason, used, max, plan, upgrade (the self-serve plan that reads more, null: talk to sales), resets_at (YYYY-MM-DD); E_RATE, 429, past the plan's calls a second: reason, max, retry_after, and the Retry-After header; E_SPEC: path; E_SPEC_LIMIT: limit, max; E_SPEC_READING: roles; E_BUSY: job, kind; E_INVALID: problems or reason). A 429 or 503 may carry Retry-After",
+    "description": "Every refusal: a stable code to branch on, a message for people, the trace id to quote to support, and the refusal's own detail beside them (E_LIMIT precedents: reason, used, max, adding; E_LIMIT requests, 403, the month's reads used on a plan that is not metered: reason, used, max, plan, upgrade (the self-serve plan that reads more, null: talk to sales), resets_at (YYYY-MM-DD); E_RATE, 429, past the plan's calls a second: reason, max, retry_after, and the Retry-After header; E_SPEC: path; E_SPEC_LIMIT: limit, max; E_SPEC_READING: roles; E_BUSY: job, kind; E_INVALID: problems or reason; the Ada version refusals, E_ADA_UNKNOWN 422, E_ADA_RETIRED 410, E_ADA_DEPRECATED 422 (chosen for a new model or as an upgrade target), E_ADA_BETA 422 (a beta closed to new models), E_ADA_UNAVAILABLE 503 (a kernel this deploy does not have, not retried): ada, the name asked for, and latest, the latest stable, named as the fix; E_NO_CHANGE 409 from an upgrade to the Ada the model runs). A 429 or 503 may carry Retry-After",
     "type": "object",
     "required": ["error"],
     "properties": {
@@ -180,6 +343,6 @@
     "E_AUTH", "E_INVALID", "E_TOO_LARGE", "E_LIMIT", "E_RATE", "E_MODEL_MISSING", "E_JOB_MISSING", "E_PRECEDENT_MISSING",
     "E_VERSION_MISSING", "E_SPEC", "E_SPEC_LIMIT", "E_SPEC_READING", "E_FEW_ROLES", "E_MAPPING", "E_IMPORT", "E_BACKTEST",
     "E_BUSY", "E_NOT_READY", "E_NO_CHANGE", "E_IDEMPOTENCY", "E_CONFLICT", "E_VERSION_GONE", "E_EXPIRED", "E_TIMEOUT",
-    "E_UNAVAILABLE"
+    "E_UNAVAILABLE", "E_ADA_UNKNOWN", "E_ADA_RETIRED", "E_ADA_DEPRECATED", "E_ADA_BETA", "E_ADA_UNAVAILABLE"
   ]
 }

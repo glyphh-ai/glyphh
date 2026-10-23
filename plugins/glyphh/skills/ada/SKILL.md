@@ -1,6 +1,6 @@
 ---
 name: ada
-description: Build, load, tune and ask Ada models in Ada Cloud through the Glyphh connector's ada_* tools. Use when the user wants software (or Claude) to decide something the way it was decided before (route a ticket, pick the fix for an error, triage a lead, approve or refuse, apply a policy), to load a history of past cases and outcomes so the next case is answered from precedent, to backtest or tune such a model, to read one of its answers, or to call it from their own code with an API key; or asks about Ada, Ada Cloud, a model's spec, or the Glyphh SDKs.
+description: Build, load, tune and ask Ada models in Ada Cloud through the Glyphh connector's ada_* tools. Use when the user wants software (or Claude) to decide something the way it was decided before (route a ticket, pick the fix for an error, triage a lead, approve or refuse, apply a policy), to load a history of past cases and outcomes so the next case is answered from precedent, to backtest or tune such a model, to read one of its answers, or to call it from their own code with an API key; or asks about Ada, Ada Cloud, a model's spec, which Ada version a model runs or upgrading it (Ada versions, betas, deprecations), or the Glyphh SDKs.
 ---
 
 # Ada
@@ -21,8 +21,8 @@ with Google or GitHub. Its Ada tools:
 
 | Tool | Does |
 |---|---|
-| `ada_models`, `ada_model {name}` | The org's models; one with its spec, active version, size and settings |
-| `ada_model_create {name, spec}` | A model from its spec: version 1, empty |
+| `ada_models`, `ada_model {name}` | The org's models, each with its Ada version; one with its spec, active version, size, settings, its Ada version and any notice about it |
+| `ada_model_create {name, spec, ada?}` | A model from its spec: version 1, empty, on the latest stable Ada unless `ada` names another |
 | `ada_spec_update {name, spec, note}`, `ada_model_delete {name, confirm}` | A new version of the spec; delete a model (`confirm` repeats its name) |
 | `ada_record {name, data, outcome?}`, `ada_record_many {name, cases}` | One case, or up to 1,000 `{data, outcome?, outcomes?, ts?}` |
 | `ada_grade {name, id, value, output?}`, `ada_forget {name, id}` | An outcome on a case already in; forget one case |
@@ -30,9 +30,11 @@ with Google or GitHub. Its Ada tools:
 | `ada_job {id, wait_seconds?}` | Any job's state and progress, waiting up to 50 s for it to end; a done export's download link |
 | `ada_learn {name}`, `ada_calibrate {name}` | Weigh the roles from the precedents, then calibrate; calibrate alone. Jobs |
 | `ada_decide`, `ada_query`, `ada_probabilities`, `ada_facts` `{name, data, ...}` | Ask |
-| `ada_backtest {name, candidates, holdout?}` | Score the live version and candidates on held-out cases, the live model untouched. A job |
+| `ada_backtest {name, candidates, holdout?, ada?}` | Score the live version and candidates on held-out cases, the live model untouched; `ada` (or a candidate's own `ada`) scores on another Ada version. A job |
 | `ada_settings {name, changes?, note?, backtest?}` | Every lever; with changes, a new version |
-| `ada_versions {name}`, `ada_activate {name, version}` | Versions, who made them and why; roll back |
+| `ada_versions {name}`, `ada_activate {name, version}` | A model's versions, who made them and why, and the Ada version each runs; roll back |
+| `ada_releases` | Every Ada version: its status (stable, beta, deprecated, retired), dates, release notes and how many of the org's models run it |
+| `ada_upgrade {name, ada?, note?, backtest?}` | Move a model to another Ada version (none: the latest stable), re-encoded as a job; the new version is live when it is done |
 | `ada_export {name, format?}` | Everything out, as a job whose done state has a one-hour download link |
 | `create_api_key {name, expires_in_days?, clearance?}`, `api_keys`, `revoke_api_key` | A key for the user's code, shown once; the keys; revoke one |
 
@@ -42,7 +44,12 @@ Claude's Connectors and sign in; never ask for a key or a token in the chat.
 A model name is lower case letters, digits and `_ . -`, at most 63. A refusal carries a code: `E_LIMIT` (the plan's
 cap: `reason`, `used`, `max`), `E_SPEC` (the spec or a case does not fit it; `path` says where), `E_SPEC_LIMIT`,
 `E_SPEC_READING`, `E_FEW_ROLES`, `E_MAPPING`, `E_BUSY` (an import or re-encode is running: wait for its job),
-`E_MODEL_MISSING`. Say what it means in plain words and what to do; never retry a refusal unchanged.
+`E_MODEL_MISSING`, and the Ada version ones (below: `E_ADA_UNKNOWN`, `E_ADA_RETIRED`, `E_ADA_DEPRECATED`,
+`E_ADA_BETA`, `E_ADA_UNAVAILABLE`). Say what it means in plain words and what to do; never retry a refusal unchanged.
+
+This skill speaks contract 5 of Ada Cloud. When `ada_releases` answers a `contract` above 5, the server knows more
+than this plugin: tell the person to update it (`/plugin update glyphh@glyphh`, then reload) before relying on
+what is new, and do not guess at fields you do not know.
 
 ## Building one with the user
 
@@ -118,6 +125,41 @@ Every lever is a setting or part of the spec, and every change is a new version 
 What needs code is not a lever: a derived field (a ratio, a weekday) is computed by the caller and sent as a role;
 a business rule ("never above $50,000") is applied by the caller around the answer.
 
+## Ada versions
+
+Ada itself has versions, named `ada-<major>-<minor>`: `ada-1-0` is the latest stable today, `ada-1-1-beta` a beta.
+Every version of a model runs one Ada version and is always answered by it, so a model's answers never change under
+it; moving to another Ada version is the person's choice, made with a backtest in front of them.
+
+- **Say which one a model runs.** `ada_model` shows its Ada and a notice when there is something to say (a newer
+  stable exists, it runs a beta, its version is deprecated). Mention it when you show a model, in one line.
+- **New models take the latest stable.** Leave `ada` out of `ada_model_create` unless the person asks for another
+  by name.
+- **A beta** is a newer Ada offered to try: opt in, never the default, chosen only by its name, labelled Beta
+  wherever it shows. Its answers can differ; it may be promoted to the next stable or withdrawn. Offer it only with
+  a backtest, and say it is a beta.
+- **When a newer stable exists** (the notice says `upgrade`), offer it, in this order:
+  1. Backtest first: `ada_backtest {name, candidates: [], ada: "<the newer one>", holdout: {newest: 200}}` scores
+     the live model and the same spec on the newer Ada on the same held-out cases (each result carries its `ada`).
+  2. Say the change in plain words, as for tuning: "on your last 200 cases ada-1-1 gets 2 more right and costs 9%
+     less, and asks a person about as often". If it is worse, say so and recommend staying.
+  3. Only when the person agrees: `ada_upgrade {name, ada, note, backtest: <the backtest's job id>}`. It re-encodes
+     the model as a job while the current version keeps answering; follow it with `ada_job`. When it is done the new
+     version is live.
+  4. Tell them how to go back: `ada_versions {name}` shows the version before (on the old Ada), and
+     `ada_activate {name, version}` makes it live again, as it was.
+  Any kept version can be chosen, an older one too (a downgrade). The same Ada again is `E_NO_CHANGE`.
+- **Deprecated and retired.** When a new stable ships, the one before is deprecated: its models keep answering, with
+  a notice and an end date, and it cannot be chosen for a new model or an upgrade (`E_ADA_DEPRECATED`). On that
+  date it is retired and every model still on it is moved to the latest stable automatically (a note says so), so a
+  model is never left unable to answer. Tell the person the date, and offer the backtest and upgrade sooner so they
+  see the change first. A retired version cannot be made live again (`E_ADA_RETIRED`).
+- **The refusals** each name the latest stable as the fix (`latest`): `E_ADA_UNKNOWN` (no such name: check
+  `ada_releases`, never guess another), `E_ADA_BETA` (a beta closed to new models), `E_ADA_UNAVAILABLE` (that Ada
+  is not on this deploy: tell support, with the trace id).
+- `ada_releases` lists them all with release notes; the `/glyphh` panel's Plan section shows the org's models by
+  Ada version and any deprecation.
+
 ## Calling it from code
 
 `create_api_key {name}` makes a key, shown once (`clearance` below 1 for a caller who may not see the secured roles;
@@ -139,7 +181,10 @@ const d = await new Ada().decide("tickets", { ticket: { what: { plan: "pro", tex
 ```
 
 Or `POST https://ada.glyphh.ai/v1/decide {model, data}` with `Authorization: Bearer <key>`. The SDKs also make
-models, import files, backtest, tune and export, with typed errors (`LimitError`, `SpecReadingError`, ...).
+models, import files, backtest, tune and export, with typed errors (`LimitError`, `SpecReadingError`, ...), and know
+Ada versions (3.3 and later): `ada.ada.versions()`, `create_model(..., ada=)`, `model.info().ada`,
+`backtest(ada=)`, `upgrade(ada=)`, a warning when a model runs a deprecated Ada, and `ClientTooOldError` when the
+server is newer than the SDK (upgrade it).
 
 ## Limits
 
