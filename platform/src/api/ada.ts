@@ -401,6 +401,8 @@ export const useCreateCloudKey = () =>
     () => [adaKeys.keys],
   );
 export const useRevokeCloudKey = () => useAdaWrite((id: string) => adaApi.delete<CloudKey>(`/keys/${id}`), () => [adaKeys.keys]);
+/** Deletes a revoked or expired key for good (the server refuses a live one, 409). */
+export const useDeleteCloudKey = () => useAdaWrite((id: string) => adaApi.delete<void>(`/keys/${id}/forever`), () => [adaKeys.keys]);
 
 /**
  * An import's file, to its upload link through the platform (`PUT /api/ada/v1/uploads/<link>`): the link the server

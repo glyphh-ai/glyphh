@@ -577,6 +577,14 @@ export function adaFake({
       state.keys.push(key);
       return HttpResponse.json({ ...key, key: 'glyphh_ak_secret123' }, { status: 201 });
     }),
+    http.delete(ada('/keys/:id/forever'), ({ params }) => {
+      const key = state.keys.find((k) => k.id === params.id);
+      if (!key) return HttpResponse.json({ error: { code: 'E_NOT_FOUND', message: 'You have no such API key.' } }, { status: 404 });
+      if (!key.revoked_at && (key.expires_at === null || new Date(key.expires_at) > new Date()))
+        return HttpResponse.json({ error: { code: 'E_CONFLICT', message: 'This API key still works. Revoke it before you delete it.' } }, { status: 409 });
+      state.keys = state.keys.filter((k) => k.id !== params.id);
+      return new HttpResponse(null, { status: 204 });
+    }),
     http.delete(ada('/keys/:id'), ({ params }) => {
       const key = state.keys.find((k) => k.id === params.id)!;
       key.revoked_at = at;

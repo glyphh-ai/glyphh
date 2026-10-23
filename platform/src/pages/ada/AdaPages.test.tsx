@@ -221,6 +221,11 @@ describe('Ada API Keys', () => {
     await user.click(within(list).getByRole('button', { name: 'Revoke' }));
     await user.click(within(await screen.findByRole('dialog', { name: 'Revoke this API key?' })).getByRole('button', { name: 'Revoke' }));
     expect(await within(list).findByText('Revoked')).toBeInTheDocument();
+
+    await user.click(within(list).getByRole('button', { name: 'Delete' }));
+    await user.click(within(await screen.findByRole('dialog', { name: 'Delete this API key?' })).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByText('No API keys yet')).toBeInTheDocument();
+    expect(fake.state.seen.some((s) => s.method === 'DELETE' && s.path.endsWith('/forever'))).toBe(true);
   });
 
   it('makes a key that never expires without an expiry', async () => {
