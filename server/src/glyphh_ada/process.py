@@ -79,9 +79,10 @@ class Worker:
 
     def serve(self, stop: threading.Event) -> None:
         self.start()
-        while not stop.is_set():
-            self.sweep()
-            self.loop.one()
+        with self.loop.alive():
+            while not stop.is_set():
+                self.sweep()
+                self.loop.one()
 
 
 def work(ctx: Context, msg: Message, worker: Worker) -> None:

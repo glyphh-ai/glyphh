@@ -5,11 +5,13 @@ import asyncio
 import time
 import uuid
 from collections import Counter
+from typing import Any
 
 import pytest
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_ada.protocol import alive_key
 from glyphh_server.admin import adascan, infra
 from glyphh_server.admin.alerts import alerts
 from glyphh_server.admin.health import job_stats
@@ -101,8 +103,42 @@ async def test_a_queue_shows_its_backlog_and_live_workers(redis: Redis) -> None:
     await redis.xadd(stream, {"a": "2"})
     await redis.xreadgroup("ada", "worker-1", {stream: ">"}, count=1)
     found = await infra.queue(redis, "sync", stream)
-    assert (found.length, found.pending, found.lag, found.consumers, found.alive) == (2, 1, 1, 1, 1)
-    await redis.delete(stream)
+    assert (found.length, found.pending, found.lag, found.consumers, found.alive) == (2, 1, 1, 1, 0)  # no beat yet
+    now = time.time()
+    await redis.zadd(alive_key(stream), {"worker-1": now, "worker-2": now - 5, "gone": now - 31})
+    assert (await infra.queue(redis, "sync", stream)).alive == 2
+    await redis.delete(stream, alive_key(stream))
+
+
+class Upstash:
+    """Production's Redis as the admin view sees it: streams and groups, but XINFO CONSUMERS answers no consumers."""
+
+    def __init__(self, redis: Redis) -> None:
+        self.redis = redis
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.redis, name)
+
+    async def xinfo_consumers(self, stream: str, group: str) -> list[dict[str, Any]]:
+        return []
+
+
+async def test_workers_are_counted_by_their_beat_where_redis_lists_no_consumers(redis: Redis) -> None:
+    stream = f"test:{uuid.uuid4().hex}"
+    await redis.xgroup_create(stream, "ada", id="0", mkstream=True)
+    await redis.xreadgroup("ada", "worker-1", {stream: ">"}, count=1)
+    upstash: Any = Upstash(redis)
+    try:
+        assert (await infra.queue(upstash, "sync", stream)).alive == 0
+        found = [await infra.queue(upstash, "sync", stream)]
+        assert [a.code for a in alerts([], found, True, FRESH, QUIET, {})] == ["no_worker_sync"]
+        await redis.zadd(alive_key(stream), {"worker-1": time.time()})
+        found = [await infra.queue(upstash, "sync", stream)]
+        assert (found[0].consumers, found[0].alive) == (0, 1)
+        assert alerts([], found, True, FRESH, QUIET, {}) == []
+        assert (await infra.queue(upstash, "sync", f"test:{uuid.uuid4().hex}")).alive == 0  # no stream, no beat
+    finally:
+        await redis.delete(stream, alive_key(stream))
 
 
 async def test_each_kernels_stream_is_shown_beside_the_front_doors(redis: Redis) -> None:

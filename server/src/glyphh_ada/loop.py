@@ -6,13 +6,15 @@ is ever taken over. A sync message past its deadline is dropped (the API has ans
 killed MAX_DELIVERIES workers is answered E_INTERNAL; one for another kernel is put on that kernel's stream
 (Forwarded) and answered there. The message is acknowledged once it is answered or passed on."""
 
+import contextlib
 import logging
 import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
 from redis import Redis
-from redis.exceptions import ResponseError
+from redis.exceptions import RedisError, ResponseError
 
 from glyphh_ada import days, protocol
 from glyphh_ada.errors import Refusal
@@ -51,6 +53,45 @@ class Heartbeat:
         self.thread.join()
 
 
+class Alive:
+    """Says this worker is alive, for each stream it reads, now and every ALIVE_EVERY seconds while it runs (busy or
+    not), in that stream's sorted set (protocol.alive_key), dropping members silent for ALIVE_FORGET; it takes itself
+    out when the worker stops. A Redis that fails is tried again at the next beat."""
+
+    def __init__(self, redis: Redis, streams: list[str], consumer: str, every: float = protocol.ALIVE_EVERY) -> None:
+        self.redis, self.consumer, self.every = redis, consumer, every
+        self.keys = [protocol.alive_key(s) for s in streams]
+        self.stop, self.thread = threading.Event(), threading.Thread(target=self._run, daemon=True)
+
+    def beat(self, now: float | None = None) -> bool:
+        now = time.time() if now is None else now
+        pipe = self.redis.pipeline(transaction=False)
+        for key in self.keys:
+            pipe.zadd(key, {self.consumer: now}).zremrangebyscore(key, "-inf", now - protocol.ALIVE_FORGET)
+            pipe.expire(key, protocol.ALIVE_FORGET)
+        try:
+            pipe.execute()
+        except RedisError:
+            return False
+        return True
+
+    def _run(self) -> None:
+        self.beat()
+        while not self.stop.wait(self.every):
+            self.beat()
+
+    def __enter__(self) -> "Alive":
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        self.stop.set()
+        self.thread.join()
+        with contextlib.suppress(RedisError):
+            for key in self.keys:
+                self.redis.zrem(key, self.consumer)
+
+
 class Loop:
     def __init__(
         self, queue: str, redis: Redis, consumer: str, dispatch: Dispatch, streams: list[str] | None = None
@@ -66,9 +107,14 @@ class Loop:
             except ResponseError as e:
                 if "BUSYGROUP" not in str(e):
                     raise
+            # Upstash answers no consumers at all: nothing is removed there. One without its numbers is kept.
             for c in self.redis.xinfo_consumers(stream, GROUP):
-                if c["pending"] == 0 and c["idle"] > STALE_CONSUMER_MS:
+                if c.get("pending", 1) == 0 and c.get("idle", 0) > STALE_CONSUMER_MS:
                     self.redis.xgroup_delconsumer(stream, GROUP, c["name"])
+
+    def alive(self) -> Alive:
+        """This worker's beat on each of its streams, for as long as it serves."""
+        return Alive(self.redis, self.streams, self.consumer)
 
     def _next(self) -> tuple[str, str, dict[str, str] | None, bool] | None:
         idle = protocol.CLAIM_IDLE[self.queue]
