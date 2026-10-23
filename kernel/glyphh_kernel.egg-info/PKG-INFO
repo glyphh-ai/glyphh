@@ -598,8 +598,12 @@ read and write the kernel makes of them). `Space(path=...)` is
 Ada Cloud: a schema per org, given at construction; a `precedents` table
 partitioned by model, each partition with an HNSW index on its glyphs as
 pgvector `bit(dim)` (`bit_hamming_ops`; a bipolar glyph is its bits, +1 as 1,
-and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096); `outcomes`,
-`meta` and `counts` keyed by model.
+and sim = 1 − 2·hamming/dim, so 512 bytes a glyph at 4096) and a unique
+index on its ids (a lookup by id, as `grade`, `forget` and `rewrite` make,
+cannot lead with the primary key `(model, id)`: 3.12.1); `outcomes`, `meta`
+and `counts` keyed by model. A store already made opens with no DDL and no
+lock (3.12.2): a `CREATE INDEX IF NOT EXISTS` waits out every write open on
+the partition, even when the index is there.
 
 ```python
 from glyphh_postgres import PostgresStore
@@ -613,11 +617,23 @@ A model over a store that can **shortlist** holds nothing in memory: writes
 go to the store, and `query`, `probabilities`, `facts` and `decide` ask it
 for the `shortlist` (1,000) nearest glyphs to the query's weighted glyph by
 Hamming distance, then re-rank them with the kernel's exact weighted score
-(`Space.candidates`), once it holds `exact_below` (20,000) precedents; below
+(`Space.candidates`), once it holds `exact_below` (1,000) precedents; below
 that, or with `shortlist: 0`, the store is read whole and the answer is the
 exact one. A precedent's exact score does not depend on the others, so the
 answer is exact whenever the shortlist holds the exact top. `learn`,
 `calibrate` and `refresh` load the store whole (`Space.load()`).
+
+What `bench/shortlist.py` measured (pgvector 0.8.7, HNSW m 64,
+ef_construction 400; recall = the exact top 15 found in the shortlist;
+`bench/results.txt` has every number): Banking77 (10,003) 100% from S 250,
+every `decide` identical; credit (800) 99.6% at S 200; a synthetic ticket
+store, queries that give every role, 100% at 100k and S 1,000, 97.6% at 1M
+and S 1,000, 99.7% at 1M and S 2,000. **Queries that give few of the roles
+the records carry shortlist badly at scale**: 99.5% at 100k (S 1,000), 33%
+at 1M (81% even by an exact Hamming scan). A worker's read, shortlisted:
+Banking77 60 ms p50 at S 1,000, the synthetic store 300 ms at 1M (most of
+it the re-rank's Python, not the SQL); read whole, 50 ms at 800 precedents,
+280 ms at 5,000, 3 s at 20,000.
 `Space.merge` takes a store as well as a path: an rrotor
 `precedents.sqlite` merges into Postgres as `SqliteStore(path,
 readonly=True)`. `bench/shortlist.py` measures recall and latency.

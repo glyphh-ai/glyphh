@@ -145,9 +145,13 @@ class Interaction:
     value_weights: tuple[tuple[str, float], ...] = ()
 
     def value_weight(self, value: Any) -> float:
+        """A pair value's weight. Since 3.13.0 (answer-changing): once learned, a pair value it never learned (never
+        seen, or seen fewer than `rare` times) weighs 0, so the pair stays out of that query's vote and its two roles'
+        own weights decide. Before, such a value weighed the pair's full weight and matched nothing: on held-out
+        combinations of an AND rule a learned model fell below plain kNN (research/compile, REPORT.md)."""
         if not self.value_weights or value is None:
             return 1.0
-        return dict(self.value_weights).get(kernel._text(value), 1.0)
+        return dict(self.value_weights).get(kernel._text(value), 0.0)
 
 
 @dataclass(frozen=True)
