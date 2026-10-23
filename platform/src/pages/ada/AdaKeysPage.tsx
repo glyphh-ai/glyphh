@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useCloudKeys, useCreateCloudKey, useRevokeCloudKey, type CloudKey, type NewCloudKey } from '@/api/ada';
+import { useCloudKeys, useCreateCloudKey, useDeleteCloudKey, useRevokeCloudKey, type CloudKey, type NewCloudKey } from '@/api/ada';
 import { useSession } from '@/api/session';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -34,6 +34,8 @@ export function AdaKeysPage() {
   const [making, setMaking] = useState(false);
   const [revoking, setRevoking] = useState<CloudKey | null>(null);
   const revoke = useRevokeCloudKey();
+  const [deleting, setDeleting] = useState<CloudKey | null>(null);
+  const remove = useDeleteCloudKey();
   const address = session.data?.adaUrl ?? 'Ada';
 
   const newKey = (
@@ -67,9 +69,13 @@ export function AdaKeysPage() {
                 badges={status.chip}
                 meta={status.meta}
                 actions={
-                  status.live && (
+                  status.live ? (
                     <Button size="sm" variant="danger" onClick={() => setRevoking(key)}>
                       Revoke
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="danger" onClick={() => setDeleting(key)}>
+                      Delete
                     </Button>
                   )
                 }
@@ -96,6 +102,24 @@ export function AdaKeysPage() {
         onClose={() => {
           revoke.reset();
           setRevoking(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this API key?"
+        description={
+          <>
+            <strong>{deleting?.name}</strong> no longer works. Deleting it removes it from this list for good.
+          </>
+        }
+        confirmLabel="Delete"
+        pending={remove.isPending}
+        error={remove.error}
+        onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
+        onClose={() => {
+          remove.reset();
+          setDeleting(null);
         }}
       />
     </>
