@@ -1,5 +1,5 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { AdaJob, AdaModel, AdaUsage, AdaVersion, CloudKey, Decision, ModelMap, ModelStats, Spec } from '@/api/ada';
+import type { AdaJob, AdaModel, AdaNotice, AdaRelease, AdaReleases, AdaUsage, AdaVersion, CloudKey, Decision, ModelMap, ModelStats, Spec } from '@/api/ada';
 import { examples } from '@/lib/spec';
 import { adaPlans, cloudLimits, me } from './fixtures';
 import { apiError, sessionHandler, v1 } from './server';
@@ -71,6 +71,85 @@ export const backtestResult = {
       change: { accuracy: 0.03, top_accuracy: 0.02, log_loss: -0.03, ask_rate: -0.02, calibration_error: -0.01 },
     },
     { candidate: { spec_version: 1 }, error: { code: 'E_SPEC_READING', message: 'Version 1 reads subject differently.' } },
+  ],
+};
+
+/** An Ada version as the registry lists it, with what is not given as a stable's would have it. */
+export const releaseOf = (given: Partial<AdaRelease> & { name: string; kernel: string }): AdaRelease => ({
+  status: 'stable',
+  beta: false,
+  open: true,
+  released: '2026-10-01',
+  deprecated: null,
+  ends: null,
+  changes_answers: true,
+  aliases: [],
+  summary: `${given.name}.`,
+  notes: '',
+  models: 0,
+  ...given,
+});
+
+/**
+ * Ada's versions a little after a release, newest first: a beta to try, the latest stable (`ada-1-1`), the stable
+ * before it deprecated until April, and the first one retired. `models` is counted by the fake from its models.
+ */
+export const adaReleases = (): AdaReleases => ({
+  latest_stable: 'ada-1-1',
+  contract: 5,
+  versions: [
+    releaseOf({
+      name: 'ada-1-2-beta',
+      kernel: '3.14.0',
+      status: 'beta',
+      beta: true,
+      released: '2026-10-23',
+      summary: 'Pairs it never learned weigh nothing.',
+      notes: 'Once a model has learned pairs, a pair value it never saw no longer pulls the answer.\n\n- Within noise on German Credit\n- Try it on your own backtest first',
+    }),
+    releaseOf({
+      name: 'ada-1-1',
+      kernel: '3.13.0',
+      released: '2026-10-20',
+      summary: 'Better calibrated answers.',
+      notes: 'Ada now calibrates each output on its own, so **how sure** it says it is matches how often it is right.\n\nThe setting `calibrate_by` takes `loss` as before.',
+    }),
+    releaseOf({
+      name: 'ada-1-0',
+      kernel: '3.12.2',
+      status: 'deprecated',
+      released: '2026-09-01',
+      deprecated: '2026-10-20',
+      ends: '2027-04-18',
+      changes_answers: true,
+      aliases: ['ada-1-0-beta'],
+      summary: 'The cloud’s launch.',
+      notes: 'The version Ada Cloud launched with.',
+    }),
+    releaseOf({ name: 'ada-0-9', kernel: '3.11.0', status: 'retired', released: '2026-06-01', deprecated: '2026-09-01', ends: '2026-10-01', summary: 'The preview.', notes: 'The preview.' }),
+  ],
+});
+
+/** A backtest of the live spec on another Ada: the live version, then the candidate, a little better. */
+export const adaBacktest = {
+  version: 2,
+  trained: 800,
+  held_out: 200,
+  output: 'default',
+  active: { candidate: { name: 'active', settings: {} }, n: 200, accuracy: 0.81, top_accuracy: 0.8, log_loss: 0.52, ask_rate: 0.1, accuracy_answered: 0.85, coverage: 0.97, calibration_error: 0.04 },
+  candidates: [
+    {
+      candidate: { ada: 'ada-1-1' },
+      n: 200,
+      accuracy: 0.83,
+      top_accuracy: 0.81,
+      log_loss: 0.5,
+      ask_rate: 0.09,
+      accuracy_answered: 0.86,
+      coverage: 0.97,
+      calibration_error: 0.02,
+      change: { accuracy: 0.02, top_accuracy: 0.01, log_loss: -0.02, ask_rate: -0.01, calibration_error: -0.02 },
+    },
   ],
 };
 
@@ -167,6 +246,8 @@ export const versionOf = (given: Partial<AdaVersion> & { version: number }): Ada
   learned: null,
   scores: null,
   store: { status: 'active', drop_after: null },
+  ada: 'ada-1-0',
+  kernel: '3.12.2',
   ...given,
 });
 
@@ -207,9 +288,12 @@ export function adaFake({
   stats = modelStats,
   map = modelMap,
   history = {} as Record<string, AdaVersion[]>,
+  releases = adaReleases(),
+  notices = {} as Record<string, AdaNotice | null>,
 } = {}) {
   const state = {
     models: structuredClone(models),
+    releases: structuredClone(releases),
     versions: new Map<string, AdaVersion[]>(),
     /** Each version's spec, by `<model>:<version>`; the model's own when not kept. */
     specs: new Map<string, Spec>(),
@@ -236,8 +320,11 @@ export function adaFake({
       requests_per_second: limits.requests_per_second,
     };
   };
+  /** An Ada name as the registry resolves it, aliases included. */
+  const release = (name: string) => state.releases.versions.find((r) => r.name === name || r.aliases.includes(name));
   for (const model of state.models) {
-    state.versions.set(model.name, structuredClone(history[model.name]) ?? [versionOf({ version: model.version, note: 'made', active: true, precedents_at: 0 })]);
+    const made = { version: model.version, note: 'made', active: true, precedents_at: 0, ada: model.ada, kernel: release(model.ada)?.kernel ?? '3.12.2' };
+    state.versions.set(model.name, structuredClone(history[model.name]) ?? [versionOf(made)]);
   }
   const specOf = (name: string, version: number): Spec => state.specs.get(`${name}:${version}`) ?? found(name)!.spec;
   /** What the server's diff says from one spec to another, for the parts the platform's tests change. */
@@ -250,8 +337,18 @@ export function adaFake({
     return changes;
   };
   let next = 1;
+  /** The server's refusal of an Ada that can't be chosen (for a new model, or an upgrade's target), naming the latest stable. */
+  const refuseAda = (name: string) => {
+    const found = release(name);
+    const fix = { ada: name, latest: state.releases.latest_stable };
+    if (!found) return apiError(422, 'E_ADA_UNKNOWN', `There is no Ada version ${name}. The latest stable is ${fix.latest}.`, fix);
+    if (found.status === 'retired') return apiError(410, 'E_ADA_RETIRED', `${name} is retired. The latest stable is ${fix.latest}.`, fix);
+    if (found.status === 'deprecated') return apiError(422, 'E_ADA_DEPRECATED', `${name} is deprecated: choose ${fix.latest}.`, fix);
+    if (found.beta && !found.open) return apiError(422, 'E_ADA_BETA', `${name} is closed to new models.`, fix);
+    return null;
+  };
 
-  const record = async (request: Request, path: string) => {
+  const record =async (request: Request, path: string) => {
     const text = request.method === 'GET' || request.method === 'DELETE' ? '' : await request.clone().text();
     let body: unknown = text;
     try {
@@ -282,7 +379,8 @@ export function adaFake({
     if (active) for (const v of list) v.active = false;
     const store: AdaVersion['store'] = { status: active ? 'active' : 'making', drop_after: null };
     const changes = diffOf(live.spec, spec);
-    list.push(versionOf({ version, note, active, ready: active, reencoded: !active, new_store: !active, changes, precedents_at: live.precedents, store }));
+    const ada = { ada: live.ada, kernel: release(live.ada)?.kernel ?? '3.12.2' };
+    list.push(versionOf({ version, note, active, ready: active, reencoded: !active, new_store: !active, changes, precedents_at: live.precedents, store, ...ada }));
     if (active) live.version = version;
     return version;
   };
@@ -299,17 +397,48 @@ export function adaFake({
     }),
     http.get(ada('/usage'), () => HttpResponse.json(usage())),
     http.get(ada('/models'), () => HttpResponse.json({ models: state.models.map(({ spec: _spec, ...row }) => row) })),
+    http.get(ada('/ada'), () =>
+      HttpResponse.json({
+        ...state.releases,
+        versions: state.releases.versions.map((r) => ({ ...r, models: state.models.filter((m) => release(m.ada)?.name === r.name).length })),
+      }),
+    ),
     http.post(ada('/models'), async ({ request }) => {
-      const { name, spec } = (await request.json()) as { name: string; spec: Spec };
+      const { name, spec, ada: asked } = (await request.json()) as { name: string; spec: Spec; ada?: string };
       if (found(name)) return apiError(409, 'E_CONFLICT', `This org has a model named ${name} already.`);
-      const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: at, spec };
+      const on = asked ?? state.releases.latest_stable;
+      const refused = refuseAda(on);
+      if (refused) return refused;
+      const model: AdaModel = { name, id: `m-${next++}`, version: 1, precedents: 0, created_at: at, spec, ada: on };
       state.models.push(model);
-      state.versions.set(name, [versionOf({ version: 1, note: 'made', active: true, precedents_at: 0 })]);
+      state.versions.set(name, [versionOf({ version: 1, note: 'made', active: true, precedents_at: 0, ada: on, kernel: release(on)!.kernel })]);
       return HttpResponse.json(model, { status: 201 });
     }),
     http.get(ada('/models/:name'), ({ params }) => {
       const model = found(String(params.name));
-      return model ? HttpResponse.json(model) : missing(String(params.name));
+      if (!model) return missing(String(params.name));
+      return HttpResponse.json({ ...model, ada_status: release(model.ada)?.status ?? 'stable', ada_notice: notices[model.name] ?? null });
+    }),
+    // An upgrade: a new version of the live spec on the target Ada, made by a re-encode job, live once it is done.
+    http.post(ada('/models/:name/upgrade'), async ({ params, request }) => {
+      const name = String(params.name);
+      const model = found(name);
+      if (!model) return missing(name);
+      const { ada: asked, note } = (await request.json()) as { ada?: string; note?: string };
+      const to = asked ?? state.releases.latest_stable;
+      const refused = refuseAda(to);
+      if (refused) return refused;
+      if (release(to)!.name === release(model.ada)?.name) return apiError(409, 'E_NO_CHANGE', `${name} runs on ${to} already.`, { ada: to });
+      const from = model.ada;
+      const list = state.versions.get(name)!;
+      const version = Math.max(...list.map((v) => v.version)) + 1;
+      state.specs.set(`${name}:${model.version}`, model.spec);
+      state.specs.set(`${name}:${version}`, model.spec);
+      list.push(
+        versionOf({ version, note: note ?? `Upgraded from ${from} to ${to}`, ready: false, reencoded: true, new_store: true, changes: [], precedents_at: model.precedents, store: { status: 'making', drop_after: null }, ada: to, kernel: release(to)!.kernel }),
+      );
+      const job = addJob(name, 'reencode', { version, spec: model.spec, ada: to });
+      return HttpResponse.json({ version, active: false, job, ada: to, from });
     }),
     http.delete(ada('/models/:name'), ({ params }) => {
       state.models = state.models.filter((m) => m.name !== params.name);
@@ -359,7 +488,7 @@ export function adaFake({
       if (entry.store.status === 'kept') return HttpResponse.json({ version, active: false, job: addJob(name, 'reencode', { version, spec }) });
       state.specs.set(`${name}:${found(name)!.version}`, found(name)!.spec);
       for (const v of list) v.active = v.version === version;
-      Object.assign(found(name)!, { version, spec });
+      Object.assign(found(name)!, { version, spec, ada: entry.ada });
       return HttpResponse.json({ version, active: true, job: null });
     }),
     http.put(ada('/models/:name/spec'), async ({ params, request }) => {
@@ -409,7 +538,16 @@ export function adaFake({
       model.precedents += rows - 1;
       return HttpResponse.json(held.job, { status: 202 });
     }),
-    http.post(ada('/models/:name/backtest'), ({ params }) => HttpResponse.json(addJob(String(params.name), 'backtest', backtestResult), { status: 202 })),
+    http.post(ada('/models/:name/backtest'), async ({ params, request }) => {
+      const name = String(params.name);
+      const { ada: on } = (await request.json()) as { ada?: string };
+      if (!on) return HttpResponse.json(addJob(name, 'backtest', backtestResult), { status: 202 });
+      // The live spec on another Ada, against the live version on its own.
+      const refused = release(on) ? null : refuseAda(on);
+      if (refused) return refused;
+      const result = { ...adaBacktest, active: { ...adaBacktest.active, ada: found(name)!.ada }, candidates: [{ ...adaBacktest.candidates[0]!, candidate: { ada: on }, ada: on }] };
+      return HttpResponse.json(addJob(name, 'backtest', result), { status: 202 });
+    }),
     http.post(ada('/models/:name/export'), ({ params }) =>
       HttpResponse.json(addJob(String(params.name), 'export', { filename: 'tickets.zip' }, { url: 'https://ada.test/v1/downloads/tickets.signed', expires_at: 1_800_000_000 }), { status: 202 }),
     ),
@@ -423,8 +561,9 @@ export function adaFake({
           const { version, spec } = held.result as { version: number; spec: Spec };
           const list = state.versions.get(held.job.model)!;
           for (const v of list) v.active = v.version === version;
-          Object.assign(list.find((v) => v.version === version)!, { ready: true, store: { status: 'active', drop_after: null } });
-          Object.assign(found(held.job.model)!, { version, spec });
+          const made = list.find((v) => v.version === version)!;
+          Object.assign(made, { ready: true, store: { status: 'active', drop_after: null } });
+          Object.assign(found(held.job.model)!, { version, spec, ada: made.ada });
         }
       } else if (held.job.state !== 'awaiting') {
         held.job = { ...held.job, state: 'running', percent: 40 };
@@ -449,4 +588,4 @@ export function adaFake({
 }
 
 /** A model with some history, as most page tests start from. */
-export const tickets = (): AdaModel => ({ name: 'tickets', id: 'm-tickets', version: 2, precedents: 1_240, created_at: '2026-10-01T09:00:00Z', spec: ticketSpec });
+export const tickets = (): AdaModel => ({ name: 'tickets', id: 'm-tickets', version: 2, precedents: 1_240, created_at: '2026-10-01T09:00:00Z', spec: ticketSpec, ada: 'ada-1-0' });

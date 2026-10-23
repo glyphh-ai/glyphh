@@ -42,6 +42,17 @@ describe('Ada Models', () => {
     expect(row).toHaveTextContent('1,240');
   });
 
+  it('shows the Ada each model runs, a beta labelled Beta', async () => {
+    on([tickets(), { ...tickets(), name: 'triage', id: 'm-triage', ada: 'ada-1-2-beta' }]);
+    renderApp('/models');
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Model', 'Version', 'Ada', 'Precedents', 'Made', 'Actions']);
+    expect((await screen.findByRole('link', { name: 'tickets' })).closest('tr')).toHaveTextContent('ada-1-0');
+    const triage = screen.getByRole('link', { name: 'triage' }).closest('tr')!;
+    expect(triage).toHaveTextContent('ada-1-2-beta');
+    expect(await within(triage).findByText('Beta')).toBeInTheDocument();
+  });
+
   it('opens the model from anywhere on its row', async () => {
     on();
     const { user, router } = renderApp('/models');
@@ -143,6 +154,45 @@ describe('New model', () => {
     const { user, router } = renderApp('/models/new');
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
     expect(router.state.location.pathname).toBe('/models');
+  });
+
+  it('makes the model on the latest stable Ada, or on another chosen; betas labelled, deprecated and retired not offered', async () => {
+    const fake = on([]);
+    const { user, router } = renderApp('/models/new');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Start from' }), 'tickets');
+    const ada = await screen.findByRole('combobox', { name: 'Ada' });
+    expect(ada).toHaveValue('ada-1-1');
+    expect(within(ada).getAllByRole('option').map((o) => o.textContent)).toEqual(['ada-1-2-beta (Beta)', 'ada-1-1 (latest stable)']);
+    await user.click(screen.getByRole('button', { name: 'Make model' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/models/tickets'));
+    expect(fake.state.seen.find((s) => s.method === 'POST' && s.path === '/models')!.body).toMatchObject({ name: 'tickets', ada: 'ada-1-1' });
+    expect((await screen.findByText('Runs on')).parentElement).toHaveTextContent('Runs on ada-1-1');
+  });
+
+  it('makes a model on a beta, labelled Beta on its page', async () => {
+    const fake = on([]);
+    const { user } = renderApp('/models/new');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Start from' }), 'tickets');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Ada' }), 'ada-1-2-beta');
+    await user.click(screen.getByRole('button', { name: 'Make model' }));
+    const line = (await screen.findByText('Runs on')).parentElement!;
+    expect(line).toHaveTextContent('ada-1-2-beta');
+    expect(within(line).getByText('Beta')).toBeInTheDocument();
+    expect(fake.state.seen.find((s) => s.method === 'POST' && s.path === '/models')!.body).toMatchObject({ ada: 'ada-1-2-beta' });
+  });
+
+  it('offers the latest stable when the version chosen is refused', async () => {
+    on([]);
+    server.use(http.post('*/api/ada/v1/models', () => apiError(422, 'E_ADA_BETA', 'ada-1-2-beta is closed to new models.', { ada: 'ada-1-2-beta', latest: 'ada-1-1' })));
+    const { user } = renderApp('/models/new');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Start from' }), 'tickets');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Ada' }), 'ada-1-2-beta');
+    await user.click(screen.getByRole('button', { name: 'Make model' }));
+    const refusal = await screen.findByRole('alert');
+    expect(refusal).toHaveTextContent('ada-1-2-beta is closed to new models.');
+    await user.click(within(refusal).getByRole('button', { name: 'Choose ada-1-1' }));
+    expect(screen.getByRole('combobox', { name: 'Ada' })).toHaveValue('ada-1-1');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

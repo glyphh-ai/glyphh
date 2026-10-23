@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   useActivate,
+  useAdaReleases,
   useAdaVersion,
   usePutSpec,
   useVersionDiff,
@@ -11,10 +12,12 @@ import {
   type VersionChange,
 } from '@/api/ada';
 import { date, plural, stamp } from '@/lib/format';
+import { isBeta } from '@/lib/releases';
 import { specText } from '@/lib/spec';
 import { autoSummary, changeText, learnedText } from '@/lib/versions';
 import { Button, Chip, CodeBlock, Dialog, LoadingCard, TextField } from '@/ui';
 import { AdaErrorNotice } from '../AdaErrorNotice';
+import { AdaName } from '../AdaRelease';
 import { ChangeResult } from './ChangeResult';
 import styles from '../ada.module.css';
 
@@ -59,6 +62,7 @@ type ViewProps = { model: AdaModel; version: AdaVersion; by: string | null; onCl
 /** One version whole: who made it and when, the precedents then and now, its store, what it changed, what it learned, its newest backtest, its spec and settings. */
 export function ViewDialog({ model, version, by, onClose }: ViewProps) {
   const detail = useAdaVersion(model.name, version.version);
+  const releases = useAdaReleases();
   const learned = Object.entries(version.learned ?? {});
   const scores = version.scores;
   const restating = (version.changes ?? []).filter((c) => c.restates);
@@ -82,6 +86,12 @@ export function ViewDialog({ model, version, by, onClose }: ViewProps) {
         <Fact label="Precedents">
           {version.precedents_at === null ? 'Not recorded when it was made' : `${version.precedents_at.toLocaleString('en-GB')} when it was made`}
           {` · ${model.precedents.toLocaleString('en-GB')} now`}
+        </Fact>
+        <Fact label="Ada">
+          <span className={styles.chips}>
+            <AdaName name={version.ada} beta={isBeta(releases.data, version.ada)} />
+            <span className={styles.meta}>kernel {version.kernel}</span>
+          </span>
         </Fact>
         <Fact label="Stored cases">{storeText(version)}</Fact>
         {version.new_store && (
@@ -154,6 +164,11 @@ export function MakeLiveDialog({ model, version, live, onClose, onLive }: LivePr
             Version {version.version}’s spec, settings and learned weights become live, in place of version {live}.
           </p>
           <p>Precedents recorded since stay in the model: cases are not versioned.</p>
+          {version.ada !== model.ada && (
+            <p>
+              It answers on {version.ada}, the Ada it was made with, in place of {model.ada}.
+            </p>
+          )}
           {apart && <p>Its cases are stored apart, so a job first brings them up to date with every write made since. Version {live} answers until it is done.</p>}
         </>
       }

@@ -11,7 +11,7 @@ describe('with Ada Cloud on', () => {
   it('has Ada’s pages only in the sidebar: no runtimes, machines, logs or licence', async () => {
     renderApp('/');
     await within(await screen.findByRole('complementary', { name: 'Main' })).findByRole('link', { name: 'Home' });
-    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'API Keys', 'Usage']);
+    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'API Keys', 'Usage']);
     expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaHome');
   });

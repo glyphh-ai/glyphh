@@ -42,10 +42,37 @@ export type Spec = {
   [field: string]: unknown;
 };
 
-/** One of the org's models, as `GET /v1/models` lists it. */
-export type AdaModelRow = { name: string; id: Uuid; version: number; precedents: number; created_at: IsoDate };
-/** One model with its active spec. */
-export type AdaModel = AdaModelRow & { spec: Spec };
+/**
+ * A version of Ada itself (`GET /v1/ada`), by name (`ada-1-0`, `ada-1-1-beta`), each one kernel release: stable or
+ * beta, then deprecated (still answering, until `ends`), then retired. `changes_answers` is against the one before it;
+ * `models` counts the org's models that run it.
+ */
+export type AdaReleaseStatus = 'stable' | 'beta' | 'deprecated' | 'retired';
+export type AdaRelease = {
+  name: string;
+  kernel: string;
+  status: AdaReleaseStatus;
+  beta: boolean;
+  /** A beta closed to new models is false: its models still run. */
+  open: boolean;
+  released: IsoDate;
+  deprecated: IsoDate | null;
+  ends: IsoDate | null;
+  changes_answers: boolean;
+  aliases: string[];
+  summary: string;
+  notes: string;
+  models: number;
+};
+/** Every Ada version, newest first, and the latest stable: the default for a new model, an upgrade and a backtest. */
+export type AdaReleases = { latest_stable: string; contract: number; versions: AdaRelease[] };
+/** What a model's header says of its Ada: a newer stable, a beta to try, its own deprecated or retired, or moved off a retired one by Glyphh. */
+export type AdaNotice = { kind: 'upgrade' | 'beta' | 'deprecated' | 'moved' | 'retired'; message: string; to?: string; ends?: IsoDate };
+
+/** One of the org's models, as `GET /v1/models` lists it, with the Ada its live version runs. */
+export type AdaModelRow = { name: string; id: Uuid; version: number; precedents: number; created_at: IsoDate; ada: string };
+/** One model with its active spec, its Ada's status and what to say of it. */
+export type AdaModel = AdaModelRow & { spec: Spec; ada_status?: AdaReleaseStatus; ada_notice?: AdaNotice | null };
 
 /** One change of spec or settings: where (`settings.k`, `layers[a].segments[s].roles[color]`), from and to (null: not there), and whether it rewrites the stored cases. */
 export type SpecChange = { path: string; from: unknown; to: unknown; restates: boolean };
@@ -90,6 +117,9 @@ export type AdaVersion = {
   learned: LearnedSummary | null;
   scores: VersionScores | null;
   store: VersionStore;
+  /** The Ada it was made and learned with, and that Ada's exact kernel release. */
+  ada: string;
+  kernel: string;
 };
 /** One version whole: its spec and every lever its settings stand at. */
 export type AdaVersionDetail = AdaVersion & { spec: Spec; settings: Record<string, LeverValue> };
@@ -117,6 +147,8 @@ export const jobEnded = (job: AdaJob | undefined) => job?.state === 'done' || jo
 
 /** A spec or settings change, or a rollback: active at once, or once its job (a re-encode or calibration) is done. */
 export type VersionChange = { version: number; active: boolean; job: AdaJob | null };
+/** An upgrade (or downgrade) of Ada: a new version of the live spec on `ada`, live once its re-encode is done. */
+export type AdaUpgrade = VersionChange & { ada: string; from: string };
 
 export type LeverValue = number | boolean | string | null;
 /** Every lever as it stands on the active version. */
@@ -169,7 +201,16 @@ export function adaRefusal(error: unknown): AdaRefusal | null {
   return null;
 }
 
-export type CloudKey = { id: Uuid; name: string; clearance: number; created_at: IsoDate; expires_at: IsoDate | null; revoked_at: IsoDate | null };
+/**
+ * The latest stable a refusal of an Ada version names as the fix (`latest`): one the registry doesn't know
+ * (E_ADA_UNKNOWN), retired (E_ADA_RETIRED), deprecated (E_ADA_DEPRECATED) or a beta closed to new models (E_ADA_BETA).
+ */
+export function adaFix(error: unknown): string | null {
+  if (!(error instanceof ApiError) || !['E_ADA_UNKNOWN', 'E_ADA_RETIRED', 'E_ADA_DEPRECATED', 'E_ADA_BETA'].includes(error.code)) return null;
+  return typeof error.detail.latest === 'string' ? error.detail.latest : null;
+}
+
+export type CloudKey ={ id: Uuid; name: string; clearance: number; created_at: IsoDate; expires_at: IsoDate | null; revoked_at: IsoDate | null };
 export type NewCloudKey = CloudKey & { key: string };
 
 export type ImportFormat = 'csv' | 'jsonl';
@@ -177,7 +218,7 @@ export type ImportStarted = AdaJob & { upload: { url: string; expires_at: number
 /** A done import's result. */
 export type Imported = { rows: number; recorded: number; added: number; replaced: number; refused: number; refusals: Array<{ row: number; path: string; message: string }> };
 
-export type Candidate = { settings?: Record<string, LeverValue>; spec_version?: number; name?: string };
+export type Candidate = { settings?: Record<string, LeverValue>; spec_version?: number; name?: string; ada?: string };
 export type Scores = {
   candidate: Candidate;
   n?: number;
@@ -193,6 +234,8 @@ export type Scores = {
   change?: Record<string, number>;
   learn?: true | string;
   error?: { code: string; message: string };
+  /** The Ada it was scored with. */
+  ada?: string;
 };
 /** A done backtest's result. */
 export type BacktestResult = { version: number; trained: number; held_out: number; output: string; active: Scores; candidates: Scores[] };
@@ -238,6 +281,7 @@ export const adaKeys = {
   all: ['ada'] as const,
   models: ['ada', 'models'] as const,
   model: (name: string) => ['ada', 'models', name] as const,
+  releases: ['ada', 'releases'] as const,
   usage: ['ada', 'usage'] as const,
   keys: ['ada', 'keys'] as const,
   job: (id: string) => ['ada', 'jobs', id] as const,
@@ -279,6 +323,8 @@ export const useAdaPrecedent = (name: string, id: string | null) =>
     enabled: Boolean(id),
     queryFn: () => adaApi.get<Precedent>(`${path(name)}/precedents/${encodeURIComponent(id ?? '')}`),
   });
+/** Every Ada version, read rarely: a release changes with a deploy. */
+export const useAdaReleases = () => useQuery({ queryKey: adaKeys.releases, queryFn: () => adaApi.get<AdaReleases>('/ada'), staleTime: 60_000 });
 export const useAdaUsage = () => useQuery({ queryKey: adaKeys.usage, queryFn: () => adaApi.get<AdaUsage>('/usage') });
 export const useCloudKeys = () => useQuery({ queryKey: adaKeys.keys, queryFn: () => adaApi.get<CloudKey[]>('/keys') });
 
@@ -302,11 +348,17 @@ function useAdaWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>, refr
   });
 }
 
-/** Everything about a model: its view, versions and settings, the list and the usage. */
-export const modelReads = (name: string) => [adaKeys.model(name), adaKeys.models, adaKeys.usage];
+/** Everything about a model: its view, versions and settings, the list, the usage and how many models each Ada runs. */
+export const modelReads = (name: string) => [adaKeys.model(name), adaKeys.models, adaKeys.usage, adaKeys.releases];
 
 export const useCreateAdaModel = () =>
-  useAdaWrite((body: { name: string; spec: Spec }) => adaApi.post<AdaModel>('/models', body), () => [adaKeys.models, adaKeys.usage]);
+  useAdaWrite(
+    (body: { name: string; spec: Spec; ada?: string }) => adaApi.post<AdaModel>('/models', body),
+    () => [adaKeys.models, adaKeys.usage, adaKeys.releases],
+  );
+/** A new version of the live spec on another Ada (no `ada`: the latest stable), by a re-encode; `backtest` the job that scored it. */
+export const useUpgradeAda = (name: string) =>
+  useAdaWrite((body: { ada?: string; note?: string; backtest?: string }) => adaApi.post<AdaUpgrade>(`${path(name)}/upgrade`, body), () => modelReads(name));
 export const useDeleteAdaModel = () =>
   useAdaWrite((name: string) => adaApi.delete(`${path(name)}?confirm=${encodeURIComponent(name)}`), () => [adaKeys.models, adaKeys.usage]);
 export const usePutSpec = (name: string) =>
@@ -336,7 +388,8 @@ export const useStartImport = (name: string) =>
   });
 export const useStartBacktest = (name: string) =>
   useMutation({
-    mutationFn: (body: { candidates: Candidate[]; holdout: { newest: number }; output?: string }) => adaApi.post<AdaJob>(`${path(name)}/backtest`, body),
+    // `ada` alone is shorthand for a candidate: the live spec on that Ada.
+    mutationFn: (body: { candidates?: Candidate[]; ada?: string; holdout: { newest: number }; output?: string }) => adaApi.post<AdaJob>(`${path(name)}/backtest`, body),
   });
 export const useStartExport = (name: string) =>
   useMutation({ mutationFn: (format: 'jsonl' | 'ada_sqlite') => adaApi.post<AdaJob>(`${path(name)}/export`, { format }) });

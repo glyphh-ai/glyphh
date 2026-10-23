@@ -129,6 +129,14 @@ const paths = {
     </>
   ),
   external: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" />,
+  // Ada's versions: releases stacked.
+  layers: <path d="M12 3l9 5-9 5-9-5 9-5zM3 12.5l9 5 9-5M3 16.5l9 5 9-5" />,
+  upgrade: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 16.5v-9M8 11l4-4 4 4" />
+    </>
+  ),
   github: (
     <path
       fill="currentColor"

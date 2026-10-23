@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   useActivate,
   useAdaLevers,
@@ -41,10 +41,12 @@ function candidateOf(draft: Draftable, live: Record<string, LeverValue>): Candid
   return Object.keys(settings).length ? { settings } : 'Add a lever to change.';
 }
 
-/** What a candidate is, in words. */
+/** What a candidate is, in words: another version, settings changed, or either on another Ada (`The live spec on ada-1-1`). */
 export function candidateText(candidate: Candidate): string {
-  if (candidate.spec_version !== undefined) return `Version ${candidate.spec_version}`;
-  if (candidate.settings && Object.keys(candidate.settings).length) return changesText(candidate.settings);
+  const on = candidate.ada ? ` on ${candidate.ada}` : '';
+  if (candidate.spec_version !== undefined) return `Version ${candidate.spec_version}${on}`;
+  if (candidate.settings && Object.keys(candidate.settings).length) return `${changesText(candidate.settings)}${on}`;
+  if (candidate.ada) return `The live spec${on}`;
   return candidate.name ?? 'Candidate';
 }
 
@@ -220,22 +222,46 @@ function Results({ model, job, result }: { model: AdaModel; job: string; result:
   const patch = usePatchSettings(model.name);
   const activate = useActivate(model.name);
   const [change, setChange] = useState<VersionChange | null>(null);
-  const priced = result.active.cost_mean !== undefined;
-  const shown = priced ? [...columns, { key: 'cost_mean' as const, label: 'Mean cost', show: num, change: by }] : columns;
-  const winner = winnerOf(result);
 
   const makeLive = (candidate: Candidate) => {
     if (candidate.spec_version !== undefined) activate.mutate(candidate.spec_version, { onSuccess: setChange });
     else patch.mutate({ changes: candidate.settings ?? {}, note: `Backtest: ${candidateText(candidate)}`, backtest: job }, { onSuccess: setChange });
   };
 
+  return (
+    <div className={styles.form}>
+      <ScoresTable
+        result={result}
+        action={(scores, best) =>
+          // A candidate on another Ada goes live by an upgrade, from the Versions tab.
+          !scores.candidate.ada && (
+            <Button size="sm" variant={best ? 'primary' : 'secondary'} loading={patch.isPending || activate.isPending} onClick={() => makeLive(scores.candidate)}>
+              Make live
+            </Button>
+          )
+        }
+      />
+      <ApiErrorNotice error={patch.error ?? activate.error} />
+      {change && <ChangeResult model={model.name} change={change} />}
+    </div>
+  );
+}
+
+/**
+ * A backtest's numbers: the live version's, then each candidate's with the change from it, the best marked; `action`
+ * what a candidate's row offers (none on a candidate that failed).
+ */
+export function ScoresTable({ result, action }: { result: BacktestResult; action?: (scores: Scores, best: boolean) => ReactNode }) {
+  const priced = result.active.cost_mean !== undefined;
+  const shown = priced ? [...columns, { key: 'cost_mean' as const, label: 'Mean cost', show: num, change: by }] : columns;
+  const winner = winnerOf(result);
   const rows: Array<{ name: string; scores: Scores; index: number | null }> = [
-    { name: `Live, version ${result.version}`, scores: result.active, index: null },
+    { name: `Live, version ${result.version}${result.active.ada ? ` on ${result.active.ada}` : ''}`, scores: result.active, index: null },
     ...result.candidates.map((scores, i) => ({ name: candidateText(scores.candidate), scores, index: i })),
   ];
 
   return (
-    <div className={styles.form}>
+    <>
       <p className={styles.meta}>
         Learned from {result.trained.toLocaleString('en-GB')} cases, scored on the newest {result.held_out.toLocaleString('en-GB')}.
       </p>
@@ -271,20 +297,12 @@ function Results({ model, job, result }: { model: AdaModel; job: string; result:
                     {index !== null && c.change(scores.change?.[c.key]) && <span className={styles.change}>{c.change(scores.change?.[c.key])}</span>}
                   </td>
                 ))}
-                <td>
-                  {index !== null && !scores.error && (
-                    <Button size="sm" variant={index === winner ? 'primary' : 'secondary'} loading={patch.isPending || activate.isPending} onClick={() => makeLive(scores.candidate)}>
-                      Make live
-                    </Button>
-                  )}
-                </td>
+                <td>{index !== null && !scores.error && action?.(scores, index === winner)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <ApiErrorNotice error={patch.error ?? activate.error} />
-      {change && <ChangeResult model={model.name} change={change} />}
-    </div>
+    </>
   );
 }

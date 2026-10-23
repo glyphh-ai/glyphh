@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useAdaModels, type AdaModelRow } from '@/api/ada';
+import { useAdaModels, useAdaReleases, type AdaModelRow } from '@/api/ada';
 import { AdaErrorNotice } from './AdaErrorNotice';
+import { AdaName } from './AdaRelease';
 import { DeleteModelDialog } from './model/DeleteModelDialog';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
+import { isBeta } from '@/lib/releases';
 import { Button, Card, EmptyState, LoadingCard, Menu, MenuItem, useToast } from '@/ui';
 import styles from './ada.module.css';
 
@@ -18,6 +20,7 @@ export function AdaModelsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const models = useAdaModels();
+  const releases = useAdaReleases();
   const [deleting, setDeleting] = useState<AdaModelRow | null>(null);
   const newModel = (
     <Button variant="primary" icon="plus" onClick={() => navigate('/models/new')}>
@@ -43,6 +46,7 @@ export function AdaModelsPage() {
               <tr>
                 <th scope="col">Model</th>
                 <th scope="col">Version</th>
+                <th scope="col">Ada</th>
                 <th scope="col">Precedents</th>
                 <th scope="col">Made</th>
                 <th scope="col">
@@ -59,6 +63,9 @@ export function AdaModelsPage() {
                     </Link>
                   </td>
                   <td className={styles.num}>v{model.version}</td>
+                  <td className={styles.num}>
+                    <AdaName name={model.ada} beta={isBeta(releases.data, model.ada)} />
+                  </td>
                   <td className={styles.num}>{model.precedents.toLocaleString('en-GB')}</td>
                   <td>{date(model.created_at)}</td>
                   <td className={styles.rowMenu} onClick={(e) => e.stopPropagation()}>
