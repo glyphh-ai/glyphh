@@ -20,13 +20,13 @@ import glyphh_spec
 import psycopg
 from psycopg.types.json import Jsonb
 
-from glyphh_ada import catalog, jobs, limits
+from glyphh_ada import catalog, jobs, limits, registry
 from glyphh_ada.catalog import q
 from glyphh_ada.errors import Refusal
 from glyphh_ada.situations import check_reading, learned_of, same_store, set_learned
 
 CALIBRATION: tuple[str, ...] = ("calibrate_by", "calibrate_sample")
-_ROW = "SELECT spec, store, ready, gone, learned FROM {s}.spec_versions WHERE model_id = %s AND version = %s"
+_ROW = "SELECT spec, store, ready, gone, learned, ada FROM {s}.spec_versions WHERE model_id = %s AND version = %s"
 _STALE = """
     SELECT store FROM {s}.spec_versions v WHERE model_id = %(m)s AND NOT gone AND store <> %(keep)s GROUP BY store
     HAVING bool_and(version <> %(active)s AND (NOT ready OR retired_at < now() - make_interval(days => %(days)s)))
@@ -69,18 +69,27 @@ def make_active(conn: psycopg.Connection, schema: str, found: catalog.Live, vers
 
 
 def _insert(
-    conn: psycopg.Connection, schema: str, found: catalog.Live, spec_json: Any, args: dict[str, Any], same: bool
+    conn: psycopg.Connection,
+    schema: str,
+    found: catalog.Live,
+    spec_json: Any,
+    args: dict[str, Any],
+    same: bool,
+    ada: str | None = None,
 ) -> int:
-    """The next version: on the active store (ready), or on a store of its own that a re-encode will make."""
+    """The next version: on the active store (ready), or on a store of its own that a re-encode will make; on the
+    model's Ada version, unless an upgrade names another."""
     top = conn.execute(q(schema, "SELECT max(version) FROM {s}.spec_versions WHERE model_id = %s"), (found.id,))
     version = int(top.fetchone()[0]) + 1  # type: ignore[index]
     insert = (
-        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, backtest, ready, precedents_at)"
-        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, backtest, ready, precedents_at,"
+        " ada, kernel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     )
     store = found.store if same else f"{found.id.hex}v{version}"
     note, backtest, held = args.get("note") or "", args.get("backtest"), catalog.count(conn, schema, found.store)
-    values = (found.id, version, Jsonb(spec_json), note, args["author"], store, backtest, same, held)
+    ada = ada or found.ada
+    kernel = registry.registry().kernel_of(ada)
+    values = (found.id, version, Jsonb(spec_json), note, args["author"], store, backtest, same, held, ada, kernel)
     conn.execute(q(schema, insert), values)
     return version
 
@@ -141,21 +150,40 @@ def activate(conn: psycopg.Connection, schema: str, name: str, version: int, aut
     found = catalog.live(conn, schema, name)
     if version == found.version:
         return {"version": version, "active": True, "job": None}
-    _, store, ready, gone, learned = row(conn, schema, found, version)
+    _, store, ready, gone, learned, ada = row(conn, schema, found, version)
     if gone:
         raise Refusal("E_VERSION_GONE", f"Version {version}'s store was dropped after {limits.KEPT_DAYS} days.", 410)
     if not ready:
         raise Refusal("E_NOT_READY", f"Version {version} is still being made: wait for its job.", 409)
+    reg, day = registry.registry(), registry.today()
+    known = reg.find(ada)
+    if known is None or known.status(day) == "retired":
+        latest = reg.latest(day).name
+        message = f"Version {version} runs on {ada}, which was retired: it cannot be made live again (use {latest})."
+        raise Refusal("E_ADA_RETIRED", message, 410, ada=ada, latest=latest, version=version)
     jobs.busy(conn, schema, found.id)
     if store != found.store:
         job = jobs.add(conn, schema, found.id, "reencode", {"version": version, "sync": True}, author)
         return {"version": version, "active": False, "job": job}
     retire(conn, schema, found)
-    set_learned(
-        conn, schema, store, learned or {}
-    )  # what it had when it stopped being active (every ready version was)
+    set_learned(conn, schema, store, learned or {})  # what it had when it stopped being active (each ready one did)
     make_active(conn, schema, found, version)
     return {"version": version, "active": True, "job": None}
+
+
+def upgrade(conn: psycopg.Connection, schema: str, name: str, ada: str | None, args: dict[str, Any]) -> dict[str, Any]:
+    """The active spec as a new version on another Ada version (none named: the latest stable; older ones too, a
+    downgrade): always a re-encode into a store of its own, by a job on that version's kernel, which restates every
+    case, learns and calibrates with it and then switches (docs/specs/ada-cloud.md, 12.6)."""
+    found, reg = catalog.live(conn, schema, name), registry.registry()
+    chosen = reg.choose(ada, registry.today())
+    if reg.find(found.ada) is chosen:  # the same version, by its name or an alias
+        latest = reg.latest(registry.today()).name
+        raise Refusal("E_NO_CHANGE", f"This model runs on {chosen.name} already.", 409, ada=chosen.name, latest=latest)
+    jobs.busy(conn, schema, found.id)
+    version = _insert(conn, schema, found, found.spec, args, same=False, ada=chosen.name)
+    job = jobs.add(conn, schema, found.id, "reencode", {"version": version}, args["author"])
+    return {"version": version, "active": False, "job": job, "ada": chosen.name, "from": found.ada}
 
 
 def prune(conn: psycopg.Connection, schema: str, found: catalog.Live, keep: str) -> list[str]:

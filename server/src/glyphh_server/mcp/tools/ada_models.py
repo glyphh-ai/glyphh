@@ -45,18 +45,21 @@ def changed(name: str, answer: dict[str, Any]) -> str:
 
 async def models(ctx: Context, _: NoArgs) -> Done:
     found, _v = await ada(ctx, "", "models", {})
-    lines = [f"{m['name']}: version {m['version']}, {m['precedents']:,} precedents" for m in found]
+    lines = [f"{m['name']}: version {m['version']} on {m['ada']}, {m['precedents']:,} precedents" for m in found]
     return Done("\n".join(lines) or "No models yet: ada_model_create makes one.", {"models": found})
 
 
 async def model(ctx: Context, args: Named) -> Done:
     found, _v = await ada(ctx, args.name, "model", {})
-    return Done(f"{args.name}: version {found['version']}, {found['precedents']:,} precedents.", found)
+    notice = f" {found['ada_notice']['message']}" if found["ada_notice"] else ""
+    text = f"{args.name}: version {found['version']} on {found['ada']}, {found['precedents']:,} precedents.{notice}"
+    return Done(text, found)
 
 
 async def create(ctx: Context, args: NewModel) -> Done:
-    made, _v = await ada(ctx, args.name, "create", {"spec": args.spec})
-    return Done(f"Made {args.name}, version 1, empty: record cases (ada_record_many) or import a file.", made)
+    made, _v = await ada(ctx, args.name, "create", args.model_dump(exclude={"name"}, exclude_none=True))
+    text = f"Made {args.name} on {made['ada']}, version 1, empty: record cases (ada_record_many) or import a file."
+    return Done(text, made)
 
 
 async def delete(ctx: Context, args: Delete) -> Done:
@@ -83,7 +86,8 @@ async def settings(ctx: Context, args: Levers) -> Done:
 async def versions(ctx: Context, args: Named) -> Done:
     found, _v = await ada(ctx, args.name, "versions", {})
     lines = [
-        f"{v['version']}{' (active)' if v['active'] else ''}: {v['note'] or 'no note'}, by {v['made_by']}, "
+        f"{v['version']}{' (active)' if v['active'] else ''} on {v['ada']}: {v['note'] or 'no note'}, "
+        f"by {v['made_by']}, "
         f"{str(v['made_at'])[:10]}" + (", its store dropped" if v["gone"] else "")
         for v in found
     ]
@@ -109,7 +113,8 @@ TOOLS: tuple[Tool, ...] = (
         "ada_model_create",
         "Make an Ada model",
         "A new model from its JSON spec (layers, segments, roles, output with its outcomes and costs, settings), "
-        "checked by the kernel and the cloud's bounds: version 1, empty.",
+        "checked by the kernel and the cloud's bounds: version 1, empty, on the latest stable Ada version unless "
+        "`ada` names another (ada_releases; a beta only when the person asks for one).",
         NewModel,
         create,
     ),

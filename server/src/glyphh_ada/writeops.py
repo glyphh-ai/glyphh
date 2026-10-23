@@ -10,19 +10,23 @@ under the request's key):
 
 from typing import Any
 
-from glyphh_ada import jobs, versions
+from glyphh_ada import jobs, routing, versions
 from glyphh_ada.catalog import live
 from glyphh_ada.errors import Refusal
-from glyphh_ada.protocol import JOBS, STREAM_MAX, STREAMS, Message
+from glyphh_ada.pg import schema_for
+from glyphh_ada.protocol import JOBS, STREAM_MAX, Message, kernel_stream
 from glyphh_ada.writes import WRITERS, refresh_due, within_cap
 
 Answer = tuple[Any, int | None]
 
 
 def enqueue(ctx: Any, msg: Message, kind: str, job_id: str) -> None:
-    """The job on the jobs stream, once the transaction that made it commits."""
+    """The job on its kernel's jobs stream (routing.for_job), once the transaction that made it commits."""
     work = Message(msg.org, msg.model, kind, {"job": job_id}, author=msg.author)
-    ctx.after.append(lambda: ctx.redis.xadd(STREAMS[JOBS], work.fields(), maxlen=STREAM_MAX, approximate=True))
+    stream = kernel_stream(
+        JOBS, routing.for_job(ctx.conn, schema_for(msg.org), jobs.view(ctx.conn, schema_for(msg.org), job_id))
+    )
+    ctx.after.append(lambda: ctx.redis.xadd(stream, work.fields(), maxlen=STREAM_MAX, approximate=True))
 
 
 def cases(ctx: Any, schema: str, msg: Message) -> Answer:
@@ -67,12 +71,15 @@ def import_go(ctx: Any, schema: str, msg: Message) -> Answer:
 
 
 def version(ctx: Any, schema: str, msg: Message) -> Answer:
-    """spec, settings or activate: the answer {version, active, job}, the job queued, every worker's copy stale."""
+    """spec, settings, activate or upgrade: the answer {version, active, job}, the job queued, every worker's copy
+    stale."""
     args = {**msg.args, "author": msg.author}
     if msg.op == "spec":
         made = versions.propose(ctx.conn, schema, msg.model, msg.args["spec"], args)
     elif msg.op == "settings":
         made = versions.settings(ctx.conn, schema, msg.model, msg.args["changes"], args)
+    elif msg.op == "upgrade":
+        made = versions.upgrade(ctx.conn, schema, msg.model, msg.args.get("ada"), args)
     else:
         made = versions.activate(ctx.conn, schema, msg.model, int(msg.args["version"]), msg.author)
     if made["job"] is not None:

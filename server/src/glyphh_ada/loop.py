@@ -1,8 +1,10 @@
-"""One worker process's loop over its stream (protocol.STREAMS[queue]), as one consumer of the group `ada`: first a
-message another worker took and stopped heartbeating (XAUTOCLAIM), else a new one (XREADGROUP). While it works, a
-heartbeat thread claims its message again every second (sync) or ten (jobs), so only a dead worker's message is ever
-taken over. A sync message past its deadline is dropped (the API has answered 504 already); one that has killed
-MAX_DELIVERIES workers is answered E_INTERNAL. The message is acknowledged once it is answered."""
+"""One worker process's loop over its streams, as one consumer of the group `ada`: its kernel's own stream
+(`ada:sync:<kernel>`, routing.py) and, for the latest stable's workers, the front door (protocol.STREAMS[queue]).
+First a message another worker took and stopped heartbeating (XAUTOCLAIM), else a new one (XREADGROUP). While it
+works, a heartbeat thread claims its message again every second (sync) or ten (jobs), so only a dead worker's message
+is ever taken over. A sync message past its deadline is dropped (the API has answered 504 already); one that has
+killed MAX_DELIVERIES workers is answered E_INTERNAL; one for another kernel is put on that kernel's stream
+(Forwarded) and answered there. The message is acknowledged once it is answered or passed on."""
 
 import logging
 import threading
@@ -21,6 +23,12 @@ log = logging.getLogger("glyphh.ada")
 
 BLOCK_MS: int = 2000
 STALE_CONSUMER_MS: int = 86_400_000  # a consumer gone a day with nothing pending leaves the group
+# dispatch answers (data, version) or (data, version, about): `about` the model's Ada version, for the API's headers
+Dispatch = Callable[[Message], tuple[Any, ...]]
+
+
+class Forwarded(Exception):  # noqa: N818: not an error, a message passed on to another kernel's stream
+    """Raised by dispatch when it has put the message on another kernel's stream: nothing to answer here."""
 
 
 class Heartbeat:
@@ -45,44 +53,47 @@ class Heartbeat:
 
 class Loop:
     def __init__(
-        self, queue: str, redis: Redis, consumer: str, dispatch: Callable[[Message], tuple[Any, int | None]]
+        self, queue: str, redis: Redis, consumer: str, dispatch: Dispatch, streams: list[str] | None = None
     ) -> None:
         self.queue, self.redis, self.consumer, self.dispatch = queue, redis, consumer, dispatch
-        self.stream = protocol.STREAMS[queue]
+        self.streams = streams or [protocol.STREAMS[queue]]
 
     def ensure_group(self) -> None:
-        """The stream and its group, made once; consumers long gone with nothing pending removed."""
-        try:
-            self.redis.xgroup_create(self.stream, GROUP, id="0", mkstream=True)
-        except ResponseError as e:
-            if "BUSYGROUP" not in str(e):
-                raise
-        for c in self.redis.xinfo_consumers(self.stream, GROUP):
-            if c["pending"] == 0 and c["idle"] > STALE_CONSUMER_MS:
-                self.redis.xgroup_delconsumer(self.stream, GROUP, c["name"])
+        """Each stream and its group, made once; consumers long gone with nothing pending removed."""
+        for stream in self.streams:
+            try:
+                self.redis.xgroup_create(stream, GROUP, id="0", mkstream=True)
+            except ResponseError as e:
+                if "BUSYGROUP" not in str(e):
+                    raise
+            for c in self.redis.xinfo_consumers(stream, GROUP):
+                if c["pending"] == 0 and c["idle"] > STALE_CONSUMER_MS:
+                    self.redis.xgroup_delconsumer(stream, GROUP, c["name"])
 
-    def _next(self) -> tuple[str, dict[str, str] | None, bool] | None:
+    def _next(self) -> tuple[str, str, dict[str, str] | None, bool] | None:
         idle = protocol.CLAIM_IDLE[self.queue]
-        claimed = self.redis.xautoclaim(self.stream, GROUP, self.consumer, idle, start_id="0-0", count=1)
-        if claimed[1]:
-            return claimed[1][0][0], claimed[1][0][1], True
-        got = self.redis.xreadgroup(GROUP, self.consumer, {self.stream: ">"}, count=1, block=BLOCK_MS)
-        return (got[0][1][0][0], got[0][1][0][1], False) if got else None
+        for stream in self.streams:
+            claimed = self.redis.xautoclaim(stream, GROUP, self.consumer, idle, start_id="0-0", count=1)
+            if claimed[1]:
+                return stream, claimed[1][0][0], claimed[1][0][1], True
+        wanted = dict.fromkeys(self.streams, ">")
+        got = self.redis.xreadgroup(GROUP, self.consumer, wanted, count=1, block=BLOCK_MS)  # type: ignore[arg-type]
+        return (got[0][0], got[0][1][0][0], got[0][1][0][1], False) if got else None
 
     def one(self) -> bool:
         """Take and answer one message; False when none came."""
         found = self._next()
         if found is None:
             return False
-        message_id, raw, claimed = found
+        stream, message_id, raw, claimed = found
         if raw:
-            with Heartbeat(self.redis, self.stream, self.consumer, message_id, protocol.HEARTBEAT[self.queue]):
-                self._answer(Message.of(raw), self._deliveries(message_id) if claimed else 1)
-        self.redis.xack(self.stream, GROUP, message_id)
+            with Heartbeat(self.redis, stream, self.consumer, message_id, protocol.HEARTBEAT[self.queue]):
+                self._answer(Message.of(raw), self._deliveries(stream, message_id) if claimed else 1)
+        self.redis.xack(stream, GROUP, message_id)
         return True
 
-    def _deliveries(self, message_id: str) -> int:
-        pending = self.redis.xpending_range(self.stream, GROUP, min=message_id, max=message_id, count=1)
+    def _deliveries(self, stream: str, message_id: str) -> int:
+        pending = self.redis.xpending_range(stream, GROUP, min=message_id, max=message_id, count=1)
         return int(pending[0]["times_delivered"]) if pending else 1
 
     def _answer(self, msg: Message, deliveries: int) -> None:
@@ -95,8 +106,10 @@ class Loop:
             return self._reply(msg, protocol.refused("E_INTERNAL", "This request could not be answered.", 500))
         data: Any = None
         try:
-            data, version = self.dispatch(msg)
-            answer = protocol.ok(data, version)
+            data, version, *ada = self.dispatch(msg)
+            answer = protocol.ok(data, version, *ada)
+        except Forwarded:
+            return
         except Refusal as r:
             answer = protocol.refused(r.code, r.message, r.status, **r.detail)
         except Exception:  # a crash is the caller's E_INTERNAL; the worker goes on

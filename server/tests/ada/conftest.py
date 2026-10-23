@@ -95,9 +95,9 @@ async def vector(engine: AsyncEngine) -> None:
         await admin.close()
 
 
-def _start(queue: str) -> Iterator[Worker]:
+def _start(queue: str, kernel: str | None = None) -> Iterator[Worker]:
     stop = threading.Event()
-    worker = Worker(ADA, queue)
+    worker = Worker(ADA, queue, kernel)
     thread = threading.Thread(target=worker.serve, args=(stop,), daemon=True)
     thread.start()
     yield worker
@@ -111,7 +111,7 @@ def streams(vector: None, monkeypatch: pytest.MonkeyPatch) -> Iterator[Redis]:
     """Fresh streams for the test, and workers that look for messages often."""
     monkeypatch.setattr(loop, "BLOCK_MS", 100)
     redis = Redis.from_url(REDIS_URL, decode_responses=True)
-    redis.delete("ada:sync", "ada:jobs")
+    redis.delete("ada:sync", "ada:jobs", *redis.keys("ada:sync:*"), *redis.keys("ada:jobs:*"))  # each kernel's too
     yield redis
     redis.close()
 
@@ -124,6 +124,20 @@ def worker(streams: Redis) -> Iterator[Worker]:
 @pytest.fixture
 def jobs_worker(streams: Redis) -> Iterator[Worker]:
     yield from _start(JOBS)
+
+
+BETA_KERNEL: str = "3.13.0"  # ada-1-1-beta's: its workers here run the venv's kernel under its name (the routing is
+# what these tests prove; that each kernel's own install answers is proved in Docker, docs/specs/ada-cloud.md 12.10)
+
+
+@pytest.fixture
+def beta_worker(streams: Redis) -> Iterator[Worker]:
+    yield from _start(SYNC, BETA_KERNEL)
+
+
+@pytest.fixture
+def beta_jobs_worker(streams: Redis) -> Iterator[Worker]:
+    yield from _start(JOBS, BETA_KERNEL)
 
 
 def _serve() -> None:

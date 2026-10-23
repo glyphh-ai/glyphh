@@ -16,11 +16,11 @@ from glyphh_postgres import PostgresStore
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from glyphh_ada import limits, orgschema
+from glyphh_ada import limits, orgschema, registry
 from glyphh_ada.errors import Refusal, model_missing
 
 _ACTIVE = """
-    SELECT m.id, m.active_version, v.spec, m.created_at, v.store FROM {s}.models m
+    SELECT m.id, m.active_version, v.spec, m.created_at, v.store, v.ada, v.made_by, v.made_at FROM {s}.models m
     JOIN {s}.spec_versions v ON v.model_id = m.id AND v.version = m.active_version
     WHERE m.name = %s AND m.deleted_at IS NULL
 """
@@ -28,18 +28,22 @@ _LIVE = """
     FROM {s}.models m JOIN {s}.spec_versions v ON v.model_id = m.id AND v.version = m.active_version
     LEFT JOIN {s}.counts c ON c.model = v.store WHERE m.deleted_at IS NULL
 """
-_LIST = "SELECT m.name, m.id, m.active_version, coalesce(c.n, 0), m.created_at" + _LIVE + " ORDER BY m.name"
+_LIST = "SELECT m.name, m.id, m.active_version, coalesce(c.n, 0), m.created_at, v.ada" + _LIVE + " ORDER BY m.name"
 _TOTAL = "SELECT coalesce(sum(c.n), 0)" + _LIVE
 
 
 class Live(NamedTuple):
-    """A live model: its id, active version, that version's spec (JSON), when it was made, the store it reads."""
+    """A live model: its id, active version, that version's spec (JSON), when it was made, the store it reads; the
+    active version's Ada version, and who made that version and when."""
 
     id: uuid.UUID
     version: int
     spec: Any
     made: Any
     store: str
+    ada: str = "ada-1-0"
+    made_by: str = ""
+    made_at: Any = None
 
 
 def q(schema: str, text: str) -> sql.Composed:
@@ -109,7 +113,7 @@ def listing(conn: psycopg.Connection, schema: str) -> list[dict[str, Any]]:
     if not has(conn, schema, "counts"):
         return []
     rows = conn.execute(q(schema, _LIST)).fetchall()
-    keys = ("name", "id", "version", "precedents", "created_at")
+    keys = ("name", "id", "version", "precedents", "created_at", "ada")
     return [dict(zip(keys, r, strict=True)) for r in rows]
 
 
@@ -117,6 +121,17 @@ def count(conn: psycopg.Connection, schema: str, key: str) -> int:
     """The precedents a store holds."""
     held = conn.execute(q(schema, "SELECT n FROM {s}.counts WHERE model = %s"), (key,)).fetchone()
     return int(held[0]) if held else 0
+
+
+def ada_of(found: Live) -> dict[str, Any]:
+    """The model's Ada version, its status and what it should be told (docs/specs/ada-cloud.md, 12.3)."""
+    reg, day = registry.registry(), registry.today()
+    known = reg.find(found.ada)
+    return {
+        "ada": found.ada,
+        "ada_status": known.status(day) if known else "retired",
+        "ada_notice": reg.notice(found.ada, found.made_by, found.made_at, day),
+    }
 
 
 def view(conn: psycopg.Connection, schema: str, name: str) -> dict[str, Any]:
@@ -128,23 +143,30 @@ def view(conn: psycopg.Connection, schema: str, name: str) -> dict[str, Any]:
         "precedents": count(conn, schema, found.store),
         "created_at": found.made,
         "spec": found.spec,
+        **ada_of(found),
     }
 
 
-def create(conn: psycopg.Connection, org: str, name: str, spec_json: Any, author: str) -> dict[str, Any]:
+def create(
+    conn: psycopg.Connection, org: str, name: str, spec_json: Any, author: str, ada: str | None = None
+) -> dict[str, Any]:
+    """Version 1 of a new model, on this Ada version (none named: the latest stable), refused when it may not be
+    chosen."""
+    chosen = registry.registry().choose(ada, registry.today())
+    ada, kernel = chosen.name, chosen.kernel
     spec = parse(spec_json)
     schema = orgschema.ensure(conn, org)
     model_id = uuid.uuid4()
     insert = (
-        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, precedents_at)"
-        " VALUES (%s, 1, %s, 'made', %s, %s, 0)"
+        "INSERT INTO {s}.spec_versions (model_id, version, spec, note, made_by, store, precedents_at, ada, kernel)"
+        " VALUES (%s, 1, %s, 'made', %s, %s, 0, %s, %s)"
     )
     try:
         with conn.transaction():
             conn.execute(
                 q(schema, "INSERT INTO {s}.models (id, name, created_by) VALUES (%s, %s, %s)"), (model_id, name, author)
             )
-            conn.execute(q(schema, insert), (model_id, Jsonb(spec_json), author, model_id.hex))
+            conn.execute(q(schema, insert), (model_id, Jsonb(spec_json), author, model_id.hex, ada, kernel))
             store(conn, schema, model_id.hex, spec.dimension, index=True)  # its partition and HNSW index
             orgschema.fence(conn, schema, org)
     except psycopg.errors.UniqueViolation:

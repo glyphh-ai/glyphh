@@ -99,7 +99,7 @@ async def test_an_import_goes_on_where_its_worker_died(
         f'UPDATE "{schema}".jobs SET state = %s, result = %s WHERE id = %s',
         ("running", Jsonb({"done": 30}), started["id"]),
     )
-    work(other.ctx, Message(str(who.org_id), "shapes", "import", {"job": started["id"]}))
+    work(other.ctx, Message(str(who.org_id), "shapes", "import", {"job": started["id"]}), other)
     done = (await ada.get(f"/v1/jobs/{started['id']}", headers=key)).json()
     assert done["state"] == "done" and done["result"]["recorded"] == 20  # rows 31 to 50
     with pytest.raises(Refusal, match="No such import"):  # import_go for a job that is no import

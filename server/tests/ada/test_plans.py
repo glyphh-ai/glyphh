@@ -62,6 +62,7 @@ async def test_free_is_refused_past_its_month_saying_how_to_read_on(
     said = await refused(ada, auth, "ada_decide", name="shapes", data=shape(3))
     assert (said["code"], said["reason"]) == ("E_LIMIT", "requests")
     used = (await ada.get("/v1/usage", headers=key)).json()
+    assert used.pop("ada")["latest_stable"] == "ada-1-0"  # each Ada version and its models (test_ada_versions.py)
     assert used == {
         "plan": "Free",
         "month": month,

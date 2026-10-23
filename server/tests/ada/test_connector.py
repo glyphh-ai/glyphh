@@ -42,7 +42,7 @@ async def test_claude_builds_a_model_from_a_csv_tunes_it_and_decides(
     imported = data(await tool(ada, auth, "ada_job", id=job["id"], wait_seconds=50))
     assert imported["state"] == "done" and imported["result"]["recorded"] == 160, imported
     listed = await tool(ada, auth, "ada_models")
-    assert text(listed) == "shapes: version 1, 160 precedents"
+    assert text(listed) == "shapes: version 1 on ada-1-0, 160 precedents"
     # One lever, backtested first: fewer neighbours voting
     tried = data(
         await tool(
@@ -66,7 +66,7 @@ async def test_claude_builds_a_model_from_a_csv_tunes_it_and_decides(
     again = await tool(ada, auth, "ada_activate", name="shapes", version=2)
     assert data(again) == {"version": 2, "active": True, "job": None}
     versions = await tool(ada, auth, "ada_versions", name="shapes")
-    assert text(versions).splitlines()[1].startswith("2 (active): k3, by ")
+    assert text(versions).splitlines()[1].startswith("2 (active) on ada-1-0: k3, by ")
     decided = await tool(ada, auth, "ada_decide", name="shapes", data=shape(7, "r", 2))  # red and small: good
     answer = data(decided)
     assert answer["outcome"] == "good" and answer["version"] == 2 and answer["model"] == "shapes"
@@ -93,7 +93,8 @@ async def test_every_ada_tool_answers_as_the_api_does(
     assert text(ungraded).endswith("its outcome taken away.")
     assert "Forgot" in text(await tool(ada, auth, "ada_forget", name="shapes", id=one["id"]))
     model = await tool(ada, auth, "ada_model", name="shapes")
-    assert text(model) == "shapes: version 1, 60 precedents." and data(model)["spec"]["name"] == "shapes"
+    beta = " ada-1-1-beta is available to try (beta)."
+    assert text(model) == "shapes: version 1 on ada-1-0, 60 precedents." + beta and data(model)["ada"] == "ada-1-0"
     query = await tool(ada, auth, "ada_query", name="shapes", data=shape(7, "g", 9))
     assert data(query)["top"] == "good" and text(query).startswith("good at confidence")
     unsure = await tool(ada, auth, "ada_query", name="shapes", data=shape(7, "z", 9), clearance=0.1)
