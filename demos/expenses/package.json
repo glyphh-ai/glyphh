@@ -1,0 +1,16 @@
+{
+  "name": "ada-expenses-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ada, live: expense approvals from your own precedents, on Ada Cloud through the Glyphh SDK.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@glyphh-ai/glyphh": "3.3.0"
+  }
+}
