@@ -133,6 +133,44 @@ describe('GET /auth/callback', () => {
     expect(res.headers.get('location')).toBe('/login?failed=denied');
   });
 
+  describe('with the website’s campaign cookie', () => {
+    async function signInWithSource(ctx: ReturnType<typeof setup>, value: string) {
+      const login = await ctx.request('/auth/login?returnTo=/');
+      const state = new URL(login.headers.get('location')!).searchParams.get('state')!;
+      const cookie = `${cookiesFrom(login)}; glyphh_src=${encodeURIComponent(value)}`;
+      return ctx.request(`/auth/callback?code=good-code&state=${state}`, { headers: { cookie } });
+    }
+
+    it('sends its tags to the server as the person, and signs them in', async () => {
+      const ctx = setup();
+      const tags = { utm_source: 'reddit', utm_campaign: 'launch', landing: '/code' };
+      const res = await signInWithSource(ctx, JSON.stringify(tags));
+      expect(res.headers.get('location')).toBe('/');
+      const sent = ctx.server.state.seen.find((r) => r.path === '/v1/me/source')!;
+      expect(sent.method).toBe('POST');
+      expect(sent.headers.get('authorization')).toBe('Bearer access-1');
+      expect(JSON.parse(sent.body)).toEqual(tags);
+    });
+
+    it.each(['not json', '[1,2]', 'null'])('sends nothing for a cookie that is not tags: %s', async (value) => {
+      const ctx = setup();
+      const res = await signInWithSource(ctx, value);
+      expect(res.headers.get('location')).toBe('/');
+      expect(ctx.server.state.seen.some((r) => r.path === '/v1/me/source')).toBe(false);
+    });
+
+    it('signs the person in when the server can’t take the tags', async () => {
+      const server = fakeServer();
+      const failing: typeof fetch = (input, init) =>
+        String(input).endsWith('/v1/me/source') ? Promise.reject(new Error('down')) : server.fetch(input as Request, init);
+      const app = createApp({ config: testConfig, fetch: failing, now: () => 1_000_000 });
+      const ctx = { ...setup(), app, server, request: (path: string, init: RequestInit = {}) => app.request(`${testConfig.platformUrl}${path}`, init) };
+      const res = await signInWithSource(ctx, '{"utm_source":"x"}');
+      expect(res.headers.get('location')).toBe('/');
+      expect(res.headers.getSetCookie().some((c) => c.startsWith('__Host-glyphh_session='))).toBe(true);
+    });
+  });
+
   it('reports the OAuth error when the code is refused', async () => {
     const res = await signIn(setup(), { code: 'bad-code' });
     expect(res.headers.get('location')).toBe('/login?failed=invalid_grant');

@@ -21,6 +21,9 @@ const sessionMaxAgeSeconds = 30 * 24 * 3600;
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+/** The website's campaign cookie (web middleware.js), on .glyphh.ai, so this site receives it too. */
+const sourceCookie = 'glyphh_src';
+
 /** Only a path on this platform may be returned to; anything else goes home. */
 export function safeReturnTo(value: string | undefined): string {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return '/';
@@ -94,13 +97,42 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
     const code = c.req.query('code');
     if (!code) return failed('refused');
 
+    let tokens: Tokens;
     try {
-      writeSession(c, await exchangeCode(config, fetcher, code, flow.verifier, now()));
+      tokens = await exchangeCode(config, fetcher, code, flow.verifier, now());
     } catch (error) {
       return failed(error instanceof OAuthError ? error.error : 'unreachable');
     }
+    writeSession(c, tokens);
+    await sendSource(c, tokens);
     return c.redirect(flow.returnTo, 302);
   });
+
+  /**
+   * Where a sign-up came from: the website's first-party `glyphh_src` cookie on .glyphh.ai (its campaign tags, kept 90
+   * days), passed to the server as a sign-in finishes; the server keeps it on an account made within the last day
+   * only. Best effort: a sign-in never waits on it to succeed.
+   */
+  async function sendSource(c: Context, tokens: Tokens) {
+    const raw = getCookie(c, sourceCookie);
+    if (!raw) return;
+    let tags: unknown;
+    try {
+      tags = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (!tags || typeof tags !== 'object' || Array.isArray(tags)) return;
+    try {
+      await fetcher(`${config.serverUrl}/v1/me/source`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${tokens.accessToken}`, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(tags),
+      });
+    } catch {
+      // The sign-in goes on: only the source is lost.
+    }
+  }
 
   app.post('/auth/logout', async (c) => {
     if (!sameOrigin(c)) return c.json(errorBody('E_FORBIDDEN', 'That request did not come from this site.'), 403);

@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { feature } from '../src/api/plans.js';
+import { staffAnswers, staffMe } from '../src/test/adminData.js';
 import * as fixtures from '../src/test/fixtures.js';
 import { mountAda } from './fake-ada.js';
 
@@ -32,6 +33,14 @@ const state = structuredClone(data);
 state.me.ada_cloud = adaCloud;
 if (adaCloud) state.me.plan = data.plans.find((plan) => plan.name === state.me.plan.name) ?? state.me.plan;
 const cloudUsage = adaCloud ? mountAda(app, port, () => state.me.plan.name) : () => null;
+// FAKE_STAFF=on signs in as Glyphh's staff (GLYPHH_STAFF_EMAILS): the staff view opens, its pages answered from the
+// fixtures, its actions accepted and changing nothing.
+if (process.env.FAKE_STAFF === 'on') {
+  Object.assign(state.me, { email: staffMe.email, staff: true });
+  for (const [path, answer] of Object.entries(staffAnswers)) app.get(`/v1${path}`, (c) => c.json(answer));
+  app.post('/v1/admin/events/*', (c) => c.json({ acknowledged: 1 }));
+  app.on(['POST', 'DELETE'], '/v1/admin/orgs/:id/:action', (c) => (c.req.param('action') === 'suspend' ? c.body(null, 204) : c.json({ message: 'Done (fake server).' })));
+}
 let nextKey = 10;
 let nextSelf = 10;
 let nextMachine = 10;

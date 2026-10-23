@@ -1,4 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { adminRoutes } from '@/admin/routes';
+import { StaffHome } from '@/admin/StaffGate';
 import { AdaOnly, AdaOr, OffOnly } from '@/components/AdaGate';
 import { HostedOnly } from '@/components/HostedOnly';
 import { RequireSession } from '@/components/RequireSession';
@@ -73,7 +75,11 @@ export const routes: RouteObject[] = [
       },
       {
         index: true,
-        element: <AdaOr ada={<AdaHome />} off={<HomePage />} />,
+        element: (
+          <StaffHome>
+            <AdaOr ada={<AdaHome />} off={<HomePage />} />
+          </StaffHome>
+        ),
         handle: { crumbs: [{ label: 'Runtime' }, { label: 'Runtimes' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Home' }] },
       },
       {
@@ -167,6 +173,8 @@ export const routes: RouteObject[] = [
       </RequireSession>
     ),
   },
+  // Glyphh's staff view (his order, 2026-10-23): staff open it when they sign in.
+  adminRoutes,
   { path: 'account', element: <Moved to="/settings/profile" /> },
   { path: 'billing', element: <Moved to="/settings/billing" /> },
 

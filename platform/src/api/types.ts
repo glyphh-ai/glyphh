@@ -98,6 +98,8 @@ export type Me = {
   ada_cloud?: boolean;
   /** Ada Cloud's use against the plan; null (or missing) while it is off. */
   cloud?: CloudUsage | null;
+  /** Glyphh's staff (the server's GLYPHH_STAFF_EMAILS): the platform opens the staff view. Missing: not staff. */
+  staff?: boolean;
 };
 
 export type Install = {

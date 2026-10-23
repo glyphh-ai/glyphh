@@ -1,4 +1,5 @@
 import { Outlet, useMatches, useParams } from 'react-router';
+import { StaffNav } from '@/admin/StaffGate';
 import { useAdaCloud } from '@/api/ada';
 import { useHosting } from '@/api/queries';
 import { AppShell } from '@/layout/AppShell/AppShell';
@@ -30,7 +31,15 @@ export function MainLayout() {
   // Ada Cloud on or off, as the server says: nothing until it is read, so neither flashes for the other.
   const ada = useAdaCloud();
   return (
-    <AppShell crumbs={useCrumbs()} sidebar={<Sidebar footer={<UserMenu />}>{ada === undefined ? null : ada ? <AdaNav /> : <RuntimeNav />}</Sidebar>}>
+    <AppShell
+      crumbs={useCrumbs()}
+      sidebar={
+        <Sidebar footer={<UserMenu />}>
+          {ada === undefined ? null : ada ? <AdaNav /> : <RuntimeNav />}
+          <StaffNav />
+        </Sidebar>
+      }
+    >
       <Outlet />
     </AppShell>
   );
