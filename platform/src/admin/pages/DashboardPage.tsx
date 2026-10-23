@@ -8,7 +8,7 @@ import { money } from '@/lib/format';
 import { Button, Card, LoadingCard, Select } from '@/ui';
 import { PrivacyNote } from '../AdminLayout';
 import { Alerts, n, ms, Stat } from '../parts';
-import { allZones, change, dayLabel, lastPulled, share } from '../traffic';
+import { allZones, change, dayLabel, GitHubStats, lastPulled, share } from '../traffic';
 import styles from '../admin.module.css';
 
 const periods = [
@@ -19,7 +19,10 @@ const periods = [
 
 const against = (before: number, delta: number | null, days: number) => `${change(delta)} on the ${days} days before (${n(before)})`;
 
-/** Visitors, page views and the visitor-to-sign-up rate across Glyphh's own sites, from Cloudflare (his order, 2026-10-23). */
+/**
+ * Visitors, page views and the visitor-to-sign-up rate across Glyphh's own sites, from Cloudflare (his order, 2026-10-23);
+ * beside them glyphh-ai/glyphh's unique visitors and unique cloners from GitHub (his order, 2026-10-23).
+ */
 function TrafficSection({ days }: { days: number }) {
   const traffic = useAdminTraffic(days);
   const data = traffic.data;
@@ -38,13 +41,16 @@ function TrafficSection({ days }: { days: number }) {
       {traffic.isPending && <LoadingCard lines={2} />}
       <ApiErrorNotice error={traffic.error} />
       {data && !data.connected && <p className={styles.meta}>Cloudflare is not connected.</p>}
+      {data?.connected && <p className={styles.meta}>All of Glyphh’s domains together; visitors are Cloudflare’s daily unique visitors, added up. {lastPulled(data)}.</p>}
+      {data && (
+        <div className={styles.stats}>
+          {data.connected && period(data.last_7)}
+          {data.connected && period(data.last_30)}
+          <GitHubStats github={data.github} />
+        </div>
+      )}
       {data?.connected && (
         <>
-          <p className={styles.meta}>All of Glyphh’s domains together; visitors are Cloudflare’s daily unique visitors, added up. {lastPulled(data)}.</p>
-          <div className={styles.stats}>
-            {period(data.last_7)}
-            {period(data.last_30)}
-          </div>
           <Chart
             kind="line"
             label="Visitors and page views by day"

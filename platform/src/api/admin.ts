@@ -212,7 +212,21 @@ export type TrafficPeriod = {
   sign_ups: number;
   conversion: number | null;
 };
-/** Glyphh's own sites' traffic, from Cloudflare as the server's hourly pull kept it. */
+export type GitHubCounts = { views: number; view_uniques: number; clones: number; clone_uniques: number };
+export type GitHubTop = { key: string; count: number; uniques: number };
+/** A public repository's traffic from GitHub: its last 14 days as GitHub counts them, and each day kept since tracking began. */
+export type GitHubRepo = {
+  name: string;
+  pulled_at: IsoDate;
+  last_14: GitHubCounts;
+  total: GitHubCounts;
+  since: string | null;
+  series: Array<GitHubCounts & { day: string }>;
+  referrers: GitHubTop[];
+  paths: GitHubTop[];
+};
+export type GitHubTraffic = { connected: boolean; repos: GitHubRepo[] };
+/** Glyphh's own sites' traffic, from Cloudflare as the server's hourly pull kept it, and its public repositories' from GitHub. */
 export type Traffic = {
   connected: boolean;
   pulled_at: IsoDate | null;
@@ -221,6 +235,7 @@ export type Traffic = {
   last_7: TrafficPeriod;
   last_30: TrafficPeriod;
   zones: TrafficZone[];
+  github: GitHubTraffic;
 };
 
 /** A query string from the values that are set. */

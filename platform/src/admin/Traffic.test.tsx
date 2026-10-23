@@ -31,10 +31,43 @@ describe('Traffic on the dashboard', () => {
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['/admin/traffic', '/admin/traffic']);
   });
 
-  it('says when Cloudflare is not connected', async () => {
+  it('shows the repository’s unique visitors and unique cloners from GitHub beside the conversion', async () => {
+    staff();
+    renderApp('/admin');
+    expect(await screen.findByText('glyphh-ai/glyphh: unique visitors, last 14 days')).toBeInTheDocument();
+    expect(screen.getByText('310')).toBeInTheDocument();
+    expect(screen.getByText('520 since 9 Oct (daily, added up)')).toBeInTheDocument();
+    expect(screen.getByText('glyphh-ai/glyphh: unique cloners, last 14 days')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getByText('77 since 9 Oct (daily, added up)')).toBeInTheDocument();
+    const line = screen.getByRole('img', { name: 'glyphh-ai/glyphh: unique cloners by day' });
+    expect(line.querySelector('polyline')?.getAttribute('points')).toBe('0.0,9.0 160.0,2.0');
+    expect(screen.getByRole('img', { name: 'glyphh-ai/glyphh: unique visitors by day' })).toBeInTheDocument();
+  });
+
+  it('says when Cloudflare is not connected, and still shows GitHub', async () => {
     staff({ ...fake.traffic, connected: false, zones: [], pulled_at: null });
     renderApp('/admin');
     expect(await screen.findByText('Cloudflare is not connected.')).toBeInTheDocument();
+    expect(screen.getByText('glyphh-ai/glyphh: unique visitors, last 14 days')).toBeInTheDocument();
+    expect(screen.queryByText('Visitors, last 7 days')).not.toBeInTheDocument();
+  });
+
+  it('says when GitHub is not connected or not pulled yet, and when no day is kept', async () => {
+    staff({ ...fake.traffic, github: { connected: false, repos: [] } });
+    const first = renderApp('/admin');
+    expect(await screen.findByText('GitHub is not connected.')).toBeInTheDocument();
+    first.unmount();
+    staff({ ...fake.traffic, github: { connected: true, repos: [] } });
+    const second = renderApp('/admin');
+    expect(await screen.findByText('Not pulled yet.')).toBeInTheDocument();
+    second.unmount();
+    const repo = { ...fake.traffic.github.repos[0]!, since: null, series: [{ day: '2026-10-23', views: 0, view_uniques: 0, clones: 0, clone_uniques: 0 }] };
+    staff({ ...fake.traffic, github: { connected: true, repos: [repo] } });
+    renderApp('/admin');
+    expect(await screen.findAllByText('No days kept yet')).toHaveLength(2);
+    const line = screen.getByRole('img', { name: 'glyphh-ai/glyphh: unique visitors by day' });
+    expect(line.querySelector('polyline')?.getAttribute('points')).toBe('0.0,30.0');
   });
 });
 

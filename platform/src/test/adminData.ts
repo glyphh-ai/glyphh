@@ -266,6 +266,24 @@ export const traffic: Traffic = {
       rum_referrers: [{ host: 'glyphh.app', key: 'www.google.com', n: 10 }],
     },
   ],
+  github: {
+    connected: true,
+    repos: [
+      {
+        name: 'glyphh-ai/glyphh',
+        pulled_at: '2026-10-23T11:05:00Z',
+        last_14: { views: 900, view_uniques: 310, clones: 120, clone_uniques: 45 },
+        total: { views: 1_400, view_uniques: 520, clones: 200, clone_uniques: 77 },
+        since: '2026-10-09',
+        series: [
+          { day: '2026-10-22', views: 60, view_uniques: 20, clones: 8, clone_uniques: 3 },
+          { day: '2026-10-23', views: 70, view_uniques: 25, clones: 9, clone_uniques: 4 },
+        ],
+        referrers: [{ key: 'Google', count: 200, uniques: 80 }],
+        paths: [{ key: '/glyphh-ai/glyphh', count: 600, uniques: 250 }],
+      },
+    ],
+  },
 };
 
 /** Each GET of the staff view and its answer, for the page tests' fake server and the local one (dev/fake-server.ts). */
