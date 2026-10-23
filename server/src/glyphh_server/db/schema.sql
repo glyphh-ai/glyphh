@@ -695,6 +695,39 @@ CREATE TABLE IF NOT EXISTS traffic_tops (
     PRIMARY KEY (zone, host, day, kind, key)
 );
 
+-- github_traffic_*: Glyphh's public repositories' traffic from GitHub (ops/traffic/github.py), pulled by the tick each
+-- hour: each repository's last 14 days as last pulled, each day's views and clones (kept beyond GitHub's 14 days),
+-- each day's pull of its popular referrers and paths. Staff only (the policies at the end).
+CREATE TABLE IF NOT EXISTS github_traffic_repos (
+    repo TEXT NOT NULL,
+    pulled_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    views BIGINT DEFAULT 0 NOT NULL,
+    view_uniques BIGINT DEFAULT 0 NOT NULL,
+    clones BIGINT DEFAULT 0 NOT NULL,
+    clone_uniques BIGINT DEFAULT 0 NOT NULL,
+    PRIMARY KEY (repo)
+);
+
+CREATE TABLE IF NOT EXISTS github_traffic_days (
+    repo TEXT NOT NULL,
+    day DATE NOT NULL,
+    views BIGINT DEFAULT 0 NOT NULL,
+    view_uniques BIGINT DEFAULT 0 NOT NULL,
+    clones BIGINT DEFAULT 0 NOT NULL,
+    clone_uniques BIGINT DEFAULT 0 NOT NULL,
+    PRIMARY KEY (repo, day)
+);
+
+CREATE TABLE IF NOT EXISTS github_traffic_tops (
+    repo TEXT NOT NULL,
+    pulled_on DATE NOT NULL,
+    kind TEXT NOT NULL,
+    key TEXT NOT NULL,
+    count BIGINT DEFAULT 0 NOT NULL,
+    uniques BIGINT DEFAULT 0 NOT NULL,
+    PRIMARY KEY (repo, pulled_on, kind, key)
+);
+
 -- orgs.admin_user_id and users.org_id point at each other, so the org's admin is added once both tables exist.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_constraint WHERE conname = 'orgs_admin_user_id_fkey') THEN
@@ -845,3 +878,15 @@ ALTER TABLE traffic_tops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE traffic_tops FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS staff ON traffic_tops;
 CREATE POLICY staff ON traffic_tops USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);
+ALTER TABLE github_traffic_repos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_traffic_repos FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS staff ON github_traffic_repos;
+CREATE POLICY staff ON github_traffic_repos USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);
+ALTER TABLE github_traffic_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_traffic_days FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS staff ON github_traffic_days;
+CREATE POLICY staff ON github_traffic_days USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);
+ALTER TABLE github_traffic_tops ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_traffic_tops FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS staff ON github_traffic_tops;
+CREATE POLICY staff ON github_traffic_tops USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);

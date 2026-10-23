@@ -6,8 +6,10 @@ held past their plan stopped; and the hosting due reported to Stripe's meter (op
 (GLYPHH_ADA_CLOUD), its reads counted in Redis added to ada_usage (glyphh_ada/requests.py) and its models' days to
 ada_model_days (glyphh_ada/days.py), and the reads past a metered plan's month reported to Stripe's ada_requests meter
 (ops/billing/ada_meter.py). With a Cloudflare token (GLYPHH_CLOUDFLARE_API_TOKEN), once an hour, Glyphh's own sites'
-traffic pulled from Cloudflare's analytics (ops/traffic/pull.py). Always first, its heartbeat (obs/tick.py) and the
-ops events logged since the last tick moved to Postgres (obs/events_store.py), for the staff view.
+traffic pulled from Cloudflare's analytics (ops/traffic/pull.py); with a GitHub token (GLYPHH_GITHUB_TRAFFIC_TOKEN),
+once an hour, its public repositories' views and clones pulled from GitHub (ops/traffic/github.py). Always first, its
+heartbeat (obs/tick.py) and the ops events logged since the last tick moved to Postgres (obs/events_store.py), for
+the staff view.
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 in a transaction it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -33,12 +35,14 @@ from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.enterprise import expire
 from glyphh_server.ops.fly import Fly
+from glyphh_server.ops.github_traffic import GitHub
 from glyphh_server.ops.held import hold
 from glyphh_server.ops.idle import stop_idle
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.metering import meter
 from glyphh_server.ops.runtime_keys import push_expired
 from glyphh_server.ops.telemetry.retention import purge
+from glyphh_server.ops.traffic import github as github_traffic
 from glyphh_server.ops.traffic import pull as traffic
 
 log = logging.getLogger("glyphh.runtime")
@@ -61,6 +65,7 @@ async def tend(
     fly: Fly | None,
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None = None,
+    github: GitHub | None = None,
 ) -> bool:
     """One tick, if no other process is ticking: answers whether it ran. The lock is the held transaction's, so it
     goes when the transaction ends however it ends (through a connection pooler too), never left behind on a
@@ -69,7 +74,7 @@ async def tend(
         if not (await held.execute(text("SELECT pg_try_advisory_xact_lock(:lock)"), {"lock": TICK})).scalar_one():
             log.info("tick skipped: another process is ticking")
             return False
-        await _tick(engine, hub, settings, step, fly, stripe, cloudflare)
+        await _tick(engine, hub, settings, step, fly, stripe, cloudflare, github)
     return True
 
 
@@ -95,6 +100,7 @@ async def _tick(
     fly: Fly | None,
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None,
+    github: GitHub | None,
 ) -> None:
     """With hosting on, the month tallied and metered; the keys that expired since the last tick (with a tick to spare)
     taken off their runtimes, the Enterprise grants past their date ended (with Stripe, their hosting due reported
@@ -120,6 +126,9 @@ async def _tick(
             parts.append(("ada meter", lambda: ada_meter.report(engine, stripe, settings.stripe_price_ada)))
     if cloudflare is not None:
         parts.append(("traffic", lambda: traffic.hourly(engine, hub.redis, cloudflare)))
+    if github is not None:
+        listed = github_traffic.repos(settings.github_traffic_repos)
+        parts.append(("github traffic", lambda: github_traffic.hourly(engine, hub.redis, github, listed)))
     await _each(parts)
 
 

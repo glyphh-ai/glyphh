@@ -53,7 +53,20 @@ class StaffSettings(BaseSettings):
         return frozenset(e.strip().lower() for e in self.staff_emails.split(",") if e.strip())
 
 
-class Settings(AdaCloudSettings, StaffSettings):
+class TrafficSettings(BaseSettings):
+    """The staff view's traffic, pulled each hour by the tick: Glyphh's own sites' from Cloudflare (ops/traffic/pull.py)
+    and its public repositories' from GitHub (ops/traffic/github.py). Each token unset, its part says it is not
+    connected."""
+
+    # A read-only Cloudflare API token with Zone Analytics on the account's zones.
+    cloudflare_api_token: str = ""
+    # A GitHub token that may read each repository's traffic (fine-grained: Administration read); the repositories are
+    # owner/name, comma-separated.
+    github_traffic_token: str = ""
+    github_traffic_repos: str = "glyphh-ai/glyphh"
+
+
+class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
@@ -123,9 +136,6 @@ class Settings(AdaCloudSettings, StaffSettings):
     # Server-side logging (rrotor's RROTOR_SERVER_LOGS=on): days a runtime's logs, audit events, metric points and
     # spans are kept before the minute tick purges them. One for every plan.
     telemetry_retention_days: int = Field(7, ge=1, le=90)
-    # Cloudflare's analytics of Glyphh's own sites, for the staff view's traffic (ops/traffic.py): a read-only API token
-    # with Zone Analytics on the account's zones. Without it the traffic view says it is not connected.
-    cloudflare_api_token: str = ""
 
     @field_validator("database_url")
     @classmethod

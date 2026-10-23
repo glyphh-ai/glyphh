@@ -1,17 +1,27 @@
 """The staff view's traffic, read from what the hourly pull kept: each zone's and hostname's days, its tops (the
 account's own sites left out of referrers), what its plan allowed, and the last 7 and 30 days against the period
-before, with the sign-ups in them. Not connected without a Cloudflare token."""
+before, with the sign-ups in them. Not connected without a Cloudflare token. And the public repositories' views and
+clones from GitHub, the last 14 days and since tracking began."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import Date, cast, delete, func, select
+from sqlalchemy import Date, cast, delete, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.admin import traffic as admin_traffic
+from glyphh_server.admin.github_traffic import HISTORY
 from glyphh_server.admin.traffic import Point, traffic
-from glyphh_server.models import TrafficDay, TrafficTop, TrafficZone, User
+from glyphh_server.models import (
+    GitHubTrafficDay,
+    GitHubTrafficRepo,
+    GitHubTrafficTop,
+    TrafficDay,
+    TrafficTop,
+    TrafficZone,
+    User,
+)
 from glyphh_server.ops.traffic import store
 from tests.admin.conftest import Admin
 
@@ -101,11 +111,51 @@ async def test_the_summary_sets_visitors_against_the_period_before_and_sign_ups(
     assert week["conversion"] == round(week["sign_ups"] / 140, 4)
 
 
+GITHUB_TABLES = (GitHubTrafficRepo, GitHubTrafficDay, GitHubTrafficTop)
+
+
+async def test_staff_see_the_repositorys_views_and_clones_last_14_days_and_since_tracking_began(
+    admin: Admin, engine: AsyncEngine
+) -> None:
+    repo = "glyphh-ai/glyphh"
+    counts = {"views": 30, "view_uniques": 9, "clones": 6, "clone_uniques": 4}
+    async with engine.begin() as conn:
+        for table in GITHUB_TABLES:
+            await conn.execute(delete(table))
+        await conn.execute(insert(GitHubTrafficRepo).values(repo=repo, pulled_at=AT, **counts))
+        days = [TODAY - timedelta(days=400), TODAY - timedelta(days=1), TODAY]
+        await conn.execute(insert(GitHubTrafficDay).values([{"repo": repo, "day": d, **counts} for d in days]))
+        tops = [
+            (TODAY - timedelta(days=1), "referrer", "old.example", 99),
+            (TODAY, "referrer", "github.com", 5),
+            (TODAY, "referrer", "Google", 8),
+            (TODAY, "path", "/glyphh-ai/glyphh", 20),
+        ]
+        rows = [
+            {"repo": repo, "pulled_on": on, "kind": k, "key": key, "count": n, "uniques": 1} for on, k, key, n in tops
+        ]
+        await conn.execute(insert(GitHubTrafficTop).values(rows))
+    found = (await admin.get("/traffic", days=7)).json()["github"]
+    assert found["connected"] is False  # no token in the suite's settings
+    (r,) = found["repos"]
+    assert r["name"] == repo and r["pulled_at"].startswith("2026-10-23T12:00")
+    assert r["last_14"] == counts and r["since"] == str(TODAY - timedelta(days=400))
+    assert r["total"] == {k: 3 * n for k, n in counts.items()}
+    assert len(r["series"]) == HISTORY and r["series"][0] == {
+        "day": str(TODAY - timedelta(days=HISTORY - 1)),
+        **dict.fromkeys(counts, 0),
+    }
+    assert r["series"][-1] == {"day": str(TODAY), **counts}
+    assert [t["key"] for t in r["referrers"]] == ["Google", "github.com"]  # the latest pull's, the most first
+    assert r["paths"] == [{"key": "/glyphh-ai/glyphh", "count": 20, "uniques": 1}]
+
+
 async def test_with_nothing_pulled_there_is_nothing_to_compare(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
-        for table in (TrafficZone, TrafficDay, TrafficTop):
+        for table in (TrafficZone, TrafficDay, TrafficTop, *GITHUB_TABLES):
             await conn.execute(delete(table))
-        found = await traffic(conn, True, 30, TODAY)
+        found = await traffic(conn, True, 30, TODAY, github_connected=True)
+    assert found.github.connected and found.github.repos == []
     assert found.connected and found.pulled_at is None and found.zones == []
     assert found.last_7.visitors == 0 and found.last_7.visitors_change is None and found.last_7.conversion is None
     assert Point(day=TODAY).cached_share is None
