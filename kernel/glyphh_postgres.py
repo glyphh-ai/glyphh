@@ -46,6 +46,10 @@ except ImportError:  # pragma: no cover - the kernel without its Postgres extra
     psycopg = None  # type: ignore[assignment]
 
 _SCHEMA = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
+# The layout of the tables above. Every kernel release that reads the same STORE_FORMAT reads and writes the same
+# stores, which is what lets a cloud model move between Ada versions (a re-encode reads the old store with the new
+# kernel) and roll back. A release that changes the layout bumps it, is a major release, and reads the one before.
+STORE_FORMAT = 1
 EF_SEARCH_MAX = 1000  # pgvector's ceiling on hnsw.ef_search; a larger shortlist scans on (iterative_scan)
 HNSW_M, HNSW_EF_CONSTRUCTION = 64, 400  # the index's graph: see PostgresStore
 
