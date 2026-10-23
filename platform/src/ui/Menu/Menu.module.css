@@ -38,6 +38,13 @@
   min-width: 228px;
 }
 
+/* A phone has no room beside the menu (the account menu's Theme ran off the screen): the submenu opens over it. */
+@media (max-width: 520px) {
+  .subPanel {
+    left: 0;
+  }
+}
+
 .item {
   display: flex;
   align-items: center;

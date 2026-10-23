@@ -3,6 +3,8 @@
   flex-direction: column;
   height: 100%;
   padding: var(--space-4) var(--space-3);
+  /* Clear of an iPhone's home indicator. */
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
 }
 
 .nav {
@@ -69,7 +71,9 @@
   color: var(--text);
 }
 
+/* Pinned: the nav above scrolls when it runs long, the account menu never leaves the rail. */
 .footer {
+  flex: none;
   margin-top: 10px;
   padding-top: var(--space-3);
   border-top: 1px solid var(--line);
