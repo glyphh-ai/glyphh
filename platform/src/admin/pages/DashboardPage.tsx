@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAdminDashboard, useAdminInfra } from '@/api/admin';
+import { Link } from 'react-router';
+import { useAdminDashboard, useAdminInfra, useAdminTraffic, type TrafficPeriod } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { Chart } from '@/components/Chart';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -7,6 +8,7 @@ import { money } from '@/lib/format';
 import { Button, Card, LoadingCard, Select } from '@/ui';
 import { PrivacyNote } from '../AdminLayout';
 import { Alerts, n, ms, Stat } from '../parts';
+import { allZones, change, dayLabel, lastPulled, share } from '../traffic';
 import styles from '../admin.module.css';
 
 const periods = [
@@ -15,8 +17,48 @@ const periods = [
   { value: '90', label: 'Last 90 days' },
 ];
 
-/** "2026-10-23" as "23 Oct". */
-const dayLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const against = (before: number, delta: number | null, days: number) => `${change(delta)} on the ${days} days before (${n(before)})`;
+
+/** Visitors, page views and the visitor-to-sign-up rate across Glyphh's own sites, from Cloudflare (his order, 2026-10-23). */
+function TrafficSection({ days }: { days: number }) {
+  const traffic = useAdminTraffic(days);
+  const data = traffic.data;
+  const period = (p: TrafficPeriod) => (
+    <>
+      <Stat label={`Visitors, last ${p.days} days`} value={n(p.visitors)} note={against(p.previous_visitors, p.visitors_change, p.days)} />
+      <Stat label={`Page views, last ${p.days} days`} value={n(p.page_views)} note={against(p.previous_page_views, p.page_views_change, p.days)} />
+      <Stat label={`Visitor to sign-up, last ${p.days} days`} value={share(p.conversion)} note={`${n(p.sign_ups)} sign-ups`} />
+    </>
+  );
+  return (
+    <Card>
+      <h2 className={styles.cardTitle}>
+        <Link to="/admin/traffic">Traffic</Link>
+      </h2>
+      {traffic.isPending && <LoadingCard lines={2} />}
+      <ApiErrorNotice error={traffic.error} />
+      {data && !data.connected && <p className={styles.meta}>Cloudflare is not connected.</p>}
+      {data?.connected && (
+        <>
+          <p className={styles.meta}>All of Glyphh’s domains together; visitors are Cloudflare’s daily unique visitors, added up. {lastPulled(data)}.</p>
+          <div className={styles.stats}>
+            {period(data.last_7)}
+            {period(data.last_30)}
+          </div>
+          <Chart
+            kind="line"
+            label="Visitors and page views by day"
+            labels={allZones(data.zones).map((d) => dayLabel(d.day))}
+            series={[
+              { label: 'Visitors', data: allZones(data.zones).map((d) => d.uniques) },
+              { label: 'Page views', data: allZones(data.zones).map((d) => d.page_views) },
+            ]}
+          />
+        </>
+      )}
+    </Card>
+  );
+}
 
 /** The staff view's landing: alerts first, then sign-ups, use, revenue and the plan mix, day by day. */
 export function DashboardPage() {
@@ -96,6 +138,7 @@ export function DashboardPage() {
               <Chart kind="bar" label="Paid conversions by day" labels={labels} series={[{ label: 'Conversions', data: data.series.map((d) => d.conversions) }]} />
             </Card>
           </div>
+          <TrafficSection days={days} />
           <PlanMixCard plans={data.money.plans} />
         </>
       )}

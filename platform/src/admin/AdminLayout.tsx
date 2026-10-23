@@ -79,6 +79,9 @@ function AdminNav() {
         <NavItem to="/admin/plans" icon="card">
           Plans
         </NavItem>
+        <NavItem to="/admin/traffic" icon="eye">
+          Traffic
+        </NavItem>
         <NavItem to="/admin/marketing" icon="flag">
           Marketing links
         </NavItem>
