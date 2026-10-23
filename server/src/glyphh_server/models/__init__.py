@@ -30,7 +30,14 @@ from glyphh_server.models.runtime_key import RuntimeKey
 from glyphh_server.models.staff import SEVERITIES, AdminAudit, OpsEvent
 from glyphh_server.models.telemetry import TelemetryLog, TelemetryMetric, TelemetrySpan
 from glyphh_server.models.token import Token
-from glyphh_server.models.traffic import TrafficDay, TrafficTop, TrafficZone
+from glyphh_server.models.traffic import (
+    GitHubTrafficDay,
+    GitHubTrafficRepo,
+    GitHubTrafficTop,
+    TrafficDay,
+    TrafficTop,
+    TrafficZone,
+)
 from glyphh_server.models.user import ROLES, User
 
 __all__ = [
@@ -60,6 +67,9 @@ __all__ = [
     "DeviceCode",
     "FlyRate",
     "GitHubInstallation",
+    "GitHubTrafficDay",
+    "GitHubTrafficRepo",
+    "GitHubTrafficTop",
     "Identity",
     "Install",
     "Invite",

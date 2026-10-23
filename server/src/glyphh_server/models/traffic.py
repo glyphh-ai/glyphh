@@ -1,6 +1,7 @@
 """Glyphh's own sites' traffic, as Cloudflare's analytics give it (ops/traffic.py), for the staff view: each zone the
 token sees and what its plan let the last pull have, each day's numbers by zone and host, and each day's tops
-(countries, pages, referrers). Pulled by the tick each hour, so a page load never calls Cloudflare. Staff only."""
+(countries, pages, referrers); and Glyphh's public repositories' views and clones from GitHub (ops/traffic/github.py).
+Pulled by the tick each hour, so a page load never calls Cloudflare or GitHub. Staff only."""
 
 from datetime import date, datetime
 from typing import Any
@@ -48,3 +49,44 @@ class TrafficTop(Base):
     kind: Mapped[str] = mapped_column(Text, primary_key=True)
     key: Mapped[str] = mapped_column(Text, primary_key=True)
     n: Mapped[int] = mapped_column(BigInteger, server_default="0")
+
+
+class GitHubTrafficRepo(Base):
+    """A public repository's traffic as the last pull found it (ops/traffic/github.py): GitHub's own totals of the
+    last 14 days, views and clones with their unique visitors and cloners."""
+
+    __tablename__ = "github_traffic_repos"
+
+    repo: Mapped[str] = mapped_column(Text, primary_key=True)
+    pulled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    views: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    view_uniques: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    clones: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    clone_uniques: Mapped[int] = mapped_column(BigInteger, server_default="0")
+
+
+class GitHubTrafficDay(Base):
+    """One UTC day of a repository's views and clones, kept beyond GitHub's 14 days, replaced while GitHub reports
+    it."""
+
+    __tablename__ = "github_traffic_days"
+
+    repo: Mapped[str] = mapped_column(Text, primary_key=True)
+    day: Mapped[date] = mapped_column(primary_key=True)
+    views: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    view_uniques: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    clones: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    clone_uniques: Mapped[int] = mapped_column(BigInteger, server_default="0")
+
+
+class GitHubTrafficTop(Base):
+    """A repository's popular referrer or path (`kind`) as one day's pull found it: GitHub's 14-day totals."""
+
+    __tablename__ = "github_traffic_tops"
+
+    repo: Mapped[str] = mapped_column(Text, primary_key=True)
+    pulled_on: Mapped[date] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    count: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    uniques: Mapped[int] = mapped_column(BigInteger, server_default="0")
