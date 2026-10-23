@@ -78,8 +78,8 @@ function renderLedger(lit = new Set()) {
     .reverse()
     .map((r) => `
       <tr class="${lit.has(r.id) ? 'lit' : ''} ${r.added ? 'added' : ''}" data-id="${r.id}">
-        <td class="ref">${r.ref}<i>${r.date}</i></td>
-        <td class="what"><b>${esc(r.description)}</b><i>${esc(r.employee)} · ${cap(r.department)} · ${cap(r.category)}</i></td>
+        <td class="ref" title="Ada's id for this precedent, as the model's 3D view labels it">${r.ref}<i>${r.id}</i></td>
+        <td class="what"><b>${esc(r.description)}</b><i>${r.date} · ${esc(r.employee)} · ${cap(r.department)} · ${cap(r.category)}</i></td>
         <td class="n">${money(r.amount)}</td>
         <td>${r.receipt ? 'Yes' : '<span class="flag">Missing</span>'}</td>
         <td class="pol">${policyLabel(r.policy)}</td>
@@ -177,7 +177,7 @@ function renderAnswer() {
           ${basis.map((r) => {
             const row = byId[r.id];
             return `<div class="basis-row">
-              <span class="ref">${row.ref}</span>
+              <span class="ref" title="Ada's id for this precedent, as the model's 3D view labels it">${row.ref}<i>${row.id}</i></span>
               <span class="what"><b>${esc(row.description)}</b><i>${money(row.amount)} · ${row.receipt ? 'receipt' : 'no receipt'} · ${policyLabel(row.policy)}</i></span>
               <span class="pill ${row.outcome}">${row.outcome === 'approve' ? 'Approved' : 'Rejected'}</span>
               <span class="sim">${pct(r.sim)} alike</span>

@@ -10,7 +10,7 @@
   --text: #ffffff;
   --text-2: #eaeaea;
   --text-3: #c8c8c8;
-  --text-4: #909090;
+  --text-4: #a6a6a6; /* labels: never darker than #999 on black */
   --accent: #b066ff;
   --accent-light: #c68cff;
   --accent-glow: rgba(176, 102, 255, 0.2);
@@ -67,8 +67,8 @@ tbody tr { transition: background 0.35s ease, box-shadow 0.35s ease; }
 tbody tr.lit { background: rgba(176, 102, 255, 0.11); box-shadow: inset 2px 0 0 var(--accent); }
 tbody tr.added { animation: in 0.45s cubic-bezier(.2,.7,.2,1) both; }
 tbody tr.added .ref { color: var(--pink); }
-td.ref, .basis-row .ref { font-family: var(--mono); font-size: 12px; color: var(--text-4); white-space: nowrap; }
-td.ref i { display: block; font-style: normal; font-size: 11px; color: #6f6f6f; margin-top: 2px; }
+td.ref, .basis-row .ref { font-family: var(--mono); font-size: 13px; color: var(--text-3); white-space: nowrap; }
+td.ref i, .basis-row .ref i { display: block; font-style: normal; font-size: 11px; color: var(--accent-light); margin-top: 3px; letter-spacing: 0.02em; }
 .what { min-width: 0; }
 .what b { display: block; font-weight: 500; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 24ch; }
 .what i { display: block; font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--text-4); margin-top: 3px; }
@@ -144,7 +144,7 @@ button:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2
 .steady { margin: 0; align-self: flex-start; font-family: var(--mono); font-size: 13px; padding: 6px 10px; border: 1px solid var(--accent); color: var(--accent-light); }
 .basis { display: flex; flex-direction: column; margin-top: 6px; }
 .basis .kicker { margin-bottom: 8px; }
-.basis-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto 78px; align-items: center; gap: 12px; padding: 11px 8px; border-bottom: 1px solid var(--hair); }
+.basis-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto 78px; align-items: center; gap: 12px; padding: 11px 8px; border-bottom: 1px solid var(--hair); }
 .basis-row:first-of-type { border-top: 1px solid var(--hair); }
 .basis-row .what i span { font-family: var(--mono); }
 .sim { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--text-3); }
