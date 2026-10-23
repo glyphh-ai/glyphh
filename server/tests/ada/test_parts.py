@@ -33,10 +33,11 @@ def test_the_command_idles_with_ada_cloud_off_and_supervises_with_it_on(monkeypa
     monkeypatch.setattr(worker, "supervise", lambda slots, queue, stop: calls.append((slots, queue)))
     monkeypatch.setattr(worker, "get_settings", lambda: SETTINGS)
     worker.main(["--queue", "sync"])
-    monkeypatch.setattr(worker, "get_settings", lambda: ADA)
+    nowhere = ADA.model_copy(update={"ada_kernels_dir": "/nowhere"})  # the beta's kernel not installed: no slot
+    monkeypatch.setattr(worker, "get_settings", lambda: nowhere)
     worker.main(["--queue", "jobs", "--processes", "3"])
     worker.main(["--queue", "sync"])
-    here = routing.installed()  # the venv's, the latest stable's; the beta's folder is not in this image
+    here = routing.installed()  # the venv's, the latest stable's
     assert calls[:2] == ["idle", ([worker.Slot(here, None, 3)], "jobs")] and calls[2][0][0].count >= 1
 
 
