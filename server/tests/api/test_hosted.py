@@ -207,15 +207,16 @@ async def test_the_app_stops_idle_runtimes_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def tend(engine: AsyncEngine, hub: Any, cfg: Any, step: int, fly: Any, stripe: Any) -> None:
-        assert fly is not None and stripe is not None and stripe.meter == "glyphh_hosting"
+    async def tend(engine: AsyncEngine, hub: Any, cfg: Any, step: int, fly: Any, stripe: Any, cf: Any) -> None:
+        assert fly is not None and stripe is not None and stripe.meter == "glyphh_hosting" and cf is not None
         ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("fly hiccup")
         stopped.set()
 
     monkeypatch.setattr(tending, "tend", tend)
-    app = create_app(FLY_SETTINGS, http=fake_http(fly=FakeFly()))
+    settings = FLY_SETTINGS.model_copy(update={"cloudflare_api_token": "cf-test-token"})
+    app = create_app(settings, http=fake_http(fly=FakeFly()))
     async for _ in _client(app):
         assert app.state.hub.waker is not None
         await asyncio.wait_for(stopped.wait(), 5)

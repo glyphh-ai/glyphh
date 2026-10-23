@@ -123,6 +123,9 @@ class Settings(AdaCloudSettings, StaffSettings):
     # Server-side logging (rrotor's RROTOR_SERVER_LOGS=on): days a runtime's logs, audit events, metric points and
     # spans are kept before the minute tick purges them. One for every plan.
     telemetry_retention_days: int = Field(7, ge=1, le=90)
+    # Cloudflare's analytics of Glyphh's own sites, for the staff view's traffic (ops/traffic.py): a read-only API token
+    # with Zone Analytics on the account's zones. Without it the traffic view says it is not connected.
+    cloudflare_api_token: str = ""
 
     @field_validator("database_url")
     @classmethod
