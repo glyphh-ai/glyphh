@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import Row, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import ConnectorGrant, ConnectorToken, User
+from glyphh_server.models import ConnectorGrant, ConnectorToken, Org, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.connector import grants
@@ -105,9 +105,10 @@ async def _live(conn: AsyncConnection, token: str, resource: str) -> Row | None:
     row = (
         await conn.execute(
             select(ConnectorToken.grant_id, User.id, User.org_id, User.role, ConnectorGrant.scope)
-            .add_columns(ConnectorToken.expires_at)
+            .add_columns(ConnectorToken.expires_at, ConnectorGrant.client_id, User.email, Org.suspended_at)
             .join(ConnectorGrant, ConnectorGrant.id == ConnectorToken.grant_id)
             .join(User, User.id == ConnectorGrant.user_id)
+            .join(Org, Org.id == User.org_id)
             .where(
                 ConnectorToken.token_hash == hash_secret(token),
                 ConnectorToken.kind == "access",
@@ -136,7 +137,15 @@ async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Pri
     row = await _live(conn, token, resource)
     if row is None:
         return None
-    return Principal(user_id=row.id, org_id=row.org_id, role=row.role, grant_id=row.grant_id)
+    return Principal(
+        user_id=row.id,
+        org_id=row.org_id,
+        role=row.role,
+        grant_id=row.grant_id,
+        client_id=row.client_id,
+        suspended=row.suspended_at is not None,
+        email=row.email,
+    )
 
 
 async def introspect(conn: AsyncConnection, token: str, resource: str) -> Introspection:

@@ -8,7 +8,7 @@ from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Unauthorized
-from glyphh_server.models import Install, Token, User
+from glyphh_server.models import Install, Org, Token, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 
@@ -31,9 +31,10 @@ async def principal_for(conn: AsyncConnection, token: str) -> Principal:
     answer. A good one marks its install seen."""
     row = (
         await conn.execute(
-            select(Token.install_id, User.id, User.org_id, User.role)
+            select(Token.install_id, User.id, User.org_id, User.role, User.email, Org.suspended_at)
             .join(Install, Install.id == Token.install_id)
             .join(User, User.id == Install.user_id)
+            .join(Org, Org.id == User.org_id)
             .where(
                 Token.token_hash == hash_secret(token),
                 Token.revoked_at.is_(None),
@@ -52,7 +53,15 @@ async def principal_for(conn: AsyncConnection, token: str) -> Principal:
         )
         .values(last_seen_at=func.now())
     )
-    return Principal(user_id=row.id, org_id=row.org_id, role=row.role, install_id=row.install_id)
+    suspended = row.suspended_at is not None
+    return Principal(
+        user_id=row.id,
+        org_id=row.org_id,
+        role=row.role,
+        install_id=row.install_id,
+        suspended=suspended,
+        email=row.email,
+    )
 
 
 async def revoke_install(conn: AsyncConnection, install_id: uuid.UUID) -> None:

@@ -42,7 +42,18 @@ class AdaCloudSettings(BaseSettings):
         return self.ada_url.rstrip("/")
 
 
-class Settings(AdaCloudSettings):
+class StaffSettings(BaseSettings):
+    """Glyphh's staff (glyphh_server/admin): the verified sign-in emails, comma-separated, that open the staff view on
+    the platform. Only through the platform's own sign-in, and every staff request is audited."""
+
+    staff_emails: str = "support@glyphh.ai"
+
+    @property
+    def staff_set(self) -> frozenset[str]:
+        return frozenset(e.strip().lower() for e in self.staff_emails.split(",") if e.strip())
+
+
+class Settings(AdaCloudSettings, StaffSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"

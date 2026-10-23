@@ -23,6 +23,7 @@ from glyphh_ada import registry, routing
 from glyphh_ada.process import Worker
 from glyphh_ada.protocol import JOBS, SYNC
 from glyphh_server.config import Settings, get_settings
+from glyphh_server.obs import events
 from glyphh_server.obs.logs import configure, fields
 
 log = logging.getLogger("glyphh.ada")
@@ -52,6 +53,7 @@ def serve(queue: str, kernel: str) -> None:
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     settings = get_settings()
     configure(settings.log_level)
+    events.install(settings.redis_url)  # its warnings and errors kept for staff as ops events
     if routing.installed() != kernel:
         log.error("this process imported another kernel", extra=fields(kernel=kernel, imported=routing.installed()))
         return idle(stop)
@@ -125,6 +127,7 @@ def main(argv: list[str] | None = None) -> None:
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     if not settings.ada_cloud:
         return idle(stop)
+    events.install(settings.redis_url)  # a worker that dies is an ops event
     slots = plan(settings, args.processes or settings.ada_workers or cpus())
     log.info("starting workers", extra=fields(queue=args.queue, slots=[(s.kernel, s.count) for s in slots]))
     supervise(slots, args.queue, stop)

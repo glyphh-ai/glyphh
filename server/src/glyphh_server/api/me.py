@@ -6,6 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
+from glyphh_server.admin.staff import is_staff
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.billing import cloud_redis
 from glyphh_server.api.link_pages import link_url
@@ -36,13 +37,16 @@ class LinkOut(BaseModel):
 async def get_me(caller: Caller, conn: Conn, request: Request) -> Me:
     """The user, their org and role, the plan version with its limits and features, the precedents its hosted runtimes
     hold and its hosting this month, and whether Ada Cloud is on (the platform shows Ada then); with it on, the plan's
-    cloud limits and what the org uses of them."""
-    return await me.me(conn, caller, cloud_redis(request))
+    cloud limits and what the org uses of them; and whether they are Glyphh's staff (the platform opens its staff
+    view)."""
+    found = await me.me(conn, caller, cloud_redis(request))
+    return found.model_copy(update={"staff": is_staff(request.app.state.settings, caller)})
 
 
 @router.patch("/me", operation_id="renameMe")
 async def rename_me(body: Rename, caller: Caller, conn: Conn, request: Request) -> Me:
-    return await me.rename_me(conn, caller, body.name, cloud_redis(request))
+    found = await me.rename_me(conn, caller, body.name, cloud_redis(request))
+    return found.model_copy(update={"staff": is_staff(request.app.state.settings, caller)})
 
 
 @router.post("/me/identities", operation_id="linkIdentity")

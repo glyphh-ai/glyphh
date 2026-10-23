@@ -12,11 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.config import Settings
 from glyphh_server.db import tenancy
-from glyphh_server.errors import Unauthorized
+from glyphh_server.errors import Forbidden, Unauthorized
 from glyphh_server.obs import context
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.tokens import principal_for
 from glyphh_server.ops.connector import tokens as connector_tokens
+
+SUSPENDED: str = "This organisation is suspended. Contact support@glyphh.ai."
 
 bearer = HTTPBearer(auto_error=False, description="The install's token from the device flow, or an OAuth access token")
 
@@ -54,6 +56,8 @@ async def authenticate(conn: AsyncConnection, creds: HTTPAuthorizationCredential
         if granted is None:
             raise
         who = granted
+    if who.suspended:
+        raise Forbidden(SUSPENDED, reason="suspended")
     context.user_id.set(str(who.user_id))
     context.org_id.set(str(who.org_id))
     await tenancy.enter(conn, who.org_id)
