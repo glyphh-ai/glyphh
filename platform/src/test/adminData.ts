@@ -1,4 +1,4 @@
-import type { AuditPage, Dashboard, Infra, OpsEventPage, OrgDetail, OrgPage, PeoplePage, PlanRow, SourceRow, AdaVersions } from '@/api/admin';
+import type { AuditPage, Dashboard, Infra, OpsEventPage, OrgDetail, OrgPage, PeoplePage, PlanRow, SourceRow, AdaVersions, Traffic } from '@/api/admin';
 import * as fixtures from './fixtures';
 
 /** The staff view's answers, in the server's shapes (its /v1/admin). */
@@ -226,6 +226,48 @@ export const events: OpsEventPage = {
   next_before: null,
 };
 
+const point = (day: string, uniques: number) => ({ day, requests: uniques * 9, page_views: uniques * 3, uniques, bytes: 1000, threats: 0, cached_share: 0.4 });
+const none = { pages: [], referrers: [], rum_pages: [], rum_referrers: [] };
+
+/** glyphh.ai on a Free plan whose adaptive dataset gives hosts, pages and referrers; glyphh.app with Web Analytics only. */
+export const traffic: Traffic = {
+  connected: true,
+  pulled_at: '2026-10-23T11:05:00Z',
+  days: 30,
+  since: '2026-09-24',
+  last_7: { days: 7, visitors: 4_200, page_views: 9_000, previous_visitors: 3_500, previous_page_views: 9_500, visitors_change: 0.2, page_views_change: -0.0526, sign_ups: 42, conversion: 0.01 },
+  last_30: { days: 30, visitors: 18_000, page_views: 40_000, previous_visitors: 0, previous_page_views: 0, visitors_change: null, page_views_change: null, sign_ups: 150, conversion: 0.0083 },
+  zones: [
+    {
+      name: 'glyphh.ai',
+      plan: 'Free Website',
+      pulled_at: '2026-10-23T11:05:00Z',
+      available: { daily: { ok: true, days: 60 }, hosts: { ok: true, days: 3 }, pages: { ok: true, days: 3 }, referrers: { ok: true, days: 3 }, rum: { ok: false, note: 'not authorized for that account' } },
+      series: [point('2026-10-22', 600), point('2026-10-23', 700)],
+      hosts: [
+        { host: 'docs.glyphh.ai', series: [{ day: '2026-10-22', requests: 300, visits: 90 }, { day: '2026-10-23', requests: 320, visits: 95 }] },
+        { host: 'glyphh.ai', series: [{ day: '2026-10-22', requests: 5_000, visits: 800 }, { day: '2026-10-23', requests: 5_200, visits: 850 }] },
+      ],
+      countries: [{ host: '', key: 'GB', n: 3_000 }, { host: '', key: 'US', n: 2_000 }],
+      ...none,
+      pages: [{ host: 'glyphh.ai', key: '/pricing', n: 700 }, { host: 'docs.glyphh.ai', key: '/quickstart', n: 120 }],
+      referrers: [{ host: 'glyphh.ai', key: 'www.google.com', n: 400 }, { host: 'docs.glyphh.ai', key: 'github.com', n: 60 }],
+    },
+    {
+      name: 'glyphh.app',
+      plan: 'Free Website',
+      pulled_at: '2026-10-23T10:05:00Z',
+      available: { daily: { ok: true, days: 60 }, hosts: { ok: false, note: 'Not on this zone’s plan' }, pages: { ok: false }, referrers: { ok: false, note: 'unknown field' }, rum: { ok: true, days: 7 } },
+      series: [point('2026-10-22', 50), point('2026-10-23', 60)],
+      hosts: [],
+      countries: [],
+      ...none,
+      rum_pages: [{ host: 'glyphh.app', key: '/sign-in', n: 30 }],
+      rum_referrers: [{ host: 'glyphh.app', key: 'www.google.com', n: 10 }],
+    },
+  ],
+};
+
 /** Each GET of the staff view and its answer, for the page tests' fake server and the local one (dev/fake-server.ts). */
 export const staffAnswers: Record<string, object> = {
   '/admin/dashboard': dashboard,
@@ -235,6 +277,7 @@ export const staffAnswers: Record<string, object> = {
   '/admin/users': people,
   '/admin/plans': plans,
   '/admin/marketing': sources,
+  '/admin/traffic': traffic,
   '/admin/ada-versions': adaVersions,
   '/admin/audit': audit,
   '/admin/events': events,

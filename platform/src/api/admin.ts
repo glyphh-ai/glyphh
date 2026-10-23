@@ -184,6 +184,45 @@ export type OpsEvent = {
 };
 export type OpsEventPage = { events: OpsEvent[]; next_before: IsoDate | null };
 
+/** One part of a zone's pull: what its Cloudflare plan (and the token) allowed, and why not when it didn't. */
+export type TrafficPart = { ok: boolean; days?: number; note?: string };
+export type TrafficPoint = { day: string; requests: number; page_views: number; uniques: number; bytes: number; threats: number; cached_share: number | null };
+export type TrafficTop = { host: string; key: string; n: number };
+export type TrafficZone = {
+  name: string;
+  plan: string | null;
+  pulled_at: IsoDate;
+  available: Record<string, TrafficPart>;
+  series: TrafficPoint[];
+  hosts: Array<{ host: string; series: Array<{ day: string; requests: number; visits: number }> }>;
+  countries: TrafficTop[];
+  pages: TrafficTop[];
+  referrers: TrafficTop[];
+  rum_pages: TrafficTop[];
+  rum_referrers: TrafficTop[];
+};
+export type TrafficPeriod = {
+  days: number;
+  visitors: number;
+  page_views: number;
+  previous_visitors: number;
+  previous_page_views: number;
+  visitors_change: number | null;
+  page_views_change: number | null;
+  sign_ups: number;
+  conversion: number | null;
+};
+/** Glyphh's own sites' traffic, from Cloudflare as the server's hourly pull kept it. */
+export type Traffic = {
+  connected: boolean;
+  pulled_at: IsoDate | null;
+  days: number;
+  since: string;
+  last_7: TrafficPeriod;
+  last_30: TrafficPeriod;
+  zones: TrafficZone[];
+};
+
 /** A query string from the values that are set. */
 export function query(params: Record<string, string | number | boolean | null | undefined>): string {
   const found = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false);
@@ -200,6 +239,7 @@ export const adminKeys = {
   users: (params: object) => [...admin, 'users', params] as const,
   plans: [...admin, 'plans'] as const,
   marketing: (days: number) => [...admin, 'marketing', days] as const,
+  traffic: (days: number) => [...admin, 'traffic', days] as const,
   adaVersions: [...admin, 'ada-versions'] as const,
   audit: (params: object) => [...admin, 'audit', params] as const,
   events: (params: object) => [...admin, 'events', params] as const,
@@ -220,6 +260,8 @@ export const useAdminUsers = (params: PeopleFilter) =>
 export const useAdminPlans = () => useQuery({ queryKey: adminKeys.plans, queryFn: () => api.get<PlanRow[]>('/admin/plans') });
 export const useAdminMarketing = (days: number) =>
   useQuery({ queryKey: adminKeys.marketing(days), queryFn: () => api.get<SourceRow[]>(`/admin/marketing?days=${days}`) });
+export const useAdminTraffic = (days: number) =>
+  useQuery({ queryKey: adminKeys.traffic(days), queryFn: () => api.get<Traffic>(`/admin/traffic?days=${days}`) });
 export const useAdminAdaVersions = () => useQuery({ queryKey: adminKeys.adaVersions, queryFn: () => api.get<AdaVersions>('/admin/ada-versions') });
 
 export type AuditFilter = { by?: string; org_id?: string; action?: string; before?: string };

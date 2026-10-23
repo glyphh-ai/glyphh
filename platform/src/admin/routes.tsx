@@ -11,6 +11,7 @@ import { MarketingPage } from './pages/MarketingPage';
 import { OrgPage } from './pages/OrgPage';
 import { OrgsPage } from './pages/OrgsPage';
 import { PlansPage } from './pages/PlansPage';
+import { TrafficPage } from './pages/TrafficPage';
 import { UsersPage } from './pages/UsersPage';
 
 const crumbs = (...labels: Array<string | [string, string]>): AdminHandle => ({
@@ -35,6 +36,7 @@ export const adminRoutes: RouteObject = {
     { path: 'orgs/:id', element: <OrgPage />, handle: crumbs(['Organisations', '/admin/orgs'], 'Organisation') },
     { path: 'users', element: <UsersPage />, handle: crumbs('People') },
     { path: 'plans', element: <PlansPage />, handle: crumbs('Plans') },
+    { path: 'traffic', element: <TrafficPage />, handle: crumbs('Traffic') },
     { path: 'marketing', element: <MarketingPage />, handle: crumbs('Marketing links') },
     { path: 'ada-versions', element: <AdaVersionsPage />, handle: crumbs('Ada versions') },
     { path: 'audit', element: <AuditPage />, handle: crumbs('Audit log') },

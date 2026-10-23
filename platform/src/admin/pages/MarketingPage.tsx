@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useAdminMarketing } from '@/api/admin';
+import { useAdminMarketing, useAdminTraffic } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { Card, CopyField, EmptyState, LoadingCard, Select, TextField } from '@/ui';
 import { n } from '../parts';
+import { referrersByKey, TopCard, tops, why } from '../traffic';
 import styles from '../admin.module.css';
 
 const site = 'https://glyphh.ai';
@@ -78,8 +79,21 @@ export function MarketingPage() {
           </div>
         </Card>
       )}
+      <ReferrerCard days={days} />
     </div>
   );
+}
+
+/** Visitors by the site that sent them, beside sign-ups by source, when Cloudflare's plan gives referrers (his order, 2026-10-23). */
+function ReferrerCard({ days }: { days: number }) {
+  const traffic = useAdminTraffic(days);
+  const data = traffic.data;
+  if (!data) return <ApiErrorNotice error={traffic.error} />;
+  const given = data.zones.filter((z) => tops(z, 'referrers').note === null);
+  const none = data.zones[0] ? why(data.zones[0].available.referrers) : 'Nothing pulled yet.';
+  const note = !data.connected ? 'Cloudflare is not connected.' : given.length === 0 ? none : null;
+  const from = given.some((z) => tops(z, 'referrers').from) ? 'From Web Analytics' : null;
+  return <TopCard title="Visitors by referrer" label="Referrer" rows={referrersByKey(given)} note={note} from={from} />;
 }
 
 function LinkBuilder() {
