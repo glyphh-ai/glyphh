@@ -1,8 +1,9 @@
-"""API keys for Ada Cloud, made by a signed-in person (not by a key): list, make (shown once), revoke."""
+"""API keys for Ada Cloud, made by a signed-in person (not by a key): list, make (shown once), revoke, and delete
+once revoked or expired."""
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
 
 from glyphh_ada import keys
@@ -35,3 +36,10 @@ async def create_key(body: NewKey, caller: Caller, conn: Conn) -> MadeCloudKey:
 async def revoke_key(key_id: uuid.UUID, caller: Caller, conn: Conn) -> CloudKey:
     """Revoke one key."""
     return await keys.revoke(conn, caller, key_id)
+
+
+@router.delete("/{key_id}/forever", operation_id="deleteApiKey", status_code=204)
+async def delete_key(key_id: uuid.UUID, caller: Caller, conn: Conn) -> Response:
+    """Delete a revoked or expired key for good; a live one is refused (409): revoke it first."""
+    await keys.delete(conn, caller, key_id)
+    return Response(status_code=204)

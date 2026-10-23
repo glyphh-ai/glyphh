@@ -1,17 +1,18 @@
 """Ada Cloud's API keys (`glyphh_ak_…`): made by a signed-in person, shown once, kept as a SHA-256 in runtime_keys with
 scope `cloud`. A key acts in its maker's org, with its clearance (0 to 1): what of a model's roles a read through it
 may see and what votes for it (the spec's security_weight). A request may ask for less clearance, never more. Revoked
-or expired, it lets nothing in (within the API's key cache, KEY_TTL seconds)."""
+or expired, it lets nothing in (within the API's key cache, KEY_TTL seconds), and can then be deleted."""
 
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.errors import NotFound
+from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Org, RuntimeKey, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import make_secret
@@ -82,6 +83,19 @@ async def revoke(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -> Cl
     if row is None:
         raise NotFound("You have no such live API key.", key_id=str(key_id))
     return CloudKey(**row._mapping)
+
+
+async def delete(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -> None:
+    """Delete one of your keys for good, once it is revoked or expired: a live key is revoked first, so nothing that
+    still works disappears from the list unseen."""
+    mine = (RuntimeKey.id == key_id, RuntimeKey.user_id == who.user_id, RuntimeKey.scope == CLOUD)
+    dead = or_(RuntimeKey.revoked_at.is_not(None), RuntimeKey.expires_at <= func.now())
+    gone = (await conn.execute(sql_delete(RuntimeKey).where(*mine, dead).returning(RuntimeKey.id))).first()
+    if gone is not None:
+        return
+    if (await conn.execute(select(RuntimeKey.id).where(*mine))).first() is not None:
+        raise Conflict("This API key still works. Revoke it before you delete it.", key_id=str(key_id))
+    raise NotFound("You have no such API key.", key_id=str(key_id))
 
 
 async def holder(conn: AsyncConnection, key: str) -> KeyHolder | None:
