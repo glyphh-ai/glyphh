@@ -13,3 +13,6 @@ class Principal(BaseModel):
     role: Literal["admin", "member"]
     install_id: uuid.UUID | None = None
     grant_id: uuid.UUID | None = None
+    client_id: uuid.UUID | None = None  # the OAuth client the grant is for (the platform's own, or a connector's)
+    suspended: bool = False  # the org is suspended by Glyphh's staff: refused (api/auth.py)
+    email: str = ""  # their verified sign-in email

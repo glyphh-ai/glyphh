@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_ada.api import HostRouter
 from glyphh_ada.api import make_app as make_ada
 from glyphh_server.api import (
+    admin,
     approvals,
+    attribution,
     billing,
     connector,
     device,
@@ -41,6 +43,7 @@ from glyphh_server.api.trace import TraceMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
+from glyphh_server.obs import events, metrics
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops import github_app, tend, vault
 from glyphh_server.ops.billing.stripe import StripeClient
@@ -74,6 +77,8 @@ ROUTERS = (
     oauth_pages,
     connector,
     mcp,
+    attribution,
+    admin,
 )
 
 
@@ -116,7 +121,9 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.http = http or httpx.AsyncClient(timeout=10)
         idle = _tending(app, cfg, engine)
+        flushing = asyncio.create_task(metrics.flush_forever(app.state.metrics, redis))
         yield
+        await metrics.stop(flushing, app.state.metrics, redis)
         idle.cancel()
         with suppress(asyncio.CancelledError):
             await idle
@@ -144,9 +151,13 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
 
 
 def _wrap(app: FastAPI, cfg: Settings, ada: FastAPI | None) -> None:
-    """The outer layers, innermost first: Ada Cloud's host (when on), CORS for the platform's read of a consent, then
-    the trace."""
+    """The outer layers, innermost first: Ada Cloud's host (when on), CORS for the platform's read of a consent, the
+    request metrics (every host's), then the trace. Warnings and errors are kept for staff as ops events
+    (obs/events.py)."""
+    app.state.metrics = metrics.Recorder()  # every request's route, status and time (obs/metrics.py)
+    events.install(cfg.redis_url)
     if ada is not None:
         app.add_middleware(HostRouter, ada=ada, hosts=cfg.ada_host_set)
     app.add_middleware(ConsentCorsMiddleware, platform_origin=cfg.platform_base)
+    app.add_middleware(metrics.MetricsMiddleware, recorder=app.state.metrics)
     app.add_middleware(TraceMiddleware)

@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -45,3 +47,10 @@ class Org(Base):
     # An Enterprise grant's end: past it, the org is back on Free (ops/enterprise.py).
     plan_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()
+    # Suspended by Glyphh's staff (admin/actions.py): its people and keys are refused until it is lifted.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    suspended_reason: Mapped[str | None] = mapped_column(Text)
+    # Where its sign-up came from: the website's campaign tags (ops/attribution.py); null when untagged.
+    source: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # When it first paid (a subscription first active): a paid conversion, for the staff view.
+    first_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

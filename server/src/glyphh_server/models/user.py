@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Text, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -24,3 +26,5 @@ class User(Base):
     name: Mapped[str | None] = mapped_column(Text)
     role: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at()
+    # Where their sign-up came from: the website's campaign tags (ops/attribution.py); null when untagged.
+    source: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

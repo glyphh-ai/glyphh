@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.db.seed import FREE
@@ -69,6 +69,8 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
         values = {"stripe_subscription_id": sub["id"], "renews_at": renews_at(sub)}
         if found.plan is not None:
             values["plan_version_id"] = found.plan_version_id
+        if status == "active":  # its first payment: a paid conversion (the staff view)
+            values["first_paid_at"] = func.coalesce(Org.first_paid_at, func.now())
     await conn.execute(
         update(Org).where(Org.id == org_id).values(**values, billing_status=status, stripe_customer_id=sub["customer"])
     )

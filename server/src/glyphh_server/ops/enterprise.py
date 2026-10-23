@@ -20,7 +20,7 @@ from typing import Any
 
 import httpx
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.config import Settings, get_settings
@@ -68,6 +68,8 @@ async def grant(
         if org.plan_until is None and org.stripe_subscription_id not in (None, subscription):
             raise Conflict(f"Cancel the org's subscription {org.stripe_subscription_id} first.", reason="subscribed")
         ends = datetime.combine(until + timedelta(days=1), time(), UTC)
+        # Its first payment is a paid conversion (the staff view).
+        paid = func.coalesce(Org.first_paid_at, func.now()) if sub["status"] == "active" else Org.first_paid_at
         values = {
             "plan_version_id": (await newest_version(conn, ENTERPRISE)).id,
             "plan_until": ends,
@@ -75,6 +77,7 @@ async def grant(
             "stripe_subscription_id": subscription,
             "stripe_customer_id": sub["customer"],
             "billing_status": sub["status"] if sub["status"] in BILLING_STATUSES else "none",
+            "first_paid_at": paid,
         }
         await conn.execute(update(Org).where(Org.id == org_id).values(**values))
         await license_keys.issue(conn, signing_key, org_id, ends)

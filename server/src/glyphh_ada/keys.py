@@ -12,7 +12,7 @@ from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import NotFound
-from glyphh_server.models import RuntimeKey, User
+from glyphh_server.models import Org, RuntimeKey, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import make_secret
 from glyphh_server.ops.runtime_keys import expiry, key_hash
@@ -85,9 +85,13 @@ async def revoke(conn: AsyncConnection, who: Principal, key_id: uuid.UUID) -> Cl
 
 
 async def holder(conn: AsyncConnection, key: str) -> KeyHolder | None:
-    """The live cloud key behind a bearer, found by its hash before anyone is known (no org set yet)."""
-    found = select(RuntimeKey.id, RuntimeKey.user_id, User.org_id, RuntimeKey.clearance).join(
-        User, User.id == RuntimeKey.user_id
+    """The live cloud key behind a bearer, found by its hash before anyone is known (no org set yet). An org
+    suspended by Glyphh's staff has none."""
+    found = (
+        select(RuntimeKey.id, RuntimeKey.user_id, User.org_id, RuntimeKey.clearance)
+        .join(User, User.id == RuntimeKey.user_id)
+        .join(Org, Org.id == User.org_id)
+        .where(Org.suspended_at.is_(None))
     )
     row = (await conn.execute(found.where(RuntimeKey.key_hash == key_hash(key), *_live))).first()
     if row is None:

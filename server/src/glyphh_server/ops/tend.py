@@ -5,7 +5,8 @@ side logging past its retention purged (ops/telemetry/retention.py); with hostin
 held past their plan stopped; and the hosting due reported to Stripe's meter (ops/billing/meter.py). With Ada Cloud on
 (GLYPHH_ADA_CLOUD), its reads counted in Redis added to ada_usage (glyphh_ada/requests.py) and its models' days to
 ada_model_days (glyphh_ada/days.py), and the reads past a metered plan's month reported to Stripe's ada_requests meter
-(ops/billing/ada_meter.py).
+(ops/billing/ada_meter.py). Always first, its heartbeat (obs/tick.py) and the ops events logged since the last tick
+moved to Postgres (obs/events_store.py), for the staff view.
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 in a transaction it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_ada import days
 from glyphh_ada.requests import flush
 from glyphh_server.config import Settings
+from glyphh_server.obs import events_store, tick
 from glyphh_server.ops.billing import ada_meter
 from glyphh_server.ops.billing.meter import report
 from glyphh_server.ops.billing.stripe import StripeClient
@@ -84,7 +86,8 @@ async def _tick(
     first), server-side logging past retention purged; with hosting on and Fly set up, the idle machines stopped and
     those held past their plan stopped; with Stripe, the hosting due reported to its meter. With Ada Cloud on, its
     reads flushed to the database, and with Stripe those past a metered plan's month reported."""
-    parts: list[tuple[str, Callable[[], Awaitable[Any]]]] = []
+    parts: list[tuple[str, Callable[[], Awaitable[Any]]]] = [("heartbeat", lambda: tick.beat(hub.redis))]
+    parts.append(("ops events", lambda: events_store.drain(engine, hub.redis)))
     if settings.hosting:
         parts.append(("tally", lambda: tally(engine, settings.fly_region)))
     parts.append(("expired keys", lambda: push_expired(engine, hub, timedelta(seconds=2 * step))))

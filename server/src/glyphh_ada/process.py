@@ -114,6 +114,7 @@ def work(ctx: Context, msg: Message, worker: Worker) -> None:
         return
     except Refusal as r:
         jobs.mark(ctx.conn, schema, job_id, "failed", error={"code": r.code, "message": r.message, **r.detail})
+        log.warning("job refused: %s", job["kind"], extra=fields(org=msg.org, job=job_id, code=r.code))
         return
     except Exception:
         if not (ctx.conn.broken or ctx.conn.closed):

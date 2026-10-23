@@ -98,6 +98,10 @@ CREATE TABLE IF NOT EXISTS orgs (
     markup_pct INTEGER,
     plan_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    suspended_at TIMESTAMP WITH TIME ZONE,
+    suspended_reason TEXT,
+    source JSONB,
+    first_paid_at TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),
     CONSTRAINT orgs_markup CHECK (coalesce(markup_pct, 0) >= 0),
     CONSTRAINT orgs_billing_status CHECK (billing_status IN ('none', 'active', 'trialing', 'past_due', 'unpaid', 'canceled', 'incomplete', 'incomplete_expired', 'paused')),
@@ -219,6 +223,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT,
     role TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    source JSONB,
     PRIMARY KEY (id),
     CONSTRAINT users_role CHECK (role IN ('admin', 'member')),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE RESTRICT
@@ -621,6 +626,44 @@ CREATE TABLE IF NOT EXISTS approvals (
 );
 CREATE INDEX IF NOT EXISTS ix_approvals_run_id ON approvals (run_id);
 
+-- admin_audit: every request Glyphh's staff make of the staff view (glyphh_server/admin/audit.py): who, what, when,
+-- which org. ops_events: the server's own errors and warnings, alike ones in a minute folded into one row with a count
+-- (obs/events.py). Neither is ever seen by a session acting for an org (the policies at the end).
+CREATE TABLE IF NOT EXISTS admin_audit (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    staff_user_id UUID NOT NULL,
+    staff_email TEXT NOT NULL,
+    action TEXT NOT NULL,
+    org_id UUID,
+    target TEXT,
+    detail JSONB DEFAULT '{}'::jsonb NOT NULL,
+    outcome TEXT DEFAULT 'ok' NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS admin_audit_at ON admin_audit (at);
+CREATE INDEX IF NOT EXISTS admin_audit_org ON admin_audit (org_id, at);
+
+CREATE TABLE IF NOT EXISTS ops_events (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    first_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    severity TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    source TEXT NOT NULL,
+    message TEXT NOT NULL,
+    detail JSONB DEFAULT '{}'::jsonb NOT NULL,
+    org_id UUID,
+    trace_id TEXT,
+    count INTEGER DEFAULT 1 NOT NULL,
+    acknowledged_at TIMESTAMP WITH TIME ZONE,
+    acknowledged_by TEXT,
+    PRIMARY KEY (id),
+    CONSTRAINT ops_events_severity CHECK (severity IN ('warning', 'error', 'critical')),
+    CONSTRAINT ops_events_count CHECK (count > 0)
+);
+CREATE INDEX IF NOT EXISTS ops_events_last ON ops_events (last_at);
+
 -- orgs.admin_user_id and users.org_id point at each other, so the org's admin is added once both tables exist.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_constraint WHERE conname = 'orgs_admin_user_id_fkey') THEN
@@ -750,3 +793,12 @@ ALTER TABLE telemetry_spans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE telemetry_spans FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON telemetry_spans;
 CREATE POLICY tenant ON telemetry_spans USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+-- Staff only: a session acting for an org sees no row of these.
+ALTER TABLE admin_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_audit FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS staff ON admin_audit;
+CREATE POLICY staff ON admin_audit USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);
+ALTER TABLE ops_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ops_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS staff ON ops_events;
+CREATE POLICY staff ON ops_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL);

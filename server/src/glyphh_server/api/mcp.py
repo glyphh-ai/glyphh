@@ -45,6 +45,8 @@ async def caller(request: Request, conn: AsyncConnection) -> Principal | None:
     if scheme.lower() != "bearer" or not token:
         return None
     who = await tokens.principal_for(conn, token.strip(), request.app.state.settings.mcp_resource)
+    if who is not None and who.suspended:  # an org suspended by Glyphh's staff: its connector signs in no more
+        return None
     if who is not None:
         context.user_id.set(str(who.user_id))
         context.org_id.set(str(who.org_id))
