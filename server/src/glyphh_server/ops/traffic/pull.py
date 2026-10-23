@@ -76,13 +76,13 @@ async def _zone(engine: AsyncEngine, cf: Cloudflare, z: dict[str, Any], rum: Rum
     for part in ("hosts", "pages", "referrers"):
         avail[part] = await _adaptive(cf, zone_id, adaptive, part, now, more_days, more_tops)
     rum_tops, avail["rum"] = rum or ({}, {"ok": False, "note": "No account on this zone"})
-    more_tops |= {k: n for k, n in rum_tops.items() if k[0] == name or k[0].endswith(f".{name}")}
+    more_tops |= rum_tops
     async with engine.begin() as conn:
         await store.zone(conn, name, zone_id, (z.get("plan") or {}).get("name"), now, avail)
         await store.days(conn, name, days, keep_larger=False)
         await store.tops(conn, name, tops, keep_larger=False)
-        await store.days(conn, name, more_days, keep_larger=True)
-        await store.tops(conn, name, more_tops, keep_larger=True)
+        await store.days(conn, name, {k: n for k, n in more_days.items() if _ours(k[0], name)}, keep_larger=True)
+        await store.tops(conn, name, {k: n for k, n in more_tops.items() if _ours(k[0], name)}, keep_larger=True)
 
 
 async def _daily(
@@ -136,13 +136,23 @@ async def _adaptive(
     return {"ok": True, "days": limit.days}
 
 
+def _ours(host: str, zone: str) -> bool:
+    """The zone or a hostname under it: a Host header naming another site is not this zone's traffic."""
+    return host == zone or host.endswith(f".{zone}")
+
+
+def _hostname(host: str) -> str:
+    """A Host header as its hostname: docs.glyphh.ai:443 is docs.glyphh.ai."""
+    return host.rsplit(":", 1)[0].lower() if host.rsplit(":", 1)[-1].isdigit() else host.lower()
+
+
 def _add(found: dict[Any, int], key: Any, n: int) -> None:
     found[key] = found.get(key, 0) + n
 
 
 def _row(part: str, end: datetime, row: dict[str, Any], days: store.Days, tops: store.Tops) -> None:
     dims, n = row.get("dimensions") or {}, int(row.get("count") or 0)
-    host, day = dims.get("clientRequestHTTPHost") or "", q.day_of(dims, end)
+    host, day = _hostname(dims.get("clientRequestHTTPHost") or ""), q.day_of(dims, end)
     if part == "hosts":
         _add(days, (host, day, "requests"), n)
         _add(days, (host, day, "visits"), int((row.get("sum") or {}).get("visits") or 0))
