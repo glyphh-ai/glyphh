@@ -3,18 +3,20 @@ asks (each zone's settings, httpRequests1dGroups, httpRequestsAdaptiveGroups, th
 which can be refused with Cloudflare's own GraphQL error, and the whole of it with an HTTP status."""
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import httpx
 
 TOKEN: str = "cf-test-token"
-FIELDS: list[str] = [
-    "clientRequestHTTPHost",
-    "clientRequestPath",
-    "clientRefererHost",
-    "edgeResponseContentTypeName",
-    "date",
+FIELDS: list[str] = [  # as Cloudflare names them
+    "count",
+    "dimensions_clientRequestHTTPHost",
+    "dimensions_clientRequestPath",
+    "dimensions_clientRefererHost",
+    "dimensions_edgeResponseContentTypeName",
+    "dimensions_date",
+    "sum_visits",
 ]
 DAILY_DAY: dict[str, Any] = {
     "sum": {
@@ -54,6 +56,7 @@ class FakeCloudflare:
         self.daily_settings: dict[str, Any] | None = {"enabled": True, "notOlderThan": 365 * 86_400}
         self.scale: int = 1  # the adaptive datasets' counts are multiplied by this
         self.queries: list[tuple[str, dict[str, Any]]] = []
+        self.page_loads: bool = True  # Web Analytics on and beaconing
 
     def _zones(self, request: httpx.Request) -> httpx.Response:
         page = int(request.url.params.get("page", 1))
@@ -67,37 +70,58 @@ class FakeCloudflare:
         days = [until - timedelta(days=i) for i in range(min(3, (until - since).days + 1))]
         return [{"dimensions": {"date": str(d)}, **DAILY_DAY} for d in sorted(days)]
 
+    @staticmethod
+    def _day(v: dict[str, Any]) -> str:
+        """The window's last day, as the rows of a one-day window name it."""
+        return str((datetime.fromisoformat(v["end"].replace("Z", "+00:00")) - timedelta(seconds=1)).date())
+
     def _adaptive(self, query: str, v: dict[str, Any]) -> list[dict[str, Any]]:
-        n = self.scale
+        n, day = self.scale, self._day(v)
         if "clientRequestPath" in query:
             return [
-                {"count": 30 * n, "dimensions": {"clientRequestHTTPHost": "glyphh.ai", "clientRequestPath": "/"}},
+                {
+                    "count": 30 * n,
+                    "dimensions": {"date": day, "clientRequestHTTPHost": "glyphh.ai", "clientRequestPath": "/"},
+                },
+                # no date: the window's last day
                 {"count": 5 * n, "dimensions": {"clientRequestHTTPHost": "docs.glyphh.ai", "clientRequestPath": ""}},
             ]
         if "clientRefererHost" in query or "clientRequestReferer" in query:
             field = "clientRefererHost" if "clientRefererHost" in query else "clientRequestReferer"
             google = "www.google.com" if field == "clientRefererHost" else "https://www.google.com/search?q=glyphh"
+            on = {"date": day, "clientRequestHTTPHost": "glyphh.ai"}
             return [
-                {"count": 9 * n, "dimensions": {"clientRequestHTTPHost": "glyphh.ai", field: google}},
-                {"count": 7 * n, "dimensions": {"clientRequestHTTPHost": "glyphh.ai", field: "docs.glyphh.ai"}},
-                {"count": 3 * n, "dimensions": {"clientRequestHTTPHost": "glyphh.ai", field: ""}},
+                {"count": 9 * n, "dimensions": {**on, field: google}},
+                {"count": 7 * n, "dimensions": {**on, field: "docs.glyphh.ai"}},
+                {"count": 3 * n, "dimensions": {**on, field: ""}},
             ]
         return [
-            {"count": 50 * n, "sum": {"visits": 20 * n}, "dimensions": {"clientRequestHTTPHost": "glyphh.ai"}},
-            {"count": 8 * n, "sum": {"visits": 2 * n}, "dimensions": {"clientRequestHTTPHost": "docs.glyphh.ai"}},
+            {
+                "count": 50 * n,
+                "sum": {"visits": 20 * n},
+                "dimensions": {"date": day, "clientRequestHTTPHost": "glyphh.ai"},
+            },
+            {
+                "count": 8 * n,
+                "sum": {"visits": 2 * n},
+                "dimensions": {"date": day, "clientRequestHTTPHost": "docs.glyphh.ai"},
+            },
         ]
 
-    def _rum(self, query: str) -> list[dict[str, Any]]:
+    def _rum(self, query: str, v: dict[str, Any]) -> list[dict[str, Any]]:
+        if not self.page_loads:
+            return []
         dim = "requestPath" if "requestPath" in query else "refererHost"
         key = "/pricing" if dim == "requestPath" else "news.ycombinator.com"
-        return [{"count": 4, "dimensions": {"requestHost": "glyphh.ai", dim: key}}, {"count": 1, "dimensions": {}}]
+        loads = {"date": self._day(v), "requestHost": "glyphh.ai", dim: key}
+        return [{"count": 4, "dimensions": loads}, {"count": 1, "dimensions": {}}]
 
     def _answer(self, query: str, v: dict[str, Any]) -> dict[str, Any]:
         if "settings" in query:
             found = {"httpRequests1dGroups": self.daily_settings, "httpRequestsAdaptiveGroups": self.adaptive}
             return {"viewer": {"zones": [{"settings": found}]}}
         if "rumPageloadEventsAdaptiveGroups" in query:
-            return {"viewer": {"accounts": [{"rumPageloadEventsAdaptiveGroups": self._rum(query)}]}}
+            return {"viewer": {"accounts": [{"rumPageloadEventsAdaptiveGroups": self._rum(query, v)}]}}
         if "httpRequests1dGroups" in query:
             return {"viewer": {"zones": [{"httpRequests1dGroups": self._daily(v)}]}}
         return {"viewer": {"zones": [{"httpRequestsAdaptiveGroups": self._adaptive(query, v)}]}}

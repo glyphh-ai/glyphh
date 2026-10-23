@@ -9,15 +9,16 @@ from glyphh_server.ops.traffic import queries as q
 from glyphh_server.ops.traffic.queries import DAY, Limits
 from glyphh_server.ops.traffic.store import Tops
 
-WINDOWS: Limits = Limits(not_older=7 * DAY)
+WINDOWS: Limits = Limits(not_older=7 * DAY)  # a day at a time, the last week
 MOST_WINDOWS: int = 8
 KINDS: tuple[tuple[str, str], ...] = (("requestPath", "rum_page"), ("refererHost", "rum_referrer"))
+NO_PAGE_LOADS: str = "Web Analytics has no page loads: it is not on for these sites"
 
 
 async def rum(cf: Cloudflare, account: str, now: datetime) -> tuple[Tops, dict[str, Any]]:
     """The account's page loads as tops keyed by hostname, or none and why."""
     tops: Tops = {}
-    for day, start, end in q.windows(now, WINDOWS, MOST_WINDOWS):
+    for start, end in q.windows(now, WINDOWS, MOST_WINDOWS):
         for dim, kind in KINDS:
             window = {"account": account, "start": q.stamp(start), "end": q.stamp(end)}
             try:
@@ -27,6 +28,8 @@ async def rum(cf: Cloudflare, account: str, now: datetime) -> tuple[Tops, dict[s
             for row in q.groups(data, "accounts", "rumPageloadEventsAdaptiveGroups"):
                 dims = row.get("dimensions") or {}
                 if key := dims.get(dim):
-                    at = (dims.get("requestHost") or "", day, kind, key)
+                    at = (dims.get("requestHost") or "", q.day_of(dims, end), kind, key)
                     tops[at] = tops.get(at, 0) + int(row.get("count") or 0)
+    if not tops:
+        return {}, {"ok": False, "note": NO_PAGE_LOADS}
     return tops, {"ok": True, "days": WINDOWS.days}
