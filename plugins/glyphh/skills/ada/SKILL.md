@@ -131,8 +131,10 @@ Ada itself has versions, named `ada-<major>-<minor>`: `ada-1-0` is the latest st
 Every version of a model runs one Ada version and is always answered by it, so a model's answers never change under
 it; moving to another Ada version is the person's choice, made with a backtest in front of them.
 
-- **Say which one a model runs.** `ada_model` shows its Ada and a notice when there is something to say (a newer
-  stable exists, it runs a beta, its version is deprecated). Mention it when you show a model, in one line.
+- **Say which one a model runs.** `ada_model` shows its Ada, its status (a model on a beta says Beta) and a notice
+  when there is something to say: `upgrade` (a newer stable exists), `beta` (a beta is open to try: mention it
+  quietly, never push it), `deprecated` (its version ends), `moved` (it was moved off a retired one). Mention it when
+  you show a model, in one line.
 - **New models take the latest stable.** Leave `ada` out of `ada_model_create` unless the person asks for another
   by name.
 - **A beta** is a newer Ada offered to try: opt in, never the default, chosen only by its name, labelled Beta

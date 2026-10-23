@@ -409,6 +409,7 @@ test("usage is the server's shape: the month, its reset, precedents, requests an
   assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.over, usage.requests.overage, usage.requests_per_second], ["Free", 1000, 5000, 0, false, 5]);
   assert.match(usage.month, /^\d{4}-\d{2}$/);
   assert.match(usage.resets_at, /^\d{4}-\d{2}-01$/);
+  assert.deepEqual([usage.ada.latest_stable, usage.ada.versions.map((v) => [v.name, v.models])], ["ada-1-0", [["ada-1-1-beta", 0], ["ada-1-0", 3]]]);
 });
 
 test("a rate refusal without the header waits as its body says", async () => {
@@ -488,7 +489,7 @@ test("a model carries its Ada on its info and on each version", async () => {
   const { ada, calls } = fake(answered(info.name), answered(listed.name), answered(versions.name));
   const m = ada.model("tickets");
   const i = await m.info();
-  assert.deepEqual([i.name, i.version, i.ada, i.ada_status, i.ada_notice.kind, i.ada_notice.to], ["tickets", 4, "ada-1-1-beta", "beta", "beta", "ada-1-0"]);
+  assert.deepEqual([i.name, i.version, i.ada, i.ada_status, i.ada_notice], ["tickets", 4, "ada-1-1-beta", "beta", null]);
   assert.deepEqual((await ada.models()).map((x) => [x.name, x.ada]), [["routing", "ada-1-0"], ["tickets", "ada-1-1-beta"]]);
   assert.deepEqual((await m.versions()).map((v) => [v.version, v.active, v.ada, v.kernel]), [[3, false, "ada-1-0", "3.12.2"], [4, true, "ada-1-1-beta", "3.13.0"]]);
   assert.deepEqual(calls.map((k) => k.path), ["/v1/models/tickets", "/v1/models", "/v1/models/tickets/versions"]);
@@ -503,7 +504,9 @@ test("a model is made on the latest stable unless an Ada is named", async () => 
   const sent = beta.request.body;
   const made = await ada.createModel(sent.name, sent.spec, { ada: "ada-1-1-beta" });
   assert.deepEqual(calls[1].body, sent);
-  assert.deepEqual([made.created.ada, made.created.ada_notice.kind], ["ada-1-1-beta", "beta"]);
+  assert.deepEqual([made.created.ada, made.created.ada_status, made.created.ada_notice], ["ada-1-1-beta", "beta", null]);
+  // on the latest stable, the quiet notice: a beta is open to try
+  assert.deepEqual([first.created.ada_notice.kind, first.created.ada_notice.to], ["beta", "ada-1-1-beta"]);
 });
 
 test("a backtest against another Ada, then an upgrade waited for, then a rollback", async () => {

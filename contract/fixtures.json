@@ -1,6 +1,6 @@
 {
   "contract": 5,
-  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code. Contract 5's Ada versions (ada-cloud.md 12): `ada` on decisions, models, versions and backtests, the version list, an upgrade, the headers (`headers`: Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) and the E_ADA_* refusals, written from the spec until run.sh records them from the server's ada-versions branch; a deprecated, moved or retired Ada, a closed beta and a kernel the deploy lacks are never reached by a local run (the registry lists ada-1-0, stable, and ada-1-1-beta, open), so those stay written.",
+  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code. Contract 5's Ada versions (ada-cloud.md 12): `ada` on decisions, models, versions and backtests, the version list, an upgrade, the headers (`headers`: Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) and the E_ADA_* refusals, checked against and taken from a local server built from glyphh-ai/server's ada-versions branch (its notes, messages, notices and job args as it answers them; models, ids and numbers kept to the story told); a deprecated, moved or retired Ada, a closed beta and a kernel the deploy lacks are never reached by a local run (the registry lists ada-1-0, stable, and ada-1-1-beta, open), so those stay written.",
   "cases": [
     {
       "name": "a model made from its spec",
@@ -68,7 +68,11 @@
           "created_at": "2026-10-22 04:42:44.094847+00:00",
           "ada": "ada-1-0",
           "ada_status": "stable",
-          "ada_notice": null,
+          "ada_notice": {
+            "kind": "beta",
+            "message": "ada-1-1-beta is available to try (beta).",
+            "to": "ada-1-1-beta"
+          },
           "spec": {
             "name": "routing",
             "seed": 4,
@@ -632,6 +636,7 @@
             ]
           },
           "result": {
+            "ada": "ada-1-0",
             "active": {
               "ada": "ada-1-0",
               "n": 100,
@@ -812,7 +817,43 @@
             "over": 0,
             "overage": false
           },
-          "requests_per_second": 5
+          "requests_per_second": 5,
+          "ada": {
+            "latest_stable": "ada-1-0",
+            "contract": 5,
+            "versions": [
+              {
+                "name": "ada-1-1-beta",
+                "kernel": "3.13.0",
+                "status": "beta",
+                "beta": true,
+                "open": true,
+                "released": "2026-10-23",
+                "deprecated": null,
+                "ends": null,
+                "changes_answers": true,
+                "aliases": [],
+                "summary": "Learned pairs of roles stay out of a vote when the query's pair is one the model never learned.",
+                "notes": "A beta: chosen only by name, never the default. Kernel 3.13.0.",
+                "models": 0
+              },
+              {
+                "name": "ada-1-0",
+                "kernel": "3.12.2",
+                "status": "stable",
+                "beta": false,
+                "open": true,
+                "released": "2026-10-22",
+                "deprecated": null,
+                "ends": null,
+                "changes_answers": true,
+                "aliases": [],
+                "summary": "Ada Cloud's first version.",
+                "notes": "Kernel 3.12.2.",
+                "models": 3
+              }
+            ]
+          }
         }
       }
     },
@@ -909,8 +950,8 @@
               "ends": null,
               "changes_answers": true,
               "aliases": [],
-              "summary": "A pair of values a model never learned weighs nothing, so the roles' own weights decide.",
-              "notes": "Once a model has learned pairs of roles, a case whose pair of values was never seen in learning no longer leans on that pair: the roles' own learned weights decide. Answers can change. On German Credit it is within noise of ada-1-0 (decides 70.5% right at a cost of 99, against 70.0% and 100). A beta: chosen by name, never the default; backtest your model on it first.",
+              "summary": "Learned pairs of roles stay out of a vote when the query's pair is one the model never learned.",
+              "notes": "When a model learns that two roles tell more together than apart (a pair, such as how long a loan runs and how much is saved), it weighs each combination of their values it has learned from. Until now, a query bringing a combination the model had never learned from still gave that pair its full weight, and since the combination matched nothing stored, the pair pulled the vote toward no one in particular.\n\nIn ada-1-1-beta such a pair weighs nothing for that query, so the two roles' own weights decide, as they would in a model that had learned no pair. Nothing stored changes, so moving to it and back is safe.\n\n**Who it changes:** only models that learned pairs (`interactions`, on by default), and only queries whose pair of values is new to the model. On German Credit it is within noise of ada-1-0 (deciding with costs: 70.5% right at a cost of 99, against 70.0% at 100). Backtest your own model against it before you upgrade.\n\n- A beta: chosen only by name, never the default.\n- Kernel 3.13.0.",
               "models": 1
             },
             {
@@ -919,13 +960,13 @@
               "status": "stable",
               "beta": false,
               "open": true,
-              "released": "2026-10-20",
+              "released": "2026-10-22",
               "deprecated": null,
               "ends": null,
-              "changes_answers": false,
+              "changes_answers": true,
               "aliases": [],
-              "summary": "Ada Cloud's first release.",
-              "notes": "The kernel Ada Cloud launched with. Every model made before Ada versions runs it.",
+              "summary": "Ada Cloud's first version.",
+              "notes": "The version Ada Cloud launched with: typed answers with calibrated probabilities, the expected cost of each choice, asking a person when the spec prices it or the confidence is under its bar, and the precedents behind every answer. Models learn their roles', values', words' and pairs' weights from their own precedents, and big models are read through a shortlist and re-ranked exactly.\n\n- Kernel 3.12.2.",
               "models": 2
             }
           ]
@@ -1027,11 +1068,7 @@
           },
           "ada": "ada-1-1-beta",
           "ada_status": "beta",
-          "ada_notice": {
-            "kind": "beta",
-            "message": "tickets runs ada-1-1-beta, a beta: chosen by name, never the default. The latest stable is ada-1-0.",
-            "to": "ada-1-0"
-          }
+          "ada_notice": null
         }
       }
     },
@@ -1278,11 +1315,7 @@
           },
           "ada": "ada-1-1-beta",
           "ada_status": "beta",
-          "ada_notice": {
-            "kind": "beta",
-            "message": "tickets-beta runs ada-1-1-beta, a beta: chosen by name, never the default. The latest stable is ada-1-0.",
-            "to": "ada-1-0"
-          }
+          "ada_notice": null
         }
       }
     },
@@ -1319,6 +1352,7 @@
             ]
           },
           "result": {
+            "ada": "ada-1-0",
             "active": {
               "ada": "ada-1-0",
               "n": 200,
@@ -1413,9 +1447,7 @@
             "state": "queued",
             "percent": 0.0,
             "args": {
-              "version": 4,
-              "ada": "ada-1-1-beta",
-              "from": "ada-1-0"
+              "version": 4
             },
             "result": null,
             "error": null,
@@ -1786,7 +1818,7 @@
         "body": {
           "error": {
             "code": "E_ADA_UNKNOWN",
-            "message": "No Ada version is named ada-9-9: the latest stable is ada-1-0.",
+            "message": "There is no Ada version ada-9-9: the latest stable is ada-1-0.",
             "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
             "ada": "ada-9-9",
             "latest": "ada-1-0"
@@ -1951,7 +1983,7 @@
         "method": "POST",
         "path": "/v1/models/tickets/upgrade",
         "body": {
-          "ada": "ada-1-0"
+          "ada": "ada-1-1-beta"
         }
       },
       "response": {
@@ -1962,9 +1994,9 @@
         "body": {
           "error": {
             "code": "E_NO_CHANGE",
-            "message": "tickets runs ada-1-0 already.",
-            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
-            "ada": "ada-1-0",
+            "message": "This model runs on ada-1-1-beta already.",
+            "trace_id": "525c12d84d054cea8229421cbc708f8b",
+            "ada": "ada-1-1-beta",
             "latest": "ada-1-0"
           }
         }

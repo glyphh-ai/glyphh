@@ -160,6 +160,8 @@ export interface Usage {
    */
   requests: { used: number; max: number | null; over: number; overage: boolean };
   requests_per_second: number | null;
+  /** The org's Ada versions (contract 5), each with the org's models on it, and the latest stable. */
+  ada?: AdaVersions;
 }
 
 export type AdaStatus = "stable" | "beta" | "deprecated" | "retired";

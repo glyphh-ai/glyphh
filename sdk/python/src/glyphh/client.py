@@ -427,6 +427,12 @@ class Usage:
     def __getitem__(self, key: str) -> Any:
         return self.data[key]
 
+    @property
+    def ada(self) -> Optional["AdaVersions"]:
+        """The org's Ada versions (contract 5): each with the org's models on it, and the latest stable."""
+        found = self.data.get("ada")
+        return AdaVersions.of(found) if isinstance(found, Mapping) else None
+
     @classmethod
     def of(cls, body: Mapping[str, Any]) -> "Usage":
         held, reads = body.get("precedents") or {}, body.get("requests") or {}

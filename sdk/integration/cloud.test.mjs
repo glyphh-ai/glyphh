@@ -132,7 +132,8 @@ test("create a model, import, learn, decide, backtest, activate, export", async 
   assert.equal(m.created.ada, latest); // made with no ada: the latest stable
   const info = await m.info();
   shaped(info, "model");
-  assert.deepEqual([info.ada, info.ada_status, info.ada_notice], [latest, "stable", null]);
+  // on the latest stable, the notice is only the quiet one a beta open to try gives: kind beta, to the beta
+  assert.deepEqual([info.ada, info.ada_status, info.ada_notice?.kind, info.ada_notice?.to], [latest, "stable", "beta", beta]);
   const before = info.version;
   for (const v of await m.versions()) assert.ok(v.ada === latest && v.kernel);
   assert.equal((await ada.models()).find((x) => x.name === "ts-tickets").ada, latest);
@@ -144,7 +145,7 @@ test("create a model, import, learn, decide, backtest, activate, export", async 
   shaped(moved, "upgrade");
   assert.deepEqual([moved.ada, moved.from, moved.active, moved.job.state, moved.job.kind], [beta, latest, true, "done", "reencode"]);
   const onBeta = await m.info();
-  assert.deepEqual([onBeta.ada, onBeta.ada_status, onBeta.version, onBeta.ada_notice?.kind], [beta, "beta", moved.version, "beta"]);
+  assert.deepEqual([onBeta.ada, onBeta.ada_status, onBeta.version, onBeta.ada_notice], [beta, "beta", moved.version, null]);
   const versions = await m.versions();
   assert.deepEqual(versions.filter((v) => v.active).map((v) => v.ada), [beta]);
   assert.equal((await m.decide(asked(3))).ada, beta);

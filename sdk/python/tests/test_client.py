@@ -461,6 +461,8 @@ def test_usage_is_typed_in_the_servers_shape():
     r = usage.requests
     assert (r.used, r.max, r.over, r.overage, usage.requests_per_second) == (sent["requests"]["used"], 5_000, 0, False, 5)
     assert usage["plan"] == "Free" and usage.data == sent  # reads as the answer's dict too
+    assert usage.ada is not None and usage.ada.latest_stable == "ada-1-0" and {v.name: v.models for v in usage.ada} == {"ada-1-1-beta": 0, "ada-1-0": 3}
+    assert Usage.of({k: v for k, v in sent.items() if k != "ada"}).ada is None  # a contract 4 server
     # Team past its month, metered; Enterprise, by contract: no caps
     team = {**sent, "plan": "Team", "requests": {"used": 5_012_345, "max": 5_000_000, "over": 12_345, "overage": True}, "requests_per_second": 200}
     enterprise = {**sent, "plan": "Enterprise", "precedents": {"used": 9, "max": None}, "requests": {"used": 3, "max": None, "over": 0, "overage": False}, "requests_per_second": None}
@@ -547,7 +549,7 @@ def test_the_ada_versions_are_listed_typed():
     assert (found.latest_stable, found.contract, len(found)) == ("ada-1-0", 5, 2)
     beta, stable = found
     assert (beta.name, beta.kernel, beta.status, beta.beta, beta.open, beta.changes_answers, beta.models) == ("ada-1-1-beta", "3.13.0", "beta", True, True, True, 1)
-    assert (stable.name, stable.status, stable.deprecated, stable.ends, stable.released) == ("ada-1-0", "stable", None, None, "2026-10-20")
+    assert (stable.name, stable.status, stable.deprecated, stable.ends, stable.released) == ("ada-1-0", "stable", None, None, "2026-10-22")
     assert found.get("ada-1-0") is stable and found.get("ada-9-9") is None and stable["kernel"] == "3.12.2"
     moved = {**c["response"]["body"], "versions": [{**c["response"]["body"]["versions"][1], "name": "ada-1-1", "aliases": ["ada-1-1-beta"]}]}
     client, _ = ada((200, moved))
@@ -562,8 +564,7 @@ def test_a_model_carries_its_ada_on_its_info_and_on_each_version():
     m = client.model("tickets")
     i = m.info()
     assert isinstance(i, glyphh.ModelInfo) and isinstance(i, dict) and i == info["response"]["body"]  # a dict, as in 3.2
-    assert (i.name, i.version, i.ada, i.ada_status) == ("tickets", 4, "ada-1-1-beta", "beta")
-    assert i.ada_notice == glyphh.AdaNotice("beta", info["response"]["body"]["ada_notice"]["message"], "ada-1-0", None)
+    assert (i.name, i.version, i.ada, i.ada_status, i.ada_notice) == ("tickets", 4, "ada-1-1-beta", "beta", None)
     assert [(x.name, x.ada) for x in client.models()] == [("routing", "ada-1-0"), ("tickets", "ada-1-1-beta")]
     vs = m.versions()
     assert [(v.version, v.active, v.ada, v.kernel) for v in vs] == [(3, False, "ada-1-0", "3.12.2"), (4, True, "ada-1-1-beta", "3.13.0")]
@@ -578,10 +579,12 @@ def test_a_model_is_made_on_the_latest_stable_unless_an_ada_is_named():
     beta = case("a model made on a beta Ada")
     client, fake = ada(answered("a model made from its spec"), answered(beta["name"]))
     first = client.create_model("routing", {"name": "routing"})
-    assert "ada" not in fake.calls[0][3] and first.created.ada == "ada-1-0" and first.created.ada_notice is None
+    assert "ada" not in fake.calls[0][3] and first.created.ada == "ada-1-0"
+    # on the latest stable, the quiet notice: a beta is open to try
+    assert first.created.ada_notice == glyphh.AdaNotice("beta", "ada-1-1-beta is available to try (beta).", "ada-1-1-beta", None)
     sent = beta["request"]["body"]
     made = client.create_model(sent["name"], sent["spec"], ada="ada-1-1-beta")
-    assert fake.calls[1][3] == sent and made.created.ada == "ada-1-1-beta" and made.created.ada_notice.kind == "beta"
+    assert fake.calls[1][3] == sent and (made.created.ada, made.created.ada_status, made.created.ada_notice) == ("ada-1-1-beta", "beta", None)
 
 
 def test_a_backtest_against_another_ada_then_an_upgrade_waited_for_then_a_rollback(clock):

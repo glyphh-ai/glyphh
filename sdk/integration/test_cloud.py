@@ -234,7 +234,9 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     assert beta is not None, "the registry lists a beta open to new models (ada-1-1-beta)"
     assert m.created is not None and m.created.ada == latest  # made with no ada: the latest stable
     info = m.info()
-    assert isinstance(info, ModelInfo) and (info.ada, info.ada_status, info.ada_notice) == (latest, "stable", None)
+    assert isinstance(info, ModelInfo) and (info.ada, info.ada_status) == (latest, "stable")
+    # on the latest stable, the notice is only the quiet one a beta open to try gives: kind beta, to the beta
+    assert info.ada_notice is not None and (info.ada_notice.kind, info.ada_notice.to) == ("beta", beta)
     before = info.version
     assert all(v.ada == latest and v.kernel for v in m.versions())
     assert {x.name: x.ada for x in ada.models()}["tickets"] == latest
@@ -247,7 +249,7 @@ def flow(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     assert moved["job"].kind == "reencode" and moved["version"] > before
     on_beta = m.info()
     assert (on_beta.ada, on_beta.ada_status, on_beta.version) == (beta, "beta", moved["version"])
-    assert on_beta.ada_notice is not None and on_beta.ada_notice.kind == "beta"
+    assert on_beta.ada_notice is None  # running the beta is said by ada_status; no newer stable to offer
     versions = m.versions()
     assert [v.ada for v in versions if v.active] == [beta] and {v.ada for v in versions} == {latest, beta}
     assert m.decide(asked(3)).ada == beta

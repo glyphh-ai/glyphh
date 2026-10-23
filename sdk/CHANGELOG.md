@@ -16,7 +16,9 @@ beta), its answers always computed by it; moving to another is the caller's choi
   today); a beta only by its name.
 - A model's Ada: `info()` carries `ada`, `ada_status` and `ada_notice` (`upgrade`, `beta`, `deprecated`, `moved`,
   `retired`, with `to` and `ends`; Python: a `ModelInfo`, still a dict, and an `AdaNotice`); each of `models()` its
-  `ada`; each of `versions()` its `ada` and `kernel` (Python: `ModelVersion`, still a dict); a `Decision` its `ada`.
+  `ada`; each of `versions()` its `ada` and `kernel` (Python: `ModelVersion`, still a dict); a `Decision` its `ada`;
+  `usage()` the org's Ada versions (`ada`, the `/v1/ada` shape). A `beta` notice on a stable model says a beta is
+  open to try; a model on the beta has `ada_status` beta and no notice.
 - `backtest(candidates, ada=)` / `backtest(candidates, { ada })`: the active spec scored on another Ada (a
   candidate may name its own `ada` too); the result's active run and each candidate carry their `ada`.
 - `upgrade(ada=None, note=, backtest=, wait=True)` / `upgrade({ ada, note, backtest, wait })` (`POST

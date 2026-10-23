@@ -43,7 +43,7 @@
   "model": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Model",
-    "description": "GET /v1/models/{name} (and what POST /v1/models {name, spec, ada?} answers, the model made, version 1 on the Ada asked for, else the latest stable): the model, its active version and spec, how many precedents it holds, and the Ada version that version runs. ada_status is that version's status; ada_notice what to tell the person: upgrade (a newer stable exists), beta (it runs a beta), deprecated (its version ends: to, ends), moved (it was moved off a retired one: to), retired; null when there is nothing to say",
+    "description": "GET /v1/models/{name} (and what POST /v1/models {name, spec, ada?} answers, the model made, version 1 on the Ada asked for, else the latest stable): the model, its active version and spec, how many precedents it holds, and the Ada version that version runs. ada_status is that version's status; ada_notice what to tell the person: upgrade (a newer stable exists: to), beta (a beta is open to try: to, the quiet one), deprecated (its version ends: to, ends), moved (it was moved off a retired one: to), retired; null when there is nothing to say (a model on the beta itself says so by ada_status)",
     "type": "object",
     "required": ["name", "version", "precedents", "ada", "ada_status", "ada_notice"],
     "properties": {
@@ -139,6 +139,7 @@
     "type": "object",
     "required": ["active", "candidates", "held_out"],
     "properties": {
+      "ada": { "type": "string" },
       "active": { "$ref": "#/$defs/run" },
       "candidates": { "type": "array", "items": { "$ref": "#/$defs/run" } },
       "held_out": { "type": "integer", "minimum": 0 },
@@ -264,7 +265,12 @@
           }
         ]
       },
-      "requests_per_second": { "type": ["integer", "null"], "minimum": 1 }
+      "requests_per_second": { "type": ["integer", "null"], "minimum": 1 },
+      "ada": {
+        "description": "Contract 5: the org's Ada versions, as GET /v1/ada answers them (latest_stable, contract, versions with the org's models on each)",
+        "type": "object",
+        "required": ["latest_stable", "contract", "versions"]
+      }
     },
     "$defs": {
       "used": {
