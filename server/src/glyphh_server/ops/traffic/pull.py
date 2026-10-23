@@ -8,7 +8,7 @@ limit) or a zone's daily totals refused is a warning, so an ops event. Once an h
 says one has begun."""
 
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -28,6 +28,7 @@ KEY: str = "traffic:pulled"
 EVERY: int = 3600
 DAILY_DAYS: int = 60
 MOST_WINDOWS: int = 8  # adaptive queries a part, a pull at most
+ROWS: int = 1000  # rows an adaptive query: a host's or a page's each day of a window
 DAILY: Limits = Limits(not_older=365 * DAY)
 ADAPTIVE: Limits = Limits()
 REFERRER_FIELDS: tuple[str, ...] = ("clientRefererHost", "clientRequestReferer")
@@ -120,16 +121,16 @@ async def _adaptive(
     if dims is None:
         return {"ok": False, "note": NOT_ON_PLAN}
     html = q.HTML if part != "hosts" and limit.has("edgeResponseContentTypeName") else ""
-    query = q.ADAPTIVE % {"limit": min(limit.page, 100), "html": html, "dims": dims}
+    query = q.ADAPTIVE % {"limit": min(limit.page, ROWS), "html": html, "dims": dims}
     found_days: store.Days = {}
     found_tops: store.Tops = {}
-    for day, start, end in q.windows(now, limit, MOST_WINDOWS):
+    for start, end in q.windows(now, limit, MOST_WINDOWS):
         try:
             data = await cf.query(query, {"zone": zone_id, "start": q.stamp(start), "end": q.stamp(end)})
         except CloudflareError as err:
             return q.note(err)
         for row in q.groups(data, "zones", "httpRequestsAdaptiveGroups"):
-            _row(part, day, row, found_days, found_tops)
+            _row(part, end, row, found_days, found_tops)
     days.update(found_days)
     tops.update(found_tops)
     return {"ok": True, "days": limit.days}
@@ -139,9 +140,9 @@ def _add(found: dict[Any, int], key: Any, n: int) -> None:
     found[key] = found.get(key, 0) + n
 
 
-def _row(part: str, day: date, row: dict[str, Any], days: store.Days, tops: store.Tops) -> None:
+def _row(part: str, end: datetime, row: dict[str, Any], days: store.Days, tops: store.Tops) -> None:
     dims, n = row.get("dimensions") or {}, int(row.get("count") or 0)
-    host = dims.get("clientRequestHTTPHost") or ""
+    host, day = dims.get("clientRequestHTTPHost") or "", q.day_of(dims, end)
     if part == "hosts":
         _add(days, (host, day, "requests"), n)
         _add(days, (host, day, "visits"), int((row.get("sum") or {}).get("visits") or 0))

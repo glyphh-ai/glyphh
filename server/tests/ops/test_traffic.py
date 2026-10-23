@@ -18,7 +18,8 @@ from glyphh_server.ops.cloudflare import Cloudflare, CloudflareError
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.traffic import pull, queries, store
 from glyphh_server.ops.traffic.queries import Limits
-from tests.cloudflare import TOKEN, FakeCloudflare, cloudflare_http, zone
+from glyphh_server.ops.traffic.rum import NO_PAGE_LOADS
+from tests.cloudflare import FIELDS, TOKEN, FakeCloudflare, cloudflare_http, zone
 from tests.conftest import SETTINGS
 
 NOW: datetime = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
@@ -205,14 +206,30 @@ async def test_the_pull_runs_once_an_hour_from_the_tick(engine: AsyncEngine, cle
     await redis.delete(pull.KEY)
 
 
+async def test_a_long_window_keeps_each_row_on_its_own_day(engine: AsyncEngine, clean: None) -> None:
+    fake = FakeCloudflare()
+    fake.adaptive = {"notOlderThan": 31 * 86_400, "maxDuration": 30 * 86_400, "availableFields": FIELDS}
+    fake.page_loads = False
+    await _pull(engine, fake)
+    zones, days, tops = await _kept(engine)
+    month_ago = str(TODAY - timedelta(days=30))
+    assert days[("glyphh.ai", "glyphh.ai", TODAY, "requests")] == 50
+    assert days[("glyphh.ai", "glyphh.ai", date.fromisoformat(month_ago), "requests")] == 50  # the second window's
+    assert zones["glyphh.ai"].available["hosts"] == {"ok": True, "days": 31}
+    assert zones["glyphh.ai"].available["rum"] == {"ok": False, "note": NO_PAGE_LOADS}
+    assert not [k for k in tops if k[3].startswith("rum_")]
+    assert all("date" in q for q, _ in fake.queries if "httpRequestsAdaptiveGroups(" in q)
+
+
 def test_the_windows_fit_the_plan() -> None:
     hourly = Limits(not_older=86_400, max_duration=3_600)
     found = queries.windows(NOW, hourly, 5)
-    assert len(found) == 5 and found[0] == (TODAY, NOW - timedelta(hours=1), NOW)  # the newest first
-    assert found[-1] == (TODAY, NOW - timedelta(hours=5), NOW - timedelta(hours=4))
+    assert len(found) == 5 and found[0] == (NOW - timedelta(hours=1), NOW)  # the newest first
+    assert found[-1] == (NOW - timedelta(hours=5), NOW - timedelta(hours=4))
     two = queries.windows(NOW, Limits(not_older=2 * 86_400), 10)
-    assert [d for d, _, _ in two] == [TODAY, TODAY - timedelta(days=1), TODAY - timedelta(days=2)]
-    assert two[-1][1] == NOW - timedelta(days=2) + timedelta(minutes=5)  # cut at the plan's reach
+    assert two == [(NOW - timedelta(days=1), NOW), (NOW - timedelta(days=2, minutes=-5), NOW - timedelta(days=1))]
+    pro = queries.windows(NOW, Limits(not_older=31 * 86_400, max_duration=30 * 86_400), 8)
+    assert [(end - start).days for start, end in pro] == [30, 0]  # a month, then what is left of the plan's reach
     assert queries.limits({}, Limits(page=7), Limits(page=9)) == (Limits(page=7), Limits(page=9))
     assert queries._limits("off", Limits(page=3)) == Limits(page=3)
     rows = [{"dimensions": {"date": str(TODAY)}, "sum": {"countryMap": [{"requests": 2}]}}]

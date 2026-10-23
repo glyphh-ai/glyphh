@@ -2,7 +2,7 @@
 (its `settings` node: how far back, how long a window, how many rows, which fields) and the windows that fit."""
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from glyphh_server.ops.cloudflare import CloudflareError
@@ -20,11 +20,11 @@ DAILY: str = """query ($zone: string, $since: Date, $until: Date) { viewer { zon
 
 ADAPTIVE: str = """query ($zone: string, $start: Time, $end: Time) { viewer { zones(filter: {zoneTag: $zone}) {
   httpRequestsAdaptiveGroups(limit: %(limit)d, filter: {datetime_geq: $start, datetime_lt: $end%(html)s},
-    orderBy: [count_DESC]) { count sum { visits } dimensions { %(dims)s } } } } }"""
+    orderBy: [count_DESC]) { count sum { visits } dimensions { date %(dims)s } } } } }"""
 
 RUM: str = """query ($account: string, $start: Time, $end: Time) { viewer { accounts(filter: {accountTag: $account}) {
   rumPageloadEventsAdaptiveGroups(limit: 100, filter: {datetime_geq: $start, datetime_lt: $end},
-    orderBy: [count_DESC]) { count sum { visits } dimensions { requestHost %(dim)s } } } } }"""
+    orderBy: [count_DESC]) { count sum { visits } dimensions { date requestHost %(dim)s } } } } }"""
 
 HTML: str = ', edgeResponseContentTypeName: "html"'
 DAILY_METRICS: dict[str, str] = {
@@ -47,7 +47,8 @@ class Limits:
     fields: frozenset[str] | None = None
 
     def has(self, field: str) -> bool:
-        return self.fields is None or field in self.fields
+        """Whether the dataset has a dimension: Cloudflare names it `dimensions_<field>` among its fields."""
+        return self.fields is None or field in self.fields or f"dimensions_{field}" in self.fields
 
     @property
     def days(self) -> int:
@@ -95,19 +96,23 @@ def daily(rows: list[dict[str, Any]]) -> tuple[dict[tuple[date, str], int], dict
     return days, countries
 
 
-def windows(now: datetime, limit: Limits, most: int) -> list[tuple[date, datetime, datetime]]:
-    """The newest windows (a day's, cut to the plan's longest), within how far back the plan reaches: `most` of them."""
+def windows(now: datetime, limit: Limits, most: int) -> list[tuple[datetime, datetime]]:
+    """Back from now as far as the plan reaches, in windows as long as it allows, the newest first: `most` of them.
+    They never overlap, so a day's rows from two windows add up."""
     earliest = now - timedelta(seconds=limit.not_older) + timedelta(minutes=5)
-    out: list[tuple[date, datetime, datetime]] = []
-    for back in range(limit.days + 1):
-        day = now.date() - timedelta(days=back)
-        start = max(datetime.combine(day, time(), UTC), earliest)
-        end = min(datetime.combine(day + timedelta(days=1), time(), UTC), now)
-        while start < end and len(out) < most:
-            begin = max(start, end - timedelta(seconds=limit.max_duration))
-            out.append((day, begin, end))
-            end = begin
+    out: list[tuple[datetime, datetime]] = []
+    end = now
+    while end > earliest and len(out) < most:
+        start = max(earliest, end - timedelta(seconds=limit.max_duration))
+        out.append((start, end))
+        end = start
     return out
+
+
+def day_of(dims: dict[str, Any], end: datetime) -> date:
+    """A row's day, else its window's last."""
+    found = dims.get("date")
+    return date.fromisoformat(found) if found else (end - timedelta(seconds=1)).date()
 
 
 def note(err: CloudflareError) -> dict[str, Any]:
