@@ -17,6 +17,8 @@ const LIMITS = {
   conference: 0,
 };
 
+const withLimit = (c) => ({ ...c, limit: LIMITS[c.category] ?? 0 });
+
 const PRESETS = [
   {
     label: 'Uber to JFK · $62',
@@ -30,14 +32,18 @@ const PRESETS = [
     label: 'Business class to London · $2,400',
     claim: { employee: 'Sofia Alvarez', department: 'marketing', category: 'airfare', amount: 2400, receipt: true, preapproved: false, description: 'Business class to London for a conference' },
   },
-];
+  {
+    label: 'Your own expense',
+    claim: { employee: '', department: '', category: '', amount: '', receipt: true, preapproved: false, description: '' },
+  },
+].map((p) => ({ ...p, claim: withLimit(p.claim) }));
 
 const $ = (id) => document.getElementById(id);
 const money = (n) => `$${Number(n).toLocaleString('en-US')}`;
 const pct = (p) => `${Math.round(p * 100)}%`;
 const cap = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const policyOf = (c) => (Number(c.amount) <= LIMITS[c.category] ? 'within limit' : c.preapproved ? 'over limit, pre-approved' : 'over limit, not pre-approved');
+const policyOf = (c) => (Number(c.amount) <= Number(c.limit) ? 'within limit' : c.preapproved ? 'over limit, pre-approved' : 'over limit, not pre-approved');
 const keyOf = (c) => [c.department, c.category, Number(c.amount), c.receipt, policyOf(c), c.description.trim().toLowerCase()].join('|');
 
 let ledger = [];
@@ -94,7 +100,7 @@ function renderPresets() {
 }
 
 function renderForm() {
-  $('category').innerHTML = Object.keys(LIMITS).map((c) => `<option value="${c}">${cap(c)}</option>`).join('');
+  $('categories').innerHTML = Object.keys(LIMITS).map((c) => `<option value="${c}">`).join('');
   fill();
 }
 
@@ -104,6 +110,7 @@ function fill() {
   $('category').value = claim.category;
   $('description').value = claim.description;
   $('amount').value = claim.amount;
+  $('limit').value = claim.limit;
   for (const seg of document.querySelectorAll('.seg')) {
     const on = claim[seg.dataset.for] ? 'yes' : 'no';
     for (const b of seg.children) b.classList.toggle('on', b.dataset.v === on);
@@ -113,21 +120,27 @@ function fill() {
 }
 
 function renderPolicy() {
-  const limit = LIMITS[claim.category];
+  const limit = Number(claim.limit);
   const p = policyOf(claim);
-  const rule = limit === 0 ? `${cap(claim.category)} always needs pre-approval` : `${cap(claim.category)} up to ${money(limit)}`;
+  const what = cap(claim.category || 'this category');
+  const rule = limit === 0 ? `${what} always needs pre-approval` : `${what} up to ${money(limit)} without pre-approval`;
   $('policy').innerHTML = `<span class="kicker dim">Policy check</span><span class="${p === 'over limit, not pre-approved' ? 'flag' : 'ok'}">${cap(p)}</span><i>${rule}${claim.receipt ? '' : ' · no receipt attached'}</i>`;
 }
 
 function read() {
+  const category = $('category').value.trim().toLowerCase();
+  // A known category brings its usual limit; the limit can still be typed over.
+  const limit = category !== claim.category && category in LIMITS ? LIMITS[category] : Number($('limit').value);
   claim = {
     ...claim,
     employee: $('employee').value.trim(),
-    department: $('department').value,
-    category: $('category').value,
+    department: $('department').value.trim().toLowerCase(),
+    category,
     description: $('description').value.trim(),
     amount: Number($('amount').value),
+    limit,
   };
+  if ($('limit').value !== String(limit)) $('limit').value = limit;
 }
 
 /* Ada's decision */
@@ -144,13 +157,19 @@ function renderAnswer() {
 
   $('answer').innerHTML = `
     <div class="verdict-wrap">
-      <p class="verdict ${verdict}">${verdict === 'ask' ? 'Not sure.' : verdict === 'approve' ? 'Approve.' : 'Reject.'}</p>
-      <p class="why">${
-        verdict === 'ask'
-          ? `Leaning ${answer.outcome}, ${pct(sure)} sure. That’s under her ${pct(BAR)} bar, so a person decides.`
-          : `${pct(sure)} sure, from ${ledger.length} decisions on record.`
-      }</p>
-      <div class="meter"><span class="fill ${verdict}" style="width:${Math.round(sure * 100)}%"></span><span class="tick" style="left:${BAR * 100}%"></span></div>
+      <div class="decision ${verdict}">
+        <div class="decision-top">
+          <span class="mark" aria-hidden="true">${verdict === 'ask' ? '?' : verdict === 'approve' ? '✓' : '✕'}</span>
+          <span class="label">${verdict === 'ask' ? 'Needs review' : verdict === 'approve' ? 'Approved' : 'Rejected'}</span>
+          <span class="conf">${pct(sure)} confidence</span>
+        </div>
+        <p class="why">${
+          verdict === 'ask'
+            ? `Leaning ${answer.outcome === 'approve' ? 'approve' : 'reject'}, but under the ${pct(BAR)} bar for deciding on her own. A person decides.`
+            : `Decided by Ada from ${ledger.length} past decisions.`
+        }</p>
+        <div class="meter"><span class="fill ${verdict}" style="width:${Math.round(sure * 100)}%"></span><span class="tick" style="left:${BAR * 100}%" title="${pct(BAR)} bar"></span></div>
+      </div>
       ${steady ? `<p class="steady">Asked ${history.length}× · the same answer every time</p>` : ''}
       ${basis.length ? `
         <div class="basis">
@@ -169,8 +188,8 @@ function renderAnswer() {
         <div class="decide">
           <span class="kicker pink">You decide</span>
           <div class="decide-row">
-            <button type="button" class="outline" data-decide="approve">Approve it</button>
-            <button type="button" class="outline" data-decide="reject">Reject it</button>
+            <button type="button" class="approve-btn" data-decide="approve">Approve</button>
+            <button type="button" class="outline" data-decide="reject">Reject</button>
           </div>
         </div>` : ''}
       ${answer.recorded ? `<p class="recorded">Recorded as ${answer.recorded.ref}, ${answer.recorded.outcome === 'approve' ? 'approved' : 'rejected'}. Ada uses it from the next question. <button type="button" class="link" data-again>Ask again</button></p>` : ''}
@@ -250,7 +269,7 @@ for (const seg of document.querySelectorAll('.seg')) {
     fill();
   });
 }
-for (const id of ['employee', 'department', 'category', 'description', 'amount']) {
+for (const id of ['employee', 'department', 'category', 'description', 'amount', 'limit']) {
   $(id).addEventListener('input', () => {
     read();
     renderPolicy();
