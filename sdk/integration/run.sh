@@ -5,19 +5,20 @@
 #
 #   ADA_SERVER_IMAGE=<image> sh sdk/integration/run.sh
 #
-# ADA_SERVER_IMAGE is an image of glyphh-ai/server at the commit under test, its branch ada-cloud-connector (the
-# plans' cloud limits, metering and the final usage shape) or later (its Dockerfile's `runtime` or `test` target),
+# ADA_SERVER_IMAGE is an image of glyphh-ai/server at the commit under test, its branch ada-versions (contract 5:
+# Ada versions, each kernel the registry lists installed) or later (its Dockerfile's `runtime` or `test` target),
 # which needs the read-only deploy key of the private kernel to build:
 #
 #   docker build --target runtime --secret id=ada_deploy_key,src=$HOME/.ssh/glyphh_ada_deploy_key \
-#     -t glyphh-server:ada <server checkout at ada-cloud-connector>
+#     -t glyphh-server:ada <server checkout at ada-versions>
 #
 # It makes two people, their orgs and an API key each straight in that throwaway database (setup_key.py; the first
 # org on Basic, as the whole way holds more than Free's 1,000 precedents; the second on Free, its month of requests
 # already used), then runs test_cloud.py (Python) and cloud.test.mjs (TypeScript):
-# create a model, import, learn, decide, backtest, activate, export, the usage, past the plan's calls a second (429
-# E_RATE) and past its month (403 E_LIMIT requests), every answer checked against contract/contract.json. Never
-# against production.
+# create a model, import, learn, decide, backtest, activate, export; the Ada versions (the list, a model's Ada, a
+# backtest on the beta, an upgrade to it, a rollback, E_NO_CHANGE and E_ADA_UNKNOWN, Glyphh-Contract on every
+# answer); the usage, past the plan's calls a second (429 E_RATE) and past its month (403 E_LIMIT requests), every
+# answer checked against contract/contract.json. Never against production.
 #
 # Each worker container starts a fixed 2 worker processes (GLYPHH_ADA_WORKERS, which the server reads as it reads
 # --processes), and every container is capped in CPUs and memory, so a laptop is not taken over.

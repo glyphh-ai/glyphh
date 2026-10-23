@@ -1,10 +1,10 @@
 {
-  "contract": 4,
-  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code.",
+  "contract": 5,
+  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code. Contract 5's Ada versions (ada-cloud.md 12): `ada` on decisions, models, versions and backtests, the version list, an upgrade, the headers (`headers`: Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) and the E_ADA_* refusals, checked against and taken from a local server built from glyphh-ai/server's ada-versions branch (its notes, messages, notices and job args as it answers them; models, ids and numbers kept to the story told); a deprecated, moved or retired Ada, a closed beta and a kernel the deploy lacks are never reached by a local run (the registry lists ada-1-0, stable, and ada-1-1-beta, open), so those stay written.",
   "cases": [
     {
       "name": "a model made from its spec",
-      "schema": null,
+      "schema": "model",
       "request": {
         "method": "POST",
         "path": "/v1/models",
@@ -66,6 +66,13 @@
           "version": 1,
           "precedents": 0,
           "created_at": "2026-10-22 04:42:44.094847+00:00",
+          "ada": "ada-1-0",
+          "ada_status": "stable",
+          "ada_notice": {
+            "kind": "beta",
+            "message": "ada-1-1-beta is available to try (beta).",
+            "to": "ada-1-1-beta"
+          },
           "spec": {
             "name": "routing",
             "seed": 4,
@@ -293,7 +300,8 @@
             }
           ],
           "model": "tickets",
-          "version": 1
+          "version": 1,
+          "ada": "ada-1-0"
         }
       }
     },
@@ -341,7 +349,8 @@
             }
           ],
           "model": "tickets",
-          "version": 3
+          "version": 3,
+          "ada": "ada-1-0"
         }
       }
     },
@@ -423,7 +432,8 @@
             }
           },
           "model": "routing",
-          "version": 1
+          "version": 1,
+          "ada": "ada-1-0"
         }
       }
     },
@@ -591,6 +601,7 @@
     {
       "name": "a backtest, done",
       "schema": "job",
+      "result_schema": "backtest",
       "request": {
         "method": "GET",
         "path": "/v1/jobs/27744c18-ea1c-4a91-a43e-a7b0a512bbd4",
@@ -625,7 +636,9 @@
             ]
           },
           "result": {
+            "ada": "ada-1-0",
             "active": {
+              "ada": "ada-1-0",
               "n": 100,
               "cost": 0.0,
               "learn": true,
@@ -650,6 +663,7 @@
             "held_out": 100,
             "candidates": [
               {
+                "ada": "ada-1-0",
                 "n": 100,
                 "cost": 0.0,
                 "learn": true,
@@ -679,6 +693,7 @@
                 "calibration_error": 0.0
               },
               {
+                "ada": "ada-1-0",
                 "n": 100,
                 "cost": 0.0,
                 "learn": true,
@@ -802,7 +817,43 @@
             "over": 0,
             "overage": false
           },
-          "requests_per_second": 5
+          "requests_per_second": 5,
+          "ada": {
+            "latest_stable": "ada-1-0",
+            "contract": 5,
+            "versions": [
+              {
+                "name": "ada-1-1-beta",
+                "kernel": "3.13.0",
+                "status": "beta",
+                "beta": true,
+                "open": true,
+                "released": "2026-10-23",
+                "deprecated": null,
+                "ends": null,
+                "changes_answers": true,
+                "aliases": [],
+                "summary": "Learned pairs of roles stay out of a vote when the query's pair is one the model never learned.",
+                "notes": "A beta: chosen only by name, never the default. Kernel 3.13.0.",
+                "models": 0
+              },
+              {
+                "name": "ada-1-0",
+                "kernel": "3.12.2",
+                "status": "stable",
+                "beta": false,
+                "open": true,
+                "released": "2026-10-22",
+                "deprecated": null,
+                "ends": null,
+                "changes_answers": true,
+                "aliases": [],
+                "summary": "Ada Cloud's first version.",
+                "notes": "Kernel 3.12.2.",
+                "models": 3
+              }
+            ]
+          }
         }
       }
     },
@@ -868,6 +919,594 @@
           "step": null,
           "prompt": null,
           "seconds": 0.1236
+        }
+      }
+    },
+    {
+      "name": "the Ada versions",
+      "schema": "ada_versions",
+      "request": {
+        "method": "GET",
+        "path": "/v1/ada",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "latest_stable": "ada-1-0",
+          "contract": 5,
+          "versions": [
+            {
+              "name": "ada-1-1-beta",
+              "kernel": "3.13.0",
+              "status": "beta",
+              "beta": true,
+              "open": true,
+              "released": "2026-10-23",
+              "deprecated": null,
+              "ends": null,
+              "changes_answers": true,
+              "aliases": [],
+              "summary": "Learned pairs of roles stay out of a vote when the query's pair is one the model never learned.",
+              "notes": "When a model learns that two roles tell more together than apart (a pair, such as how long a loan runs and how much is saved), it weighs each combination of their values it has learned from. Until now, a query bringing a combination the model had never learned from still gave that pair its full weight, and since the combination matched nothing stored, the pair pulled the vote toward no one in particular.\n\nIn ada-1-1-beta such a pair weighs nothing for that query, so the two roles' own weights decide, as they would in a model that had learned no pair. Nothing stored changes, so moving to it and back is safe.\n\n**Who it changes:** only models that learned pairs (`interactions`, on by default), and only queries whose pair of values is new to the model. On German Credit it is within noise of ada-1-0 (deciding with costs: 70.5% right at a cost of 99, against 70.0% at 100). Backtest your own model against it before you upgrade.\n\n- A beta: chosen only by name, never the default.\n- Kernel 3.13.0.",
+              "models": 1
+            },
+            {
+              "name": "ada-1-0",
+              "kernel": "3.12.2",
+              "status": "stable",
+              "beta": false,
+              "open": true,
+              "released": "2026-10-22",
+              "deprecated": null,
+              "ends": null,
+              "changes_answers": true,
+              "aliases": [],
+              "summary": "Ada Cloud's first version.",
+              "notes": "The version Ada Cloud launched with: typed answers with calibrated probabilities, the expected cost of each choice, asking a person when the spec prices it or the confidence is under its bar, and the precedents behind every answer. Models learn their roles', values', words' and pairs' weights from their own precedents, and big models are read through a shortlist and re-ranked exactly.\n\n- Kernel 3.12.2.",
+              "models": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the org's models, each with its Ada",
+      "schema": "models",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "models": [
+            {
+              "name": "routing",
+              "id": "a1400fbd-6139-4b28-bd61-0541d8ddc904",
+              "version": 1,
+              "precedents": 60,
+              "created_at": "2026-10-22 04:42:44.094847+00:00",
+              "ada": "ada-1-0"
+            },
+            {
+              "name": "tickets",
+              "id": "4c9f51d2-7b1e-4f0a-9a43-1d2e3f4a5b6c",
+              "version": 4,
+              "precedents": 1210,
+              "created_at": "2026-10-22 04:18:43.000000+00:00",
+              "ada": "ada-1-1-beta"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a model and its Ada",
+      "schema": "model",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models/tickets",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-1-beta"
+        },
+        "body": {
+          "name": "tickets",
+          "id": "4c9f51d2-7b1e-4f0a-9a43-1d2e3f4a5b6c",
+          "version": 4,
+          "precedents": 1210,
+          "created_at": "2026-10-22 04:18:43.000000+00:00",
+          "spec": {
+            "name": "tickets",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          },
+          "ada": "ada-1-1-beta",
+          "ada_status": "beta",
+          "ada_notice": null
+        }
+      }
+    },
+    {
+      "name": "a model on a deprecated Ada",
+      "schema": "model",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models/claims",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-0",
+          "glyphh-ada-notice": "deprecated: claims runs ada-1-0, deprecated: it answers until 2027-04-21, then moves to the latest stable. Backtest and upgrade to ada-1-1 before then."
+        },
+        "body": {
+          "name": "claims",
+          "id": "0b6e2f7a-93c4-4d1e-8f25-6a7b8c9d0e1f",
+          "version": 2,
+          "precedents": 4810,
+          "created_at": "2026-10-20 11:02:13.000000+00:00",
+          "spec": {
+            "name": "claims",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          },
+          "ada": "ada-1-0",
+          "ada_status": "deprecated",
+          "ada_notice": {
+            "kind": "deprecated",
+            "message": "claims runs ada-1-0, deprecated: it answers until 2027-04-21, then moves to the latest stable. Backtest and upgrade to ada-1-1 before then.",
+            "to": "ada-1-1",
+            "ends": "2027-04-21"
+          }
+        }
+      }
+    },
+    {
+      "name": "a model's versions, each with its Ada",
+      "schema": "versions",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models/tickets/versions",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-1-beta"
+        },
+        "body": {
+          "versions": [
+            {
+              "version": 3,
+              "note": "every word as it is",
+              "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af",
+              "made_at": "2026-10-22 04:42:31.000000+00:00",
+              "active": false,
+              "backtest": null,
+              "ready": true,
+              "gone": false,
+              "retired_at": "2026-10-23 09:12:09.880412+00:00",
+              "reencoded": true,
+              "new_store": true,
+              "changes": [
+                {
+                  "path": "settings.word_weights",
+                  "from": true,
+                  "to": false,
+                  "restates": true
+                }
+              ],
+              "precedents_at": 1210,
+              "learned": null,
+              "scores": null,
+              "store": {
+                "status": "kept",
+                "drop_after": "2026-10-30 09:12:09.880412+00:00"
+              },
+              "ada": "ada-1-0",
+              "kernel": "3.12.2"
+            },
+            {
+              "version": 4,
+              "note": "ada-1-1-beta: 2 fewer wrong on the last 200",
+              "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af",
+              "made_at": "2026-10-23 09:12:01.204331+00:00",
+              "active": true,
+              "backtest": "6a1d0f4e-2c3b-4a59-8e7d-9f0a1b2c3d4e",
+              "ready": true,
+              "gone": false,
+              "retired_at": null,
+              "reencoded": true,
+              "new_store": true,
+              "changes": [],
+              "precedents_at": 1210,
+              "learned": null,
+              "scores": null,
+              "store": {
+                "status": "active",
+                "drop_after": null
+              },
+              "ada": "ada-1-1-beta",
+              "kernel": "3.13.0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a model made on a beta Ada",
+      "schema": "model",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models",
+        "body": {
+          "name": "tickets-beta",
+          "spec": {
+            "name": "tickets-beta",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          },
+          "ada": "ada-1-1-beta"
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "name": "tickets-beta",
+          "id": "9d8c7b6a-5f4e-4d3c-b2a1-0f9e8d7c6b5a",
+          "version": 1,
+          "precedents": 0,
+          "created_at": "2026-10-23 09:30:00.000000+00:00",
+          "spec": {
+            "name": "tickets-beta",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          },
+          "ada": "ada-1-1-beta",
+          "ada_status": "beta",
+          "ada_notice": null
+        }
+      }
+    },
+    {
+      "name": "a backtest against another Ada, done",
+      "schema": "job",
+      "result_schema": "backtest",
+      "request": {
+        "method": "GET",
+        "path": "/v1/jobs/6a1d0f4e-2c3b-4a59-8e7d-9f0a1b2c3d4e",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "id": "6a1d0f4e-2c3b-4a59-8e7d-9f0a1b2c3d4e",
+          "model": "tickets",
+          "kind": "backtest",
+          "state": "done",
+          "percent": 100.0,
+          "args": {
+            "holdout": {
+              "seed": 0,
+              "newest": 200
+            },
+            "clearance": 1.0,
+            "candidates": [
+              {
+                "ada": "ada-1-1-beta"
+              }
+            ]
+          },
+          "result": {
+            "ada": "ada-1-0",
+            "active": {
+              "ada": "ada-1-0",
+              "n": 200,
+              "cost": 64.0,
+              "learn": true,
+              "accuracy": 0.86,
+              "ask_rate": 0.08,
+              "coverage": 0.92,
+              "log_loss": 0.351,
+              "mistakes": {
+                "keep": 4
+              },
+              "calibrate": true,
+              "candidate": {
+                "name": "active",
+                "settings": {}
+              },
+              "cost_mean": 0.32,
+              "top_accuracy": 0.86,
+              "accuracy_answered": 0.88,
+              "calibration_error": 0.031
+            },
+            "output": "default",
+            "trained": 1010,
+            "version": 3,
+            "held_out": 200,
+            "candidates": [
+              {
+                "ada": "ada-1-1-beta",
+                "n": 200,
+                "cost": 58.0,
+                "learn": true,
+                "accuracy": 0.87,
+                "ask_rate": 0.07,
+                "coverage": 0.93,
+                "log_loss": 0.342,
+                "mistakes": {
+                  "keep": 4
+                },
+                "calibrate": true,
+                "candidate": {
+                  "ada": "ada-1-1-beta"
+                },
+                "cost_mean": 0.29,
+                "top_accuracy": 0.87,
+                "accuracy_answered": 0.89,
+                "calibration_error": 0.031,
+                "change": {
+                  "accuracy": 0.01,
+                  "ask_rate": -0.01,
+                  "log_loss": -0.009,
+                  "cost_mean": -0.03,
+                  "top_accuracy": 0.01,
+                  "calibration_error": 0.0
+                }
+              }
+            ]
+          },
+          "error": null,
+          "created_at": "2026-10-23 09:12:01.204331+00:00",
+          "started_at": "2026-10-23 09:12:02.551020+00:00",
+          "finished_at": "2026-10-23 09:12:09.880412+00:00",
+          "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+        }
+      }
+    },
+    {
+      "name": "an upgrade to another Ada",
+      "schema": "upgrade",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/tickets/upgrade",
+        "body": {
+          "ada": "ada-1-1-beta",
+          "note": "ada-1-1-beta: 2 fewer wrong on the last 200",
+          "backtest": "6a1d0f4e-2c3b-4a59-8e7d-9f0a1b2c3d4e"
+        }
+      },
+      "response": {
+        "status": 202,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-0"
+        },
+        "body": {
+          "version": 4,
+          "active": false,
+          "job": {
+            "id": "e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b",
+            "model": "tickets",
+            "kind": "reencode",
+            "state": "queued",
+            "percent": 0.0,
+            "args": {
+              "version": 4
+            },
+            "result": null,
+            "error": null,
+            "created_at": "2026-10-23 09:12:01.204331+00:00",
+            "started_at": null,
+            "finished_at": null,
+            "made_by": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+          },
+          "ada": "ada-1-1-beta",
+          "from": "ada-1-0"
+        }
+      }
+    },
+    {
+      "name": "a decision just after its model was moved off a retired Ada",
+      "schema": "decision",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "claims",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "pro",
+                "channel": "mail",
+                "text": "card lost"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-1",
+          "glyphh-ada-notice": "moved: ada-1-0 was retired on 2027-04-21: claims was moved to ada-1-1 (version 3). Its version 2 is kept and cannot be made live again."
+        },
+        "body": {
+          "outcome": "keep",
+          "expected_cost": 0.12,
+          "probabilities": {
+            "keep": 0.88,
+            "refund": 0.12
+          },
+          "ask": false,
+          "receipts": [
+            {
+              "id": "5e1a9c2b7d40",
+              "sim": 0.9312,
+              "outcome": "keep",
+              "hash": "c4d1e7a9b2f30658",
+              "author": "830f6127-f0e3-4ced-8105-ad2037ba26af"
+            }
+          ],
+          "model": "claims",
+          "version": 3,
+          "ada": "ada-1-1"
         }
       }
     },
@@ -1157,6 +1796,208 @@
             "trace_id": "ddd1392c438741f9836518a2c9c2a1d5",
             "job": "9bfaff33-5de1-4b5e-aca9-e32ed246e014",
             "kind": "import"
+          }
+        }
+      }
+    },
+    {
+      "name": "an Ada that does not exist",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/tickets/upgrade",
+        "body": {
+          "ada": "ada-9-9"
+        }
+      },
+      "response": {
+        "status": 422,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_ADA_UNKNOWN",
+            "message": "There is no Ada version ada-9-9: the latest stable is ada-1-0.",
+            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
+            "ada": "ada-9-9",
+            "latest": "ada-1-0"
+          }
+        }
+      }
+    },
+    {
+      "name": "a retired Ada",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/tickets/upgrade",
+        "body": {
+          "ada": "ada-0-9"
+        }
+      },
+      "response": {
+        "status": 410,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_ADA_RETIRED",
+            "message": "ada-0-9 is retired: choose the latest stable, ada-1-0.",
+            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
+            "ada": "ada-0-9",
+            "latest": "ada-1-0"
+          }
+        }
+      }
+    },
+    {
+      "name": "a deprecated Ada as an upgrade's target",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/routing/upgrade",
+        "body": {
+          "ada": "ada-1-0"
+        }
+      },
+      "response": {
+        "status": 422,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_ADA_DEPRECATED",
+            "message": "ada-1-0 is deprecated (it ends 2027-04-21): a new model or an upgrade takes the latest stable, ada-1-1.",
+            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
+            "ada": "ada-1-0",
+            "latest": "ada-1-1"
+          }
+        }
+      }
+    },
+    {
+      "name": "a beta closed to new models",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models",
+        "body": {
+          "name": "tickets-beta",
+          "spec": {
+            "name": "tickets-beta",
+            "seed": 5,
+            "dimension": 2048,
+            "layers": [
+              {
+                "name": "t",
+                "segments": [
+                  {
+                    "name": "s",
+                    "roles": [
+                      {
+                        "name": "plan"
+                      },
+                      {
+                        "name": "channel"
+                      },
+                      {
+                        "name": "text",
+                        "text_encoding": "bag_of_words"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "output": {
+              "costs": {
+                "refund": {
+                  "keep": 3
+                },
+                "keep": {
+                  "refund": 1
+                }
+              },
+              "ask_below": 0.6
+            }
+          },
+          "ada": "ada-1-1-beta"
+        }
+      },
+      "response": {
+        "status": 422,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_ADA_BETA",
+            "message": "ada-1-1-beta is closed to new models; its models run on. Choose the latest stable, ada-1-0.",
+            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
+            "ada": "ada-1-1-beta",
+            "latest": "ada-1-0"
+          }
+        }
+      }
+    },
+    {
+      "name": "an Ada this deploy does not have",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/decide",
+        "body": {
+          "model": "claims",
+          "data": {
+            "t": {
+              "s": {
+                "plan": "pro"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_ADA_UNAVAILABLE",
+            "message": "claims runs ada-0-9, which this deploy does not have: tell support, quoting the trace id.",
+            "trace_id": "5f0d6c1e2b7a4e3c9d1f8a6b4c2e0d17",
+            "ada": "ada-0-9",
+            "latest": "ada-1-0"
+          }
+        }
+      }
+    },
+    {
+      "name": "an upgrade to the Ada the model runs",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/models/tickets/upgrade",
+        "body": {
+          "ada": "ada-1-1-beta"
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "glyphh-contract": "5"
+        },
+        "body": {
+          "error": {
+            "code": "E_NO_CHANGE",
+            "message": "This model runs on ada-1-1-beta already.",
+            "trace_id": "525c12d84d054cea8229421cbc708f8b",
+            "ada": "ada-1-1-beta",
+            "latest": "ada-1-0"
           }
         }
       }

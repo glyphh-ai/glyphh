@@ -181,6 +181,65 @@ class JobFailedError(AdaError):
     """A job ended `failed`: `code` and `message` are its error's; `detail["job"]` is the job."""
 
 
+# Ada versions (contract 5): every model version runs one Ada version, chosen by name (ada-1-0, ada-1-1-beta)
+
+
+class AdaVersionError(AdaError):
+    """An Ada version refused. `ada` is the name asked for, `latest` the latest stable, which the server names as the
+    fix: `client.ada.versions()` lists them all."""
+
+    @property
+    def ada(self) -> Optional[str]:
+        return self.detail.get("ada")
+
+    @property
+    def latest(self) -> Optional[str]:
+        return self.detail.get("latest")
+
+
+class AdaVersionUnknownError(AdaVersionError):
+    """E_ADA_UNKNOWN (422): no Ada version has that name. Never substituted: choose one `client.ada.versions()` lists,
+    or leave `ada` out for the latest stable."""
+
+
+class AdaVersionRetiredError(AdaVersionError):
+    """E_ADA_RETIRED (410): that Ada version is retired, so it cannot be chosen or made live again (its models were
+    moved to the latest stable, `latest`)."""
+
+
+class AdaVersionDeprecatedError(AdaVersionError):
+    """E_ADA_DEPRECATED (422): that Ada version is deprecated: it still answers for the models on it, but cannot be
+    chosen for a new model or as an upgrade's target. Choose `latest`."""
+
+
+class AdaBetaClosedError(AdaVersionError):
+    """E_ADA_BETA (422): that beta is closed to new models (its models run on). Choose `latest`, or another beta."""
+
+
+class AdaVersionUnavailableError(AdaVersionError):
+    """E_ADA_UNAVAILABLE (503): the model's Ada version is not on this deploy. Not retried: tell support, quoting
+    `trace_id`."""
+
+
+class ClientTooOldError(AdaError):
+    """E_CLIENT_TOO_OLD: the server speaks a newer contract (`contract`) than this SDK (`supported`): upgrade the SDK
+    (`pip install -U glyphh`). Raised rather than reading answers whose shape the SDK does not know."""
+
+    @property
+    def contract(self) -> Optional[int]:
+        return self.detail.get("contract")
+
+    @property
+    def supported(self) -> Optional[int]:
+        return self.detail.get("supported")
+
+
+class AdaDeprecationWarning(FutureWarning):
+    """A model runs a deprecated Ada version, or was just moved off a retired one (the server's `Glyphh-Ada-Notice`).
+    A FutureWarning, so it shows by default; once per client and notice. `warnings.simplefilter("error",
+    AdaDeprecationWarning)` makes it raise."""
+
+
 # A clustered self-hosted runtime's refusals (SDK 3.1 for rrotor): kept so code that catches them still imports.
 class NoHeadError(AdaError):
     """E_NO_HEAD (503): a self-hosted cluster has no head. Retried; raised once retries are spent."""
@@ -229,6 +288,12 @@ TYPED: Dict[str, Type[AdaError]] = {
     "E_EXPIRED": ExpiredError,
     "E_TIMEOUT": AdaTimeoutError,
     "E_UNAVAILABLE": UnavailableError,
+    "E_ADA_UNKNOWN": AdaVersionUnknownError,
+    "E_ADA_RETIRED": AdaVersionRetiredError,
+    "E_ADA_DEPRECATED": AdaVersionDeprecatedError,
+    "E_ADA_BETA": AdaBetaClosedError,
+    "E_ADA_UNAVAILABLE": AdaVersionUnavailableError,
+    "E_CLIENT_TOO_OLD": ClientTooOldError,
     "E_NO_HEAD": NoHeadError,
     "E_HEAD_LOST": HeadLostError,
     "E_NOT_COMMITTED": NotCommittedError,

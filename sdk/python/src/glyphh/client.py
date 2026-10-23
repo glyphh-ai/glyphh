@@ -12,15 +12,31 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
-from .errors import AdaError, AdaTimeoutError, JobFailedError, ReadOnlyError, error
+from .errors import (
+    AdaDeprecationWarning,
+    AdaError,
+    AdaTimeoutError,
+    ClientTooOldError,
+    JobFailedError,
+    ReadOnlyError,
+    error,
+)
 
 #: Where Ada answers. GLYPHH_ADA_URL (or 3.0's GLYPHH_RUNTIME_URL) moves it, e.g. to a local server under test.
 DEFAULT_URL = "https://ada.glyphh.ai"
+#: The contract (contract/contract.json) this SDK speaks. A server that speaks a newer one (its Glyphh-Contract
+#: header, or /v1/ada's `contract`) is refused with ClientTooOldError, asking for the SDK to be upgraded.
+SUPPORTED_CONTRACT = 5
+#: The Ada versions this release was made and tested against. Any other name the server lists is sent as it is: the
+#: server's registry decides (`client.ada.versions()`); an unknown one is refused there, never substituted.
+SUPPORTED_ADA = ("ada-1-0", "ada-1-1-beta")
+CONTRACT_HEADER, ADA_HEADER, NOTICE_HEADER = "glyphh-contract", "glyphh-ada", "glyphh-ada-notice"
 DEFAULT_TIMEOUT = 90.0
 #: How long, in seconds, a call keeps retrying what is safe to send again before it raises.
 RETRY_DEADLINE = 30.0
@@ -110,7 +126,8 @@ class Decision:
     """`POST /v1/decide`: the outcome of least expected cost under the spec's costs, the calibrated probabilities,
     whether a person should decide instead (`ask`; the outcome is then the best guess, for them to see), and the
     precedents it stands on. `facts` when asked for (`include=["facts"]`); `outputs` when several outputs were
-    decided at once, each a Decision. It reads as a 3.0 `Result` too: `done`, `status` and `data` (the answer)."""
+    decided at once, each a Decision. `ada`: the Ada version that answered (contract 5). It reads as a 3.0 `Result`
+    too: `done`, `status` and `data` (the answer)."""
 
     outcome: Optional[str]
     probabilities: Dict[str, float]
@@ -121,6 +138,7 @@ class Decision:
     version: int
     facts: Optional[List[Any]] = None
     outputs: Optional[Dict[str, "Decision"]] = None
+    ada: Optional[str] = None
     data: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     # 3.0's Result, for code written to it
@@ -136,10 +154,11 @@ class Decision:
     limit_exceeded = False
 
     @classmethod
-    def of(cls, body: Mapping[str, Any], model: str = "", version: int = 0) -> "Decision":
+    def of(cls, body: Mapping[str, Any], model: str = "", version: int = 0, ada: Optional[str] = None) -> "Decision":
         model, version = str(body.get("model") or model), int(body.get("version") or version)
+        ada = body.get("ada") or ada
         found = body.get("outputs")
-        outputs = None if found is None else {k: cls.of(v, model, version) for k, v in found.items()}
+        outputs = None if found is None else {k: cls.of(v, model, version, ada) for k, v in found.items()}
         ask = bool(body["ask"]) if "ask" in body else any(d.ask for d in (outputs or {}).values())
         return cls(
             outcome=body.get("outcome"),
@@ -151,8 +170,173 @@ class Decision:
             version=version,
             facts=body.get("facts"),
             outputs=outputs,
+            ada=ada,
             data=dict(body),
         )
+
+
+@dataclass(frozen=True)
+class AdaNotice:
+    """What to tell the person about a model's Ada version: `upgrade` (a newer stable exists, `to`), `beta` (it runs a
+    beta), `deprecated` (its version ends on `ends`; it moves to `to` then), `moved` (it was moved off a retired one,
+    to `to`), `retired`."""
+
+    kind: str
+    message: str
+    to: Optional[str] = None
+    ends: Optional[str] = None
+
+    @classmethod
+    def of(cls, body: Any) -> Optional["AdaNotice"]:
+        if not isinstance(body, Mapping):
+            return None
+        return cls(str(body.get("kind") or ""), str(body.get("message") or ""), body.get("to"), body.get("ends"))
+
+
+class ModelInfo(Dict[str, Any]):
+    """A model as the server answers it (`GET /v1/models/{name}`, `create_model`, each of `models()`), a dict as in
+    3.2, with its Ada version read out: `ada` (the name its active version runs, e.g. ada-1-0), `ada_status` (stable,
+    beta, deprecated, retired) and `ada_notice` (an AdaNotice, or None when there is nothing to say)."""
+
+    @property
+    def name(self) -> str:
+        return str(self.get("name") or "")
+
+    @property
+    def version(self) -> int:
+        return int(self.get("version") or 0)
+
+    @property
+    def precedents(self) -> int:
+        return int(self.get("precedents") or 0)
+
+    @property
+    def ada(self) -> Optional[str]:
+        return self.get("ada")
+
+    @property
+    def ada_status(self) -> Optional[str]:
+        return self.get("ada_status")
+
+    @property
+    def ada_notice(self) -> Optional[AdaNotice]:
+        return AdaNotice.of(self.get("ada_notice"))
+
+
+class ModelVersion(Dict[str, Any]):
+    """One version of a model (`Model.versions()`), a dict as in 3.2, with the Ada version it was made and learned
+    with: `ada` (the name) and `kernel` (the exact release, shown only in a release's details)."""
+
+    @property
+    def version(self) -> int:
+        return int(self.get("version") or 0)
+
+    @property
+    def active(self) -> bool:
+        return bool(self.get("active"))
+
+    @property
+    def ada(self) -> Optional[str]:
+        return self.get("ada")
+
+    @property
+    def kernel(self) -> Optional[str]:
+        return self.get("kernel")
+
+
+@dataclass(frozen=True)
+class AdaVersion:
+    """One Ada version (`GET /v1/ada`): its `name` (ada-1-0, ada-1-1-beta), the kernel release it is, its `status`
+    (stable, beta, deprecated, retired), whether a beta is still `open` to new models, its dates (`released`,
+    `deprecated`, `ends`), whether it `changes_answers` against the version before it, other names that resolve to it
+    (`aliases`), its `summary` and release `notes`, and how many of the org's `models` run it."""
+
+    name: str
+    kernel: str
+    status: str
+    beta: bool
+    open: bool
+    released: Optional[str]
+    deprecated: Optional[str]
+    ends: Optional[str]
+    changes_answers: bool
+    aliases: List[str]
+    summary: str
+    notes: str
+    models: int
+    data: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def __getitem__(self, key: str) -> Any:
+        return self.data[key]
+
+    @classmethod
+    def of(cls, body: Mapping[str, Any]) -> "AdaVersion":
+        return cls(
+            name=str(body["name"]),
+            kernel=str(body.get("kernel") or ""),
+            status=str(body.get("status") or ""),
+            beta=bool(body.get("beta")),
+            open=bool(body.get("open", True)),
+            released=body.get("released"),
+            deprecated=body.get("deprecated"),
+            ends=body.get("ends"),
+            changes_answers=bool(body.get("changes_answers")),
+            aliases=list(body.get("aliases") or []),
+            summary=str(body.get("summary") or ""),
+            notes=str(body.get("notes") or ""),
+            models=int(body.get("models") or 0),
+            data=dict(body),
+        )
+
+
+@dataclass(frozen=True)
+class AdaVersions:
+    """`GET /v1/ada`: every Ada version, newest first, the `latest_stable` (the default for a new model, an upgrade and
+    a backtest's target) and the `contract` the server speaks. Iterates over the versions; `get(name)` finds one by its
+    name or an alias."""
+
+    latest_stable: str
+    contract: int
+    versions: List[AdaVersion]
+    data: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def __iter__(self) -> Iterator[AdaVersion]:
+        return iter(self.versions)
+
+    def __len__(self) -> int:
+        return len(self.versions)
+
+    def __getitem__(self, i: int) -> AdaVersion:
+        return self.versions[i]
+
+    def get(self, name: str) -> Optional[AdaVersion]:
+        return next((v for v in self.versions if name == v.name or name in v.aliases), None)
+
+    @classmethod
+    def of(cls, body: Mapping[str, Any]) -> "AdaVersions":
+        return cls(
+            latest_stable=str(body.get("latest_stable") or ""),
+            contract=int(body.get("contract") or 0),
+            versions=[AdaVersion.of(v) for v in body.get("versions") or []],
+            data=dict(body),
+        )
+
+
+def _too_old(contract: Any) -> Optional[ClientTooOldError]:
+    """The refusal to read a newer contract than this SDK's, or None."""
+    try:
+        n = int(contract)
+    except (TypeError, ValueError):
+        return None
+    if n <= SUPPORTED_CONTRACT:
+        return None
+    return ClientTooOldError(
+        "E_CLIENT_TOO_OLD",
+        f"Ada Cloud speaks contract {n}; this glyphh SDK speaks contract {SUPPORTED_CONTRACT}. Upgrade it: "
+        "pip install -U glyphh.",
+        0,
+        {"contract": n, "supported": SUPPORTED_CONTRACT},
+    )
 
 
 @dataclass(frozen=True)
@@ -243,6 +427,12 @@ class Usage:
     def __getitem__(self, key: str) -> Any:
         return self.data[key]
 
+    @property
+    def ada(self) -> Optional["AdaVersions"]:
+        """The org's Ada versions (contract 5): each with the org's models on it, and the latest stable."""
+        found = self.data.get("ada")
+        return AdaVersions.of(found) if isinstance(found, Mapping) else None
+
     @classmethod
     def of(cls, body: Mapping[str, Any]) -> "Usage":
         held, reads = body.get("precedents") or {}, body.get("requests") or {}
@@ -295,9 +485,15 @@ def _retryable(err: AdaError, safe: bool) -> bool:
     """Refused before anything ran (429, a self-hosted cluster's E_NO_HEAD): any call. Ada unreachable for a moment
     (E_UNREACHABLE, E_UNAVAILABLE, E_TIMEOUT, a proxy's 502, 503, 504): a call that is safe to send again, a read or
     a write carrying an Idempotency-Key (made once however often it is sent)."""
+    if err.code in NEVER_AGAIN:
+        return False
     if err.code == "E_NO_HEAD" or err.status == 429:
         return True
     return safe and (err.code in TRANSIENT or err.status in (502, 503, 504))
+
+
+#: Refusals that asking again cannot change: a kernel this deploy lacks (503), a server newer than the SDK.
+NEVER_AGAIN = ("E_ADA_UNAVAILABLE", "E_CLIENT_TOO_OLD")
 
 
 def _result(body: Mapping[str, Any]) -> Result:
@@ -309,7 +505,11 @@ def _result(body: Mapping[str, Any]) -> Result:
 
 
 def _parsed(status: int, content: bytes, got: Mapping[str, str]) -> Any:
-    """An answer's JSON, or its refusal raised as the typed error."""
+    """An answer's JSON, or its refusal raised as the typed error. An answer of a newer contract than this SDK's
+    (Glyphh-Contract) is refused first, whatever it says: ClientTooOldError."""
+    too_old = _too_old(got.get(CONTRACT_HEADER))
+    if too_old is not None:
+        raise too_old
     try:
         parsed = json.loads(content) if content else {}
     except ValueError:
@@ -342,6 +542,10 @@ class Ada:
 
     Calls safe to send again (reads, and writes, which carry an Idempotency-Key) are retried while Ada is unreachable
     for a moment, with backoff (Retry-After honoured), for up to `retry_deadline` seconds (0: never).
+
+    Every model runs an Ada version (`ada.versions()` lists them; `create_model(..., ada=)`, `Model.upgrade`); a model
+    on a deprecated version, or just moved off a retired one, warns `AdaDeprecationWarning` once per client. A server
+    that speaks a newer contract than `SUPPORTED_CONTRACT` is refused with `ClientTooOldError`: upgrade the SDK.
     """
 
     def __init__(
@@ -365,6 +569,9 @@ class Ada:
         self._send = transport or _urllib
         self.retry_deadline, self.read_your_writes = retry_deadline, read_your_writes
         self._seq, self._lock = 0, threading.Lock()
+        self._noticed: Set[str] = set()
+        #: Ada's versions: `ada.versions()`.
+        self.ada = AdaReleases(self)
 
     @property
     def cluster_seq(self) -> int:
@@ -424,7 +631,19 @@ class Ada:
             headers[MIN_SEQ] = str(self._seq)
         status, content, got = self._exchange(method, f"{self.url}{path}", headers, raw)
         self._saw(got.get(CLUSTER_SEQ))
-        return _parsed(status, content, got)
+        answer = _parsed(status, content, got)
+        self._notice(got.get(NOTICE_HEADER))
+        return answer
+
+    def _notice(self, notice: Optional[str]) -> None:
+        """The server's Glyphh-Ada-Notice (`deprecated: ...`, `moved: ...`), warned once per client and notice."""
+        if not notice:
+            return
+        with self._lock:
+            if notice in self._noticed:
+                return
+            self._noticed.add(notice)
+        warnings.warn(f"Glyphh Ada: {notice}", AdaDeprecationWarning, stacklevel=5)
 
     def _saw(self, seq: Optional[str]) -> None:
         try:
@@ -436,17 +655,27 @@ class Ada:
 
     # models
 
-    def models(self) -> List[Dict[str, Any]]:
-        """The org's models: each one's name, active version and how many precedents it holds."""
-        return list(self._call("GET", "/v1/models")["models"])
+    def models(self) -> List[ModelInfo]:
+        """The org's models: each one's name, active version, how many precedents it holds and its `ada`."""
+        return [ModelInfo(m) for m in self._call("GET", "/v1/models")["models"]]
 
     def model(self, name: str) -> "Model":
         return Model(self, name)
 
-    def create_model(self, name: str, spec: Mapping[str, Any], *, idempotency_key: Optional[str] = None) -> "Model":
+    def create_model(
+        self,
+        name: str,
+        spec: Mapping[str, Any],
+        *,
+        ada: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> "Model":
         """A model from its JSON spec, checked by the kernel and the cloud's bounds: version 1, empty. Its name is
-        lower case letters, digits and `_ . -`, at most 63. `Model.created` is the answer."""
-        made = self._write("POST", "/v1/models", {"name": name, "spec": dict(spec)}, idempotency_key)
+        lower case letters, digits and `_ . -`, at most 63. `ada`: the Ada version it runs (`ada.versions()`); None,
+        the latest stable. A beta only by its name; a deprecated, retired, unknown or closed one is refused
+        (`AdaVersionError`). `Model.created` is the answer, a `ModelInfo`."""
+        body = _drop_none(name=name, spec=dict(spec), ada=ada)
+        made = self._write("POST", "/v1/models", body, idempotency_key)
         return Model(self, name, made)
 
     def delete_model(self, name: str) -> Dict[str, Any]:
@@ -558,22 +787,44 @@ class Ada:
         return _result(self._call("POST", f"/v1/runs/{_quote(run_id)}/cancel", {}))
 
 
+class AdaReleases:
+    """Ada's versions, as `client.ada`: `versions()` lists every one the cloud keeps, newest first."""
+
+    def __init__(self, client: Ada) -> None:
+        self._client = client
+
+    def versions(self) -> AdaVersions:
+        """`GET /v1/ada`: every Ada version (name, status, dates, whether it changes answers, notes, the org's models
+        on it) and the latest stable. A server of a newer contract than the SDK's: `ClientTooOldError`."""
+        body = self._client._call("GET", "/v1/ada")
+        too_old = _too_old(body.get("contract"))
+        if too_old is not None:
+            raise too_old
+        return AdaVersions.of(body)
+
+    def latest_stable(self) -> str:
+        """The name of the latest stable Ada version: the default for a new model, an upgrade and a backtest."""
+        return self.versions().latest_stable
+
+
 class Model:
     """One model of the org. SDK 3.0's calls (`call`, `record`, `query`, `facts`, `probabilities`, `learn`) answer a
-    `Result` as they did; the rest are the cloud's own."""
+    `Result` as they did; the rest are the cloud's own. `model.ada` is the client; the Ada version a model runs is
+    `model.info().ada`, and each version's `model.versions()[i].ada`."""
 
     def __init__(self, ada: Ada, name: str, created: Optional[Mapping[str, Any]] = None) -> None:
         self.ada, self.name = ada, name
-        self.created = None if created is None else dict(created)  # create_model's answer
+        self.created = None if created is None else ModelInfo(created)  # create_model's answer
 
     def _path(self, rest: str = "") -> str:
         return f"/v1/models/{_quote(self.name)}{rest}"
 
     # the model
 
-    def info(self) -> Dict[str, Any]:
-        """The model: its active version and spec, and how many precedents it holds."""
-        return dict(self.ada._call("GET", self._path()))
+    def info(self) -> ModelInfo:
+        """The model: its active version and spec, how many precedents it holds, and its Ada version (`ada`,
+        `ada_status`, `ada_notice`: say a newer stable exists, it runs a beta, or its version ends)."""
+        return ModelInfo(self.ada._call("GET", self._path()))
 
     def delete(self) -> Dict[str, Any]:
         """Delete the model and every precedent it holds. Not undone."""
@@ -629,16 +880,42 @@ class Model:
         made = self.ada._write("PATCH", self._path("/settings"), body, idempotency_key)
         return self._change(made, wait, timeout, on_progress)
 
-    def versions(self) -> List[Dict[str, Any]]:
-        """Every version: who made it and why, which is active."""
-        return list(self.ada._call("GET", self._path("/versions"))["versions"])
+    def versions(self) -> List[ModelVersion]:
+        """Every version: who made it and why, which is active, and the Ada version it was made and learned with
+        (`ada`, `kernel`)."""
+        return [ModelVersion(v) for v in self.ada._call("GET", self._path("/versions"))["versions"]]
 
     def activate(
         self, version: int, *, wait: bool = True, timeout: float = JOB_TIMEOUT, on_progress: Optional[Progress] = None
     ) -> Dict[str, Any]:
-        """Make another version active (a rollback): at once, or by a job bringing its store up to date first."""
+        """Make another version active (a rollback, an upgrade's too: it answers on that version's Ada again): at
+        once, or by a job bringing its store up to date first. A version on a retired Ada: `AdaVersionRetiredError`."""
         made = self.ada._write("POST", self._path(f"/versions/{int(version)}/activate"), {})
         return self._change(made, wait, timeout, on_progress)
+
+    def upgrade(
+        self,
+        ada: Optional[str] = None,
+        *,
+        note: Optional[str] = None,
+        backtest: Optional[str] = None,
+        wait: bool = True,
+        timeout: float = JOB_TIMEOUT,
+        on_progress: Optional[Progress] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Move the model to another Ada version: `ada` (None: the latest stable; any supported version, an older one
+        too, a downgrade). A new version of the active spec on it, always re-encoded by a job while the old version
+        serves: {version, active, job, ada, from}. Waited for unless `wait=False`; when its job is done the new
+        version is active (`active` True). Backtest first (`backtest(ada=...)`) and pass its job's id as `backtest`;
+        roll back with `activate(<the version before>)`. The Ada it runs already: `NoChangeError`; a deprecated,
+        retired, unknown or closed one: `AdaVersionError`."""
+        body = _drop_none(ada=ada, note=note, backtest=backtest)
+        made = self.ada._write("POST", self._path("/upgrade"), body, idempotency_key)
+        out = self._change(made, wait, timeout, on_progress)
+        if isinstance(out.get("job"), Job) and out["job"].done:
+            out["active"] = True
+        return out
 
     # cases
 
@@ -712,6 +989,7 @@ class Model:
         self,
         candidates: Sequence[Mapping[str, Any]] = (),
         *,
+        ada: Optional[str] = None,
         holdout: Optional[Mapping[str, Any]] = None,
         output: Optional[str] = None,
         clearance: Optional[float] = None,
@@ -720,11 +998,14 @@ class Model:
         on_progress: Optional[Progress] = None,
     ) -> Job:
         """Score the active version and up to ten candidates ({settings}, {spec_version} or {spec}, each with an
-        optional name) on the model's own held-out precedents (`holdout` {newest: n}, 200 by default, or {fraction,
-        seed}), each learned on the rest. The live model is never touched. The job's `result` has, per candidate,
-        accuracy, log-loss, cost, ask rate, coverage, calibration error and the mistakes."""
+        optional name, and an optional `ada`: scored on that Ada version) on the model's own held-out precedents
+        (`holdout` {newest: n}, 200 by default, or {fraction, seed}), each learned on the rest by its own Ada. `ada`
+        is shorthand for the candidate {"ada": ada}: the active spec on that Ada, before an upgrade. The live model
+        is never touched. The job's `result` has, for the active version and per candidate, its `ada`, accuracy,
+        log-loss, cost, ask rate, coverage, calibration error and the mistakes."""
         body = _drop_none(
             candidates=[dict(c) for c in candidates],
+            ada=ada,
             holdout=None if holdout is None else dict(holdout),
             output=output,
             clearance=clearance,

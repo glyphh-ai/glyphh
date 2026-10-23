@@ -1,7 +1,8 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.1.6: your Ada Cloud account, the Ada skill and the file ledger. Ada Cloud is
-Ada as an API that Glyphh runs: nothing to install or host.
+The Glyphh plugin for Claude Code, 1.2.0: your Ada Cloud account, the Ada skill and the file ledger. Ada Cloud is
+Ada as an API that Glyphh runs: nothing to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a
+server that speaks a newer one is said plainly in the panel and by the skill, with how to update the plugin.
 
 ```
 /plugin marketplace add glyphh-ai/glyphh
@@ -12,7 +13,7 @@ Ada as an API that Glyphh runs: nothing to install or host.
 |---|---|
 | The account (a hooks module, `hooks/register.tsx`) | `/glyphh`: sign in, the account, org, plan and billing panel. Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` (function hooks are early access in Claude Code 2.1) |
 | The sign-in card (MCP server, `.mcp.json`) | Ask Claude *"sign in to Glyphh"* |
-| Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, added once in Claude's Connectors) |
+| Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, added once in Claude's Connectors). It says which Ada version a model runs, offers a newer stable with a backtest first (`ada_backtest` with `ada`, then `ada_upgrade` only when you agree, and how to roll back), explains betas, and warns of deprecations |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
 
 The skill, the card and the ledger work without the variable.
@@ -38,7 +39,7 @@ token>`.
 | Sign in | `POST /v1/device/code {name, surface, mod_version, machine_id}`; shows the code and link (opened in the browser pane on the desktop, printed in a terminal); polls `POST /v1/device/token` at `interval`, 5 s slower on `slow_down`, until the token, `expired_token` or `access_denied`. Copy link, Cancel |
 | Account | Name (Enter renames), email, sign-in providers (link, unlink), installs (revoke one; revoking this one signs out), Sign out |
 | Org | Name (an admin renames), members and roles (an admin removes, never the admin), invites: send (the link to copy), revoke |
-| Plan | The plan and the org's Ada Cloud use this month (`/v1/me`'s `cloud`): precedents held of the plan's, reads of the plan's, the reads past it (metered), and the day the count starts again; every plan by price with its precedents, reads a month and what reads past the month cost (`/v1/plans`'s `cloud`) |
+| Plan | The plan and the org's Ada Cloud use this month (`/v1/me`'s `cloud`): precedents held of the plan's, reads of the plan's, the reads past it (metered), and the day the count starts again; the org's models by Ada version (`cloud.ada`, the shape of the Ada host's `GET /v1/ada`): the latest stable, each version's status (a beta labelled, a deprecated one with its end date) and models, and for a deprecated one what happens on that date and what to do; a newer contract than the plugin's 5 is one line saying to update it; every plan by price with its precedents, reads a month and what reads past the month cost (`/v1/plans`'s `cloud`) |
 | Billing (admin) | Stripe Checkout for Basic, Pro or Team without a subscription (`POST /v1/billing/checkout`), else a change of plan (`POST /v1/billing/plan`); **Talk to us** for Enterprise (`sales@glyphh.ai`, copied); card and invoices (`POST /v1/billing/portal`). Stripe opens in the browser pane, or as a link in a terminal |
 
 The plans (members, installs and models unlimited on each; reads are decide, query, probabilities and facts calls,

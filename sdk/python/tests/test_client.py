@@ -121,16 +121,26 @@ def job(state, kind="learn", percent=None, **more):
 # the contract
 
 
-def test_the_contract_is_4_and_every_fixture_is_its_schemas():
-    assert CONTRACT["contract"] == FIXTURES["contract"] == 4
-    assert {"decision", "usage", "job", "answer", "result", "error"} <= set(CONTRACT)
+def test_the_contract_is_5_the_sdks_and_every_fixture_is_its_schemas():
+    assert CONTRACT["contract"] == FIXTURES["contract"] == glyphh.SUPPORTED_CONTRACT == 5
+    assert {"decision", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"} <= set(CONTRACT)
+    assert {"Glyphh-Contract", "Glyphh-Ada", "Glyphh-Ada-Notice"} == set(CONTRACT["headers"])
     for c in FIXTURES["cases"]:
         if c["schema"]:
             validate(c["response"]["body"], CONTRACT[c["schema"]])
         if c.get("data_schema"):
             validate(c["response"]["body"]["data"], CONTRACT[c["data_schema"]])
+        if c.get("result_schema"):
+            validate(c["response"]["body"]["result"], CONTRACT[c["result_schema"]])
         if c["response"]["status"] >= 400:
             assert c["schema"] == "error" and c["response"]["body"]["error"]["code"] in CONTRACT["codes"]
+        for header in c["response"].get("headers", {}):
+            assert header == header.lower(), (c["name"], header)
+    # every Ada refusal is typed, and names the latest stable as its fix
+    for code in ("E_ADA_UNKNOWN", "E_ADA_RETIRED", "E_ADA_DEPRECATED", "E_ADA_BETA", "E_ADA_UNAVAILABLE"):
+        assert code in CONTRACT["codes"] and issubclass(glyphh.errors.TYPED[code], glyphh.AdaVersionError)
+    current = next(c for c in FIXTURES["cases"] if c["name"] == "the Ada versions")["response"]["body"]
+    assert set(glyphh.SUPPORTED_ADA) == {v["name"] for v in current["versions"]} and current["latest_stable"] == "ada-1-0"
 
 
 # models
@@ -162,7 +172,7 @@ def test_a_decision_from_v1_decide_reads_as_3_0s_result_too():
     d = client.decide("tickets", sent["data"], include=["facts"], clearance=0.5)
     assert isinstance(d, Decision) and fake.calls[0][3] == sent and fake.calls[0][1] == f"{URL}/v1/decide"
     body = c["response"]["body"]
-    assert (d.outcome, d.probabilities, d.ask, d.model, d.version) == (body["outcome"], body["probabilities"], False, "tickets", body["version"])
+    assert (d.outcome, d.probabilities, d.ask, d.model, d.version, d.ada) == (body["outcome"], body["probabilities"], False, "tickets", body["version"], "ada-1-0")
     assert d.receipts == body["receipts"] and d.facts == body["facts"] and d.outputs is None
     assert d.done and d.status == "done" and not d.waiting and d.data == body and not d.limit_exceeded
 
@@ -175,6 +185,7 @@ def test_a_decision_that_asks_and_one_of_several_outputs():
     both = client.decide("routing", several["request"]["body"]["data"], outputs=["team", "urgent"])
     assert set(both.outputs) == {"team", "urgent"} and both.outputs["team"].outcome == "billing"
     assert both.outputs["team"].model == "routing" and not both.ask and both.outcome is None
+    assert both.ada == both.outputs["team"].ada == "ada-1-0"
     assert fake.calls[1][3] == several["request"]["body"]
 
 
@@ -450,6 +461,8 @@ def test_usage_is_typed_in_the_servers_shape():
     r = usage.requests
     assert (r.used, r.max, r.over, r.overage, usage.requests_per_second) == (sent["requests"]["used"], 5_000, 0, False, 5)
     assert usage["plan"] == "Free" and usage.data == sent  # reads as the answer's dict too
+    assert usage.ada is not None and usage.ada.latest_stable == "ada-1-0" and {v.name: v.models for v in usage.ada} == {"ada-1-1-beta": 0, "ada-1-0": 3}
+    assert Usage.of({k: v for k, v in sent.items() if k != "ada"}).ada is None  # a contract 4 server
     # Team past its month, metered; Enterprise, by contract: no caps
     team = {**sent, "plan": "Team", "requests": {"used": 5_012_345, "max": 5_000_000, "over": 12_345, "overage": True}, "requests_per_second": 200}
     enterprise = {**sent, "plan": "Enterprise", "precedents": {"used": 9, "max": None}, "requests": {"used": 3, "max": None, "over": 0, "overage": False}, "requests_per_second": None}
@@ -519,4 +532,152 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (doc, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.2.0"
+    assert glyphh.__version__ == "3.3.0"
+    for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
+        text = (ROOT / doc).read_text()
+        assert "ada-1-0" in text and "upgrade" in text, doc
+
+
+# Ada versions (contract 5)
+
+
+def test_the_ada_versions_are_listed_typed():
+    c = case("the Ada versions")
+    client, fake = ada(answered(c["name"]))
+    found = client.ada.versions()
+    assert paths(fake) == [("GET", "/v1/ada")] and isinstance(found, glyphh.AdaVersions)
+    assert (found.latest_stable, found.contract, len(found)) == ("ada-1-0", 5, 2)
+    beta, stable = found
+    assert (beta.name, beta.kernel, beta.status, beta.beta, beta.open, beta.changes_answers, beta.models) == ("ada-1-1-beta", "3.13.0", "beta", True, True, True, 1)
+    assert (stable.name, stable.status, stable.deprecated, stable.ends, stable.released) == ("ada-1-0", "stable", None, None, "2026-10-22")
+    assert found.get("ada-1-0") is stable and found.get("ada-9-9") is None and stable["kernel"] == "3.12.2"
+    moved = {**c["response"]["body"], "versions": [{**c["response"]["body"]["versions"][1], "name": "ada-1-1", "aliases": ["ada-1-1-beta"]}]}
+    client, _ = ada((200, moved))
+    assert client.ada.versions().get("ada-1-1-beta").name == "ada-1-1"  # a promoted beta's name resolves
+    client, _ = ada((200, c["response"]["body"]))
+    assert client.ada.latest_stable() == "ada-1-0"
+
+
+def test_a_model_carries_its_ada_on_its_info_and_on_each_version():
+    info, listed, versions = case("a model and its Ada"), case("the org's models, each with its Ada"), case("a model's versions, each with its Ada")
+    client, fake = ada(answered(info["name"]), answered(listed["name"]), answered(versions["name"]))
+    m = client.model("tickets")
+    i = m.info()
+    assert isinstance(i, glyphh.ModelInfo) and isinstance(i, dict) and i == info["response"]["body"]  # a dict, as in 3.2
+    assert (i.name, i.version, i.ada, i.ada_status, i.ada_notice) == ("tickets", 4, "ada-1-1-beta", "beta", None)
+    assert [(x.name, x.ada) for x in client.models()] == [("routing", "ada-1-0"), ("tickets", "ada-1-1-beta")]
+    vs = m.versions()
+    assert [(v.version, v.active, v.ada, v.kernel) for v in vs] == [(3, False, "ada-1-0", "3.12.2"), (4, True, "ada-1-1-beta", "3.13.0")]
+    assert vs[0]["note"] == "every word as it is"
+    assert paths(fake) == [("GET", "/v1/models/tickets"), ("GET", "/v1/models"), ("GET", "/v1/models/tickets/versions")]
+    client, _ = ada((200, {"name": "old", "version": 1}))
+    old = client.model("old").info()
+    assert (old.ada, old.ada_status, old.ada_notice) == (None, None, None)  # a contract 4 server: no ada, no notice
+
+
+def test_a_model_is_made_on_the_latest_stable_unless_an_ada_is_named():
+    beta = case("a model made on a beta Ada")
+    client, fake = ada(answered("a model made from its spec"), answered(beta["name"]))
+    first = client.create_model("routing", {"name": "routing"})
+    assert "ada" not in fake.calls[0][3] and first.created.ada == "ada-1-0"
+    # on the latest stable, the quiet notice: a beta is open to try
+    assert first.created.ada_notice == glyphh.AdaNotice("beta", "ada-1-1-beta is available to try (beta).", "ada-1-1-beta", None)
+    sent = beta["request"]["body"]
+    made = client.create_model(sent["name"], sent["spec"], ada="ada-1-1-beta")
+    assert fake.calls[1][3] == sent and (made.created.ada, made.created.ada_status, made.created.ada_notice) == ("ada-1-1-beta", "beta", None)
+
+
+def test_a_backtest_against_another_ada_then_an_upgrade_waited_for_then_a_rollback(clock):
+    bt, up = answered("a backtest against another Ada, done"), answered("an upgrade to another Ada")
+    done = {**up[1]["job"], "state": "done", "percent": 100.0, "result": {"version": 4, "ada": "ada-1-1-beta"}}
+    client, fake = ada(
+        (202, {**bt[1], "state": "queued", "percent": 0.0, "result": None}),
+        bt,
+        up,
+        (200, {**done, "state": "running", "percent": 50.0, "result": None}),
+        (200, done),
+        (200, {"version": 3, "active": True, "job": None}),
+    )
+    m = client.model("tickets")
+    j = m.backtest(ada="ada-1-1-beta", holdout={"newest": 200})
+    assert fake.calls[0][3] == {"candidates": [], "ada": "ada-1-1-beta", "holdout": {"newest": 200}}
+    assert (j.result["active"]["ada"], j.result["candidates"][0]["ada"]) == ("ada-1-0", "ada-1-1-beta")
+    assert j.result["candidates"][0]["cost"] < j.result["active"]["cost"]
+    seen = []
+    moved = m.upgrade("ada-1-1-beta", note="ada-1-1-beta: 2 fewer wrong on the last 200", backtest=j.id, on_progress=seen.append)
+    assert fake.calls[2][3] == {"ada": "ada-1-1-beta", "note": "ada-1-1-beta: 2 fewer wrong on the last 200", "backtest": j.id}
+    assert (moved["version"], moved["ada"], moved["from"], moved["active"]) == (4, "ada-1-1-beta", "ada-1-0", True)
+    assert isinstance(moved["job"], Job) and moved["job"].kind == "reencode" and [s.state for s in seen] == ["queued", "running", "done"]
+    assert m.activate(3)["active"]  # the rollback
+    assert paths(fake) == [
+        ("POST", "/v1/models/tickets/backtest"),
+        ("GET", f"/v1/jobs/{bt[1]['id']}"),
+        ("POST", "/v1/models/tickets/upgrade"),
+        ("GET", f"/v1/jobs/{up[1]['job']['id']}"),
+        ("GET", f"/v1/jobs/{up[1]['job']['id']}"),
+        ("POST", "/v1/models/tickets/versions/3/activate"),
+    ]
+    assert all("idempotency-key" in c[2] for c in fake.calls if c[0] == "POST")
+    client, fake = ada(up)
+    later = client.model("tickets").upgrade(wait=False)
+    assert fake.calls[0][3] == {} and later["active"] is False and later["job"].state == "queued"  # no ada: the latest stable
+    client, fake = ada((202, job("queued", "backtest")))
+    client.model("tickets").backtest([{"ada": "ada-1-1-beta", "settings": {"k": 5}}], wait=False)
+    assert fake.calls[0][3] == {"candidates": [{"ada": "ada-1-1-beta", "settings": {"k": 5}}]}
+
+
+@pytest.mark.parametrize(
+    ("name", "error"),
+    [
+        ("an Ada that does not exist", glyphh.AdaVersionUnknownError),
+        ("a retired Ada", glyphh.AdaVersionRetiredError),
+        ("a deprecated Ada as an upgrade's target", glyphh.AdaVersionDeprecatedError),
+        ("a beta closed to new models", glyphh.AdaBetaClosedError),
+        ("an Ada this deploy does not have", glyphh.AdaVersionUnavailableError),
+        ("an upgrade to the Ada the model runs", glyphh.NoChangeError),
+    ],
+)
+def test_an_ada_refusal_is_typed_names_the_latest_stable_and_is_never_sent_again(clock, name, error):
+    c = case(name)
+    client, fake = ada(answered(name))
+    with pytest.raises(error) as caught:
+        client._call(c["request"]["method"], c["request"]["path"], c["request"]["body"], idempotency_key="k1")
+    err, sent = caught.value, c["response"]["body"]["error"]
+    assert (err.code, err.status, err.message) == (sent["code"], c["response"]["status"], sent["message"])
+    assert len(fake.calls) == 1 and clock == []  # E_ADA_UNAVAILABLE's 503 is not retried: no kernel comes back
+    if isinstance(err, glyphh.AdaVersionError):
+        assert (err.ada, err.latest) == (sent["ada"], sent["latest"])
+
+
+def test_a_deprecated_or_moved_model_warns_once_per_client_and_notice():
+    deprecated, moved = case("a model on a deprecated Ada"), case("a decision just after its model was moved off a retired Ada")
+    client, _ = ada(answered(deprecated["name"]), answered(deprecated["name"]), answered(moved["name"]))
+    with pytest.warns(glyphh.AdaDeprecationWarning) as seen:
+        info = client.model("claims").info()
+        client.model("claims").info()
+        d = client.decide("claims", moved["request"]["body"]["data"])
+    assert [str(w.message) for w in seen] == [f"Glyphh Ada: {deprecated['response']['headers']['glyphh-ada-notice']}", f"Glyphh Ada: {moved['response']['headers']['glyphh-ada-notice']}"]
+    assert info.ada_notice.kind == "deprecated" and (info.ada_notice.to, info.ada_notice.ends) == ("ada-1-1", "2027-04-21")
+    assert (d.ada, d.version) == ("ada-1-1", 3) and issubclass(glyphh.AdaDeprecationWarning, FutureWarning)
+    client, _ = ada(answered("a model and its Ada"))
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        client.model("tickets").info()  # a beta's notice is in the body, never a warning
+
+
+def test_a_server_of_a_newer_contract_is_refused_clearly_never_read():
+    newer = {"glyphh-contract": "6"}
+    for answer in ((200, {"models": []}, newer), (503, {"error": {"code": "E_UNAVAILABLE", "message": "x"}}, newer)):
+        client, fake = ada(answer)
+        with pytest.raises(glyphh.ClientTooOldError) as caught:
+            client.models()
+        err = caught.value
+        assert (err.code, err.contract, err.supported) == ("E_CLIENT_TOO_OLD", 6, 5) and len(fake.calls) == 1
+        assert "pip install -U glyphh" in err.message and "contract 6" in err.message
+    client, _ = ada((200, {**case("the Ada versions")["response"]["body"], "contract": 7}))
+    with pytest.raises(glyphh.ClientTooOldError):
+        client.ada.versions()
+    client, _ = ada((200, {"models": []}, {"Glyphh-Contract": "5"}), (200, {"models": []}, {"glyphh-contract": "4"}), (200, {"models": []}))
+    assert client.models() == client.models() == client.models() == []  # its own, an older one, or none: read

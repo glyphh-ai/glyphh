@@ -26,6 +26,16 @@ import {
   SpecError,
   SpecReadingError,
   retryAfter,
+  AdaBetaClosedError,
+  AdaVersionDeprecatedError,
+  AdaVersionError,
+  AdaVersionRetiredError,
+  AdaVersionUnavailableError,
+  AdaVersionUnknownError,
+  ClientTooOldError,
+  NoChangeError,
+  SUPPORTED_ADA,
+  SUPPORTED_CONTRACT,
 } from "../dist/index.js";
 
 const contract = JSON.parse(readFileSync(new URL("../../../contract/contract.json", import.meta.url), "utf8"));
@@ -83,14 +93,19 @@ function job(state, kind = "learn", more = {}) {
   return body;
 }
 
-test("the contract is 4, and every fixture's refusal is a code it names", () => {
-  assert.equal(contract.contract, 4);
-  assert.equal(fixtures.contract, 4);
-  for (const name of ["decision", "usage", "job", "answer", "result", "error"]) assert.ok(contract[name], name);
+test("the contract is 5, the SDK's, and every fixture's refusal is a code it names", () => {
+  assert.equal(contract.contract, 5);
+  assert.equal(fixtures.contract, 5);
+  assert.equal(SUPPORTED_CONTRACT, 5);
+  const names = ["decision", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"];
+  for (const name of names) assert.ok(contract[name], name);
   for (const c of fixtures.cases) {
     if (c.response.status >= 400) assert.ok(contract.codes.includes(c.response.body.error.code), c.name);
     if (c.schema) for (const key of contract[c.schema].required) assert.ok(key in c.response.body, `${c.name}: ${key}`);
+    if (c.result_schema) for (const key of contract[c.result_schema].required) assert.ok(key in c.response.body.result, `${c.name}: result.${key}`);
   }
+  const listed = byName("the Ada versions").response.body.versions.map((v) => v.name);
+  assert.deepEqual([...SUPPORTED_ADA].sort(), listed.sort());
 });
 
 test("a model is made from its spec, written once", async () => {
@@ -115,7 +130,7 @@ test("a decision from /v1/decide reads as 3.0's Result too", async () => {
   assert.deepEqual(calls[0].body, c.request.body);
   assert.equal(calls[0].path, "/v1/decide");
   const body = c.response.body;
-  assert.deepEqual([d.outcome, d.probabilities, d.ask, d.model, d.version], [body.outcome, body.probabilities, false, "tickets", body.version]);
+  assert.deepEqual([d.outcome, d.probabilities, d.ask, d.model, d.version, d.ada], [body.outcome, body.probabilities, false, "tickets", body.version, "ada-1-0"]);
   assert.deepEqual(d.receipts, body.receipts);
   assert.deepEqual(d.facts, body.facts);
   assert.equal(d.status, "done");
@@ -394,6 +409,7 @@ test("usage is the server's shape: the month, its reset, precedents, requests an
   assert.deepEqual([usage.plan, usage.precedents.max, usage.requests.max, usage.requests.over, usage.requests.overage, usage.requests_per_second], ["Free", 1000, 5000, 0, false, 5]);
   assert.match(usage.month, /^\d{4}-\d{2}$/);
   assert.match(usage.resets_at, /^\d{4}-\d{2}-01$/);
+  assert.deepEqual([usage.ada.latest_stable, usage.ada.versions.map((v) => [v.name, v.models])], ["ada-1-0", [["ada-1-1-beta", 0], ["ada-1-0", 3]]]);
 });
 
 test("a rate refusal without the header waits as its body says", async () => {
@@ -450,4 +466,153 @@ test("Retry-After as a date, and a transport that answers no headers", async () 
   const { ada } = fake([200, { models: [] }]);
   assert.deepEqual(await ada.models(), []);
   assert.equal(ada.clusterSeq, 0);
+});
+
+// Ada versions (contract 5)
+
+test("the Ada versions are listed, with the latest stable", async () => {
+  const c = byName("the Ada versions");
+  const { ada, calls } = fake(answered(c.name), answered(c.name));
+  const found = await ada.ada.versions();
+  assert.deepEqual(calls.map((k) => [k.method, k.path]), [["GET", "/v1/ada"]]);
+  assert.deepEqual([found.latest_stable, found.contract, found.versions.length], ["ada-1-0", 5, 2]);
+  const [beta, stable] = found.versions;
+  assert.deepEqual([beta.name, beta.kernel, beta.status, beta.beta, beta.open, beta.changes_answers, beta.models], ["ada-1-1-beta", "3.13.0", "beta", true, true, true, 1]);
+  assert.deepEqual([stable.name, stable.status, stable.deprecated, stable.ends], ["ada-1-0", "stable", null, null]);
+  assert.equal(await ada.ada.latestStable(), "ada-1-0");
+});
+
+test("a model carries its Ada on its info and on each version", async () => {
+  const info = byName("a model and its Ada");
+  const listed = byName("the org's models, each with its Ada");
+  const versions = byName("a model's versions, each with its Ada");
+  const { ada, calls } = fake(answered(info.name), answered(listed.name), answered(versions.name));
+  const m = ada.model("tickets");
+  const i = await m.info();
+  assert.deepEqual([i.name, i.version, i.ada, i.ada_status, i.ada_notice], ["tickets", 4, "ada-1-1-beta", "beta", null]);
+  assert.deepEqual((await ada.models()).map((x) => [x.name, x.ada]), [["routing", "ada-1-0"], ["tickets", "ada-1-1-beta"]]);
+  assert.deepEqual((await m.versions()).map((v) => [v.version, v.active, v.ada, v.kernel]), [[3, false, "ada-1-0", "3.12.2"], [4, true, "ada-1-1-beta", "3.13.0"]]);
+  assert.deepEqual(calls.map((k) => k.path), ["/v1/models/tickets", "/v1/models", "/v1/models/tickets/versions"]);
+});
+
+test("a model is made on the latest stable unless an Ada is named", async () => {
+  const beta = byName("a model made on a beta Ada");
+  const { ada, calls } = fake(answered("a model made from its spec"), answered(beta.name));
+  const first = await ada.createModel("routing", { name: "routing" });
+  assert.equal("ada" in calls[0].body, false);
+  assert.equal(first.created.ada, "ada-1-0");
+  const sent = beta.request.body;
+  const made = await ada.createModel(sent.name, sent.spec, { ada: "ada-1-1-beta" });
+  assert.deepEqual(calls[1].body, sent);
+  assert.deepEqual([made.created.ada, made.created.ada_status, made.created.ada_notice], ["ada-1-1-beta", "beta", null]);
+  // on the latest stable, the quiet notice: a beta is open to try
+  assert.deepEqual([first.created.ada_notice.kind, first.created.ada_notice.to], ["beta", "ada-1-1-beta"]);
+});
+
+test("a backtest against another Ada, then an upgrade waited for, then a rollback", async () => {
+  const [, bt] = answered("a backtest against another Ada, done");
+  const up = answered("an upgrade to another Ada");
+  const done = { ...up[1].job, state: "done", percent: 100, result: { version: 4, ada: "ada-1-1-beta" } };
+  const { slept, clock } = fakeClock();
+  const { ada, calls } = fake(
+    [202, { ...bt, state: "queued", percent: 0, result: null }],
+    [200, bt],
+    up,
+    [200, { ...done, state: "running", percent: 50, result: null }],
+    [200, done],
+    [200, { version: 3, active: true, job: null }],
+    { clock },
+  );
+  const m = ada.model("tickets");
+  const j = await m.backtest([], { ada: "ada-1-1-beta", holdout: { newest: 200 } });
+  assert.deepEqual(calls[0].body, { candidates: [], ada: "ada-1-1-beta", holdout: { newest: 200 } });
+  assert.deepEqual([j.result.active.ada, j.result.candidates[0].ada], ["ada-1-0", "ada-1-1-beta"]);
+  const seen = [];
+  const moved = await m.upgrade({ ada: "ada-1-1-beta", note: "2 fewer wrong", backtest: j.id, onProgress: (x) => seen.push(x.state) });
+  assert.deepEqual(calls[2].body, { ada: "ada-1-1-beta", note: "2 fewer wrong", backtest: j.id });
+  assert.deepEqual([moved.version, moved.ada, moved.from, moved.active, moved.job.kind], [4, "ada-1-1-beta", "ada-1-0", true, "reencode"]);
+  assert.deepEqual(seen, ["queued", "running", "done"]);
+  assert.equal((await m.activate(3)).active, true);
+  assert.deepEqual(calls.map((k) => [k.method, k.path]), [
+    ["POST", "/v1/models/tickets/backtest"],
+    ["GET", `/v1/jobs/${bt.id}`],
+    ["POST", "/v1/models/tickets/upgrade"],
+    ["GET", `/v1/jobs/${up[1].job.id}`],
+    ["GET", `/v1/jobs/${up[1].job.id}`],
+    ["POST", "/v1/models/tickets/versions/3/activate"],
+  ]);
+  assert.ok(slept.length >= 2);
+  const later = fake(up);
+  const queued = await later.ada.model("tickets").upgrade({ wait: false });
+  assert.deepEqual([later.calls[0].body, queued.active, queued.job.state], [{}, false, "queued"]);
+});
+
+for (const [name, error] of [
+  ["an Ada that does not exist", AdaVersionUnknownError],
+  ["a retired Ada", AdaVersionRetiredError],
+  ["a deprecated Ada as an upgrade's target", AdaVersionDeprecatedError],
+  ["a beta closed to new models", AdaBetaClosedError],
+  ["an Ada this deploy does not have", AdaVersionUnavailableError],
+  ["an upgrade to the Ada the model runs", NoChangeError],
+]) {
+  test(`an Ada refusal is typed, names the latest stable, and is never sent again: ${name}`, async () => {
+    const c = byName(name);
+    const { slept, clock } = fakeClock();
+    const { ada, calls } = fake(answered(name), { clock });
+    await assert.rejects(ada.call(c.request.method, c.request.path, c.request.body, false, "k1"), (e) => {
+      const sent = c.response.body.error;
+      assert.ok(e instanceof error && e instanceof AdaError);
+      assert.deepEqual([e.code, e.status, e.message], [sent.code, c.response.status, sent.message]);
+      if (e instanceof AdaVersionError) assert.deepEqual([e.ada, e.latest], [sent.ada, sent.latest]);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(slept, []);
+  });
+}
+
+test("a deprecated or moved model warns once per client and notice; a beta's notice never does", async () => {
+  const deprecated = byName("a model on a deprecated Ada");
+  const moved = byName("a decision just after its model was moved off a retired Ada");
+  const warned = [];
+  const { ada } = fake(answered(deprecated.name), answered(deprecated.name), answered(moved.name), answered("a model and its Ada"), { onWarning: (w) => warned.push(w) });
+  const info = await ada.model("claims").info();
+  await ada.model("claims").info();
+  const d = await ada.decide("claims", moved.request.body.data);
+  await ada.model("tickets").info();
+  const said = (c) => c.response.headers["glyphh-ada-notice"].split(": ");
+  assert.deepEqual(warned, [
+    { kind: "deprecated", message: said(deprecated).slice(1).join(": ") },
+    { kind: "moved", message: said(moved).slice(1).join(": ") },
+  ]);
+  assert.deepEqual([info.ada_notice.kind, info.ada_notice.to, info.ada_notice.ends], ["deprecated", "ada-1-1", "2027-04-21"]);
+  assert.deepEqual([d.ada, d.version], ["ada-1-1", 3]);
+  // the default handler is console.warn
+  const original = console.warn;
+  const printed = [];
+  console.warn = (...args) => printed.push(args.join(" "));
+  try {
+    await fake(answered(deprecated.name)).ada.model("claims").info();
+  } finally {
+    console.warn = original;
+  }
+  assert.ok(printed[0].startsWith("Glyphh Ada: deprecated: claims runs ada-1-0"));
+});
+
+test("a server of a newer contract is refused clearly, never read", async () => {
+  const newer = { "Glyphh-Contract": "6" };
+  for (const answer of [[200, { models: [] }, newer], [503, { error: { code: "E_UNAVAILABLE", message: "x" } }, newer]]) {
+    const { ada, calls } = fake(answer);
+    await assert.rejects(ada.models(), (e) => {
+      assert.ok(e instanceof ClientTooOldError);
+      assert.deepEqual([e.code, e.contract, e.supported], ["E_CLIENT_TOO_OLD", 6, 5]);
+      assert.match(e.message, /contract 6.*npm install @glyphh-ai\/glyphh@latest/);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+  }
+  const { ada } = fake([200, { ...byName("the Ada versions").response.body, contract: 7 }]);
+  await assert.rejects(ada.ada.versions(), ClientTooOldError);
+  const fine = fake([200, { models: [] }, { "glyphh-contract": "5" }], [200, { models: [] }, { "glyphh-contract": "4" }], [200, { models: [] }]);
+  for (let i = 0; i < 3; i++) assert.deepEqual(await fine.ada.models(), []); // its own, an older one, or none: read
 });

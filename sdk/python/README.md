@@ -41,14 +41,47 @@ tickets.activate(1)                                            # and back
 tickets.export(to="tickets.zip")                               # everything, as a zip: never locked in
 ```
 
+## Ada versions
+
+Every model version runs one Ada version, named `ada-<major>-<minor>` (`-beta` for a beta): `ada-1-0` is the
+latest stable today, `ada-1-1-beta` a beta. A model's answers are always computed by its own Ada version; moving
+to another is your choice, made with a backtest in front of you.
+
+```python
+for v in ada.ada.versions():                                   # newest first: name, status, dates, notes, your models on it
+    print(v.name, v.status, v.ends, v.changes_answers, v.models)
+
+tickets = ada.create_model("tickets", spec)                     # the latest stable; ada="ada-1-1-beta" to opt in to a beta
+info = tickets.info()
+print(info.ada, info.ada_status, info.ada_notice)              # ada-1-0 stable None; each of versions() has .ada too
+
+bt = tickets.backtest(ada="ada-1-1-beta")                       # the active spec, learned and scored on that Ada
+print(bt.result["active"]["cost"], "->", bt.result["candidates"][0]["cost"])
+before = info.version
+moved = tickets.upgrade("ada-1-1-beta", note="2 fewer wrong on the last 200", backtest=bt.id)   # a re-encode, waited for
+tickets.activate(before)                                       # and back, on the Ada it ran before
+```
+
+`upgrade()` with no `ada` moves to the latest stable; an older version is a downgrade, allowed while it is kept.
+A beta is never the default. A deprecated version still answers until its end date, then the model is moved to the
+latest stable for you (never left unable to answer); while it runs one, or just after it was moved, the client warns
+`AdaDeprecationWarning` (once per client). A name refused is never substituted: `AdaVersionUnknownError`,
+`AdaVersionRetiredError`, `AdaVersionDeprecatedError` (for a new model or as an upgrade's target),
+`AdaBetaClosedError`, `AdaVersionUnavailableError`, each with `ada` and `latest` (the latest stable, the fix).
+
+The SDK speaks contract `SUPPORTED_CONTRACT` (5) and was made against `SUPPORTED_ADA` (`ada-1-0`, `ada-1-1-beta`);
+newer names the server lists work as they are. A server that speaks a newer contract is refused, never read
+half-understood: `ClientTooOldError` (`contract`, `supported`), saying to `pip install -U glyphh`.
+
 | | |
 |---|---|
-| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `models()`, `model(name)`, `create_model(name, spec)`, `delete_model(name)`; `job(id)`, `wait(job, timeout=, on_progress=)`, `download(job)`; `usage()` |
-| `Model` | `info()`, `spec()`, `set_spec(spec, note=, backtest=)`, `settings()` and `settings(changes, note=, backtest=)`, `versions()`, `activate(version)`, `delete()`; `record_many(cases)` (a thousand a request, in chunks), `grade(id, value, output=)`, `forget(id)`; `decide(data, ...)`; `learn()`, `learn_job()`, `calibrate()`, `backtest(candidates, holdout=, output=)`; `import_file(path or bytes, format=, mapping=, partial=, learn=)`, `export(format=, to=)` |
-| `Decision` | `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`, `version`; reads as 3.0's `Result` too (`done`, `status`, `data`) |
+| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `models()`, `model(name)`, `create_model(name, spec, ada=)`, `delete_model(name)`; `ada.versions()`, `ada.latest_stable()`; `job(id)`, `wait(job, timeout=, on_progress=)`, `download(job)`; `usage()` |
+| `Model` | `info()` (a `ModelInfo`: `ada`, `ada_status`, `ada_notice`), `spec()`, `set_spec(spec, note=, backtest=)`, `settings()` and `settings(changes, note=, backtest=)`, `versions()` (each with `ada`, `kernel`), `activate(version)`, `upgrade(ada=, note=, backtest=, wait=)`, `delete()`; `record_many(cases)` (a thousand a request, in chunks), `grade(id, value, output=)`, `forget(id)`; `decide(data, ...)`; `learn()`, `learn_job()`, `calibrate()`, `backtest(candidates, ada=, holdout=, output=)`; `import_file(path or bytes, format=, mapping=, partial=, learn=)`, `export(format=, to=)` |
+| `Decision` | `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`, `version`, `ada`; reads as 3.0's `Result` too (`done`, `status`, `data`) |
+| `AdaVersions` | `latest_stable`, `contract`, `versions` (each an `AdaVersion`: `name`, `kernel`, `status`, `beta`, `open`, `released`, `deprecated`, `ends`, `changes_answers`, `aliases`, `summary`, `notes`, `models`); iterates over the versions; `get(name)` |
 | `Job` | `id`, `model`, `kind`, `state` (`awaiting`, `queued`, `running`, `done`, `failed`), `percent`, `result`, `error`, `download`, `upload`; `done`, `failed`, `ended` |
 | `Usage` | `plan`, `month` (YYYY-MM, UTC), `resets_at` (YYYY-MM-DD), `models`, `precedents` (`used`, `max`), `requests` (`used`, `max`, `over`, `overage`: past the month metered on Basic, Pro and Team, refused on Free), `requests_per_second`; `None` is by contract, no cap |
-| `AdaError` | `code`, `message`, `status`, `detail`, `retry_after`, `trace_id`; typed by code: `AuthError`, `LimitError` (`reason`, `used`, `max`, `plan`, `upgrade`, `resets_at`), `RateError` (`retry_after` from Retry-After, `max`; waited out while the retry deadline allows), `InvalidError`, `ModelMissingError`, `JobMissingError`, `SpecError`, `SpecLimitError`, `SpecReadingError`, `FewRolesError`, `MappingError`, `BusyError`, `NotReadyError`, `NoChangeError`, `IdempotencyError`, `VersionGoneError`, `AdaTimeoutError`, `UnavailableError`, `JobFailedError` (a job that ended `failed`) |
+| `AdaError` | `code`, `message`, `status`, `detail`, `retry_after`, `trace_id`; typed by code: `AuthError`, `LimitError` (`reason`, `used`, `max`, `plan`, `upgrade`, `resets_at`), `RateError` (`retry_after` from Retry-After, `max`; waited out while the retry deadline allows), `InvalidError`, `ModelMissingError`, `JobMissingError`, `SpecError`, `SpecLimitError`, `SpecReadingError`, `FewRolesError`, `MappingError`, `BusyError`, `NotReadyError`, `NoChangeError`, `IdempotencyError`, `VersionGoneError`, `AdaTimeoutError`, `UnavailableError`, `JobFailedError` (a job that ended `failed`), `AdaVersionError` and its kinds (above), `ClientTooOldError` |
 
 Every call that runs long is a job, waited for with its progress unless `wait=False`. Every write carries an
 `Idempotency-Key`, so the client sends again what is safe to: a read, or a write, while Ada is unreachable for a

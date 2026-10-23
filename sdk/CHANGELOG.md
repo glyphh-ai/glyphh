@@ -2,6 +2,44 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.3.0
+
+Ada versions (contract 5): every model version runs one Ada version, named `ada-<major>-<minor>` (`-beta` for a
+beta), its answers always computed by it; moving to another is the caller's choice. Nothing of 3.2 breaks: `info()`,
+`models()` and `versions()` answer the same dicts (Python) and objects (TypeScript), with the Ada read out.
+
+- `ada.versions()` (`GET /v1/ada`; `client.ada` in both): every Ada version, newest first (`name`, `kernel`,
+  `status` stable, beta, deprecated or retired, `beta`, `open`, `released`, `deprecated`, `ends`,
+  `changes_answers`, `aliases`, `summary`, `notes`, the org's `models` on it), the `latest_stable` and the server's
+  `contract`; `ada.latest_stable()` / `ada.latestStable()`.
+- `create_model(name, spec, ada=)` / `createModel(name, spec, { ada })`: left out, the latest stable (`ada-1-0`
+  today); a beta only by its name.
+- A model's Ada: `info()` carries `ada`, `ada_status` and `ada_notice` (`upgrade`, `beta`, `deprecated`, `moved`,
+  `retired`, with `to` and `ends`; Python: a `ModelInfo`, still a dict, and an `AdaNotice`); each of `models()` its
+  `ada`; each of `versions()` its `ada` and `kernel` (Python: `ModelVersion`, still a dict); a `Decision` its `ada`;
+  `usage()` the org's Ada versions (`ada`, the `/v1/ada` shape). A `beta` notice on a stable model says a beta is
+  open to try; a model on the beta has `ada_status` beta and no notice.
+- `backtest(candidates, ada=)` / `backtest(candidates, { ada })`: the active spec scored on another Ada (a
+  candidate may name its own `ada` too); the result's active run and each candidate carry their `ada`.
+- `upgrade(ada=None, note=, backtest=, wait=True)` / `upgrade({ ada, note, backtest, wait })` (`POST
+  /v1/models/{name}/upgrade`): a new version of the active spec on that Ada (none: the latest stable; an older one
+  is a downgrade), re-encoded by a job that is waited for with its progress; active once it is done. Roll back with
+  `activate(version)`.
+- Typed refusals, each an `AdaVersionError` with `ada` and `latest` (the latest stable, the fix):
+  `AdaVersionUnknownError` (`E_ADA_UNKNOWN`), `AdaVersionRetiredError` (`E_ADA_RETIRED`),
+  `AdaVersionDeprecatedError` (`E_ADA_DEPRECATED`), `AdaBetaClosedError` (`E_ADA_BETA`),
+  `AdaVersionUnavailableError` (`E_ADA_UNAVAILABLE`, a 503 never retried); an upgrade to the Ada the model runs is
+  `NoChangeError`.
+- A model on a deprecated Ada, or just moved off a retired one (`Glyphh-Ada-Notice`), is said once per client and
+  notice: Python `warnings.warn` with `AdaDeprecationWarning` (a `FutureWarning`, shown by default), TypeScript
+  `new Ada({ onWarning })` (default `console.warn`).
+- Each SDK states what it speaks: `SUPPORTED_CONTRACT` (5) and `SUPPORTED_ADA` (`ada-1-0`, `ada-1-1-beta`; other
+  names the server lists are sent as they are). An answer whose `Glyphh-Contract` (or `/v1/ada`'s `contract`) is
+  newer is refused, never read half-understood: `ClientTooOldError` (`E_CLIENT_TOO_OLD`, `contract`, `supported`),
+  saying how to upgrade. An older server, or none of the header, is read as before.
+- `contract/contract.json` 5: `headers`, `ada_versions`, `model`, `models`, `versions`, `upgrade`, `backtest` added,
+  `ada` required on `decision`, the five `E_ADA_*` codes; fixtures for each (`result_schema` checks a job's result).
+
 ## 3.2.0
 
 Ada Cloud (the spec's "SDK 3.1"; 3.1.0 was already published, for clustered runtimes). Nothing of 3.0 or 3.1 breaks.

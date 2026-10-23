@@ -7,6 +7,36 @@ export type Call = { method: string; path: string; body: Json; bearer?: string }
 
 const TOKEN = 'tok-secret-1'
 
+const version = (name: string, status: string, models: number, more: Json = {}) => ({
+  name,
+  kernel: name === 'ada-1-0' ? '3.12.2' : '3.13.0',
+  status,
+  beta: name.endsWith('-beta'),
+  open: true,
+  released: '2026-10-20',
+  deprecated: null,
+  ends: null,
+  changes_answers: name !== 'ada-1-0',
+  aliases: [],
+  summary: '',
+  notes: '',
+  models,
+  ...more,
+})
+
+/** GET /v1/ada for the org, as contract 5's fixture `the Ada versions`. */
+export const ADA = { latest_stable: 'ada-1-0', contract: 5, versions: [version('ada-1-1-beta', 'beta', 1), version('ada-1-0', 'stable', 2)] }
+/** A later registry: ada-1-1 stable, ada-1-0 deprecated, ada-0-9 retired. */
+export const ADA_LATER = {
+  latest_stable: 'ada-1-1',
+  contract: 5,
+  versions: [
+    version('ada-1-1', 'stable', 1, { aliases: ['ada-1-1-beta'] }),
+    version('ada-1-0', 'deprecated', 2, { deprecated: '2026-10-21', ends: '2027-04-21' }),
+    version('ada-0-9', 'retired', 0, { deprecated: '2026-04-01', ends: '2026-10-01' }),
+  ],
+}
+
 function newState() {
   return {
     calls: [] as Call[],
@@ -25,6 +55,8 @@ function newState() {
     billingStatus: 'none',
     /** Reads made this month, the org's. */
     reads: 1234,
+    /** /v1/me's `cloud.ada`: the Ada host's GET /v1/ada for the org (null: a server without it). */
+    ada: ADA as Json | null,
   }
 }
 
@@ -73,6 +105,7 @@ const meOf = (s: State) => {
       precedents: { used: 432, max: p.cloud.precedents },
       requests: { used: s.reads, max, over: max !== null && p.cloud.overage ? Math.max(0, s.reads - max) : 0, overage: p.cloud.overage },
       requests_per_second: p.cloud.requests_per_second,
+      ...(s.ada ? { ada: s.ada } : {}),
     },
   }
 }
