@@ -16,6 +16,7 @@ from glyphh_ada.protocol import GROUP, STREAMS
 from glyphh_server.obs import tick
 
 ALIVE_MS: int = 30_000
+SCAN_COUNT: int = 1000  # keys a SCAN step looks at: the metrics keep some 30,000 keys
 SIZES: str = """
     SELECT c.relname, pg_total_relation_size(c.oid) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') ORDER BY 2 DESC, 1 LIMIT 10"""
@@ -80,7 +81,8 @@ async def queues(redis: Redis) -> list[Queue]:
     """The two front doors (sync, jobs), always; and each kernel's own stream once one exists (`sync:3.13.0`)."""
     found = [await queue(redis, name, stream) for name, stream in STREAMS.items()]
     for name, stream in STREAMS.items():
-        kernels = sorted([s async for s in redis.scan_iter(match=f"{stream}:*", _type="stream")])
+        found_streams = redis.scan_iter(match=f"{stream}:*", _type="stream", count=SCAN_COUNT)
+        kernels = sorted([s async for s in found_streams])
         found += [await queue(redis, f"{name}{s.removeprefix(stream)}", s) for s in kernels]
     return found
 
