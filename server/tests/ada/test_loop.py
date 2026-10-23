@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_ada import loop, protocol
 from glyphh_ada.api import HostRouter
 from glyphh_ada.errors import Refusal
-from glyphh_ada.loop import Heartbeat, Loop
+from glyphh_ada.loop import Alive, Heartbeat, Loop
 from glyphh_ada.protocol import GROUP, SYNC, Message
 from glyphh_server.app import create_app
 from tests.ada.conftest import ADA, HOST, an_org
@@ -98,6 +98,40 @@ def test_long_gone_consumers_leave_and_other_errors_raise(streams: Redis, monkey
     streams.set("ada:jobs", "not a stream")
     with pytest.raises(ResponseError):
         _loop(streams, "x", queue="jobs")
+
+
+def test_consumer_cleanup_does_nothing_where_redis_lists_no_consumers(
+    streams: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    removed: list[str] = []
+    monkeypatch.setattr(loop, "STALE_CONSUMER_MS", -1)
+    monkeypatch.setattr(streams, "xgroup_delconsumer", lambda *a: removed.append(a[2]))
+    monkeypatch.setattr(streams, "xinfo_consumers", lambda *_: [])  # Upstash
+    _loop(streams, "x")
+    monkeypatch.setattr(streams, "xinfo_consumers", lambda *_: [{"name": "odd"}])  # a reply without its numbers
+    _loop(streams, "x")
+    assert removed == []
+
+
+def test_a_worker_says_it_is_alive_on_each_stream_and_leaves_when_it_stops(streams: Redis) -> None:
+    keys = [protocol.alive_key("ada:sync"), protocol.alive_key("ada:sync:9.9.9")]
+    assert keys == ["ada:alive:sync", "ada:alive:sync:9.9.9"]
+    streams.delete(*keys)
+    old = time.time() - protocol.ALIVE_FORGET - 1
+    streams.zadd(keys[0], {"long-gone": old})
+    worker = Loop(SYNC, streams, "me", lambda _: (None, None), ["ada:sync", "ada:sync:9.9.9"])
+    with worker.alive() as beating:
+        time.sleep(0.1)
+        assert [streams.zrange(k, 0, -1) for k in keys] == [["me"], ["me"]]  # the long gone dropped
+        assert 0 < streams.ttl(keys[0]) <= protocol.ALIVE_FORGET
+        assert beating.beat(now=time.time() + 5)
+        assert streams.zscore(keys[1], "me") > time.time()
+    assert [streams.exists(k) for k in keys] == [0, 0]
+    with Alive(streams, ["ada:jobs"], "quick", every=0.01):
+        time.sleep(0.1)  # beats again and again
+    down = Redis.from_url(UNREACHABLE_REDIS, socket_connect_timeout=0.2)
+    with Alive(down, ["ada:sync"], "me") as lost:  # Redis down: tried again at the next beat, never raised
+        assert lost.beat() is False
 
 
 def test_a_heartbeat_keeps_a_message_from_going_idle(streams: Redis) -> None:

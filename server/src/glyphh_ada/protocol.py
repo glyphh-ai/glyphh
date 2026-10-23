@@ -22,6 +22,11 @@ REPLY_TTL: int = 60  # seconds a reply waits for the API to read it
 CLAIM_IDLE: dict[str, int] = {SYNC: 5_000, JOBS: 60_000}
 HEARTBEAT: dict[str, float] = {SYNC: 1.0, JOBS: 10.0}
 MAX_DELIVERIES: int = 3  # a message that killed this many workers is answered E_INTERNAL and dropped
+# Each worker process says it is alive, for each stream it reads, every ALIVE_EVERY seconds: its consumer name in the
+# stream's sorted set (alive_key), scored with the time. Redis's own consumer list (XINFO CONSUMERS) cannot be relied
+# on: Upstash, production's Redis, answers it empty while the workers read. A member silent ALIVE_FORGET s is dropped.
+ALIVE_EVERY: float = 10.0
+ALIVE_FORGET: int = 3600
 
 READS: frozenset[str] = frozenset({"query", "probabilities", "facts", "decide"})
 # The writes to a model's precedents, each under the model's write lock (versions.write_lock)
@@ -42,6 +47,11 @@ ANY_KERNEL: frozenset[str] = frozenset({"models", "model", "job", "note", "delet
 def kernel_stream(queue: str, kernel: str) -> str:
     """The stream of one kernel's workers (docs/specs/ada-cloud.md, 12.4): `ada:sync:3.12.2`, `ada:jobs:3.13.0`."""
     return f"{STREAMS[queue]}:{kernel}"
+
+
+def alive_key(stream: str) -> str:
+    """The workers reading a stream, each scored with when it last beat: `ada:alive:sync`, `ada:alive:jobs:3.12.2`."""
+    return f"ada:alive:{stream.removeprefix('ada:')}"
 
 
 def reply_key(request_id: str) -> str:

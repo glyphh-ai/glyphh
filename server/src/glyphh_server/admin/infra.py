@@ -1,7 +1,8 @@
 """What the server can measure of itself, for staff: Ada's queues (each stream's length, what its group has taken and
-not answered, what it has not taken yet) and its workers (a consumer of the group seen within ALIVE_MS is alive: an
-idle worker asks again every two seconds, a busy one claims its message again every one or ten), the minute tick's
-last beat, Postgres's size and connections (its own statistics) and Redis's memory."""
+not answered, what it has not taken yet) and its workers (one that said so within ALIVE_MS is alive: each worker
+process says so for each stream it reads every ten seconds, busy or not, glyphh_ada.loop.Alive; Redis's own consumer
+list is shown too, but Upstash, production's Redis, answers it empty), the minute tick's last beat, Postgres's size
+and connections (its own statistics) and Redis's memory."""
 
 import time
 from datetime import UTC, datetime
@@ -12,7 +13,7 @@ from redis.exceptions import ResponseError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_ada.protocol import GROUP, STREAMS
+from glyphh_ada.protocol import GROUP, STREAMS, alive_key
 from glyphh_server.obs import tick
 
 ALIVE_MS: int = 30_000
@@ -30,8 +31,8 @@ class Queue(BaseModel):
     length: int
     pending: int = Field(description="Taken by a worker, not answered yet")
     lag: int = Field(description="Not taken by any worker yet")
-    consumers: int
-    alive: int = Field(description="Workers seen within the last 30 seconds")
+    consumers: int = Field(description="The group's consumers as Redis lists them (XINFO CONSUMERS; Upstash: none)")
+    alive: int = Field(description="Worker processes reading this stream that said so within the last 30 seconds")
 
 
 class Table(BaseModel):
@@ -59,13 +60,20 @@ class Tick(BaseModel):
     age_seconds: float | None
 
 
+async def alive(redis: Redis, stream: str, now: float | None = None) -> int:
+    """The worker processes that said, within ALIVE_MS, they read this stream (glyphh_ada.loop.Alive)."""
+    since = (time.time() if now is None else now) - ALIVE_MS / 1000
+    return int(await redis.zcount(alive_key(stream), since, "+inf"))
+
+
 async def queue(redis: Redis, name: str, stream: str) -> Queue:
+    workers = await alive(redis, stream)
     try:
         groups = [g for g in await redis.xinfo_groups(stream) if g["name"] == GROUP]
         consumers = await redis.xinfo_consumers(stream, GROUP) if groups else []
         length = await redis.xlen(stream)
     except ResponseError:  # no stream yet: no worker has started
-        return Queue(stream=name, length=0, pending=0, lag=0, consumers=0, alive=0)
+        return Queue(stream=name, length=0, pending=0, lag=0, consumers=0, alive=workers)
     group = groups[0] if groups else {}
     return Queue(
         stream=name,
@@ -73,7 +81,7 @@ async def queue(redis: Redis, name: str, stream: str) -> Queue:
         pending=int(group.get("pending") or 0),
         lag=int(group.get("lag") or 0),
         consumers=len(consumers),
-        alive=sum(1 for c in consumers if int(c["idle"]) < ALIVE_MS),
+        alive=workers,
     )
 
 
