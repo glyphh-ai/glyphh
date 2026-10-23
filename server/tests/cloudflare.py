@@ -106,6 +106,9 @@ class FakeCloudflare:
                 "sum": {"visits": 2 * n},
                 "dimensions": {"date": day, "clientRequestHTTPHost": "docs.glyphh.ai"},
             },
+            # a scanner's Host headers: a port, capitals, and another site altogether
+            {"count": 2 * n, "dimensions": {"date": day, "clientRequestHTTPHost": "Docs.glyphh.ai:8443"}},
+            {"count": 4 * n, "dimensions": {"date": day, "clientRequestHTTPHost": "evil.ngrok-free.dev"}},
         ]
 
     def _rum(self, query: str, v: dict[str, Any]) -> list[dict[str, Any]]:

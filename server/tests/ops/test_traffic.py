@@ -62,6 +62,8 @@ async def test_a_pull_keeps_each_zones_days_hosts_countries_pages_and_referrers(
     assert days[("glyphh.ai", "", TODAY, "cached_requests")] == 25
     assert days[("glyphh.ai", "glyphh.ai", TODAY, "requests")] == 50
     assert days[("glyphh.ai", "docs.glyphh.ai", TODAY, "visits")] == 2
+    assert days[("glyphh.ai", "docs.glyphh.ai", TODAY, "requests")] == 8 + 2  # its port and capitals folded in
+    assert {k[1] for k in days} == {"", "glyphh.ai", "docs.glyphh.ai"}  # another site's Host header left out
     assert tops[("glyphh.ai", "", TODAY, "country", "GB")] == 60
     assert tops[("glyphh.ai", "glyphh.ai", TODAY, "page", "/")] == 30
     assert tops[("glyphh.ai", "docs.glyphh.ai", TODAY, "page", "/")] == 5  # no path: the root
