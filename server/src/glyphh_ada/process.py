@@ -12,6 +12,7 @@ import threading
 import time
 from typing import Any
 
+import psycopg
 from redis import Redis
 
 from glyphh_ada import files, jobs, orgschema, pg, registry, retirement, routing, runner
@@ -26,6 +27,7 @@ from glyphh_server.obs.logs import fields
 
 log = logging.getLogger("glyphh.ada")
 SWEEP_EVERY: float = 3600.0  # seconds between two moves of retired versions' models
+IDLE_PROBE: float = 30.0  # seconds a connection sits unused before it is probed (the database drops idle ones)
 
 
 class Worker:
@@ -35,6 +37,7 @@ class Worker:
         self.front = self.kernel == registry.registry().latest(registry.today()).kernel
         self.redis = Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=30)
         self.ctx = self._connect()
+        self.used = time.monotonic()
         consumer = f"{socket.gethostname()}-{os.getpid()}-{threading.get_ident()}"
         streams = [kernel_stream(queue, self.kernel)] + ([STREAMS[queue]] if self.front else [])
         self.loop = Loop(queue, self.redis, consumer, self.dispatch, streams)
@@ -55,10 +58,25 @@ class Worker:
         self.redis.xadd(kernel_stream(self.queue, kernel), msg.fields(), maxlen=STREAM_MAX, approximate=True)
         raise Forwarded
 
+    def _alive(self) -> bool:
+        """False when the connection is broken, closed, or idle long enough to have been dropped and fails a probe."""
+        conn = self.ctx.conn
+        if conn.broken or conn.closed:
+            return False
+        if time.monotonic() - self.used < IDLE_PROBE:
+            return True
+        try:
+            conn.execute("SELECT 1")
+        except psycopg.OperationalError:
+            return False
+        return True
+
     def dispatch(self, msg: Message) -> tuple[Any, ...]:
-        if self.ctx.conn.broken or self.ctx.conn.closed:
+        if not self._alive():
             log.warning("reconnecting to Postgres", extra=fields(queue=self.queue))
+            self.ctx.conn.close()
             self.ctx = self._connect()
+        self.used = time.monotonic()
         if self.queue == JOBS:
             work(self.ctx, msg, self)
             return None, None
