@@ -11,7 +11,7 @@ import pytest
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, routing, runner, worker
+from glyphh_ada import cache, catalog, handlers, jobs, limits, orgschema, pg, process, routing, runner, worker
 from glyphh_ada.errors import Refusal
 from glyphh_ada.process import Worker, work
 from glyphh_ada.protocol import JOBS, SYNC, Message
@@ -132,6 +132,23 @@ async def test_a_broken_connection_is_made_again(engine: AsyncEngine, ada: httpx
     found, _, about = idle.dispatch(Message(str(who.org_id), "", "models", {}))
     assert about is None  # about no one model
     assert found == [] and not idle.ctx.conn.closed
+
+
+async def test_an_idle_connection_the_database_dropped_is_made_again(
+    engine: AsyncEngine, ada: httpx.AsyncClient, idle: Worker
+) -> None:
+    who, _key = await an_org(engine, ada)
+    idle.queue = SYNC
+    dropped = idle.ctx.conn
+    idle.used -= process.IDLE_PROBE
+    idle.dispatch(Message(str(who.org_id), "", "models", {}))
+    assert idle.ctx.conn is dropped  # idle but alive: the probe passes, the connection stays
+    with pg.connect(ADA.database_url) as other:
+        other.execute("SELECT pg_terminate_backend(%s)", (dropped.info.backend_pid,))
+    assert not dropped.broken  # psycopg cannot know yet: only a probe finds out
+    idle.used -= process.IDLE_PROBE
+    found, *_ = idle.dispatch(Message(str(who.org_id), "", "models", {}))
+    assert found == [] and idle.ctx.conn is not dropped and dropped.closed
 
 
 async def test_jobs_that_are_done_crash_or_lose_their_model(
