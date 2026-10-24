@@ -140,6 +140,9 @@ async def test_an_idle_connection_the_database_dropped_is_made_again(
     who, _key = await an_org(engine, ada)
     idle.queue = SYNC
     dropped = idle.ctx.conn
+    idle.used -= process.IDLE_PROBE
+    idle.dispatch(Message(str(who.org_id), "", "models", {}))
+    assert idle.ctx.conn is dropped  # idle but alive: the probe passes, the connection stays
     with pg.connect(ADA.database_url) as other:
         other.execute("SELECT pg_terminate_backend(%s)", (dropped.info.backend_pid,))
     assert not dropped.broken  # psycopg cannot know yet: only a probe finds out
