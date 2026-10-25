@@ -26,6 +26,30 @@ release is tagged `v<version>` on `main`.
 Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
 to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
 
+## 3.14.0 — 2026-10-25 — answer-changing
+
+**Time can weigh: calibrate fits a recency half-life.** With `settings.recency` (on by default), `calibrate` also
+tries half-lives of 1/16 to 2 times the span of the model's graded precedents, each held-out precedent asked at
+its own time. It keeps the half-life that best beats none, by at least 1% of the log-loss (or by cost with
+`calibrate_by: "cost"`), and keeps none otherwise. A read is then asked at the case's own time (`temporal_source`)
+or now, and each precedent's voice in the vote and the probabilities is halved per half-life of age. The
+half-life is kept in the store (`meta.half_lives`, per output; `Space.half_life()`). A model whose precedents span
+under a day never gets one. With `recency: false` every voice stays whole.
+
+**A lever, off by default: `settings.level_weights: "roles"`.** A segment then weighs its roles' weights summed,
+and a layer its segments' summed, so learned weights can quiet a whole segment of uninformative roles. The default
+stays `"spec"`, the weights as before. On German Credit `"roles"` decided worse (cost 125 against 99; learned from
+its own store, 115 against 102), so it is for a backtest on a model whose segments hold many quiet roles.
+
+- Changes answers only where `calibrate` fits a half-life: models whose graded precedents span at least a day and
+  whose answers drift with time. Nothing stored changes: the glyphs, the encoding (3) and the store's layout
+  (`STORE_FORMAT` 1) are 3.13.0's.
+- German Credit (the benchmark's `calibrate.py`): every answer is the same as 3.13.0's (`decide` with costs 70.5%,
+  cost 99; learned from its own store 69.0%, cost 102). Its cases carry no time, so no half-life is fitted.
+  Banking77 is the same too. Neither benchmark has time in it: recency is checked on a drifting store in
+  `test_versions.py`, not on a public benchmark.
+- New: `Space.half_life`, `Space.set_half_life`, `query(now=)`, `probabilities(now=)`, `calibrate(recency=)`.
+
 ## 3.13.0 — 2026-10-23 — answer-changing
 
 **A pair value the model never learned no longer votes.** Once `learn` has found a pair of roles that tell more

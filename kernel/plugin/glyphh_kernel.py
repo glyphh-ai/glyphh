@@ -26,11 +26,19 @@ from typing import Any, NamedTuple, Protocol, runtime_checkable
 import numpy as np
 from collections.abc import Callable
 
-__version__ = "3.13.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
+__version__ = "3.14.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
 TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
 POOL = 25  # nearest precedents a probability is spread over
 TAUS = (0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
+DAY = 86_400.0
+# recency (calibrate(recency=True)): the half-lives tried, as shares of the time the graded precedents span; a store
+# spanning under RECENCY_SPAN seconds has no time to weigh, and a half-life must beat none by RECENCY_GAIN of its
+# log-loss (or cost less) to be kept, so a store whose answers do not drift keeps every precedent's full voice
+HALF_LIVES = (1 / 16, 1 / 8, 1 / 4, 1 / 2, 1.0, 2.0)
+RECENCY_SPAN = DAY
+RECENCY_GAIN = 0.01
+HALF_LIVES_KEY = "half_lives"  # the store's meta: {output: seconds}
 ENCODING = 3  # bump when encode() changes; stores re-encode on open
 DEFAULT = "default"  # the output a precedent's own `outcome` is: every read without output= reads it
 SHORTLIST = 1000  # candidates a store that can shortlist hands a read, re-ranked exactly (Space.candidates)
@@ -874,6 +882,7 @@ class Space:
         self.tau = TAU if tau is None else float(tau)
         self._tau_given = tau is not None
         self._taus: dict[str, float] = {}  # a named output's own calibrated temperature
+        self._half_lives: dict[str, float] = {}  # an output's fitted recency half-life in seconds (none: off)
         self.decay = decay
         self.author = author
         self._ids: list[str] = []
@@ -1109,6 +1118,33 @@ class Space:
         if self._store is not None:
             self._store.set_tau(name, tau)
 
+    def half_life(self, output: str | None = None) -> float | None:
+        """The output's recency half-life in seconds (calibrate(recency=True) fits it), None when time weighs
+        nothing."""
+        return self._half_lives.get(_output_name(output))
+
+    def set_half_life(self, output: str | None, seconds: float | None) -> None:
+        """Keep an output's recency half-life (None: off), as calibrate() would; kept in the store's meta."""
+        self._writes("calibrate")
+        name = _output_name(output)
+        if seconds is not None and not float(seconds) > 0:
+            raise ValueError("a half-life is a positive number of seconds")
+        if seconds is None:
+            self._half_lives.pop(name, None)
+        else:
+            self._half_lives[name] = float(seconds)
+        if self._store is not None:
+            self._store.set_meta(HALF_LIVES_KEY, dict(self._half_lives))
+
+    def _recency(self, now: float | None, output: str | None) -> np.ndarray | None:
+        """Each precedent's voice by its age at `now`: 0.5 ** (age / half-life), a precedent from after `now`
+        aged 0. None (every voice whole) without a `now` or a half-life."""
+        half = self._half_lives.get(_output_name(output))
+        if now is None or half is None or self._n == 0:
+            return None
+        age = np.maximum(float(now) - np.asarray(self._ts[: self._n], dtype=np.float64), 0.0)
+        return np.maximum(np.power(0.5, age / half), 1e-9)  # the oldest still speak, if faintly
+
     def view(self, fn: Callable[[Any], Any], into: Space | None = None) -> Space:
         """This store's precedents with every situation passed through fn, in memory only: the same ids, outcomes
         (every output's), authors, times and events, each glyph made again from its new situation. How one output
@@ -1140,6 +1176,7 @@ class Space:
         out._named = [dict(row) for row in self._named]
         out.k, out.min_sim = self.k, self.min_sim
         out.tau, out._tau_given, out._taus = self.tau, self._tau_given, dict(self._taus)
+        out._half_lives = dict(self._half_lives)
         out._source = (id(self), self._epoch)
         return out
 
@@ -1350,6 +1387,7 @@ class Space:
         weights: dict[str, Any] | None = None,
         bias: Callable[[str], float] | None = None,
         output: str | None = None,
+        now: float | None = None,
     ) -> Answer:
         """weights: the query's weights tree (see encode()). Weighted,
         every similarity here is the exact weighted sim (a fact tree's
@@ -1359,9 +1397,11 @@ class Space:
         (what the query's own words say about that outcome, for one);
         the similarity bar, support and receipts are unbiased.
         output: which output votes (default: the default output); a
-        precedent without an outcome for it ranks but does not vote."""
+        precedent without an outcome for it ranks but does not vote.
+        now: the query's time (epoch seconds); given, and the output
+        has a recency half-life, each voter weighs by its age too."""
         if not self._loaded:
-            return self.candidates(situation, events, weights).query(situation, events, weights, bias, output)
+            return self.candidates(situation, events, weights).query(situation, events, weights, bias, output, now)
         if self._n == 0:
             return Answer(False, 0.0, 0.0, 0, None, {}, [])
         outs = self._outs(output)
@@ -1373,6 +1413,9 @@ class Space:
             return Answer(False, 0.0, max(top[0][1], 0.0), 0, None, {}, receipts)
         sims = np.array([s for _, s in voters])
         weights = sims if bias is None else np.array([s * bias(outs[i]) for i, s in voters])
+        recency = self._recency(now, output)
+        if recency is not None:
+            weights = weights * recency[[i for i, _ in voters]]
         wsum = float(weights.sum()) or 1.0
         outcomes: dict[str, float] = {}
         for (i, _), w in zip(voters, weights):
@@ -1506,18 +1549,22 @@ class Space:
         weights: dict[str, Any] | None = None,
         bias: Callable[[str], float] | None = None,
         output: str | None = None,
+        now: float | None = None,
     ) -> dict[str, float]:
         """P(outcome | situation) for every outcome among the POOL
         nearest precedents by exact weighted sim: a softmax of their
         scores at temperature tau, summed per outcome. Calibrated once
         calibrate() has fit tau to this store's own graded record.
-        output: which output's outcomes, at that output's own tau."""
+        output: which output's outcomes, at that output's own tau.
+        now: the query's time; with the output's recency half-life,
+        each precedent's share is weighed by its age as well."""
         if not self._loaded:
-            return self.candidates(situation, events, weights).probabilities(situation, events, weights, bias, output)
+            return self.candidates(situation, events, weights).probabilities(situation, events, weights, bias, output, now)
         if self._n == 0:
             return {}
         scores = self._scores(situation, events, weights or {})
-        return self._probabilities(scores, self._tau_for(output), bias=bias, outs=self._outs(output))
+        recency = self._recency(now, output)
+        return self._probabilities(scores, self._tau_for(output), bias=bias, outs=self._outs(output), recency=recency)
 
     def _probabilities(
         self,
@@ -1526,6 +1573,7 @@ class Space:
         skip: int = -1,
         bias: Callable[[str], float] | None = None,
         outs: list[str | None] | None = None,
+        recency: np.ndarray | None = None,
     ) -> dict[str, float]:
         outs = self._outcomes if outs is None else outs
         order = [int(i) for i in np.argsort(scores, kind="stable")[::-1] if i != skip and outs[i] is not None][:POOL]
@@ -1535,7 +1583,8 @@ class Space:
         mass: dict[str, float] = {}
         for i in order:
             o = outs[i]
-            mass[o] = mass.get(o, 0.0) + math.exp((float(scores[i]) - top) / tau) * (1.0 if bias is None else bias(o))
+            share = math.exp((float(scores[i]) - top) / tau) * (1.0 if bias is None else bias(o))
+            mass[o] = mass.get(o, 0.0) + share * (1.0 if recency is None else float(recency[i]))
         z = sum(mass.values()) or 1.0
         return {o: m / z for o, m in mass.items()}
 
@@ -1547,6 +1596,7 @@ class Space:
         cost: Callable[[dict[str, float], str], float] | None = None,
         bias_for: Callable[[dict[str, Any]], Callable[[str], float] | None] | None = None,
         output: str | None = None,
+        recency: bool = False,
     ) -> float:
         """Fit tau so probabilities mean what they say: hold out each of
         the `sample` newest precedents in turn, score it against the
@@ -1559,7 +1609,12 @@ class Space:
         probabilities would cost when `true` is the outcome: given, the
         temperature with the least total cost wins, log-loss breaking
         ties, so the fit serves the decision rather than the curve.
-        output: fit that output's own tau (saved as 'tau:<output>')."""
+        output: fit that output's own tau (saved as 'tau:<output>').
+        recency: fit a half-life with it, each held-out precedent asked
+        at its own time: none, or a share of the time the graded
+        precedents span (HALF_LIVES), kept only when it beats none
+        (RECENCY_GAIN). Without it the output's half-life is left as
+        it is. The half-life is in seconds (half_life())."""
         self._writes("calibrate")
         self._ensure_loaded()
         name = _output_name(output)
@@ -1576,17 +1631,31 @@ class Space:
             )
             for h in held
         ]
-        best: tuple[float, float, float] = (float("inf"), float("inf"), TAU)
-        for tau in TAUS:
-            loss = paid = 0.0
-            for h, scores, bias in scored:
-                p = self._probabilities(scores, tau, skip=h, bias=bias, outs=outs)
-                loss -= math.log(max(p.get(outs[h], 0.0), 1e-6))  # type: ignore[arg-type]
-                if cost is not None:
-                    paid += cost(p, outs[h])  # type: ignore[arg-type]
-            key = (round(paid, 9), loss) if cost is not None else (loss, 0.0)
-            if key < best[:2]:
-                best = (*key, tau)
+        span = (max(self._ts[i] for i in graded) - min(self._ts[i] for i in graded)) if recency else 0.0
+        halves: list[float | None] = [None] + ([span * f for f in HALF_LIVES] if span >= RECENCY_SPAN else [])
+        ts = np.asarray(self._ts[: self._n], dtype=np.float64)
+        fits: dict[float | None, tuple[float, float, float]] = {}
+        for half in halves:
+            ages = [None if half is None else np.maximum(np.power(0.5, np.maximum(ts[h] - ts, 0.0) / half), 1e-9) for h in held]
+            best: tuple[float, float, float] = (float("inf"), float("inf"), TAU)
+            for tau in TAUS:
+                loss = paid = 0.0
+                for (h, scores, bias), aged in zip(scored, ages):
+                    p = self._probabilities(scores, tau, skip=h, bias=bias, outs=outs, recency=aged)
+                    loss -= math.log(max(p.get(outs[h], 0.0), 1e-6))  # type: ignore[arg-type]
+                    if cost is not None:
+                        paid += cost(p, outs[h])  # type: ignore[arg-type]
+                key = (round(paid, 9), loss) if cost is not None else (loss, 0.0)
+                if key < best[:2]:
+                    best = (*key, tau)
+            fits[half] = best
+        none = fits[None]
+        bar = (none[0], none[1] * (1 - RECENCY_GAIN)) if cost is not None else (none[0] * (1 - RECENCY_GAIN), 0.0)
+        passing = {half: fit for half, fit in fits.items() if half is not None and fit[:2] < bar}
+        chosen = min(passing, key=lambda half: passing[half][:2]) if passing else None
+        best = fits[chosen]
+        if recency:
+            self.set_half_life(name, chosen)
         if name == DEFAULT:
             self.tau, self._tau_given = best[2], False
             key_name = "tau"
@@ -1660,6 +1729,7 @@ class Space:
         rows, named = store.shortlist(self.encode(situation, events, weights), self.shortlist)
         out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author, lexicon=self.lexicon)
         out.tau, out._tau_given, out._taus = self.tau, self._tau_given, dict(self._taus)
+        out._half_lives = dict(self._half_lives)
         for rid, text, outcome, dim, blob, author, ts, ev in rows:
             glyph = np.frombuffer(blob, dtype=np.int8).copy()
             out._append(rid, outcome, glyph, author, ts, _situation_of(text), out._traj(_events_from_blob(ev, dim)))
@@ -1762,6 +1832,8 @@ class Space:
                     self.tau = float(value)
             else:
                 self._taus[key[4:]] = float(value)
+        kept = self._store.meta(HALF_LIVES_KEY)
+        self._half_lives = {k: float(v) for k, v in kept.items() if v} if isinstance(kept, dict) else {}
 
     def refresh(self) -> int:
         """Pull in rows other agents wrote to this file since open.
