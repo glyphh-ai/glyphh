@@ -109,7 +109,7 @@ def test_status_choice_and_notices_follow_the_dates() -> None:
     shipped = registry.load()
     assert shipped.notice("ada-1-0", "me", None, now)["kind"] == "beta"  # type: ignore[index]
     assert shipped.notice(BETA, "me", None, now) is None  # the newest: nothing to tell
-    unopened = registry.Registry([ver("ada-1-1-beta", "3.13.0", installed=False), ver("ada-1-0", "3.12.2")])
+    unopened = registry.Registry([ver(BETA, BETA_KERNEL, installed=False), ver("ada-1-0", "3.12.2")])
     with pytest.raises(Refusal, match="not running here"):
         unopened.choose(BETA, now)
     assert unopened.kernels() == ["3.12.2"]
@@ -137,7 +137,7 @@ async def test_models_on_two_versions_side_by_side_upgraded_and_rolled_back(
     assert worker.redis.xlen(f"ada:sync:{BETA_KERNEL}") >= 2  # the beta model's calls went to its kernel's workers
     listed = (await ada.get("/v1/ada", headers=key)).json()
     assert listed["latest_stable"] == "ada-1-0" and listed["contract"] == registry.CONTRACT
-    assert {v["name"]: v["models"] for v in listed["versions"]} == {BETA: 1, "ada-1-0": 1}
+    assert {v["name"]: v["models"] for v in listed["versions"]} == {BETA: 1, "ada-1-1-beta": 0, "ada-1-0": 1}
     usage = (await ada.get("/v1/usage", headers=key)).json()
     assert usage["ada"]["versions"] == listed["versions"]
 
