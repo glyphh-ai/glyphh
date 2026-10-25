@@ -55,6 +55,7 @@ import json
 import math
 from collections import Counter, defaultdict
 import re
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -179,6 +180,12 @@ class Settings:
     shortlist: int = kernel.SHORTLIST  # over a store that can shortlist (Postgres): the candidates a read re-ranks
     # exactly; 0 reads every precedent, exactly, at any size
     exact_below: int = kernel.EXACT_BELOW  # a model holding fewer precedents is read whole, exactly
+    level_weights: str = "spec"  # "spec": the spec's own weights, every segment of a layer equal whatever its roles
+    # tell; "roles" (3.14.0): a segment weighs its roles' weights summed (times its own), a layer its segments', so a
+    # role's voice is the same wherever the spec puts it. Not the default: on German Credit it decided worse (cost
+    # 125 against 99); a lever to backtest on a model whose segments hold many quiet roles
+    recency: bool = True  # calibrate fits a half-life (time weighs the newer precedents more) and keeps it only when
+    # it beats none on the held-out newest; false: every precedent's voice is whole, whatever its age
 
     RANGES = {  # name: (kind, low, high) or (kind, choices)
         "k": (int, 1, 1000),
@@ -197,6 +204,8 @@ class Settings:
         "word_evidence": (float, 0.0, 5.0),
         "shortlist": (int, 0, 10000),
         "exact_below": (int, 0, 100000000),
+        "level_weights": (str, ("roles", "spec")),
+        "recency": (bool,),
     }
     LEARNING = ("word_weights", "word_floor", "interactions", "max_interactions", "rare", "word_pairs", "max_word_pairs")
 
@@ -738,9 +747,14 @@ class Spec:
     def weights(self, clearance: float = 1.0, present: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """The kernel weights tree: every level's similarity_weight, 0 for
         whatever the clearance may not see and, given `present` (a
-        situation), 0 for every part it leaves out."""
+        situation), 0 for every part it leaves out. With level_weights
+        "roles" a segment's weight is its own times its roles' summed,
+        a layer's its own times its segments', and the pairs layer the
+        sum of its pairs: the score is then each role's weighted mean
+        wherever it sits."""
         if self.security_weight > clearance:
             raise SpecError("", "this model is above the reader's clearance")
+        by_roles = self.settings.level_weights == "roles"
         tree: dict[str, Any] = {}
         for l in self.layers:
             lp = (present or {}).get(l.name) if present is not None else None
@@ -761,7 +775,11 @@ class Spec:
                     else:
                         value = sp.get(r.name) if isinstance(sp, dict) else None
                         roles[r.name] = r.similarity_weight * r.value_weight(value)
+                if by_roles:
+                    roles["*"] = sw * sum(v for k, v in roles.items() if k != "*")
                 segs[s.name] = roles
+            if by_roles:
+                segs["*"] = lw * sum(v["*"] for k, v in segs.items() if k != "*")
             tree[l.name] = segs
         if self.interactions:
             ip = (present or {}).get(INTERACTIONS) if present is not None else None
@@ -773,7 +791,7 @@ class Spec:
                     pairs[i.name] = 0.0
                 else:
                     pairs[i.name] = i.similarity_weight * i.value_weight(value)
-            own = max(pairs.values(), default=0.0)
+            own = sum(pairs.values()) if by_roles else max(pairs.values(), default=0.0)
             tree[INTERACTIONS] = {"*": 0.0 if (present is not None and ip is None) else own, "pairs": {"*": 1.0, **pairs}}
         return tree
 
@@ -1508,7 +1526,16 @@ class Model:
     def query(self, data: Any, clearance: float = 1.0, output: str | None = None) -> kernel.Answer:
         name = self._name(output)
         space, situation, weights = self._reader(name, data, clearance)
-        return space.query(situation, weights=weights, bias=self.bias(situation, name), output=name)
+        now = self._now(data)
+        return space.query(situation, weights=weights, bias=self.bias(situation, name), output=name, now=now)
+
+    def _now(self, data: Any) -> float | None:
+        """The time a read is asked at, for recency: the case's own (temporal_source) when it carries one, else
+        the clock; None when the model's recency is off."""
+        if not self.settings.recency:
+            return None
+        ts = self.spec.timestamp(data) if isinstance(data, Mapping) else None
+        return time.time() if ts is None else ts
 
     def facts(
         self,
@@ -1530,7 +1557,8 @@ class Model:
         """P(outcome | data) over the nearest precedents, at the output's temperature (calibrate() fits it)."""
         name = self._name(output)
         space, situation, weights = self._reader(name, data, clearance)
-        return space.probabilities(situation, weights=weights, bias=self.bias(situation, name), output=name)
+        now = self._now(data)
+        return space.probabilities(situation, weights=weights, bias=self.bias(situation, name), output=name, now=now)
 
     def calibrate(
         self, sample: int | None = None, clearance: float = 1.0, by: str | None = None, output: str | None = None
@@ -1559,9 +1587,12 @@ class Model:
             cost=(lambda p, true: costs.cost(self._least(p, name), true)) if by == "cost" else None,
             bias_for=lambda s: self.bias(s, name),
             output=name,
+            recency=self.settings.recency,
         )
         if space is not self.space:
             self.space.set_tau(name, tau)  # fitted on the view; kept by the store
+            if self.settings.recency:
+                self.space.set_half_life(name, space.half_life(name))
         return tau
 
     def _least(self, probabilities: Mapping[str, float], output: str | None = None) -> str:

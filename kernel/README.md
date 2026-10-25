@@ -510,7 +510,7 @@ different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
 `word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
 `calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`, `word_evidence`,
-`shortlist`, `exact_below`), each checked by name
+`shortlist`, `exact_below`, `level_weights`, `recency`), each checked by name
 and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
 kept with the store over the spec's; a learning lever moved relearns there
 and then. `model.settings.to_json(all=True)` reads them. The settings are not
@@ -555,6 +555,17 @@ query's words with the voter's outcome), in `query`, `probabilities`,
 `decide` and the calibration alike; the similarity bar, support and receipts
 stay unbiased. This is the weight per word per outcome a classic text model
 has and a similarity lacks.
+
+**Recency** (`recency`, on by default; 3.14.0): `calibrate` also fits a
+half-life, tried at 1/16 to 2 times the span of the graded precedents with
+each held-out precedent asked at its own time, and keeps it only when it beats
+none by 1% of the log-loss (or on cost). A read is asked at the case's own time
+(`temporal_source`) or now, and each precedent's voice in `query`,
+`probabilities` and `decide` halves per half-life of its age. A store spanning
+under a day, or one whose answers do not drift, gets none and reads as before.
+`level_weights: "roles"` (off: `"spec"` by default) makes a segment weigh its
+roles' weights summed and a layer its segments', so learned weights can quiet
+a whole segment; on German Credit it decided worse, so backtest it first.
 
 `learn` also finds **interactions**: pairs of roles that tell more about the
 outcome together than the better of them alone (a bad checking account with a
