@@ -93,7 +93,7 @@ async def test_every_ada_tool_answers_as_the_api_does(
     assert text(ungraded).endswith("its outcome taken away.")
     assert "Forgot" in text(await tool(ada, auth, "ada_forget", name="shapes", id=one["id"]))
     model = await tool(ada, auth, "ada_model", name="shapes")
-    beta = " ada-1-1-beta is available to try (beta)."
+    beta = " ada-1-2-beta is available to try (beta)."
     assert text(model) == "shapes: version 1 on ada-1-0, 60 precedents." + beta and data(model)["ada"] == "ada-1-0"
     query = await tool(ada, auth, "ada_query", name="shapes", data=shape(7, "g", 9))
     assert data(query)["top"] == "good" and text(query).startswith("good at confidence")
