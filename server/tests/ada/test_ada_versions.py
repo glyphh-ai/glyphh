@@ -20,7 +20,7 @@ from tests.ada.conftest import ADA, BETA_KERNEL, SHAPES, a_model, an_org, cases,
 from tests.ada.mcp import signed_in, text, tool
 from tests.db.helpers import person
 
-BETA = "ada-1-1-beta"
+BETA = "ada-1-2-beta"
 DATA = shape(7, "r", 2)
 
 
@@ -47,11 +47,13 @@ def use(monkeypatch: pytest.MonkeyPatch, reg: registry.Registry, day: date) -> N
 
 def test_the_registry_as_shipped() -> None:
     reg, day = registry.load(), registry.today()
-    assert reg.latest(day).name == "ada-1-0" and reg.kernels() == ["3.13.0", "3.12.2"]
-    assert reg.kernel_of(BETA) == "3.13.0" and reg.kernel_of("ada-0-9") == ""
+    assert reg.latest(day).name == "ada-1-0" and reg.kernels() == ["3.14.0", "3.13.0", "3.12.2"]
+    assert reg.kernel_of(BETA) == "3.14.0" and reg.kernel_of("ada-0-9") == ""
     assert reg.choose(None, day).name == "ada-1-0" and reg.choose(BETA, day).beta
     shown = reg.view(reg.find(BETA), day)  # type: ignore[arg-type]
-    assert shown["status"] == "beta" and shown["kernel"] == "3.13.0" and "never learned" in shown["summary"]
+    assert shown["status"] == "beta" and shown["kernel"] == "3.14.0" and "drift" in shown["summary"]
+    superseded = reg.find("ada-1-1-beta")  # a beta superseded by another: deprecated that day, ends 30 days on
+    assert superseded is not None and superseded.ends == superseded.deprecated + timedelta(days=30)  # type: ignore[operator]
 
 
 def test_a_list_that_breaks_the_support_policy_is_refused() -> None:
@@ -107,7 +109,7 @@ def test_status_choice_and_notices_follow_the_dates() -> None:
     shipped = registry.load()
     assert shipped.notice("ada-1-0", "me", None, now)["kind"] == "beta"  # type: ignore[index]
     assert shipped.notice(BETA, "me", None, now) is None  # the newest: nothing to tell
-    unopened = registry.Registry([ver("ada-1-1-beta", "3.13.0", installed=False), ver("ada-1-0", "3.12.2")])
+    unopened = registry.Registry([ver(BETA, BETA_KERNEL, installed=False), ver("ada-1-0", "3.12.2")])
     with pytest.raises(Refusal, match="not running here"):
         unopened.choose(BETA, now)
     assert unopened.kernels() == ["3.12.2"]
@@ -135,7 +137,7 @@ async def test_models_on_two_versions_side_by_side_upgraded_and_rolled_back(
     assert worker.redis.xlen(f"ada:sync:{BETA_KERNEL}") >= 2  # the beta model's calls went to its kernel's workers
     listed = (await ada.get("/v1/ada", headers=key)).json()
     assert listed["latest_stable"] == "ada-1-0" and listed["contract"] == registry.CONTRACT
-    assert {v["name"]: v["models"] for v in listed["versions"]} == {BETA: 1, "ada-1-0": 1}
+    assert {v["name"]: v["models"] for v in listed["versions"]} == {BETA: 1, "ada-1-1-beta": 0, "ada-1-0": 1}
     usage = (await ada.get("/v1/usage", headers=key)).json()
     assert usage["ada"]["versions"] == listed["versions"]
 
@@ -275,6 +277,7 @@ async def test_the_connector_lists_versions_and_upgrades(
     auth = await signed_in(engine, who)
     await tool(ada, auth, "ada_model_create", name="shapes", spec=SHAPES, ada="ada-1-0")
     listed = await tool(ada, auth, "ada_releases")
-    assert text(listed).startswith("The latest stable is ada-1-0") and "ada-1-1-beta: beta, released" in text(listed)
+    assert text(listed).startswith("The latest stable is ada-1-0") and "ada-1-2-beta: beta, released" in text(listed)
+    assert "ada-1-1-beta: deprecated (ends 2026-11-24), released" in text(listed)
     moved = await tool(ada, auth, "ada_upgrade", name="shapes", ada=BETA, note="try the beta")
     assert text(moved).startswith(f"Version 2 of shapes on {BETA} (from ada-1-0) is being made by job ")
