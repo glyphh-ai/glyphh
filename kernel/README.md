@@ -494,6 +494,26 @@ reads it through an in-memory view (`Space.view`) built from those, kept
 current as cases arrive. A spec without `outputs` has the one `default`
 output, and every call reads as before; `outcome=` is the default output's.
 
+### Typed outputs and unions
+
+An output's `kind` says what its answer is (kernel 3.15.0; docs/multi-output.md, Typed outputs):
+
+```python
+spec = Spec.from_json({..., "outputs": {
+    "kind":     {"values": ["bug", "billing"]},                                  # choice (the default)
+    "severity": {"kind": "score", "values": ["low", "medium", "high"],          # ordered levels
+                 "when": {"output": "kind", "in": ["bug"]}},                    # a union's branch
+    "refund":   {"kind": "number", "number": {"min": 0, "max": 100, "step": 10},
+                 "when": {"output": "kind", "in": ["billing"]}},
+    "urgent":   {"kind": "noul"},                                               # yes or no
+    "tags":     {"kind": "many", "values": ["mobile", "web", "gold"]}}})        # any of them
+model.record(data, outcomes={"kind": "billing", "refund": 80, "urgent": True, "tags": ["web", "gold"]})
+model.decide_all(data)   # test_typed_outputs.py's model, on a gold billing case
+# {"kind": {"outcome": "billing", ...}, "severity": {"outcome": None, "applies": False, ...},
+#  "refund": {"outcome": "85", "value": 85.0, "applies": True, ...}, "urgent": {"outcome": "true", "p": 1.0, ...},
+#  "tags": {"outcome": ["web", "gold"], "probabilities": {"mobile": 0.0, "web": 1.0, "gold": 1.0}, ...}}
+```
+
 `Model(spec, path=..., readonly=True)` opens the store read-only (see
 `Space`). `query`, `facts`, `probabilities`, `decide` and the settings
 (`model.settings`, `configure()` with no changes) read as ever. `record`,

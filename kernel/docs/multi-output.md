@@ -95,9 +95,30 @@ A precedent counts once against a plan's `max_precedents`, however many outputs 
 4. rrotor's `rrotor.ada` and an example model; the Ada part (version bump).
 5. SDKs and the contract; then the security benchmark's Ada as one model.
 
+## Typed outputs (kernel 3.15.0)
+
+An output's `kind` says what its answer is. A spec that names no kind is a choice, and decides as before.
+
+| kind | the spec | recorded as | `decide` adds |
+| --- | --- | --- | --- |
+| `choice` | `values` (optional) | one of them | — |
+| `score` | `values`, two or more, in order | one of them | `level`: the expected level (0 = the first) |
+| `noul` | nothing (its outcomes are `"false"`, `"true"`) | `true`/`false` or the strings | `p`: P(true) |
+| `number` | `number: {min, max, step}` | a number (kept as its bin) | `value`: the expected number |
+| `many` | `values`, two or more | a list of them | `outcome` is a list; `probabilities` each value's P(true) |
+
+- **Ordered mistakes.** A score's or a number's mistake costs how many levels (bins) it is off, where `costs` names
+  no price for the pair, so the least-cost outcome is the median, not the mode. A choice's mistakes still all cost 1.
+- **A number** is learned by its bins (at most 1,000); each outcome is a bin's midpoint as printed (`"45"`).
+- **A many output** is its values' nouls: member outputs `<name>--0`, `<name>--1`, ... in the store, each learning
+  and calibrating on its own. `outputs()` and `to_json()` name only the many output; it takes no costs or ask.
+- **A discriminated union.** `when: {"output": "kind", "in": ["bug"]}` asks an output only when another's outcome
+  is one of those. `decide_all` decides the one it hangs on first (asked for or not) and answers the branch not
+  taken `{"outcome": null, "applies": false}`; a branch taken says `"applies": true`. A record that grades a branch
+  its own outcome of the other leaves out is refused (E_OUTPUT_WHEN). The output hung on is a choice, a score or a
+  noul; whens may chain and may not go round. `decide` alone does not check the branch.
+
 ## Open questions
 
-1. Should an output be able to name the outputs it depends on (the containment questions asked only when triage
-   acts), so `decide_all` skips the ones not reached? Proposed: no — the caller's policy decides what to ask, as the
-   benchmark's does.
+1. ~~Should an output be able to name the outputs it depends on?~~ Yes, since 3.15.0: `when` (Typed outputs).
 2. Should `values` be required? Proposed: optional; an open set is today's behaviour.
