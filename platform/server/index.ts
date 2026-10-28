@@ -4,6 +4,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
 import { createDemo, hostOf, readDemoConfig, serveDemoPage, type HistoryRow } from './demo.js';
+import { createVoice, isVoicePath, serveVoiceRedirect } from './voice.js';
 
 /** Production: the route handlers, the built pages, and index.html for every other path; the demo on its own host. */
 const config = readConfig();
@@ -19,8 +20,14 @@ app.get('*', (c) => c.html(indexHtml));
 const demoConfig = readDemoConfig();
 const history = JSON.parse(await readFile('demo/history.json', 'utf8')) as HistoryRow[];
 const demo = serveDemoPage(createDemo({ config: demoConfig, history, secureCookies: config.secureCookies }));
+// demo.glyphh.ai/voice: the voice game's /api/voice and its own model; its page is served with the others'.
+const voiceCalls = Number(process.env.DEMO_VOICE_DAILY_CALLS);
+const voice = serveVoiceRedirect(
+  createVoice({ config: { ...demoConfig, voiceDailyCalls: Number.isInteger(voiceCalls) && voiceCalls > 0 ? voiceCalls : 300 }, secureCookies: config.secureCookies }),
+);
+const onDemo = (req: Request) => (isVoicePath(new URL(req.url).pathname) ? voice.fetch(req) : demo.fetch(req));
 
 const port = Number(process.env.PORT ?? 3000);
-serve({ fetch: (req) => (hostOf(req) === demoConfig.host ? demo.fetch(req) : app.fetch(req)), port }, () =>
+serve({ fetch: (req) => (hostOf(req) === demoConfig.host ? onDemo(req) : app.fetch(req)), port }, () =>
   console.log(`Glyphh platform on ${config.platformUrl}, the demo on https://${demoConfig.host} (port ${port})`),
 );

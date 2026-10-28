@@ -14,6 +14,5 @@ export const DEMOS = [
     blurb: 'Ada reads how you sound against how you usually sound. No audio leaves your browser, only the numbers.',
     tags: ['voice', 'game', 'audio'],
     model: 'launch-demo-voice',
-    soon: true,
   },
 ];
