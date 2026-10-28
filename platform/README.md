@@ -157,7 +157,7 @@ anger. **No audio is kept or sent**, and the page says so: the browser measures 
 pitch, its range and wobble, loudness, pace, pauses, seconds a word), sends seven numbers, each a change from the
 visitor's usual voice, and drops the samples. The name stays in the browser (localStorage), with Ada's ids for the
 visitor's takes and the numbers of their true takes, from which the usual voice is worked out again each time. The
-page is `demo/public/voice`, a card on the front page, the handlers `server/voice.ts`, on the same key; their model is `launch-demo-voice`, made the
+page is `demo/public/voice`, a card on the front page, the handlers `server/voice.ts`, on the same key; their model is `launch-demo-voice-2`, made the
 first time and never reset, every take carrying the visitor's id (a year-long HttpOnly cookie, `glyphh_voice`).
 
 | Route | Does |

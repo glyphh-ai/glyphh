@@ -29,11 +29,11 @@ type Seen = { method: string; path: string; body: any };
  * version and its job, record_many (research takes get s ids, visitors' p ids), decide, the map, a precedent, its
  * deletion.
  */
-function fakeAda({ exists = false as false | 'same' | 'old' } = {}) {
+function fakeAda({ exists = false as false | 'same' | 'old' | 'locked' } = {}) {
   const seen: Seen[] = [];
   const store = new Map<string, { situation: any; outcome: string }>();
   let made = Boolean(exists);
-  let spec: unknown = exists === 'old' ? { ...VOICE_SPEC, output: { ask_below: 0.6 } } : JSON.parse(JSON.stringify(VOICE_SPEC));
+  let spec: unknown = exists === 'old' || exists === 'locked' ?{ ...VOICE_SPEC, output: { ask_below: 0.6 } } : JSON.parse(JSON.stringify(VOICE_SPEC));
   let id = 0;
   let seeded = 0;
   const ada = new Hono();
@@ -49,6 +49,7 @@ function fakeAda({ exists = false as false | 'same' | 'old' } = {}) {
   });
   ada.get('/v1/models/:name', (c) => c.json({ name: VOICE_MODEL, spec }));
   ada.put('/v1/models/:name/spec', async (c) => {
+    if (exists === 'locked') return c.json({ error: { code: 'E_SPEC_READING' } }, 422);
     spec = (await c.req.json()).spec;
     return c.json({ version: 2, active: false, job: 'job1' });
   });
@@ -195,6 +196,14 @@ describe('the voice API', () => {
     expect(order.indexOf(`POST /v1/models/${VOICE_MODEL}/record_many`)).toBeGreaterThan(order.indexOf('GET /v1/jobs/job1'));
     expect(ada.seen.some((s) => s.method === 'DELETE')).toBe(false);
     expect([...ada.store.keys()].filter((k) => k.startsWith('s'))).toHaveLength(32);
+  });
+
+  it('goes on with the model as it is when Ada will not take the spec in place', async () => {
+    const { ada, post } = setup(config, { exists: 'locked' });
+    const res = await post('/api/voice/enrol', enrolment);
+    expect(res.status).toBe(200);
+    expect(ada.seen.filter((s) => s.path.endsWith('/record_many'))).toHaveLength(1);
+    expect((await post('/api/voice/read', { take: take('free') })).status).toBe(200);
   });
 
   it('shows the model in 3D: each take’s id, mood and bits, and its nearest; a new take shows at once', async () => {
