@@ -125,6 +125,7 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | `DEMO_GLYPHH_API_KEY` | The demo's Ada Cloud key (below). Unset: demo.glyphh.ai shows its page and its API answers 503 |
 | `DEMO_HOST` | The host the demo answers on (default `demo.glyphh.ai`) |
 | `DEMO_DAILY_CALLS` | The demo's Ada calls a day, all visitors together (default 150) |
+| `DEMO_VOICE_DAILY_CALLS` | The voice demo's (demo.glyphh.ai/voice) Ada calls a day, all visitors together (default 300) |
 
 ## demo.glyphh.ai
 
@@ -148,6 +149,27 @@ department and category, $0 to $3,000, a receipt yes or no, one of the three pol
 characters at most) before Ada is called. Writes come from the demo page only. Each visitor (their address) has 10
 decides and records a minute and 100 a day, and a reset every 5 minutes; the demo has `DEMO_DAILY_CALLS` Ada calls a
 day in all. A take adds 20 precedents at most, and an hour after the first, the model goes back to the 40.
+
+### demo.glyphh.ai/voice
+
+A game: Ada reads how a visitor sounds against how they usually sound, as likelihoods of truth, a lie, stress and
+anger. **No audio is kept or sent**, and the page says so: the browser measures each take (`demo/voice/measure.js`:
+pitch, its range and wobble, loudness, pace, pauses, seconds a word), sends seven numbers, each a change from the
+visitor's usual voice, and drops the samples. The name stays in the browser (localStorage), with Ada's ids for the
+visitor's takes and the numbers of their true takes, from which the usual voice is worked out again each time. The
+page is `demo/voice`, the handlers `server/voice.ts`, on the same key; their model is `launch-demo-voice`, made the
+first time and never reset, every take carrying the visitor's id (a year-long HttpOnly cookie, `glyphh_voice`).
+
+| Route | Does |
+|---|---|
+| `POST /api/voice/enrol {takes}` | The three set phrases, in order (their name, a truth, a lie), recorded as truth, truth, lie |
+| `POST /api/voice/read {take}` | `POST /v1/decide`: each mood's likelihood, whether Ada cannot tell (under 60%), the closest takes' moods |
+| `POST /api/voice/teach {take, mood}` | What the take really was, recorded |
+| `POST /api/voice/forget {ids}` | Each id checked to carry the visitor's id, then deleted; the visitor gets a new id |
+
+A take is a phrase (`self`, `truth`, `lie`, `free`) and the seven numbers, each clamped to its range; anything else is
+refused. A visitor keeps 60 takes, the model 20,000; the visitor limits are the expenses demo's, and the voice demo
+has `DEMO_VOICE_DAILY_CALLS` Ada calls a day of its own (default 300).
 
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.
