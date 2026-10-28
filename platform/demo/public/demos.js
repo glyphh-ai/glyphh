@@ -13,6 +13,6 @@ export const DEMOS = [
     title: 'Voice check',
     blurb: 'Ada reads how you sound against how you usually sound. No audio leaves your browser, only the numbers.',
     tags: ['voice', 'game', 'audio'],
-    model: 'launch-demo-voice',
+    model: 'launch-demo-voice-2',
   },
 ];

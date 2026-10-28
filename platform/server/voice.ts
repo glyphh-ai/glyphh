@@ -9,12 +9,14 @@ import { LIMITS as DEMO_LIMITS, Refusal, Window, type DemoConfig } from './demo.
  * the page measures each take there (pitch, loudness, pace, pauses, wobble, length), sends only those numbers, each
  * as a change from the visitor's own usual voice, and throws the recording away. The name stays in the browser too.
  *
- * One model, `launch-demo-voice`, named here and nowhere else, never reset: it is everyone's takes, each carrying its
+ * One model, `launch-demo-voice-2`, named here and nowhere else, never reset: it is everyone's takes, each carrying its
  * visitor's id (the cookie), so a visitor who comes back is still known and their own takes count most. Forget takes
  * every one of a visitor's precedents out of the model, checked against that id before each is deleted.
  */
 
-export const VOICE_MODEL = 'launch-demo-voice';
+// The second: Ada reads a stored case's numbers by its spec's ranges and will not change them in place
+// (E_SPEC_READING), so the ranges a voice moves by came with a new model; the first, `launch-demo-voice`, is left.
+export const VOICE_MODEL = 'launch-demo-voice-2';
 
 export const MOODS = ['truth', 'lie', 'stressed', 'angry'] as const;
 export type Mood = (typeof MOODS)[number];
@@ -235,8 +237,12 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
       try {
         made = await ada('PUT', `${base}/spec`, { spec: VOICE_SPEC, note: 'Voice check: ranges a voice moves by, the research takes' });
       } catch (e) {
-        // Ada holds this spec already (it reads it back in another form): nothing to change, nothing to seed.
-        if (e instanceof Refusal && e.message.includes('E_NO_CHANGE')) return;
+        // Ada holds this spec already (it reads it back in another form), or will not take it in place: the game
+        // goes on with the model as it is rather than refusing every take.
+        if (e instanceof Refusal && e.status === 502) {
+          if (!e.message.includes('E_NO_CHANGE')) console.error('voice demo: the spec was not taken:', e.message);
+          return;
+        }
         throw e;
       }
       await settle(typeof made.job === 'string' ? made.job : (made.job?.id ?? undefined));
