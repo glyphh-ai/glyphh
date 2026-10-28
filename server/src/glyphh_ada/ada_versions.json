@@ -3,8 +3,8 @@
   "versions": [
     {
       "name": "ada-1-2-beta",
-      "kernel": "3.14.0",
-      "commit": "f47007d32e93f8999e56c64c73ec2a19dbbf5a12",
+      "kernel": "3.15.0",
+      "commit": "22ee92f95d5c3fbe4d154bd214a13d7084709e97",
       "status": "beta",
       "open": true,
       "released": "2026-10-25",
@@ -13,8 +13,8 @@
       "changes_answers": true,
       "store_format": 1,
       "aliases": [],
-      "summary": "Time can weigh: a model whose answers drift gives its newer precedents more say.",
-      "notes": "When a model calibrates, ada-1-2-beta also tries giving each precedent less say as it ages, halving it every so often (its half-life), each held-out case asked at its own time. It keeps a half-life only when it clearly beats none on the model's newest precedents, so a model whose answers do not change over time reads exactly as before. A case is asked at its own time when the spec names one (`temporal_source`), else now. The setting `recency` turns it off.\n\nA new setting, `level_weights`, is off by default: set to `roles`, a segment weighs as much as its roles' weights added up, so a segment of roles that tell nothing goes quiet. On German Credit it decided worse, so backtest it on your own model before you turn it on.\n\nIt includes ada-1-1-beta's change (a pair of values the model never learned stays out of the vote). Nothing stored changes, so moving to it and back is safe.\n\n**Who it changes:** only models whose graded cases span at least a day and whose answers drift with time. German Credit and Banking77 give every answer exactly as on ada-1-1-beta (neither has time in it). Backtest your own model against it before you upgrade.\n\n- A beta: chosen only by name, never the default.\n- Kernel 3.14.0."
+      "summary": "Time can weigh: a model whose answers drift gives its newer precedents more say. Typed outputs and unions.",
+      "notes": "When a model calibrates, ada-1-2-beta also tries giving each precedent less say as it ages, halving it every so often (its half-life), each held-out case asked at its own time. It keeps a half-life only when it clearly beats none on the model's newest precedents, so a model whose answers do not change over time reads exactly as before. A case is asked at its own time when the spec names one (`temporal_source`), else now. The setting `recency` turns it off.\n\nA new setting, `level_weights`, is off by default: set to `roles`, a segment weighs as much as its roles' weights added up, so a segment of roles that tell nothing goes quiet. On German Credit it decided worse, so backtest it on your own model before you turn it on.\n\nIt includes ada-1-1-beta's change (a pair of values the model never learned stays out of the vote). Nothing stored changes, so moving to it and back is safe.\n\n**Who it changes:** only models whose graded cases span at least a day and whose answers drift with time. German Credit and Banking77 give every answer exactly as on ada-1-1-beta (neither has time in it). Backtest your own model against it before you upgrade.\n\n**Typed outputs (since 2026-10-28).** A named output can say what its answer is with `kind`: `choice` (the default), `score` (ordered levels: a mistake costs how many levels it is off, and an answer says the expected `level`), `noul` (yes or no, recorded as true or false, and an answer says `p`, the chance of yes), `number` (`number: {min, max, step}`, recorded as a number, and an answer says the expected `value`) or `many` (any of its values at once, recorded as a list). `when: {output, in}` makes an output one branch of a discriminated union: it is asked only when another output's answer is one of those values; a decide of every output answers a branch not taken with `applies: false`, and a case may not grade a branch its own answers leave out. A spec that uses none of these answers exactly as before.\n\n- A beta: chosen only by name, never the default.\n- Kernel 3.15.0 (3.14.0 until 2026-10-28; 3.15.0 changes no answer of a spec 3.14.0 reads)."
     },
     {
       "name": "ada-1-1-beta",
