@@ -13,12 +13,18 @@ from glyphh_ada.api.call import call
 
 router = APIRouter(prefix="/v1/models/{name}", tags=["cases"], dependencies=[Depends(bounded)])
 
+# a named output's outcome by its kind: a choice's or score's value, a noul's true/false, a number, a many's list
+Outcome = str | bool | float | list[str]
+OUTCOME = "By the output's kind: one of its values, true/false (noul), a number (number), a list of values (many)"
+
 
 class Case(BaseModel):
     model_config = ConfigDict(extra="forbid")
     data: dict[str, Any] = Field(description="The case in the spec's shape: layers, segments, roles")
     outcome: str | None = Field(None, min_length=1, description="The default output's outcome, when known")
-    outcomes: dict[str, str] | None = Field(None, description="Named outputs' outcomes: {output: value}")
+    outcomes: dict[str, Outcome] | None = Field(
+        None, description=f"Named outputs' outcomes: {{output: value}}. {OUTCOME}"
+    )
     ts: float | None = Field(None, description="When it happened, epoch seconds; else the spec's or now")
 
 
@@ -31,7 +37,7 @@ class Grade(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str = Field(min_length=1, max_length=200)
     output: str | None = Field(None, description="A named output; left out, the default one")
-    value: str | None = Field(None, description="The outcome; null takes it away")
+    value: Outcome | None = Field(None, description=f"The outcome; null takes it away. {OUTCOME}")
 
 
 @router.post("/record", operation_id="recordAdaCase")
