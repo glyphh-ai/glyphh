@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { LIMITS as DEMO_LIMITS, Refusal, Window, type DemoConfig } from './demo.js';
 
 /**
@@ -309,13 +308,12 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
   return app;
 }
 
-/** Requests the voice demo answers on the demo's host: its page and its API. */
-export const isVoicePath = (path: string) => path === '/voice' || path.startsWith('/voice/') || path.startsWith('/api/voice/');
+/** Requests the voice demo answers on the demo's host: its API, and /voice sent on to the page. The page itself
+ * (demo/public/voice) is served with the other demos' (serveDemoPage). */
+export const isVoicePath = (path: string) => path === '/voice' || path.startsWith('/api/voice/');
 
-/** The page (demo/voice) at /voice after its /api. */
-export function serveVoicePage(app: Hono, root = 'demo') {
+export function serveVoiceRedirect(app: Hono) {
   app.get('/voice', (c) => c.redirect('/voice/', 308));
-  app.use('/voice/*', serveStatic({ root }));
   app.notFound((c) => c.text('Not found', 404));
   return app;
 }

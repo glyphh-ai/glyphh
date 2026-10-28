@@ -153,11 +153,11 @@ day in all. A take adds 20 precedents at most, and an hour after the first, the 
 ### demo.glyphh.ai/voice
 
 A game: Ada reads how a visitor sounds against how they usually sound, as likelihoods of truth, a lie, stress and
-anger. **No audio is kept or sent**, and the page says so: the browser measures each take (`demo/voice/measure.js`:
+anger. **No audio is kept or sent**, and the page says so: the browser measures each take (`demo/public/voice/measure.js`:
 pitch, its range and wobble, loudness, pace, pauses, seconds a word), sends seven numbers, each a change from the
 visitor's usual voice, and drops the samples. The name stays in the browser (localStorage), with Ada's ids for the
 visitor's takes and the numbers of their true takes, from which the usual voice is worked out again each time. The
-page is `demo/voice`, the handlers `server/voice.ts`, on the same key; their model is `launch-demo-voice`, made the
+page is `demo/public/voice`, a card on the front page, the handlers `server/voice.ts`, on the same key; their model is `launch-demo-voice`, made the
 first time and never reset, every take carrying the visitor's id (a year-long HttpOnly cookie, `glyphh_voice`).
 
 | Route | Does |

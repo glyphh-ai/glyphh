@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import type { DemoConfig } from './demo.js';
-import { createVoice, isVoicePath, MEASURES, readMood, readTake, serveVoicePage, speakerOf, VOICE_LIMITS, VOICE_MODEL, VOICE_SPEC } from './voice.js';
+import { createDemo, serveDemoPage, type DemoConfig } from './demo.js';
+import { createVoice, isVoicePath, MEASURES, readMood, readTake, serveVoiceRedirect, speakerOf, VOICE_LIMITS, VOICE_MODEL, VOICE_SPEC } from './voice.js';
 // @ts-expect-error the page's own module, plain JS
-import { against, features, usual } from '../demo/voice/measure.js';
+import { against, features, usual } from '../demo/public/voice/measure.js';
 
 const body = async (res: Response): Promise<any> => res.json();
 const config: DemoConfig = { host: 'demo.test', key: 'glyphh_ak_demo', adaUrl: 'https://ada.test', dailyCalls: 1000 };
@@ -180,7 +180,8 @@ describe('the voice API', () => {
 });
 
 describe('the page', () => {
-  const page = () => serveVoicePage(createVoice({ config: { ...config, key: undefined } }));
+  // The page is served with the other demos' (serveDemoPage); /voice itself is sent on to it.
+  const page = () => serveDemoPage(createDemo({ config: { ...config, key: undefined }, history: [] }));
 
   it.each([
     ['/voice/', 'text/html'],
@@ -198,14 +199,19 @@ describe('the page', () => {
     expect(html).toContain('No audio is kept or sent.');
   });
 
-  it('has nothing outside /voice', async () => {
-    expect((await page().request('https://demo.test/history.json')).status).toBe(404);
-    expect((await page().request('https://demo.test/voice/../server/voice.ts')).status).toBe(404);
+  it('has nothing of the server’s', async () => {
+    expect((await page().request('https://demo.test/voice/../../server/voice.ts')).status).toBe(404);
   });
 
-  it('routes /voice and /api/voice only', () => {
-    expect(['/voice', '/voice/', '/api/voice/read'].every(isVoicePath)).toBe(true);
-    expect(['/', '/api/decide', '/voiceover'].some(isVoicePath)).toBe(false);
+  it('sends /voice on to /voice/', async () => {
+    const res = await serveVoiceRedirect(createVoice({ config })).request('https://demo.test/voice');
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('/voice/');
+  });
+
+  it('takes /voice and /api/voice only, the page left to the demos’', () => {
+    expect(['/voice', '/api/voice/read'].every(isVoicePath)).toBe(true);
+    expect(['/', '/voice/', '/api/decide', '/voiceover'].some(isVoicePath)).toBe(false);
   });
 });
 
