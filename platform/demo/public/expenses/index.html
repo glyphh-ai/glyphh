@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense approvals · Ada</title>
+  <link rel="icon" type="image/png" href="/glyphh-mascot-square-black.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=sentient@400i&display=swap">
+  <link rel="stylesheet" href="/expenses/styles.css">
+</head>
+<body>
+  <header class="head">
+    <div class="brand">
+      <a href="/" aria-label="All demos"><img src="/glyphh-logo-white-outline.png" alt="Glyphh" class="logo"></a>
+      <span class="divider"></span>
+      <span class="product">Expense approvals</span>
+      <span class="kicker">Decided by Ada</span>
+    </div>
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="status">Connecting to Ada Cloud…</span>
+      <button type="button" class="ghost" id="reset">Reset demo</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel ledger" aria-labelledby="ledger-title">
+      <div class="panel-head">
+        <h2 id="ledger-title" class="kicker">Past decisions</h2>
+        <span class="sub" id="ledger-count"></span>
+      </div>
+      <div class="table-wrap" id="ledger-wrap">
+        <table>
+          <thead>
+            <tr><th>Ref · Ada id</th><th>Expense</th><th class="n">Amount</th><th>Receipt</th><th>Policy</th><th>Decision</th></tr>
+          </thead>
+          <tbody id="ledger"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel claim" aria-labelledby="claim-title">
+      <div class="panel-head">
+        <h2 id="claim-title" class="kicker">New expense</h2>
+      </div>
+      <div class="presets" id="presets"></div>
+      <form id="form" autocomplete="off">
+        <div class="row2">
+          <label class="field"><span>Employee</span><input id="employee" required></label>
+          <label class="field"><span>Department</span><input id="department" list="departments" required></label>
+          <datalist id="departments"><option value="sales"><option value="engineering"><option value="marketing"><option value="customer success"><option value="finance"></datalist>
+        </div>
+        <label class="field"><span>Description</span><input id="description" required></label>
+        <div class="row3">
+          <label class="field"><span>Category</span><input id="category" list="categories" required><datalist id="categories"></datalist></label>
+          <label class="field"><span>Amount</span>
+            <div class="money"><i>$</i><input id="amount" type="number" min="0" max="3000" step="1" required></div>
+          </label>
+          <label class="field"><span>Policy limit</span>
+            <div class="money"><i>$</i><input id="limit" type="number" min="0" max="3000" step="1" required></div>
+          </label>
+        </div>
+        <div class="row2">
+          <div class="field"><span>Receipt attached</span><div class="seg" data-for="receipt"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>
+          <div class="field"><span>Pre-approved</span><div class="seg" data-for="preapproved"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>
+        </div>
+        <div class="policy" id="policy"></div>
+        <button type="submit" class="primary" id="ask">Ask Ada</button>
+        <p class="error" id="error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section class="panel answer" aria-labelledby="answer-title" aria-live="polite">
+      <div class="panel-head">
+        <h2 id="answer-title" class="kicker">Ada’s decision</h2>
+        <span class="ms" id="ms"></span>
+      </div>
+      <div id="answer">
+        <div class="empty">
+          <p class="empty-big">Ask about an expense.</p>
+          <p>Ada answers from the decisions on the left, says how sure she is, and shows you which ones.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/expenses/app.js" type="module"></script>
+</body>
+</html>
