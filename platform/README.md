@@ -166,10 +166,24 @@ first time and never reset, every take carrying the visitor's id (a year-long Ht
 | `POST /api/voice/read {take}` | `POST /v1/decide`: each mood's likelihood, whether Ada cannot tell (under 60%), the closest takes' moods |
 | `POST /api/voice/teach {take, mood}` | What the take really was, recorded |
 | `POST /api/voice/forget {ids}` | Each id checked to carry the visitor's id, then deleted; the visitor gets a new id |
+| `GET /api/voice/map` | `GET /v1/models/{name}/map` (600 takes): each take's id, mood and glyph bits, and its nearest, for the 3D view; held 5 seconds, dropped when a take is recorded or forgotten |
 
 A take is a phrase (`self`, `truth`, `lie`, `free`) and the seven numbers, each clamped to its range; anything else is
 refused. A visitor keeps 60 takes, the model 20,000; the visitor limits are the expenses demo's, and the voice demo
 has `DEMO_VOICE_DAILY_CALLS` Ada calls a day of its own (default 300).
+
+Each measure's range is what a voice moves by between calm and upset, no wider (a number is encoded by where it sits
+in its range, so a wide range makes every take look alike). The model starts with 32 research takes (`speaker`
+`research`): eight of each mood as the vocal-emotion studies describe it against a calm voice, so stress and anger
+can be read before anyone has taught them. A model on an older spec gets this one as a new version at start, its job
+followed to the end, then the research takes.
+
+Under the game, the platform's own 3D view (`src/pages/ada/model/view/scene.ts`) draws every take, the visitor's
+bright, again after each take Ada keeps. It is built for the plain page on its own (`src/demo/glyph-view.ts`,
+`vite.demo.config.ts`, into `dist/demo`) and served at `/voice/3d/glyph-view.js`.
+
+Every demo page wears the platform's look: `demo/public/platform.css` (dark-hc's tokens, white buttons, 8px corners,
+the wordmark), loaded after each page's own stylesheet.
 
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.

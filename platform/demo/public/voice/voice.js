@@ -17,6 +17,8 @@ const PROMPTS = [
   'I love my job.',
 ];
 const MOODS = { truth: 'Truth', lie: 'Lie', stressed: 'Stressed', angry: 'Angry' };
+// Each mood's colour, from the platform's dark-hc series: in the bars, the legend and the 3D view alike.
+const COLOURS = { truth: '#6ee7b7', lie: '#d2a8ff', stressed: '#fcd34d', angry: '#fca5a5' };
 const KEPT = 'glyphh_voice';
 const MAX_SECONDS = 10;
 const TRUE_KEPT = 20;
@@ -54,8 +56,35 @@ function showError(message) {
   $('error').textContent = message || '';
 }
 
+/* The 3D view: the platform's own (src/demo/glyph-view.ts), loaded once the game starts, drawn again after each
+   take Ada keeps. */
+
+let view = null;
+
+async function drawMap() {
+  try {
+    const res = await fetch('/api/voice/map');
+    const map = await res.json();
+    if (!res.ok) throw new Error(map.error);
+    view ??= new (await import('/voice/3d/glyph-view.js')).GlyphView($('glyphs'));
+    const counts = {};
+    for (const p of map.points) counts[p.outcome] = (counts[p.outcome] || 0) + 1;
+    $('view-count').textContent = `${map.points.length} takes · ${me?.ids.length ?? 0} yours`;
+    $('legend').innerHTML = Object.entries(MOODS)
+      .map(([m, label]) => `<span><i style="background:${COLOURS[m]}"></i>${label} ${counts[m] || 0}</span>`)
+      .join('');
+    const drawn = view.show({ map, colours: COLOURS, bright: new Set(me?.ids ?? []) });
+    $('view-note').hidden = drawn;
+    $('view-note').textContent = drawn ? '' : 'This browser cannot draw the 3D view: WebGL is off or not supported.';
+    $('view').hidden = false;
+  } catch {
+    // The game goes on without its picture.
+  }
+}
+
 function show(id) {
   for (const s of ['start', 'enrol', 'game']) $(s).hidden = s !== id;
+  if (id !== 'game') $('view').hidden = true;
   $('who').textContent = me ? `Listening to ${me.name}` : '';
   $('forget').hidden = !me?.ids.length;
 }
@@ -145,6 +174,7 @@ function startGame() {
   renderPrompts();
   renderTakes();
   show('game');
+  drawMap();
 }
 
 function renderTakes() {
@@ -192,9 +222,9 @@ function renderAnswer(a) {
   $('answer').innerHTML = `
     <p class="verdict ${a.ask ? 'ask' : top}">${a.ask ? 'Ada cannot tell' : `Sounds like <b>${MOODS[top].toLowerCase()}</b>`}</p>
     <div class="bars">${ranked
-      .map(([m, v]) => `<div class="bar ${m}"><span>${MOODS[m]}</span><div><i style="width:${Math.round(v * 100)}%"></i></div><b>${pct(v)}</b></div>`)
+      .map(([m, v]) => `<div class="bar ${m}"><span>${MOODS[m]}</span><div><i style="width:${Math.round(v * 100)}%;background:${COLOURS[m]}"></i></div><b>${pct(v)}</b></div>`)
       .join('')}</div>
-    <p class="sub">${a.ask ? `Nothing above ${pct(0.6)}: your take sits between moods she knows.` : `${pct(p)} likely, from the ${a.receipts.length === 1 ? 'take' : `${a.receipts.length} takes`} it sounds closest to.`}</p>`;
+    <p class="sub">${a.ask ? `Nothing above ${pct(0.45)}: your take sits between moods she knows.` : `${pct(p)} likely, from the ${a.receipts.length === 1 ? 'take' : `${a.receipts.length} takes`} it sounds closest to.`}</p>`;
   $('moods').innerHTML = Object.entries(MOODS).map(([m, label]) => `<button type="button" class="chip mood ${m}" data-m="${m}">${label}</button>`).join('');
   $('teach').hidden = false;
 }
@@ -212,8 +242,9 @@ $('moods').addEventListener('click', async (e) => {
     save();
     last = null;
     $('teach').hidden = true;
-    $('answer').innerHTML = `<p class="empty-big">Thanks. Ada knows your voice a little better.</p><p class="sub">Say another.</p>`;
+    $('answer').innerHTML = `<p class="empty-big">Thanks. Ada knows your voice a little better.</p><p class="sub">Say another. Your take is in the 3D view below.</p>`;
     renderTakes();
+    drawMap();
   } catch (err) {
     showError(err.message);
   } finally {
