@@ -13,6 +13,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
+COPY demo ./demo
 USER node
 EXPOSE 3000
 CMD ["node", "dist/server/server/index.js"]

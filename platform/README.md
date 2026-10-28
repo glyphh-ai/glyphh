@@ -122,6 +122,29 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | `PLATFORM_CLIENT_NAME` | The `client_name` it registered with (default `Glyphh`), so its own consent pages are recognised |
 | `SESSION_SECRET` | 32+ random bytes, base64: seals the session cookie |
 | `PORT` | Where it listens (default 3000) |
+| `DEMO_GLYPHH_API_KEY` | The demo's Ada Cloud key (below). Unset: demo.glyphh.ai shows its page and its API answers 503 |
+| `DEMO_HOST` | The host the demo answers on (default `demo.glyphh.ai`) |
+| `DEMO_DAILY_CALLS` | The demo's Ada calls a day, all visitors together (default 150) |
+
+## demo.glyphh.ai
+
+The same process answers `demo.glyphh.ai` with the expenses demo and nothing of the platform's: no sign-in, no
+session, no `/api/v1`. Anyone can use it. The page is `demo/public`, the 40 past expenses `demo/history.json`, the
+handlers `server/demo.ts`; they hold `DEMO_GLYPHH_API_KEY` and the browser never sees it.
+
+| Route | Does |
+|---|---|
+| `GET /api/state` | The model and the ledger: the 40, then what visitors recorded (another visitor's name shown as "Another visitor") |
+| `POST /api/decide {claim}` | `POST /v1/decide` on `launch-demo-expenses`: the answer, its probabilities, whether a person decides, the precedents |
+| `POST /api/record {claim, outcome}` | `record_many` of one case, the next ref (E-2081 on), approve or reject |
+| `POST /api/reset` | The model made again from the 40 (only when something was recorded) |
+
+The key can reach every model in its org, so the handlers name one, `launch-demo-expenses`, and take no model, path
+or setting from the page; any other `/api` path is 403. A claim is checked against the expense's shape (words for
+department and category, $0 to $3,000, a receipt yes or no, one of the three policy checks, a description of 120
+characters at most) before Ada is called. Writes come from the demo page only. Each visitor (their address) has 10
+decides and records a minute and 100 a day, and a reset every 5 minutes; the demo has `DEMO_DAILY_CALLS` Ada calls a
+day in all. A take adds 20 precedents at most, and an hour after the first, the model goes back to the 40.
 
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.
