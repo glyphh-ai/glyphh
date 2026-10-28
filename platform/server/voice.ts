@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { LIMITS as DEMO_LIMITS, Refusal, Window, type DemoConfig } from './demo.js';
 
 /**
@@ -20,15 +21,19 @@ export type Mood = (typeof MOODS)[number];
 export const PHRASES = ['self', 'truth', 'lie', 'free'] as const;
 export type Phrase = (typeof PHRASES)[number];
 
-/** Each measure as a change from the visitor's usual voice, and the range it is read over. */
+/**
+ * Each measure as a change from the visitor's usual voice, and the range it is read over. The ranges are what a voice
+ * moves by between calm and upset, no wider: a number is encoded by how far along its range it sits, so a range ten
+ * times too wide makes every take look the same to Ada (the first cut's did, and stress and anger never showed).
+ */
 export const MEASURES = {
-  pitch: { min: -12, max: 12, bin: 1 }, // semitones up or down
-  range: { min: 0.25, max: 3, bin: 0.15 }, // how far the pitch roams, × usual
-  loudness: { min: -18, max: 18, bin: 1.5 }, // dB
-  pace: { min: 0.4, max: 2.5, bin: 0.1 }, // syllables a second, × usual
-  pauses: { min: -0.6, max: 0.6, bin: 0.05 }, // share of the take that is silence, against usual
-  wobble: { min: 0.25, max: 3, bin: 0.15 }, // frame-to-frame pitch jumps, × usual
-  length: { min: 0.25, max: 4, bin: 0.15 }, // seconds spoken, × usual for that phrase
+  pitch: { min: -6, max: 6, bin: 0.5 }, // semitones up or down
+  range: { min: 0.5, max: 2, bin: 0.1 }, // how far the pitch roams, × usual
+  loudness: { min: -9, max: 9, bin: 0.75 }, // dB
+  pace: { min: 0.6, max: 1.6, bin: 0.05 }, // syllables a second, × usual
+  pauses: { min: -0.3, max: 0.3, bin: 0.03 }, // share of the take that is silence, against usual
+  wobble: { min: 0.5, max: 2, bin: 0.1 }, // frame-to-frame pitch jumps, × usual
+  length: { min: 0.5, max: 2, bin: 0.1 }, // seconds a word, × usual
 } as const;
 export type Measures = Record<keyof typeof MEASURES, number>;
 
@@ -41,17 +46,58 @@ export const VOICE_SPEC = {
         {
           name: 'voice',
           roles: [
-            { name: 'speaker', similarity_weight: 0.8 },
-            { name: 'phrase', similarity_weight: 0.3 },
+            // Who spoke counts a little, so a visitor's own takes come first; how they sounded decides.
+            { name: 'speaker', similarity_weight: 0.3 },
+            { name: 'phrase', similarity_weight: 0 },
             ...Object.entries(MEASURES).map(([name, m]) => ({ name, numeric_config: { min_value: m.min, max_value: m.max, bin_width: m.bin } })),
           ],
         },
       ],
     },
   ],
-  // Under 60% sure of one mood, the page says Ada cannot tell.
-  output: { ask_below: 0.6 },
+  // Four moods: under 45% sure of one, the page says Ada cannot tell.
+  output: { ask_below: 0.45 },
 };
+
+/**
+ * What the model starts from, so every mood is there before anyone teaches it: takes of no one (`speaker`
+ * `research`), each mood as the vocal-emotion research describes it against a calm voice (Juslin & Laukka 2003;
+ * Scherer 2003; for lies, DePaulo et al. 2003, whose cues are weak): anger louder, higher, faster, roaming wider;
+ * stress higher, faster, shakier, narrower; a lie a little higher, slower, with more pauses. Eight of each, spread a
+ * little, the same every time.
+ */
+const PROFILES: Record<Mood, Measures> = {
+  truth: { pitch: 0, range: 1, loudness: 0, pace: 1, pauses: 0, wobble: 1, length: 1 },
+  lie: { pitch: 0.8, range: 0.95, loudness: -0.5, pace: 0.92, pauses: 0.08, wobble: 1.1, length: 1.2 },
+  stressed: { pitch: 2.5, range: 0.8, loudness: 1.5, pace: 1.15, pauses: -0.03, wobble: 1.45, length: 0.92 },
+  angry: { pitch: 2, range: 1.5, loudness: 6, pace: 1.15, pauses: -0.08, wobble: 1.25, length: 0.9 },
+};
+const SPREAD: Measures = { pitch: 0.6, range: 0.08, loudness: 1.2, pace: 0.05, pauses: 0.03, wobble: 0.08, length: 0.06 };
+export const SEED_SPEAKER = 'research';
+
+export function seeds(): { mood: Mood; measures: Measures }[] {
+  let x = 7;
+  const next = () => ((x = (x * 48271) % 2147483647) / 2147483647) * 2 - 1;
+  return MOODS.flatMap((mood) =>
+    Array.from({ length: 8 }, () => ({
+      mood,
+      measures: Object.fromEntries(Object.entries(PROFILES[mood]).map(([k, v]) => [k, Math.round((v + next() * SPREAD[k as keyof Measures]) * 1000) / 1000])) as Measures,
+    })),
+  );
+}
+
+/** Whether the model's spec reads takes as this one does: every role and its range, the speaker's weight, the bar. */
+export const sameSpec = (spec: unknown) => canonical(spec) === canonical(VOICE_SPEC);
+
+const canonical = (v: unknown): string =>
+  Array.isArray(v)
+    ? `[${v.map(canonical).join(',')}]`
+    : typeof v === 'object' && v !== null
+      ? `{${Object.keys(v)
+          .sort()
+          .map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`)
+          .join(',')}}`
+      : JSON.stringify(v);
 
 export const VOICE_LIMITS = {
   /** A visitor's takes kept in the model; past it, their oldest are not deleted, new ones are refused. */
@@ -62,6 +108,8 @@ export const VOICE_LIMITS = {
 };
 
 const VISITOR_COOKIE = 'glyphh_voice';
+const MAP_POINTS = 600;
+const MAP_FOR_MS = 5000;
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
@@ -120,6 +168,7 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
   let calls = 0;
   // Takes per visitor since this process started: a cap, not a record (the model holds the takes).
   const takes = new Map<string, number>();
+  let map: { at: number; body: unknown } | null = null;
 
   const minute = new Window(DEMO_LIMITS.perMinute, MINUTE);
   const daily = new Window(DEMO_LIMITS.perDay, DAY);
@@ -149,13 +198,49 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
     return json;
   }
 
-  /** The model there, once per process; made the first time, never emptied. */
+  /** The research takes, recorded once: when the model is made, or read anew by a changed spec. */
+  async function seed() {
+    const got = await ada<{ precedents?: number }>('POST', `${base}/record_many`, {
+      cases: seeds().map((s) => ({ data: asData(SEED_SPEAKER, { phrase: 'free', measures: s.measures }), outcome: s.mood })),
+    });
+    precedents = got.precedents ?? precedents;
+  }
+
+  /** A new version's job, followed until it is done (a minute at most), so what is recorded next lands in it. */
+  async function settle(job: string | undefined) {
+    for (let i = 0; job && i < 30; i++) {
+      const got = await ada<{ state?: string; status?: string }>('GET', `${config.adaUrl}/v1/jobs/${encodeURIComponent(job)}`);
+      const state = got.state ?? got.status;
+      if (state === 'done' || state === 'failed') return;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+
+  /**
+   * The model there and reading takes as VOICE_SPEC does, once per process: made the first time, never emptied. A
+   * model on an older spec gets this one as a new version (its takes read again), then the research takes.
+   */
   function prepare() {
     ready ??= (async () => {
       const { models = [] } = await ada<{ models?: { name: string; precedents?: number }[] }>('GET', `${config.adaUrl}/v1/models`);
       const found = models.find((m) => m.name === VOICE_MODEL);
-      if (found) precedents = found.precedents ?? 0;
-      else await ada('POST', `${config.adaUrl}/v1/models`, { name: VOICE_MODEL, spec: VOICE_SPEC });
+      if (!found) {
+        await ada('POST', `${config.adaUrl}/v1/models`, { name: VOICE_MODEL, spec: VOICE_SPEC });
+        return seed();
+      }
+      precedents = found.precedents ?? 0;
+      const { spec } = await ada<{ spec?: unknown }>('GET', base);
+      if (sameSpec(spec)) return;
+      let made: { job?: string | { id?: string } | null };
+      try {
+        made = await ada('PUT', `${base}/spec`, { spec: VOICE_SPEC, note: 'Voice check: ranges a voice moves by, the research takes' });
+      } catch (e) {
+        // Ada holds this spec already (it reads it back in another form): nothing to change, nothing to seed.
+        if (e instanceof Refusal && e.message.includes('E_NO_CHANGE')) return;
+        throw e;
+      }
+      await settle(typeof made.job === 'string' ? made.job : (made.job?.id ?? undefined));
+      await seed();
     })().catch((e) => {
       ready = null;
       throw e;
@@ -202,6 +287,7 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
     });
     takes.set(visitor, had + cases.length);
     precedents = got.precedents ?? precedents + cases.length;
+    map = null;
     return got.ids ?? [];
   }
 
@@ -260,6 +346,29 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
     return c.json({ id });
   });
 
+  /**
+   * The model in 3D, as the platform's view draws it (`GET /v1/models/{name}/map`): each take's glyph bits, its
+   * mood, and its nearest. Held a few seconds, and dropped when a take is recorded or forgotten, so a new take shows.
+   */
+  app.get('/api/voice/map', async (c) => {
+    limit(c);
+    if (!map || now() - map.at > MAP_FOR_MS) {
+      const got = await ada<{ dim?: number; points?: { id: string; outcome: string | null; bits: string | null }[]; edges?: [number, number, number][] }>(
+        'GET',
+        `${base}/map?limit=${MAP_POINTS}`,
+      );
+      map = {
+        at: now(),
+        body: {
+          dim: got.dim ?? 0,
+          points: (got.points ?? []).map((p) => ({ id: p.id, outcome: p.outcome, bits: p.bits })),
+          edges: got.edges ?? [],
+        },
+      };
+    }
+    return c.json(map.body);
+  });
+
   /** Every take of the visitor's out of the model: each checked to be theirs, then deleted. */
   app.post('/api/voice/forget', async (c) => {
     const body = await readBody(c);
@@ -286,13 +395,14 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
     }
     takes.delete(visitor);
     precedents = Math.max(0, precedents - forgotten);
+    map = null;
     // A new id from here on: what was left of the old one, if anything, is no longer theirs.
     setCookie(c, VISITOR_COOKIE, randomUUID(), { httpOnly: true, secure: secureCookies, sameSite: 'Lax', path: '/', maxAge: 365 * 24 * 3600 });
     return c.json({ forgotten });
   });
 
   app.all('/api/voice/*', () => {
-    throw new Refusal(403, 'The voice demo answers enrol, read, teach and forget only.');
+    throw new Refusal(403, 'The voice demo answers enrol, read, teach, forget and map only.');
   });
 
   app.onError((e, c) => {
@@ -310,10 +420,12 @@ export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, se
 
 /** Requests the voice demo answers on the demo's host: its API, and /voice sent on to the page. The page itself
  * (demo/public/voice) is served with the other demos' (serveDemoPage). */
-export const isVoicePath = (path: string) => path === '/voice' || path.startsWith('/api/voice/');
+export const isVoicePath = (path: string) => path === '/voice' || path.startsWith('/voice/3d/') || path.startsWith('/api/voice/');
 
-export function serveVoiceRedirect(app: Hono) {
+/** /voice sent on to the page, and the platform's 3D view, built (vite.demo.config.ts), at /voice/3d. */
+export function serveVoiceRedirect(app: Hono, built = 'dist/demo') {
   app.get('/voice', (c) => c.redirect('/voice/', 308));
+  app.get('/voice/3d/glyph-view.js', serveStatic({ root: built, rewriteRequestPath: () => '/glyph-view.js' }));
   app.notFound((c) => c.text('Not found', 404));
   return app;
 }

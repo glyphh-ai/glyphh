@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch server/dev.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
+    "build": "vite build && vite build -c vite.demo.config.ts && tsc -p tsconfig.server.json",
     "start": "node dist/server/server/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

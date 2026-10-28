@@ -1,5 +1,5 @@
-/* The voice game in the expenses demo's look (demo/public/styles.css): black, hairline rails, one purple; Geist,
-   Sentient italic for Ada's read, mono for labels. Pink means "Ada cannot tell". Labels never darker than #999. */
+/* The voice game's layout; its look is the platform's (/platform.css, loaded after this). Amber means "Ada cannot
+   tell". Labels never darker than #999. */
 
 :root {
   --bg: #000000;
@@ -87,10 +87,31 @@ button:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar { display: grid; grid-template-columns: 90px minmax(0, 1fr) 48px; align-items: center; gap: 12px; font-family: var(--mono); font-size: 13px; color: var(--text-3); }
 .bar div { height: 8px; background: var(--hair); }
-.bar i { display: block; height: 100%; background: var(--accent); transition: width 0.5s cubic-bezier(.2,.7,.2,1); }
-.bar.lie i { background: var(--text-2); }
+.bar i { display: block; height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(.2,.7,.2,1); }
+.bar div { border-radius: 4px; }
 .bar b { text-align: right; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
 #teach { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--hair); }
+
+/* In the platform's look (platform.css): rounded panels, white buttons, each mood its series colour. */
+.panel { border-radius: 12px; background: var(--surface); }
+.promise { border-left: 0; border: 1px solid var(--rail); border-radius: var(--radius); }
+.meter, .meter i { border-radius: 3px; }
+.meter i { background: var(--text); }
+.primary.live { background: #f87171; color: #000; }
+.verdict b { color: var(--text); }
+.verdict.truth b { color: #6ee7b7; }
+.verdict.lie b { color: #d2a8ff; }
+.verdict.stressed b { color: #fcd34d; }
+.verdict.angry b { color: #fca5a5; }
+
+/* The 3D view, below the boxes */
+.view .canvas-box { position: relative; height: 460px; border: 1px solid var(--hair); border-radius: var(--radius); overflow: hidden; background: #000; }
+.view canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.view canvas:active { cursor: grabbing; }
+.view-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes pulse { 50% { opacity: 0.75; } }
