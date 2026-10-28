@@ -36,7 +36,28 @@ import {
   NoChangeError,
   SUPPORTED_ADA,
   SUPPORTED_CONTRACT,
+  asDecision,
 } from "../dist/index.js";
+
+test("typed outputs read in their own terms", () => {
+  const d = asDecision({
+    model: "tickets",
+    version: 2,
+    ada: "ada-1-2-beta",
+    outputs: {
+      urgent: { outcome: "true", probabilities: { true: 0.9, false: 0.1 }, ask: false, p: 0.9 },
+      refund: { outcome: "45", probabilities: { 45: 1 }, ask: false, value: 41.5, applies: true },
+      severity: { outcome: null, probabilities: {}, ask: false, applies: false },
+      tags: { outcome: ["web", "gold"], probabilities: { web: 0.9, gold: 0.8 }, ask: false },
+    },
+  }).outputs;
+  assert.equal(d.urgent.p, 0.9);
+  assert.equal(d.refund.value, 41.5);
+  assert.equal(d.refund.applies, true);
+  assert.equal(d.severity.applies, false);
+  assert.deepEqual(d.tags.outcome, ["web", "gold"]);
+  assert.equal(d.tags.p, undefined);
+});
 
 const contract = JSON.parse(readFileSync(new URL("../../../contract/contract.json", import.meta.url), "utf8"));
 const fixtures = JSON.parse(readFileSync(new URL("../../../contract/fixtures.json", import.meta.url), "utf8"));

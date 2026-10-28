@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "glyphh"
-version = "3.3.0"
+version = "3.4.0"
 description = "Ada for Python: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key."
 readme = "README.md"
 license = "MIT"

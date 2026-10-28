@@ -77,7 +77,37 @@ Adding or taking away roles, the weights, costs and settings can change at any t
   confidence, not costs.
 - `report`: the paths a fact tree shows (`["ticket.internal.cause"]`), each still cut by the reader's clearance.
 
+## Typed outputs and unions (`ada-1-2-beta`)
+
+A named output's `kind` says what its answer is. Pick the kind the question really has; leave it out for a choice.
+These run on `ada-1-2-beta` (kernel 3.15.0) only: make the model with `"ada": "ada-1-2-beta"`, and say it is a beta.
+
+| `kind` | The spec | A case records | The answer adds |
+|---|---|---|---|
+| `choice` (default) | `values` (optional) | one of them | |
+| `score` | `values`, in order, two or more | one of them | `level`: the expected level (0 = the first); a mistake costs the levels it is off |
+| `noul` | nothing more | `true` or `false` | `p`: P(true) |
+| `number` | `number: {min, max, step}` (200 bins at most in the cloud) | a number | `value`: the expected number; `outcome` is the likeliest bin's midpoint |
+| `many` | `values`, two or more | a list of them | `outcome` is a list; `probabilities` each value's P(true) |
+
+A **union**: `"when": {"output": "kind", "in": ["bug"]}` asks an output only when another's outcome is one of those
+(a bug's severity, a billing case's refund). Deciding every output answers the branch not taken
+`{"outcome": null, "applies": false}`: tell the user it does not apply, never guess it. A case that grades a branch
+its own outcome leaves out is refused (`E_OUTPUT_WHEN`). The output hung on is a choice, a score or a noul.
+
+```json
+"outputs": {
+  "kind":     {"values": ["bug", "billing"]},
+  "severity": {"kind": "score", "values": ["low", "medium", "high"], "when": {"output": "kind", "in": ["bug"]}},
+  "refund":   {"kind": "number", "number": {"min": 0, "max": 500, "step": 25}, "when": {"output": "kind", "in": ["billing"]}},
+  "urgent":   {"kind": "noul"},
+  "tags":     {"kind": "many", "values": ["mobile", "web", "enterprise"]}
+}
+```
+
+A case: `{"data": {...}, "outcomes": {"kind": "billing", "refund": 120, "urgent": true, "tags": ["web"]}}`.
+
 ## The cloud's bounds
 
-A spec is at most 64 KB of JSON, 64 roles, 20 named outputs, 200 values an output, `k` 200 and `dimension` 8,192
-(`E_SPEC_LIMIT` names the bound). No string may hold the NUL character.
+A spec is at most 64 KB of JSON, 64 roles, 20 named outputs (a many output counts once and once per value), 200
+values an output (a number's bins), `k` 200 and `dimension` 8,192 (`E_SPEC_LIMIT` names the bound). No string may hold the NUL character.

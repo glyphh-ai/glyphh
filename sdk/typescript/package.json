@@ -1,21 +1,47 @@
 {
   "name": "@glyphh-ai/glyphh",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Ada for TypeScript and JavaScript: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc -p .",
     "test": "npm run build && node --test test/*.test.mjs"
   },
-  "keywords": ["glyphh", "ada", "typed", "deterministic", "precedent", "decision"],
+  "keywords": [
+    "glyphh",
+    "ada",
+    "typed",
+    "deterministic",
+    "precedent",
+    "decision"
+  ],
   "homepage": "https://glyphh.ai",
-  "repository": { "type": "git", "url": "git+https://github.com/glyphh-ai/glyphh.git", "directory": "sdk/typescript" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glyphh-ai/glyphh.git",
+    "directory": "sdk/typescript"
+  },
   "license": "MIT",
-  "publishConfig": { "access": "public" },
-  "devDependencies": { "typescript": "^5.6.0" }
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
 }
