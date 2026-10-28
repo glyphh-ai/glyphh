@@ -8,6 +8,7 @@ consensus (its zone, level or option), and a learning curve (Ada trained on part
 
 from __future__ import annotations
 
+import os
 import random
 from collections import Counter
 
@@ -92,7 +93,7 @@ def main() -> None:
             fa = f"{a[q][0]:3d}/{a[q][1]:<3d} {a[q][0] / a[q][1]:5.1%}" if q in a else " " * 13
             fj = f"{j[q][0]:3d}/{j[q][1]:<3d} {j[q][0] / j[q][1]:5.1%}" if q in j else ""
             print(f"  {q:34s} {fa} | {fj}")
-    if run.SET == "dev":
+    if run.SET == "dev" and not os.environ.get("NO_CURVE"):
         print("\nlearning curve (dev, five folds):")
         curve(cases)
 
