@@ -400,8 +400,9 @@ export function createDemo({ config, history, fetch: fetcher = fetch, now = Date
   return app;
 }
 
-/** The demo's page (demo/public) after its /api; any other path is 404, never the platform's. */
+/** The demos' front page and the expenses page (demo/public) after its /api; any other path is 404, never the platform's. */
 export function serveDemoPage(app: Hono, root = 'demo/public') {
+  app.get('/expenses', (c) => c.redirect('/expenses/', 308));
   app.use('*', serveStatic({ root }));
   app.notFound((c) => c.text('Not found', 404));
   return app;

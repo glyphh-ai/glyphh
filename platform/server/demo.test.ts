@@ -347,12 +347,29 @@ describe('the page', () => {
 
   it.each([
     ['/', 'text/html'],
-    ['/app.js', 'text/javascript'],
-    ['/styles.css', 'text/css'],
+    ['/home.js', 'text/javascript'],
+    ['/demos.js', 'text/javascript'],
+    ['/home.css', 'text/css'],
+    ['/expenses/', 'text/html'],
+    ['/expenses/app.js', 'text/javascript'],
+    ['/expenses/styles.css', 'text/css'],
   ])('serves %s', async (path, type) => {
     const res = await page().request(`https://demo.test${path}`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain(type);
+  });
+
+  it('sends /expenses to /expenses/', async () => {
+    const res = await page().request('https://demo.test/expenses');
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('/expenses/');
+  });
+
+  it('links every live demo card to a page it serves', async () => {
+    const { DEMOS } = (await import('../demo/public/demos.js')) as { DEMOS: { href: string; soon?: boolean }[] };
+    const live = DEMOS.filter((d) => !d.soon);
+    expect(live.length).toBeGreaterThan(0);
+    for (const d of live) expect((await page().request(`https://demo.test${d.href}`)).status).toBe(200);
   });
 
   it.each(['/history.json', '/../history.json', '/../server/demo.ts', '/login', '/auth/session'])('has nothing at %s', async (path) => {
@@ -360,7 +377,7 @@ describe('the page', () => {
   });
 
   it('holds no key in what it serves', async () => {
-    const js = await (await page().request('https://demo.test/app.js')).text();
+    const js = await (await page().request('https://demo.test/expenses/app.js')).text();
     expect(js).not.toMatch(/glyphh_ak_|authorization/i);
   });
 });

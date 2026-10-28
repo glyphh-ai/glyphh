@@ -128,8 +128,11 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 
 ## demo.glyphh.ai
 
-The same process answers `demo.glyphh.ai` with the expenses demo and nothing of the platform's: no sign-in, no
-session, no `/api/v1`. Anyone can use it. The page is `demo/public`, the 40 past expenses `demo/history.json`, the
+The same process answers `demo.glyphh.ai` with the demos and nothing of the platform's: no sign-in, no session, no
+`/api/v1`. Anyone can use it. `/` is the front page, a card per demo with a search (`demo/public/index.html`); each
+demo is one entry in `demo/public/demos.js` (`soon: true` shows its card without a link until it is live).
+
+The expenses demo is `/expenses/`: the page `demo/public/expenses`, the 40 past expenses `demo/history.json`, the
 handlers `server/demo.ts`; they hold `DEMO_GLYPHH_API_KEY` and the browser never sees it.
 
 | Route | Does |
