@@ -10,14 +10,14 @@ skill's; this skill is only how to reach it from the shell. Every command prints
 stdout. A refusal is `{"error": {code, message, ...}}` on stderr with exit code 1 (the codes are the ada skill's),
 a usage mistake exits 2. Job progress goes to stderr; `-q` hides it.
 
-## Install and sign in
+## Install and the key
 
 - `glyphh --version`; missing: `pipx install glyphh` (or `uv tool install glyphh`, or `pip install glyphh`).
-- `glyphh whoami`. Not signed in and no `GLYPHH_API_KEY` set: run `glyphh login --no-browser` in the background
-  (it waits for the approval), give the user the link and the code it prints in one line, and once they approve it
-  answers `{"signed_in": true, "email"}`. It is the plugin's sign-in: one per machine, kept in
-  `~/.glyphh/install.json`, so signing in either way signs in both, and `glyphh logout` signs both out.
-- `GLYPHH_API_KEY` set wins over the sign-in (CI, a server). Never ask for a key or a token in the chat.
+- `glyphh whoami`. `{"logged_in": false}`: the command needs an API key. Ask the user, in one line, to run
+  `! glyphh login` themselves and paste a key from the platform's API Keys page (https://platform.glyphh.ai); with
+  the connector, `create_api_key` makes one, shown once, for them to paste. It is checked against Ada and kept for
+  the machine. Never ask for the key in the chat and never put it in a command line yourself.
+- `GLYPHH_API_KEY`, when set, wins over the kept key (CI, a server).
 
 ## Commands
 

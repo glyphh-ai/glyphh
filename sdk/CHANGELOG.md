@@ -11,10 +11,10 @@ breaks; the TypeScript package changes only its version.
   `spec`, `create`, `delete`, `record`, `record-many`, `grade`, `forget`, `import`, `learn`, `calibrate`, `decide`,
   `query`, `probabilities`, `facts`, `backtest`, `settings`, `versions`, `activate`, `upgrade`, `export`, `job`,
   `usage`, `releases`. Every answer is the API's JSON on stdout; a refusal is `{"error": {...}}` on stderr, exit 1.
-- `glyphh login` is the Claude plugin's device flow (RFC 8628, `surface: "cli"`, the same machine id), and keeps the
-  install in `~/.glyphh/install.json` as the plugin does: one sign-in per machine serves both.
-- `Ada()` with no key set uses that sign-in (the Ada API takes an install's token with full clearance);
-  `GLYPHH_API_KEY` still wins. `glyphh.signin` holds the flow for code that wants it.
+- It runs on an API key, as the SDK does: `glyphh login` checks one against Ada and keeps it 0600 in
+  `~/.glyphh/credentials.json` (`--key-stdin` from a pipe); `GLYPHH_API_KEY` wins over it; `glyphh logout` forgets it
+  (the key stays live until revoked).
+- `Ada()` with no key given or set uses the key `glyphh login` kept.
 
 ## 3.4.0
 

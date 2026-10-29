@@ -1,6 +1,6 @@
 """`glyphh`: Ada Cloud from a terminal, for people and for agents with a shell. Every command prints the API's own
 answer as JSON on stdout; a refusal prints `{"error": {code, message, ...}}` on stderr and exits 1, a usage
-mistake exits 2. It signs in as the plugin does (`glyphh login`, the device flow) or runs on GLYPHH_API_KEY.
+mistake exits 2. It runs on an API key: GLYPHH_API_KEY, or the one `glyphh login` keeps for this machine.
 
     glyphh login
     glyphh models
@@ -15,16 +15,17 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import getpass
 import json
+import os
 import sys
-import webbrowser
 from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
 from . import __version__
 from .client import Ada, AdaVersions, Decision, Job, Usage
+from .credentials import KEY_PREFIX, credentials_path, forget_key, read_key, save_key
 from .errors import AdaError
-from .signin import SignIn
 
 
 def _json(text: str) -> Any:
@@ -71,26 +72,33 @@ def _progress(quiet: bool):
 # commands: each takes the parsed arguments and prints its answer
 
 
+def _shown(key: str) -> str:
+    return f"{key[: len(KEY_PREFIX)]}…{key[-4:]}"
+
+
 def login(a: argparse.Namespace) -> None:
-    flow = SignIn()
-    who = flow.whoami()
-    if who:
-        return _out({"signed_in": True, "email": who})
-    p = flow.start()
-    print(f"Open {p.verification_uri_complete} and approve the code {p.user_code}.", file=sys.stderr)
-    if not a.no_browser:
-        webbrowser.open(p.verification_uri_complete)
-    print("Waiting for the approval...", file=sys.stderr)
-    _out({"signed_in": True, "email": flow.wait(p)})
+    if a.key_stdin:
+        key = sys.stdin.readline().strip()
+    else:
+        print("An API key from https://platform.glyphh.ai (API Keys), or from Claude's Glyphh connector.", file=sys.stderr)
+        key = getpass.getpass("API key: ").strip()
+    if not key.startswith(KEY_PREFIX):
+        raise AdaError("E_INVALID", f"That is not an Ada Cloud API key: they start with {KEY_PREFIX}.")
+    used = Ada(key=key).usage()  # a key Ada refuses is never kept
+    path = save_key(key)
+    _out({"logged_in": True, "key": _shown(key), "plan": used.plan, "kept": str(path)})
 
 
 def logout(_: argparse.Namespace) -> None:
-    _out({"signed_out": SignIn().sign_out()})
+    _out({"logged_out": forget_key(), "note": "The key stays live until it is revoked on the API Keys page."})
 
 
 def whoami(_: argparse.Namespace) -> None:
-    who = SignIn().whoami()
-    _out({"signed_in": bool(who), "email": who})
+    env = os.environ.get("GLYPHH_API_KEY") or os.environ.get("GLYPHH_RUNTIME_KEY")
+    key, source = (env, "GLYPHH_API_KEY") if env else (read_key(), str(credentials_path()))
+    if not key:
+        return _out({"logged_in": False})
+    _out({"logged_in": True, "key": _shown(key), "from": source, "plan": Ada(key=key).usage().plan})
 
 
 def models(_: argparse.Namespace) -> None:
@@ -241,13 +249,13 @@ def parser() -> argparse.ArgumentParser:
     def ask(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
         p.add_argument("data", type=_json, help="the case, as JSON (or @file, -)")
         p.add_argument("--output", help="which of the model's named outputs")
-        p.add_argument("--clearance", type=float, help="read with less clearance than the sign-in's or key's")
+        p.add_argument("--clearance", type=float, help="read with less clearance than the key's")
         return p
 
-    p = cmd("login", login, "Sign this machine in to Glyphh (the device flow, as the plugin's)", model_arg=False)
-    p.add_argument("--no-browser", action="store_true", help="print the link, do not open it")
-    cmd("logout", logout, "Sign this machine out (the plugin's sign-in too: they share it)", model_arg=False)
-    cmd("whoami", whoami, "Who this machine is signed in as", model_arg=False)
+    p = cmd("login", login, "Keep an API key for this machine (~/.glyphh/credentials.json), checked first", model_arg=False)
+    p.add_argument("--key-stdin", action="store_true", help="read the key from stdin, not a prompt")
+    cmd("logout", logout, "Forget the kept API key (it stays live until revoked)", model_arg=False)
+    cmd("whoami", whoami, "Which key this machine uses, from where, and its org's plan", model_arg=False)
     cmd("usage", usage, "What the org uses of Ada Cloud against its plan this month", model_arg=False)
     cmd("releases", releases, "Every Ada version: status, dates, notes, the org's models on it", model_arg=False)
 

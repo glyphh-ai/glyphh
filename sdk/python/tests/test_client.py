@@ -456,13 +456,13 @@ def test_3_0s_calls_name_their_functions_and_a_long_learn_is_waited_for(clock):
 def test_the_url_defaults_to_ada_cloud_and_the_key_comes_from_the_environment(monkeypatch, tmp_path):
     for name in ("GLYPHH_ADA_URL", "GLYPHH_RUNTIME_URL", "GLYPHH_API_KEY", "GLYPHH_RUNTIME_KEY"):
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("HOME", str(tmp_path))  # no sign-in on this machine
+    monkeypatch.setenv("HOME", str(tmp_path))  # no key kept on this machine
     with pytest.raises(AdaError) as caught:
         Ada()
     assert caught.value.code == "E_CONFIG" and "GLYPHH_API_KEY" in caught.value.message
     assert "glyphh login" in caught.value.message
-    glyphh.signin.write_install(glyphh.signin.Install("i1", "glyphh_it_signed_in"))  # glyphh login, or the plugin's
-    assert Ada().key == "glyphh_it_signed_in"
+    glyphh.credentials.save_key("glyphh_ak_kept")  # what glyphh login keeps
+    assert Ada().key == "glyphh_ak_kept"
     monkeypatch.setenv("GLYPHH_RUNTIME_KEY", "glyphh_rk_old")
     assert Ada().key == "glyphh_rk_old" and Ada().url == DEFAULT_URL == "https://ada.glyphh.ai"
     monkeypatch.setenv("GLYPHH_API_KEY", "glyphh_ak_env")
