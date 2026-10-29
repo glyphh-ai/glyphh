@@ -38,8 +38,9 @@ with Google or GitHub. Its Ada tools:
 | `ada_export {name, format?}` | Everything out, as a job whose done state has a one-hour download link |
 | `create_api_key {name, expires_in_days?, clearance?}`, `api_keys`, `revoke_api_key` | A key for the user's code, shown once; the keys; revoke one |
 
-No `ada_*` tools: the connector is not added, or not signed in. Ask the user to add `https://api.glyphh.ai/mcp` in
-Claude's Connectors and sign in; never ask for a key or a token in the chat.
+No `ada_*` tools: the connector is not added, or not signed in. With a shell, the `glyphh` command does the same
+work (the glyphh-cli skill); without one, ask the user to add `https://api.glyphh.ai/mcp` in Claude's Connectors
+and sign in. Never ask for a key or a token in the chat.
 
 A model name is lower case letters, digits and `_ . -`, at most 63. A refusal carries a code: `E_LIMIT` (the plan's
 cap: `reason`, `used`, `max`), `E_SPEC` (the spec or a case does not fit it; `path` says where), `E_SPEC_LIMIT`,

@@ -1,6 +1,6 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.3.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill and the file ledger. Ada Cloud is
+The Glyphh plugin for Claude Code, 1.4.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill and the file ledger. Ada Cloud is
 Ada as an API that Glyphh runs: nothing to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a
 server that speaks a newer one is said plainly in the panel and by the skill, with how to update the plugin.
 
@@ -14,6 +14,7 @@ server that speaks a newer one is said plainly in the panel and by the skill, wi
 | The account (a hooks module, `hooks/register.tsx`) | `/glyphh`: sign in, the account, org, plan and billing panel. Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` (function hooks are early access in Claude Code 2.1) |
 | The sign-in card (MCP server, `.mcp.json`) | Ask Claude *"sign in to Glyphh"* |
 | Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, added once in Claude's Connectors). It says which Ada version a model runs, offers a newer stable with a backtest first (`ada_backtest` with `ada`, then `ada_upgrade` only when you agree, and how to roll back), explains betas, and warns of deprecations |
+| The glyphh command (a skill, [`skills/glyphh-cli/SKILL.md`](skills/glyphh-cli/SKILL.md)) | The same Ada work through the shell: `glyphh` from `pip install glyphh`, JSON out, on an API key (`glyphh login` keeps one for the machine, or `GLYPHH_API_KEY`) |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
 
 The skill, the card and the ledger work without the variable.
