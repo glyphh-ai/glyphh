@@ -27,6 +27,7 @@ from .errors import (
     ReadOnlyError,
     error,
 )
+from .credentials import read_key
 
 #: Where Ada answers. GLYPHH_ADA_URL (or 3.0's GLYPHH_RUNTIME_URL) moves it, e.g. to a local server under test.
 DEFAULT_URL = "https://ada.glyphh.ai"
@@ -575,11 +576,13 @@ class Ada:
         found = url or os.environ.get("GLYPHH_ADA_URL") or os.environ.get("GLYPHH_RUNTIME_URL") or DEFAULT_URL
         self.url = found.rstrip("/")
         self.key = key or os.environ.get("GLYPHH_API_KEY") or os.environ.get("GLYPHH_RUNTIME_KEY") or ""
+        if not self.key:  # the key `glyphh login` kept for this machine
+            self.key = read_key() or ""
         if not self.key:
             raise AdaError(
                 "E_CONFIG",
-                "An API key is needed: set GLYPHH_API_KEY (make one on the platform's API Keys page, or ask Claude "
-                "through the Glyphh connector).",
+                "An API key is needed: set GLYPHH_API_KEY, or keep one for this machine with `glyphh login` (make one "
+                "on the platform's API Keys page, or ask Claude through the Glyphh connector).",
             )
         self._send = transport or _urllib
         self.retry_deadline, self.read_your_writes = retry_deadline, read_your_writes

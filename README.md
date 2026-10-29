@@ -5,7 +5,7 @@ Glyphh's developer surface for Ada Cloud: the Claude Code plugin, the SDKs and t
 | Folder | Install | What |
 |---|---|---|
 | [`plugins/glyphh`](plugins/glyphh) | `/plugin marketplace add glyphh-ai/glyphh`, then `/plugin install glyphh@glyphh` | The plugin: your Glyphh account in Claude Code, the Ada skill, the file ledger |
-| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada` |
+| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command |
 | [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"` |
 | [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server |
 | [`benchmarks`](benchmarks) | | Ada against Claude and classic models on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
@@ -15,7 +15,21 @@ answer is typed (the spec's outcomes), with calibrated probabilities, the expect
 person should decide instead, and the precedents it stands on. No language model is in the path, the same question
 gets the same answer, and a model learns one confirmed case at a time. Glyphh runs it at `https://ada.glyphh.ai`:
 there is nothing to install or host. Claude reaches it through the Glyphh connector (`https://api.glyphh.ai/mcp`)
-and the Ada skill; your software through the SDKs with an API key.
+and the Ada skill; your software through the SDKs with an API key; your terminal, scripts, CI and agents with a shell
+through the `glyphh` command.
+
+## The command
+
+```bash
+pipx install glyphh             # the Python package installs `glyphh`
+glyphh login                    # paste an API key (the platform's API Keys page): checked, then kept for this machine
+glyphh create tickets --spec @spec.json
+glyphh import tickets history.csv --mapping '{"Plan": "ticket.what.plan", "Result": "outcome"}'
+glyphh decide tickets '{"ticket": {"what": {"plan": "pro", "text": "charged twice"}}}'
+```
+
+Every Ada call is a command; every answer is the API's JSON on stdout, a refusal JSON on stderr with exit code 1.
+`GLYPHH_API_KEY` wins over the kept key, for CI. The full guide: [`sdk/python`](sdk/python#the-glyphh-command).
 
 - Platform (sign in, models, API keys, usage): https://platform.glyphh.ai
 - Pricing: https://glyphh.ai/pricing. Plans sell precedents held and reads a month; members, keys and models are
