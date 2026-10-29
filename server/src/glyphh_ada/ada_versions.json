@@ -4,7 +4,7 @@
     {
       "name": "ada-1-2-beta",
       "kernel": "3.16.0",
-      "commit": "b0b5e1579e494747c74e5f0dd577118fb75038fd",
+      "commit": "873d6d66c5ae2da51bc59df6247b8759e2cb89ec",
       "status": "beta",
       "open": true,
       "released": "2026-10-25",
