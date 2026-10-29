@@ -24,7 +24,26 @@ tickets.record({"ticket": {...}}, "refund")                     # a confirmed ou
 
 The key is made on the platform's API Keys page (https://platform.glyphh.ai), or by Claude through the Glyphh
 connector; it acts in your org, with the clearance it was made with. `GLYPHH_ADA_URL` moves the address (a local
-server under test); 3.0's `GLYPHH_RUNTIME_URL` and `GLYPHH_RUNTIME_KEY` are still read.
+server under test); 3.0's `GLYPHH_RUNTIME_URL` and `GLYPHH_RUNTIME_KEY` are still read. With no key set, `Ada()`
+uses this machine's Glyphh sign-in (`glyphh login`, below, or the Claude plugin's), with your full clearance.
+
+## The glyphh command
+
+The package installs `glyphh` (also `python -m glyphh`): Ada Cloud from a terminal, for you and for agents with a
+shell. Every answer is the API's JSON on stdout; a refusal is `{"error": {...}}` on stderr and exit code 1.
+
+```bash
+pipx install glyphh
+glyphh login                    # the device flow: approve the code in your browser; shared with the Claude plugin
+glyphh create tickets --spec @spec.json
+glyphh import tickets history.csv --mapping '{"Plan": "ticket.what.plan", "Result": "outcome"}'
+glyphh decide tickets '{"ticket": {"what": {"plan": "pro", "text": "charged twice"}}}'
+glyphh record tickets @case.json --outcome refund
+glyphh --help                   # every command: models, spec, record-many, learn, backtest, settings, export, ...
+```
+
+A JSON argument is the JSON itself, `@file` for a file's, or `-` for stdin's. `glyphh logout` signs the machine out
+(the plugin too); `GLYPHH_API_KEY`, when set, wins over the sign-in.
 
 ## From nothing to a decision
 

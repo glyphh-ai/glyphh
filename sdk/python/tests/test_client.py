@@ -453,12 +453,16 @@ def test_3_0s_calls_name_their_functions_and_a_long_learn_is_waited_for(clock):
 # the address and the key
 
 
-def test_the_url_defaults_to_ada_cloud_and_the_key_comes_from_the_environment(monkeypatch):
+def test_the_url_defaults_to_ada_cloud_and_the_key_comes_from_the_environment(monkeypatch, tmp_path):
     for name in ("GLYPHH_ADA_URL", "GLYPHH_RUNTIME_URL", "GLYPHH_API_KEY", "GLYPHH_RUNTIME_KEY"):
         monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))  # no sign-in on this machine
     with pytest.raises(AdaError) as caught:
         Ada()
     assert caught.value.code == "E_CONFIG" and "GLYPHH_API_KEY" in caught.value.message
+    assert "glyphh login" in caught.value.message
+    glyphh.signin.write_install(glyphh.signin.Install("i1", "glyphh_it_signed_in"))  # glyphh login, or the plugin's
+    assert Ada().key == "glyphh_it_signed_in"
     monkeypatch.setenv("GLYPHH_RUNTIME_KEY", "glyphh_rk_old")
     assert Ada().key == "glyphh_rk_old" and Ada().url == DEFAULT_URL == "https://ada.glyphh.ai"
     monkeypatch.setenv("GLYPHH_API_KEY", "glyphh_ak_env")
@@ -550,7 +554,7 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (doc, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.4.0"
+    assert glyphh.__version__ == "3.5.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

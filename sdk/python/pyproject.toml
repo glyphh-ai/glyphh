@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "glyphh"
-version = "3.4.0"
-description = "Ada for Python: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key."
+version = "3.5.0"
+description = "Ada for Python and the glyphh command: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key or a Glyphh sign-in."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -19,6 +19,9 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = []
+
+[project.scripts]
+glyphh = "glyphh.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "jsonschema>=4.18"]

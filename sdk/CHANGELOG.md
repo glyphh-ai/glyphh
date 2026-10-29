@@ -2,6 +2,20 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.5.0
+
+The `glyphh` command (Python): Ada Cloud from a terminal, for people and for agents with a shell. Nothing of 3.4
+breaks; the TypeScript package changes only its version.
+
+- `pip install glyphh` installs `glyphh` (and `python -m glyphh`): `login`, `logout`, `whoami`, `models`, `model`,
+  `spec`, `create`, `delete`, `record`, `record-many`, `grade`, `forget`, `import`, `learn`, `calibrate`, `decide`,
+  `query`, `probabilities`, `facts`, `backtest`, `settings`, `versions`, `activate`, `upgrade`, `export`, `job`,
+  `usage`, `releases`. Every answer is the API's JSON on stdout; a refusal is `{"error": {...}}` on stderr, exit 1.
+- `glyphh login` is the Claude plugin's device flow (RFC 8628, `surface: "cli"`, the same machine id), and keeps the
+  install in `~/.glyphh/install.json` as the plugin does: one sign-in per machine serves both.
+- `Ada()` with no key set uses that sign-in (the Ada API takes an install's token with full clearance);
+  `GLYPHH_API_KEY` still wins. `glyphh.signin` holds the flow for code that wants it.
+
 ## 3.4.0
 
 Typed outputs and discriminated unions (Ada kernel 3.15.0, on `ada-1-2-beta`). A spec's named output can say what

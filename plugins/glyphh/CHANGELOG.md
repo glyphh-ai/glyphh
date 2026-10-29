@@ -2,6 +2,13 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.4.0 — 2026-10-29
+
+The glyphh command. A new skill, glyphh-cli, does the Ada skill's work through the shell with `glyphh` (the Python
+SDK 3.5.0's command, `pip install glyphh`) when the connector's `ada_*` tools are not there, or when a file, a
+script or many cases from a file suit a command better. It signs in with this plugin's sign-in: `glyphh login` is
+the same device flow and keeps the same `~/.glyphh/install.json`, so one sign-in serves both.
+
 ## 1.3.0 — 2026-10-28
 
 Typed outputs and discriminated unions (Ada kernel 3.15.0, on `ada-1-2-beta`).
