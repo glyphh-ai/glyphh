@@ -2,6 +2,20 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.4.0
+
+Typed outputs and discriminated unions (Ada kernel 3.15.0, on `ada-1-2-beta`). A spec's named output can say what
+its answer is with `kind`: `choice` (the default), `score` (ordered levels), `noul` (yes or no), `number`
+(`number: {min, max, step}`) or `many` (any of its values at once); `when: {output, in}` makes it a branch of a
+union, asked only when another output's outcome is one of those. Nothing of 3.3 breaks.
+
+- Recording: `record(..., outcomes=)` and `grade(id, value)` take every kind of outcome (`Outcome`, both SDKs): one
+  of the output's values, `True`/`False` for a noul, a number, a list of values for a many output.
+- A `Decision` (and each of its `outputs`) carries what its kind adds: `p` (a noul's P(true)), `value` (a number's
+  expected value), `level` (a score's expected level), and `applies` on a union's branch (`False`: not asked, the
+  output it hangs on was decided an outcome that leaves it out). A many output's `outcome` is a list, its
+  `probabilities` each value's P(true). Each is absent (None / undefined) where the kind does not give it.
+
 ## 3.3.0
 
 Ada versions (contract 5): every model version runs one Ada version, named `ada-<major>-<minor>` (`-beta` for a

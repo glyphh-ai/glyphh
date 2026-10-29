@@ -121,15 +121,22 @@ class Result:
         )
 
 
+# a named output's outcome by its kind (Ada kernel 3.15.0): a choice's or score's value, a noul's True/False, a
+# number, a many output's list of values
+Outcome = Union[str, bool, float, List[str]]
+
+
 @dataclass(frozen=True)
 class Decision:
     """`POST /v1/decide`: the outcome of least expected cost under the spec's costs, the calibrated probabilities,
     whether a person should decide instead (`ask`; the outcome is then the best guess, for them to see), and the
     precedents it stands on. `facts` when asked for (`include=["facts"]`); `outputs` when several outputs were
-    decided at once, each a Decision. `ada`: the Ada version that answered (contract 5). It reads as a 3.0 `Result`
-    too: `done`, `status` and `data` (the answer)."""
+    decided at once, each a Decision. `ada`: the Ada version that answered (contract 5). By the output's kind (Ada
+    kernel 3.15.0): a noul's `p` (P(true)), a number's expected `value`, a score's expected `level`, a many output's
+    `outcome` a list; a union's branch says `applies` (False: not asked, its other output's outcome leaves it out).
+    It reads as a 3.0 `Result` too: `done`, `status` and `data` (the answer)."""
 
-    outcome: Optional[str]
+    outcome: Optional[Union[str, List[str]]]
     probabilities: Dict[str, float]
     expected_cost: Optional[float]
     ask: bool
@@ -140,6 +147,10 @@ class Decision:
     outputs: Optional[Dict[str, "Decision"]] = None
     ada: Optional[str] = None
     data: Dict[str, Any] = field(default_factory=dict, repr=False)
+    p: Optional[float] = None
+    value: Optional[float] = None
+    level: Optional[float] = None
+    applies: Optional[bool] = None
 
     # 3.0's Result, for code written to it
     status = "done"
@@ -172,6 +183,10 @@ class Decision:
             outputs=outputs,
             ada=ada,
             data=dict(body),
+            p=body.get("p"),
+            value=body.get("value"),
+            level=body.get("level"),
+            applies=body.get("applies"),
         )
 
 
@@ -948,8 +963,9 @@ class Model:
             send()
         return total
 
-    def grade(self, precedent_id: str, value: Optional[str], *, output: Optional[str] = None) -> Dict[str, Any]:
-        """One output's outcome on a case already recorded (None takes it away)."""
+    def grade(self, precedent_id: str, value: Optional["Outcome"], *, output: Optional[str] = None) -> Dict[str, Any]:
+        """One output's outcome on a case already recorded (None takes it away): by the output's kind, one of its
+        values, True/False (noul), a number (number) or a list of values (many)."""
         body = {"id": precedent_id, "value": value, **_drop_none(output=output)}
         return dict(self.ada._write("POST", self._path("/grade"), body))
 
@@ -1100,7 +1116,7 @@ class Model:
         data: Mapping[str, Any],
         outcome: Optional[str] = None,
         *,
-        outcomes: Optional[Mapping[str, str]] = None,
+        outcomes: Optional[Mapping[str, "Outcome"]] = None,
         ts: Optional[float] = None,
     ) -> Result:
         """One case, with its outcome when known: `data` {id, precedents}."""

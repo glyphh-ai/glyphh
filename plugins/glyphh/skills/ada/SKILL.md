@@ -94,6 +94,9 @@ what is new, and do not guess at fields you do not know.
   the best guess, for the person to see. Ask them, and record their answer.
 - `receipts`: the precedents it stands on (`id`, `sim`, `outcome`, `hash`, `author`). Cite them.
 - `outputs`, when several named outputs were decided at once: one such answer each.
+- By the output's `kind` ([references/spec.md](references/spec.md), Typed outputs): a noul's `p` (P(true)), a
+  number's expected `value`, a score's expected `level`, a many output's `outcome` as a list. A union's branch says
+  `applies`; `applies: false` means the question does not arise for this case: say so, never present a guess.
 
 `ada_query` is the raw vote, `{sufficient, confidence, support, count, top, outcomes, receipts}`: trust `top` only
 when `sufficient` and `count` is more than one or two; `confidence` is a similarity-weighted vote, not a

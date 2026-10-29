@@ -189,6 +189,24 @@ def test_a_decision_that_asks_and_one_of_several_outputs():
     assert fake.calls[1][3] == several["request"]["body"]
 
 
+def test_typed_outputs_read_in_their_own_terms():
+    body = {
+        "model": "tickets",
+        "version": 2,
+        "ada": "ada-1-2-beta",
+        "outputs": {
+            "urgent": {"outcome": "true", "probabilities": {"true": 0.9, "false": 0.1}, "ask": False, "p": 0.9},
+            "refund": {"outcome": "45", "probabilities": {"45": 1.0}, "ask": False, "value": 41.5, "applies": True},
+            "severity": {"outcome": None, "probabilities": {}, "ask": False, "applies": False},
+            "tags": {"outcome": ["web", "gold"], "probabilities": {"web": 0.9, "gold": 0.8}, "ask": False},
+        },
+    }
+    d = Decision.of(body).outputs
+    assert d["urgent"].p == 0.9 and d["refund"].value == 41.5 and d["refund"].applies
+    assert d["severity"].applies is False and d["severity"].outcome is None
+    assert d["tags"].outcome == ["web", "gold"] and d["tags"].p is None and d["tags"].applies is None
+
+
 # jobs
 
 
@@ -532,7 +550,7 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (doc, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.3.0"
+    assert glyphh.__version__ == "3.4.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

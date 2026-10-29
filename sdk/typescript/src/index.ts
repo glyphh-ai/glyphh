@@ -81,10 +81,24 @@ export interface Answer {
   receipts: Receipt[];
 }
 
+/**
+ * A named output's outcome by its kind (Ada kernel 3.15.0): a choice's or score's value, a noul's true/false, a
+ * number, a many output's list of values.
+ */
+export type Outcome = string | boolean | number | string[];
+
 /** One output's decision. */
 export interface Decided {
-  /** The outcome of least expected cost; when `ask`, the best guess, for the person to see. */
-  outcome: string | null;
+  /** The outcome of least expected cost (a many output's: a list); when `ask`, the best guess, for the person to see. */
+  outcome: string | string[] | null;
+  /** A noul's P(true). */
+  p?: number;
+  /** A number's expected value. */
+  value?: number;
+  /** A score's expected level (0 = the first). */
+  level?: number;
+  /** A union's branch: false when the output it hangs on was decided an outcome that leaves it out (not asked). */
+  applies?: boolean;
   expected_cost: number | null;
   probabilities: Record<string, number>;
   /** A person should decide instead: nothing is known, asking is cheaper, or the top probability is under the spec's bar. */
@@ -611,13 +625,15 @@ function asResult<T>(body: Omit<Result<T>, "limit_exceeded">): Result<T> {
 
 function asDecided(body: Data): Decided {
   const out: Decided = {
-    outcome: (body.outcome as string | null | undefined) ?? null,
+    outcome: (body.outcome as string | string[] | null | undefined) ?? null,
     expected_cost: (body.expected_cost as number | null | undefined) ?? null,
     probabilities: (body.probabilities as Record<string, number> | undefined) ?? {},
     ask: Boolean(body.ask),
     receipts: (body.receipts as Receipt[] | undefined) ?? [],
   };
   if (body.facts !== undefined) out.facts = body.facts as unknown[];
+  for (const k of ["p", "value", "level"] as const) if (typeof body[k] === "number") out[k] = body[k] as number;
+  if (typeof body.applies === "boolean") out.applies = body.applies;
   return out;
 }
 
@@ -979,7 +995,7 @@ export interface ChangeOptions extends WaitOptions {
 export interface Case {
   data: Data;
   outcome?: string;
-  outcomes?: Record<string, string>;
+  outcomes?: Record<string, Outcome>;
   ts?: number;
 }
 
@@ -1121,8 +1137,8 @@ export class AdaModel {
     return total;
   }
 
-  /** One output's outcome on a case already recorded (null takes it away). */
-  grade(id: string, value: string | null, options: { output?: string } = {}): Promise<Data> {
+  /** One output's outcome on a case already recorded (null takes it away), by the output's kind (`Outcome`). */
+  grade(id: string, value: Outcome | null, options: { output?: string } = {}): Promise<Data> {
     return this.ada.write("POST", this.#path("/grade"), { id, value, ...drop({ output: options.output }) });
   }
 
@@ -1221,7 +1237,7 @@ export class AdaModel {
   }
 
   /** One case, with its outcome when known: `data` {id, precedents}. */
-  record(data: Data, outcome?: string, more: { outcomes?: Record<string, string>; ts?: number } = {}): Promise<Result<{ id: string; precedents: number }>> {
+  record(data: Data, outcome?: string, more: { outcomes?: Record<string, Outcome>; ts?: number } = {}): Promise<Result<{ id: string; precedents: number }>> {
     return this.call("record", { data, ...drop({ outcome, outcomes: more.outcomes, ts: more.ts }) });
   }
 

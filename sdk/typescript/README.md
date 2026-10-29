@@ -40,6 +40,21 @@ await tickets.activate(1);                                     // and back
 await tickets.export({ to: "tickets.zip" });                   // everything, as a zip: never locked in
 ```
 
+## Typed outputs and unions
+
+On `ada-1-2-beta`, a named output's `kind` says what its answer is: `score`, `noul`, `number`, `many` or `choice`
+(the default), and `when` makes an output a branch of a union. Record each in its own terms (`Outcome`); read what
+its kind adds:
+
+```ts
+await tickets.recordMany([{ data, outcomes: { kind: "billing", refund: 120, urgent: true, tags: ["web"] } }]);
+const d = await ada.decide("tickets", data, { outputs: ["kind", "severity", "refund", "urgent", "tags"] });
+d.outputs?.urgent.p;          // a noul's P(true)
+d.outputs?.refund.value;      // a number's expected value
+d.outputs?.severity.applies;  // false: a bug's severity does not arise for a billing case
+d.outputs?.tags.outcome;      // a many output's list
+```
+
 ## Ada versions
 
 Every model version runs one Ada version, named `ada-<major>-<minor>` (`-beta` for a beta): `ada-1-0` is the
