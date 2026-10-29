@@ -19,6 +19,7 @@ is a new version, kept with who made it, why (the note) and the backtest that ch
 | `word_pairs` | false | Learn pairs of words ("top" + "up"), for intents that are phrases | Re-encoded |
 | `max_word_pairs` | 20 | How many word pairs at most (0 to 200) | Re-encoded |
 | `lexicon` | true | Read words through WordNet and Moby, so related words correlate | Re-encoded |
+| `word_reach` | 1 | On ada-1-2-beta: 2 or 3 reads words further, plain forms ("charged" as "charge") and related words past direct synonyms. Backtest it first on models whose text is plain English | Re-encoded |
 | `calibrate_by` | loss | `loss`: probabilities that mean what they say; `cost`: that decide best by the costs | Live, then recalibrated |
 | `calibrate_sample` | 200 | The newest precedents a calibration holds out | Live |
 | `refresh_every` | none | Learn and calibrate again every so many precedents, as a job | Live |
