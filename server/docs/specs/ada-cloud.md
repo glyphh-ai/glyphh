@@ -55,7 +55,8 @@ Today an Ada model is a GitHub repo of `glyphh.json`, `spec.json` and `model.py`
 rrotor's sandbox (rrotor `docs/architecture.md` section 8; `examples/ada_incidents/`, `examples/ada_tickets/`). But
 the spec already carries almost everything: `glyphh_spec.py` parses layers, segments, roles (`similarity_weight`,
 `security_weight`, `key_part`, `numeric_config`, `text_encoding`, `lexicons`), `interactions`, `temporal_source`,
-`output` (`report`, `costs`, `ask`), named `outputs` (`values`, `costs`, `ask`) and `settings` (14 levers), and
+`output` (`report`, `costs`, `ask`), named `outputs` (`values`, `costs`, `ask`; from kernel 3.15.0 a `kind`:
+choice, score, noul, number or many, and `when`, a discriminated union) and `settings` (14 levers), and
 `glyphh_spec.Model` does `record`, `grade`, `learn`, `refresh`, `calibrate`, `configure`, `query`, `facts`,
 `probabilities`, `decide` and `decide_all`. The `model.py` files are thin wrappers.
 
@@ -271,7 +272,7 @@ cloud run one kernel.
 | Rate | Per org per plan (section 7), `429 E_RATE` with `Retry-After` |
 | Imports | 200 MB a file, one running per model (**built:** `GLYPHH_ADA_IMPORT_BYTES`; one import or re-encode open per model, `409 E_BUSY`; a file in the request's body 5 MB) |
 | Backtests | **Built:** 10 candidates; the held-out from the newest `limits.JOB_SAMPLE` |
-| Spec | `dimension` at most 8,192 (the kernel allows 65,536, `_parse_spec`), 64 roles, 20 named outputs, 200 values per output, `k` at most 200; **built:** 64 KB of JSON (`413 E_SPEC_LIMIT`), each bound `422 E_SPEC_LIMIT` with `limit` and `max` |
+| Spec | `dimension` at most 8,192 (the kernel allows 65,536, `_parse_spec`), 64 roles, 20 named outputs (a many output counts once and once per value: its members each learn), 200 values per output (a number's bins), `k` at most 200; **built:** 64 KB of JSON (`413 E_SPEC_LIMIT`), each bound `422 E_SPEC_LIMIT` with `limit` and `max` |
 | Strings | **Built:** no string, key or value, may hold NUL (`\u0000`): Postgres's `jsonb` refuses it, so the API answers `400 E_INVALID` `nul` before a worker sees it |
 | A query's roles | **Built:** over 100,000 precedents, at least half the roles that vote (3.4), else `422 E_FEW_ROLES` |
 | Making, deleting a model; `record_many` | **Built:** 30 s, then `504 E_TIMEOUT` (the write is made once even if it lands after: send it again with the same `Idempotency-Key`) |

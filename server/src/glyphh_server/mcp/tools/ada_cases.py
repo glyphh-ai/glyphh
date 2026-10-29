@@ -122,7 +122,9 @@ TOOLS: tuple[Tool, ...] = (
         "ada_decide",
         "Ada decide",
         "The headline: the outcome of least expected cost, its probabilities, whether a person should decide instead "
-        f"(ask), and the precedents it stands on. {ASKS} Counts as a request (one per output).",
+        f"(ask), and the precedents it stands on. {ASKS} By an output's kind it adds p (a noul's P(true)), value (a "
+        "number's), level (a score's) or a list (many); a union's branch not taken answers applies: false. Counts as "
+        "a request (one per output).",
         DecideArgs,
         decide,
         True,

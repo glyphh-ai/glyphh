@@ -10,6 +10,8 @@ from typing import Any
 import httpx
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from glyphh_ada import prepare
+from glyphh_ada.api.cases import Case, Grade
 from glyphh_ada.process import Worker
 from tests.ada.conftest import a_model, an_org, finished, path_of
 
@@ -99,3 +101,34 @@ async def test_named_outputs_go_in_out_and_through_a_reencode(
     archive = (await ada.get(path_of((await finished(ada, key, zipped.json()))["download"]["url"]))).content
     lines_out = zipfile.ZipFile(io.BytesIO(archive)).read("precedents.jsonl").decode().splitlines()
     assert sum('"team"' in line for line in lines_out) == 60
+
+
+class _TypedSpec:
+    """A kernel 3.15.0 spec's outcomes_in, as an import's rows meet it: a number kept as its bin, a many's list as
+    its members' true/false."""
+
+    def outcomes_in(self, named: dict[str, Any]) -> dict[str, Any]:
+        return {"refund": "45", "tags--0": "true", "tags--1": "false"} if "tags" in named else named
+
+    def check_outcome(self, output: str, value: str) -> None:
+        assert value in ("45", "true", "false")
+
+
+class _TypedModel:
+    spec = _TypedSpec()
+
+    def _name(self, output: str) -> str:
+        return output
+
+
+def test_an_imported_rows_typed_outcomes_go_through_the_kernels_outcomes_in() -> None:
+    model: Any = _TypedModel()
+    outcome, named = prepare._outcomes(model, {"outcomes": {"refund": 42.5, "tags": ["mobile"]}})
+    assert outcome is None and named == {"refund": "45", "tags--0": "true", "tags--1": "false"}
+
+
+def test_a_case_and_a_grade_take_every_kind_of_outcome() -> None:
+    case = Case(data={}, outcomes={"kind": "bug", "urgent": True, "refund": 42.5, "tags": ["web", "gold"]})
+    assert case.outcomes == {"kind": "bug", "urgent": True, "refund": 42.5, "tags": ["web", "gold"]}
+    assert Grade(id="c1", output="tags", value=["web"]).value == ["web"]
+    assert Grade(id="c1", output="refund", value=7).value == 7

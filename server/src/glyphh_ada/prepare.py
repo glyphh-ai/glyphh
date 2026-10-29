@@ -33,6 +33,9 @@ def _outcomes(model: glyphh_spec.Model, case: dict[str, Any]) -> tuple[str | Non
         raise glyphh_spec.SpecError("outcome", "a non-empty string")
     if not isinstance(named, dict):
         raise glyphh_spec.SpecError("outcomes", "an object of {output: value}")
+    typed = getattr(model.spec, "outcomes_in", None)  # kernel 3.15.0: a number, a noul's bool, a many's list, a union
+    if typed is not None:
+        named = typed({model._name(name): value for name, value in named.items()})
     for name, value in named.items():
         if isinstance(value, str):
             model.spec.check_outcome(model._name(name), value)

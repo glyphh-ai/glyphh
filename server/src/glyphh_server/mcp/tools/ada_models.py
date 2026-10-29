@@ -114,7 +114,9 @@ TOOLS: tuple[Tool, ...] = (
         "Make an Ada model",
         "A new model from its JSON spec (layers, segments, roles, output with its outcomes and costs, settings), "
         "checked by the kernel and the cloud's bounds: version 1, empty, on the latest stable Ada version unless "
-        "`ada` names another (ada_releases; a beta only when the person asks for one).",
+        "`ada` names another (ada_releases; a beta only when the person asks for one). On ada-1-2-beta a named "
+        "output may have a `kind` (score, noul, number with {min, max, step}, many; choice by default) and `when` "
+        "({output, in}: a union's branch, asked only when that output's outcome is one of those).",
         NewModel,
         create,
     ),
