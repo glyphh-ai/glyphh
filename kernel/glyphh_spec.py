@@ -250,6 +250,10 @@ PAIR_CANDIDATES = 120  # the most common words of a text role among which word p
 
 
 
+OUTPUT_KINDS = ("choice", "score", "noul", "number", "many")
+NOUL = ("false", "true")
+
+
 @dataclass(frozen=True)
 class Output:
     report: tuple[str, ...] = ()
@@ -264,12 +268,33 @@ class Output:
     # a confidence bar: set, decide() asks whenever the most probable outcome's probability is under it (beside
     # `ask`, for people who think in confidence before costs). Unset, confidence alone never asks.
     ask_below: float | None = None
+    # what the outcome is (kernel 3.15.0): "choice" one of `values`; "score" one of `values` in order (a mistake
+    # costs how many levels it is off); "noul" yes or no ("false", "true": decide() says P(true) as `p`);
+    # "number" a value in [min, max] learned by its bin (`values` the bins' midpoints, a mistake costs how many
+    # bins it is off; decide() says the expected `value`); "many" any of `values` at once (each value a noul of
+    # its own, a member output named <output>--<i>)
+    kind: str = "choice"
+    number: tuple[float, float, float] | None = None  # a number's (min, max, step)
+    # a discriminated union: the output is asked only when another output's outcome is one of these (decide_all
+    # answers it {"applies": false} otherwise, and a case may not grade it then)
+    when: tuple[str, tuple[str, ...]] | None = None
+    of: tuple[str, str] | None = None  # a many output's member: (the many output, the value it stands for)
 
     def cost(self, decided: str, true: str) -> float:
         table = dict((d, dict(t)) for d, t in self.costs)
         if decided in table and true in table[decided]:
             return table[decided][true]
-        return 0.0 if decided == true else 1.0
+        if decided == true:
+            return 0.0
+        if self.kind in ("score", "number") and decided in self.values and true in self.values:
+            return float(abs(self.values.index(decided) - self.values.index(true)))
+        return 1.0
+
+    def bin_of(self, value: float) -> str:
+        """A number's bin: the midpoint label of the step it falls in (clamped to [min, max])."""
+        lo, hi, step = self.number  # type: ignore[misc]
+        i = min(max(int((min(max(value, lo), hi) - lo) // step), 0), len(self.values) - 1)
+        return self.values[i]
 
 
 @dataclass(frozen=True)
@@ -306,6 +331,55 @@ class Spec:
         values = self.output_of(output).values
         if values and value not in values:
             raise SpecError(f"outputs.{output}", f"E_OUTPUT_VALUE: {value!r} is not one of {', '.join(values)}")
+
+    def declared(self) -> list[str]:
+        """The outputs the spec names (a many output's members are not among them)."""
+        return [name for name, o in self.outputs if o.of is None]
+
+    def stored(self) -> list[str]:
+        """The outputs a precedent carries outcomes for: every declared one but a many output, and its members."""
+        return [name for name, o in self.outputs if o.kind != "many"]
+
+    def members(self, output: str) -> list[tuple[str, str]]:
+        """A many output's members: (member output, the value it stands for)."""
+        return [(name, o.of[1]) for name, o in self.outputs if o.of is not None and o.of[0] == output]
+
+    def outcomes_in(self, named: Mapping[str, Any]) -> dict[str, Any]:
+        """A case's named outcomes as the store keeps them: a number as its bin, a noul's true/false (a bool
+        too), a many output's list as its members' "true"/"false"; each checked (E_OUTPUT, E_OUTPUT_VALUE), and a
+        union's output refused where the case's own outcome of the output it hangs on leaves it out
+        (E_OUTPUT_WHEN). None (no outcome) passes as it is."""
+        out: dict[str, Any] = {}
+        for name, value in named.items():
+            o = self.output_of(name)
+            if value is None and o.kind == "many":
+                out.update({member: None for member, _ in self.members(name)})
+            elif value is None or o.of is not None:
+                out[name] = value
+            elif o.kind == "many":
+                if not isinstance(value, (list, tuple)) or not all(isinstance(v, str) for v in value):
+                    raise SpecError(f"outputs.{name}", "a many output's outcome is a list of its values")
+                for v in value:
+                    if v not in o.values:
+                        raise SpecError(f"outputs.{name}", f"E_OUTPUT_VALUE: {v!r} is not one of {', '.join(o.values)}")
+                for member, v in self.members(name):
+                    out[member] = "true" if v in value else "false"
+            elif o.kind == "number":
+                out[name] = o.bin_of(_number(value, f"outputs.{name}"))
+            elif o.kind == "noul" and isinstance(value, bool):
+                out[name] = "true" if value else "false"
+            else:
+                if isinstance(value, str):  # anything else the store refuses (a non-empty string)
+                    self.check_outcome(name, value)
+                out[name] = value
+        for name, value in out.items():
+            when = self.output_of(name).when
+            if value is not None and when and isinstance(out.get(when[0]), str) and out[when[0]] not in when[1]:
+                raise SpecError(
+                    f"outputs.{name}",
+                    f"E_OUTPUT_WHEN: asked only when {when[0]} is {' or '.join(when[1])}, not {out[when[0]]!r}",
+                )
+        return out
 
     # -- JSON in and out --------------------------------------------
 
@@ -352,12 +426,21 @@ class Spec:
                 {
                     "outputs": {
                         name: {
-                            **({"values": list(o.values)} if o.values else {}),
+                            **({"kind": o.kind} if o.kind != "choice" else {}),
+                            **(
+                                {"number": dict(zip(("min", "max", "step"), o.number, strict=True))}
+                                if o.number
+                                else {"values": list(o.values)}
+                                if o.values and o.kind != "noul"
+                                else {}
+                            ),
+                            **({"when": {"output": o.when[0], "in": list(o.when[1])}} if o.when else {}),
                             **({"costs": {d: dict(t) for d, t in o.costs}} if o.costs else {}),
                             **({"ask": o.ask} if o.ask is not None else {}),
                             **({"ask_below": o.ask_below} if o.ask_below is not None else {}),
                         }
                         for name, o in self.outputs
+                        if o.of is None
                     }
                 }
                 if self.outputs
@@ -1131,7 +1214,10 @@ def _parse_spec(obj: Any) -> Spec:
             raise SpecError(at, str(e)) from None
         if name == kernel.DEFAULT:
             raise SpecError(at, 'the default output is the spec\'s "output"; name the others')
-        od = _fields(spec_of, at, [], ["values", "costs", "ask", "ask_below"])
+        od = _fields(spec_of, at, [], ["values", "costs", "ask", "ask_below", "kind", "number", "when"])
+        kind = od.get("kind", "choice")
+        if kind not in OUTPUT_KINDS:
+            raise SpecError(f"{at}.kind", f"is one of {', '.join(OUTPUT_KINDS)}")
         values = od.get("values", [])
         if (
             not isinstance(values, list)
@@ -1139,11 +1225,68 @@ def _parse_spec(obj: Any) -> Spec:
             or len(set(values)) != len(values)
         ):
             raise SpecError(f"{at}.values", "must be a list of distinct, non-empty outcomes")
+        number = None
+        if kind == "number":
+            if "values" in od:
+                raise SpecError(f"{at}.values", "a number's outcomes are its bins: give number {min, max, step}")
+            nd = _fields(od.get("number"), f"{at}.number", ["min", "max", "step"], [])
+            lo, hi, step = (_number(nd[k], f"{at}.number.{k}") for k in ("min", "max", "step"))
+            if not (hi > lo and step > 0) or (hi - lo) / step > 1000:
+                raise SpecError(f"{at}.number", "needs max above min and a step above 0 (1,000 bins at most)")
+            number = (lo, hi, step)
+            n = math.ceil((hi - lo) / step - 1e-9)
+            values = [f"{lo + (i + 0.5) * step:g}" for i in range(n)]
+            if len(set(values)) != len(values):
+                raise SpecError(f"{at}.number", "its bins' midpoints must differ as printed (a coarser step)")
+        elif "number" in od:
+            raise SpecError(f"{at}.number", 'is a number output\'s (kind "number")')
+        if kind == "noul":
+            if values and values != list(NOUL):
+                raise SpecError(f"{at}.values", 'a noul\'s outcomes are "false" and "true"')
+            values = list(NOUL)
+        if kind in ("score", "many") and len(values) < 2:
+            raise SpecError(f"{at}.values", f"a {kind} output names two values or more")
+        when = None
+        if "when" in od:
+            wd = _fields(od["when"], f"{at}.when", ["output", "in"], [])
+            if not isinstance(wd["in"], list) or not wd["in"] or not all(isinstance(v, str) for v in wd["in"]):
+                raise SpecError(f"{at}.when.in", "must be a list of the other output's outcomes")
+            when = (str(wd["output"]), tuple(wd["in"]))
         o_costs, o_ask = _costs_and_ask(od, at)
+        if kind == "many" and (o_costs or o_ask is not None or "ask_below" in od):
+            raise SpecError(at, "a many output's members decide as nouls: no costs, ask or ask_below")
         named = [d for d, _ in o_costs] + [t for _, table in o_costs for t, _ in table]
         if values and any(v not in values for v in named):
             raise SpecError(f"{at}.costs", "names an outcome outside the output's values")
-        outputs.append((name, Output((), o_costs, o_ask, tuple(values), _ask_below(od, at))))
+        outputs.append(
+            (name, Output((), o_costs, o_ask, tuple(values), _ask_below(od, at), kind, number, when))
+        )
+        if kind == "many":
+            for i, v in enumerate(values):
+                member = f"{name}--{i}"
+                if len(member) > 64:
+                    raise SpecError(at, "a many output's name leaves room for its members' (<name>--<i>, 64 at most)")
+                outputs.append((member, Output((), (), None, NOUL, None, "noul", None, when, (name, v))))
+    declared = dict(outputs)
+    if len(declared) != len(outputs):
+        raise SpecError("outputs", "a many output's member name (<name>--<i>) is named by another output")
+    for name, child in outputs:
+        if child.when is None or child.of is not None:
+            continue
+        parent = declared.get(child.when[0])
+        if parent is None or parent.of is not None:
+            raise SpecError(f"outputs.{name}.when.output", f"names no output of this spec: {child.when[0]!r}")
+        if parent.kind in ("number", "many"):
+            raise SpecError(f"outputs.{name}.when.output", "hangs on a choice, score or noul output")
+        if parent.values and any(v not in parent.values for v in child.when[1]):
+            raise SpecError(f"outputs.{name}.when.in", f"names an outcome outside {child.when[0]}'s values")
+        seen, at_ = {name}, child.when[0]
+        while at_ is not None:
+            if at_ in seen:
+                raise SpecError(f"outputs.{name}.when", "the outputs' whens go round in a circle")
+            seen.add(at_)
+            w = declared[at_].when
+            at_ = w[0] if w else None
     spec = Spec(
         _name(o["name"], "name"),
         tuple(layers),
@@ -1318,7 +1461,11 @@ class Model:
 
     def outputs(self) -> list[str]:
         """The outputs this model decides: the spec's named ones, or the default one when it names none."""
-        return [name for name, _ in self.spec.outputs] or [kernel.DEFAULT]
+        return self.spec.declared() or [kernel.DEFAULT]
+
+    def _stored(self) -> list[str]:
+        """The outputs that learn and calibrate: every declared one but a many output, and its members."""
+        return self.spec.stored() or [kernel.DEFAULT]
 
     def _spec_for(self, name: str) -> Spec:
         """The spec an output reads by: the default's own, or a named output's learned one (until it learns: the
@@ -1348,10 +1495,7 @@ class Model:
         """One case, recorded once: its outcome (the default output's) and/or its named outputs' (`outcomes`,
         {output: value}), each checked against the spec's outputs (E_OUTPUT, E_OUTPUT_VALUE). Returns its id."""
         self._writes("record")
-        named = dict(outcomes or {})
-        for name, value in named.items():
-            if isinstance(value, str):
-                self.spec.check_outcome(self._name(name), value)
+        named = self.spec.outcomes_in({self._name(k): v for k, v in (outcomes or {}).items()})
         situation = self.spec.situation(data)
         stamp = ts if ts is not None else self.spec.timestamp(data)
         rid = self.space.record(situation, outcome, rid=self.spec.key(situation), ts=stamp, outcomes=named or None)
@@ -1382,9 +1526,7 @@ class Model:
             try:
                 if outcome is not None and (not isinstance(outcome, str) or not outcome):
                     raise SpecError("outcome", "a non-empty string")
-                for name, value in named.items():
-                    if isinstance(value, str):
-                        self.spec.check_outcome(self._name(name), value)
+                named = self.spec.outcomes_in({self._name(k): v for k, v in named.items()})
                 situation = self.spec.situation(case["data"])
                 stamp = case.get("ts") if case.get("ts") is not None else self.spec.timestamp(case["data"])
                 kernel._named_outcomes(named)
@@ -1414,9 +1556,11 @@ class Model:
         """One output's outcome on a case already recorded: added, replaced or (None) taken away."""
         self._writes("grade")
         name = self._name(output)
-        if isinstance(value, str):
-            self.spec.check_outcome(name, value)
-        self.space.grade(rid, name, value)
+        if name == kernel.DEFAULT:
+            self.space.grade(rid, name, value)
+            return
+        for stored, v in self.spec.outcomes_in({name: value}).items():
+            self.space.grade(rid, stored, v)
 
     def learn(self, output: str | None = None) -> dict[str, Any]:
         """Learn the weights from the store's own graded precedents (every role's similarity_weight and
@@ -1430,7 +1574,7 @@ class Model:
         if output is not None or not self.spec.outputs:
             return self._learn(self._name(output))
         out: dict[str, Any] = {}
-        for name in ([kernel.DEFAULT] if self.space.graded() else []) + self.outputs():
+        for name in ([kernel.DEFAULT] if self.space.graded() else []) + self._stored():
             try:
                 out[name] = self._learn(name)
             except SpecError:  # not enough graded for this output yet
@@ -1554,8 +1698,12 @@ class Model:
         return [{**t.to_json(), "tree": spec.report(t.to_json()["tree"], clearance)} for t in trees]
 
     def probabilities(self, data: Any, clearance: float = 1.0, output: str | None = None) -> dict[str, float]:
-        """P(outcome | data) over the nearest precedents, at the output's temperature (calibrate() fits it)."""
+        """P(outcome | data) over the nearest precedents, at the output's temperature (calibrate() fits it). A
+        many output's: each value's P(true)."""
         name = self._name(output)
+        if name != kernel.DEFAULT and self.spec.output_of(name).kind == "many":
+            each = {v: self.probabilities(data, clearance, member) for member, v in self.spec.members(name)}
+            return {v: p.get("true", 0.0) for v, p in each.items() if p}
         space, situation, weights = self._reader(name, data, clearance)
         now = self._now(data)
         return space.probabilities(situation, weights=weights, bias=self.bias(situation, name), output=name, now=now)
@@ -1571,7 +1719,7 @@ class Model:
         self._writes("calibrate")
         if output is not None or not self.spec.outputs:
             return self._calibrate(self._name(output), sample, clearance, by)
-        names = ([kernel.DEFAULT] if self.space.graded() else []) + self.outputs()
+        names = ([kernel.DEFAULT] if self.space.graded() else []) + self._stored()
         return {name: self._calibrate(name, sample, clearance, by) for name in names if len(self.space.graded(name)) >= 10}
 
     def _calibrate(self, name: str, sample: int | None, clearance: float, by: str | None) -> float:
@@ -1610,29 +1758,59 @@ class Model:
         outcome is then still the best guess, for the person to see. The output's ask_below asks too whenever
         the most probable outcome's probability is under it."""
         name = self._name(output)
+        costs = self.spec.output_of(name)
+        if costs.kind == "many":
+            # each value a noul of its own: the outcome is every value decided true, probabilities each P(true)
+            each = {v: self.decide(data, clearance, member) for member, v in self.spec.members(name)}
+            known = {v: d for v, d in each.items() if d["outcome"] is not None}
+            return {
+                "outcome": [v for v, d in each.items() if d["outcome"] == "true"] if known else None,
+                "expected_cost": round(sum(d["expected_cost"] for d in known.values()), 4) if known else None,
+                "probabilities": {v: d["p"] for v, d in known.items()},
+                "ask": not known or any(d["ask"] for d in each.values()),
+            }
         probabilities = self.probabilities(data, clearance, name)
         if not probabilities:
             return {"outcome": None, "expected_cost": None, "probabilities": {}, "ask": True}
-        costs = self.spec.output_of(name)
         expected = {
             decided: sum(p * costs.cost(decided, true) for true, p in probabilities.items())
             for decided in probabilities
         }
         best = self._least(probabilities, name)
-        return {
+        out = {
             "outcome": best,
             "expected_cost": round(expected[best], 4),
             "probabilities": {o: round(p, 4) for o, p in probabilities.items()},
             "ask": (costs.ask is not None and expected[best] > costs.ask)
             or (costs.ask_below is not None and max(probabilities.values()) < costs.ask_below),
         }
+        if costs.kind == "noul":
+            out["p"] = round(probabilities.get("true", 0.0), 4)
+        elif costs.kind == "number":
+            out["value"] = round(sum(p * float(o) for o, p in probabilities.items()), 6)
+        elif costs.kind == "score":
+            out["level"] = round(sum(p * costs.values.index(o) for o, p in probabilities.items() if o in costs.values), 4)
+        return out
 
     def decide_all(
         self, data: Any, clearance: float = 1.0, outputs: Sequence[str] | None = None
     ) -> dict[str, dict[str, Any]]:
-        """Every output's decision about one case (or the named outputs'), in one call: {output: decide()}."""
+        """Every output's decision about one case (or the named outputs'), in one call: {output: decide()}. A
+        union's output (`when`) is decided only when the output it hangs on is decided one of its outcomes (that
+        one decided first, asked for or not); otherwise it answers {"outcome": None, "applies": False}."""
         names = [self._name(o) for o in outputs] if outputs is not None else self.outputs()
-        return {name: self.decide(data, clearance, name) for name in names}
+        done: dict[str, dict[str, Any]] = {}
+
+        def one(name: str) -> dict[str, Any]:
+            if name not in done:
+                when = self.spec.output_of(name).when if name != kernel.DEFAULT else None
+                if when and one(when[0]).get("outcome") not in when[1]:
+                    done[name] = {"outcome": None, "expected_cost": None, "probabilities": {}, "ask": False, "applies": False}
+                else:
+                    done[name] = {**self.decide(data, clearance, name), **({"applies": True} if when else {})}
+            return done[name]
+
+        return {name: one(name) for name in names}
 
     def __len__(self) -> int:
         return len(self.space)

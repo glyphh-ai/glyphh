@@ -26,7 +26,7 @@ from typing import Any, NamedTuple, Protocol, runtime_checkable
 import numpy as np
 from collections.abc import Callable
 
-__version__ = "3.14.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
+__version__ = "3.15.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
 TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
 POOL = 25  # nearest precedents a probability is spread over

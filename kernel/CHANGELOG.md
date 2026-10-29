@@ -26,6 +26,26 @@ release is tagged `v<version>` on `main`.
 Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
 to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
 
+## 3.15.0 — 2026-10-28 — compatible
+
+**Typed outputs and discriminated unions.** A named output's `kind` says what its answer is: `choice` (the
+default, as before), `score` (ordered `values`: a mistake costs the levels it is off, `decide` adds the expected
+`level`), `noul` (yes or no: recorded `true`/`false`, `decide` adds `p`, P(true)), `number` (`number: {min, max,
+step}`: recorded as a number and learned by its bin, `decide` adds the expected `value`) and `many` (any of its
+`values` at once: recorded as a list, each value a noul of its own stored as `<name>--<i>`, `decide` answers the
+list and each value's P(true)). `when: {"output", "in"}` makes an output a union's branch: `decide_all` decides the
+output it hangs on first and answers a branch not taken `{"outcome": null, "applies": false}`, and a record that
+grades a branch its own outcome leaves out is refused (`E_OUTPUT_WHEN`). docs/multi-output.md, Typed outputs.
+
+- Compatible: a spec that names no `kind` or `when` parses, stores and answers exactly as on 3.14.0. Nothing stored
+  changes: the encoding (3) and the store's layout (`STORE_FORMAT` 1) are 3.14.0's. A spec that uses them does not
+  parse on 3.14.0 or before.
+- TypeSafe's Security Incidents workflow (benchmarks `typesafe-workflows/typed_outputs.py`, the consensus action;
+  Jev 59.4% on dev, five folds, and 54.0% on test): flat choices 49.8% / 56.0%; nouls and scores as `score` 49.4% /
+  56.0%; nouls as `number`, learned from the consensus's own P(true), 50.6% / 52.0% (the expected `value` 45.2% /
+  56.0%); the containment questions as `when` branches of triage 49.8% / 56.0%. The kinds give each question its
+  true type and the union skips what the workflow never asks; none moves the score here.
+
 ## 3.14.0 — 2026-10-25 — answer-changing
 
 **Time can weigh: calibrate fits a recency half-life.** With `settings.recency` (on by default), `calibrate` also
