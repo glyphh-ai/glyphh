@@ -18,7 +18,7 @@ from glyphh_ada.errors import Refusal
 
 READING: tuple[str, ...] = ("numeric_config", "text_encoding", "key_part")
 # The settings that change what a stored case carries (its learned word weights and pairs, its words' glyphs)
-STORED_SETTINGS: tuple[str, ...] = (*glyphh_spec.Settings.LEARNING, "lexicon")
+STORED_SETTINGS: tuple[str, ...] = (*glyphh_spec.Settings.LEARNING, "lexicon", "word_reach")  # word_reach: 3.16.0
 _LEARNED = "(key = 'learned' OR key LIKE 'learned:%%' OR key = 'tau' OR key LIKE 'tau:%%')"
 
 
@@ -67,7 +67,8 @@ def _canon(spec: glyphh_spec.Spec) -> Any:
     given by hand), declared pairs and the settings that restate; not weights, security, outputs or other levers."""
     roles = {p: (r.key_part, r.numeric_config, r.text_encoding, r.value_weights) for p, r in _roles(spec).items()}
     pairs = sorted(i.roles for i in spec.interactions)
-    return spec.dimension, spec.seed, roles, pairs, [getattr(spec.settings, k) for k in STORED_SETTINGS]
+    # a setting an older kernel lacks reads as its default there: word_reach 1, the reading before 3.16.0
+    return spec.dimension, spec.seed, roles, pairs, [getattr(spec.settings, k, 1) for k in STORED_SETTINGS]
 
 
 def same_store(old: glyphh_spec.Spec, new: glyphh_spec.Spec) -> bool:
