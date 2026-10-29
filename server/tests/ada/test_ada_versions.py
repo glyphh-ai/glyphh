@@ -47,11 +47,11 @@ def use(monkeypatch: pytest.MonkeyPatch, reg: registry.Registry, day: date) -> N
 
 def test_the_registry_as_shipped() -> None:
     reg, day = registry.load(), registry.today()
-    assert reg.latest(day).name == "ada-1-0" and reg.kernels() == ["3.15.0", "3.13.0", "3.12.2"]
-    assert reg.kernel_of(BETA) == "3.15.0" and reg.kernel_of("ada-0-9") == ""
+    assert reg.latest(day).name == "ada-1-0" and reg.kernels() == ["3.16.0", "3.13.0", "3.12.2"]
+    assert reg.kernel_of(BETA) == "3.16.0" and reg.kernel_of("ada-0-9") == ""
     assert reg.choose(None, day).name == "ada-1-0" and reg.choose(BETA, day).beta
     shown = reg.view(reg.find(BETA), day)  # type: ignore[arg-type]
-    assert shown["status"] == "beta" and shown["kernel"] == "3.15.0" and "drift" in shown["summary"]
+    assert shown["status"] == "beta" and shown["kernel"] == "3.16.0" and "drift" in shown["summary"]
     superseded = reg.find("ada-1-1-beta")  # a beta superseded by another: deprecated that day, ends 30 days on
     assert superseded is not None and superseded.ends == superseded.deprecated + timedelta(days=30)  # type: ignore[operator]
 
