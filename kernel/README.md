@@ -530,7 +530,7 @@ different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
 `word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
 `calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`, `word_evidence`,
-`shortlist`, `exact_below`, `level_weights`, `recency`), each checked by name
+`shortlist`, `exact_below`, `level_weights`, `recency`, `word_reach`), each checked by name
 and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
 kept with the store over the spec's; a learning lever moved relearns there
 and then. `model.settings.to_json(all=True)` reads them. The settings are not
@@ -563,7 +563,13 @@ parts of speech, and the Moby list's 192,960 word forms with their classes.
 A word's glyph is its own symbol tilted toward its neighbourhood (itself at
 1, its synonyms sharing 0.9, its near words 0.6, its classes 0.3), so
 "arrive" and "come" correlate and a word no seed knows is its symbol alone.
-The `lexicon` setting turns it off. `word_pairs` (off by default) makes
+The `lexicon` setting turns it off. `word_reach` (3.16.0; 1 by default, the
+reading above) reads further at 2 or 3: a word with its plain form ("charged"
+with "charge", "cards" with "card", never "news" with "new") and that many
+steps of neighbours' neighbours (mutual neighbours first, the strongest six
+of each word each step), the neighbourhood as loud as the word itself, so a
+common word's forty neighbours are no longer lost in the majority vote
+("angry" and "furious" 0.07 at reach 1, 0.30 at 2). `word_pairs` (off by default) makes
 `learn` also keep pairs of common words that tell more together than apart
 ("top" + "up"), at most `max_word_pairs`, carried in the bag as "a+b".
 
