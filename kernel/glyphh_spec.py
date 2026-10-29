@@ -186,6 +186,9 @@ class Settings:
     # 125 against 99); a lever to backtest on a model whose segments hold many quiet roles
     recency: bool = True  # calibrate fits a half-life (time weighs the newer precedents more) and keeps it only when
     # it beats none on the held-out newest; false: every precedent's voice is whole, whatever its age
+    word_reach: int = 1  # how far a text role's word reads through the lexicon (with `lexicon` on): 1, its own
+    # neighbours (the reading before 3.16.0); 2 or 3 (3.16.0), also its plain form ("charged" reads with "charge")
+    # and that many steps of neighbours' neighbours, the strongest few each step
 
     RANGES = {  # name: (kind, low, high) or (kind, choices)
         "k": (int, 1, 1000),
@@ -206,7 +209,13 @@ class Settings:
         "exact_below": (int, 0, 100000000),
         "level_weights": (str, ("roles", "spec")),
         "recency": (bool,),
+        "word_reach": (int, 1, 3),
     }
+
+    @property
+    def reading(self) -> int:
+        """How the Space reads words: 0 without the lexicon, else word_reach (glyphh_kernel._reach)."""
+        return self.word_reach if self.lexicon else 0
     LEARNING = ("word_weights", "word_floor", "interactions", "max_interactions", "rare", "word_pairs", "max_word_pairs")
 
     def with_changes(self, changes: Mapping[str, Any], at: str = "settings") -> Settings:
@@ -1385,7 +1394,7 @@ class Model:
             tau=tau,
             readonly=readonly,
             store=store,
-            lexicon=spec.settings.lexicon,
+            lexicon=spec.settings.reading,
             load=False,
         )
         kept = self.space.meta("settings")
@@ -1393,7 +1402,7 @@ class Model:
         given = {k_: v for k_, v in (("k", k), ("min_sim", min_sim), ("refresh_every", refresh_every)) if v is not None}
         self.settings = spec.settings.with_changes(self.overrides).with_changes(given)
         self.spec = spec.with_settings(self.settings)
-        self.space.lexicon = self.settings.lexicon  # before a glyph is made: the model's own reading of words
+        self.space.lexicon = self.settings.reading  # before a glyph is made: the model's own reading of words
         if not hasattr(self.space.store, "shortlist"):
             self.space._ensure_loaded()  # a file, or memory: every precedent held, as ever
         learned = self.space.meta("learned")
@@ -1422,8 +1431,8 @@ class Model:
         self.space.k, self.space.min_sim = self.settings.k, self.settings.min_sim
         self.space.shortlist, self.space.exact_below = self.settings.shortlist, self.settings.exact_below
         self.refresh_every = self.settings.refresh_every
-        if self.space.lexicon != self.settings.lexicon:
-            self.space.relexicon(self.settings.lexicon, persist=not self.readonly)
+        if self.space.lexicon != self.settings.reading:
+            self.space.relexicon(self.settings.reading, persist=not self.readonly)
 
     def configure(self, **changes: Any) -> dict[str, Any]:
         """Change the levers live: checked, kept with the store (over the spec's `settings`, until changed again),

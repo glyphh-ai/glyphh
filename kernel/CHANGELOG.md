@@ -26,6 +26,24 @@ release is tagged `v<version>` on `main`.
 Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
 to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
 
+## 3.16.0 — 2026-10-29 — compatible
+
+**Words read further: `settings.word_reach`.** 1 by default, the lexicon's reading before (a word and its own
+neighbours). At 2 or 3 a text role's word also reads with its plain form ("charged" with "charge", "cards" with
+"card", "stolen" with "steal"; a word the seed knows itself takes one only as a derivation, a verb form of a verb or
+a plural of a noun, so "news" never reads as "new") and with that many steps of neighbours' neighbours: mutual
+neighbours first, the strongest six of each word each step, a word met from two sides weighing more. The
+neighbourhood speaks as loud as the word itself (its L2 norm 1 beside the word's 1): at reach 1 a common word's
+forty neighbours, a fortieth each, are lost to its own symbol in the majority vote, which is why "angry" and
+"furious" read 0.07 apart there and 0.30 at reach 2, while unrelated words stay within ±0.03.
+
+- Compatible: `word_reach` 1 (the default) reads every word bit for bit as 3.15.0. A spec or setting that sets 2
+  or 3 does not parse on 3.15.0. Moving it re-reads every stored glyph, as `lexicon` does (`Space.relexicon`).
+- Banking77 (the 77-intent bank-message set; record, refresh, query), chosen on 1,000 messages held inside the
+  10,003: reach 1 88.0%, 2 89.2%, 3 89.0%; then the 3,080 test messages once each: reach 1 88.2%, 2 88.6%, 3 88.5%.
+  TypeSafe's Security Incidents workflow, whose alerts are mostly identifiers: the same at 1 and 2 (49.8% dev, 56.0%
+  test). So it is a lever to backtest on a model whose text is plain English, not a new default.
+
 ## 3.15.0 — 2026-10-28 — compatible
 
 **Typed outputs and discriminated unions.** A named output's `kind` says what its answer is: `choice` (the

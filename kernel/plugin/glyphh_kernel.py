@@ -26,7 +26,7 @@ from typing import Any, NamedTuple, Protocol, runtime_checkable
 import numpy as np
 from collections.abc import Callable
 
-__version__ = "3.15.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
+__version__ = "3.16.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
 TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
 POOL = 25  # nearest precedents a probability is spread over
@@ -495,8 +495,16 @@ def _word_glyph(item: Any, seed: int, dim: int, lexicon: bool = True) -> np.ndar
             from glyphh_lexicon import LEXICON
         except ImportError:  # the kernel without its lexicon module: words are symbols
             return symbol(f"val:{item}", seed, dim)
-        return LEXICON.glyph(item, seed, dim)
+        return LEXICON.glyph(item, seed, dim, reach=_reach(lexicon))
     return symbol(f"val:{_text(item)}", seed, dim)
+
+
+def _reach(lexicon: Any) -> int:
+    """A reading of words as a number: 0 no lexicon, 1 a word and its neighbours (the lexicon as before 3.16.0),
+    2 or 3 that many steps out (Settings.word_reach). True is 1."""
+    if not lexicon:
+        return 0
+    return 1 if lexicon is True else max(1, min(3, int(lexicon)))
 
 
 def _weighted_set(data: Any) -> bool:
@@ -874,7 +882,7 @@ class Space:
             raise ValueError("a Space takes a path or a store, not both")
         self.readonly = bool(readonly)
         self.path = str(Path(path).expanduser()) if path else getattr(store, "path", None)
-        self.lexicon = bool(lexicon)
+        self.lexicon = _reach(lexicon)  # 0: words are symbols; 1..3: read through the lexicon, that many steps out
         self.shortlist, self.exact_below = SHORTLIST, EXACT_BELOW
         self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
         # temperature for probabilities: given, else the file's
@@ -1679,8 +1687,9 @@ class Space:
 
     def relexicon(self, lexicon: bool, persist: bool = True) -> int:
         """Read words through the lexicon, or not, from now on: every held glyph and leaf made again from its
-        situation and events, and (persist) the store's glyphs with them. Returns how many were made again."""
-        lexicon = bool(lexicon)
+        situation and events, and (persist) the store's glyphs with them. Returns how many were made again.
+        lexicon: off (False, 0), on (True, 1), or a reach of 2 or 3 (Settings.word_reach)."""
+        lexicon = _reach(lexicon)
         if lexicon == self.lexicon:
             return 0
         if persist:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import math
 import os
 from collections import OrderedDict
 from pathlib import Path
@@ -26,6 +27,29 @@ SYNONYMS = 0.9  # the voice a word's synonyms share in its glyph
 NEAR = 0.6  # its near words'
 CLASSES = 0.3  # its parts of speech'
 CACHE = 50000  # word glyphs kept, per (seed, dim)
+# a reach past 1 (Settings.word_reach, 3.16.0): each step out, a word's neighbours' neighbours join its glyph at
+# STEP times the voice of the neighbour they came through, from the first BEAM neighbours of each (the seeds list a
+# word's neighbours by its commonest senses first), so a reach stays a handful of words, never the dictionary
+STEP = 0.5
+BEAM = 6
+LEMMA = 0.9  # the voice a word's plain form shares in its glyph ("charged" reads with "charge"), from reach 2
+NEIGHBOURHOOD = 1.0  # from reach 2, the voice of the word's whole neighbourhood (its L2 norm) beside its own 1.0
+# an inflected word's plain form, tried in order: the suffix taken off, then what is put back
+_SUFFIXES = (
+    ("ies", "y"), ("ied", "y"), ("ves", "f"), ("ves", "fe"), ("ses", "s"), ("xes", "x"), ("zes", "z"),
+    ("ches", "ch"), ("shes", "sh"), ("men", "man"), ("ing", ""), ("ing", "e"), ("ed", ""), ("ed", "e"),
+    ("er", ""), ("est", ""), ("es", ""), ("s", ""), ("ly", ""),
+)
+_IRREGULAR = {
+    "stolen": "steal", "stole": "steal", "taken": "take", "took": "take", "gone": "go", "went": "go",
+    "lost": "lose", "paid": "pay", "sent": "send", "made": "make", "got": "get", "gotten": "get",
+    "bought": "buy", "sold": "sell", "brought": "bring", "came": "come", "done": "do", "did": "do",
+    "said": "say", "told": "tell", "left": "leave", "kept": "keep", "found": "find", "given": "give",
+    "gave": "give", "broke": "break", "broken": "break", "frozen": "freeze", "froze": "freeze",
+    "spent": "spend", "seen": "see", "saw": "see", "known": "know", "knew": "know", "held": "hold",
+    "won": "win", "felt": "feel", "meant": "mean", "began": "begin", "begun": "begin", "wrote": "write",
+    "written": "write", "children": "child", "people": "person", "men": "man", "women": "woman",
+}
 
 
 def _folder() -> Path:
@@ -95,33 +119,127 @@ class Lexicon:
     def forget(self) -> None:
         self._glyphs.clear()
 
-    def glyph(self, word: str, seed: int, dim: int) -> np.ndarray:
-        """The word's glyph through the seeds (cached), or its bare symbol when off, absent or unknown."""
+    def lemma(self, word: str) -> str | None:
+        """An inflected word's plain form the word seed knows ("charged" -> "charge", "stolen" -> "steal"), or None
+        when the word is a plain form already or none is found."""
+        self._load()
+        assert self._words is not None
+        known = self._words.get(word)
+
+        grammar = self._grammar if self._grammar is not None else {}
+
+        def classes(w: str) -> set[str]:
+            found = self._words.get(w) if self._words is not None else None
+            return set(grammar.get(w, ())) | ({found[2]} if found else set())
+
+        def tied(stem: str, suffix: str) -> bool:
+            # a word the seed knows itself ("charged", "news") takes a plain form only as a derivation (the two
+            # list each other), a verb form of a verb ("charged" from "charge") or a plural of a noun, so "news"
+            # never reads as "new"
+            if known is None:
+                return True
+            other = self._words.get(stem)
+            if stem in known[0] or stem in known[1] or (other is not None and (word in other[0] or word in other[1])):
+                return True
+            if suffix in ("ed", "ied", "ing"):  # a verb form: the stem is a verb by either seed
+                return any(c.endswith("verb") and c != "adverb" for c in classes(stem))
+            if suffix in ("s", "es", "ies", "ses", "xes", "zes", "ches", "shes", "ves"):  # a plural: the stem is
+                return other is not None and other[2] == "noun"  # first of all a noun ("cards"; never "news")
+            return False
+
+        if word in _IRREGULAR and _IRREGULAR[word] in self._words:
+            return _IRREGULAR[word]
+        for suffix, back in _SUFFIXES:
+            if len(word) > len(suffix) + 2 and word.endswith(suffix):
+                stem = word[: -len(suffix)] + back
+                if stem != word and stem in self._words and tied(stem, suffix):
+                    return stem
+                if not back and len(stem) > 3 and stem[-1] == stem[-2] and stem[:-1] in self._words and tied(stem[:-1], suffix):
+                    return stem[:-1]  # a doubled consonant: "stopped" -> "stop"
+        return None
+
+    def glyph(self, word: str, seed: int, dim: int, reach: int = 1) -> np.ndarray:
+        """The word's glyph through the seeds (cached), or its bare symbol when off, absent or unknown. reach 1 is
+        the word and its neighbours (synonyms, near words, classes); 2 and 3 (Settings.word_reach) add its plain
+        form and that many steps of neighbours' neighbours."""
         from glyphh_kernel import bundle, symbol
 
         if not self.enabled or not self.available:
             return symbol(f"val:{word}", seed, dim)
-        key = (word, seed, dim)
+        reach = max(1, min(3, int(reach)))
+        key = (word, seed, dim) if reach == 1 else (word, seed, dim, reach)
         held = self._glyphs.get(key)
         if held is not None:
             self._glyphs.move_to_end(key)
             return held
-        entry = self.entry(word)
-        own = symbol(f"val:{word}", seed, dim)
-        if entry is None:
-            made = own
+        if reach == 1:
+            made = self._near_glyph(word, seed, dim)
         else:
-            synonyms, near, classes = entry
-            parts, weights = [own], [1.0]
-            for items, share, prefix in ((synonyms, SYNONYMS, "val"), (near, NEAR, "val"), (classes, CLASSES, "class")):
-                for item in items:
-                    parts.append(symbol(f"{prefix}:{item}", seed, dim))
-                    weights.append(share / len(items))
-            made = bundle(parts, weights)
+            voices = self._reach(word, reach)
+            made = bundle([symbol(name, seed, dim) for name in voices], list(voices.values()))
         self._glyphs[key] = made
         if len(self._glyphs) > CACHE:
             self._glyphs.popitem(last=False)
         return made
+
+    def _near_glyph(self, word: str, seed: int, dim: int) -> np.ndarray:
+        """Reach 1: the word, its synonyms, its near words and its classes (the reading before 3.16.0)."""
+        from glyphh_kernel import bundle, symbol
+
+        entry = self.entry(word)
+        own = symbol(f"val:{word}", seed, dim)
+        if entry is None:
+            return own
+        synonyms, near, classes = entry
+        parts, weights = [own], [1.0]
+        for items, share, prefix in ((synonyms, SYNONYMS, "val"), (near, NEAR, "val"), (classes, CLASSES, "class")):
+            for item in items:
+                parts.append(symbol(f"{prefix}:{item}", seed, dim))
+                weights.append(share / len(items))
+        return bundle(parts, weights)
+
+    def _reach(self, word: str, reach: int) -> dict[str, float]:
+        """Reach 2 or 3: {symbol name: voice} of the word, its plain form, its classes and its neighbours out to
+        `reach` steps. A neighbour met twice adds its voices (words that agree from two sides weigh more); each
+        step takes the first BEAM neighbours of each word it starts from, at STEP of that word's voice."""
+        own = {f"val:{word}": 1.0}
+        frontier: dict[str, float] = {word: 1.0}
+        plain = self.lemma(word)
+        if plain is not None:
+            own[f"val:{plain}"] = LEMMA
+            frontier[plain] = LEMMA
+        near_voices: dict[str, float] = {}
+        seen = set(frontier)
+        for step in range(reach):
+            nxt: dict[str, float] = {}
+            for w, voice in frontier.items():
+                found = self.entry(w)
+                if found is None:
+                    continue
+                for items, share in ((found[0], SYNONYMS), (found[1], NEAR)):
+                    ranked = sorted(items, key=lambda i: (not self._mutual(w, i), i))  # the ones that list w back first
+                    if step > 0:
+                        ranked = ranked[:BEAM]
+                    for item in ranked:
+                        if item in seen:
+                            continue
+                        v = voice * (1.0 if step == 0 else STEP) * share * (2.0 if self._mutual(w, item) else 1.0)
+                        near_voices[f"val:{item}"] = near_voices.get(f"val:{item}", 0.0) + v
+                        nxt[item] = nxt.get(item, 0.0) + v
+            seen |= set(nxt)
+            # the next step starts from the loudest of this step's words only, so the reach stays small
+            frontier = dict(sorted(nxt.items(), key=lambda kv: (-kv[1], kv[0]))[:BEAM])
+        entry = self.entry(plain or word)
+        classes = {f"class:{c}": CLASSES / len(entry[2]) for c in entry[2]} if entry is not None and entry[2] else {}
+        # the neighbourhood speaks as one, as loud as the word itself: else forty neighbours at a fortieth each are
+        # lost to the word's own symbol in the majority vote (the reading at reach 1, for a common word)
+        norm = math.sqrt(sum(v * v for v in near_voices.values())) or 1.0
+        return {**own, **classes, **{k: NEIGHBOURHOOD * v / norm for k, v in near_voices.items()}}
+
+    def _mutual(self, a: str, b: str) -> bool:
+        """b lists a among its synonyms or near words (and so the tie runs both ways)."""
+        found = self._words.get(b) if self._words is not None else None
+        return found is not None and (a in found[0] or a in found[1])
 
     def view(self) -> dict[str, Any]:
         return {"enabled": self.enabled, "available": self.available, "folder": str(self.folder)}
