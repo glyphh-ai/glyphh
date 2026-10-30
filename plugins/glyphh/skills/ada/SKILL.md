@@ -105,9 +105,8 @@ probability. A caller with a lower `clearance` sees less: secured roles are cut 
 
 What to expect: on a public credit data set (800 cases learned, 200 held out) the learned, calibrated model matched
 Claude judging the same cases on accuracy and on the bank's cost, deterministically, at a tiny fraction of the cost
-a decision; a classic model was level with it on cost. Ada's edge is the receipts, the clearances, asking when it
-should, and learning one confirmed case at a time, not beating a classic model on numbers: say so when the user has
-purely numeric data and needs none of those.
+a decision. Ada's edge is the receipts, the clearances, asking when it should, and learning one confirmed case at
+a time: say so when the user has purely numeric data and needs none of those.
 
 ## Tuning, with the user
 

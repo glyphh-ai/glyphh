@@ -8,7 +8,7 @@ Glyphh's developer surface for Ada Cloud: the Claude Code plugin, the SDKs and t
 | [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command |
 | [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"` |
 | [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server |
-| [`benchmarks`](benchmarks) | | Ada against Claude and classic models on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
+| [`benchmarks`](benchmarks) | | Ada against Claude on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
 
 **Ada Cloud is Ada as an API.** You describe your cases once as a JSON spec, load your history, and ask: every
 answer is typed (the spec's outcomes), with calibrated probabilities, the expected cost of each choice, whether a

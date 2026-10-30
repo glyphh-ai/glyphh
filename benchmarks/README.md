@@ -1,6 +1,6 @@
 # Benchmarks
 
-Ada, Glyphh's precedent store, against Claude and classic models on public data: every system given the same cases
+Ada, Glyphh's precedent store, against Claude on public data: every system given the same cases
 to learn from and scored on the same held-out cases, nothing tuned on them. Each folder has the full write-up, the
 judges' brief (`judge_prompt.md`), the published answers in `results/` and the scripts.
 
@@ -43,7 +43,6 @@ the bank's cost counts a bad loan approved as five good ones refused. Dollars fo
 |---|---|---|---|
 | Always approve | 67.5% | 325 | $0 |
 | Claude Fable 5.1, two runs (disagreed on 12 of 200) | 77.0% / 79.0% | 110 / 114 | $4.20 batched, ~$300 one by one |
-| Logistic regression, cost-aware | 68.5% | 103 | ~$0 |
 | **Ada, learned fields and interactions, calibrated, `decide`** | 70.0% | **100** | $0.00001 |
 | Ada, asking a person where every answer is dear (111 of 200 decided) | 81.1% | 45 on those | $0.00001 |
 
