@@ -377,8 +377,7 @@ Numbers from the replays this design was validated on:
   predicting SIG labels: precedent answers at confidence ≥ 0.5 were
   86% accurate (91% at ≥ 0.6); ungated answers were 50%.
 - On the same replay, the decision loop with a live LLM fallback
-  reached 0.862 accuracy versus 0.599 for a continuously retrained
-  TF-IDF + logistic regression baseline.
+  reached 0.862 accuracy.
 - Ordered strand state predicted next steps at 0.710 versus 0.595 for
   an unordered bundle; sequence-anomaly detection reached AUC 0.748.
 - A separate agent, given only this file and the spec, built a
@@ -579,8 +578,8 @@ weigh on the vote by `word_evidence` (2 by default): each voter's weight is
 scaled by exp(word_evidence × the mean pointwise mutual information of the
 query's words with the voter's outcome), in `query`, `probabilities`,
 `decide` and the calibration alike; the similarity bar, support and receipts
-stay unbiased. This is the weight per word per outcome a classic text model
-has and a similarity lacks.
+stay unbiased. This is a weight per word per outcome, which a plain similarity
+lacks.
 
 **Recency** (`recency`, on by default; 3.14.0): `calibrate` also fits a
 half-life, tried at 1/16 to 2 times the span of the graded precedents with
