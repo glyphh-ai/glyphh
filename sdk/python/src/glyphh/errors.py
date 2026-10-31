@@ -310,3 +310,134 @@ def error(
     if retry_after is None and detail and isinstance(detail.get("retry_after"), (int, float)):
         retry_after = float(detail["retry_after"])
     return TYPED.get(code, AdaError)(code, message, status, detail, retry_after)
+
+
+# A local rrotor's refusals (glyphh.Runtime): the runtime you install that hosts your programs and CLIs, not Ada.
+# Each is an AdaError too, so one `except AdaError` still catches everything the package raises.
+
+
+class RrotorError(AdaError):
+    """rrotor refused, or could not be reached (`E_UNREACHABLE`: is it running? The glyphh plugin's rrotor skill
+    installs and starts it). A code the SDK does not know is a plain RrotorError."""
+
+
+class RrotorAuthError(RrotorError):
+    """E_AUTH (401): no token, or not this rrotor's. A local rrotor takes its local token (the installer keeps it in
+    ~/.glyphh/rrotor/token); a self-hosted one a runtime key."""
+
+
+class RrotorForbiddenError(RrotorError):
+    """E_FORBIDDEN, E_HOST, E_ORIGIN (403, 421): a local rrotor answers only on 127.0.0.1 or localhost at its own
+    port, and never to a web page."""
+
+
+class LocalOnlyError(RrotorError):
+    """E_LOCAL_ONLY (403): changing the runtime itself (its licence, its parts) is for a local rrotor; a self-hosted
+    one takes those from its environment."""
+
+
+class ProgramMissingError(RrotorError):
+    """E_PROGRAM_MISSING (404): no program (or CLI) of that name is deployed here."""
+
+
+class FunctionMissingError(RrotorError):
+    """E_FUNCTION_MISSING (404): the program has no such function."""
+
+
+class RunMissingError(RrotorError):
+    """E_RUN_MISSING (404): no run of that id here."""
+
+
+class ScheduleMissingError(RrotorError):
+    """E_SCHEDULE_MISSING (404): the program has no schedule of that name."""
+
+
+class ManifestError(RrotorError):
+    """E_MANIFEST (422): glyphh.json (or program.py's functions) refused at deploy; the message says where."""
+
+
+class DeployError(RrotorError):
+    """A deploy refused: E_DEPLOY, E_BUNDLE, E_COMMIT, E_COMMIT_MISSING, E_GIT, E_REPO, E_DEPS, E_VENV, E_TOO_BIG, or
+    a CLI's install (E_CLI_INSTALL, E_CLI_CHECKSUM)."""
+
+
+class InputsError(RrotorError):
+    """E_INPUTS, E_CLI_INPUTS (400): the inputs do not fit the function's schema, or a CLI call's arguments, stdin or
+    files are past their bounds."""
+
+
+class RunStateError(RrotorError):
+    """E_RUN_STATE (409): the run is not waiting (a continue), or has ended (a cancel)."""
+
+
+class NotProgramError(RrotorError):
+    """E_NOT_PROGRAM (400): a CLI was called as a program: use `run_cli`."""
+
+
+class NotCliError(RrotorError):
+    """E_NOT_CLI (400): a program was run as a CLI: use `call`."""
+
+
+class CliDeniedError(RrotorError):
+    """E_CLI_DENIED (403): the CLI's `allow` patterns do not take these arguments."""
+
+
+class NotHeadError(RrotorError):
+    """E_NOT_HEAD (503): in a cluster, secrets and schedules change on the head (`head`), not on a follower."""
+
+    @property
+    def head(self) -> Optional[str]:
+        return self.detail.get("head")
+
+
+class LicenceError(RrotorError):
+    """E_LICENCE (400): the licence key handed in is not a good one."""
+
+
+class NotInPlanError(RrotorError):
+    """E_NOT_IN_PLAN (403): not in this licence's plan (the audit log is Enterprise's)."""
+
+
+RUNTIME_TYPED: Dict[str, Type[AdaError]] = {
+    "E_AUTH": RrotorAuthError,
+    "E_UNAUTHORIZED": RrotorAuthError,
+    "E_FORBIDDEN": RrotorForbiddenError,
+    "E_HOST": RrotorForbiddenError,
+    "E_ORIGIN": RrotorForbiddenError,
+    "E_LOCAL_ONLY": LocalOnlyError,
+    "E_PROGRAM_MISSING": ProgramMissingError,
+    "E_FUNCTION_MISSING": FunctionMissingError,
+    "E_RUN_MISSING": RunMissingError,
+    "E_SCHEDULE_MISSING": ScheduleMissingError,
+    "E_MANIFEST": ManifestError,
+    "E_DEPLOY": DeployError,
+    "E_BUNDLE": DeployError,
+    "E_COMMIT": DeployError,
+    "E_COMMIT_MISSING": DeployError,
+    "E_GIT": DeployError,
+    "E_REPO": DeployError,
+    "E_DEPS": DeployError,
+    "E_VENV": DeployError,
+    "E_TOO_BIG": DeployError,
+    "E_CLI_INSTALL": DeployError,
+    "E_CLI_CHECKSUM": DeployError,
+    "E_INPUTS": InputsError,
+    "E_CLI_INPUTS": InputsError,
+    "E_RUN_STATE": RunStateError,
+    "E_NOT_PROGRAM": NotProgramError,
+    "E_NOT_CLI": NotCliError,
+    "E_CLI_DENIED": CliDeniedError,
+    "E_NOT_HEAD": NotHeadError,
+    "E_LICENCE": LicenceError,
+    "E_NOT_IN_PLAN": NotInPlanError,
+}
+#: What a runtime shares with a self-hosted cluster's refusals above: those classes, as they were.
+SHARED = ("E_NO_HEAD", "E_HEAD_LOST", "E_NOT_COMMITTED", "E_RUN_LOST", "E_READ_ONLY", "E_VERSION_MISSING")
+
+
+def runtime_error(
+    code: str, message: str, status: int = 0, detail: Optional[Dict[str, Any]] = None, retry_after: Optional[float] = None
+) -> AdaError:
+    """The typed error for a runtime's code (RrotorError for one the SDK does not know)."""
+    cls = RUNTIME_TYPED.get(code) or (TYPED[code] if code in SHARED else RrotorError)
+    return cls(code, message.replace("Ada answered", "rrotor answered"), status, detail, retry_after)

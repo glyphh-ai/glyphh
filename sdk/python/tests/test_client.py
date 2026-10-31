@@ -547,14 +547,18 @@ def test_retry_after_as_a_date_and_a_transport_that_answers_no_headers(clock):
 
 
 def test_the_docs_tell_the_cloud_story():
-    """What a customer and Claude read: Ada Cloud, an API key, no runtime of their own to run."""
-    for doc in ("README.md", "sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
-        text = (ROOT / doc).read_text()
-        assert "ada.glyphh.ai" in text or doc.endswith("SKILL.md"), doc
+    """What a customer and Claude read about Ada: Ada Cloud and an API key, nothing to host. The runtime (rrotor, its
+    programs and CLIs) has its own docs and skills; only the Ada skill is kept free of it, so Claude never mixes an
+    Ada model up with a program."""
+    for doc in ("README.md", "sdk/python/README.md", "sdk/typescript/README.md"):
+        assert "ada.glyphh.ai" in (ROOT / doc).read_text(), doc
+    ada_skill = [ROOT / "plugins/glyphh/skills/ada/SKILL.md", *sorted((ROOT / "plugins/glyphh/skills/ada/references").glob("*.md"))]
+    for path in ada_skill:
+        text = path.read_text()
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
-            assert gone not in text, (doc, gone)
+            assert gone not in text, (path.name, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.5.0"
+    assert glyphh.__version__ == "3.6.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

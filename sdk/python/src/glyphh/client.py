@@ -520,9 +520,10 @@ def _result(body: Mapping[str, Any]) -> Result:
     return r
 
 
-def _parsed(status: int, content: bytes, got: Mapping[str, str]) -> Any:
-    """An answer's JSON, or its refusal raised as the typed error. An answer of a newer contract than this SDK's
-    (Glyphh-Contract) is refused first, whatever it says: ClientTooOldError."""
+def _parsed(status: int, content: bytes, got: Mapping[str, str], make: Callable[..., AdaError] = error) -> Any:
+    """An answer's JSON, or its refusal raised as the typed error (`make` picks the class: a local runtime's refusals
+    have their own). An answer of a newer contract than this SDK's (Glyphh-Contract) is refused first, whatever it
+    says: ClientTooOldError."""
     too_old = _too_old(got.get(CONTRACT_HEADER))
     if too_old is not None:
         raise too_old
@@ -536,7 +537,7 @@ def _parsed(status: int, content: bytes, got: Mapping[str, str]) -> Any:
         code = err.get("code") or fallback
         detail = {k: v for k, v in err.items() if k not in ("code", "message")}
         message = err.get("message") or f"Ada answered {status}"
-        raise error(code, message, status, detail, _retry_after(got.get("retry-after")))
+        raise make(code, message, status, detail, _retry_after(got.get("retry-after")))
     return parsed
 
 

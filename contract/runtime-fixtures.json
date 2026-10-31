@@ -1,0 +1,308 @@
+{
+  "runtime": 1,
+  "description": "A local rrotor's requests and answers, as the SDKs' Runtime tests use them. Written from rrotor's code (glyphh-ai/rrotor at 52009c1, the programs-cli branch: api/routes.py, api/ops.py, programs.py, scheduler.py, licence.py, runner/engine.py) and its examples (examples/daily_sales, examples/cli_gh), not recorded from a running image: the shapes are the code's, the values a story (daily_sales deployed, called, approved; gh run once).",
+  "cases": [
+    {
+      "name": "the programs",
+      "schema": "programs",
+      "request": { "method": "GET", "path": "/v1/programs" },
+      "response": {
+        "status": 200,
+        "body": {
+          "programs": [
+            {
+              "name": "daily_sales",
+              "kind": "program",
+              "description": "A day's sales from the export in the program's folder, added up, converted to euros, and written to its ledger once approved",
+              "active": 1,
+              "functions": {
+                "start": {
+                  "description": "Read a day's sales export, add it up, and write the total to the ledger (asks approval first)",
+                  "inputs": { "type": "object", "properties": { "day": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } }, "additionalProperties": false },
+                  "approvals": ["write"],
+                  "writes": true
+                },
+                "summary": { "description": "The ledger: each day written, its total in dollars and euros", "inputs": { "type": "object", "additionalProperties": false }, "approvals": [], "writes": false }
+              },
+              "versions": [{ "program": "daily_sales", "version": 1, "commit_sha": "3f1c0b9e8d7a6c5b4a3f2e1d0c9b8a7f6e5d4c3b", "deployed_at": "2026-10-31T09:12:04Z" }]
+            },
+            {
+              "name": "github",
+              "kind": "cli",
+              "description": "GitHub's gh, from its release tarball",
+              "active": 1,
+              "functions": {},
+              "versions": [{ "program": "github", "version": 1, "commit_sha": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b", "deployed_at": "2026-10-31T09:20:41Z" }]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a deploy from a bundle",
+      "schema": "program_version",
+      "request": { "method": "POST", "path": "/v1/programs/deploy", "body": { "bundle": "<a git bundle, base64>", "commit": "3f1c0b9e8d7a6c5b4a3f2e1d0c9b8a7f6e5d4c3b" } },
+      "response": { "status": 201, "body": { "program": "daily_sales", "version": 1, "commit_sha": "3f1c0b9e8d7a6c5b4a3f2e1d0c9b8a7f6e5d4c3b", "deployed_at": "2026-10-31T09:12:04Z" } }
+    },
+    {
+      "name": "a deploy from a repo",
+      "schema": "program_version",
+      "request": { "method": "POST", "path": "/v1/programs/deploy", "body": { "repo": "acme/daily-sales", "commit": "4a2d1e0f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d" } },
+      "response": { "status": 201, "body": { "program": "daily_sales", "version": 2, "commit_sha": "4a2d1e0f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d", "deployed_at": "2026-10-31T10:02:51Z" } }
+    },
+    {
+      "name": "a call that waits for approval",
+      "schema": "run",
+      "request": { "method": "POST", "path": "/v1/runs", "body": { "program": "daily_sales", "function": "start", "inputs": { "day": "2026-10-14" } } },
+      "response": {
+        "status": 200,
+        "body": { "run_id": "6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b", "program": "daily_sales", "version": 1, "function": "start", "status": "needs_approval", "data": null, "step": "write", "prompt": "Write 2026-10-14's total, $412.50 (€380.21), to the sales ledger?", "seconds": 0.412 }
+      }
+    },
+    {
+      "name": "the runs waiting for approval",
+      "schema": "approvals",
+      "request": { "method": "GET", "path": "/v1/approvals" },
+      "response": {
+        "status": 200,
+        "body": { "approvals": [{ "run_id": "6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b", "program": "daily_sales", "function": "start", "origin": "local", "step": "write", "prompt": "Write 2026-10-14's total, $412.50 (€380.21), to the sales ledger?", "asked_at": "2026-10-31T09:13:10Z" }] }
+      }
+    },
+    {
+      "name": "the run approved, done",
+      "schema": "run",
+      "request": { "method": "POST", "path": "/v1/runs/6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b/continue", "body": { "answer": { "approved": true } } },
+      "response": {
+        "status": 200,
+        "body": {
+          "run_id": "6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b",
+          "program": "daily_sales",
+          "version": 1,
+          "function": "start",
+          "status": "done",
+          "data": { "day": "2026-10-14", "orders": 3, "total_usd": "412.50", "total_eur": "380.21", "written": true },
+          "step": null,
+          "prompt": null,
+          "seconds": 0.618
+        }
+      }
+    },
+    {
+      "name": "a run's status",
+      "schema": "run_info",
+      "request": { "method": "GET", "path": "/v1/runs/6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b" },
+      "response": {
+        "status": 200,
+        "body": {
+          "run_id": "6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b",
+          "program": "daily_sales",
+          "version": 1,
+          "function": "start",
+          "caller": "claude",
+          "origin": "local",
+          "status": "done",
+          "created_at": 1793437984.1,
+          "updated_at": 1793438001.9,
+          "ended_at": 1793438001.9,
+          "seconds": 0.618,
+          "result": { "status": "done", "data": { "day": "2026-10-14", "written": true }, "step": null, "prompt": null }
+        }
+      }
+    },
+    {
+      "name": "a run's log",
+      "schema": "log",
+      "request": { "method": "GET", "path": "/v1/runs/6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b/log" },
+      "response": { "status": 200, "body": { "run_id": "6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b", "lines": [{ "at": 1793437984.2, "message": "called" }, { "at": 1793438001.8, "message": "written", "day": "2026-10-14" }] } }
+    },
+    {
+      "name": "a run cancelled",
+      "schema": "run",
+      "request": { "method": "POST", "path": "/v1/runs/0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e/cancel", "body": {} },
+      "response": { "status": 200, "body": { "run_id": "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e", "program": "daily_sales", "version": 1, "function": "start", "status": "cancelled", "data": null, "step": null, "prompt": null, "seconds": 0.2 } }
+    },
+    {
+      "name": "a program's secrets",
+      "schema": "secrets",
+      "request": { "method": "GET", "path": "/v1/programs/github/secrets" },
+      "response": { "status": 200, "body": { "program": "github", "secrets": [{ "name": "GH_TOKEN", "declared": true, "set": false }] } }
+    },
+    {
+      "name": "a secret set",
+      "schema": "secret",
+      "request": { "method": "PUT", "path": "/v1/programs/github/secrets/GH_TOKEN", "body": { "value": "<the value>" } },
+      "response": { "status": 200, "body": { "program": "github", "name": "GH_TOKEN", "set": true } }
+    },
+    {
+      "name": "a secret deleted",
+      "schema": "secret",
+      "request": { "method": "DELETE", "path": "/v1/programs/github/secrets/GH_TOKEN" },
+      "response": { "status": 200, "body": { "program": "github", "name": "GH_TOKEN", "set": false } }
+    },
+    {
+      "name": "the schedules",
+      "schema": "schedules",
+      "request": { "method": "GET", "path": "/v1/schedules" },
+      "response": {
+        "status": 200,
+        "body": {
+          "schedules": [
+            {
+              "id": "daily_sales/each_morning",
+              "program": "daily_sales",
+              "name": "each_morning",
+              "version": 1,
+              "function": "start",
+              "cron": "15 6 * * *",
+              "tz": "UTC",
+              "input": {},
+              "paused": false,
+              "next_at": "2026-11-01T06:15:00Z",
+              "last": { "run_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "at": "2026-10-31T06:15:00Z", "status": "done", "code": null },
+              "skipped": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a schedule paused",
+      "schema": "schedule",
+      "request": { "method": "POST", "path": "/v1/schedules/daily_sales/each_morning/pause", "body": {} },
+      "response": {
+        "status": 200,
+        "body": { "id": "daily_sales/each_morning", "program": "daily_sales", "name": "each_morning", "version": 1, "function": "start", "cron": "15 6 * * *", "tz": "UTC", "input": {}, "paused": true, "next_at": null, "last": null, "skipped": null }
+      }
+    },
+    {
+      "name": "a schedule resumed",
+      "schema": "schedule",
+      "request": { "method": "POST", "path": "/v1/schedules/daily_sales/each_morning/resume", "body": {} },
+      "response": {
+        "status": 200,
+        "body": { "id": "daily_sales/each_morning", "program": "daily_sales", "name": "each_morning", "version": 1, "function": "start", "cron": "15 6 * * *", "tz": "UTC", "input": {}, "paused": false, "next_at": "2026-11-01T06:15:00Z", "last": null, "skipped": null }
+      }
+    },
+    {
+      "name": "the CLIs",
+      "schema": "clis",
+      "request": { "method": "GET", "path": "/v1/clis" },
+      "response": {
+        "status": 200,
+        "body": {
+          "clis": [
+            {
+              "name": "github",
+              "description": "GitHub's gh, from its release tarball",
+              "version": 1,
+              "command": "gh",
+              "install": { "source": "url", "pinned": "https://github.com/cli/cli/releases/download/v2.62.0/gh_2.62.0_linux_amd64.tar.gz" },
+              "allow": ["pr *", "issue *", "repo view *", "api repos/*"],
+              "approvals": ["pr merge *", "pr close *", "issue close *"],
+              "needs_approval": true,
+              "home": true,
+              "hosts": ["api.github.com", "github.com"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a CLI command, done",
+      "schema": "run",
+      "request": { "method": "POST", "path": "/v1/clis/github/run", "body": { "args": ["pr", "list", "--limit", "2"] } },
+      "response": {
+        "status": 200,
+        "body": {
+          "run_id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+          "program": "github",
+          "version": 1,
+          "function": "cli",
+          "status": "done",
+          "data": { "exit_code": 0, "stdout": "41\tFix the ledger\topen\n40\tAdd euros\tmerged\n", "stderr": "", "stdout_bytes": 44, "stderr_bytes": 0, "truncated": false, "files": {}, "files_skipped": [] },
+          "step": null,
+          "prompt": null,
+          "seconds": 1.204
+        }
+      }
+    },
+    {
+      "name": "a CLI command that waits for approval",
+      "schema": "run",
+      "request": { "method": "POST", "path": "/v1/clis/github/run", "body": { "args": ["pr", "merge", "41"] } },
+      "response": {
+        "status": 200,
+        "body": { "run_id": "3d4e5f6a-7b8c-4d9e-8f0a-2b3c4d5e6f7a", "program": "github", "version": 1, "function": "cli", "status": "needs_approval", "data": null, "step": "cli", "prompt": "Run `gh pr merge 41`?", "seconds": 0.0 }
+      }
+    },
+    {
+      "name": "the licence, Community",
+      "schema": "licence",
+      "request": { "method": "GET", "path": "/v1/licence" },
+      "response": {
+        "status": 200,
+        "body": { "licence": { "tier": "free", "community": true, "license_id": null, "customer_id": null, "source": null, "issued_at": null, "expires_at": null, "state": "none", "days_left": null, "max_nodes": 1, "cluster_sync_enabled": false, "ha": false } }
+      }
+    },
+    {
+      "name": "a licence key handed in",
+      "schema": "licence",
+      "request": { "method": "PUT", "path": "/v1/licence", "body": "<a licence key>" },
+      "response": {
+        "status": 200,
+        "body": {
+          "licence": { "tier": "pro", "community": false, "license_id": "5b1e7c2a-9d4f-4e3b-8a6c-1f2e3d4c5b6a", "customer_id": "cus_123", "source": "api", "issued_at": "2026-10-31T00:00:00Z", "expires_at": "2026-11-30T23:59:59Z", "state": "live", "days_left": 30, "max_nodes": 3, "cluster_sync_enabled": true, "ha": false },
+          "kept": true
+        }
+      }
+    },
+    {
+      "name": "a wrong token",
+      "schema": "error",
+      "request": { "method": "GET", "path": "/v1/programs" },
+      "response": { "status": 401, "body": { "error": { "code": "E_AUTH", "message": "Send the local token: Authorization: Bearer <local token>." } } }
+    },
+    {
+      "name": "a program that is not there",
+      "schema": "error",
+      "request": { "method": "POST", "path": "/v1/runs", "body": { "program": "nope", "function": "start", "inputs": {} } },
+      "response": { "status": 404, "body": { "error": { "code": "E_PROGRAM_MISSING", "message": "This rrotor has no program nope.", "program": "nope" } } }
+    },
+    {
+      "name": "a manifest refused",
+      "schema": "error",
+      "request": { "method": "POST", "path": "/v1/programs/deploy", "body": { "bundle": "<a git bundle, base64>", "commit": "5b3e2f1a0d9c8b7a6e5f4d3c2b1a0f9e8d7c6b5a" } },
+      "response": { "status": 422, "body": { "error": { "code": "E_MANIFEST", "message": "glyphh.json is refused: functions: functions names at least one function" } } }
+    },
+    {
+      "name": "arguments a CLI does not allow",
+      "schema": "error",
+      "request": { "method": "POST", "path": "/v1/clis/github/run", "body": { "args": ["auth", "token"] } },
+      "response": { "status": 403, "body": { "error": { "code": "E_CLI_DENIED", "message": "github does not allow `auth token`: its allow patterns are pr *, issue *, repo view *, api repos/*." } } }
+    },
+    {
+      "name": "a run that is not waiting",
+      "schema": "error",
+      "request": { "method": "POST", "path": "/v1/runs/6f0e3c1a-2b4d-4e8f-9a1b-3c5d7e9f1a2b/continue", "body": { "answer": { "approved": true } } },
+      "response": { "status": 409, "body": { "error": { "code": "E_RUN_STATE", "message": "This run is not waiting for an answer.", "run_status": "done" } } }
+    },
+    {
+      "name": "a schedule that is not there",
+      "schema": "error",
+      "request": { "method": "POST", "path": "/v1/schedules/daily_sales/nightly/pause", "body": {} },
+      "response": { "status": 404, "body": { "error": { "code": "E_SCHEDULE_MISSING", "message": "daily_sales has no schedule nightly.", "schedule": "daily_sales/nightly" } } }
+    },
+    {
+      "name": "a licence on a self-hosted rrotor",
+      "schema": "error",
+      "request": { "method": "PUT", "path": "/v1/licence", "body": "<a licence key>" },
+      "response": { "status": 403, "body": { "error": { "code": "E_LOCAL_ONLY", "message": "A self runtime takes its link token, parts and licence from its environment, its image and Glyphh, not over the API." } } }
+    },
+    {
+      "name": "a secret set on a follower",
+      "schema": "error",
+      "request": { "method": "PUT", "path": "/v1/programs/github/secrets/GH_TOKEN", "body": { "value": "<the value>" } },
+      "response": { "status": 503, "body": { "error": { "code": "E_NOT_HEAD", "message": "Secrets are set on the cluster's head (rrotor-0), which keeps them; this node is a follower.", "head": "rrotor-0" } } }
+    }
+  ]
+}
