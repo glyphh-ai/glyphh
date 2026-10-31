@@ -1,8 +1,10 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.4.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill and the file ledger. Ada Cloud is
-Ada as an API that Glyphh runs: nothing to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a
-server that speaks a newer one is said plainly in the panel and by the skill, with how to update the plugin.
+The Glyphh plugin for Claude Code, 1.5.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill, rrotor
+(your local runtime for programs and CLIs) and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing
+to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said
+plainly in the panel and by the skill, with how to update the plugin. rrotor is the other way round: a container you
+run on your own machine, which hosts your programs and CLIs in a sandbox; Glyphh only grants it a licence.
 
 ```
 /plugin marketplace add glyphh-ai/glyphh
@@ -15,9 +17,12 @@ server that speaks a newer one is said plainly in the panel and by the skill, wi
 | The sign-in card (MCP server, `.mcp.json`) | Ask Claude *"sign in to Glyphh"* |
 | Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, added once in Claude's Connectors). It says which Ada version a model runs, offers a newer stable with a backtest first (`ada_backtest` with `ada`, then `ada_upgrade` only when you agree, and how to roll back), explains betas, and warns of deprecations |
 | The glyphh command (a skill, [`skills/glyphh-cli/SKILL.md`](skills/glyphh-cli/SKILL.md)) | The same Ada work through the shell: `glyphh` from `pip install glyphh`, JSON out, on an API key (`glyphh login` keeps one for the machine, or `GLYPHH_API_KEY`) |
+| rrotor (a skill, [`skills/rrotor/SKILL.md`](skills/rrotor/SKILL.md), with `scripts/rrotor.sh`) | Ask Claude *"install rrotor"*: it finds Apple's `container`, OrbStack or Docker, pulls `ghcr.io/glyphh-ai/rrotor` at the version this release pins, runs it as `glyphh-rrotor` on `127.0.0.1:7777` only with the volume `glyphh-rrotor-data` at `/data`, keeps a local token in `~/.glyphh/rrotor/token` (0600; the container holds only its SHA-256), and adds rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Then Claude deploys, calls and schedules programs, asks you at each approval, keeps secrets on the runtime, and runs CLIs through rrotor's tools |
+| Programs and CLIs (a skill, [`skills/rrotor-programs/SKILL.md`](skills/rrotor-programs/SKILL.md)) | How Claude writes a program (`glyphh.json` and `program.py`: inputs, approvals, secrets, schedules, `ctx.db`, declared hosts) and a CLI's manifest (`"kind": "cli"`, a pinned install, allow and approval patterns) |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
 
-The skill, the card and the ledger work without the variable.
+The skills, the card and the ledger work without the variable. Programs are not Ada models: rrotor runs no Ada, and
+the Ada skills never touch rrotor.
 
 ## Commands
 
