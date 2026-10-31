@@ -1,0 +1,44 @@
+# rrotor on your own computer: the local runtime that hosts your programs and CLIs, its API on 127.0.0.1 only, for
+# Claude Code on this machine. The glyphh plugin's rrotor skill does the same from Claude (and makes the token for
+# you); this file is the same container by hand. Use one or the other: both are the container glyphh-rrotor on the
+# volume glyphh-rrotor-data.
+#
+#   mkdir -p ~/.glyphh/rrotor && (umask 077; openssl rand -hex 32 > ~/.glyphh/rrotor/token)
+#   export RROTOR_LOCAL_TOKEN_SHA256="$(tr -d ' \n' < ~/.glyphh/rrotor/token | shasum -a 256 | cut -d' ' -f1)"
+#   docker compose -f docker-compose.local.yml up -d
+#   claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp \
+#     --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"
+#
+# rrotor holds only the token's SHA-256; the token stays in your file. No licence is needed: without one rrotor runs as
+# Community, and nothing a licence does refuses a run.
+name: glyphh-rrotor
+
+services:
+  rrotor:
+    image: ghcr.io/glyphh-ai/rrotor:${RROTOR_VERSION:-0.1.0}
+    container_name: glyphh-rrotor
+    restart: unless-stopped
+    environment:
+      RROTOR_MODE: local
+      RROTOR_DATA: /data
+      RROTOR_SERVER: ${RROTOR_SERVER:-https://api.glyphh.ai}
+      RROTOR_HOST_PORT: ${RROTOR_PORT:-7777}
+      RROTOR_LOCAL_TOKEN_SHA256: ${RROTOR_LOCAL_TOKEN_SHA256:?the SHA-256 of your local token (see the top of this file)}
+    # The program sandbox (bubblewrap) makes namespaces and mounts /proc, which Docker's default seccomp profile,
+    # AppArmor profile and masked paths refuse. rrotor's own seccomp filter and Landlock hold each run instead.
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+      - systempaths=unconfined
+    read_only: true
+    tmpfs:
+      - /tmp:exec,mode=1777
+    volumes:
+      - rrotor-data:/data
+    # This machine's loopback only: rrotor refuses any other Host, and any web page's Origin.
+    ports:
+      - "127.0.0.1:${RROTOR_PORT:-7777}:7777"
+
+volumes:
+  rrotor-data:
+    name: glyphh-rrotor-data

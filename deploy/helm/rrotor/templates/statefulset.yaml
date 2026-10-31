@@ -1,0 +1,244 @@
+# One rrotor: one replica, one writer of /data; a second replica outside a cluster would be a second runtime. With
+# cluster.enabled, `replicas` nodes of one runtime, each with its own /data, started together (Parallel): the head
+# is the only writer and ships what it writes to the others (https://docs.glyphh.ai/helm, "A cluster").
+{{- if and (eq (toString .Values.serverLogs) "on") (eq (toString .Values.link) "off") }}
+{{- fail "serverLogs \"on\" needs the link: an air-gapped rrotor (link \"off\") sends nothing to Glyphh" }}
+{{- end }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rrotor.fullname" . }}
+  labels:
+    {{- include "rrotor.labels" . | nindent 4 }}
+spec:
+  replicas: {{ include "rrotor.replicas" . }}
+  serviceName: {{ include "rrotor.headless" . }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "rrotor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rrotor.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if not .Values.existingSecret }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "rrotor.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      hostUsers: {{ .Values.hostUsers }}
+      terminationGracePeriodSeconds: 60
+      {{- with .Values.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: rrotor
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 7777
+              protocol: TCP
+            {{- if .Values.cluster.enabled }}
+            - name: cluster
+              containerPort: {{ .Values.cluster.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            - name: RROTOR_MODE
+              value: self
+            - name: RROTOR_SERVER
+              value: {{ .Values.server | quote }}
+            - name: RROTOR_PUBLIC_HOST
+              value: {{ include "rrotor.publicHost" . | quote }}
+            - name: RROTOR_LINK
+              value: {{ .Values.link | quote }}
+            - name: RROTOR_DATA
+              value: /data
+            - name: RROTOR_RUNTIME_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.secretName" . }}
+                  key: RROTOR_RUNTIME_ID
+            - name: RROTOR_RUNTIME_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.secretName" . }}
+                  key: RROTOR_RUNTIME_TOKEN
+            - name: GLYPHH_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.secretName" . }}
+                  key: GLYPHH_LICENSE_KEY
+                  optional: true
+            - name: RROTOR_LICENCE  # an earlier release's name, in a Secret made outside the chart
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.secretName" . }}
+                  key: RROTOR_LICENCE
+                  optional: true
+            {{- with .Values.runtime.keysSha256 }}
+            - name: RROTOR_KEYS_SHA256
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: RROTOR_SERVER_LOGS
+              value: {{ .Values.serverLogs | quote }}
+            - name: RROTOR_AUDIT_RETENTION_DAYS
+              value: {{ .Values.audit.retentionDays | quote }}
+            - name: RROTOR_AUDIT_MAX_MB
+              value: {{ .Values.audit.maxMb | quote }}
+            - name: RROTOR_DRAIN_SIGNALS
+              value: {{ .Values.drain.signals | quote }}
+            - name: RROTOR_DRAIN_BUFFER
+              value: {{ .Values.drain.buffer | quote }}
+            - name: RROTOR_DRAIN_AT
+              value: {{ .Values.drain.at | quote }}
+            - name: RROTOR_LOG_PAYLOADS
+              value: {{ .Values.drain.payloads | quote }}
+            {{- with .Values.drain.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.secretName" . }}
+                  key: OTEL_EXPORTER_OTLP_HEADERS
+                  optional: true
+            {{- with .Values.drain.resourceAttributes }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.drain.serviceName }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.drain.tracesSampler }}
+            - name: OTEL_TRACES_SAMPLER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.drain.tracesSamplerArg }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.cluster.enabled }}
+            {{- $dns := printf "%s.%s.svc.%s" (include "rrotor.headless" .) .Release.Namespace .Values.cluster.clusterDomain }}
+            - name: RROTOR_CLUSTER
+              value: "on"
+            - name: RROTOR_NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: RROTOR_CLUSTER_DNS
+              value: {{ $dns | quote }}
+            - name: RROTOR_CLUSTER_PORT
+              value: {{ .Values.cluster.port | quote }}
+            - name: RROTOR_CLUSTER_ADVERTISE  # the pod's own name under the headless Service
+              value: "$(RROTOR_NODE_ID).{{ $dns }}:{{ .Values.cluster.port }}"
+            - name: RROTOR_CLUSTER_HEAD
+              value: {{ .Values.cluster.head | default (printf "%s-0" (include "rrotor.fullname" .)) | quote }}
+            - name: RROTOR_CLUSTER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.clusterSecretName" . }}
+                  key: RROTOR_CLUSTER_SECRET
+            - name: RROTOR_CLUSTER_SECRET_PREVIOUS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rrotor.clusterSecretName" . }}
+                  key: RROTOR_CLUSTER_SECRET_PREVIOUS
+                  optional: true
+            {{- with .Values.cluster.evictAfter }}
+            - name: RROTOR_CLUSTER_EVICT_AFTER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.cluster.logKeep }}
+            - name: RROTOR_CLUSTER_LOG_KEEP
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- include "rrotor.resources" . | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # The runs' scratch space: the root filesystem is read-only.
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if and .Values.cluster.enabled .Values.cluster.antiAffinity }}
+      # The nodes on different machines and, where there are zones, in different zones.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "rrotor.selectorLabels" . | nindent 20 }}
+            - weight: 50
+              podAffinityTerm:
+                topologyKey: topology.kubernetes.io/zone
+                labelSelector:
+                  matchLabels:
+                    {{- include "rrotor.selectorLabels" . | nindent 20 }}
+      {{- end }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "rrotor.selectorLabels" . | nindent 10 }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ include "rrotor.diskSize" . }}
