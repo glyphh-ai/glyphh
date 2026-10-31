@@ -1,9 +1,9 @@
 """One runtime's link, from its token to its close.
 
 The link is accepted, then refused with a close and its reason when the token is not good (4401). The first message
-must be `hello` (ops/link/hello.py): another protocol is closed 4426, anything else 4400. Then the Cloud answers
+must be `hello` (ops/link/hello.py): another protocol is closed 4426, anything else 4400. Then the server answers
 `welcome`, the runtime is online, and three things run until one ends: reading the rrotor's messages, a ping every 20
-seconds (nothing heard for three closes it, 4408), and the hub's relay of what other processes send it. An
+seconds (nothing heard for three closes it, 4408), and the hub's relay of what other processes send it (`keys`). An
 unreadable message is logged and skipped; one that cannot be recorded closes the link (1011) and is not acked, so the
 rrotor replays it after it reconnects."""
 
@@ -14,8 +14,7 @@ from functools import partial
 import anyio
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.websockets import WebSocket
 
 from glyphh_server.db import tenancy
@@ -33,16 +32,12 @@ from glyphh_server.ops.link.protocol import (
     REFUSED,
     SILENT,
     Ack,
-    Deployed,
-    Event,
     Inbound,
     Ping,
     Pong,
-    Result,
     Usage,
     Welcome,
 )
-from glyphh_server.ops.routines import Routines
 from glyphh_server.ops.runtime_keys import hashes_for
 
 log = logging.getLogger("glyphh.link")
@@ -54,11 +49,8 @@ MISSED: int = 3
 @dataclass(frozen=True, slots=True)
 class Context:
     engine: AsyncEngine
-    redis: Redis
     hub: Hub
-    routines: Routines
-    secrets_key: bytes | None
-    signing_key: Ed25519PrivateKey | None = None  # signs the licence a hosted or self-hosted runtime's welcome carries
+    signing_key: Ed25519PrivateKey | None = None  # signs the licence a self-hosted runtime's welcome carries
 
 
 @dataclass(slots=True)
@@ -109,17 +101,15 @@ async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
 
 async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
     """Every runtime's welcome carries the org's newest licence key (null: none). A local runtime's has no licence
-    (its mod hands one in); a hosted one's carries its keys and its licence, the plan's precedents per node its cap; a
-    self-hosted one's the same with its precedents unlimited and the licence's grace."""
+    (its mod hands one in); a self-hosted one's carries its runtime keys and its licence, with the licence's grace."""
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         license_key = await license_keys.newest(conn, runtime.org_id)
         if runtime.mode == "local":
             return Welcome(license_key=license_key)
-        hosted = runtime.mode == "hosted"
-        stamp = Stamp(runtime.id, LINK, None if hosted else GRACE_DAYS, hosted=hosted)
         keys, licence = await hashes_for(conn, runtime.id), None
         if ctx.signing_key is not None:
+            stamp = Stamp(runtime.id, LINK, GRACE_DAYS)
             licence = await sign_license(conn, ctx.signing_key, runtime.user_id, runtime.org_id, None, stamp)
     return Welcome(licence=licence, license_key=license_key, keys=keys)
 
@@ -151,33 +141,27 @@ async def _read(ctx: Context, runtime: Runtime, link: Link, clock: Clock) -> Non
 
 
 async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -> bool:
-    """Answer or record one message; False once the link is closed because it could not be recorded."""
+    """Answer or record one message; False once the link is closed because it could not be recorded. A result, an
+    event or a deployed (Passed) is acked and kept nowhere."""
     if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
             await link.send(Pong().model_dump())
         return True
-    try:
-        async with ctx.engine.begin() as conn:
-            await tenancy.enter(conn, runtime.org_id)
-            await _record(conn, ctx, runtime, message)
-    except Exception:
-        log.exception("message not recorded", extra=fields(runtime=str(runtime.id), type=message.type))
-        await link.close(FAILED, "That message could not be recorded. Reconnect and replay it.")
-        return False
+    if isinstance(message, Usage):
+        try:
+            await _record(ctx, runtime, message)
+        except Exception:
+            log.exception("message not recorded", extra=fields(runtime=str(runtime.id), type=message.type))
+            await link.close(FAILED, "That message could not be recorded. Reconnect and replay it.")
+            return False
     await link.send(Ack(of=message.id).model_dump())
     return True
 
 
-async def _record(
-    conn: AsyncConnection, ctx: Context, runtime: Runtime, message: Result | Deployed | Event | Usage
-) -> None:
-    if isinstance(message, Deployed):
-        await inbound.apply_deployed(conn, runtime, message)
-    elif not await inbound.first_time(conn, runtime, message.seq):
-        log.info("replay skipped", extra=fields(runtime=str(runtime.id), seq=message.seq))
-    elif isinstance(message, Result):
-        await inbound.apply_result(conn, ctx.redis, runtime, message)
-    elif isinstance(message, Usage):
-        await reports.apply_usage(conn, runtime, message)
-    else:
-        await inbound.apply_event(conn, ctx.routines, ctx.secrets_key, runtime, message)
+async def _record(ctx: Context, runtime: Runtime, message: Usage) -> None:
+    async with ctx.engine.begin() as conn:
+        await tenancy.enter(conn, runtime.org_id)
+        if await inbound.first_time(conn, runtime, message.seq):
+            await reports.apply_usage(conn, runtime, message)
+        else:
+            log.info("replay skipped", extra=fields(runtime=str(runtime.id), seq=message.seq))

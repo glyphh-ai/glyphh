@@ -12,7 +12,7 @@ from glyphh_ada.usage import CloudUsage
 from glyphh_server.models import Identity, Org, User
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import PlanView
-from glyphh_server.ops.usage import Hosting, Precedents, usage
+from glyphh_server.ops.usage import Precedents, usage
 
 
 class MeOrg(BaseModel):
@@ -32,7 +32,6 @@ class Me(BaseModel):
     org: MeOrg
     plan: PlanView
     precedents: Precedents
-    hosting: Hosting
     ada_cloud: bool = Field(False, description="Ada Cloud is on (GLYPHH_ADA_CLOUD): the platform shows Ada")
     cloud: CloudUsage | None = Field(None, description="Ada Cloud's precedents and reads; null while it is off")
     staff: bool = Field(
@@ -58,7 +57,6 @@ async def me(conn: AsyncConnection, who: Principal, cloud: Redis | None = None) 
         org=MeOrg(**org._mapping),
         plan=used.plan,
         precedents=used.precedents,
-        hosting=used.hosting,
         ada_cloud=cloud is not None,
         cloud=used.cloud,
     )

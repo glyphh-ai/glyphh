@@ -59,14 +59,12 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         "GLYPHH_STRIPE_PRICE_BASIC": "price_1",
         "GLYPHH_STRIPE_PRICE_PRO": "price_2",
         "GLYPHH_STRIPE_PRICE_TEAM": "price_3",
-        "GLYPHH_STRIPE_PRICE_HOSTING": "price_4",
-        "GLYPHH_STRIPE_METER_HOSTING": "glyphh_hosting",
-        "GLYPHH_STRIPE_PRICE_ADA": "price_5",
+        "GLYPHH_STRIPE_PRICE_ADA": "price_4",
         "GLYPHH_STRIPE_METER_ADA": "ada_requests",
     }
-    products = {"glyphh_basic", "glyphh_pro", "glyphh_team", "glyphh_hosting", "glyphh_ada_requests"}
+    products = {"glyphh_basic", "glyphh_pro", "glyphh_team", "glyphh_ada_requests"}
     assert account.products == products
-    basic, pro, team, hosting, reads = account.prices
+    basic, pro, team, reads = account.prices
     assert (basic["unit_amount"], basic["product"], basic["lookup_key"]) == (
         "2000",
         "glyphh_basic",
@@ -83,14 +81,10 @@ def test_it_makes_everything_once_and_finds_it_again() -> None:
         "glyphh_pro_month_9900",
     )
     assert (team["unit_amount"], team["product"], team["currency"]) == ("29900", "glyphh_team", "usd")
-    assert (hosting["unit_amount"], hosting["recurring[usage_type]"], hosting["recurring[meter]"]) == (
-        "1",
-        "metered",
-        "mtr_1",
-    )
-    meter, ada = account.meters
-    assert (ada["event_name"], ada["display_name"]) == ("ada_requests", "Ada Cloud reads")
-    assert (meter["event_name"], meter["default_aggregation[formula]"]) == ("glyphh_hosting", "sum")
+    assert reads["recurring[meter]"] == "mtr_1"
+    (meter,) = account.meters
+    assert (meter["event_name"], meter["display_name"]) == ("ada_requests", "Ada Cloud reads")
+    assert meter["default_aggregation[formula]"] == "sum"
     assert (meter["customer_mapping[event_payload_key]"], meter["value_settings[event_payload_key]"]) == (
         "stripe_customer_id",
         "value",
@@ -110,5 +104,5 @@ def test_it_needs_a_key_and_prints_the_settings(
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_setup")
     runpy.run_path(str(SCRIPT), run_name="__main__")
     out = capsys.readouterr().out
-    assert "GLYPHH_STRIPE_PRICE_BASIC=price_1\n" in out and "GLYPHH_STRIPE_METER_HOSTING=glyphh_hosting\n" in out
+    assert "GLYPHH_STRIPE_PRICE_BASIC=price_1\n" in out and "GLYPHH_STRIPE_METER_ADA=ada_requests\n" in out
     assert "fly secrets set GLYPHH_STRIPE_PRICE_BASIC=price_1 GLYPHH_STRIPE_PRICE_PRO=price_2" in out

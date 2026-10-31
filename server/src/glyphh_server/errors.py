@@ -52,8 +52,8 @@ class UnsupportedMedia(GlyphhError):
 
 
 class LimitReached(GlyphhError):
-    """The plan allows no more hosted machines. The detail names the limit, what is used, the most allowed, and the
-    plan that would lift it."""
+    """A plan's limit is reached (Ada Cloud's precedents or reads). The detail names the limit, what is used and the
+    most allowed."""
 
     code = "E_LIMIT"
     status = 403

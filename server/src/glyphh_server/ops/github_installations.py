@@ -1,6 +1,6 @@
 """The Glyphh GitHub App on a person's own GitHub account. Installing it goes through the browser; the installation
 GitHub sends back is recorded only when GitHub says it is on the GitHub account the person signs in with, so nobody
-can record someone else's. From it the Cloud mints a short-lived token for one of the person's repos per deploy."""
+can record someone else's. From it the server can mint a short-lived token for one of the person's repos."""
 
 import uuid
 from datetime import datetime

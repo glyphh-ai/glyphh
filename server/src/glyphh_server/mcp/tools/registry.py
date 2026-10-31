@@ -20,8 +20,6 @@ from glyphh_server.mcp.tools import (
     ada_releases,
     billing,
     grants,
-    logs,
-    machines,
     people,
     runtime,
     self_hosted,
@@ -42,9 +40,7 @@ TOOLS: dict[str, Tool] = {
         *people.TOOLS,
         *grants.TOOLS,
         *runtime.TOOLS,
-        *machines.TOOLS,
         *self_hosted.TOOLS,
-        *logs.TOOLS,
     )
 }
 

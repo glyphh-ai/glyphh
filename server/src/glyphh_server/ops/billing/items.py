@@ -1,5 +1,5 @@
-"""A Stripe subscription's items as Glyphh sells them: the plan's flat item (its price a plan version's) and the
-metered hosting item (passed over: the meter, not the item, says what it charges)."""
+"""A Stripe subscription's items as Glyphh sells them: the plan's flat item (its price a plan version's) and a metered
+item, Ada Cloud's reads (passed over: the meter, not the item, says what it charges)."""
 
 import logging
 import uuid

@@ -16,7 +16,7 @@ async def check_resource(conn: AsyncConnection, settings: Settings, form: dict[s
     if "resource" not in form:
         return
     own = (canonical(settings.mcp_resource), canonical(settings.base_url))
-    if canonical(form["resource"]) not in own and await runtime_resource(conn, settings, form["resource"]) is None:
+    if canonical(form["resource"]) not in own and await runtime_resource(conn, form["resource"]) is None:
         raise OAuthError("invalid_target", NOT_OURS)
 
 

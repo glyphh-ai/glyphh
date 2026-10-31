@@ -30,7 +30,7 @@ async def list_users(
 
 @router.get("/plans", operation_id="adminPlans")
 async def list_plans(staff: Staff) -> list[PlanRow]:
-    """Every plan's versions: prices, Stripe ids, limits, cloud caps, markup and the orgs on each."""
+    """Every plan's versions: prices, Stripe ids, limits, cloud caps and the orgs on each."""
     return await plans(staff.conn)
 
 

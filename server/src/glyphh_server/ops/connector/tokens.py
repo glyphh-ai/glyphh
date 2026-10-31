@@ -149,7 +149,7 @@ async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Pri
 
 
 async def introspect(conn: AsyncConnection, token: str, resource: str) -> Introspection:
-    """For a hosted runtime asking about a bearer it was shown: live for the runtime's own address, and whose."""
+    """For a self-hosted runtime asking about a bearer it was shown: live for the runtime's own address, and whose."""
     row = await _live(conn, token, resource)
     if row is None:
         return Introspection(active=False)

@@ -25,7 +25,7 @@ async def test_an_install_gets_its_local_runtime_and_a_new_token_each_time(
     made = first.json()
     row = await _runtime(engine, made["runtime_id"])
     assert (row.mode, row.install_id, row.user_id, row.state) == ("local", ada.install_id, ada.user_id, "stopped")
-    assert row.token_hash == hash_secret(made["token"]) and row.region is None and row.fly_machine_id is None
+    assert row.token_hash == hash_secret(made["token"]) and row.public_url is None and row.name is None
     again = (await client.post("/v1/runtime/local", headers=ada.headers)).json()
     assert again["runtime_id"] == made["runtime_id"] and again["token"] != made["token"]
     assert (await _runtime(engine, made["runtime_id"])).token_hash == hash_secret(again["token"])

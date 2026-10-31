@@ -1,6 +1,6 @@
 """Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
 (runtime nodes and precedents per node), its features, and with Ada Cloud on its cloud limits (precedents and reads
-a month per org, calls a second). The markup on Fly's rates is a version's own and is never shown."""
+a month per org, calls a second)."""
 
 import uuid
 from typing import Literal
@@ -16,8 +16,8 @@ from glyphh_server.models import Mod, Org, Plan, PlanVersion
 
 class Limits(BaseModel):
     machines: int | None = Field(
-        description="Runtime nodes, the org's together: every runtime node linked for it, hosted or self-hosted (only "
-        "hosted machines are refused past it; the rest are counted, never refused); null = unlimited"
+        description="Runtime nodes, the org's together: the licence key's max_nodes, enforced by rrotor; the server "
+        "counts the nodes it hears from and never refuses one; null = unlimited"
     )
     precedents: int | None = Field(
         description="Precedents per node, across all its Ada models: the licence key's max_precedents, enforced by "
@@ -63,11 +63,6 @@ class PlanView(BaseModel):
         BUILT,
         description="Which features work today, the same on every plan: never show one as included that is not built",
     )
-    markup_hidden: Literal[True] = Field(True, description="The hosted rates already carry the plan's markup")
-    hosting: bool = Field(
-        description="Glyphh hosts machines on it while hosting is on (GLYPHH_HOSTING): Pro, Team, Enterprise; never "
-        "Free or Basic, whose runtime node is self-hosted"
-    )
     cloud: CloudLimits | None = Field(None, description="Ada Cloud's limits; null while Ada Cloud is off")
 
 
@@ -85,7 +80,6 @@ COLUMNS = (
     PlanVersion.ha,
     PlanVersion.offline,
     PlanVersion.sso,
-    PlanVersion.hosting_markup_pct,
     PlanVersion.cloud_precedents,
     PlanVersion.cloud_requests,
     PlanVersion.cloud_rps,
@@ -112,11 +106,6 @@ def cloud_limits(row: Row) -> CloudLimits:
     )
 
 
-def hosts(row: Row) -> bool:
-    """Whether Glyphh hosts machines on this version: a markup on Fly's rates, or a contract's (an org's own)."""
-    return not row.self_serve or row.hosting_markup_pct is not None
-
-
 def view(row: Row, cloud: bool = False) -> PlanView:
     """A version as callers see it; its cloud limits only with Ada Cloud on."""
     return PlanView(
@@ -127,7 +116,6 @@ def view(row: Row, cloud: bool = False) -> PlanView:
         self_serve=row.self_serve,
         limits=Limits(machines=row.max_machines, precedents=row.precedents),
         features=features(row),
-        hosting=hosts(row),
         cloud=cloud_limits(row) if cloud else None,
     )
 

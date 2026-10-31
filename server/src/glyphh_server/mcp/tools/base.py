@@ -33,7 +33,7 @@ class Context:
 
     def stripe(self) -> StripeClient:
         cfg = self.settings
-        return StripeClient(self.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada)
+        return StripeClient(self.http, cfg.stripe_secret_key, cfg.stripe_meter_ada)
 
 
 @dataclass(frozen=True, slots=True)

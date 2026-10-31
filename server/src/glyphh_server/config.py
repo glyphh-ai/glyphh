@@ -103,39 +103,14 @@ class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
     stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
-    # Hosting, metered: the price on the Billing Meter (a unit is a US cent), second on every paid subscription, and the
-    # meter's event name (glyphh_hosting). Without the price, Checkout answers E_UNAVAILABLE; without the name, nothing
-    # is reported to the meter. scripts/stripe-setup.py makes them and prints these.
-    stripe_price_hosting: str | None = None
-    stripe_meter_hosting: str = ""
     # The Glyphh GitHub App: its id, its private key (PEM) and its slug (its install page is under the slug).
     github_app_id: str = ""
     github_app_private_key: str = ""
     github_app_slug: str = ""
-    # Encrypts routine trigger tokens at rest (AES-256-GCM): base64 of 32 random bytes.
-    secrets_key: str = ""
     # Where an invite's link points; the token rides its query. Defaults to {public_url}/join.
     invite_url: str = ""
     # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
     mcp_origins: str = "https://claude.ai,https://claude.com"
-    # Glyphh's managed cloud, the hosted runtimes on Fly: off by default (GLYPHH_HOSTING=on brings it back). Off, no
-    # machine is made, started or restarted, the tick meters and stops nothing, Checkout sells no hosting, /v1/rates is
-    # E_UNAVAILABLE hosting_off and /v1/plans shows no hosted machines; machines already made can still be stopped and
-    # deleted. The code stays.
-    hosting: bool = False
-    # Hosted runtimes on Fly: the deploy token, the one app the machines live in, their region, the hosted rrotor
-    # image (private: carries the Ada part). Without all three of the token, the app and the image, hosting is off.
-    fly_api_token: str = ""
-    fly_app: str = ""
-    fly_region: str = "iad"
-    fly_image: str = ""
-    # The runtimes' public addresses: <machine>.<domain>, a wildcard certificate and DNS record on the app.
-    fly_public_domain: str = "glyphh.app"
-    # A hosted runtime with no run for this long is stopped; a call starts it again.
-    runtime_idle_minutes: int = 10
-    # Server-side logging (rrotor's RROTOR_SERVER_LOGS=on): days a runtime's logs, audit events, metric points and
-    # spans are kept before the minute tick purges them. One for every plan.
-    telemetry_retention_days: int = Field(7, ge=1, le=90)
 
     @field_validator("database_url")
     @classmethod
@@ -161,15 +136,6 @@ class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
     @property
     def github_app_install_url(self) -> str:
         return f"https://github.com/apps/{self.github_app_slug}/installations/new"
-
-    @property
-    def fly_configured(self) -> bool:
-        return bool(self.fly_api_token and self.fly_app and self.fly_image)
-
-    @property
-    def hosting_on(self) -> bool:
-        """Hosting switched on and Fly set up: the server makes, starts, wakes, meters and stops machines."""
-        return self.hosting and self.fly_configured
 
     @property
     def mcp_resource(self) -> str:

@@ -1,5 +1,5 @@
-"""A rrotor on the link, for the tests: runtimes and models made straight in the database, a server reached by a
-real WebSocket in-process, a hello said, and a process holding a runtime's link stood in for on its Redis channel."""
+"""A rrotor on the link, for the tests: runtimes made straight in the database, a server reached by a real WebSocket
+in-process, a hello said, and a process holding a runtime's link stood in for on its Redis channel."""
 
 import json
 import uuid
@@ -19,18 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.app import create_app
 from glyphh_server.db import tenancy
-from glyphh_server.models import Deployment, Model, ModelVersion, Rrotor
+from glyphh_server.models import Rrotor
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.secrets import hash_secret, make_secret
 from glyphh_server.ops.link.hub import channel
 from glyphh_server.ops.runtimes import issue_local
 from tests.conftest import PROVIDER_SETTINGS
 from tests.db.helpers import Person
-from tests.fakes import FakeGitHubApp, FakeRoutines, fake_http
+from tests.fakes import fake_http
 
 WAIT: float = 5.0
-SHA: str = "0123456789abcdef0123456789abcdef01234567"
-SHA2: str = "89abcdef0123456789abcdef0123456789abcdef"
 
 
 @dataclass(frozen=True)
@@ -57,15 +55,6 @@ async def local_runtime(engine: AsyncEngine, who: Person) -> Rt:
     return Rt(made.runtime_id, made.token, "local")
 
 
-async def hosted_runtime(engine: AsyncEngine, who: Person, name: str = "default", size: str = "small") -> Rt:
-    token = make_secret()
-    async with engine.begin() as conn:
-        values = {"user_id": who.user_id, "mode": "hosted", "state": "stopped", "token_hash": hash_secret(token)}
-        values |= {"name": name, "size": size}
-        runtime_id = (await conn.execute(insert(Rrotor).values(values).returning(Rrotor.id))).scalar_one()
-    return Rt(runtime_id, token, "hosted")
-
-
 async def self_runtime(engine: AsyncEngine, who: Person, public_url: str = "https://rrotor.acme.test") -> Rt:
     token = make_secret()
     async with engine.begin() as conn:
@@ -75,36 +64,15 @@ async def self_runtime(engine: AsyncEngine, who: Person, public_url: str = "http
     return Rt(runtime_id, token, "self")
 
 
-async def a_model(
-    engine: AsyncEngine, who: Person, name: str = "daily_sales", repo: str | None = None
-) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
-    """A model with two versions (two commits); answers the model's id and the two versions' ids."""
-    async with engine.begin() as conn:
-        values = {"user_id": who.user_id, "org_id": who.org_id, "name": name, "repo": repo}
-        model_id = (await conn.execute(insert(Model).values(values).returning(Model.id))).scalar_one()
-        ids = []
-        for version, sha in ((1, SHA), (2, SHA2)):
-            values = {"model_id": model_id, "version": version, "commit_sha": sha, "manifest": {}}
-            ids.append((await conn.execute(insert(ModelVersion).values(values).returning(ModelVersion.id))).scalar())
-    return model_id, ids[0], ids[1]
-
-
-async def deploy(engine: AsyncEngine, runtime_id: uuid.UUID, version_id: uuid.UUID, active: bool = True) -> None:
-    async with engine.begin() as conn:
-        await conn.execute(insert(Deployment).values(rrotor_id=runtime_id, model_version_id=version_id, active=active))
-
-
 async def runtime_row(engine: AsyncEngine, runtime_id: uuid.UUID):  # type: ignore[no-untyped-def]
     async with engine.connect() as conn:
         return (await conn.execute(select(Rrotor).where(Rrotor.id == runtime_id))).one()
 
 
 @asynccontextmanager
-async def server(
-    routines: FakeRoutines | None = None, github_app: FakeGitHubApp | None = None
-) -> AsyncIterator[Server]:
+async def server() -> AsyncIterator[Server]:
     """One server process: its own app, hub and Redis client, on the one Redis and database."""
-    app = create_app(PROVIDER_SETTINGS, http=fake_http(routines=routines, github_app=github_app))
+    app = create_app(PROVIDER_SETTINGS, http=fake_http())
     async with LifespanManager(app):
         transport = ASGIWebSocketTransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
@@ -112,7 +80,7 @@ async def server(
 
 
 def hello(rt: Rt, **over: Any) -> dict[str, Any]:
-    said = {"type": "hello", "id": "h1", "protocol": 1, "version": "1.2.3", "mode": rt.mode, "runtime_id": str(rt.id)}
+    said = {"type": "hello", "id": "h1", "protocol": 2, "version": "1.2.3", "mode": rt.mode, "runtime_id": str(rt.id)}
     return {**said, "deployed": [], **over}
 
 

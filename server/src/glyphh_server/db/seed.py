@@ -63,7 +63,6 @@ class PlanSeed:
     max_machines: int | None
     precedents: int | None
     features: Features
-    hosting_markup_pct: int | None
     cloud: Cloud = Cloud()
 
 
@@ -76,10 +75,8 @@ SALES: str = "sales@glyphh.ai"
 # Never per seat, per model or per install: a plan sells runtime nodes (max_machines: Free 1, Pro 3, Team 10, Enterprise
 # unlimited; Chris, 2026-10-19), precedents and sync. `precedents` is per node, across all the node's Ada models:
 # the licence key's max_precedents (Free 5,000, Pro 50,000, Team 500,000, Enterprise unlimited; rrotor's
-# docs/specs/licensing.md). It was the managed bucket (Pro 100,000, Team 1,000,000), what the hosted runtimes held
-# together. `sync` is the key's cluster_sync_enabled. Enterprise is by contract, its price and its markup each
-# customer's own (the org's markup_pct, ops/enterprise.py). TBD (Chris): Team's 500,000 precedents, and the markups
-# on Fly's rates, are placeholders until set.
+# docs/specs/licensing.md). `sync` is the key's cluster_sync_enabled. Enterprise is by contract, its price each
+# customer's own (ops/enterprise.py). TBD (Chris): Team's 500,000 precedents is a placeholder until set.
 # Ada Cloud (Chris, 2026-10-21, decision 3): precedents per org and reads a month, never seats, models or keys: Free
 # 1,000 and 5,000 (refused past them; lowered from 5,000 and 10,000 by Chris, 2026-10-22), Pro 100,000 and
 # 1,000,000, Team 1,000,000 and 5,000,000 (each read past the month $1 per 10,000, metered); calls a second 5, 50,
@@ -89,15 +86,15 @@ SALES: str = "sales@glyphh.ai"
 # Basic (Chris, 2026-10-22), between Free and Pro: $20 a month for Ada Cloud, 10,000 precedents and 50,000 reads a
 # month, 10 calls a second, reads past the month metered like Pro's and Team's. No sync, HA, offline or SSO, and no
 # licence key (rrotor's tiers are free, pro, team and enterprise): a self-hosted node runs as on Free, one node and
-# 5,000 precedents; no hosting (no markup).
+# 5,000 precedents.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), None, Cloud(1_000, 5_000, 5)),
-    PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), None, Cloud(10_000, 50_000, 10, True)),
-    PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), 30, Cloud(100_000, 1_000_000, 50, True)),
+    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), Cloud(1_000, 5_000, 5)),
+    PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), Cloud(10_000, 50_000, 10, True)),
+    PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), Cloud(100_000, 1_000_000, 50, True)),
     PlanSeed(  # TBD: 500,000
-        "Team", 29_900, "month", True, 10, 500_000, Features(sync=True), 30, Cloud(1_000_000, 5_000_000, 200, True)
+        "Team", 29_900, "month", True, 10, 500_000, Features(sync=True), Cloud(1_000_000, 5_000_000, 200, True)
     ),
-    PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True), None),
+    PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True)),
 )
 
 
@@ -155,7 +152,6 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             self_serve=seed.self_serve,
             max_machines=seed.max_machines,
             precedents=seed.precedents,
-            hosting_markup_pct=seed.hosting_markup_pct,
             **asdict(seed.features),
             **asdict(seed.cloud),
         )
@@ -173,7 +169,6 @@ KEPT: tuple[str, ...] = (
     "ha",
     "offline",
     "sso",
-    "hosting_markup_pct",
 )
 
 

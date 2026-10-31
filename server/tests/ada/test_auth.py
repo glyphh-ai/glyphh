@@ -114,7 +114,8 @@ async def test_with_ada_cloud_off_no_host_reaches_it(engine: AsyncEngine) -> Non
     async for c in _client(app):
         c.base_url = httpx.URL("http://ada.glyphh.ai")
         assert (await c.post("/v1/decide", json={})).status_code == 404  # the account API's answer
-        assert (await c.get("/v1/models")).status_code == 401  # the account API's own models, signed in
+        assert (await c.get("/v1/models")).status_code == 404  # the account API has no models of its own
+        assert (await c.get("/v1/me")).status_code == 401  # the account API's own route, signed in
 
 
 async def test_the_ada_hosts_and_only_they_reach_it(engine: AsyncEngine, ada: httpx.AsyncClient) -> None:

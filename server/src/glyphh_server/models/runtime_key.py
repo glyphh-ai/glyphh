@@ -9,10 +9,9 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class RuntimeKey(Base):
-    """A key that calls one of the person's runtimes at its own address: the hosted machine or self-hosted runtime
-    it names, or, naming none, every hosted machine of theirs. Only its SHA-256 is kept; rrotor holds the
-    same and checks the bearer itself. A key may expire; an expired one leaves what rrotor holds. Revoking one keeps
-    the row (named in the list, dated) and drops its hash from what rrotor holds.
+    """A key that calls one of the person's self-hosted runtimes at its own address: the one it names. Only its
+    SHA-256 is kept; rrotor holds the same and checks the bearer itself. A key may expire; an expired one leaves what
+    rrotor holds. Revoking one keeps the row (named in the list, dated) and drops its hash from what rrotor holds.
 
     A key of scope `cloud` is an Ada Cloud API key instead (glyphh_ak_, glyphh_ada/keys.py): it calls the Ada API in
     its maker's org with its clearance (0 to 1), and is never sent to a runtime."""
