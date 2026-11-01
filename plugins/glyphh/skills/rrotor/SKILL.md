@@ -79,7 +79,15 @@ Once connected, rrotor's tools are `mcp__rrotor__*`:
 | `secrets_list {program}`, `secret_set {program, name, value}`, `secret_delete` | A program's secrets: names back, never a value |
 | `schedules_list`, `schedule_pause`, `schedule_resume` `{program, name}` | The schedules rrotor fires itself |
 | `clis_list`, `cli_run {cli, args, stdin?, files?}` | The CLIs; one command: exit code, stdout, stderr, or `needs_approval` |
+| `cli_login {cli}` | Signs a CLI in from the person's phone, into their own HOME on the rrotor (each signed-in person signs in as themselves; `clis_list` says `signed_in` for the caller) |
+| `apps_list` | The apps (pages published to this rrotor): name, title, version, roles, review state, Open URL |
+| `app_publish {name, title, description, roles?, files, entry?, functions?, program?, ...}` | A page as a new version of an app, awaiting review in the organisation's catalogue (the `publish` skill) |
 | `audit_query` | The audit log (Enterprise) |
+
+The organisation's catalogue of apps is the Glyphh connector's (`https://api.glyphh.ai/mcp`): `artifacts {q?, page?,
+state?}` lists them as cards (search, Open; a reviewer sees Awaiting review with Approve and Reject),
+`artifact_approve`, `artifact_reject {reason}` and `artifact_retire` act on one by id; `whoami` says whether the
+person is a reviewer (`reviewer`) and their groups.
 
 - **A folder on this machine** deploys with the script (the MCP tool takes a GitHub repo): commit first, then
   `sh "${CLAUDE_SKILL_DIR}/scripts/rrotor.sh" deploy /abs/path/to/program` (HEAD, or a commit after

@@ -1,0 +1,11 @@
+{
+  "name": "release_notes",
+  "kind": "app",
+  "description": "What changed in this release, as one page for the whole organisation",
+  "app": {
+    "entry": "index.html",
+    "title": "Release notes",
+    "roles": []
+  },
+  "limits": { "seconds": 30, "memory_mb": 128 }
+}

@@ -13,3 +13,7 @@ Call the `glyphh_sign_in` tool (from this plugin's `glyphh` MCP server). It take
 - If it fails (for example the Glyphh server cannot be reached), say so plainly. `/glyphh signin` is the other way in.
 
 Never ask the user for a password or token, and never call `glyphh_sign_in_status` yourself: it is the card's.
+
+Once signed in, the Glyphh connector's `whoami` says who they are: name, email, organisation and role, and now
+their `groups` (from the organisation's single sign-on, if any) and `reviewer` (whether they review the apps
+published to the organisation's rrotors: the `publish` skill).
