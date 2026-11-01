@@ -1,0 +1,34 @@
+{
+  "name": "launch_watch",
+  "description": "Each morning: glyphh's GitHub stars, new issues and PRs, PyPI and npm downloads, kept day by day and emailed as a summary by the signed-in claude CLI through the owner's Gmail connector",
+  "python": "3.13",
+  "functions": {
+    "morning": {
+      "description": "Take today's numbers, keep them, and email the summary through Claude's Gmail connector (asks first when called from Claude)",
+      "inputs": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Who gets the email" }
+        },
+        "required": ["to"],
+        "additionalProperties": false
+      },
+      "approvals": ["email"],
+      "writes": true
+    },
+    "history": {
+      "description": "The numbers kept so far, newest first",
+      "inputs": {
+        "type": "object",
+        "properties": { "days": { "type": "integer", "minimum": 1, "maximum": 365 } },
+        "additionalProperties": false
+      },
+      "writes": false
+    }
+  },
+  "hosts": ["api.github.com", "pypistats.org", "api.npmjs.org"],
+  "clis": ["claude"],
+  "databases": ["sqlite"],
+  "limits": { "seconds": 900, "memory_mb": 256 },
+  "schedules": [{ "function": "morning", "cron": "37 7 * * *", "tz": "America/Chicago", "input": { "to": "you@example.com" }, "name": "each_morning" }]
+}
