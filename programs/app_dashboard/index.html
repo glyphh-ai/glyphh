@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy failures</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 32px 24px; max-width: 760px; margin-inline: auto; font-family: system-ui, sans-serif; line-height: 1.5; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: GrayText; margin: 0 0 24px; }
+  .row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  input, button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, .5); background: transparent; color: inherit; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid rgba(128, 128, 128, .25); }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 4px; background: #d9534f; }
+  .note { color: GrayText; }
+</style>
+</head>
+<body>
+<h1>Deploy failures</h1>
+<p class="sub">Failed GitHub Actions runs by workflow, read as you each time the page loads.</p>
+<div class="row">
+  <label for="since">Since</label>
+  <input id="since" type="date">
+  <button id="refresh" type="button">Refresh</button>
+  <span id="status" class="note"></span>
+</div>
+<table aria-label="Failures by workflow">
+  <thead><tr><th>Workflow</th><th class="n">Failures</th><th></th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<script>
+  // The page's data comes from its own function on the rrotor, run as the viewer: never a connector, never a key.
+  const $ = (id) => document.getElementById(id);
+  const since = $("since");
+  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  since.value = weekAgo.toISOString().slice(0, 10);
+
+  async function load() {
+    $("status").textContent = "Loading…";
+    const res = await fetch("/apps/deploy_failures/call/failures", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ since: since.value }),
+    });
+    const result = await res.json();
+    if (result.status !== "done") {
+      $("status").textContent = `Could not load: ${result.data?.reason || result.status}`;
+      return;
+    }
+    const rows = result.data.by_workflow;
+    const most = Math.max(1, ...rows.map((r) => r.failures));
+    $("rows").replaceChildren(...rows.map((r) => {
+      const tr = document.createElement("tr");
+      const name = document.createElement("td"); name.textContent = r.workflow;
+      const n = document.createElement("td"); n.className = "n"; n.textContent = String(r.failures);
+      const cell = document.createElement("td");
+      const bar = document.createElement("div"); bar.className = "bar"; bar.style.width = `${Math.round((r.failures / most) * 100)}%`;
+      cell.append(bar);
+      tr.append(name, n, cell);
+      return tr;
+    }));
+    $("status").textContent = `${result.data.total} failed runs since ${result.data.since}`;
+  }
+  $("refresh").addEventListener("click", load);
+  load();
+</script>
+</body>
+</html>

@@ -2,6 +2,24 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.6.0 — 2026-11-01
+
+Pages published to the organisation. Nothing of the Ada skills, the account panel or the ledger changes.
+
+- A new skill, `publish`: *"publish this to my org"* takes the page Claude made in the session (a Claude Code
+  artifact, one `.html` or `.md` file), agrees its name, title, description and the roles that may open it,
+  rewrites any claude.ai connector call into a function of the app (`program.py`, called by the page at
+  `/apps/<name>/call/<function>` and run as the person viewing it) or leaves it out with a note, and publishes it
+  with the rrotor's new `app_publish` tool as an app (`"kind": "app"`), awaiting review in the organisation's
+  catalogue. It then says who reviews (the admin and the reviewer groups), gives the Open link, and offers
+  `artifact_approve` when the person is a reviewer.
+- The rrotor skill names the rrotor's `apps_list` and `app_publish`, `cli_login` (each person's CLIs signed in as
+  themselves), and the Glyphh connector's `artifacts` (the organisation's apps as cards: search, Open, and for a
+  reviewer Approve and Reject), `artifact_approve`, `artifact_reject` and `artifact_retire`; the sign-in skill, that
+  `whoami` now answers `groups` and `reviewer`.
+- Two example apps under `programs/`: `app_static` (a page with nothing behind it) and `app_dashboard` (a page with
+  one function, roles and a declared host, with tests).
+
 ## 1.5.0 — 2026-10-31
 
 rrotor, your local runtime, from Claude. Nothing of the Ada skills, the account panel or the ledger changes.

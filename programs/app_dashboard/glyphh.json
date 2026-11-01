@@ -1,0 +1,25 @@
+{
+  "name": "deploy_failures",
+  "kind": "app",
+  "description": "Last week's failed GitHub Actions runs by workflow, for the SRE group",
+  "python": "3.13",
+  "app": {
+    "entry": "index.html",
+    "title": "Deploy failures",
+    "roles": ["sre", "admin"],
+    "functions": ["failures"]
+  },
+  "functions": {
+    "failures": {
+      "description": "Failed workflow runs since a date, counted by workflow",
+      "inputs": {
+        "type": "object",
+        "properties": { "since": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } },
+        "additionalProperties": false
+      },
+      "writes": false
+    }
+  },
+  "hosts": ["api.github.com"],
+  "limits": { "seconds": 60, "memory_mb": 256 }
+}

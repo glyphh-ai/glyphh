@@ -1,7 +1,7 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.5.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill, rrotor
-(your local runtime for programs and CLIs) and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing
+The Glyphh plugin for Claude Code, 1.6.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill, rrotor
+(your local runtime for programs and CLIs), pages published to your organisation's rrotor, and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing
 to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said
 plainly in the panel and by the skill, with how to update the plugin. rrotor is the other way round: a container you
 run on your own machine, which hosts your programs and CLIs in a sandbox; Glyphh only grants it a licence.
@@ -19,6 +19,7 @@ run on your own machine, which hosts your programs and CLIs in a sandbox; Glyphh
 | The glyphh command (a skill, [`skills/glyphh-cli/SKILL.md`](skills/glyphh-cli/SKILL.md)) | The same Ada work through the shell: `glyphh` from `pip install glyphh`, JSON out, on an API key (`glyphh login` keeps one for the machine, or `GLYPHH_API_KEY`) |
 | rrotor (a skill, [`skills/rrotor/SKILL.md`](skills/rrotor/SKILL.md), with `scripts/rrotor.sh`) | Ask Claude *"install rrotor"*: it finds Apple's `container`, OrbStack or Docker, pulls `ghcr.io/glyphh-ai/rrotor` at the version this release pins, runs it as `glyphh-rrotor` on `127.0.0.1:7777` only with the volume `glyphh-rrotor-data` at `/data`, keeps a local token in `~/.glyphh/rrotor/token` (0600; the container holds only its SHA-256), and adds rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Then Claude deploys, calls and schedules programs, asks you at each approval, keeps secrets on the runtime, and runs CLIs through rrotor's tools |
 | Programs and CLIs (a skill, [`skills/rrotor-programs/SKILL.md`](skills/rrotor-programs/SKILL.md)) | How Claude writes a program (`glyphh.json` and `program.py`: inputs, approvals, secrets, schedules, `ctx.db`, declared hosts) and a CLI's manifest (`"kind": "cli"`, a pinned install, allow and approval patterns) |
+| Publish (a skill, [`skills/publish/SKILL.md`](skills/publish/SKILL.md)) | *"Publish this to my org"*: the page Claude made in the session (a Claude Code artifact) goes to your organisation's rrotor as an app (`"kind": "app"`, the rrotor's `app_publish`), any claude.ai connector call rewritten into a function the page calls as the viewer, and waits for a reviewer (your admin, or the reviewer groups set in Settings → Auth) in the organisation's catalogue: the platform's Artifacts page, or the connector's `artifacts` cards in Claude |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
 
 The skills, the card and the ledger work without the variable. Programs are not Ada models: rrotor runs no Ada, and
@@ -150,7 +151,7 @@ through the engine on both surfaces. `mcp/test` checks install.json's mode and a
 | `hooks/glyphh/command.ts`, `open.ts`, `openreq.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the card's open requests; the panel's note |
 | `mcp/src/` | The MCP server: `server.ts` (the tools and the card), `flow.ts` (the device flow), `install.ts` (install.json, the device id's probe) |
 | `mcp/card/` | `sign-in.html`, and `mcp-app.js`: `@modelcontextprotocol/ext-apps` 2.0.3's bridge, vendored |
-| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md` |
+| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md`, `rrotor/SKILL.md` (with `scripts/rrotor.sh`), `rrotor-programs/SKILL.md`, `publish/SKILL.md` |
 | `types/index.d.ts` | The account's types and the `$.state` contract |
 
 **`$` stays in its file.** The engine reads a module's source before running it and follows `$` only into functions

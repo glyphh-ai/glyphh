@@ -6,6 +6,12 @@ tests. Copy one, change it, and deploy it to your rrotor. More are on the way.
 | Program | What it does | Uses |
 |---|---|---|
 | [`launch_watch`](launch_watch) | Each morning, takes a project's GitHub stars, forks, new issues and PRs, and its PyPI and npm downloads. Keeps them day by day in its database and emails you the summary through Claude's Gmail connector | A schedule, an approval, SQLite, the built-in `claude` CLI |
+| [`app_static`](app_static) | A page published to the organisation (`"kind": "app"`): one `index.html`, served at `/apps/release_notes/` to everyone signed in, once a reviewer approves it | An app with nothing behind it |
+| [`app_dashboard`](app_dashboard) | A dashboard of failed GitHub Actions runs by workflow, for the `sre` group: the page calls its own function, run as the person viewing it | An app with a function, roles, a declared host |
+
+An **app** is a page Claude made (a Claude Code artifact) published to the organisation's own rrotor and reviewed
+before anyone opens it; the plugin's `publish` skill does it from the session (*"publish this to my org"*). Its
+manifest is a program's with `"kind": "app"` and an `app` block (`entry`, `title`, `roles`, `functions`).
 
 ## Deploy one
 
