@@ -26,7 +26,7 @@ export type Plan = {
   /** Bought here through Stripe's checkout; otherwise by talking to Glyphh. */
   self_serve: boolean;
   /**
-   * `machines`: runtime nodes, every runtime linked for the org, hosted or self-hosted (Free 1, Basic 1, Pro 3,
+   * `machines`: runtime nodes, every rrotor linked for the org, local or self-hosted (Free 1, Basic 1, Pro 3,
    * Team 10). `precedents`: what one node may hold, across its models (Free and Basic 5,000, Pro 50,000, Team
    * 500,000). Null is unlimited.
    */
@@ -34,9 +34,6 @@ export type Plan = {
   features: PlanFeatures;
   /** Whether each feature is built; a feature not in it (or no map at all) is built. */
   built?: { [feature: string]: boolean | undefined };
-  markup_hidden: true;
-  /** Whether Glyphh hosts machines on it while hosting is on: Pro, Team, Enterprise; never Free or Basic. */
-  hosting?: boolean;
   /** Ada Cloud's limits, the org's whatever its people, models or keys; null (or missing) while Ada Cloud is off. */
   cloud?: CloudLimits | null;
 };
@@ -78,9 +75,6 @@ export type CloudUsage = {
   requests_per_second: number | null;
 };
 
-/** One hosted machine's cost this month, in cents, as billed. */
-export type MachineCost = { id: Uuid; name: string; size: MachineSize; cents: number };
-
 export type Me = {
   id: Uuid;
   email: string;
@@ -90,10 +84,8 @@ export type Me = {
   /** `plan_until`: when an Enterprise grant ends; null on any other plan. */
   org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null; plan_until: IsoDate | null };
   plan: Plan;
-  /** The most any one of the org's runtimes holds, hosted or self-hosted, against the plan's per node (null: unlimited). */
+  /** The most any one of the org's runtimes holds, local or self-hosted, against the plan's per node (null: unlimited). */
   precedents: { used: number; limit: number | null };
-  /** Hosted machines this month so far. */
-  hosting: { month: string; month_to_date_cents: number; machines: MachineCost[] };
   /** Ada Cloud is on (`GLYPHH_ADA_CLOUD`): the platform is Ada's, with no runtimes. Missing on an older server: off. */
   ada_cloud?: boolean;
   /** Ada Cloud's use against the plan; null (or missing) while it is off. */
@@ -113,20 +105,11 @@ export type Install = {
   current: boolean;
 };
 
-export type RuntimeState = 'none' | 'stopped' | 'online' | 'offline';
-
-export type Runtime = {
-  runtime_id: Uuid | null;
-  address: string | null;
-  state: RuntimeState;
-  region: string | null;
-  image_version: string | null;
-  last_seen_at: IsoDate | null;
-  seconds_used: number;
-};
-
+/** A key that calls one of the person's self-hosted runtimes at its address. */
 export type RuntimeKey = {
   id: Uuid;
+  /** The self-hosted runtime it calls. */
+  runtime_id: Uuid;
   name: string;
   created_at: IsoDate;
   expires_at: IsoDate | null;
@@ -136,21 +119,6 @@ export type RuntimeKey = {
   last_used_at: IsoDate | null;
 };
 export type NewRuntimeKey = RuntimeKey & { key: string };
-
-/** A hosted machine's size: Fly's guest and the volume under it. */
-export type MachineSize = 'small' | 'medium' | 'large';
-
-/** One of a person's hosted machines, as `GET /v1/runtimes` lists them. */
-export type Machine = {
-  id: Uuid;
-  name: string;
-  size: MachineSize;
-  state: 'stopped' | 'online' | 'offline';
-  address: string | null;
-  /** Seconds it has run this month. */
-  month_seconds: number;
-  created_at: IsoDate;
-};
 
 /** How a self-hosted rrotor last reported in: `stopped` until it first links. */
 export type SelfRuntimeState = 'stopped' | 'online' | 'offline';
@@ -203,7 +171,8 @@ export type RuntimeNode = {
   runtime_id: Uuid;
   /** The runtime's name. */
   runtime: string | null;
-  mode: 'hosted' | 'self';
+  /** A local rrotor (an install's, started from Claude) or one self-hosted at its own address. */
+  mode: 'local' | 'self';
   /** As the node named itself; null for a runtime that has said no node (it counts as one). */
   node_id: string | null;
   cluster_id: Uuid | null;
@@ -222,24 +191,6 @@ export type OfflineLicence = { token: string; expires_at: IsoDate };
 
 export type ModelVersion = { id: Uuid; version: number; commit_sha: string; created_at: IsoDate; active_on: Uuid[] };
 export type Model = { id: Uuid; name: string; repo: string | null; created_at: IsoDate; versions: ModelVersion[] };
-
-/** One size at a plan's rates: what it costs a month and a second while it runs. */
-export type SizeRate = { size: MachineSize; usd_per_month: number; usd_per_second: number };
-
-/**
- * `GET /v1/rates`: the hosted machine rates for each plan with hosting. The top-level `sizes` are Fly's own; the pages
- * show only a plan's.
- */
-export type Rates = {
-  effective_from: IsoDate;
-  source: string;
-  sizes: Array<SizeRate & { cpu_kind: string; cpus: number; memory_mb: number; volume_gb: number }>;
-  volume_usd_per_gb_month: number;
-  plans: Record<string, { sizes: SizeRate[]; volume_usd_per_gb_month: number }>;
-};
-
-/** `GET /v1/rates` while Glyphh hosts nothing (`GLYPHH_HOSTING=off`): this, or the rates with an empty `plans`. */
-export type HostingOff = { hosting: 'off' };
 
 export type Org = {
   id: Uuid;
@@ -263,73 +214,3 @@ export type Consent = DeviceConsent | OAuthConsent;
 export type ApiErrorBody = {
   error: { code: string; message: string; trace_id?: string; reason?: string; [detail: string]: unknown };
 };
-
-/**
- * rrotor's opt-in server-side telemetry (`RROTOR_SERVER_LOGS=on`), as `GET /v1/telemetry/*` answers it. By default a
- * runtime sends none, and these lists are empty. Read tolerantly: a field the platform does not know is kept, and an
- * optional one may be missing.
- */
-
-/** OTLP's severity, named as the server names it: a filter by one means it and above. */
-export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-
-/** What every record carries: when, and which runtime and node sent it. `attributes` are rrotor's, nested ones dotted. */
-type Sent = {
-  id?: Uuid;
-  at: IsoDate;
-  runtime_id?: Uuid | null;
-  /** The runtime's name. */
-  runtime?: string | null;
-  /** The node it came from (its service.instance.id). */
-  node_id?: string | null;
-  attributes?: Record<string, unknown> | null;
-  [field: string]: unknown;
-};
-
-/** One log record. */
-export type LogRecord = Sent & {
-  level?: LogLevel | string | null;
-  /** OTLP's severity number, 1 to 24. */
-  severity?: number | null;
-  /** The message. */
-  body?: string | null;
-  trace_id?: string | null;
-  span_id?: string | null;
-};
-
-/** `GET /v1/telemetry/logs`: newest first, without the audit events, and the next page's cursor (null on the last). */
-export type LogsPage = { records?: LogRecord[]; next_cursor?: string | null; [field: string]: unknown };
-
-/**
- * One audit event: its kind (run.call, model.deploy, access.denied, …) and its fields as attributes, flattened:
- * `actor.type` (key, sign-in, local, server, rrotor, anonymous), `actor.key_sha256`, `actor.sub`, `via`,
- * `outcome.status`, `outcome.code`.
- */
-export type AuditEvent = Sent & { kind?: string | null };
-
-/** `GET /v1/telemetry/audit`: newest first, and the next page's cursor (null on the last). */
-export type AuditPage = { events?: AuditEvent[]; next_cursor?: string | null; [field: string]: unknown };
-
-/**
- * The latest point of one metric series: a node, a metric and its point's attributes. rrotor's are `rrotor.runs`
- * (sum: model, function, status), `rrotor.run.seconds` (histogram), `rrotor.precedents` (gauge: model),
- * `rrotor.precedents.cap`, `rrotor.link.state` (gauge: state) and `rrotor.drain.dropped` (sum: drain, signal).
- */
-export type MetricPoint = {
-  runtime_id?: Uuid | null;
-  runtime?: string | null;
-  node_id?: string | null;
-  name: string;
-  unit?: string | null;
-  kind?: 'gauge' | 'sum' | 'histogram' | string | null;
-  /** A gauge's or sum's value; a histogram's sum. */
-  value?: number | null;
-  /** A histogram's count. */
-  count?: number | null;
-  attributes?: Record<string, unknown> | null;
-  at?: IsoDate | null;
-  [field: string]: unknown;
-};
-
-/** `GET /v1/telemetry/metrics`: the latest point of each series. */
-export type MetricsAnswer = { metrics?: MetricPoint[]; [field: string]: unknown };

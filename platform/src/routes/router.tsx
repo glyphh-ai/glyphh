@@ -1,8 +1,7 @@
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
 import { adminRoutes } from '@/admin/routes';
 import { StaffHome } from '@/admin/StaffGate';
-import { AdaOnly, AdaOr, OffOnly } from '@/components/AdaGate';
-import { HostedOnly } from '@/components/HostedOnly';
+import { AdaOnly, AdaOr } from '@/components/AdaGate';
 import { RequireSession } from '@/components/RequireSession';
 import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
@@ -11,10 +10,9 @@ import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
-import { HomePage } from '@/pages/home/HomePage';
 import { KeysPage } from '@/pages/keys/KeysPage';
-import { MachinesPage } from '@/pages/machines/MachinesPage';
 import { ModelsPage } from '@/pages/models/ModelsPage';
+import { RuntimesPage } from '@/pages/runtimes/RuntimesPage';
 import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
 import { AuthorizePage } from '@/pages/flows/AuthorizePage';
@@ -26,7 +24,6 @@ import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
 import { LicencePage } from '@/pages/settings/licence/LicencePage';
-import { LogsPage } from '@/pages/settings/logs/LogsPage';
 import { MembersPage } from '@/pages/settings/MembersPage';
 import { ProfilePage } from '@/pages/settings/ProfilePage';
 import { UsagePage } from '@/pages/settings/UsagePage';
@@ -36,11 +33,14 @@ const crumbs = (...labels: string[]): RouteHandle => ({
   crumbs: labels.map((label, i) => ({ label, to: i === 0 && labels.length > 1 ? '/settings/general' : undefined })),
 });
 
-/** Paths the server sends a browser to that live under Settings here; the query string comes along. */
+/** Paths that moved (some the server sends a browser to); the query string comes along. */
 function Moved({ to }: { to: string }) {
   const { search } = useLocation();
   return <Navigate to={`${to}${search}`} replace />;
 }
+
+/** The crumbs of a page in Runtimes & licences. */
+const runtimeCrumbs = (label: string): RouteHandle => ({ crumbs: [{ label: 'Runtimes & licences' }, { label }] });
 
 export const routes: RouteObject[] = [
   // Signed-in pages.
@@ -51,41 +51,32 @@ export const routes: RouteObject[] = [
       </RequireSession>
     ),
     children: [
-      // With Ada Cloud on (the server's ada_cloud), the platform is Ada's: Home, Models, API Keys and Usage are Ada's,
-      // and nothing of runtimes, machines, the licence, rrotor's logs or self-hosting is reached (each goes Home).
-      // Getting started became the Add a runtime dialog on Runtimes (2026-10-20); old links open it there.
+      // With Ada Cloud on (the server's ada_cloud), Home, Models, API Keys and Usage are Ada's. Runtimes & licences sits
+      // beside it in both: the rrotors a person runs themselves and the licence key they run on. Glyphh hosts no
+      // runtime (2026-10-31): the old Machines and Logs pages go to Runtimes, and Getting started to its Add a runtime.
+      { path: 'runtimes', element: <RuntimesPage />, handle: runtimeCrumbs('Runtimes') },
+      { path: 'licence', element: <LicencePage />, handle: runtimeCrumbs('Licence') },
       {
-        path: 'getting-started',
-        element: (
-          <OffOnly>
-            <Navigate to="/?add=1" replace />
-          </OffOnly>
-        ),
+        path: 'runtime-keys',
+        element: <AdaOr ada={<KeysPage />} off={<Moved to="/keys" />} />,
+        handle: runtimeCrumbs('Runtime keys'),
       },
-      {
-        path: 'machines',
-        element: (
-          <OffOnly>
-            <HostedOnly>
-              <MachinesPage />
-            </HostedOnly>
-          </OffOnly>
-        ),
-        handle: { crumbs: [{ label: 'Machines' }] },
-      },
+      { path: 'getting-started', element: <Navigate to="/runtimes?add=1" replace /> },
+      { path: 'machines', element: <Navigate to="/runtimes" replace /> },
+      { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       {
         index: true,
         element: (
           <StaffHome>
-            <AdaOr ada={<AdaHome />} off={<HomePage />} />
+            <AdaOr ada={<AdaHome />} off={<Moved to="/runtimes" />} />
           </StaffHome>
         ),
-        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Runtimes' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Home' }] },
+        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'Runtimes' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Home' }] },
       },
       {
         path: 'keys',
         element: <AdaOr ada={<AdaKeysPage />} off={<KeysPage />} />,
-        handle: { crumbs: [{ label: 'Runtime' }, { label: 'API Keys' }], adaCrumbs: [{ label: 'Ada' }, { label: 'API Keys' }] },
+        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'API Keys' }], adaCrumbs:[{ label: 'Ada' }, { label: 'API Keys' }] },
       },
       {
         path: 'models',
@@ -122,25 +113,7 @@ export const routes: RouteObject[] = [
       {
         path: 'usage',
         element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
-        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Usage' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Usage' }] },
-      },
-      {
-        path: 'logs',
-        element: (
-          <OffOnly>
-            <LogsPage />
-          </OffOnly>
-        ),
-        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Logs' }] },
-      },
-      {
-        path: 'licence',
-        element: (
-          <OffOnly>
-            <LicencePage />
-          </OffOnly>
-        ),
-        handle: { crumbs: [{ label: 'Runtime' }, { label: 'Licence' }] },
+        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'Usage' }], adaCrumbs:[{ label: 'Ada' }, { label: 'Usage' }] },
       },
     ],
   },
@@ -155,10 +128,10 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="general" replace /> },
       { path: 'general', element: <GeneralPage />, handle: crumbs('Settings', 'General') },
       { path: 'billing', element: <BillingPage />, handle: crumbs('Settings', 'Billing') },
-      // Licence, usage and logs moved to the main sidebar (2026-10-20).
+      // Licence and usage moved to the main sidebar (2026-10-20); rrotor's logs are no more (2026-10-31).
       { path: 'licence', element: <Moved to="/licence" /> },
       { path: 'usage', element: <Moved to="/usage" /> },
-      { path: 'logs', element: <Moved to="/logs" /> },
+      { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },

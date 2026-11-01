@@ -1,7 +1,6 @@
 import { Outlet, useMatches, useParams } from 'react-router';
 import { StaffNav } from '@/admin/StaffGate';
 import { useAdaCloud } from '@/api/ada';
-import { useHosting } from '@/api/queries';
 import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
@@ -45,44 +44,20 @@ export function MainLayout() {
   );
 }
 
-/** With Ada Cloud on: Ada's pages only, no runtimes. */
+/** With Ada Cloud on: Ada's pages, then Runtimes & licences. */
 function AdaNav() {
   return (
-    <NavGroup label="Ada">
-      <NavItem to="/" end icon="home">
-        Home
-      </NavItem>
-      <NavItem to="/models" icon="model">
-        Models
-      </NavItem>
-      {/* Ada's own versions, after Models (his order, 2026-10-23). */}
-      <NavItem to="/ada" icon="layers">
-        Ada
-      </NavItem>
-      <NavItem to="/keys" icon="key">
-        API Keys
-      </NavItem>
-      <NavItem to="/usage" icon="monitor">
-        Usage
-      </NavItem>
-    </NavGroup>
-  );
-}
-
-/** With Ada Cloud off: the runtimes, as before. */
-function RuntimeNav() {
-  // Machines are Glyphh's hosted ones: shown only once the server says it hosts any.
-  const hosting = useHosting();
-  return (
     <>
-      {hosting && (
-        <NavItem to="/machines" icon="chip">
-          Machines
-        </NavItem>
-      )}
-      <NavGroup label="Runtime">
+      <NavGroup label="Ada">
         <NavItem to="/" end icon="home">
-          Runtimes
+          Home
+        </NavItem>
+        <NavItem to="/models" icon="model">
+          Models
+        </NavItem>
+        {/* Ada's own versions, after Models (his order, 2026-10-23). */}
+        <NavItem to="/ada" icon="layers">
+          Ada
         </NavItem>
         <NavItem to="/keys" icon="key">
           API Keys
@@ -90,11 +65,39 @@ function RuntimeNav() {
         <NavItem to="/usage" icon="monitor">
           Usage
         </NavItem>
-        <NavItem to="/logs" icon="logs">
-          Logs
+      </NavGroup>
+      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31). */}
+      <NavGroup label="Runtimes & licences">
+        <NavItem to="/runtimes" icon="chip">
+          Runtimes
         </NavItem>
         <NavItem to="/licence" icon="card">
           Licence
+        </NavItem>
+        <NavItem to="/runtime-keys" icon="key">
+          Runtime keys
+        </NavItem>
+      </NavGroup>
+    </>
+  );
+}
+
+/** With Ada Cloud off: Runtimes & licences, with the runtimes' keys and usage, then Ada's models. */
+function RuntimeNav() {
+  return (
+    <>
+      <NavGroup label="Runtimes & licences">
+        <NavItem to="/runtimes" icon="chip">
+          Runtimes
+        </NavItem>
+        <NavItem to="/licence" icon="card">
+          Licence
+        </NavItem>
+        <NavItem to="/keys" icon="key">
+          API Keys
+        </NavItem>
+        <NavItem to="/usage" icon="monitor">
+          Usage
         </NavItem>
       </NavGroup>
       <NavGroup label="Ada">

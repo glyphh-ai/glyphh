@@ -157,18 +157,6 @@
   font-size: var(--text-md);
 }
 
-.rates {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-12);
-}
-
-.ratesTitle {
-  font-size: var(--text-lg);
-  font-weight: 500;
-}
-
 /* A feature the plan will have once Glyphh builds it. */
 .soonTag {
   flex: none;

@@ -1,48 +1,36 @@
 import { screen, within } from '@testing-library/react';
 import { me, nodes, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
 const meter = (name: string) => screen.getByText(name, { selector: 'div' }).parentElement!;
-const free = { ...me, plan: plans[0]!, precedents: { used: 3_200, limit: 5_000 }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } };
+const free = { ...me, plan: plans[0]!, precedents: { used: 3_200, limit: 5_000 } };
 
 describe('Usage', () => {
-  it('shows the fullest node’s precedents against the plan’s per node, and hosting this month so far', async () => {
+  it('shows the fullest node’s precedents against the plan’s per node, and nothing of hosting', async () => {
     renderApp('/usage');
     expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
     expect(await screen.findByText('On Pro.')).toBeInTheDocument();
     expect(within(meter('Precedents')).getByText('18,240')).toBeInTheDocument();
     expect(within(meter('Precedents')).getByText('of 50,000 on the fullest node')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Precedents on the fullest node' })).toHaveAttribute('aria-valuemax', '50000');
-    expect(within(meter('Hosting')).getByText('$12.17')).toBeInTheDocument();
-    expect(within(meter('Hosting')).getByText('this month so far')).toBeInTheDocument();
+    expect(screen.queryByText(/hosting|hosted machine/i)).not.toBeInTheDocument();
   });
 
-  it('lists each hosted machine’s cost this month, most first', async () => {
-    renderApp('/usage');
-    const list = await screen.findByRole('list', { name: 'Hosting by machine' });
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows.map((row) => row.textContent)).toEqual(['ExperimentsLarge$8.05', 'MainSmall$4.12']);
-  });
-
-  it('says there is no limit on a plan without one, and no machines this month', async () => {
-    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 2_500_000, limit: null }, hosting: { month: '2026-10', month_to_date_cents: 0, machines: [] } })));
+  it('says there is no limit on a plan without one', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4], precedents: { used: 2_500_000, limit: null } })));
     renderApp('/usage');
     expect(await screen.findByText('on the fullest node, no limit')).toBeInTheDocument();
     expect(screen.getByText('2,500,000')).toBeInTheDocument();
     expect(screen.queryByRole('progressbar', { name: 'Precedents on the fullest node' })).not.toBeInTheDocument();
-    expect(screen.getByText('No hosted machines this month')).toBeInTheDocument();
   });
 
-  it('on Free, shows the fullest node against Community’s 5,000, and hosting is on Pro and Team', async () => {
+  it('on Free, shows the fullest node against Community’s 5,000', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/usage');
     expect(await screen.findByText('On Free.')).toBeInTheDocument();
     expect(await screen.findByText('of 5,000 on the fullest node')).toBeInTheDocument();
     expect(within(meter('Precedents')).getByText('of 5,000 on the fullest node')).toBeInTheDocument();
-    expect(await within(meter('Hosting')).findByText(/Hosting is on Pro and Team\./)).toBeInTheDocument();
-    expect(within(meter('Hosting')).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
-    expect(screen.queryByRole('list', { name: 'Hosting by machine' })).not.toBeInTheDocument();
   });
 
   it('shows the refusal when the usage cannot be read', async () => {
@@ -57,7 +45,7 @@ describe('Usage', () => {
 
   it('shows the usage loading until it is known, and no keys yet', async () => {
     server.use(
-      http.get(v1('/rates'), () => new Promise<never>(() => {})),
+      http.get(v1('/license/nodes'), () => new Promise<never>(() => {})),
       http.get(v1('/runtime/keys'), () => HttpResponse.json([])),
     );
     renderApp('/usage');
@@ -97,8 +85,8 @@ describe('Usage’s runtime nodes', () => {
     expect(within(rows[0]!).getByText(/^Acme production · 1\.4\.2 · last seen /)).toBeInTheDocument();
     expect(within(rows[0]!).getByText('12,050 of 50,000 precedents')).toBeInTheDocument();
     expect(within(rows[1]!).getByText('Follower')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Main')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText(/^Hosted · 1\.4\.2 · last seen /)).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('studio-mac')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText(/^Local · 1\.4\.2 · last seen /)).toBeInTheDocument();
     expect(within(rows[2]!).getByText('18,240 of 50,000 precedents')).toBeInTheDocument();
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
@@ -137,7 +125,7 @@ describe('Usage’s runtime nodes', () => {
   });
 
   it('on Free, one node of 1 against Community’s 5,000 precedents', async () => {
-    server.use(...hostingOffHandlers());
+    server.use(...onFreeHandlers());
     renderApp('/usage');
     const list = await screen.findByRole('list', { name: 'Runtime nodes' });
     expect(within(list).getByText('Acme production')).toBeInTheDocument();
@@ -153,18 +141,5 @@ describe('Usage from Billing and the settings rail', () => {
     expect(router.state.location.pathname).toBe('/usage');
     const rail = screen.getByRole('complementary', { name: 'Main' });
     expect(within(rail).getByRole('link', { name: 'Usage' })).toHaveAttribute('href', '/usage');
-  });
-});
-
-describe('Usage while Glyphh hosts nothing', () => {
-  it('has no hosting cost: precedents per node and the API keys only', async () => {
-    server.use(...hostingOffHandlers());
-    renderApp('/usage');
-    expect(await screen.findByText('On Free.')).toBeInTheDocument();
-    expect(await screen.findByText('of 5,000 on the fullest node')).toBeInTheDocument();
-    expect(screen.queryByText('Hosting', { selector: 'div' })).not.toBeInTheDocument();
-    expect(screen.queryByText(/hosting/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Hosted machines' })).not.toBeInTheDocument();
-    expect(await screen.findByRole('list', { name: 'API key calls' })).toBeInTheDocument();
   });
 });

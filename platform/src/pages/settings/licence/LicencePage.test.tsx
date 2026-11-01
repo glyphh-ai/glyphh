@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { licenceKeys } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 import { masked, termsText } from './licence';
 
 const live = licenceKeys.keys[0]!;
@@ -67,7 +67,7 @@ describe('Licence', () => {
   });
 
   it('on Free, says Community needs no key, with its limits, and nothing to paste', async () => {
-    server.use(...hostingOffHandlers());
+    server.use(...onFreeHandlers());
     renderApp('/licence');
     const card = await screen.findByRole('region', { name: 'Community' });
     expect(within(card).getByText('Community: no key needed')).toBeInTheDocument();
@@ -92,9 +92,34 @@ describe('Licence', () => {
     expect(await screen.findByText('Keys are unavailable.')).toBeInTheDocument();
   });
 
-  it('opens from the main sidebar', async () => {
+  it('opens from the main sidebar, in Runtimes & licences', async () => {
     renderApp('/');
     const rail = await screen.findByRole('complementary', { name: 'Main' });
     expect(await within(rail).findByRole('link', { name: 'Licence' })).toHaveAttribute('href', '/licence');
+    expect(within(rail).getByRole('group', { name: 'Runtimes & licences' })).toContainElement(within(rail).getByRole('link', { name: 'Licence' }));
+  });
+
+  it('counts the nodes the key is counted against, from the server’s nodes', async () => {
+    renderApp('/licence');
+    expect(await screen.findByRole('heading', { name: 'Runtime nodes' })).toBeInTheDocument();
+    const count = await screen.findByText('Runtime nodes', { selector: 'div' });
+    expect(within(count.parentElement!).getByText('of 3')).toBeInTheDocument();
+    const rows = within(screen.getByRole('list', { name: 'Runtime nodes' })).getAllByRole('listitem');
+    expect(rows.map((row) => within(row).getByText(/precedents$/).textContent)).toEqual([
+      '12,050 of 50,000 precedents',
+      '12,050 of 50,000 precedents',
+      '18,240 of 50,000 precedents',
+    ]);
+    expect(within(rows[2]!).getByText(/^Local · /)).toBeInTheDocument();
+  });
+
+  it('says there is no node yet, with the way to install rrotor', async () => {
+    server.use(http.get(v1('/license/nodes'), () => HttpResponse.json({ count: 0, max_nodes: 3, over: false, nodes: [] })));
+    renderApp('/licence');
+    expect(await screen.findByText('No runtime nodes yet')).toBeInTheDocument();
+    // The sidebar's Runtimes, and the empty state's.
+    const links = screen.getAllByRole('link', { name: 'Runtimes' });
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link).toHaveAttribute('href', '/runtimes');
   });
 });

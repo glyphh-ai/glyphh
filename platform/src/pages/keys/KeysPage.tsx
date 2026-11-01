@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { useCreateRuntimeKey, useDeleteRuntimeKey, useRevokeRuntimeKey, useRuntimeKeys } from '@/api/queries';
+import { Link } from 'react-router';
+import { useAdaCloud } from '@/api/ada';
+import { useCreateRuntimeKey, useDeleteRuntimeKey, useRevokeRuntimeKey, useRuntimeKeys, useSelfRuntimes } from '@/api/queries';
 import type { NewRuntimeKey, RuntimeKey } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -33,7 +35,9 @@ function keyStatus(key: RuntimeKey, now: Date) {
   return { chip: null, meta: `${made} · expires ${date(key.expires_at)}`, live: true };
 }
 
+/** The keys that call the org's self-hosted runtimes; with Ada Cloud on, Runtime keys beside Ada's own API keys. */
 export function KeysPage() {
+  const ada = useAdaCloud() === true;
   const keys = useRuntimeKeys();
   const [making, setMaking] = useState(false);
   const [revoking, setRevoking] = useState<RuntimeKey | null>(null);
@@ -49,7 +53,11 @@ export function KeysPage() {
 
   return (
     <>
-      <PageHeader title="API Keys" description="Your apps call your runtime with an API key as the bearer. Each key is shown once, when you make it." actions={newKey} />
+      <PageHeader
+        title={ada ? 'Runtime keys' : 'API Keys'}
+        description="Your apps call your self-hosted runtime with an API key as the bearer. Each key is shown once, when you make it."
+        actions={newKey}
+      />
 
       {keys.isPending && <LoadingCard />}
       {keys.error && <ApiErrorNotice error={keys.error} />}
@@ -126,16 +134,19 @@ export function KeysPage() {
   );
 }
 
-/** Name a key, then show it once. */
+/** Name a key and the self-hosted runtime it calls (the first, until another is chosen), then show it once. */
 function NewKeyDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateRuntimeKey();
+  const runtimes = useSelfRuntimes();
   const [name, setName] = useState('');
+  const [picked, setPicked] = useState('');
   const [days, setDays] = useState('30');
   const [made, setMade] = useState<NewRuntimeKey | null>(null);
+  const runtimeId = picked || runtimes.data?.[0]?.id || '';
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    create.mutate({ name: name.trim(), expires_in_days: days === 'never' ? null : Number(days) }, { onSuccess: setMade });
+    create.mutate({ name: name.trim(), runtime_id: runtimeId, expires_in_days: days === 'never' ? null : Number(days) }, { onSuccess: setMade });
   };
 
   if (made) {
@@ -167,7 +178,7 @@ function NewKeyDialog({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" form="new-key" loading={create.isPending} disabled={!name.trim()}>
+          <Button variant="primary" type="submit" form="new-key" loading={create.isPending} disabled={!name.trim() || !runtimeId}>
             Make key
           </Button>
         </>
@@ -175,6 +186,21 @@ function NewKeyDialog({ onClose }: { onClose: () => void }) {
     >
       <form id="new-key" className={styles.form} onSubmit={submit}>
         <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Billing worker" autoFocus />
+        {runtimes.data && runtimes.data.length > 0 && (
+          <Select
+            label="Runtime"
+            hint="The self-hosted runtime it calls."
+            value={runtimeId}
+            onChange={(e) => setPicked(e.target.value)}
+            options={runtimes.data.map((runtime) => ({ value: runtime.id, label: runtime.name }))}
+          />
+        )}
+        {runtimes.data?.length === 0 && (
+          <p className={styles.note}>
+            A key calls a self-hosted runtime at its address. Add one on <Link to="/runtimes">Runtimes</Link> first.
+          </p>
+        )}
+        <ApiErrorNotice error={runtimes.error} />
         <Select label="Expires after" value={days} onChange={(e) => setDays(e.target.value)} options={lifetimes} />
         {days === 'never' && (
           <ErrorNotice message="This key never expires. If it leaks, it works until you revoke it. Choose an expiry unless you must." />

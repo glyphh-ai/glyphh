@@ -37,10 +37,14 @@ describe('API Keys', () => {
     const expiry = within(dialog).getByLabelText('Expires after');
     expect(expiry).toHaveValue('30');
     await user.selectOptions(expiry, '90 days');
+    // The self-hosted runtime it calls: the first, until another is chosen.
+    const runtime = within(dialog).getByLabelText('Runtime');
+    expect(runtime).toHaveValue('rt-self-1');
+    await user.selectOptions(runtime, 'Lab');
     await user.click(within(dialog).getByRole('button', { name: 'Make key' }));
 
     const made = await screen.findByRole('dialog', { name: 'Your new API key' });
-    expect(sent).toEqual({ name: 'Deploy bot', expires_in_days: 90 });
+    expect(sent).toEqual({ name: 'Deploy bot', runtime_id: 'rt-self-2', expires_in_days: 90 });
     expect(within(made).getByText('glyphh_rk_abc123')).toBeInTheDocument();
     expect(within(made).getByText('Copy it now and keep it somewhere safe. You won’t see it again. It expires 14 Jan 2027.')).toBeInTheDocument();
     await user.click(within(made).getByRole('button', { name: 'Done' }));
@@ -132,7 +136,18 @@ describe('API key expiry', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('This key never expires. If it leaks, it works until you revoke it.');
     await user.click(screen.getByRole('button', { name: 'Make key' }));
     expect(await screen.findByText('Copy it now and keep it somewhere safe. You won’t see it again. It never expires.')).toBeInTheDocument();
-    expect(sent).toEqual({ name: 'Forever' });
+    expect(sent).toEqual({ name: 'Forever', runtime_id: 'rt-self-1' });
+  });
+
+  it('asks for a self-hosted runtime first when there is none: a key calls one', async () => {
+    server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
+    const { user } = renderApp('/keys');
+    await user.click(await screen.findByRole('button', { name: 'New API key' }));
+    const dialog = screen.getByRole('dialog', { name: 'New API key' });
+    expect(await within(dialog).findByText(/A key calls a self-hosted runtime at its address/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Runtimes' })).toHaveAttribute('href', '/runtimes');
+    await user.type(within(dialog).getByLabelText('Name'), 'Deploy bot');
+    expect(within(dialog).getByRole('button', { name: 'Make key' })).toBeDisabled();
   });
 
   it('marks a key that never expires', async () => {

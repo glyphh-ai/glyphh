@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { me, plans, selfRuntimes } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
 describe('the self-hosted runtimes on Runtimes', () => {
   it('lists each with its state, version and last heartbeat', async () => {
@@ -15,10 +15,10 @@ describe('the self-hosted runtimes on Runtimes', () => {
     expect(within(lab!).getByText('rrotor.lab.acme.com · no heartbeat yet')).toBeInTheDocument();
   });
 
-  it('shows nothing when there are none', async () => {
+  it('shows no list when there are none', async () => {
     server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
-    renderApp('/');
-    await screen.findByText('https://chris-7f3a.glyphh.app');
+    renderApp('/runtimes');
+    await screen.findByText('No self-hosted runtime yet');
     expect(screen.queryByText('Your self-hosted runtimes')).not.toBeInTheDocument();
   });
 
@@ -143,9 +143,9 @@ describe('the self-hosted runtimes on Runtimes', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('lists them while Glyphh hosts nothing, and offline licences stay on Enterprise', async () => {
-    server.use(...hostingOffHandlers());
-    const { user } = renderApp('/');
+  it('lists them on Free, and offline licences stay on Enterprise', async () => {
+    server.use(...onFreeHandlers());
+    const { user } = renderApp('/runtimes');
     const list = await screen.findByRole('list', { name: 'Self-hosted runtimes' });
     expect(within(list).getByText('Acme production')).toBeInTheDocument();
     await user.click(within(list).getAllByRole('button', { name: 'Offline licence' })[0]!);

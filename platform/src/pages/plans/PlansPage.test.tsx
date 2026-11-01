@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
 const card = (name: string) => screen.getByRole('region', { name });
 
@@ -29,7 +29,7 @@ describe('Choosing a plan', () => {
     expect(within(free).getByText('5,000 precedents per node')).toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
-    // Basic, between Free and Pro: one self-hosted node as on Free, and no hosting.
+    // Basic, between Free and Pro: one node as on Free.
     const basic = card('Basic');
     expect(within(basic).getByText('$20')).toBeInTheDocument();
     expect(within(basic).getByText('per month')).toBeInTheDocument();
@@ -52,16 +52,12 @@ describe('Choosing a plan', () => {
     expect(within(enterprise).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('shows the hosted machine rates of each plan with hosting, never Fly’s own, and Enterprise’s as set in the contract', async () => {
+  it('says nothing of hosted machines and shows no rates: Glyphh hosts no runtime', async () => {
     renderApp('/settings/plans');
-    const table = await screen.findByRole('table', { name: 'Hosted machine rates' });
-    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team', 'Enterprise']);
-    const medium = within(table).getByRole('row', { name: /^Medium/ });
-    expect(within(medium).getAllByText('$33.01 / month')).toHaveLength(2);
-    expect(within(medium).getByText('Set in your contract.')).toBeInTheDocument();
-    expect(within(table).getAllByText('Set in your contract.')).toHaveLength(4);
-    expect(within(table).queryByText('$25.39 / month')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hosted machines' })).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Enterprise' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosted machine|hosting/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('shows a contract plan with a floor price as from that price a year, and a yearly self-serve plan', async () => {
@@ -75,13 +71,6 @@ describe('Choosing a plan', () => {
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByText('From $10,000')).toBeInTheDocument();
     expect(within(enterprise).getByText('per year')).toBeInTheDocument();
-  });
-
-  it('shows the server’s refusal when the rates cannot be read, and the plans still', async () => {
-    server.use(http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Rates are unavailable.')));
-    renderApp('/settings/plans');
-    expect(await screen.findByText('Rates are unavailable.')).toBeInTheDocument();
-    expect(await screen.findByRole('region', { name: 'Team' })).toBeInTheDocument();
   });
 
   it('closes with the X, and with Escape, back to billing', async () => {
@@ -133,16 +122,6 @@ describe('Choosing a plan', () => {
     fireEvent.click(dialog);
     await user.click(screen.getByRole('button', { name: 'Switch to Free' }));
     expect(within(dialog).queryByText('That plan cannot be chosen now.')).not.toBeInTheDocument();
-  });
-
-  it('down to Free with hosted machines, says to delete them first, with the way to Machines', async () => {
-    server.use(http.post(v1('/billing/plan'), () => apiError(409, 'E_CONFLICT', 'Delete your hosted machines first.', { reason: 'machines' })));
-    const { user } = renderApp('/settings/plans');
-    await user.click(await screen.findByRole('button', { name: 'Switch to Free' }));
-    const dialog = screen.getByRole('dialog', { name: 'Switch to Free?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Switch plan' }));
-    expect(await within(dialog).findByText('Delete your hosted machines first.')).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
   });
 
   it('offers no move to Free without a subscription: there is nothing to cancel', async () => {
@@ -212,9 +191,9 @@ describe('Choosing a plan', () => {
   });
 });
 
-describe('Choosing a plan while Glyphh hosts nothing and some features are not built', () => {
+describe('Choosing a plan while some features are not built', () => {
   it('offers the plans as before, with each feature not built marked coming soon', async () => {
-    server.use(...hostingOffHandlers());
+    server.use(...onFreeHandlers());
     renderApp('/settings/plans');
     const pro = await screen.findByRole('region', { name: 'Pro' });
     expect(within(pro).getByText('$99')).toBeInTheDocument();
@@ -224,16 +203,5 @@ describe('Choosing a plan while Glyphh hosts nothing and some features are not b
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
     expect(within(enterprise).getByText('Offline licences for air-gapped runtimes').closest('li')).not.toHaveTextContent('Coming soon');
     expect(within(enterprise).getByText('Audit logs').closest('li')).toHaveTextContent('Coming soon');
-  });
-
-  it('says nothing of hosted machines and shows no rates, and the rates refused is no error', async () => {
-    server.use(...hostingOffHandlers());
-    renderApp('/settings/plans');
-    await screen.findByRole('region', { name: 'Enterprise' });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.queryByText('Hosting is off.')).not.toBeInTheDocument();
-    expect(screen.queryByText(/hosted machine/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Hosted machines' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Hosted machine rates' })).not.toBeInTheDocument();
   });
 });

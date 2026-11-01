@@ -8,25 +8,54 @@ const sidebar = () => screen.getByRole('complementary', { name: 'Main' });
 describe('with Ada Cloud on', () => {
   beforeEach(() => server.use(...adaFake({ models: [tickets()] }).handlers));
 
-  it('has Ada’s pages only in the sidebar: no runtimes, machines, logs or licence', async () => {
+  it('has Ada’s pages, then Runtimes & licences beside them: no machines or logs', async () => {
     renderApp('/');
     await within(await screen.findByRole('complementary', { name: 'Main' })).findByRole('link', { name: 'Home' });
-    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'API Keys', 'Usage']);
+    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Home',
+      'Models',
+      'Ada',
+      'API Keys',
+      'Usage',
+      'Runtimes',
+      'Licence',
+      'Runtime keys',
+    ]);
+    const ada = within(sidebar()).getByRole('group', { name: 'Ada' });
+    expect(within(ada).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'API Keys', 'Usage']);
+    const runtimes = within(sidebar()).getByRole('group', { name: 'Runtimes & licences' });
+    expect(within(runtimes).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/runtimes', '/licence', '/runtime-keys']);
     expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaHome');
   });
 
-  it.each(['/logs', '/licence', '/machines', '/getting-started', '/settings/logs', '/settings/licence'])('sends %s Home', async (path) => {
+  it.each([
+    ['/runtimes', '/runtimes', 'Runtimes'],
+    ['/machines', '/runtimes', 'Runtimes'],
+    ['/logs', '/runtimes', 'Runtimes'],
+    ['/settings/logs', '/runtimes', 'Runtimes'],
+    ['/getting-started', '/runtimes', 'Runtimes'],
+    ['/licence', '/licence', 'Licence'],
+    ['/settings/licence', '/licence', 'Licence'],
+    ['/runtime-keys', '/runtime-keys', 'Runtime keys'],
+  ])('opens %s at %s, in Runtimes & licences', async (path, at, title) => {
     const { router } = renderApp(path);
-    expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/');
+    expect(await screen.findByRole('heading', { name: title, level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(at);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(`Runtimes & licences${title}`);
+  });
+
+  it('keeps Ada’s own API keys apart from the runtime keys', async () => {
+    renderApp('/runtime-keys');
+    expect(await screen.findByRole('heading', { name: 'Runtime keys', level: 1 })).toBeInTheDocument();
+    expect(screen.getByText(/call your self-hosted runtime with an API key/)).toBeInTheDocument();
   });
 
   it('opens Home, not Add a runtime, from the old ?add=1 link', async () => {
     renderApp('/?add=1');
     expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.queryByText(/rrotor|runtime/i)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByText(/rrotor|runtime/i)).not.toBeInTheDocument();
   });
 
   it('keeps Billing, Members, Profile and Installs in Settings, and the plan says nothing of runtimes', async () => {

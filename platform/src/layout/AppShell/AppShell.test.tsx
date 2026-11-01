@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
-import { hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
+import { http, HttpResponse, server, v1 } from '@/test/server';
 
 // The stylesheets as written: the tests run in Node, and the UI's tsconfig carries no Node types, hence the narrow one.
 type Fs = { readFileSync(path: string, encoding: 'utf8'): string };
@@ -14,7 +14,8 @@ const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentEl
 
 describe('the sidebar on a phone', () => {
   it('opens from the Menu button and closes from the scrim', async () => {
-    const { user } = renderApp('/');
+    const { user } = renderApp('/runtimes');
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     expect(shell()).toHaveAttribute('data-sidebar', 'open');
     await user.click(screen.getByRole('button', { name: 'Close menu' }));
@@ -23,7 +24,8 @@ describe('the sidebar on a phone', () => {
   });
 
   it('closes when the Menu button is pressed again', async () => {
-    const { user } = renderApp('/');
+    const { user } = renderApp('/runtimes');
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
     const menu = await screen.findByRole('button', { name: 'Menu' });
     await user.click(menu);
     await user.click(menu);
@@ -75,26 +77,22 @@ describe('the account menu on a phone', () => {
 });
 
 describe('the main sidebar', () => {
-  it('has the logo, the runtime and Ada, and no organisation group: settings is in the account menu', async () => {
+  it('has the logo, Runtimes & licences and Ada, and no organisation group: settings is in the account menu', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
     // The links come once the account says Ada Cloud is off.
     await within(main).findByRole('link', { name: 'Runtimes' });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
-    for (const name of ['Runtimes', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
+    for (const name of ['Runtimes', 'Licence', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
     expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
     for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
   });
-});
 
-describe('the main sidebar while Glyphh hosts nothing', () => {
-  it.each(['refused', 'off', 'empty'] as const)('has no Machines when the rates answer %s', async (rates) => {
-    server.use(...hostingOffHandlers(rates), http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
+  it('has nothing Glyphh hosted: no Machines and no Logs', async () => {
+    server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
-    // Home's empty state for running rrotor yourself shows once the plans and rates are read.
-    await screen.findByRole('button', { name: 'Run rrotor yourself' });
-    expect(within(main).queryByRole('link', { name: 'Machines' })).not.toBeInTheDocument();
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'API Keys', 'Usage', 'Logs', 'Licence', 'Models']);
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'API Keys', 'Usage', 'Models']);
   });
 });

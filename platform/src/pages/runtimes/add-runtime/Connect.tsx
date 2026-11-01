@@ -21,7 +21,7 @@ export function Connect({ title, connector, note, runtimeUrl }: ConnectProps) {
         <>
           <CopyField value={`export GLYPHH_RUNTIME_URL=${runtimeUrl}`} label="runtime URL" />
           <span className={styles.meta}>
-            The SDKs read it, with a runtime key from <Link to="/keys">API Keys</Link>.
+            The SDKs read it, with a <Link to="/runtime-keys">runtime key</Link>.
           </span>
         </>
       )}

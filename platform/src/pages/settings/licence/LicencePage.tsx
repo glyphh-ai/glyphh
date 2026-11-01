@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { useLicenceKeys, useMe } from '@/api/queries';
+import { useLicenceKeys, useMe, useRuntimeNodes } from '@/api/queries';
 import type { LicenceKey } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
@@ -11,15 +11,17 @@ import billing from '../billing/billing.module.css';
 import settings from '../settings.module.css';
 import { SettingsTitle } from '../SettingsTitle';
 import { community, graceDays, keyEnv, keyFile, masked, stateChip, termsText, tierName } from './licence';
+import { NodeCount, NodeList } from './Nodes';
 import styles from './Licence.module.css';
 
 /**
- * The org's licence key: the one its runtimes are sent now, how it reaches them, and the keys before it. Free has none:
- * rrotor runs as Community.
+ * The org's licence key: the one its runtimes are sent now (its plan, runtime nodes and expiry), how it reaches them,
+ * the nodes it is counted against, and the keys before it. Free has none: rrotor runs as Community.
  */
 export function LicencePage() {
   const me = useMe();
   const licence = useLicenceKeys();
+  const nodes = useRuntimeNodes();
   const free = me.data?.plan.price_cents === 0;
   const current = licence.data?.keys.find((key) => key.key === licence.data?.license_key) ?? null;
   const older = licence.data?.keys.filter((key) => key !== current) ?? [];
@@ -54,6 +56,20 @@ export function LicencePage() {
           </div>
         </SettingsSection>
       )}
+
+      <SettingsSection
+        title="Runtime nodes"
+        description="Each rrotor node seen in the last two days, local or self-hosted, counted against your plan. Over the plan is shown, never stopped."
+      >
+        {nodes.isPending && <LoadingCard />}
+        <ApiErrorNotice error={nodes.error} />
+        {nodes.data && (
+          <div className={styles.nodes}>
+            <NodeCount nodes={nodes.data} />
+            <NodeList nodes={nodes.data} perNode={me.data?.precedents.limit ?? null} />
+          </div>
+        )}
+      </SettingsSection>
 
       {older.length > 0 && (
         <SettingsSection title="Older keys" description="Expired keys, and keys whose subscription ended. None is sent to rrotor.">

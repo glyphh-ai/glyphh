@@ -1,10 +1,8 @@
 import { screen, within } from '@testing-library/react';
-import type { Machine, SelfRuntime } from '@/api/types';
-import { machines, me, plans, runtime, selfRuntimes } from '@/test/fixtures';
+import type { SelfRuntime } from '@/api/types';
+import { me, plans, selfRuntimes } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, hostingOffHandlers, http, HttpResponse, server, v1 } from '@/test/server';
-
-const noRuntime = { ...runtime, state: 'none', address: null, runtime_id: null };
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
 const registration = {
   id: 'rt-self-9',
@@ -20,8 +18,8 @@ const registration = {
   },
 };
 
-/** Opens Runtimes with the dialog up, as `/?add=1` does. */
-async function openAdd(path = '/?add=1') {
+/** Opens Runtimes with the dialog up, as `/runtimes?add=1` does. */
+async function openAdd(path = '/runtimes?add=1') {
   const view = renderApp(path);
   const dialog = await screen.findByRole('dialog', { name: 'Add a runtime' });
   return { ...view, dialog };
@@ -50,37 +48,46 @@ async function register(user: ReturnType<typeof renderApp>['user'], choice: stri
 
 describe('Add a runtime', () => {
   it('opens over Runtimes from Add a runtime, and closes back to it', async () => {
-    const { user, router } = renderApp('/');
+    const { user, router } = renderApp('/runtimes');
     expect(await screen.findByRole('heading', { name: 'Runtimes', level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Add a runtime' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add a runtime' }));
     const dialog = await screen.findByRole('dialog', { name: 'Add a runtime' });
-    expect(router.state.location.pathname + router.state.location.search).toBe('/?add=1');
-    expect(within(dialog).getByRole('link', { name: 'self-hosting docs' })).toHaveAttribute('href', 'https://docs.glyphh.ai/run-rrotor');
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(router.state.location.pathname + router.state.location.search).toBe('/runtimes?add=1');
+    expect(within(dialog).getAllByRole('link', { name: 'self-hosting docs' })[0]).toHaveAttribute('href', 'https://docs.glyphh.ai/run-rrotor');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog', { name: 'Add a runtime' })).not.toBeInTheDocument();
     expect(router.state.location.search).toBe('');
   });
 
-  it('opens on load at /?add=1, under the Runtimes breadcrumb', async () => {
+  it('opens on load at /runtimes?add=1, under the Runtimes breadcrumb', async () => {
     await openAdd();
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Runtimes')).toHaveAttribute('aria-current', 'page');
   });
 
-  it('is where /getting-started goes now, and there is no Getting started in the sidebar', async () => {
-    const { router } = await openAdd('/getting-started');
-    expect(router.state.location.pathname + router.state.location.search).toBe('/?add=1');
-    const sidebar = screen.getByRole('complementary', { name: 'Main' });
-    expect(within(sidebar).queryByRole('link', { name: 'Getting started' })).not.toBeInTheDocument();
+  it('is where /getting-started and the old /?add=1 go now, and there is no Getting started in the sidebar', async () => {
+    for (const path of ['/getting-started', '/?add=1']) {
+      const { router, unmount } = await openAdd(path);
+      expect(router.state.location.pathname + router.state.location.search).toBe('/runtimes?add=1');
+      const sidebar = screen.getByRole('complementary', { name: 'Main' });
+      expect(within(sidebar).queryByRole('link', { name: 'Getting started' })).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
-  it('opens from the empty Runtimes page, with no address change but ?add=1', async () => {
-    server.use(http.get(v1('/runtime'), () => HttpResponse.json(noRuntime)), http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
-    const { user, router } = renderApp('/');
-    await screen.findByText('No runtime yet');
-    await user.click(screen.getByRole('button', { name: 'Run rrotor yourself' }));
-    expect(await screen.findByRole('dialog', { name: 'Add a runtime' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/');
+  it('offers only running rrotor yourself, this computer first: Glyphh hosts none', async () => {
+    const { dialog } = await openAdd();
+    expect(await within(dialog).findByRole('radio', { name: /^This computer/ })).toBeChecked();
+    expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['local', 'compose', 'helm', 'terraform']);
+    expect(
+      within(dialog).getByRole('radio', { name: /^This computer.*Free\. Try it on your laptop; no HTTPS, so Claude cannot connect yet\./ }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: /^Docker.*Free\. One command on a Linux machine\./ })).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: /^Helm.*Free\./ })).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: /^Terraform.*Free\./ })).toBeInTheDocument();
+    expect(within(dialog).getByText(/Running it yourself is free on every plan/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Glyphh hosted|Glyphh runs it for you|Make your machine/)).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
   });
 
   it('shows the runtime just registered in the list once it closes', async () => {
@@ -101,155 +108,10 @@ describe('Add a runtime', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     await user.click(screen.getByRole('button', { name: 'Add a runtime' }));
     const again = await screen.findByRole('dialog', { name: 'Add a runtime' });
-    expect(within(again).getByRole('radio', { name: /^Glyphh hosted/ })).toBeChecked();
+    expect(within(again).getByRole('radio', { name: /^This computer/ })).toBeChecked();
     await user.click(within(again).getByRole('radio', { name: /^Docker/ }));
     expect(within(again).getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
     expect(screen.queryByText('glyphh_rt_secret')).not.toBeInTheDocument();
-  });
-
-  describe('Glyphh hosted', () => {
-    it('makes a first machine with a name and a size, then gives its connector URL and the SDKs', async () => {
-      let rows: Machine[] = [];
-      let sent: unknown;
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json(rows)),
-        http.post(v1('/runtimes'), async ({ request }) => {
-          sent = await request.json();
-          rows = [{ ...machines[0]!, name: 'Work', size: 'medium' }];
-          return HttpResponse.json(rows[0], { status: 201 });
-        }),
-      );
-      const { user, dialog } = await openAdd();
-      expect(await within(dialog).findByRole('radio', { name: /^Glyphh hosted/ })).toBeChecked();
-      const form = await within(dialog).findByRole('form', { name: 'Make your machine' });
-      expect(within(form).getByLabelText('Name')).toHaveValue('Main');
-      expect(within(form).getByRole('radio', { name: /^Small/ })).toBeChecked();
-      await user.clear(within(form).getByLabelText('Name'));
-      await user.type(within(form).getByLabelText('Name'), 'Work');
-      await user.click(within(form).getByRole('radio', { name: /^Medium/ }));
-      expect(within(dialog).getAllByRole('button').slice(-2).map((b) => b.textContent)).toEqual(['Cancel', 'Make your machine']);
-      await user.click(within(dialog).getByRole('button', { name: 'Make your machine' }));
-      expect(await within(dialog).findByText('https://chris-7f3a.glyphh.app/mcp')).toBeInTheDocument();
-      expect(within(dialog).getAllByRole('button').at(-1)).toHaveTextContent('Done');
-      expect(within(dialog).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      expect(sent).toEqual({ name: 'Work', size: 'medium' });
-      expect(within(dialog).getByRole('heading', { name: 'Connect Claude to Work' })).toBeInTheDocument();
-      expect(within(dialog).getByText('pip install glyphh')).toBeInTheDocument();
-      expect(within(dialog).queryByRole('button', { name: /^Start/ })).not.toBeInTheDocument();
-      expect(within(dialog).getByRole('link', { name: 'Machines' })).toHaveAttribute('href', '/machines');
-    });
-
-    it('says hosting is on Pro and Team, and running it yourself is free', async () => {
-      const { dialog } = await openAdd();
-      expect(await within(dialog).findByRole('radio', { name: /^Glyphh hosted.*On Pro and Team\./ })).toBeInTheDocument();
-      expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['hosted', 'local', 'compose', 'helm', 'terraform']);
-      expect(
-        within(dialog).getByRole('radio', { name: /^This computer.*Free\. Try it on your laptop; no HTTPS, so Claude cannot connect yet\./ }),
-      ).toBeInTheDocument();
-      expect(within(dialog).getByRole('radio', { name: /^Docker.*Free\. One command on a Linux machine\./ })).toBeInTheDocument();
-      expect(within(dialog).getByRole('radio', { name: /^Helm.*Free\./ })).toBeInTheDocument();
-      expect(within(dialog).getByRole('radio', { name: /^Terraform.*Free\./ })).toBeInTheDocument();
-      expect(within(dialog).getByText(/Running it yourself is free on every plan/)).toBeInTheDocument();
-    });
-
-    it('shows the plan’s rate on each size of the first machine, and Enterprise’s as set in the contract', async () => {
-      server.use(http.get(v1('/runtimes'), () => HttpResponse.json([])));
-      const { client } = await openAdd();
-      const form = await screen.findByRole('form', { name: 'Make your machine' });
-      expect(await within(form).findByText('$8.71 / month')).toBeInTheDocument();
-      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] })));
-      await client.invalidateQueries({ queryKey: ['me'] });
-      expect(await within(form).findAllByText('Set in your contract.')).toHaveLength(3);
-      expect(within(form).queryByText(/\/ month/)).not.toBeInTheDocument();
-    });
-
-    it('on Free, says hosting is on Pro and Team, with their rates and Upgrade', async () => {
-      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
-      const { user, router, dialog } = await openAdd();
-      expect(await within(dialog).findByText(/Glyphh hosts machines on Pro and Team\./)).toBeInTheDocument();
-      expect(within(dialog).queryByRole('form', { name: 'Make your machine' })).not.toBeInTheDocument();
-      const table = await within(dialog).findByRole('table', { name: 'Hosted machine rates' });
-      expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Size', 'Pro', 'Team']);
-      await user.click(within(dialog).getByRole('button', { name: 'Upgrade' }));
-      expect(router.state.location.pathname).toBe('/settings/plans');
-    });
-
-    it('on Free, asks a member to ask their admin', async () => {
-      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member', plan: plans[0] })), http.get(v1('/runtimes'), () => HttpResponse.json([])));
-      const { dialog } = await openAdd();
-      expect(await within(dialog).findByText(/Ask your admin to upgrade\./)).toBeInTheDocument();
-      expect(within(dialog).queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
-    });
-
-    it('starts the first machine when it is stopped', async () => {
-      let rows: Machine[] = [{ ...machines[1]! }];
-      let started = '';
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json(rows)),
-        http.post(v1('/runtimes/:id/start'), ({ params }) => {
-          started = String(params.id);
-          rows = [{ ...rows[0]!, state: 'online' }];
-          return HttpResponse.json(rows[0]);
-        }),
-      );
-      const { user, dialog } = await openAdd();
-      await user.click(await within(dialog).findByRole('button', { name: 'Start' }));
-      await vi.waitFor(() => expect(within(dialog).queryByRole('button', { name: 'Start' })).not.toBeInTheDocument());
-      expect(started).toBe('rt-2b8e41');
-      expect(within(dialog).getByText('https://chris-2b8e.glyphh.app/mcp')).toBeInTheDocument();
-    });
-
-    it('says plainly when the plan has no room for the machine to start, with the way to Billing', async () => {
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json([machines[1]])),
-        http.post(v1('/runtimes/:id/start'), () => apiError(403, 'E_LIMIT', 'Free has no hosted machines.', { reason: 'machines' })),
-      );
-      const { user, dialog } = await openAdd();
-      await user.click(await within(dialog).findByRole('button', { name: 'Start' }));
-      const alert = await within(dialog).findByRole('alert');
-      expect(alert).toHaveTextContent('Your plan has no room for this machine, so it stays stopped.');
-      expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
-    });
-
-    it('shows the server’s refusal when starting fails', async () => {
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json([machines[1]])),
-        http.post(v1('/runtimes/:id/start'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off right now.')),
-      );
-      const { user, dialog } = await openAdd();
-      await user.click(await within(dialog).findByRole('button', { name: 'Start' }));
-      expect(await within(dialog).findByText('Hosting is off right now.')).toBeInTheDocument();
-    });
-
-    it('sends a person at the plan’s limit to Billing', async () => {
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json([])),
-        http.post(v1('/runtimes'), () => apiError(403, 'E_LIMIT', 'Free allows 1 machine.', { reason: 'machines' })),
-      );
-      const { user, dialog } = await openAdd();
-      await user.click(await within(dialog).findByRole('button', { name: 'Make your machine' }));
-      const alert = await within(dialog).findByRole('alert');
-      expect(alert).toHaveTextContent('Your plan has no room for another machine.');
-      expect(within(alert).getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/settings/billing');
-    });
-
-    it('says plainly when the server has stopped hosting machines, with the way to run rrotor yourself', async () => {
-      server.use(
-        http.get(v1('/runtimes'), () => HttpResponse.json([])),
-        http.post(v1('/runtimes'), () => apiError(409, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })),
-      );
-      const { user, dialog } = await openAdd();
-      await user.click(await within(dialog).findByRole('button', { name: 'Make your machine' }));
-      const alert = await within(dialog).findByRole('alert');
-      expect(alert).toHaveTextContent('Glyphh is not hosting machines now. Run rrotor yourself with Docker, Helm or Terraform.');
-      expect(within(alert).getByRole('link', { name: 'Add a runtime' })).toHaveAttribute('href', '/?add=1');
-    });
-
-    it('says so when the machines cannot be read', async () => {
-      server.use(http.get(v1('/runtimes'), () => apiError(500, 'E_INTERNAL', 'The machines could not be read.')));
-      const { dialog } = await openAdd();
-      expect(await within(dialog).findByText('The machines could not be read.')).toBeInTheDocument();
-    });
   });
 
   describe('self-hosted', () => {
@@ -458,7 +320,7 @@ describe('Add a runtime', () => {
       expect(run).not.toHaveTextContent('compose');
       expect(within(dialog).getByText(/Claude’s connector cannot reach it: that needs a public HTTPS host, so use Docker or Helm on a server/)).toBeInTheDocument();
       expect(within(dialog).getByText('export GLYPHH_RUNTIME_URL=http://127.0.0.1:7777')).toBeInTheDocument();
-      expect(within(dialog).getByRole('link', { name: 'API Keys' })).toHaveAttribute('href', '/keys');
+      expect(within(dialog).getByRole('link', { name: 'runtime key' })).toHaveAttribute('href', '/runtime-keys');
       expect(within(dialog).queryByRole('button', { name: 'Copy connector URL' })).not.toBeInTheDocument();
       expect(within(dialog).getByText('pip install glyphh')).toBeInTheDocument();
     });
@@ -475,21 +337,9 @@ describe('Add a runtime', () => {
   });
 });
 
-describe('Add a runtime while Glyphh hosts nothing', () => {
-  it.each(['refused', 'off', 'empty'] as const)('offers only running rrotor yourself, this computer first, when the rates answer %s', async (rates) => {
-    server.use(...hostingOffHandlers(rates));
-    const { dialog } = await openAdd();
-    const local = await within(dialog).findByRole('radio', { name: /^This computer/ });
-    expect(local).toBeChecked();
-    expect(within(dialog).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['local', 'compose', 'helm', 'terraform']);
-    expect(within(dialog).queryByRole('radio', { name: /^Glyphh hosted/ })).not.toBeInTheDocument();
-    expect(within(dialog).queryByText(/Glyphh runs it for you/)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('form', { name: 'Register a runtime' })).toBeInTheDocument();
-    expect(within(dialog).queryByRole('form', { name: 'Make your machine' })).not.toBeInTheDocument();
-  });
-
-  it('registers a self-hosted runtime as before', async () => {
-    server.use(...hostingOffHandlers());
+describe('Add a runtime on Free', () => {
+  it('registers a self-hosted runtime as on any plan', async () => {
+    server.use(...onFreeHandlers());
     const { user } = await openAdd();
     const sent = await register(user, 'Helm');
     expect(sent).toEqual([{ name: 'Acme production', public_url: 'https://rrotor.acme.com' }]);

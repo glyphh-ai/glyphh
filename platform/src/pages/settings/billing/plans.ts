@@ -1,6 +1,6 @@
 import { feature, featureNames } from '@/api/plans';
 import type { CloudLimits, FeatureName, Plan } from '@/api/types';
-import { listText, money } from '@/lib/format';
+import { money } from '@/lib/format';
 import type { IconName } from '@/ui';
 
 /** A plan's price in two parts, for the plan picker: "$99" "month", "From $10,000" "year", or "By contract". */
@@ -17,23 +17,14 @@ export function priceText(plan: Plan): string {
   return per ? `${amount} / ${per}` : amount;
 }
 
-/** Whether Glyphh hosts machines on the plan (while hosting is on), as the server says: not Free or Basic. */
-export const hasHosting = (plan: Plan) => plan.hosting ?? plan.price_cents !== 0;
-
-/** The self-serve plans with hosting, as words: "Pro and Team". */
-export function hostingPlansText(plans: Plan[] | undefined): string {
-  const names = (plans ?? []).filter((plan) => plan.self_serve && hasHosting(plan)).map((plan) => plan.name);
-  return names.length ? listText(names) : 'a paid plan';
-}
-
-/** A plan's runtime nodes (`limits.machines`): every runtime linked for the org, hosted or self-hosted. */
+/** A plan's runtime nodes (`limits.machines`): every rrotor linked for the org, local or self-hosted. */
 export function machinesText(machines: number | null): string {
   if (machines === null) return 'Unlimited runtime nodes';
   if (machines === 0) return 'No runtime nodes';
   return machines === 1 ? '1 runtime node' : `${machines} runtime nodes`;
 }
 
-/** What one node may hold, across its models, as the licence key carries it to every node, hosted or self-hosted. */
+/** What one node may hold, across its models, as the licence key carries it to every node, local or self-hosted. */
 export function precedentsText(precedents: number | null): string | null {
   if (precedents === null) return 'Unlimited precedents per node';
   if (precedents === 0) return null;

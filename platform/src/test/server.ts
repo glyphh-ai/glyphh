@@ -21,49 +21,24 @@ export const defaultHandlers: HttpHandler[] = [
   http.get('*/auth/providers', () => HttpResponse.json({ providers: ['github', 'google'] })),
   http.get(v1('/me'), () => HttpResponse.json(fixtures.me)),
   http.get(v1('/org'), () => HttpResponse.json(fixtures.org)),
-  http.get(v1('/runtime'), () => HttpResponse.json(fixtures.runtime)),
   http.get(v1('/runtime/keys'), () => HttpResponse.json(fixtures.runtimeKeys)),
-  http.get(v1('/runtimes'), () => HttpResponse.json(fixtures.machines)),
   http.get(v1('/runtimes/self'), () => HttpResponse.json(fixtures.selfRuntimes)),
   http.get(v1('/models'), () => HttpResponse.json(fixtures.models)),
   http.get(v1('/plans'), () => HttpResponse.json(fixtures.plans)),
-  http.get(v1('/rates'), () => HttpResponse.json(fixtures.rates)),
   http.get(v1('/org/members'), () => HttpResponse.json(fixtures.members)),
   http.get(v1('/org/invites'), () => HttpResponse.json(fixtures.invites)),
   http.get(v1('/installs'), () => HttpResponse.json(fixtures.installs)),
   http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.licenceKeys)),
   http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.nodes)),
-  http.get(v1('/telemetry/logs'), () => HttpResponse.json({ records: fixtures.logs, next_cursor: null })),
-  http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: fixtures.auditEvents, next_cursor: null })),
-  http.get(v1('/telemetry/metrics'), () => HttpResponse.json({ metrics: fixtures.metrics })),
 ];
 
-/** The server as it answers while no runtime sends it anything, rrotor's default: `server.use(...nothingSentHandlers())`. */
-export const nothingSentHandlers = (): HttpHandler[] => [
-  http.get(v1('/telemetry/logs'), () => HttpResponse.json({ records: [], next_cursor: null })),
-  http.get(v1('/telemetry/audit'), () => HttpResponse.json({ events: [], next_cursor: null })),
-  http.get(v1('/telemetry/metrics'), () => HttpResponse.json({ metrics: [] })),
-];
-
-/**
- * The server as it answers with hosting off and features not yet built: a test calls `server.use(...hostingOffHandlers())`.
- * `rates` picks how the server answers the rates: refused with `hosting_off` (as it does), `{hosting: "off"}`, or no plans.
- */
-export const hostingOffHandlers = (rates: 'refused' | 'off' | 'empty' = 'refused'): HttpHandler[] => [
-  http.get(v1('/me'), () => HttpResponse.json(fixtures.hostingOff.me)),
-  http.get(v1('/org'), () => HttpResponse.json(fixtures.hostingOff.org)),
-  http.get(v1('/plans'), () => HttpResponse.json(fixtures.hostingOff.plans)),
-  http.get(v1('/rates'), () =>
-    rates === 'refused'
-      ? apiError(503, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })
-      : HttpResponse.json(rates === 'off' ? fixtures.hostingOff.rates : { ...fixtures.rates, plans: {} }),
-  ),
-  http.get(v1('/runtime'), () => HttpResponse.json(fixtures.hostingOff.runtime)),
-  http.get(v1('/runtimes'), () => HttpResponse.json(fixtures.hostingOff.machines)),
-  http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.hostingOff.licenceKeys)),
-  http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.hostingOff.nodes)),
-  http.post(v1('/runtimes'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
-  http.post(v1('/runtime/start'), () => apiError(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now.', { reason: 'hosting_off' })),
+/** The server as it answers a Free org with features not yet built: a test calls `server.use(...onFreeHandlers())`. */
+export const onFreeHandlers = (): HttpHandler[] => [
+  http.get(v1('/me'), () => HttpResponse.json(fixtures.onFree.me)),
+  http.get(v1('/org'), () => HttpResponse.json(fixtures.onFree.org)),
+  http.get(v1('/plans'), () => HttpResponse.json(fixtures.onFree.plans)),
+  http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.onFree.licenceKeys)),
+  http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.onFree.nodes)),
 ];
 
 export const server = setupServer(...defaultHandlers);
