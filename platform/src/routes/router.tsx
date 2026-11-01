@@ -6,6 +6,7 @@ import { RequireSession } from '@/components/RequireSession';
 import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
+import { ArtifactsPage } from '@/pages/artifacts/ArtifactsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
@@ -19,6 +20,7 @@ import { DeviceApprovePage } from '@/pages/flows/DeviceApprovePage';
 import { DevicePage } from '@/pages/flows/DevicePage';
 import { LoginPage } from '@/pages/flows/LoginPage';
 import { DeviceDonePage, ErrorPage, GitHubInstalledPage, NotFoundPage } from '@/pages/flows/ResultPages';
+import { AuthPage } from '@/pages/settings/AuthPage';
 import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
@@ -55,6 +57,7 @@ export const routes: RouteObject[] = [
       // runtime (2026-10-31): the old Machines and Logs pages go to Runtimes, and Getting started to its Add a runtime.
       { path: 'runtimes', element: <RuntimesPage />, handle: runtimeCrumbs('Runtimes') },
       { path: 'licence', element: <LicencePage />, handle: runtimeCrumbs('Licence') },
+      { path: 'artifacts', element: <ArtifactsPage />, handle: runtimeCrumbs('Artifacts') },
       {
         path: 'runtime-keys',
         element: <AdaOr ada={<KeysPage />} off={<Moved to="/keys" />} />,
@@ -137,6 +140,7 @@ export const routes: RouteObject[] = [
       { path: 'usage', element: <Moved to="/usage" /> },
       { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
+      { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
     ],

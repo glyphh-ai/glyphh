@@ -34,10 +34,10 @@ server's `glyphh_signin` cookie (ten minutes, on the server's domain), so each a
 
 | Route | Arrives from | Shows | Answers with |
 |---|---|---|---|
-| `/device?code=` | `GET {server}/v1/device?code=` (without a code, asks for it) | The code, to match Claude's; a button per provider from `GET {server}/auth/providers` | Link to `GET {server}/auth/{provider}/start?code=` |
+| `/device?code=` | `GET {server}/v1/device?code=` (without a code, asks for it) | The code, to match Claude's; a button per provider from `GET {server}/auth/providers`, and single sign-on when it says `sso` (the work email, whose domain names the org) | Link to `GET {server}/auth/{provider}/start?code=` (`/auth/sso/start?code=&email=`) |
 | `/device/approve?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "device", code, name, surface, email}` | Link to `GET {server}/auth/approve?consent=&decision=approve` or `deny` |
 | `/device/done?result=approved\|denied` | `/auth/approve` | "Signed in" or "Nothing was signed in" | — |
-| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` | "<client> wants to use your Glyphh account"; a button per provider | Link to `GET {server}/auth/{provider}/start?oauth=` |
+| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` | "<client> wants to use your Glyphh account"; a button per provider, and single sign-on as on `/device` | Link to `GET {server}/auth/{provider}/start?oauth=` (`&email=` for single sign-on) |
 | `/allow?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "oauth", client, returns_to, resource, email}` | Link to `GET {server}/auth/oauth/allow?consent=&decision=allow` or `deny` |
 | `/account?linked=<provider>` | a provider link's callback | Redirects to `/settings/profile`, which confirms the link | — |
 | `/billing?done=1` | Stripe Checkout and the portal | Redirects to `/settings/billing`, read afresh | — |
@@ -57,14 +57,22 @@ A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message
   to its Add a runtime.
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
   with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
-  "offline": true, "sso": false}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
-  and audit logs missing from `built` (or with no map) are not built; roles and audit logs follow `sso` when the server
-  does not name them. Plans are listed, priced and bought as before.
+  "offline": true, "sso": true}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
+  and audit logs missing from `built` (or with no map) are not built; roles and audit logs are included where `sso`
+  is when the server does not name them, and built only when it says so. Plans are listed, priced and bought as before.
+- **Single sign-on** (Enterprise) is set on Settings → Auth (`GET`/`PUT`/`DELETE /v1/org/sso`): the OpenID Connect
+  issuer, client id and secret (never shown back), the email domains that route a sign-in to the org, the redirect URI
+  to register at the identity provider, and whether it is required (then Google and GitHub are refused for the org's
+  people). The sign-in pages offer "Continue with single sign-on" when `GET {server}/auth/providers` says `sso`: the
+  person gives their work email and goes to `{server}/auth/sso/start?…&email=`; the platform's own log-in remembers
+  the email beside the provider so `/authorize` continues without asking again. Settings → Auth also takes the
+  **reviewer groups** (`reviewers`): the identity provider's groups whose members review the org's artifacts beside the
+  admin.
 
 ## Ada Cloud
 
 With the server's `GLYPHH_ADA_CLOUD` on, `GET /v1/me` answers `ada_cloud: true`: Home, Models, Ada, API Keys and Usage
-are Ada's (the sidebar's Ada), and **Runtimes & licences** sits beside them (Runtimes, Licence, Runtime keys; below,
+are Ada's (the sidebar's Ada), and **Runtimes & licences** sits beside them (Runtimes, Licence, Artifacts, Runtime keys; below,
 Pages). The old `?add=1` on Home opens Home. Off, or on an older server without the field, every page is as below. The browser calls
 `/api/ada/v1/*` here; the route handler adds the session's token and passes the call to Ada's host
 (`GLYPHH_ADA_URL`, `https://ada.glyphh.ai`), which takes a Glyphh sign-in as the account API does. An import's file goes
@@ -91,12 +99,13 @@ nodes, precedents per node or runtime features (sync, HA, offline licences).
 ## Pages
 
 The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
-Runtimes & licences (Runtimes, Licence, and Runtime keys with Ada Cloud on or API Keys and Usage with it off) is in the
+Runtimes & licences (Runtimes, Licence, Artifacts, and Runtime keys with Ada Cloud on or API Keys and Usage with it off) is in the
 sidebar either way; with Ada Cloud off, `/` goes to `/runtimes`.
 
 | Route | Page | Server calls | Does |
 |---|---|---|---|
 | `/runtimes` | Runtimes | `GET /v1/runtimes/self`, `GET /v1/me` | **Install rrotor** on your own computer: from Claude Code, the `glyphh` plugin (`/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh`), then "install rrotor" (its `rrotor` skill); or by hand, `glyphh-ai/glyphh`'s `deploy/compose/docker-compose.local.yml` (fetch it, make a local token, `docker compose … up -d`, `claude mcp add` at `http://127.0.0.1:7777/mcp`), with a link to the Docker Compose guide; the key reaches rrotor on its own, or as `GLYPHH_LICENSE_KEY`; none is Community. The runtimes run at their own address: state, version, last heartbeat; rotate the token (`POST /v1/runtimes/self/{id}/token`), delete (`DELETE /v1/runtimes/self/{id}`), offline licence on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`). **Add a runtime** (a dialog; `/runtimes?add=1` opens it on load, and the old `/?add=1` and `/getting-started` go there): for a rrotor at its own public address only (one on the person's own computer comes from the `rrotor` skill, above): Docker, Helm or Terraform, each with what it needs (register with a DNS name, `POST /v1/runtimes/self {name, public_url}`, token shown once; the command filled from the answer's `env`, nothing to clone, pasteable in zsh and bash with no `#` lines, ending with a `curl …/healthz` check: Docker is `deploy/compose` as its README has it, `docker-compose.yml` and the `Caddyfile` fetched into a folder, `.env` written with the runtime id, token and public host (and `RROTOR_CPUS`/`RROTOR_MEMORY` for Medium and Large, the Helm chart's presets), `docker compose up -d`; or the image alone with `docker run` behind HTTPS already in front; Helm installs the released chart; Terraform's module is `git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/<cloud>?ref=main`; on a paid plan, how to set the licence key, as text beside the block, for an air-gapped node only). Then the connector URL `https://<host>/mcp` and the SDK and plugin install commands. Closing it reads the runtimes again |
+| `/artifacts` | Artifacts | `GET /v1/artifacts?q=&page=&per_page=24&state=`, `GET /v1/me`, `POST /v1/artifacts/{id}/approve\|reject\|retire` | The pages Claude published to the org's rrotors, from the server's catalogue (`glyphh-ai/server`, `docs/specs/artifacts.md`): cards with the title, the description (three lines at most), the runtime and version, the roles that may open it (or Everyone), who published it and when, and **Open** (the app at the rrotor, `{runtime_url}/apps/{name}/`, a new tab). A search field (`?q=`, sent once typing pauses) and 24 a page (`?page=`, Previous/Next, "25–30 of 30"). A reviewer (`me.reviewer`: the admin, or a member in a reviewer group) has the tabs Published, Awaiting review (`?state=draft`: Approve, Reject with a reason) and Rejected (`?state=rejected`: the reason), and Retire on a published one; a member asking for a review tab in the URL sees Published |
 | `/licence` | Licence | `GET /v1/me`, `GET /v1/license/keys`, `GET /v1/license/nodes` | The key the org's runtimes are sent now (`license_key`), masked with Reveal and Copy: its tier, runtime nodes, precedents per node, sync and expiry. How it reaches rrotor: on its own at the link and the daily heartbeat, renewed at each payment; an air-gapped node takes it as `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key`. The runtime nodes "N of M" and each node, local or self-hosted (runtime, node id, role, version, precedents, last seen), over the plan shown, never blocking. Older keys with their state (live, expired, revoked). Free has none: Community, 1 node, 5,000 precedents, no sync. `/settings/licence` goes here |
 | `/runtime-keys` (Ada Cloud on), `/keys` (off) | Runtime keys, API Keys | `GET /v1/runtime/keys`, `GET /v1/runtimes/self` | Make one for a self-hosted runtime (`POST /v1/runtime/keys {name, runtime_id, expires_in_days?}`: the runtime, the first until another is chosen; 7, 30, 60, 90 or 365 days, or never; shown once; with no runtime registered, the way to Runtimes), revoke (`DELETE /v1/runtime/keys/{id}`), delete a revoked or expired one (`DELETE /v1/runtime/keys/{id}/record`). With Ada Cloud off, `/runtime-keys` goes to `/keys` |
 | `/usage` (Ada Cloud off) | Usage | `GET /v1/me`, `GET /v1/runtime/keys`, `GET /v1/license/nodes` | The fullest node's precedents against the plan's per node; the runtime nodes and each node, as on Licence; each API key's calls. `/settings/usage` goes here |

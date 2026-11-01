@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { renderApp, stubLocation } from '@/test/render';
 import { http, HttpResponse, server, serverUrl, sessionHandler } from '@/test/server';
-import { pendingLogin, rememberLogin } from './pendingLogin';
+import { forgetLogin, pendingLogin, rememberLogin } from './pendingLogin';
 
 const consent = (body: Record<string, unknown>, status = 200) =>
   http.get(`${serverUrl}/auth/consent`, ({ request }) => {
@@ -90,7 +90,29 @@ describe('Log in, more', () => {
     } finally {
       document.removeEventListener('click', stay);
     }
-    expect(pendingLogin()).toBe('google');
+    expect(pendingLogin()?.provider).toBe('google');
+  });
+
+  it('offers single sign-on when the server does, asking for the work email and remembering it', async () => {
+    const location = stubLocation();
+    server.use(sessionHandler(false), http.get('*/auth/providers', () => HttpResponse.json({ providers: ['google'], sso: true })));
+    try {
+      const { user } = renderApp('/login?returnTo=/keys');
+      await user.click(await screen.findByRole('button', { name: 'Log in with single sign-on' }));
+      await user.type(screen.getByLabelText('Work email'), 'pat@acme.com');
+      await user.click(screen.getByRole('button', { name: 'Log in with single sign-on' }));
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('/auth/login?returnTo=%2Fkeys'));
+      expect(pendingLogin()).toEqual(expect.objectContaining({ provider: 'sso', email: 'pat@acme.com' }));
+    } finally {
+      location.restore();
+    }
+  });
+
+  it('offers no single sign-on when the server does not', async () => {
+    server.use(sessionHandler(false));
+    renderApp('/login');
+    await screen.findByRole('link', { name: 'Log in with Google' });
+    expect(screen.queryByRole('button', { name: 'Log in with single sign-on' })).not.toBeInTheDocument();
   });
 });
 
@@ -99,6 +121,32 @@ describe('/authorize', () => {
     renderApp('/authorize?oauth=o1&client=Claude');
     expect(await screen.findByRole('heading', { name: 'Claude wants to use your Glyphh account' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toHaveAttribute('href', `${serverUrl}/auth/github/start?oauth=o1`);
+  });
+
+  it('continues the platform’s own single sign-on with the work email already given', async () => {
+    const location = stubLocation();
+    rememberLogin('sso', 'pat@acme.com');
+    try {
+      renderApp('/authorize?oauth=o1&client=Glyphh');
+      await vi.waitFor(() => expect(location.replace).toHaveBeenCalledWith(`${serverUrl}/auth/sso/start?oauth=o1&email=pat%40acme.com`));
+    } finally {
+      location.restore();
+      forgetLogin();
+    }
+  });
+
+  it('sends a third-party client’s person to their organisation’s single sign-on by work email', async () => {
+    const location = stubLocation();
+    server.use(http.get('*/auth/providers', () => HttpResponse.json({ providers: ['github'], sso: true })));
+    try {
+      const { user } = renderApp('/authorize?oauth=o1&client=Claude');
+      await user.click(await screen.findByRole('button', { name: 'Continue with single sign-on' }));
+      await user.type(screen.getByLabelText('Work email'), 'pat@acme.com');
+      await user.click(screen.getByRole('button', { name: 'Continue with single sign-on' }));
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith(`${serverUrl}/auth/sso/start?oauth=o1&email=pat%40acme.com`));
+    } finally {
+      location.restore();
+    }
   });
 
   it('continues the platform’s own log-in with the provider already chosen', async () => {
@@ -190,6 +238,23 @@ describe('/device', () => {
     renderApp('/device?code=ABCD-EFGH');
     expect(await screen.findByLabelText('Code')).toHaveTextContent('ABCD-EFGH');
     expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', `${serverUrl}/auth/google/start?code=ABCD-EFGH`);
+    expect(screen.queryByRole('button', { name: 'Continue with single sign-on' })).not.toBeInTheDocument();
+  });
+
+  it('signs in by work email when single sign-on is offered', async () => {
+    const location = stubLocation();
+    server.use(http.get('*/auth/providers', () => HttpResponse.json({ providers: ['google'], sso: true })));
+    try {
+      const { user } = renderApp('/device?code=ABCD-EFGH');
+      await user.click(await screen.findByRole('button', { name: 'Continue with single sign-on' }));
+      const field = screen.getByLabelText('Work email');
+      expect(screen.getByRole('button', { name: 'Continue with single sign-on' })).toBeDisabled();
+      await user.type(field, ' Pat@Acme.com ');
+      await user.click(screen.getByRole('button', { name: 'Continue with single sign-on' }));
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith(`${serverUrl}/auth/sso/start?code=ABCD-EFGH&email=Pat%40Acme.com`));
+    } finally {
+      location.restore();
+    }
   });
 
   it('asks for the code when the link has none', async () => {

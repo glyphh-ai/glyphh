@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { readResponse } from './client';
-import type { Consent } from './types';
+import type { Consent, Providers } from './types';
 
 export type Session = {
   signedIn: boolean;
@@ -20,13 +20,22 @@ export const useSession = () =>
     staleTime: Infinity,
   });
 
-/** Sign-in providers the server has set up, in its order. */
+/** Sign-in providers the server has set up, in its order, and whether single sign-on is offered too. */
 export const useProviders = () =>
   useQuery({
     queryKey: ['providers'],
-    queryFn: async () => (await readResponse<{ providers: string[] }>(await fetch('/auth/providers'))).providers,
+    queryFn: async () => {
+      const found = await readResponse<Providers>(await fetch('/auth/providers'));
+      return { providers: found.providers, sso: found.sso === true };
+    },
     staleTime: Infinity,
   });
+
+/** Where a provider's sign-in starts on the server for a step (`code=`, `oauth=`); single sign-on carries the email. */
+export function startUrl(serverUrl: string, provider: string, step: string, email?: string): string {
+  const mail = email ? `&email=${encodeURIComponent(email)}` : '';
+  return `${serverUrl}/auth/${provider}/start?${step}${mail}`;
+}
 
 /**
  * What a sign-in or a client is asking for. The server ties a consent to the browser that started it

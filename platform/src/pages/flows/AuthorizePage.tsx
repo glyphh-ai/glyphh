@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { useProviders, useSession } from '@/api/session';
+import { startUrl, useProviders, useSession } from '@/api/session';
 import { ProviderButtons } from '@/components/ProviderButtons';
 import { AuthLayout } from '@/layout/AuthLayout/AuthLayout';
 import { ErrorNotice, Skeleton } from '@/ui';
@@ -26,12 +26,12 @@ function Authorize({ oauth, client }: { oauth: string; client: string }) {
   const providers = useProviders();
   const serverUrl = session.data?.serverUrl;
 
-  const startUrl = (provider: string) => `${serverUrl}/auth/${provider}/start?oauth=${encodeURIComponent(oauth)}`;
+  const start = (provider: string, email?: string) => startUrl(serverUrl ?? '', provider, `oauth=${encodeURIComponent(oauth)}`, email);
 
-  // The platform's own log-in: the provider was chosen on /login a moment ago.
+  // The platform's own log-in: the provider (and, for single sign-on, the work email) was chosen on /login a moment ago.
   const own = session.data && client === session.data.clientName ? pendingLogin() : null;
   useEffect(() => {
-    if (own) window.location.replace(startUrl(own));
+    if (own) window.location.replace(start(own.provider, own.email));
   });
 
   if (own) {
@@ -46,7 +46,7 @@ function Authorize({ oauth, client }: { oauth: string; client: string }) {
     <AuthLayout title={`${client} wants to use your Glyphh account`}>
       <p className={styles.text}>Sign in to choose whether to allow it.</p>
       {(providers.isPending || session.isPending) && <Skeleton height={44} />}
-      {providers.data && serverUrl && <ProviderButtons providers={providers.data} href={startUrl} />}
+      {providers.data && serverUrl && <ProviderButtons providers={providers.data.providers} sso={providers.data.sso} href={start} />}
     </AuthLayout>
   );
 }

@@ -6,16 +6,23 @@ describe('the pending log-in note', () => {
   it('remembers the provider chosen, until forgotten', () => {
     expect(pendingLogin()).toBeNull();
     rememberLogin('github');
-    expect(pendingLogin()).toBe('github');
+    expect(pendingLogin()).toEqual(expect.objectContaining({ provider: 'github' }));
+    expect(pendingLogin()).not.toHaveProperty('email');
     forgetLogin();
     expect(pendingLogin()).toBeNull();
+  });
+
+  it('remembers the work email given for single sign-on', () => {
+    rememberLogin('sso', 'pat@acme.com');
+    expect(pendingLogin()).toEqual(expect.objectContaining({ provider: 'sso', email: 'pat@acme.com' }));
+    forgetLogin();
   });
 
   it('lasts ten minutes', () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     rememberLogin('google');
     now.mockReturnValue(1_000_000 + 10 * 60 * 1000);
-    expect(pendingLogin()).toBe('google');
+    expect(pendingLogin()).toEqual({ provider: 'google', at: 1_000_000 });
     now.mockReturnValue(1_000_000 + 10 * 60 * 1000 + 1);
     expect(pendingLogin()).toBeNull();
   });

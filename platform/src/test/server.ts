@@ -18,9 +18,10 @@ const v1 = (path: string) => `*/api/v1${path}`;
 
 export const defaultHandlers: HttpHandler[] = [
   sessionHandler(),
-  http.get('*/auth/providers', () => HttpResponse.json({ providers: ['github', 'google'] })),
+  http.get('*/auth/providers', () => HttpResponse.json({ providers: ['github', 'google'], sso: false })),
   http.get(v1('/me'), () => HttpResponse.json(fixtures.me)),
   http.get(v1('/org'), () => HttpResponse.json(fixtures.org)),
+  http.get(v1('/org/sso'), () => HttpResponse.json(null)),
   http.get(v1('/runtime/keys'), () => HttpResponse.json(fixtures.runtimeKeys)),
   http.get(v1('/runtimes/self'), () => HttpResponse.json(fixtures.selfRuntimes)),
   http.get(v1('/plans'), () => HttpResponse.json(fixtures.plans)),
@@ -39,6 +40,24 @@ export const onFreeHandlers = (): HttpHandler[] => [
   http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.onFree.licenceKeys)),
   http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.onFree.nodes)),
 ];
+
+/**
+ * `GET /v1/artifacts` as the server pages it: the state asked (approved by default), `q` against title, description
+ * and name, `per_page` (24) from `page`. Pass the fixtures (or many) and tests assert the query from what comes back.
+ */
+export const artifactsHandler = (all = fixtures.artifacts) =>
+  http.get(v1('/artifacts'), ({ request }) => {
+    const url = new URL(request.url);
+    const state = url.searchParams.get('state') ?? 'approved';
+    const q = (url.searchParams.get('q') ?? '').toLowerCase();
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const perPage = Number(url.searchParams.get('per_page') ?? '24');
+    const found = all.filter((a) => a.state === state && (!q || [a.title, a.description, a.name].some((s) => s.toLowerCase().includes(q))));
+    const artifacts = found.slice((page - 1) * perPage, page * perPage);
+    return HttpResponse.json({ artifacts, page, per_page: perPage, total: found.length });
+  });
+
+defaultHandlers.push(artifactsHandler());
 
 export const server = setupServer(...defaultHandlers);
 

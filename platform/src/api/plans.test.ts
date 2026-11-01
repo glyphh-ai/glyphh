@@ -10,12 +10,14 @@ describe('a plan’s features', () => {
     expect(feature(onFree.plans[4]!, 'offline')).toEqual({ included: true, built: true });
   });
 
-  it('takes roles and audit logs from sso when the server names neither', () => {
+  it('includes roles and audit logs where sso is, built only when the server says so', () => {
     const enterprise = onFree.plans[4]!;
+    expect(feature(enterprise, 'sso')).toEqual({ included: true, built: true });
     expect(feature(enterprise, 'rbac')).toEqual({ included: true, built: false });
     expect(feature(enterprise, 'audit')).toEqual({ included: true, built: false });
-    expect(feature(plans[4]!, 'audit')).toEqual({ included: true, built: true });
-    expect(feature({ ...enterprise, features: { ...enterprise.features, rbac: true }, built: { ...enterprise.built, sso: true } }, 'rbac')).toEqual({ included: true, built: true });
+    expect(feature(plans[4]!, 'audit')).toEqual({ included: true, built: true }); // named in its built map
+    expect(feature({ ...enterprise, built: { ...enterprise.built, audit: true } }, 'audit')).toEqual({ included: true, built: true });
+    expect(feature({ ...enterprise, features: { ...enterprise.features, rbac: true }, built: { ...enterprise.built, rbac: true } }, 'rbac')).toEqual({ included: true, built: true });
   });
 
   it('reads {included, built} per feature alike', () => {
