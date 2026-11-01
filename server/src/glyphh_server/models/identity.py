@@ -6,11 +6,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at
 
-PROVIDERS: tuple[str, ...] = ("google", "github")
+PROVIDERS: tuple[str, ...] = ("google", "github", "sso")
 
 
 class Identity(Base):
-    """A Google or GitHub account a user signs in with, found by the provider's own id, never by email alone."""
+    """A Google, GitHub or single sign-on account a user signs in with, found by the provider's own id (an SSO one's
+    `<issuer>#<subject>`), never by email alone."""
 
     __tablename__ = "identities"
     __table_args__ = (CheckConstraint(f"provider IN {PROVIDERS}", name="identities_provider"),)

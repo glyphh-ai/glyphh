@@ -18,6 +18,7 @@ from glyphh_server.mcp.tools import (
     ada_keys,
     ada_models,
     ada_releases,
+    artifacts,
     billing,
     grants,
     people,
@@ -41,6 +42,7 @@ TOOLS: dict[str, Tool] = {
         *grants.TOOLS,
         *runtime.TOOLS,
         *self_hosted.TOOLS,
+        *artifacts.TOOLS,
     )
 }
 
@@ -65,7 +67,7 @@ def listed(tool: Tool, with_panel: bool) -> dict[str, Any]:
         "annotations": {"title": tool.title, "readOnlyHint": tool.read_only, "openWorldHint": False},
     }
     if tool.panel and with_panel:
-        shown["_meta"] = {"ui": {"resourceUri": panel.URI}}
+        shown["_meta"] = {"ui": {"resourceUri": tool.resource or panel.URI}}
     return shown
 
 

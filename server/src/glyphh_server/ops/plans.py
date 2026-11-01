@@ -29,11 +29,11 @@ class Features(BaseModel):
     sync: bool = Field(description="Sync the precedent store across instances")
     ha: bool = Field(description="Highly available runtimes")
     offline: bool = Field(description="Offline (air-gapped) licences")
-    sso: bool = Field(description="SSO and SAML, roles and audit logs")
+    sso: bool = Field(description="Single sign-on with the org's own identity provider (OpenID Connect)")
 
 
-# What works today, one source of truth: only offline licences; the other features are licence flags, not built.
-BUILT: Features = Features(sync=False, ha=False, offline=True, sso=False)
+# What works today, one source of truth: offline licences and single sign-on; sync and HA are licence flags, not built.
+BUILT: Features = Features(sync=False, ha=False, offline=True, sso=True)
 OVERAGE_CENTS_PER_10K: int = 100  # a metered plan's reads past its month: $1 per 10,000 (the ada_requests price)
 
 

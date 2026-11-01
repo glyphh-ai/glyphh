@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Text, func, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -28,3 +28,6 @@ class User(Base):
     created_at: Mapped[datetime] = created_at()
     # Where their sign-up came from: the website's campaign tags (ops/attribution.py); null when untagged.
     source: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # The identity provider's groups, as single sign-on last said (docs/specs/artifacts.md, 2): the roles an
+    # artifact may be restricted to. Empty for a Google or GitHub sign-in.
+    groups: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))

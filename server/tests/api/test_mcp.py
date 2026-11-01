@@ -18,6 +18,7 @@ from tests.connector import MODERN, UI, granted, modern, modern_headers, rpc
 from tests.db.helpers import person
 
 PANEL: str = "ui://glyphh/account/4"
+ARTIFACTS: str = "ui://glyphh/artifacts/1"
 
 
 async def _auth(engine: AsyncEngine) -> dict[str, str]:
@@ -151,8 +152,21 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "self_runtimes",
         "register_self_runtime",
         "offline_licence",
+        "artifacts",
+        "artifact_approve",
+        "artifact_reject",
+        "artifact_retire",
     }
-    assert {n for n, t in tools.items() if "_meta" in t} == {"whoami", "plan", "usage"}
+    panels = {n: t["_meta"]["ui"]["resourceUri"] for n, t in tools.items() if "_meta" in t}
+    assert panels == {
+        "whoami": PANEL,
+        "plan": PANEL,
+        "usage": PANEL,
+        "artifacts": ARTIFACTS,
+        "artifact_approve": ARTIFACTS,
+        "artifact_reject": ARTIFACTS,
+        "artifact_retire": ARTIFACTS,
+    }
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}
     assert tools["upgrade"]["inputSchema"]["required"] == ["plan"] and tools["whoami"]["annotations"]["readOnlyHint"]
     assert tools["plans"]["annotations"]["readOnlyHint"] and not tools["upgrade"]["annotations"]["readOnlyHint"]
@@ -164,16 +178,20 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
 
 async def test_the_panel_is_listed_and_read_as_an_mcp_app(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     auth = await _auth(engine)
-    assert (await rpc(client, auth, "resources/list"))["result"]["resources"] == [panel.RESOURCE]
+    listed = (await rpc(client, auth, "resources/list"))["result"]["resources"]
+    assert listed == [panel.RESOURCE, panel.ARTIFACTS_RESOURCE] and listed[1]["uri"] == ARTIFACTS
     assert (await rpc(client, auth, "resources/templates/list"))["result"]["resourceTemplates"] == []
-    (read,) = (await rpc(client, auth, "resources/read", uri=PANEL))["result"]["contents"]
-    assert (read["uri"], read["mimeType"], read["_meta"]) == (
-        PANEL,
-        "text/html;profile=mcp-app",
-        {"ui": {"prefersBorder": True}},
-    )
-    assert read["text"].startswith("<!doctype html>") and "window.McpApp=" in read["text"]
-    assert "__APP_JS__" not in read["text"] and "callServerTool" in read["text"]
+    for uri in (PANEL, ARTIFACTS):
+        (read,) = (await rpc(client, auth, "resources/read", uri=uri))["result"]["contents"]
+        assert (read["uri"], read["mimeType"], read["_meta"]) == (
+            uri,
+            "text/html;profile=mcp-app",
+            {"ui": {"prefersBorder": True}},
+        )
+        assert read["text"].startswith("<!doctype html>") and "window.McpApp=" in read["text"]
+        assert "__APP_JS__" not in read["text"] and "callServerTool" in read["text"]
+    cards = (await rpc(client, auth, "resources/read", uri=ARTIFACTS))["result"]["contents"][0]["text"]
+    assert "artifact_approve" in cards and "openLink" in cards
     gone = await rpc(client, auth, "resources/read", uri="ui://glyphh/other")
     assert gone["error"]["code"] == -32602
 

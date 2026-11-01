@@ -41,7 +41,7 @@ async def test_signing_in_makes_an_install_with_a_free_org_and_hands_its_token_o
     assert (code["interval"], code["expires_in"], len(code["user_code"])) == (5, 600, 9)
     page = await browser.http.get("/v1/device", params={"code": code["user_code"].lower().replace("-", "")})
     assert went(page) == ("/device", {"code": code["user_code"]})
-    assert (await browser.http.get("/auth/providers")).json() == {"providers": ["google", "github"]}
+    assert (await browser.http.get("/auth/providers")).json()["providers"] == ["google", "github"]
     shown, consent = await to_approve(browser.http, code["user_code"])
     assert shown == {
         "kind": "device",
@@ -112,7 +112,7 @@ async def test_without_providers_the_page_says_so(engine: AsyncEngine, stripe: F
     async for bare in open_browser(stripe, SETTINGS):
         code = await new_code(bare.http)
         assert went(await bare.http.get("/v1/device", params={"code": code["user_code"]}))[0] == "/device"
-        assert (await bare.http.get("/auth/providers")).json() == {"providers": []}
+        assert (await bare.http.get("/auth/providers")).json()["providers"] == []
 
 
 async def test_installs_are_never_limited_a_second_machine_is_a_second_install(browser: Browser) -> None:

@@ -56,7 +56,8 @@ async def test_the_plans_are_free_basic_pro_team_and_enterprise(
         FEATURES_OFF | {"sync": True},
         {"sync": True, "ha": True, "offline": True, "sso": True},
     ]
-    assert all(p["built"] == FEATURES_OFF | {"offline": True} for p in plans)  # only offline licences work today
+    built = FEATURES_OFF | {"offline": True, "sso": True}  # offline licences and single sign-on work today
+    assert all(p["built"] == built for p in plans)
     keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built"}
     assert keys | {"cloud"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud is off
 

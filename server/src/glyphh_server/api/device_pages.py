@@ -4,12 +4,16 @@ it by a short-lived cookie.
 
 The device flow: the link opens `GET /v1/device?code=` → the platform's `/device` page (the code, Continue with a
 provider) → `GET /auth/{provider}/start?code=` → the provider → `GET /auth/{provider}/callback` → the platform's
-`/device/approve?consent=` page, which reads `GET /auth/consent` and answers with `GET /auth/approve`."""
+`/device/approve?consent=` page, which reads `GET /auth/consent` and answers with `GET /auth/approve`.
+
+An org's single sign-on (ops/sso.py) takes the same steps as `sso`: `/auth/sso/start` with the person's work email
+(`email=`), whose domain names the org, and the org (`o`) travels in the signed state to `/auth/sso/callback`."""
 
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, Request
+from sqlalchemy.ext.asyncio import AsyncConnection
 from starlette.responses import RedirectResponse, Response
 
 from glyphh_server.api import link_pages, oauth_pages
@@ -26,13 +30,29 @@ from glyphh_server.api.browser_session import (
 )
 from glyphh_server.api.pages import to_platform
 from glyphh_server.errors import Forbidden, Invalid
-from glyphh_server.ops import device_approval
+from glyphh_server.ops import device_approval, sso
 from glyphh_server.ops.auth import signed
-from glyphh_server.ops.auth.providers import available, provider
+from glyphh_server.ops.auth.providers import Provider, available, provider
 from glyphh_server.ops.auth.signin import sign_in
 
 router = APIRouter()
 DEVICE: str = "device"
+
+
+async def chosen_provider(
+    name: str, request: Request, conn: AsyncConnection, email: str | None = None, state: dict[str, Any] | None = None
+) -> tuple[Provider, dict[str, str]]:
+    """The provider the step names, and what its state must carry: Google or GitHub, or an org's single sign-on,
+    found by the work email on the way out and by the org in the state on the way back."""
+    settings = cfg(request)
+    if name != sso.NAME:
+        return provider(name, settings), {}
+    http = request.app.state.http
+    if state is not None:
+        found = await sso.for_org(conn, http, settings, uuid.UUID(str(state.get("o"))))
+    else:
+        found = await sso.for_email(conn, http, settings, email or "")
+    return found, {"o": str(found.org_id)}
 
 
 @router.get("/v1/device", operation_id="deviceSignInPage", tags=["device flow"], response_class=RedirectResponse)
@@ -46,9 +66,10 @@ async def device_page(request: Request, conn: Conn, code: str | None = None) -> 
 
 
 @router.get("/auth/providers", operation_id="signInProviders", tags=["device flow"])
-async def providers(request: Request) -> dict[str, list[str]]:
-    """The sign-in providers this server offers (google, github), for the platform's Continue buttons."""
-    return {"providers": list(available(cfg(request)))}
+async def providers(request: Request, conn: Conn) -> dict[str, Any]:
+    """The sign-in providers this server offers (google, github), for the platform's Continue buttons, and `sso`:
+    whether any org signs in with single sign-on, so the page offers it too (asking for the person's work email)."""
+    return {"providers": list(available(cfg(request))), "sso": await sso.offered(conn)}
 
 
 @router.get("/auth/{name}/start", include_in_schema=False)
@@ -59,11 +80,12 @@ async def start(
     code: str | None = None,
     link: str | None = None,
     oauth: str | None = None,
+    email: str | None = None,
 ) -> Response:
     """Off to the provider, for a device sign-in (`code`), to link the provider to an account (`link`), or to allow
-    the connector (`oauth`)."""
+    the connector (`oauth`); single sign-on (`sso`) needs the person's work email too (`email`)."""
     settings = cfg(request)
-    chosen = provider(name, settings)
+    chosen, by_org = await chosen_provider(name, request, conn, email=email)
     if oauth:
         purpose = oauth_pages.purpose(settings, name, oauth)
     elif link:
@@ -73,7 +95,7 @@ async def start(
     else:
         raise Invalid(START_AGAIN)
     nonce = new_browser()
-    state = signed.sign(settings.secret_key, {**purpose, "n": nonce}, TTL)
+    state = signed.sign(settings.secret_key, {**purpose, **by_org, "n": nonce}, TTL)
     away = RedirectResponse(chosen.authorize_url(settings, callback_url(settings, name), state), status_code=302)
     return bind_browser(away, settings, nonce)
 
@@ -81,10 +103,10 @@ async def start(
 @router.get("/auth/{name}/callback", include_in_schema=False)
 async def callback(name: str, request: Request, conn: Conn, state: str, code: str | None = None) -> Response:
     settings = cfg(request)
-    chosen = provider(name, settings)
     st = signed.verify(settings.secret_key, state)
     if st["p"] != name or st["n"] != browser(request):
         raise Invalid(START_AGAIN)
+    chosen, _ = await chosen_provider(name, request, conn, state=st)
     if not code:
         raise Forbidden("Signing in was cancelled. Start again in Claude when you're ready.", reason="cancelled")
     if link_pages.is_link(st):

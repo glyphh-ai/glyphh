@@ -1,6 +1,7 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
 from glyphh_server.models.ada_usage import AdaMeterEvent, AdaModelDay, AdaUsage
+from glyphh_server.models.artifact import STATES, Artifact
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
@@ -15,6 +16,7 @@ from glyphh_server.models.node import ROLES_IN_CLUSTER, Node
 from glyphh_server.models.oauth_client import AUTH_METHODS, OAuthClient
 from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
+from glyphh_server.models.org_sso import OrgSso, SsoDomain
 from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.runtime_key import RuntimeKey
@@ -39,6 +41,7 @@ __all__ = [
     "ROLES",
     "ROLES_IN_CLUSTER",
     "SEVERITIES",
+    "STATES",
     "SURFACES",
     "TIERS",
     "TOKEN_KINDS",
@@ -46,6 +49,7 @@ __all__ = [
     "AdaModelDay",
     "AdaUsage",
     "AdminAudit",
+    "Artifact",
     "Base",
     "ConnectorGrant",
     "ConnectorToken",
@@ -64,10 +68,12 @@ __all__ = [
     "OAuthCode",
     "OpsEvent",
     "Org",
+    "OrgSso",
     "Plan",
     "PlanVersion",
     "Rrotor",
     "RuntimeKey",
+    "SsoDomain",
     "Token",
     "TrafficDay",
     "TrafficTop",

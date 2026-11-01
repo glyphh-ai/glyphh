@@ -11,6 +11,7 @@ from glyphh_ada.api import HostRouter
 from glyphh_ada.api import make_app as make_ada
 from glyphh_server.api import (
     admin,
+    artifacts,
     attribution,
     billing,
     connector,
@@ -58,6 +59,7 @@ ROUTERS = (
     billing,
     runtime,
     self_hosted,
+    artifacts,
     github,
     github_pages,
     oauth_meta,

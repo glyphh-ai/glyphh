@@ -17,6 +17,8 @@ async def whoami(ctx: Context, _: NoArgs) -> Done:
         "email": found.email,
         "name": found.name,
         "role": found.role,
+        "groups": found.groups,
+        "reviewer": found.reviewer,
         "org": {"id": str(found.org.id), "name": found.org.name},
     }
     return Done(f"{found.name or found.email} ({found.email}), {found.role} of {found.org.name}.", data)

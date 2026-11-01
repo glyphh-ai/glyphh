@@ -20,6 +20,7 @@ from starlette.websockets import WebSocket
 from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops import catalogue as artifacts
 from glyphh_server.ops import license_keys
 from glyphh_server.ops.license import GRACE_DAYS, LINK, Stamp, sign_license
 from glyphh_server.ops.link import inbound, reports
@@ -32,6 +33,7 @@ from glyphh_server.ops.link.protocol import (
     REFUSED,
     SILENT,
     Ack,
+    Deployed,
     Inbound,
     Ping,
     Pong,
@@ -105,13 +107,15 @@ async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         license_key = await license_keys.newest(conn, runtime.org_id)
+        catalogue = await artifacts.for_runtime(conn, runtime.id)
+        reviewers = await artifacts.reviewer_groups(conn, runtime.org_id)
         if runtime.mode == "local":
-            return Welcome(license_key=license_key)
+            return Welcome(license_key=license_key, artifacts=catalogue, reviewers=reviewers)
         keys, licence = await hashes_for(conn, runtime.id), None
         if ctx.signing_key is not None:
             stamp = Stamp(runtime.id, LINK, GRACE_DAYS)
             licence = await sign_license(conn, ctx.signing_key, runtime.user_id, runtime.org_id, None, stamp)
-    return Welcome(licence=licence, license_key=license_key, keys=keys)
+    return Welcome(licence=licence, license_key=license_key, keys=keys, artifacts=catalogue, reviewers=reviewers)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:
@@ -141,13 +145,13 @@ async def _read(ctx: Context, runtime: Runtime, link: Link, clock: Clock) -> Non
 
 
 async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -> bool:
-    """Answer or record one message; False once the link is closed because it could not be recorded. A result, an
-    event or a deployed (Passed) is acked and kept nowhere."""
+    """Answer or record one message; False once the link is closed because it could not be recorded. A result or an
+    event (Passed) is acked and kept nowhere; a deployed app makes its catalogue row."""
     if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
             await link.send(Pong().model_dump())
         return True
-    if isinstance(message, Usage):
+    if isinstance(message, Usage | Deployed):
         try:
             await _record(ctx, runtime, message)
         except Exception:
@@ -158,10 +162,12 @@ async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -
     return True
 
 
-async def _record(ctx: Context, runtime: Runtime, message: Usage) -> None:
+async def _record(ctx: Context, runtime: Runtime, message: Usage | Deployed) -> None:
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
-        if await inbound.first_time(conn, runtime, message.seq):
+        if isinstance(message, Deployed):
+            await artifacts.catalogue_deployed(conn, runtime, message)
+        elif await inbound.first_time(conn, runtime, message.seq):
             await reports.apply_usage(conn, runtime, message)
         else:
             log.info("replay skipped", extra=fields(runtime=str(runtime.id), seq=message.seq))

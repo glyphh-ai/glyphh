@@ -1,6 +1,9 @@
-"""The account panel: one MCP App resource (MCP Apps 2026-01-26), an HTML page that renders the account and acts by
-calling the connector's own tools through the host. It inlines the MCP Apps client (@modelcontextprotocol/ext-apps
-2.0.3, the bundle the glyphh mod's sign-in card ships). Its address carries its version: a new panel, a new address."""
+"""The panels: MCP App resources (MCP Apps 2026-01-26), each an HTML page that renders what its tools answer and acts
+by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/4`) and the artifacts
+panel (`ui://glyphh/artifacts/1`, docs/specs/artifacts.md, 3.5: the org's artifacts as cards, searchable and paged,
+with Open; a reviewer's Awaiting review with Approve and Reject). Each inlines the MCP Apps client
+(@modelcontextprotocol/ext-apps 2.0.3, the bundle the glyphh mod's sign-in card ships). An address carries its
+version: a new panel, a new address."""
 
 from functools import lru_cache
 from importlib import resources
@@ -9,6 +12,7 @@ from typing import Any
 from glyphh_server.mcp.protocol import Call
 
 URI: str = "ui://glyphh/account/4"
+ARTIFACTS_URI: str = "ui://glyphh/artifacts/1"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {
@@ -18,17 +22,27 @@ RESOURCE: dict[str, str] = {
     "description": "Your Glyphh account: plan, each mod's limits and use, upgrade, billing, installs and grants.",
     "mimeType": MIME,
 }
+ARTIFACTS_RESOURCE: dict[str, str] = {
+    "uri": ARTIFACTS_URI,
+    "name": "artifacts",
+    "title": "Org artifacts",
+    "description": "Your org's artifacts: Claude's pages published to its rrotors, searchable, with Open; "
+    "a reviewer approves or rejects the ones awaiting review.",
+    "mimeType": MIME,
+}
+RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, ARTIFACTS_RESOURCE)
+PAGES: dict[str, str] = {URI: "account.html", ARTIFACTS_URI: "artifacts.html"}
 
 
 @lru_cache
-def html() -> str:
+def html(uri: str = URI) -> str:
     folder = resources.files("glyphh_server.mcp") / "panel"
     script = (folder / "mcp-app.js").read_text().replace("</script", "<\\/script")
-    return (folder / "account.html").read_text().replace("__APP_JS__", script)
+    return (folder / PAGES[uri]).read_text().replace("__APP_JS__", script)
 
 
-def contents() -> dict[str, Any]:
-    return {"uri": URI, "mimeType": MIME, "text": html(), "_meta": {"ui": {"prefersBorder": True}}}
+def contents(uri: str = URI) -> dict[str, Any]:
+    return {"uri": uri, "mimeType": MIME, "text": html(uri), "_meta": {"ui": {"prefersBorder": True}}}
 
 
 def shown(call: Call) -> bool:
