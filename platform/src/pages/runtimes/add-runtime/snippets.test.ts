@@ -1,17 +1,13 @@
 import {
+  composeCommands,
   connectorUrl,
   defaultOptions,
-  dockerInstall,
   dockerRun,
   healthCheck,
   helmChartUrl,
   helmCommand,
   hostOf,
   isHost,
-  isHostFor,
-  localInstall,
-  localRun,
-  localRuntimeUrl,
   terraformCommands,
   terraformModule,
 } from './snippets';
@@ -23,7 +19,7 @@ const env = {
   RROTOR_RUNTIME_TOKEN: 'glyphh_rt_abc',
   RROTOR_PUBLIC_HOST: 'rrotor.acme.com',
 };
-const localEnv = { ...env, RROTOR_PUBLIC_HOST: '127.0.0.1' };
+const files = 'https://raw.githubusercontent.com/glyphh-ai/glyphh/main/deploy/compose';
 
 const runImage = (host: string) =>
   [
@@ -53,48 +49,34 @@ describe('the host', () => {
     expect(isHost('')).toBe(false);
   });
 
-  it('may be localhost or an IP address on this computer only', () => {
-    for (const host of ['127.0.0.1', 'localhost', '192.168.1.20', 'rrotor.acme.com']) expect(isHostFor('local', host)).toBe(true);
-    // The server keeps https://<host> with no port, and no IPv6 literal.
-    for (const host of ['', 'rrotor acme.com', 'not_a_host', 'localhost:7777', '127.0.0.1:7777', '[::1]']) expect(isHostFor('local', host)).toBe(false);
-    for (const way of ['compose', 'helm', 'terraform'] as const) {
-      expect(isHostFor(way, '127.0.0.1')).toBe(false);
-      expect(isHostFor(way, 'localhost')).toBe(false);
-      expect(isHostFor(way, 'rrotor.acme.com')).toBe(true);
-    }
-  });
-
-  it('gives the connector URL, and the SDKs’ URL on this computer', () => {
+  it('gives the connector URL', () => {
     expect(connectorUrl('rrotor.acme.com')).toBe('https://rrotor.acme.com/mcp');
-    expect(localRuntimeUrl('127.0.0.1')).toBe('http://127.0.0.1:7777');
   });
 });
 
 describe('the snippets', () => {
-  it('runs the install script on this computer (it runs the image alone there), then checks it over HTTP at its host', () => {
-    expect(localInstall(localEnv)).toBe(
+  it('runs deploy/compose as its README does: the compose file and the Caddyfile, .env from the registration, then checks it over HTTPS', () => {
+    expect(composeCommands(env)).toBe(
       [
-        'curl -fsSL https://glyphh.ai/install.sh | \\',
-        '  RROTOR_RUNTIME_ID=rt-1 RROTOR_RUNTIME_TOKEN=glyphh_rt_abc RROTOR_PUBLIC_HOST=127.0.0.1 sh',
-        'curl -fsS --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:7777/healthz',
-      ].join('\n'),
-    );
-  });
-
-  it('runs the image alone on this computer, then checks it at its host', () => {
-    expect(localRun(localEnv)).toBe(`${runImage('127.0.0.1')}\ncurl -fsS --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:7777/healthz`);
-    expect(localRun({ ...localEnv, RROTOR_PUBLIC_HOST: 'localhost' })).toMatch(/http:\/\/localhost:7777\/healthz$/);
-  });
-
-  it('runs the install script with the registration’s values, the size only when not small, then checks it over HTTPS', () => {
-    expect(dockerInstall(env)).toBe(
-      [
-        'curl -fsSL https://glyphh.ai/install.sh | \\',
-        '  RROTOR_RUNTIME_ID=rt-1 RROTOR_RUNTIME_TOKEN=glyphh_rt_abc RROTOR_PUBLIC_HOST=rrotor.acme.com sh',
+        'mkdir -p rrotor && cd rrotor',
+        `curl -fsSLO ${files}/docker-compose.yml`,
+        `curl -fsSLO ${files}/Caddyfile`,
+        "printf '%s\\n' 'RROTOR_RUNTIME_ID=rt-1' 'RROTOR_RUNTIME_TOKEN=glyphh_rt_abc' 'RROTOR_PUBLIC_HOST=rrotor.acme.com' > .env",
+        'docker compose up -d',
         healthCheck('https://rrotor.acme.com'),
       ].join('\n'),
     );
-    expect(dockerInstall(env, 'large')).toContain('RROTOR_PUBLIC_HOST=rrotor.acme.com RROTOR_SIZE=large sh');
+  });
+
+  it('sets the compose file’s limits for a size above small, as the Helm chart’s presets', () => {
+    expect(composeCommands(env, 'medium')).toContain("'RROTOR_CPUS=2' 'RROTOR_MEMORY=4g' > .env");
+    expect(composeCommands(env, 'large')).toContain("'RROTOR_CPUS=2' 'RROTOR_MEMORY=8g' > .env");
+    expect(composeCommands(env)).not.toContain('RROTOR_CPUS');
+  });
+
+  it('points at no install script', () => {
+    for (const size of ['small', 'medium', 'large'] as const) expect(composeCommands(env, size)).not.toContain('install.sh');
+    expect(dockerRun(env)).not.toContain('install.sh');
   });
 
   it('runs the image alone behind HTTPS, checked on the machine', () => {
@@ -119,7 +101,7 @@ describe('the snippets', () => {
   it('leaves a value blank when the env lacks it', () => {
     expect(helmCommand({}, defaultOptions)).toContain('--set runtime.id= \\');
     expect(terraformModule({}, defaultOptions)).toContain('runtime_id    = ""');
-    expect(dockerInstall({})).toContain('RROTOR_RUNTIME_ID= ');
+    expect(composeCommands({})).toContain("'RROTOR_RUNTIME_ID=' ");
   });
 
   it('writes the AWS module with its four variables, and the commands beside it end with the check', () => {
@@ -146,7 +128,7 @@ describe('the snippets', () => {
     expect(terraformModule(env, { ...defaultOptions, cloud: 'gcp', gcpProject: 'acme-prod', gcpRegion: 'us-east1' })).toContain('project       = "acme-prod"');
   });
 
-  const shell = () => [localInstall(localEnv), localRun(localEnv),dockerInstall(env, 'medium'), dockerRun(env), helmCommand(env, defaultOptions), terraformCommands(env)];
+  const shell = () => [composeCommands(env, 'medium'), dockerRun(env), helmCommand(env, defaultOptions), terraformCommands(env)];
 
   it('pastes into zsh or bash: no comment lines, and each ends with the health check', () => {
     for (const block of shell()) {

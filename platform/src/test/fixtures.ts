@@ -1,4 +1,4 @@
-import type { CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Model, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime } from '@/api/types';
+import type { CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime } from '@/api/types';
 
 /**
  * One org's data in the server's shapes, shared by the page tests and the local fake server: on Pro, as if every
@@ -87,19 +87,6 @@ export const selfRuntimes: SelfRuntime[] = [
     version: null,
     last_seen_at: null,
     last_heartbeat_at: null,
-  },
-];
-
-export const models: Model[] = [
-  {
-    id: 'm-1',
-    name: 'invoice-triage',
-    repo: 'glyphh-ai/invoice-triage',
-    created_at: '2026-09-20T10:00:00Z',
-    versions: [
-      { id: 'v-1', version: 1, commit_sha: '3f9c2ab71d', created_at: '2026-09-20T10:00:00Z', active_on: [] },
-      { id: 'v-2', version: 2, commit_sha: '8be41c0f2a', created_at: '2026-10-11T16:20:00Z', active_on: ['rt-7f3a9c'] },
-    ],
   },
 ];
 

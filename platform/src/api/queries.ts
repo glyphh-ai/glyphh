@@ -6,7 +6,6 @@ import type {
   LicenceKeys,
   Me,
   Member,
-  Model,
   NewInvite,
   NewRuntimeKey,
   NewSelfRuntime,
@@ -28,7 +27,6 @@ export const keys = {
   installs: ['installs'] as const,
   runtimeKeys: ['runtime', 'keys'] as const,
   selfRuntimes: ['runtimes', 'self'] as const,
-  models: ['models'] as const,
   plans: ['plans'] as const,
   licenceKeys: ['license', 'keys'] as const,
   nodes: ['license', 'nodes'] as const,
@@ -43,7 +41,6 @@ export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<
 export const useInstalls = () => useQuery({ queryKey: keys.installs, queryFn: () => api.get<Install[]>('/installs') });
 export const useRuntimeKeys = () => useQuery({ queryKey: keys.runtimeKeys, queryFn: () => api.get<RuntimeKey[]>('/runtime/keys') });
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
-export const useModels = () => useQuery({ queryKey: keys.models, queryFn: () => api.get<Model[]>('/models') });
 export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
 /** The org's licence keys, newest first, and the newest live one: none on Free. */
 export const useLicenceKeys = () => useQuery({ queryKey: keys.licenceKeys, queryFn: () => api.get<LicenceKeys>('/license/keys') });
@@ -84,8 +81,6 @@ export const useDeleteSelfRuntime = () =>
   useWrite((id: string) => api.delete(`/runtimes/self/${id}`), [keys.selfRuntimes, keys.nodes, keys.runtimeKeys]);
 export const useIssueOfflineLicence = () =>
   useWrite(({ id, days }: { id: string; days: number }) => api.post<OfflineLicence>(`/runtimes/${id}/offline-licence`, { days }), []);
-
-export const useDeleteModel = () => useWrite((id: string) => api.delete(`/models/${id}`), [keys.models]);
 
 export const useRenameMe = () => useWrite((name: string) => api.patch<Me>('/me', { name }), [keys.me]);
 export const useLinkProvider = () =>

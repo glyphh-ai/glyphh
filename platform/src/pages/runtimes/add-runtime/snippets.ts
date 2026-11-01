@@ -1,25 +1,22 @@
 /**
  * What each self-hosted option needs pasted, filled in from a registration's env. Nothing to clone, and every shell
  * block pastes as is into zsh or bash: no `#` lines (zsh without interactive_comments refuses them); notes go beside
- * the block. Each ends with the health check.
+ * the block. Each ends with the health check. A runtime on the person's own computer is not registered here: the
+ * glyphh plugin's rrotor skill installs it (Runtimes' Install rrotor).
  */
 
 /** The self-hosting docs' hub; each deployment also has its own page. */
 export const docsUrl = 'https://docs.glyphh.ai/run-rrotor';
 export const image = 'ghcr.io/glyphh-ai/rrotor';
-/**
- * The install script: on a Linux server, rrotor with Compose and HTTPS in front of it; with a public host of
- * 127.0.0.1, localhost or an IP address, the image alone on port 7777 over plain HTTP, no Compose.
- */
-export const installScriptUrl = 'https://glyphh.ai/install.sh';
+/** The glyphh repo's Docker Compose files (deploy/compose), fetched one by one. */
+export const composeFilesUrl = 'https://raw.githubusercontent.com/glyphh-ai/glyphh/main/deploy/compose';
 /** The Helm chart as released from the public repo. */
 export const helmChartUrl = 'https://github.com/glyphh-ai/glyphh/releases/download/rrotor-chart-0.2.0/rrotor-0.2.0.tgz';
 
-/** `local` is this computer: the image alone on port 7777, no HTTPS. */
-export type Deployment = 'local' | 'compose' | 'helm' | 'terraform';
+/** Where a self-hosted rrotor runs, at its own public HTTPS address. */
+export type Deployment = 'compose' | 'helm' | 'terraform';
 
 export const deploymentDocsUrl: Record<Deployment, string> = {
-  local: docsUrl,
   compose: 'https://docs.glyphh.ai/docker-compose',
   helm: 'https://docs.glyphh.ai/helm',
   terraform: 'https://docs.glyphh.ai/terraform',
@@ -27,7 +24,6 @@ export const deploymentDocsUrl: Record<Deployment, string> = {
 
 /** What each way needs before registering. */
 export const requirements: Record<Deployment, string> = {
-  local: 'Docker running on this computer (Docker Desktop, or any Docker).',
   compose: 'A Linux server with Docker and the Compose plugin (docker compose version works), a DNS name pointing at it, ports 80 and 443 open.',
   helm: 'A Kubernetes cluster with an Ingress controller, and kubectl and helm set up for it.',
   terraform: 'An AWS account or a GCP project, and terraform.',
@@ -45,6 +41,13 @@ export const sizes: ReadonlyArray<{ value: Size; label: string }> = [
   { value: 'large', label: 'Large' },
 ];
 
+/** Each size as the compose file's limits, as the Helm chart's presets have them. Small is the file's default. */
+const composeLimits: Record<Size, { cpus: string; memory: string } | null> = {
+  small: null,
+  medium: { cpus: '2', memory: '4g' },
+  large: { cpus: '2', memory: '8g' },
+};
+
 /** The settings a person can change under the snippet; the rest come from the registration. */
 export type SnippetOptions = {
   size: Size;
@@ -55,9 +58,6 @@ export type SnippetOptions = {
 };
 
 export const defaultOptions: SnippetOptions = { size: 'small', ingressClass: 'nginx', cloud: 'aws', gcpProject: '', gcpRegion: 'europe-west2' };
-
-/** This computer's host until the person changes it. */
-export const localHost = '127.0.0.1';
 
 /** `rrotor.acme.com` from what a person types: a scheme, a path or a trailing slash are dropped. */
 export function hostOf(input: string): string {
@@ -73,18 +73,7 @@ export function isHost(host: string): boolean {
   return /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z0-9-]*(:\d{1,5})?$/.test(host);
 }
 
-/**
- * On this computer, also localhost or an IPv4 address, with no port (the server keeps `https://<host>` alone and
- * refuses a port or an IPv6 literal); elsewhere, a DNS name as `isHost`.
- */
-export function isHostFor(deployment: Deployment, host: string): boolean {
-  if (deployment !== 'local') return isHost(host);
-  return /^(localhost|\d{1,3}(\.\d{1,3}){3}|[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z0-9-]*)$/.test(host);
-}
-
 export const connectorUrl = (host: string) => `https://${host}/mcp`;
-/** Where the SDKs reach a runtime on this computer. */
-export const localRuntimeUrl = (host: string) => `http://${host}:7777`;
 
 /** The last line of every block: waits for rrotor to answer, and fails loudly when it does not. */
 export const healthCheck = (base: string) => `curl -fsS --retry 15 --retry-connrefused --retry-delay 2 ${base}/healthz`;
@@ -95,34 +84,36 @@ export const healthCheck = (base: string) => `curl -fsS --retry 15 --retry-connr
  */
 export const licenceKeyPlaceholder = '<your licence key from the Licence page>';
 export const licenceKeyAddition: Record<Deployment, string> = {
-  local: `GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} before sh`,
-  compose: `GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} before sh`,
+  compose: `GLYPHH_LICENSE_KEY=${licenceKeyPlaceholder} to .env`,
   helm: `--set extraEnv[0].name=GLYPHH_LICENSE_KEY --set-string extraEnv[0].value='${licenceKeyPlaceholder}'`,
   terraform: `offline_licence = "${licenceKeyPlaceholder}" to the module`,
 };
 
-/** The registration's values the install script and the image take, in this order. */
+/** The registration's values the compose file and the image take, in this order. */
 const runtimeVars = ['RROTOR_RUNTIME_ID', 'RROTOR_RUNTIME_TOKEN', 'RROTOR_PUBLIC_HOST'] as const;
 const hostIn = (env: Record<string, string>) => env.RROTOR_PUBLIC_HOST ?? '';
 
-/** One command on a Linux server: the install script with the registration's values, and the size unless small. */
-export function dockerInstall(env: Record<string, string>, size: Size = 'small'): string {
-  return [...installLines(env, size), healthCheck(`https://${hostIn(env)}`)].join('\n');
+/**
+ * A Linux server, as deploy/compose's README has it: rrotor and Caddy in front of it for HTTPS. Fetch
+ * docker-compose.yml and the Caddyfile into a folder of their own, write .env with the registration's values (and the
+ * size's limits unless small), start it, then check it at its host.
+ */
+export function composeCommands(env: Record<string, string>, size: Size = 'small'): string {
+  const values = runtimeVars.map((name) => `${name}=${env[name] ?? ''}`);
+  const limits = composeLimits[size];
+  if (limits) values.push(`RROTOR_CPUS=${limits.cpus}`, `RROTOR_MEMORY=${limits.memory}`);
+  return [
+    'mkdir -p rrotor && cd rrotor',
+    `curl -fsSLO ${composeFilesUrl}/docker-compose.yml`,
+    `curl -fsSLO ${composeFilesUrl}/Caddyfile`,
+    `printf '%s\\n' ${values.map((value) => `'${value}'`).join(' ')} > .env`,
+    'docker compose up -d',
+    healthCheck(`https://${hostIn(env)}`),
+  ].join('\n');
 }
 
-/** This computer: the same install script, which runs the image alone on 7777 for a local host, checked over HTTP. */
-export function localInstall(env: Record<string, string>): string {
-  return [...installLines(env, 'small'), healthCheck(localRuntimeUrl(hostIn(env) || localHost))].join('\n');
-}
-
-function installLines(env: Record<string, string>, size: Size): string[] {
-  const vars = runtimeVars.map((name) => `${name}=${env[name] ?? ''}`);
-  if (size !== 'small') vars.push(`RROTOR_SIZE=${size}`);
-  return [`curl -fsSL ${installScriptUrl} | \\`, `  ${vars.join(' ')} sh`];
-}
-
-/** The image alone on port 7777. */
-function runImage(env: Record<string, string>): string {
+/** A server with HTTPS already in front: the image alone on port 7777, checked on the machine itself. */
+export function dockerRun(env: Record<string, string>): string {
   return [
     'docker run -d --name rrotor --restart unless-stopped',
     '  --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined',
@@ -130,14 +121,10 @@ function runImage(env: Record<string, string>): string {
     '  -e RROTOR_MODE=self',
     ...runtimeVars.map((name) => `  -e ${name}=${env[name] ?? ''}`),
     `  ${image}:latest`,
-  ].join(' \\\n');
+  ]
+    .join(' \\\n')
+    .concat(`\n${healthCheck('http://127.0.0.1:7777')}`);
 }
-
-/** A server with HTTPS already in front: the image alone, checked on the machine itself. */
-export const dockerRun = (env: Record<string, string>) => `${runImage(env)}\n${healthCheck(localRuntimeUrl(localHost))}`;
-
-/** This computer: the image alone, checked at the host it was registered with. */
-export const localRun = (env: Record<string, string>) => `${runImage(env)}\n${healthCheck(localRuntimeUrl(hostIn(env) || localHost))}`;
 
 export function helmCommand(env: Record<string, string>, options: SnippetOptions): string {
   const values = [

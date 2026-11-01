@@ -142,11 +142,6 @@ app.post('/v1/runtimes/:id/offline-licence', async (c) => {
   const token = Buffer.from(JSON.stringify({ payload, signature: 'dev-signature' })).toString('base64url');
   return c.json({ token, expires_at });
 });
-app.get('/v1/models', (c) => c.json(state.models));
-app.delete('/v1/models/:id', (c) => {
-  state.models = state.models.filter((m) => m.id !== c.req.param('id'));
-  return c.body(null, 204);
-});
 // The licence key: one for the paid month, none on Free (rrotor runs as Community). The runtime nodes, counted softly.
 app.get('/v1/license/keys', (c) => c.json(state.licenceKeys));
 app.get('/v1/license/nodes', (c) => c.json(state.nodes));

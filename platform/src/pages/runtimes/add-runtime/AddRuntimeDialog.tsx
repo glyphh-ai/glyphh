@@ -8,10 +8,12 @@ import styles from './AddRuntime.module.css';
 
 type Choice = { value: Deployment; title: string; text: string };
 
-/** Where a person runs rrotor themselves: free on every plan. Glyphh hosts none. */
+/**
+ * Where a person runs rrotor themselves at its own address: free on every plan. Glyphh hosts none, and one on their own
+ * computer comes from the glyphh plugin's rrotor skill (Install rrotor, on the page), not from here.
+ */
 const choices: ReadonlyArray<Choice> = [
-  { value: 'local', title: 'This computer', text: 'Free. Try it on your laptop; no HTTPS, so Claude cannot connect yet.' },
-  { value: 'compose', title: 'Docker', text: 'Free. One command on a Linux machine.' },
+  { value: 'compose', title: 'Docker', text: 'Free. Docker Compose on a Linux server, with HTTPS in front.' },
   { value: 'helm', title: 'Helm', text: 'Free. Your Kubernetes cluster: EKS, GKE or AKS.' },
   { value: 'terraform', title: 'Terraform', text: 'Free. One VM on AWS or GCP.' },
 ];
@@ -31,7 +33,8 @@ export function AddRuntimeDialog({ open, onClose }: { open: boolean; onClose: ()
       title="Add a runtime"
       description={
         <>
-          Choose where rrotor runs, then connect Claude. Running it yourself is free on every plan: read the{' '}
+          A rrotor on a server at its own address: choose where it runs, then connect Claude. On your own computer, install it from Claude
+          instead (Install rrotor). Free on every plan: read the{' '}
           <a href={docsUrl}>self-hosting docs</a>.
         </>
       }
@@ -58,8 +61,8 @@ export function AddRuntimeDialog({ open, onClose }: { open: boolean; onClose: ()
 }
 
 function AddRuntime({ onPrimary }: { onPrimary: OnPrimary }) {
-  // Until the person picks, this computer.
-  const [where, setWhere] = useState<Deployment>('local');
+  // Until the person picks, Docker.
+  const [where, setWhere] = useState<Deployment>('compose');
   const [registered, setRegistered] = useState<NewSelfRuntime | null>(null);
 
   return (

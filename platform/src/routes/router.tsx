@@ -11,7 +11,6 @@ import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
 import { KeysPage } from '@/pages/keys/KeysPage';
-import { ModelsPage } from '@/pages/models/ModelsPage';
 import { RuntimesPage } from '@/pages/runtimes/RuntimesPage';
 import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
@@ -78,15 +77,20 @@ export const routes: RouteObject[] = [
         element: <AdaOr ada={<AdaKeysPage />} off={<KeysPage />} />,
         handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'API Keys' }], adaCrumbs:[{ label: 'Ada' }, { label: 'API Keys' }] },
       },
+      // Models are Ada Cloud's only: with it off the server serves none, so they go to Runtimes (2026-10-31).
       {
         path: 'models',
-        element: <AdaOr ada={<AdaModelsPage />} off={<ModelsPage />} />,
+        element: (
+          <AdaOnly otherwise="/runtimes">
+            <AdaModelsPage />
+          </AdaOnly>
+        ),
         handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] },
       },
       {
         path: 'models/new',
         element: (
-          <AdaOnly otherwise="/models">
+          <AdaOnly otherwise="/runtimes">
             <NewModelPage />
           </AdaOnly>
         ),
@@ -95,7 +99,7 @@ export const routes: RouteObject[] = [
       {
         path: 'models/:name',
         element: (
-          <AdaOnly otherwise="/models">
+          <AdaOnly otherwise="/runtimes">
             <ModelPage />
           </AdaOnly>
         ),

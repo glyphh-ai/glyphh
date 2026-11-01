@@ -189,9 +189,6 @@ export type RuntimeNodes = { count: number; max_nodes: number | null; over: bool
 /** A long-lived licence for an air-gapped runtime, set as RROTOR_LICENCE. */
 export type OfflineLicence = { token: string; expires_at: IsoDate };
 
-export type ModelVersion = { id: Uuid; version: number; commit_sha: string; created_at: IsoDate; active_on: Uuid[] };
-export type Model = { id: Uuid; name: string; repo: string | null; created_at: IsoDate; versions: ModelVersion[] };
-
 export type Org = {
   id: Uuid;
   name: string;

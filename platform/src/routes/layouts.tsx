@@ -82,30 +82,23 @@ function AdaNav() {
   );
 }
 
-/** With Ada Cloud off: Runtimes & licences, with the runtimes' keys and usage, then Ada's models. */
+/** With Ada Cloud off: Runtimes & licences, with the runtimes' keys and usage. No models: they are Ada Cloud's. */
 function RuntimeNav() {
   return (
-    <>
-      <NavGroup label="Runtimes & licences">
-        <NavItem to="/runtimes" icon="chip">
-          Runtimes
-        </NavItem>
-        <NavItem to="/licence" icon="card">
-          Licence
-        </NavItem>
-        <NavItem to="/keys" icon="key">
-          API Keys
-        </NavItem>
-        <NavItem to="/usage" icon="monitor">
-          Usage
-        </NavItem>
-      </NavGroup>
-      <NavGroup label="Ada">
-        <NavItem to="/models" icon="model">
-          Models
-        </NavItem>
-      </NavGroup>
-    </>
+    <NavGroup label="Runtimes & licences">
+      <NavItem to="/runtimes" icon="chip">
+        Runtimes
+      </NavItem>
+      <NavItem to="/licence" icon="card">
+        Licence
+      </NavItem>
+      <NavItem to="/keys" icon="key">
+        API Keys
+      </NavItem>
+      <NavItem to="/usage" icon="monitor">
+        Usage
+      </NavItem>
+    </NavGroup>
   );
 }
 

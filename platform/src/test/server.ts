@@ -23,7 +23,6 @@ export const defaultHandlers: HttpHandler[] = [
   http.get(v1('/org'), () => HttpResponse.json(fixtures.org)),
   http.get(v1('/runtime/keys'), () => HttpResponse.json(fixtures.runtimeKeys)),
   http.get(v1('/runtimes/self'), () => HttpResponse.json(fixtures.selfRuntimes)),
-  http.get(v1('/models'), () => HttpResponse.json(fixtures.models)),
   http.get(v1('/plans'), () => HttpResponse.json(fixtures.plans)),
   http.get(v1('/org/members'), () => HttpResponse.json(fixtures.members)),
   http.get(v1('/org/invites'), () => HttpResponse.json(fixtures.invites)),

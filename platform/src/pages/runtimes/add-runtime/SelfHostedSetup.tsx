@@ -6,7 +6,7 @@ import { Button, CopyField, TextField } from '@/ui';
 import { Connect } from './Connect';
 import { useFooterPrimary, type OnPrimary } from './footer';
 import { DeploySnippet } from './DeploySnippet';
-import { connectorUrl, docsUrl, hostOf, isHostFor, localHost, localRuntimeUrl, requirements, type Deployment } from './snippets';
+import { connectorUrl, docsUrl, hostOf, isHost, requirements, type Deployment } from './snippets';
 import styles from './AddRuntime.module.css';
 
 type SelfHostedSetupProps = {
@@ -29,7 +29,7 @@ export function SelfHostedSetup({ deployment, registered, onRegistered, onPrimar
     return (
       <div className={styles.stack}>
         {needs}
-        <RegisterForm deployment={deployment} onRegistered={onRegistered} onPrimary={onPrimary} />
+        <RegisterForm onRegistered={onRegistered} onPrimary={onPrimary} />
       </div>
     );
   }
@@ -44,15 +44,7 @@ export function SelfHostedSetup({ deployment, registered, onRegistered, onPrimar
         <span className={styles.meta}>Shown once. It is in the command below too; keep both out of version control.</span>
       </div>
       <DeploySnippet deployment={deployment} env={registered.env} />
-      {deployment === 'local' ? (
-        <Connect
-          title="Connect"
-          runtimeUrl={localRuntimeUrl(host)}
-          note="Claude’s connector needs a public HTTPS host: run it with Docker or Helm on a server for that."
-        />
-      ) : (
-        <Connect title="Connect" connector={connectorUrl(host)} note={`Once it answers at ${host}, add this in Claude as a custom connector.`} />
-      )}
+      <Connect title="Connect" connector={connectorUrl(host)} note={`Once it answers at ${host}, add this in Claude as a custom connector.`} />
       <div className={styles.actions}>
         <Button variant="ghost" icon="plus" onClick={() => onRegistered(null)}>
           Register another
@@ -62,19 +54,17 @@ export function SelfHostedSetup({ deployment, registered, onRegistered, onPrimar
   );
 }
 
-type RegisterFormProps = { deployment: Deployment; onRegistered: (runtime: NewSelfRuntime) => void; onPrimary: OnPrimary };
+type RegisterFormProps = { onRegistered: (runtime: NewSelfRuntime) => void; onPrimary: OnPrimary };
 
-function RegisterForm({ deployment, onRegistered, onPrimary }: RegisterFormProps) {
+/** Its name and public host: a DNS name it will answer at over HTTPS. */
+function RegisterForm({ onRegistered, onPrimary }: RegisterFormProps) {
   const register = useRegisterSelfRuntime();
-  const local = deployment === 'local';
   const [name, setName] = useState('');
-  // Untouched, this computer's host is 127.0.0.1; any other way starts empty.
-  const [typed, setTyped] = useState<string | null>(null);
-  const hostInput = typed ?? (local ? localHost : '');
+  const [hostInput, setHostInput] = useState('');
   const host = hostOf(hostInput);
-  const valid = isHostFor(deployment, host);
+  const valid = isHost(host);
   useFooterPrimary(onPrimary, { form: 'register-runtime', label: 'Register runtime', ready: !!name.trim() && valid, pending: register.isPending });
-  const hostError = hostInput.trim() && !valid ? (local ? 'Use a host or an IP address, such as 127.0.0.1.' : 'Use the host alone, such as rrotor.acme.com.') : undefined;
+  const hostError = hostInput.trim() && !valid ? 'Use the host alone, such as rrotor.acme.com.' : undefined;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -87,14 +77,14 @@ function RegisterForm({ deployment, onRegistered, onPrimary }: RegisterFormProps
         Register it first: you get its token and the command to paste. See the <a href={docsUrl}>self-hosting docs</a> for what the host needs.
       </span>
       <div className={styles.formRow}>
-        <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={local ? 'My laptop' : 'Acme production'} />
+        <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Acme production" />
         <TextField
-          label={local ? 'Host' : 'Public host'}
+          label="Public host"
           value={hostInput}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder={local ? localHost : 'rrotor.acme.com'}
+          onChange={(e) => setHostInput(e.target.value)}
+          placeholder="rrotor.acme.com"
           mono
-          hint={local ? '127.0.0.1 (this computer only)' : 'The DNS name that will point at the server, e.g. rrotor.acme.com'}
+          hint="The DNS name that will point at the server, e.g. rrotor.acme.com"
           error={hostError}
         />
       </div>

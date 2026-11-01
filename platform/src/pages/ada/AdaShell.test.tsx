@@ -85,9 +85,10 @@ describe('with Ada Cloud on', () => {
 });
 
 describe('with Ada Cloud off', () => {
-  it.each(['/models/new', '/models/tickets'])('has no %s: Models is today’s', async (path) => {
+  it.each(['/models', '/models/new', '/models/tickets'])('has no %s: models are Ada Cloud’s, so it goes to Runtimes', async (path) => {
     const { router } = renderApp(path);
-    expect(await screen.findByRole('heading', { name: 'Models' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/models');
+    expect(await screen.findByRole('heading', { name: 'Runtimes', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/runtimes');
+    expect(within(sidebar()).queryByRole('link', { name: 'Models' })).not.toBeInTheDocument();
   });
 });

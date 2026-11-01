@@ -77,22 +77,22 @@ describe('the account menu on a phone', () => {
 });
 
 describe('the main sidebar', () => {
-  it('has the logo, Runtimes & licences and Ada, and no organisation group: settings is in the account menu', async () => {
+  it('has the logo and Runtimes & licences, and no organisation group: settings is in the account menu', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
     // The links come once the account says Ada Cloud is off.
     await within(main).findByRole('link', { name: 'Runtimes' });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
-    for (const name of ['Runtimes', 'Licence', 'API Keys', 'Models']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
+    for (const name of ['Runtimes', 'Licence', 'API Keys']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
     expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
     for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
   });
 
-  it('has nothing Glyphh hosted: no Machines and no Logs', async () => {
+  it('has nothing Glyphh hosted and no Models with Ada Cloud off: no Machines, Logs or Models', async () => {
     server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
     await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'API Keys', 'Usage', 'Models']);
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'API Keys', 'Usage']);
   });
 });
