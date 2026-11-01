@@ -1,5 +1,6 @@
-"""The first message on a link: the rrotor's `hello`, within 10 seconds, of protocol 1, naming the runtime its token
-is. Anything else closes the link with its reason: another protocol 4426 (update the rrotor), the rest 4400."""
+"""The first message on a link: the rrotor's `hello`, within 10 seconds, of protocol 2, naming the runtime its token
+is. Anything else closes the link with its reason: another protocol (1 included) 4426 (update the rrotor), the rest
+4400."""
 
 import json
 

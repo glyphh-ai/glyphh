@@ -8,7 +8,7 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class ConnectorGrant(Base):
-    """A client (a routine, the desktop, claude.ai) the person allowed to call the Glyphh connector, for a scope and
+    """A client (the desktop, claude.ai, the platform) the person allowed to call the Glyphh connector, for a scope and
     the resource its tokens are bound to. One live grant per person and client; revoking it ends every token it
     holds."""
 

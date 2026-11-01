@@ -11,7 +11,6 @@ from glyphh_ada.api import HostRouter
 from glyphh_ada.api import make_app as make_ada
 from glyphh_server.api import (
     admin,
-    approvals,
     attribution,
     billing,
     connector,
@@ -22,21 +21,16 @@ from glyphh_server.api import (
     github_pages,
     health,
     license,
-    machines,
     mcp,
     me,
-    models,
     mods,
     oauth,
     oauth_meta,
     oauth_pages,
     org,
-    otlp,
     plans,
-    routine_triggers,
     runtime,
     self_hosted,
-    telemetry,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
@@ -45,12 +39,10 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs import events, metrics
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, tend, vault
+from glyphh_server.ops import github_app, tend
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.cloudflare import Cloudflare
-from glyphh_server.ops.fly import Fly
 from glyphh_server.ops.github_traffic import GitHub
-from glyphh_server.ops.idle import waker
 from glyphh_server.ops.license import load_key
 from glyphh_server.ops.link.hub import Hub
 
@@ -60,18 +52,12 @@ ROUTERS = (
     device_pages,
     me,
     license,
-    otlp,
-    telemetry,
     org,
     mods,
     plans,
     billing,
     runtime,
     self_hosted,
-    machines,  # after self_hosted: /v1/runtimes/self is not a machine's id
-    models,
-    routine_triggers,
-    approvals,
     github,
     github_pages,
     oauth_meta,
@@ -91,7 +77,6 @@ async def tend_forever(
     engine: AsyncEngine,
     hub: Hub,
     cfg: Settings,
-    fly: Fly | None,
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None = None,
     github: GitHub | None = None,
@@ -100,23 +85,18 @@ async def tend_forever(
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), fly, stripe, cloudflare, github)
+            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), stripe, cloudflare, github)
         except Exception:
-            logging.getLogger("glyphh.runtime").exception("tending hosted runtimes failed")
+            logging.getLogger("glyphh.runtime").exception("tick failed")
 
 
 def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
-    """The minute tick, always; with hosting on, Fly and the hub's waker; with billing set up, Stripe's meter; with a
-    Cloudflare token, the hourly traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull."""
-    fly = Fly(app.state.http, cfg) if cfg.hosting_on else None
-    if fly is not None:
-        app.state.hub.waker = waker(engine, fly)
-    meter = cfg.stripe_secret_key and StripeClient(
-        app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_hosting, cfg.stripe_meter_ada
-    )
+    """The minute tick, always; with billing set up, Stripe (Ada Cloud's meter); with a Cloudflare token, the hourly
+    traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull."""
+    meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_ada)
     cloudflare = Cloudflare(app.state.http, cfg.cloudflare_api_token) if cfg.cloudflare_api_token else None
     github = GitHub(app.state.http, cfg.github_traffic_token) if cfg.github_traffic_token else None
-    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, fly, meter or None, cloudflare, github))
+    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github))
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -151,7 +131,6 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.state.redis = redis
     app.state.hub = Hub(redis)
     app.state.signing_key = load_key(cfg)
-    app.state.secrets_key = vault.load_key(cfg)
     app.state.github_key = github_app.load_key(cfg)
     app.state.ada = None if ada is None else ada.state  # the connector's Ada tools call the workers through it
     errors.install(app)

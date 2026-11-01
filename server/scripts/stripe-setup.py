@@ -3,11 +3,10 @@
     STRIPE_SECRET_KEY=sk_test_… uv run python scripts/stripe-setup.py
 
 Safe to run again: products have Glyphh's own ids, prices are found by their lookup keys and the meter by its event
-name, so nothing is made twice. It makes the products Basic, Pro, Team, Hosting and Ada Cloud reads; Basic's,
-Pro's and Team's flat monthly prices (from db/seed.py; GLYPHH_STRIPE_PRICE_BASIC, _PRO, _TEAM); the Billing Meter
-glyphh_hosting (summed, one unit a US cent, the customer by its id) and the hosting price on that meter, a cent a
-unit, monthly; and the Billing Meter ada_requests (summed, one unit an Ada Cloud read past a Basic, Pro or Team month)
-and its price, $1 per 10,000 (a hundredth of a cent a unit), monthly. Enterprise has no price here: each deal is its
+name, so nothing is made twice. It makes the products Basic, Pro, Team and Ada Cloud reads; Basic's, Pro's and Team's
+flat monthly prices (from db/seed.py; GLYPHH_STRIPE_PRICE_BASIC, _PRO, _TEAM); and the Billing Meter ada_requests
+(summed, one unit an Ada Cloud read past a Basic, Pro or Team month, the customer by its id) and its price, $1 per
+10,000 (a hundredth of a cent a unit), monthly. Enterprise has no price here: each deal is its
 own. A price already made is never changed: a plan's lookup key
 carries its amount, so a new amount in db/seed.py is a new price (and, once set, a new plan version at the next boot).
 """
@@ -21,8 +20,6 @@ import httpx
 from glyphh_server.db.seed import PLANS
 from glyphh_server.ops.billing.stripe import API, form
 
-METER: str = "glyphh_hosting"
-HOSTING_KEY: str = "glyphh_hosting_cent"
 ADA_METER: str = "ada_requests"
 ADA_KEY: str = "glyphh_ada_requests_10k_100"  # $1 (100 cents) per 10,000 reads
 
@@ -54,7 +51,7 @@ def price(stripe: Stripe, lookup_key: str, body: dict[str, Any]) -> str:
     return str(stripe.post("/prices", {**body, "lookup_key": lookup_key, "currency": "usd"})["id"])
 
 
-def meter(stripe: Stripe, event: str = METER, shown: str = "Glyphh hosting (cents)") -> str:
+def meter(stripe: Stripe, event: str, shown: str) -> str:
     listed = stripe.get("/billing/meters", status="active", limit=100)
     listed.raise_for_status()
     found = [m for m in listed.json()["data"] if m["event_name"] == event]
@@ -81,11 +78,6 @@ def setup(stripe: Stripe) -> dict[str, str]:
         key = f"glyphh_{plan.name.lower()}_{plan.interval}_{plan.price_cents}"
         body = {"product": made, "unit_amount": plan.price_cents, "recurring": recurring}
         settings[f"GLYPHH_STRIPE_PRICE_{plan.name.upper()}"] = price(stripe, key, body)
-    hosting = product(stripe, "glyphh_hosting", "Glyphh hosting")
-    recurring = {"interval": "month", "usage_type": "metered", "meter": meter(stripe)}
-    body = {"product": hosting, "unit_amount": 1, "recurring": recurring}
-    settings["GLYPHH_STRIPE_PRICE_HOSTING"] = price(stripe, HOSTING_KEY, body)
-    settings["GLYPHH_STRIPE_METER_HOSTING"] = METER
     reads = product(stripe, "glyphh_ada_requests", "Glyphh Ada Cloud reads")
     recurring = {"interval": "month", "usage_type": "metered", "meter": meter(stripe, ADA_METER, "Ada Cloud reads")}
     body = {"product": reads, "unit_amount_decimal": "0.01", "recurring": recurring}

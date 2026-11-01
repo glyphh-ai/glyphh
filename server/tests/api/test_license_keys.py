@@ -172,7 +172,7 @@ async def test_an_enterprise_grant_issues_a_key_through_its_last_day_and_revokin
     deal = f"sub_ent_{ada.org_id.hex}"
     stripe.sub(deal, f"cus_ent_{ada.org_id.hex}", "price_deal", 1)
     billing = StripeClient(fake_http(stripe), "sk_test")
-    await enterprise.grant(engine, billing, ada.org_id, date(2027, 10, 31), None, deal, signer)
+    await enterprise.grant(engine, billing, ada.org_id, date(2027, 10, 31), deal, signer)
     keys = await listed(client, ada.headers)
     payload = read(keys["license_key"], signer.public_key())
     assert (payload["tier"], payload["max_nodes"], payload["max_precedents"]) == ("enterprise", None, None)
@@ -180,7 +180,7 @@ async def test_an_enterprise_grant_issues_a_key_through_its_last_day_and_revokin
     stripe.subs[deal]["items"]["data"][0]["current_period_end"] = PERIOD_END
     await send(client, "invoice.payment_succeeded", {"customer": f"cus_ent_{ada.org_id.hex}", "subscription": deal})
     assert len((await listed(client, ada.headers))["keys"]) == 1  # the deal's invoice: the same key, to its day
-    await enterprise.revoke(engine, ada.org_id, None)
+    await enterprise.revoke(engine, ada.org_id)
     assert (await listed(client, ada.headers))["license_key"] is None
 
 

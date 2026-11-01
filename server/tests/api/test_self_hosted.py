@@ -1,28 +1,21 @@
 """Self-hosted runtimes: registered by name and public address (the token shown once, the environment filled in),
 listed, their token rotated (the old one refused, its link closed, here or on another process), deleted; linked,
-welcomed with a licence that carries its grace and unlimited precedents; keys made for one; never tallied."""
+welcomed with a licence that carries its grace and unlimited precedents; keys made for one."""
 
 import base64
 import json
 import uuid
-from types import SimpleNamespace
 from typing import Any
 
 import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from redis.asyncio import Redis
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.errors import Unavailable
 from glyphh_server.models import Rrotor
-from glyphh_server.ops import tend
-from glyphh_server.ops.link import calls
-from glyphh_server.ops.link.hub import Hub
-from glyphh_server.ops.link.protocol import Keys
 from tests.db.helpers import Person, person
-from tests.link import Rt, closed, connect, hello, linked, receive, runtime_row, server
+from tests.link import Rt, closed, connect, hello, linked, local_runtime, receive, runtime_row, server
 
 HOST = "rrotor.acme.test"
 
@@ -58,7 +51,7 @@ async def test_a_self_hosted_runtime_is_registered_with_its_environment_and_list
         "RROTOR_PUBLIC_HOST": HOST,
     }
     row = await runtime_row(engine, uuid.UUID(body["id"]))
-    assert (row.mode, row.state, row.install_id, row.fly_machine_id) == ("self", "stopped", None, None)
+    assert (row.mode, row.state, row.install_id) == ("self", "stopped", None)
     assert row.token_hash != body["token"]
     again = await client.post(
         "/v1/runtimes/self", json={"name": "x", "public_url": f"https://{HOST}"}, headers=ada.headers
@@ -108,7 +101,7 @@ async def test_glyphhs_own_addresses_and_a_blank_name_are_refused(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine)
-    for url in ("https://glyphh.app", "https://m1a2b3c4d5.glyphh.app", "https://localhost"):
+    for url in ("https://localhost",):
         res = await client.post("/v1/runtimes/self", json={"name": "A", "public_url": url}, headers=ada.headers)
         assert res.status_code == 422 and "Glyphh's own" in res.json()["error"]["message"], url
     res = await client.post(
@@ -177,30 +170,21 @@ async def test_a_key_is_made_for_a_self_hosted_runtime_and_reaches_it(
     ada, eve = await person(engine), await person(engine)
     runtime = rt(await made(client, ada))
     theirs = rt(await made(client, eve, "https://eve.acme.test"))
-    async with server() as srv, linked(srv, runtime) as ws:
+    async with server() as srv, server() as other, linked(srv, runtime) as ws:
         res = await srv.http.post(
             "/v1/runtime/keys", json={"name": "CRM", "runtime_id": str(runtime.id)}, headers=ada.headers
         )
         assert res.status_code == 201, res.text
         assert res.json()["runtime_id"] == str(runtime.id)
         assert len((await receive(ws, "keys"))["hashes"]) == 1
+        gone = await other.http.delete(f"/v1/runtime/keys/{res.json()['id']}", headers=ada.headers)
+        assert gone.status_code == 200  # revoked through another process: the list reaches the link over Redis
+        assert (await receive(ws, "keys"))["hashes"] == []
     res = await client.post("/v1/runtime/keys", json={"name": "x", "runtime_id": str(theirs.id)}, headers=ada.headers)
     assert res.status_code == 404
     listed = (await client.get("/v1/runtime/keys", headers=ada.headers)).json()
     assert [k["runtime_id"] for k in listed] == [str(runtime.id)]
-
-
-async def test_the_tally_never_counts_it_and_a_call_to_it_offline_says_so(
-    client: httpx.AsyncClient, engine: AsyncEngine, redis: Redis
-) -> None:
-    ada = await person(engine)
-    runtime = rt(await made(client, ada))
-    async with engine.begin() as conn:
-        await conn.execute(update(Rrotor).where(Rrotor.id == runtime.id).values(state="online", month_seconds=10**7))
-    await tend.tally(engine, "iad")
-    row = await runtime_row(engine, runtime.id)
-    assert (row.month, row.month_seconds) == (None, 10**7)
-    away = SimpleNamespace(id=runtime.id, mode="self", last_seen_at=None)
-    with pytest.raises(Unavailable) as refused:
-        await calls.deliver(Hub(redis), away, Keys(hashes=[]))  # type: ignore[arg-type]
-    assert refused.value.message.startswith("Your self-hosted runtime is not connected.")
+    local = await local_runtime(engine, ada)  # a key names a self-hosted runtime, never a local one
+    res = await client.post("/v1/runtime/keys", json={"name": "x", "runtime_id": str(local.id)}, headers=ada.headers)
+    assert res.status_code == 404
+    assert (await client.post("/v1/runtime/keys", json={"name": "x"}, headers=ada.headers)).status_code == 422

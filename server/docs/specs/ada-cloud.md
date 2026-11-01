@@ -12,7 +12,7 @@ org and pgvector). Every claim about today cites the file it comes from.
 no runtime, no repo and no image. The model is TypeSafe AI's Jev: cloud only, one endpoint, typed answers with
 probabilities, billed per request. Why: self-hosting rrotor is too hard to get running, and the public image
 `ghcr.io/glyphh-ai/rrotor` carries the Ada kernel's source (the IP). Self-hosted rrotor stays, as the Enterprise
-option. Glyphh-hosted per-org Fly machines (`GLYPHH_HOSTING`) stay off.
+option. Glyphh hosts no per-org runtime: the server only licenses rrotor.
 
 This reverses two standing rulings, and the plan says so where it matters: "nothing of Glyphh's is on the data path"
 and "Glyphh's cloud never keeps a copy of the code or the precedents" (`docs/architecture.md`, Architecture and Ada

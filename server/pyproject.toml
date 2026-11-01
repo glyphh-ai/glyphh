@@ -1,7 +1,7 @@
 [project]
 name = "glyphh-server"
 version = "0.1.0"
-description = "The Glyphh server: accounts, orgs, invites, plans and metered hosting, installs, the license and the record of models for Glyphh's mods"
+description = "The Glyphh server: accounts, orgs, invites, plans and billing, installs, licences for local rrotors, the connector and Ada Cloud"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
@@ -13,7 +13,6 @@ dependencies = [
     "cryptography>=44",
     "python-multipart>=0.0.20",
     "redis>=5.2",
-    "opentelemetry-proto==1.45.1",
     # Ada Cloud's kernel (docs/specs/ada-cloud.md, 3.2): the private ada-private repo at a pinned commit, never
     # published. CI and Fly's builder read it with a read-only deploy key (the Dockerfile's ada_deploy_key secret).
     "glyphh-kernel[postgres] @ git+https://github.com/glyphh-ai/ada-private@f28212c414a7ce031cdb5253f5c4e2258141401d",

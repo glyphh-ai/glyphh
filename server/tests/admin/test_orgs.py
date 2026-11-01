@@ -194,7 +194,7 @@ async def test_enterprise_is_granted_and_revoked_by_staff(admin: Admin, engine: 
     sub, customer = f"sub_deal{org.org_id.hex}", f"cus_deal_{org.org_id.hex}"
     admin.stripe.sub(sub, customer, "price_deal", 1)
     until = (datetime.now(UTC) + timedelta(days=365)).date()
-    body = {"until": until.isoformat(), "subscription": sub, "markup": 10}
+    body = {"until": until.isoformat(), "subscription": sub}
     granted_ = await admin.http.post(f"/v1/admin/orgs/{org.org_id}/enterprise", json=body, headers=admin.headers)
     assert granted_.status_code == 200, granted_.text
     row = await org_row(engine, org.org_id)
@@ -202,7 +202,7 @@ async def test_enterprise_is_granted_and_revoked_by_staff(admin: Admin, engine: 
     revoked = await admin.http.delete(f"/v1/admin/orgs/{org.org_id}/enterprise", headers=admin.headers)
     assert revoked.status_code == 200 and "is on Free" in revoked.json()["message"]
     audited = await _audited(engine, org.org_id)
-    assert audited[0][1]["subscription"] == sub and audited[0][1]["markup"] == 10
+    assert audited[0][1]["subscription"] == sub and "markup" not in audited[0][1]
     bad = await admin.http.post(
         f"/v1/admin/orgs/{org.org_id}/enterprise", json=body | {"subscription": "nope"}, headers=admin.headers
     )

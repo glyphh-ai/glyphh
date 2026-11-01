@@ -62,7 +62,7 @@ async def sync_subscription(conn: AsyncConnection, org_id: uuid.UUID, sub: dict[
     if status in ENDED:
         free = await newest_version(conn, FREE)
         values: dict[str, Any] = {"plan_version_id": free.id, "stripe_subscription_id": None, "renews_at": None}
-        values |= {"plan_until": None, "markup_pct": None}  # an Enterprise deal's subscription ended: so has the deal
+        values |= {"plan_until": None}  # an Enterprise deal's subscription ended: so has the deal
         await license_keys.revoke(conn, org_id)
     else:
         found = await classify(conn, org_id, sub)

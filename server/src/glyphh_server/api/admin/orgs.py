@@ -15,7 +15,6 @@ from glyphh_server.admin.orgs import LIMIT_MAX, OrgPage, orgs
 from glyphh_server.api.admin.deps import Staff
 from glyphh_server.ops import enterprise
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.fly import Fly
 
 router = APIRouter()
 
@@ -23,7 +22,6 @@ router = APIRouter()
 class EnterpriseGrant(BaseModel):
     until: date = Field(description="The deal's last day (UTC)")
     subscription: str = Field(pattern=r"^sub_[A-Za-z0-9]+$", description="The deal's Stripe subscription")
-    markup: int | None = Field(None, ge=0, description="With hosting on: percent over Fly's rates")
 
 
 class Done(BaseModel):
@@ -52,23 +50,15 @@ async def grant_enterprise(org_id: uuid.UUID, body: EnterpriseGrant, staff: Staf
     """On Enterprise through `until`, billed on the deal's subscription, with a licence key to then."""
     state = staff.request.app.state
     stripe = StripeClient(state.http, state.settings.stripe_secret_key)  # without billing set up: E_UNAVAILABLE
-    said = await enterprise.grant(
-        state.engine, stripe, org_id, body.until, body.markup, body.subscription, state.signing_key
-    )
-    await staff.note(until=body.until.isoformat(), subscription=body.subscription, markup=body.markup)
+    said = await enterprise.grant(state.engine, stripe, org_id, body.until, body.subscription, state.signing_key)
+    await staff.note(until=body.until.isoformat(), subscription=body.subscription)
     return Done(message=said)
 
 
 @router.delete("/orgs/{org_id}/enterprise", operation_id="adminRevokeEnterprise")
 async def revoke_enterprise(org_id: uuid.UUID, staff: Staff) -> Done:
-    """Back on Free, its hosting due reported first; its subscription is then cancelled in Stripe by hand."""
-    state = staff.request.app.state
-    settings = state.settings
-    fly = Fly(state.http, settings) if settings.hosting_on else None
-    meter = settings.stripe_secret_key and StripeClient(
-        state.http, settings.stripe_secret_key, settings.stripe_meter_hosting
-    )
-    said = await enterprise.revoke(state.engine, org_id, fly, meter or None)
+    """Back on Free, its licence keys revoked; its subscription is then cancelled in Stripe by hand."""
+    said = await enterprise.revoke(staff.request.app.state.engine, org_id)
     return Done(message=said)
 
 

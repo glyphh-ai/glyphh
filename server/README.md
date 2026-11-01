@@ -1,9 +1,10 @@
 # server
 
-The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, the signed licence,
-the licence key (one per paid period, signed for rrotor), flat plans on Stripe, the Glyphh connector (`/mcp`, OAuth 2.1), the hosted runtimes on Fly (built, off by default:
-`GLYPHH_HOSTING`) and the record of each person's Ada models, runtimes and runs. It renders nothing (every browser step lands on the
-platform, `glyphh-ai/platform`) and is never on the data path: a model is called at its runtime's own address.
+The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, flat plans on
+Stripe, the licences for rrotor (the signed licence and the licence key, one per paid period), the runtime link every
+local or self-hosted rrotor holds for its licence, the Glyphh connector (`/mcp`, OAuth 2.1) and Ada Cloud (built, off
+by default: `GLYPHH_ADA_CLOUD`). It renders nothing (every browser step lands on the platform, `glyphh-ai/platform`),
+hosts no runtime and is never on a program's data path: rrotor runs on the person's own machines.
 
 - [`docs/architecture.md`](docs/architecture.md): the contract. The system, the API, the settings, the data model,
   and what is not built yet.

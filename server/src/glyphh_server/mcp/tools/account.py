@@ -82,13 +82,9 @@ async def plan(ctx: Context, _: NoArgs) -> Done:
     return Done("\n".join(lines), {"plan": dump(p), "org": dump(org), "license_key": key})
 
 
-def dollars(cents: int) -> str:
-    return f"${cents / 100:,.2f}"
-
-
 async def show_usage(ctx: Context, _: NoArgs) -> Done:
     found = await usage.usage(ctx.conn, ctx.who.org_id, cloud_redis(ctx))
-    held, hosting = found.precedents, found.hosting
+    held = found.precedents
     seen = await nodes.nodes(ctx.conn, ctx.who.org_id)
     over = " (over the plan: shown, never stopped)" if seen.over else ""
     said, key = await key_line(ctx)
@@ -97,8 +93,6 @@ async def show_usage(ctx: Context, _: NoArgs) -> Done:
         f"Runtime nodes: {seen.count} of {amount(seen.max_nodes)}{over}.",
         f"Precedents: {held.used:,} on your fullest runtime, of {amount(held.limit)} per node.",
         said,
-        f"Hosting {hosting.month} so far: {dollars(hosting.month_to_date_cents)}.",
-        *(f"{m.name} ({m.size}): {dollars(m.cents)}" for m in hosting.machines),
     ]
     return Done("\n".join(lines), dump(found) | {"nodes": dump(seen), "license_key": key})
 
@@ -138,7 +132,7 @@ TOOLS: tuple[Tool, ...] = (
         "usage",
         "Usage",
         "What the org uses of its plan: its runtime nodes against the plan's, the precedents on its fullest runtime "
-        "against the plan's per node, its licence key (masked), and hosting this month so far, machine by machine.",
+        "against the plan's per node, and its licence key (masked).",
         NoArgs,
         show_usage,
         True,

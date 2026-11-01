@@ -19,7 +19,7 @@ from tests.api.test_heartbeat import beat, send
 from tests.api.test_self_hosted import made, rt
 from tests.connector import granted, tool
 from tests.db.helpers import Person, person
-from tests.link import WAIT, connect, hello, hosted_runtime, local_runtime, runtime_row, self_runtime, server
+from tests.link import WAIT, connect, hello, local_runtime, runtime_row, self_runtime, server
 
 CLUSTER = uuid.uuid4()
 
@@ -67,7 +67,7 @@ async def test_the_new_fields_are_checked(client: httpx.AsyncClient, engine: Asy
 async def test_every_welcome_carries_the_key_and_a_hello_names_its_node(engine: AsyncEngine) -> None:
     ada = await person(engine, "Team")
     key = await a_key(engine, ada)
-    for runtime in (await local_runtime(engine, ada), await hosted_runtime(engine, ada)):
+    for runtime in (await local_runtime(engine, ada), await self_runtime(engine, ada)):
         said = hello(runtime, node_id="pod-a", cluster_id=str(CLUSTER), role="head")
         async with server() as srv, connect(srv, runtime.token) as ws:
             await ws.send_json(said)
@@ -92,14 +92,14 @@ async def test_the_orgs_nodes_are_counted_softly_against_the_plan(
 ) -> None:
     ada = await person(engine, "Free")
     now = datetime.now(UTC)
-    hosted = await hosted_runtime(engine, ada, "box")  # never linked: a hosted machine is a node all the same
+    local = await local_runtime(engine, ada)  # a local runtime is a node while it is seen
     online = await _self(engine, ada, "on", state="online", last_seen_at=now)
     clustered = await _self(engine, ada, "cl", last_heartbeat_at=now - timedelta(hours=1))
     await _self(engine, ada, "gone", state="offline", last_seen_at=now - timedelta(days=3))  # not heard: not counted
     await _self(engine, ada, "never")  # never seen: not counted
     stale = await _self(engine, ada, "st", last_heartbeat_at=now - timedelta(hours=2))
-    await local_runtime(engine, ada)  # a local runtime is not a runtime node
     async with engine.begin() as conn:
+        await conn.execute(update(Rrotor).where(Rrotor.id == local.id).values(state="online", last_seen_at=now))
         for runtime_id, node, seen in (
             (clustered, "b", now),
             (clustered, "a", now),
@@ -116,7 +116,7 @@ async def test_the_orgs_nodes_are_counted_softly_against_the_plan(
         [
             (str(clustered), "a", "self"),
             (str(clustered), "b", "self"),
-            (str(hosted.id), None, "hosted"),
+            (str(local.id), None, "local"),
             (str(online), None, "self"),
             (str(stale), None, "self"),
         ],
@@ -127,12 +127,12 @@ async def test_the_orgs_nodes_are_counted_softly_against_the_plan(
         (str(clustered), "b", "self"),
     ]
     seen = {n["runtime_id"]: n["seen_at"] for n in body["nodes"]}
-    assert seen[str(hosted.id)] is None and seen[str(online)] is not None
+    assert seen[str(local.id)] is not None and seen[str(online)] is not None
     _, auth = await granted(engine, ada)
     used = (await tool(client, auth, "usage"))["content"][0]["text"]
     assert used.startswith("Runtime nodes: 5 of 1 (over the plan: shown, never stopped).\n")
     enterprise = await person(engine, "Enterprise")
-    await hosted_runtime(engine, enterprise)
+    await _self(engine, enterprise, "ent", state="online", last_seen_at=now)
     unlimited = (await client.get("/v1/license/nodes", headers=enterprise.headers)).json()
     assert (unlimited["count"], unlimited["max_nodes"], unlimited["over"]) == (1, None, False)
     assert (await client.get("/v1/license/nodes")).status_code == 401

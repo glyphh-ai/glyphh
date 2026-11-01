@@ -1,4 +1,3 @@
-import base64
 import os
 from collections.abc import AsyncIterator
 
@@ -32,8 +31,6 @@ UNREACHABLE_REDIS: str = "redis://127.0.0.1:1/0"
 SECRET_KEY: str = "test-secret-key-that-signs-sign-in-links-0123456789"
 PUBLIC_URL: str = "http://localhost:8080"
 WEBHOOK_SECRET: str = "whsec_test_not_a_real_secret"
-# Made fresh for each run: no real key is ever in the tests.
-SECRETS_KEY: str = base64.b64encode(os.urandom(32)).decode()
 GITHUB_APP_ID: str = "424242"
 GITHUB_APP_KEY: rsa.RSAPrivateKey = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 GITHUB_APP_PEM: str = GITHUB_APP_KEY.private_bytes(
@@ -51,14 +48,9 @@ SETTINGS: Settings = Settings(
     stripe_price_basic="price_test_basic",
     stripe_price_pro="price_test_pro",
     stripe_price_team="price_test_team",
-    stripe_price_hosting="price_test_hosting",
-    stripe_meter_hosting="glyphh_hosting",
-    secrets_key=SECRETS_KEY,
     github_app_id=GITHUB_APP_ID,
     github_app_private_key=GITHUB_APP_PEM,
     github_app_slug="glyphh-test",
-    # The suite runs with Glyphh's managed cloud on; tests/api/test_tiers.py turns it off.
-    hosting=True,
 )
 PROVIDER_SETTINGS: Settings = SETTINGS.model_copy(
     update={

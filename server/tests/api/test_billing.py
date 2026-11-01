@@ -1,18 +1,37 @@
 """Plans and billing: Checkout, plan changes, Stripe's portal, all against a fake Stripe."""
 
 import httpx
-from sqlalchemy import delete
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import Rrotor
 from tests.db.helpers import member, org_row, person, subscribed
 from tests.fakes import FakeStripe
-from tests.link import hosted_runtime
+from tests.link import local_runtime, self_runtime
 
 FEATURES_OFF = {"sync": False, "ha": False, "offline": False, "sso": False}
 
 
-async def test_the_plans_are_free_basic_pro_team_and_enterprise_never_naming_the_markup(
+async def test_billing_shows_the_plan_and_the_fullest_runtimes_precedents(
+    client: httpx.AsyncClient, engine: AsyncEngine
+) -> None:
+    ada = await person(engine, "Pro")
+    bob = await member(engine, ada.org_id)
+    empty = (await client.get("/v1/billing", headers=ada.headers)).json()
+    assert empty["precedents"] == {"used": 0, "limit": 50_000} and "hosting" not in empty
+    mine, theirs = await local_runtime(engine, ada), await self_runtime(engine, bob)
+    async with engine.begin() as conn:
+        for runtime_id, held in ((mine.id, 1_200), (theirs.id, 800)):
+            await conn.execute(update(Rrotor).where(Rrotor.id == runtime_id).values(precedents=held))
+    billing = (await client.get("/v1/billing", headers=ada.headers)).json()
+    assert (billing["plan"]["name"], billing["billing_status"], billing["renews_at"]) == ("Pro", "none", None)
+    assert billing["precedents"] == {"used": 1_200, "limit": 50_000} and billing["cloud"] is None
+    me = (await client.get("/v1/me", headers=bob.headers)).json()
+    assert me["precedents"] == billing["precedents"]
+    assert (await client.get("/v1/billing")).status_code == 401
+
+
+async def test_the_plans_are_free_basic_pro_team_and_enterprise(
     client: httpx.AsyncClient,
 ) -> None:
     plans = (await client.get("/v1/plans")).json()
@@ -37,11 +56,9 @@ async def test_the_plans_are_free_basic_pro_team_and_enterprise_never_naming_the
         FEATURES_OFF | {"sync": True},
         {"sync": True, "ha": True, "offline": True, "sso": True},
     ]
-    assert all(p["markup_hidden"] is True and "markup_pct" not in p for p in plans)
     assert all(p["built"] == FEATURES_OFF | {"offline": True} for p in plans)  # only offline licences work today
-    assert [p["hosting"] for p in plans] == [False, False, True, True, True]  # Free and Basic: self-hosted only
-    keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built", "markup_hidden"}
-    assert keys | {"hosting", "cloud"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud is off
+    keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built"}
+    assert keys | {"cloud"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud is off
 
 
 async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(
@@ -54,7 +71,7 @@ async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(
     assert path == "/customers" and customer["email"] == ada.email and customer["metadata[org_id]"] == str(ada.org_id)
     assert session["mode"] == "subscription" and session["line_items[0][price]"] == "price_test_team"
     assert (session["line_items[0][quantity]"], session["client_reference_id"]) == ("1", str(ada.org_id))
-    assert session["line_items[1][price]"] == "price_test_hosting" and "line_items[1][quantity]" not in session
+    assert "line_items[1][price]" not in session  # nothing metered while Ada Cloud is off
     assert session["success_url"] == "http://localhost:8080/billing/done"
     customer = (await org_row(engine, ada.org_id)).stripe_customer_id
     assert customer.startswith("cus_")
@@ -79,18 +96,6 @@ async def test_checkout_refuses_what_it_cannot_sell(client: httpx.AsyncClient, e
     await subscribed(engine, ada.org_id, "sub_solo", "cus_solo")
     res = await client.post("/v1/billing/checkout", json={"plan": "Pro"}, headers=ada.headers)
     assert res.status_code == 409 and res.json()["error"]["reason"] == "subscribed"
-
-
-async def test_checkout_needs_the_hosting_price(engine: AsyncEngine) -> None:
-    from glyphh_server.app import create_app
-    from tests.conftest import SETTINGS, _client
-    from tests.fakes import fake_http
-
-    ada = await person(engine)
-    unpriced = SETTINGS.model_copy(update={"stripe_price_hosting": None})
-    async for client in _client(create_app(unpriced, http=fake_http())):
-        res = await client.post("/v1/billing/checkout", json={"plan": "Pro"}, headers=ada.headers)
-        assert (res.status_code, res.json()["error"]["reason"]) == (503, "billing_off")
 
 
 async def test_billing_is_the_admins(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
@@ -161,20 +166,10 @@ async def test_changing_plan_needs_a_subscription_and_self_serve_plans(
     assert res.status_code == 409 and res.json()["error"]["reason"] == "contract"
 
 
-async def test_down_to_free_cancels_now_once_no_machine_is_left(
-    client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
-) -> None:
+async def test_down_to_free_cancels_now(client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe) -> None:
     ada = await person(engine, "Team")
-    bob = await member(engine, ada.org_id)
     stripe.sub("sub_down", "cus_down", "price_test_team", 1)
     await subscribed(engine, ada.org_id, "sub_down", "cus_down")
-    await hosted_runtime(engine, ada)
-    machine = await hosted_runtime(engine, bob)  # two, the org's together: Free allows one
-    held = await client.post("/v1/billing/plan", json={"plan": "Free"}, headers=ada.headers)
-    assert held.status_code == 409 and held.json()["error"]["reason"] == "machines"
-    assert held.json()["error"]["message"] == "Delete your hosted machines first. Free allows 1 hosted machine."
-    async with engine.begin() as conn:
-        await conn.execute(delete(Rrotor).where(Rrotor.id == machine.id))
     res = await client.post("/v1/billing/plan", json={"plan": "Free"}, headers=ada.headers)
     assert res.status_code == 200 and (res.json()["plan"]["name"], res.json()["billing_status"]) == ("Free", "canceled")
     assert stripe.calls[-1] == ("DELETE", "/subscriptions/sub_down", {"invoice_now": "true", "prorate": "true"})

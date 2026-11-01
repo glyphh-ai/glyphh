@@ -1,4 +1,4 @@
-"""Google, GitHub (sign-in and the Glyphh GitHub App), Stripe and Anthropic's routines, faked at the HTTP layer: the
+"""Google, GitHub (sign-in and the Glyphh GitHub App) and Stripe, faked at the HTTP layer: the
 server's own code runs unchanged against them, and no test ever reaches the real services."""
 
 import base64
@@ -149,92 +149,19 @@ class FakeGitHubApp:
         return httpx.Response(201, json={"token": "ghs_fake_repo_token", "expires_at": "2026-10-14T13:00:00Z"})
 
 
-class FakeRoutines:
-    """Anthropic's routine fire endpoint: what it was sent, and the answer it is set to give."""
-
-    def __init__(self) -> None:
-        self.calls: list[httpx.Request] = []
-        self.reply: httpx.Response | Exception = httpx.Response(
-            200,
-            json={
-                "type": "routine_fire",
-                "claude_code_session_id": "session_fake",
-                "claude_code_session_url": "https://claude.ai/code/session_fake",
-            },
-        )
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append(request)
-        if isinstance(self.reply, Exception):
-            raise self.reply
-        return self.reply
-
-
-class FakeFly:
-    """Fly's Machines API for one app: volumes and machines by id, each machine's state, every call kept."""
-
-    def __init__(self, token: str = "fly_test_token", app: str = "glyphh-runtimes") -> None:
-        self.token, self.app = token, app
-        self.volumes: dict[str, dict[str, Any]] = {}
-        self.machines: dict[str, dict[str, Any]] = {}
-        self.calls: list[tuple[str, str, Any]] = []
-        self.fail: bool = False
-        self.on_start: Any = None  # called with the machine's id when one is started (a test's rrotor linking)
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        assert request.headers["authorization"] == f"Bearer {self.token}"
-        body = json.loads(request.content) if request.content else None
-        path = request.url.path.removeprefix(f"/v1/apps/{self.app}")
-        self.calls.append((request.method, path, body))
-        if self.fail:
-            return httpx.Response(500, text="fly is down")
-        if path == "/volumes" and request.method == "POST":
-            volume_id = f"vol_{len(self.volumes) + 1}"
-            self.volumes[volume_id] = {"id": volume_id, **body}
-            return httpx.Response(201, json=self.volumes[volume_id])
-        if path == "/machines" and request.method == "GET":
-            return httpx.Response(200, json=list(self.machines.values()))
-        if path == "/machines" and request.method == "POST":
-            machine_id = f"m_{len(self.machines) + 1}"
-            self.machines[machine_id] = {"id": machine_id, "state": "stopped", **body}
-            return httpx.Response(200, json=self.machines[machine_id])
-        parts = path.strip("/").split("/")
-        if parts[0] == "machines" and len(parts) >= 2:
-            machine = self.machines.get(parts[1].split("?")[0])
-            if machine is None:
-                return httpx.Response(404, json={"error": "machine not found"})
-            if request.method == "DELETE":
-                del self.machines[machine["id"]]
-                return httpx.Response(200, json={"ok": True})
-            if len(parts) == 2:
-                return httpx.Response(200, json=machine)
-            machine["state"] = "stopped" if parts[2] == "stop" else "started"  # start, restart
-            return httpx.Response(200, json={"ok": True})
-        if parts[0] == "volumes" and len(parts) == 2 and request.method == "DELETE":
-            self.volumes.pop(parts[1], None)
-            return httpx.Response(200, json={"ok": True})
-        return httpx.Response(404, json={"error": "no such route"})
-
-
 def fake_http(
     stripe: FakeStripe | None = None,
     over: dict[tuple[str, str], Any] | None = None,
     github_app: FakeGitHubApp | None = None,
-    routines: FakeRoutines | None = None,
-    fly: FakeFly | None = None,
 ) -> httpx.AsyncClient:
     providers = provider_answers(over)
     billing = stripe or FakeStripe()
 
     def handle(request: httpx.Request) -> httpx.Response:
-        if request.url.host == "api.machines.dev" and fly:
-            return fly.handle(request)
         if request.url.host == "api.stripe.com":
             return billing.handle(request)
         if request.url.host == "api.github.com" and request.url.path.startswith("/app/") and github_app:
             return github_app.handle(request)
-        if request.url.host == "api.anthropic.com" and routines:
-            return routines.handle(request)
         return answer(providers[(request.method, request.url.path)])
 
     return httpx.AsyncClient(transport=httpx.MockTransport(handle))

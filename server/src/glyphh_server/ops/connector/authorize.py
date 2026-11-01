@@ -17,8 +17,7 @@ from glyphh_server.ops.connector.errors import AuthorizeRefused
 
 SCOPE: str = "account"
 PKCE: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._~-]{43,128}$")
-MACHINE: re.Pattern[str] = re.compile(r"^[0-9a-z]{6,32}$")
-NOT_OURS: str = "Glyphh issues tokens for its own connector and for a runtime: hosted, or self-hosted and registered."
+NOT_OURS: str = "Glyphh issues tokens for its own connector and for a self-hosted runtime that is registered."
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,24 +49,16 @@ def runtime_host(asked: str) -> str | None:
     return parts.netloc.lower() or None
 
 
-def is_hosted(settings: Settings, host: str) -> bool:
-    """`<machine>.<domain>`: a hosted runtime's address. The machine need not exist yet; the runtime that
-    introspects the token is the one that says whether it is its own."""
-    label, dot, rest = host.partition(".")
-    return bool(dot) and rest == settings.fly_public_domain.lower() and MACHINE.match(label) is not None
-
-
-async def runtime_resource(conn: AsyncConnection, settings: Settings, asked: str) -> str | None:
-    """A runtime's address as a resource, hosted or a registered self-hosted one's: the token is bound to its
-    `/mcp`. Looked up before anyone is known, so across every org."""
+async def runtime_resource(conn: AsyncConnection, asked: str) -> str | None:
+    """A registered self-hosted runtime's address as a resource: the token is bound to its `/mcp`. Looked up before
+    anyone is known, so across every org."""
     host = runtime_host(asked)
     if host is None:
         return None
     address = f"https://{host}"
-    if not is_hosted(settings, host):
-        registered = select(Rrotor.id).where(Rrotor.mode == "self", Rrotor.public_url == address).limit(1)
-        if (await conn.execute(registered)).first() is None:
-            return None
+    registered = select(Rrotor.id).where(Rrotor.mode == "self", Rrotor.public_url == address).limit(1)
+    if (await conn.execute(registered)).first() is None:
+        return None
     return f"{address}/mcp"
 
 
@@ -76,7 +67,7 @@ async def resource_for(conn: AsyncConnection, settings: Settings, asked: str | N
     address."""
     if asked is None or canonical(asked) in (canonical(settings.mcp_resource), canonical(settings.base_url)):
         return settings.mcp_resource
-    runtime = await runtime_resource(conn, settings, asked)
+    runtime = await runtime_resource(conn, asked)
     if runtime is not None:
         return runtime
     raise AuthorizeRefused("invalid_target", NOT_OURS)

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.api.test_self_hosted import made, rt, verifies
 from tests.db.helpers import person
-from tests.link import hosted_runtime, local_runtime, runtime_row
+from tests.link import local_runtime, runtime_row
 
 MACHINE = "ab" * 32
 
@@ -74,9 +74,8 @@ async def test_only_a_self_hosted_runtimes_own_token_beats(client: httpx.AsyncCl
     for token in (None, "not-a-token"):
         res = await send(client, token, beat())
         assert res.status_code == 401 and res.json()["error"]["code"] == "E_UNAUTHORIZED"
-    for other in (await hosted_runtime(engine, ada), await local_runtime(engine, ada)):
-        res = await send(client, other.token, beat())
-        assert res.status_code == 403 and res.json()["error"]["reason"] == "not_self"
+    res = await send(client, (await local_runtime(engine, ada)).token, beat())
+    assert res.status_code == 403 and res.json()["error"]["reason"] == "not_self"
 
 
 def decoded(token: str) -> dict[str, Any]:
@@ -103,8 +102,8 @@ async def test_an_offline_licence_is_one_token_good_for_the_days_asked(
     for days in (0, 366, None):
         assert (await client.post(path, json={"days": days}, headers=ada.headers)).status_code == 422
     assert (await client.post(path, json={"days": 30}, headers=eve.headers)).status_code == 404
-    hosted = await hosted_runtime(engine, ada)
-    res = await client.post(f"/v1/runtimes/{hosted.id}/offline-licence", json={"days": 30}, headers=ada.headers)
+    local = await local_runtime(engine, ada)
+    res = await client.post(f"/v1/runtimes/{local.id}/offline-licence", json={"days": 30}, headers=ada.headers)
     assert res.status_code == 404
     assert (await client.post(path, json={"days": 30})).status_code == 401
 

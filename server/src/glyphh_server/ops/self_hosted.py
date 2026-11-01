@@ -1,8 +1,8 @@
 """Self-hosted runtimes: a rrotor the person runs on their own infrastructure (Docker Compose, a Helm chart,
 Terraform), registered here by name and the public address it answers at, `https://<host>`. Its token is shown once
-and kept only as a hash; rotating it, or deleting the runtime, closes its link. It links like any rrotor, but nothing
-here runs it: it is never provisioned, woken or stopped, and never tallied. Its licence comes in
-its welcome, from its daily heartbeat, or, air-gapped, as an offline licence (ops/heartbeat.py)."""
+and kept only as a hash; rotating it, or deleting the runtime, closes its link. It links like any rrotor; nothing here
+runs it. Its licence comes in its welcome, from its daily heartbeat, or, air-gapped, as an offline licence
+(ops/heartbeat.py)."""
 
 import re
 import uuid
@@ -54,19 +54,14 @@ def _host_of(url: str) -> str | None:
 
 def public_address(settings: Settings, asked: str) -> str:
     """The address as kept, `https://<host>` lowercased; anything else is refused, and so is an address of Glyphh's
-    own (a hosted runtime's domain, the server, the platform)."""
+    own (the server, the platform)."""
     raw = asked.strip()
     parts = urlsplit(raw)
     host = parts.hostname or ""
     plain = parts.scheme.lower() == "https" and parts.netloc.lower() == host and parts.path in ("", "/")
     if not plain or "?" in raw or "#" in raw or not HOST.match(host):
         raise Invalid(ADDRESS_RULE, reason="public_url")
-    domain = settings.fly_public_domain.lower()
-    if (
-        host == domain
-        or host.endswith(f".{domain}")
-        or host in (_host_of(settings.base_url), _host_of(settings.platform_base))
-    ):
+    if host in (_host_of(settings.base_url), _host_of(settings.platform_base)):
         raise Invalid("That address is one of Glyphh's own.", reason="public_url")
     return f"https://{host}"
 
@@ -124,7 +119,7 @@ async def rotate(conn: AsyncConnection, hub: Hub, who: Principal, runtime_id: uu
 
 
 async def delete_self(conn: AsyncConnection, hub: Hub, who: Principal, runtime_id: uuid.UUID) -> None:
-    """The record goes, with its keys, deployments and runs; what is on the runtime's own volume stays there."""
+    """The record goes, with its keys and nodes; what is on the runtime's own volume stays there."""
     await mine(conn, who, runtime_id)
     await conn.execute(delete(Rrotor).where(Rrotor.id == runtime_id))
     await hub.drop(runtime_id, "This runtime was deleted from Glyphh.")

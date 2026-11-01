@@ -10,7 +10,7 @@ cross processes: they stay with the process holding the link, best effort."""
 import json
 import logging
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from typing import Any
 
@@ -55,14 +55,10 @@ class Link:
         await self.close(REPLACED, "A newer link of this runtime took over.")
 
 
-Waker = Callable[[uuid.UUID], Awaitable[None]]
-
-
 class Hub:
-    def __init__(self, redis: Redis, waker: Waker | None = None) -> None:
+    def __init__(self, redis: Redis) -> None:
         self.redis = redis
         self.links: dict[uuid.UUID, Link] = {}
-        self.waker = waker  # starts a stopped hosted runtime's machine; None where hosting is off
 
     async def attach(self, link: Link) -> None:
         """This process now holds the runtime's link; an older one, here or on another process, is closed. Said once

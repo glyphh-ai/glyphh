@@ -44,7 +44,7 @@ async def counts() -> AsyncIterator[Redis]:
 
 
 def meter(stripe: FakeStripe, name: str = "ada_requests") -> StripeClient:
-    return StripeClient(fake_http(stripe), "sk_test", "glyphh_hosting", name)
+    return StripeClient(fake_http(stripe), "sk_test", name)
 
 
 def sent(stripe: FakeStripe, customer: str) -> list[dict[str, str]]:
@@ -160,9 +160,9 @@ async def test_checkout_sells_the_metered_reads_and_going_free_reports_them(
     opened = await billed.post("/v1/billing/checkout", json={"plan": "Team"}, headers=buyer.headers)
     assert opened.status_code == 200, opened.text
     lines = {v for k, v in stripe.calls[-1][2].items() if k.endswith("[price]")}
-    assert lines == {"price_test_team", "price_test_hosting", "price_test_ada"}
+    assert lines == {"price_test_team", "price_test_ada"}
     basic = await billed.post("/v1/billing/checkout", json={"plan": "Basic"}, headers=buyer.headers)
-    assert basic.status_code == 200, basic.text  # Basic's reads past its month are metered too; it has no hosting
+    assert basic.status_code == 200, basic.text  # Basic's reads past its month are metered too
     lines = {v for k, v in stripe.calls[-1][2].items() if k.endswith("[price]")}
     assert lines == {"price_test_basic", "price_test_ada"}
     unpriced = ADA.model_copy(update={"stripe_price_ada": None})
@@ -184,7 +184,7 @@ async def test_the_tick_flushes_and_reports_with_ada_cloud_on(
     month = requests.period()
     await counts.set(requests.pending_key(who.org_id, month), 3)
     await counts.sadd(requests.orgs_key(month), str(who.org_id))
-    assert await tend.tend(engine, Hub(counts), ADA, 60, None, None)  # no Stripe: flushed only
+    assert await tend.tend(engine, Hub(counts), ADA, 60, None)  # no Stripe: flushed only
     assert sent(stripe, customer) == []
-    assert await tend.tend(engine, Hub(counts), ADA, 60, None, meter(stripe))
+    assert await tend.tend(engine, Hub(counts), ADA, 60, meter(stripe))
     assert [e["payload[value]"] for e in sent(stripe, customer)] == ["2"]

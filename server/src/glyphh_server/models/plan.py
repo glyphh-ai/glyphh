@@ -27,9 +27,7 @@ class PlanVersion(Base):
     null when set per customer; self_serve plans are bought through Stripe Checkout, the others by contract.
     max_machines is the org's runtime nodes, its people's together (the licence key's max_nodes); precedents what one
     node may hold across its Ada models (the key's max_precedents). The features are signed into the licence, sync
-    as the key's cluster_sync_enabled. hosting_markup_pct is
-    added to Fly's rates for the hosted machines and is never shown; null where there is no hosting or it is set per
-    customer (an org's own markup_pct overrides it).
+    as the key's cluster_sync_enabled.
 
     Ada Cloud's limits (docs/specs/ada-cloud.md, section 7), the org's whatever its people, models or keys:
     cloud_precedents across its models, cloud_requests (reads) a calendar month, cloud_rps calls a second; past
@@ -43,7 +41,6 @@ class PlanVersion(Base):
         CheckConstraint("coalesce(price_cents, 0) >= 0", name="plan_versions_price"),
         CheckConstraint(f"billing_interval IN {INTERVALS}", name="plan_versions_interval"),
         CheckConstraint("coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0", name="plan_versions_limits"),
-        CheckConstraint("coalesce(hosting_markup_pct, 0) >= 0", name="plan_versions_markup"),
         CheckConstraint(
             "coalesce(cloud_precedents, 0) >= 0 AND coalesce(cloud_requests, 0) >= 0 AND coalesce(cloud_rps, 1) > 0",
             name="plan_versions_cloud",
@@ -63,7 +60,6 @@ class PlanVersion(Base):
     ha: Mapped[bool] = mapped_column(server_default="false")
     offline: Mapped[bool] = mapped_column(server_default="false")
     sso: Mapped[bool] = mapped_column(server_default="false")
-    hosting_markup_pct: Mapped[int | None]
     cloud_precedents: Mapped[int | None]
     cloud_requests: Mapped[int | None]
     cloud_rps: Mapped[int | None]

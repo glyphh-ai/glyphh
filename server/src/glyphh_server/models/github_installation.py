@@ -8,8 +8,8 @@ from glyphh_server.models.base import Base, created_at, guid
 
 
 class GitHubInstallation(Base):
-    """The Glyphh GitHub App installed on the person's own GitHub account, one per person: the Cloud mints a
-    short-lived token for one repo from it per deploy. No long-lived GitHub key is kept."""
+    """The Glyphh GitHub App installed on the person's own GitHub account, one per person: the server can mint a
+    short-lived token for one repo from it. No long-lived GitHub key is kept."""
 
     __tablename__ = "github_installations"
 

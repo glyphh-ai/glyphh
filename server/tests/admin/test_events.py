@@ -86,7 +86,7 @@ async def test_the_tick_moves_events_to_postgres_folded(engine: AsyncEngine, red
         log.warning("stripe call failed %s", marker, extra=fields(path="/v1/stripe/webhook"))
     log.error("other %s", marker)
     await redis.delete(tick.KEY)
-    assert await tend.tend(engine, Hub(redis), SETTINGS.model_copy(update={"hosting": False}), 60, None, None)
+    assert await tend.tend(engine, Hub(redis), SETTINGS, 60, None)
     assert await tick.last(redis) is not None
     async with engine.connect() as conn:
         rows = list(await conn.execute(select(OpsEvent).where(OpsEvent.message.contains(marker))))

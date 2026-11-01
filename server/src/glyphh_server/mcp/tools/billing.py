@@ -34,8 +34,8 @@ TOOLS: tuple[Tool, ...] = (
         "upgrade",
         "Upgrade",
         "Subscribe to Basic, Pro or Team (answers Stripe Checkout's address to open) or, when already subscribed, "
-        "change to another plan, prorated; Free cancels the subscription once no hosted machine is left. Enterprise is "
-        "by contract (sales@glyphh.ai). Only the org's admin can.",
+        "change to another plan, prorated; Free cancels the subscription. Enterprise is by contract (sales@glyphh.ai). "
+        "Only the org's admin can.",
         UpgradeArgs,
         upgrade,
     ),

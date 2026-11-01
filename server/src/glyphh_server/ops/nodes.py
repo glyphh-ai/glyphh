@@ -1,7 +1,7 @@
 """The org's runtime nodes, as the server sees them: each node that heartbeats or links says its `node_id` (the
 operator's own name for it), `cluster_id` and `role` (rrotor's docs/specs/cluster.md), kept per runtime with its
-store's precedents and its version. A hosted or self-hosted runtime that has said no node is one node: a hosted one
-always, a self-hosted one while seen (linked, or heard within NODE_WINDOW). A node not heard within it is not counted.
+store's precedents and its version. A runtime, local or self-hosted, that has said no node is one node while seen
+(linked, or heard within NODE_WINDOW). A node not heard within it is not counted.
 
 The count is soft: shown against the plan's runtime nodes ("4 nodes on a 3-node plan"), never refusing anything.
 rrotor enforces the key's max_nodes itself, per cluster, at join."""
@@ -27,7 +27,7 @@ Role = Literal["standalone", "head", "follower"]
 class NodeView(BaseModel):
     runtime_id: uuid.UUID
     runtime: str | None = Field(description="The runtime's name")
-    mode: str = Field(description="hosted or self")
+    mode: str = Field(description="local or self")
     node_id: str | None = Field(description="As the node said it; null: a runtime that has said no node")
     cluster_id: uuid.UUID | None
     role: Role | None
@@ -59,19 +59,16 @@ def _heard(row: Row) -> datetime | None:
 
 
 def _counts(row: Row, cutoff: datetime) -> bool:
-    """A runtime that has said no node is one: a hosted one always, a self-hosted one while linked or heard since the
-    cutoff."""
+    """A runtime that has said no node is one while linked or heard since the cutoff."""
     heard = _heard(row)
-    return row.mode == "hosted" or row.state == "online" or (heard is not None and heard > cutoff)
+    return row.state == "online" or (heard is not None and heard > cutoff)
 
 
 async def nodes(conn: AsyncConnection, org_id: uuid.UUID) -> Nodes:
     cutoff = datetime.now(UTC) - NODE_WINDOW
     people = select(User.id).where(User.org_id == org_id)
     runtimes = select(Rrotor.id, Rrotor.name, Rrotor.mode, Rrotor.state, Rrotor.image_version, Rrotor.precedents)
-    runtimes = runtimes.add_columns(Rrotor.last_seen_at, Rrotor.last_heartbeat_at).where(
-        Rrotor.user_id.in_(people), Rrotor.mode.in_(("hosted", "self"))
-    )
+    runtimes = runtimes.add_columns(Rrotor.last_seen_at, Rrotor.last_heartbeat_at).where(Rrotor.user_id.in_(people))
     found = list(await conn.execute(runtimes.order_by(Rrotor.name, Rrotor.id)))
     said = select(Node).where(Node.rrotor_id.in_([r.id for r in found]), Node.seen_at > cutoff)
     by_runtime: dict[uuid.UUID, list[Row]] = {}

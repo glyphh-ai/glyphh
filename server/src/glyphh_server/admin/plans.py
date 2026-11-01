@@ -1,5 +1,5 @@
-"""Every plan and every version of it, for staff: prices, Stripe's price ids, limits, Ada Cloud's caps, the markup on
-Fly's rates (never shown to customers) and how many orgs are on each version."""
+"""Every plan and every version of it, for staff: prices, Stripe's price ids, limits, Ada Cloud's caps and how many
+orgs are on each version."""
 
 import uuid
 from datetime import datetime
@@ -24,7 +24,6 @@ class VersionRow(BaseModel):
     ha: bool
     offline: bool
     sso: bool
-    hosting_markup_pct: int | None
     cloud_precedents: int | None
     cloud_requests: int | None
     cloud_rps: int | None
@@ -44,9 +43,8 @@ class PlanRow(BaseModel):
 VERSION = (
     PlanVersion.id, PlanVersion.version, PlanVersion.price_cents, PlanVersion.billing_interval,
     PlanVersion.stripe_price_id, PlanVersion.self_serve, PlanVersion.max_machines, PlanVersion.precedents,
-    PlanVersion.sync, PlanVersion.ha, PlanVersion.offline, PlanVersion.sso, PlanVersion.hosting_markup_pct,
-    PlanVersion.cloud_precedents, PlanVersion.cloud_requests, PlanVersion.cloud_rps, PlanVersion.cloud_overage,
-    PlanVersion.created_at,
+    PlanVersion.sync, PlanVersion.ha, PlanVersion.offline, PlanVersion.sso, PlanVersion.cloud_precedents,
+    PlanVersion.cloud_requests, PlanVersion.cloud_rps, PlanVersion.cloud_overage, PlanVersion.created_at,
 )  # fmt: skip
 
 

@@ -45,7 +45,7 @@ async def test_a_plan_seeded_without_a_price_gets_one_as_a_new_version(engine: A
         )
     from glyphh_server.db import seed
 
-    trial = seed.PlanSeed("Trial", 0, "month", True, 0, 0, seed.Features(), None)
+    trial = seed.PlanSeed("Trial", 0, "month", True, 0, 0, seed.Features())
     async with engine.begin() as conn:
         await seed._seed_version(conn, trial, "price_test_trial")
     assert await _versions(engine, "Trial") == [(1, None), (2, "price_test_trial")]
@@ -71,7 +71,7 @@ async def test_new_cloud_limits_are_a_new_version_that_takes_the_price_and_the_o
     async with engine.begin() as conn:
         await conn.execute(update(Org).where(Org.id == who.org_id).values(plan_version_id=old))
     cloud = seed.Cloud(1_000, 2_000, 3, True)
-    carry = seed.PlanSeed("Carry", 4_900, "month", True, 2, None, seed.Features(sync=True), None, cloud)
+    carry = seed.PlanSeed("Carry", 4_900, "month", True, 2, None, seed.Features(sync=True), cloud)
     for _ in range(2):  # again: nothing more
         async with engine.begin() as conn:
             await seed._seed_version(conn, carry, None)
@@ -102,21 +102,18 @@ async def test_the_schema_step_runs_as_a_module(engine: AsyncEngine) -> None:
     assert len(await _versions(engine, "Free")) == 1
 
 
-async def test_the_plans_carry_their_price_limits_features_and_hidden_markup(engine: AsyncEngine) -> None:
+async def test_the_plans_carry_their_price_limits_and_features(engine: AsyncEngine) -> None:
     columns = (PlanVersion.price_cents, PlanVersion.max_machines, PlanVersion.precedents, PlanVersion.offline)
     async with engine.connect() as conn:
         rows = await conn.execute(
-            select(Plan.name, *columns, PlanVersion.hosting_markup_pct)
-            .join(Plan)
-            .where(PlanVersion.version == 1, Plan.active)
-            .order_by(Plan.sort)
+            select(Plan.name, *columns).join(Plan).where(PlanVersion.version == 1, Plan.active).order_by(Plan.sort)
         )
         assert [tuple(r) for r in rows] == [
-            ("Free", 0, 1, 5_000, False, None),
-            ("Basic", 2_000, 1, 5_000, False, None),
-            ("Pro", 9_900, 3, 50_000, False, 30),
-            ("Team", 29_900, 10, 500_000, False, 30),
-            ("Enterprise", None, None, None, True, None),
+            ("Free", 0, 1, 5_000, False),
+            ("Basic", 2_000, 1, 5_000, False),
+            ("Pro", 9_900, 3, 50_000, False),
+            ("Team", 29_900, 10, 500_000, False),
+            ("Enterprise", None, None, None, True),
         ]
 
 

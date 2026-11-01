@@ -200,7 +200,7 @@ async def test_the_pull_runs_once_an_hour_from_the_tick(engine: AsyncEngine, cle
     await redis.delete(pull.KEY)
     fake = FakeCloudflare()
     cf = Cloudflare(cloudflare_http(fake), TOKEN)
-    assert await tend.tend(engine, Hub(redis), SETTINGS, 60, None, None, cf)
+    assert await tend.tend(engine, Hub(redis), SETTINGS, 60, None, cf)
     asked = len(fake.queries)
     assert asked and sorted((await _kept(engine))[0]) == ["glyphh.ai", "glyphh.app"]
     assert not await pull.hourly(engine, redis, cf)

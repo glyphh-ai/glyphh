@@ -209,12 +209,12 @@ async def test_a_tick_part_that_fails_does_not_stop_the_days_reaching_the_databa
     await days.count(counts.pipeline(), who.org_id, "m", "query", 2).execute()
 
     async def fails(*_: Any) -> None:
-        raise RuntimeError("retention hiccup")
+        raise RuntimeError("grants hiccup")
 
-    monkeypatch.setattr(tend, "purge", fails)
-    with pytest.raises(RuntimeError, match="retention hiccup"):
-        await tend.tend(engine, Hub(counts), ADA, 60, None, None)
-    assert "tick part failed: retention" in caplog.text
+    monkeypatch.setattr(tend, "expire", fails)
+    with pytest.raises(RuntimeError, match="grants hiccup"):
+        await tend.tend(engine, Hub(counts), ADA, 60, None)
+    assert "tick part failed: enterprise grants" in caplog.text
     assert await counts.hgetall(days.key(who.org_id)) == {}
     async with engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)

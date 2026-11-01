@@ -12,7 +12,8 @@ CAPABILITIES: dict[str, Any] = {"tools": {}, "resources": {}}
 INSTRUCTIONS: str = (
     "Glyphh's account, from Claude: who you are (whoami), your plan (plan) and what you use of it (usage), what each "
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
-    "members and invites, your runtimes, and the apps allowed to use this connector (connector_grants)."
+    "members and invites, your self-hosted runtimes, their keys and offline licences, and the apps allowed to use "
+    "this connector (connector_grants)."
 )
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "

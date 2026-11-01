@@ -4,7 +4,7 @@
 # GLYPHH_SECRET_KEY, GLYPHH_LICENSE_SIGNING_KEY (the Ed25519 key that signs licences and licence keys; a secret
 # set as GLYPHH_LICENSE_KEY, its old name, is still read, but to rrotor that name is the customer's key string),
 # GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in providers, the Stripe prices and meter
-# (scripts/stripe-setup.py prints them) and Fly hosting ones as they are added.
+# (scripts/stripe-setup.py prints them) as they are added.
 app = "glyphh-ai-server"
 primary_region = "iad"
 

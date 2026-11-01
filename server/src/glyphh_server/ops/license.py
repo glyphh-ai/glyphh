@@ -1,6 +1,6 @@
-"""The license: what an org's plan allows (its hosted machines, its features, and every active mod with its limits:
-Ada's precedents per node on a hosted runtime, unlimited anywhere else), signed with Ed25519 so the mod can check it
-offline with the public key, and short-lived so a change of plan reaches the machine within a day.
+"""The license: what an org's plan allows (its runtime nodes, its features, and every active mod with its limits),
+signed with Ed25519 so the mod can check it offline with the public key, and short-lived so a change of plan reaches
+the machine within a day. The licence key (ops/license_keys.py) carries the precedents per node; rrotor prefers it.
 docs/architecture.md (The license) shows the payload.
 
 The signature is over the payload's canonical JSON: keys sorted, no spaces, ASCII only (json.dumps with
@@ -33,7 +33,7 @@ ADA: str = "ada"
 
 
 class AccountLimits(BaseModel):
-    machines: int | None = Field(description="Hosted machines, the org's together: null = unlimited, 0 = none")
+    machines: int | None = Field(description="Runtime nodes, the org's together: null = unlimited")
 
 
 class ModLimits(BaseModel):
@@ -45,7 +45,7 @@ def _absent(value: object) -> bool:
 
 
 class LicensePayload(BaseModel):
-    install_id: uuid.UUID | None  # none for a hosted runtime's licence: no install starts it
+    install_id: uuid.UUID | None  # none for a self-hosted runtime's licence: no install starts it
     user_id: uuid.UUID
     org_id: uuid.UUID
     plan: str
@@ -61,14 +61,12 @@ class LicensePayload(BaseModel):
 
 @dataclass(frozen=True, slots=True)
 class Stamp:
-    """What a runtime's licence says of itself: the runtime, how it came, its grace and how long it lasts; whether it
-    is hosted, where the plan's precedents per node are its cap."""
+    """What a runtime's licence says of itself: the runtime, how it came, its grace and how long it lasts."""
 
     runtime_id: uuid.UUID
     kind: str
     grace_days: int | None = None
     ttl: timedelta = LICENSE_TTL
-    hosted: bool = False
 
 
 class License(BaseModel):
@@ -109,10 +107,7 @@ async def sign_license(
     stamp: Stamp | None = None,
 ) -> License:
     plan = await org_version(conn, org_id)
-    precedents = plan.precedents if stamp is not None and stamp.hosted else None
-    mods = {
-        slug: ModLimits(limits={"precedents": precedents} if slug == ADA else {}) for slug in await active_mods(conn)
-    }
+    mods = {slug: ModLimits(limits={"precedents": None} if slug == ADA else {}) for slug in await active_mods(conn)}
     own: dict[str, Any] = {}
     if stamp is not None:
         own = {

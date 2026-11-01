@@ -1,10 +1,9 @@
 """Ada Cloud's reads past a metered plan's month (Basic, Pro, Team: cloud_overage), reported to Stripe's ada_requests
 Billing Meter, one unit a read, priced $1 per 10,000 (GLYPHH_STRIPE_PRICE_ADA): for each subscribed org, the reads
 past its plan's cloud_requests in each month (ada_usage, as the minute tick last flushed it) not yet reported, once a
-day and as soon as the month has ended (and at once when the org goes down to Free). As the hosting meter does
-(meter.py): each report written before it is sent, its id the identifier Stripe counts once, sent again at the next
-tick if Stripe would not take it. The subscription is given the metered price first when it has none (one made before
-Ada Cloud)."""
+day and as soon as the month has ended (and at once when the org goes down to Free). Each report is written before it
+is sent, its id the identifier Stripe counts once, sent again at the next tick if Stripe would not take it. The
+subscription is given the metered price first when it has none (one made before Ada Cloud)."""
 
 import logging
 import uuid

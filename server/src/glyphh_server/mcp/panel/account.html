@@ -24,7 +24,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-pri
 <section><h2>Plan</h2><p id="plan">Loading…</p><ul id="limits"></ul>
   <div class="row"><select id="plans" aria-label="Plan"></select><button id="upgrade">Upgrade</button>
   <button id="billing">Manage billing</button></div></section>
-<section><h2>Usage</h2><p id="usage">Loading…</p><ul id="hosting"></ul></section>
+<section><h2>Usage</h2><p id="usage">Loading…</p></section>
 <section><h2>Installs</h2><ul id="installs"></ul></section>
 <section><h2>Connector grants</h2><ul id="grants"></ul></section>
 <p class="bad" id="error" hidden></p>
@@ -72,12 +72,8 @@ function showPlan(d) {
     item(`Precedents per node: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
 }
 
-const dollars = (c) => `$${(c / 100).toFixed(2)}`;
-
 function showUsage(u) {
-  $("usage").textContent = `Precedents ${u.precedents.used} on the fullest runtime, of ${amount(u.precedents.limit)} per node. ` +
-    `Hosting this month: ${dollars(u.hosting.month_to_date_cents)}.`;
-  $("hosting").replaceChildren(...u.hosting.machines.map((m) => item(`${m.name} (${m.size}): ${dollars(m.cents)}`)));
+  $("usage").textContent = `Precedents ${u.precedents.used} on the fullest runtime, of ${amount(u.precedents.limit)} per node.`;
 }
 
 async function refresh() {

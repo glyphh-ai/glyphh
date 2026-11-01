@@ -15,7 +15,7 @@ from glyphh_server.ops.link import hello as hello_step
 from glyphh_server.ops.link import session
 from glyphh_server.ops.link.presence import Runtime, bearer
 from tests.db.helpers import person
-from tests.link import WAIT, closed, connect, hello, hosted_runtime, linked, local_runtime, receive, runtime_row, server
+from tests.link import WAIT, closed, connect, hello, linked, local_runtime, receive, runtime_row, self_runtime, server
 
 
 async def _until_state(engine: AsyncEngine, runtime_id: object, state: str) -> str:
@@ -44,9 +44,9 @@ async def test_a_hello_is_welcomed_and_the_runtime_is_online_until_it_hangs_up(e
     assert (await runtime_row(engine, rt.id)).last_seen_at >= seen
 
 
-async def test_a_hosted_runtime_is_welcomed_with_the_plans_precedents_per_node(engine: AsyncEngine) -> None:
+async def test_a_self_hosted_runtime_is_welcomed_with_its_licence_and_keys(engine: AsyncEngine) -> None:
     ada = await person(engine, "Pro")
-    rt = await hosted_runtime(engine, ada)
+    rt = await self_runtime(engine, ada)
     async with server() as srv, connect(srv, rt.token) as ws:
         await ws.send_json(hello(rt))
         welcome = await ws.receive_json(timeout=WAIT)
@@ -55,12 +55,12 @@ async def test_a_hosted_runtime_is_welcomed_with_the_plans_precedents_per_node(e
     assert welcome["keys"] == []
     payload = welcome["licence"]["payload"]
     assert (payload["install_id"], payload["user_id"], payload["plan"]) == (None, str(ada.user_id), "Pro")
-    assert (payload["kind"], payload["runtime_id"], "grace_days" in payload) == ("link", str(rt.id), False)
-    assert payload["mods"] == {"ada": {"limits": {"precedents": 50_000}}} and payload["limits"] == {"machines": 3}
+    assert (payload["kind"], payload["runtime_id"], payload["grace_days"]) == ("link", str(rt.id), 14)
+    assert payload["mods"] == {"ada": {"limits": {"precedents": None}}} and payload["limits"] == {"machines": 3}
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
     public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
-    ctx = session.Context(engine, None, None, None, None)  # type: ignore[arg-type]
-    runtime = Runtime(rt.id, ada.user_id, ada.org_id, "hosted")
+    ctx = session.Context(engine, None, None)  # type: ignore[arg-type]
+    runtime = Runtime(rt.id, ada.user_id, ada.org_id, "self", "https://rrotor.acme.test")
     assert (await session._welcome(ctx, runtime)).licence is None  # no key to sign with: no licence
 
 
@@ -86,19 +86,27 @@ async def test_a_link_without_a_good_token_is_refused_with_its_reason(engine: As
     ("said", "code", "reason"),
     [
         ("not json", 4400, "must be hello"),
-        ({"type": "hello", "protocol": 1}, 4400, "must be hello"),
-        ({"type": "result", "protocol": 1}, 4400, "must be hello"),
-        ({"type": "hello", "protocol": 2}, 4426, "protocol 1"),
+        ({"type": "hello", "protocol": 2}, 4400, "must be hello"),
+        ({"type": "result", "protocol": 2}, 4400, "must be hello"),
+        ({"type": "hello", "protocol": 1}, 4426, "protocol 2"),
+        ({"type": "hello", "protocol": 3}, 4426, "protocol 2"),
+        ("protocol 1", 4426, "Update the rrotor"),
         ("other runtime", 4400, "another runtime"),
         ("other mode", 4400, "another runtime"),
+        ("hosted", 4400, "must be hello"),
     ],
 )
-async def test_the_first_message_must_be_a_hello_of_protocol_1_for_this_runtime(
+async def test_the_first_message_must_be_a_hello_of_protocol_2_for_this_runtime(
     engine: AsyncEngine, said: object, code: int, reason: str
 ) -> None:
     ada, eve = await person(engine), await person(engine)
     rt, other = await local_runtime(engine, ada), await local_runtime(engine, eve)
-    special = {"other runtime": hello(rt, runtime_id=str(other.id)), "other mode": hello(rt, mode="hosted")}
+    special = {
+        "protocol 1": hello(rt, protocol=1),
+        "other runtime": hello(rt, runtime_id=str(other.id)),
+        "other mode": hello(rt, mode="self"),
+        "hosted": hello(rt, mode="hosted"),
+    }
     message = special.get(said, said) if isinstance(said, str) else said
     async with server() as srv, connect(srv, rt.token) as ws:
         await ws.send_text(message if isinstance(message, str) else json.dumps(message))
@@ -144,16 +152,9 @@ async def test_unreadable_messages_are_skipped_and_the_link_stays(engine: AsyncE
         await ws.send_bytes(b"\x00\x01")
         for message in (
             {"type": "nope", "id": "x"},
-            {"type": "result", "id": "r", "seq": 1},
-            {
-                "type": "result",
-                "id": "r",
-                "seq": 1,
-                "run_id": str(rt.id),
-                "seconds": 1,
-                "result": {"status": "needs_approval"},
-            },
-            {"type": "event", "id": "e", "seq": 0, "model": "p", "kind": "k"},
+            {"type": "usage", "id": "u"},
+            {"type": "usage", "id": "u", "seq": 0},
+            {"type": "result", "id": ""},
             {"type": "ack", "id": "a", "of": "w"},
         ):
             await ws.send_json(message)
