@@ -1,13 +1,15 @@
 # platform
 
-The Glyphh platform, https://platform.glyphh.ai: the one web app a person uses. They sign in, register the runtimes they run,
-make the keys that call them, pay and run their org. Every page shows the server's API; the platform stores nothing.
+The Glyphh platform, https://platform.glyphh.ai: the one web app a person uses. They sign in, use Ada Cloud, see the
+licence their runtimes run on, register the runtimes they run themselves, make the keys that call them, pay and run their
+org. Every page shows the server's API; the platform stores nothing. Glyphh hosts no runtime: for rrotor the server only
+grants licences.
 
 | Part | Repo | What |
 |---|---|---|
 | Platform | `glyphh-ai/platform` (this) | Every page a person sees |
-| Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai. Renders no page |
-| Runtimes | `glyphh-ai/rrotor` | rrotor: self-hosted at its own address, `https://<host>` (`RROTOR_PUBLIC_HOST`); Glyphh-hosted at `https://<machine>.glyphh.app` only while hosting is on (it is off). Claude and apps call it directly |
+| Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai: accounts, billing, licences, Ada Cloud. Renders no page |
+| Runtimes | `glyphh-ai/rrotor` | rrotor, the runtime a person runs for their programs and CLIs: local on their own computer (installed from Claude with the `glyphh` plugin's `rrotor` skill, or `deploy/compose` in `glyphh-ai/glyphh`), or self-hosted at its own address, `https://<host>` (`RROTOR_PUBLIC_HOST`). It reads its licence key as `GLYPHH_LICENSE_KEY`. Claude and apps call it directly |
 
 The contract is the server's `docs/architecture.md` (the API table and **The platform**); prices and plan rules are
 its `docs/pricing.md`.
@@ -19,9 +21,11 @@ its `docs/pricing.md`.
    `{server}/oauth/authorize`; the server sends the browser to `/authorize` here to pick Google or GitHub, and the
    tokens come back to `{PLATFORM_URL}/auth/callback`. They live in a sealed, HttpOnly cookie; the browser never holds
    a token.
-2. **Claude** connects to a runtime at `https://<host>/mcp` (or, with hosting on, `https://<machine>.glyphh.app/mcp`). Its OAuth runs
-   against the same server and lands on `/authorize` here; already signed in, it is one Allow.
-3. **Apps** call a runtime with a runtime key (made on API Keys, shown once) as the bearer.
+2. **Claude** reaches a local rrotor at `http://127.0.0.1:7777/mcp` (the `rrotor` skill adds it), and a self-hosted one
+   at `https://<host>/mcp`, whose OAuth runs against the same server and lands on `/authorize` here; already signed in,
+   it is one Allow.
+3. **Apps** call a self-hosted runtime with a runtime key (made on Runtime keys, or API Keys with Ada Cloud off; shown
+   once) as the bearer.
 
 ## Routes the server sends a browser to
 
@@ -42,30 +46,26 @@ server's `glyphh_signin` cookie (ten minutes, on the server's domain), so each a
 
 A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message", "trace_id"}}`, shown like `/error`.
 
-## Hosting off, and features not built
+## Licences only, and features not built
 
-The server's `GLYPHH_HOSTING` is off by default. The platform reads it from the server and hard-codes nothing:
-
-- **Hosting is off** when `GET /v1/rates` is refused with `E_UNAVAILABLE` `reason: hosting_off` (503, as the server
-  does; read as no rates, never shown as an error), or answers `{"hosting": "off"}` or an empty `plans` map; never
-  from the plans. A plan's `limits.machines` is its **runtime nodes**: every runtime linked for the org, hosted or
-  self-hosted (Free 1, Pro 3, Team 10, Enterprise unlimited), shown as "runtime nodes" with hosting on or off.
-  With hosting off, Machines is gone from the sidebar and `/machines` opens Add a runtime (`/?add=1`), which offers
-  this computer, Docker, Helm and Terraform only; Home has no Start, no cost and no link to Machines; Billing, Plans and Usage
-  say nothing of hosted machines, rates or hosting cost. A hosted machine route the server refuses with `E_UNAVAILABLE` `reason: hosting_off` says to run rrotor
-  yourself. With hosting on, every page is as before.
+- **Glyphh hosts no runtime.** For rrotor the server only grants licences: the licence key, the runtimes a person
+  registers to run at their own address and their tokens, offline licences, runtime keys and the nodes counted. It has
+  no hosted machines, rates, hosting cost or runtime telemetry, and the platform shows none. A plan's `limits.machines`
+  is its **runtime nodes**: every rrotor linked for the org, local or self-hosted (Free 1, Pro 3, Team 10, Enterprise
+  unlimited), shown as "runtime nodes"; its `limits.precedents` is per node (Free 5,000, Pro 50,000, Team 500,000),
+  shown as "precedents per node". The old `/machines`, `/logs` and `/settings/logs` go to Runtimes, `/getting-started`
+  to its Add a runtime.
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
   with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
   "offline": true, "sso": false}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
   and audit logs missing from `built` (or with no map) are not built; roles and audit logs follow `sso` when the server
-  does not name them. A plan's `limits.precedents` is per node, hosted or self-hosted (Free 5,000, Pro 50,000, Team
-  500,000), shown as "precedents per node" with hosting on or off. Plans are listed, priced and bought as before.
+  does not name them. Plans are listed, priced and bought as before.
 
 ## Ada Cloud
 
-With the server's `GLYPHH_ADA_CLOUD` on, `GET /v1/me` answers `ada_cloud: true` and the platform is Ada's: no
-runtimes, machines, licence, rrotor's logs, Add a runtime or self-hosting (`/logs`, `/licence`, `/machines`,
-`/getting-started` go Home). Off, or on an older server without the field, every page is as below. The browser calls
+With the server's `GLYPHH_ADA_CLOUD` on, `GET /v1/me` answers `ada_cloud: true`: Home, Models, Ada, API Keys and Usage
+are Ada's (the sidebar's Ada), and **Runtimes & licences** sits beside them (Runtimes, Licence, Runtime keys; below,
+Pages). The old `?add=1` on Home opens Home. Off, or on an older server without the field, every page is as below. The browser calls
 `/api/ada/v1/*` here; the route handler adds the session's token and passes the call to Ada's host
 (`GLYPHH_ADA_URL`, `https://ada.glyphh.ai`), which takes a Glyphh sign-in as the account API does. An import's file goes
 `PUT /api/ada/v1/uploads/<link>`, streamed to the upload link without a token (the link is its own credential).
@@ -85,25 +85,25 @@ plan's calls a second; Retry-After, passed back by the route handlers), 403 `E_L
 server names, or Talk to us) and `precedents` (the plans). With Ada Cloud on the plan cards show each plan's cloud caps
 (`cloud` on `GET /v1/plans`) in place of runtime nodes and precedents per node.
 
-Billing, Plans, Members, Profile, Installs and General stay; a plan's runtime nodes, precedents per node and runtime
-features (sync, HA, offline licences) are not shown.
+Billing, Plans, Members, Profile, Installs and General stay; the plan cards show the cloud caps, not a plan's runtime
+nodes, precedents per node or runtime features (sync, HA, offline licences).
 
 ## Pages
 
 The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
+Runtimes & licences (Runtimes, Licence, and Runtime keys with Ada Cloud on or API Keys and Usage with it off) is in the
+sidebar either way; with Ada Cloud off, `/` goes to `/runtimes`.
 
 | Route | Page | Server calls | Does |
 |---|---|---|---|
-| `/machines` | Machines (hosting on only) | `GET /v1/runtimes`, `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | Each hosted machine's size, state, address, connector URL and cost this month. Make one (`POST /v1/runtimes {name, size}`), start, stop, restart (`POST /v1/runtimes/{id}/start`, `stop`, `restart`), delete after typing its name (`DELETE /v1/runtimes/{id}?confirm=<name>`). `E_LIMIT` `reason: machines` links to Billing. On Free, the plans with hosting and their rates |
-| `/` | Runtimes | `GET /v1/runtime`, `GET /v1/runtimes/self`, `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | The first hosted machine: address, state, cost this month, connector URL. Start (`POST /v1/runtime/start`), stop (`POST /v1/runtime/stop`). Self-hosted runtimes: rotate the token (`POST /v1/runtimes/self/{id}/token`), delete (`DELETE /v1/runtimes/self/{id}`), offline licence on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`). **Add a runtime** (a dialog; `/?add=1` opens it on load, and the old `/getting-started` redirects there): where rrotor runs, this computer, Docker, Helm or Terraform, each with what it needs (register, `POST /v1/runtimes/self {name, public_url}`, token shown once; the command filled from the answer's `env`, nothing to clone, pasteable in zsh and bash with no `#` lines, ending with a `curl …/healthz` check: this computer is the image alone with `docker run` on port 7777 (host 127.0.0.1 by default; localhost and IPs allowed for it only), no HTTPS so no Claude connector, the SDKs take `GLYPHH_RUNTIME_URL=http://<host>:7777`; Docker is `curl -fsSL https://glyphh.ai/install.sh \| RROTOR_RUNTIME_ID=… sh`, or the image alone with `docker run`; Helm installs the released chart; Terraform's module is `git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/<cloud>?ref=main`; on a paid plan, how to set the licence key, as text beside the block, for an air-gapped node only); with hosting on, Glyphh hosted first (make a first machine, `POST /v1/runtimes {name, size}`, or start it, `POST /v1/runtimes/{id}/start`). Then the connector URL `https://<host>/mcp` and the SDK and plugin install commands. Closing it reads the runtimes again |
-| `/keys` | API Keys | `GET /v1/runtime/keys` | Make one (`POST /v1/runtime/keys {name, expires_in_days?}`: 7, 30, 60, 90 or 365 days, or never; shown once), revoke (`DELETE /v1/runtime/keys/{id}`), delete a revoked or expired one (`DELETE /v1/runtime/keys/{id}/record`) |
-| `/models` | Models | `GET /v1/models` | Each Ada model's versions by commit and where each is active. Delete (`DELETE /v1/models/{id}`) |
+| `/runtimes` | Runtimes | `GET /v1/runtimes/self`, `GET /v1/me` | **Install rrotor** on your own computer: from Claude Code, the `glyphh` plugin (`/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh`), then "install rrotor" (its `rrotor` skill); or by hand, `glyphh-ai/glyphh`'s `deploy/compose/docker-compose.local.yml` (fetch it, make a local token, `docker compose … up -d`, `claude mcp add` at `http://127.0.0.1:7777/mcp`), with a link to the Docker Compose guide; the key reaches rrotor on its own, or as `GLYPHH_LICENSE_KEY`; none is Community. The runtimes run at their own address: state, version, last heartbeat; rotate the token (`POST /v1/runtimes/self/{id}/token`), delete (`DELETE /v1/runtimes/self/{id}`), offline licence on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`). **Add a runtime** (a dialog; `/runtimes?add=1` opens it on load, and the old `/?add=1` and `/getting-started` go there): where rrotor runs, this computer, Docker, Helm or Terraform, each with what it needs (register, `POST /v1/runtimes/self {name, public_url}`, token shown once; the command filled from the answer's `env`, nothing to clone, pasteable in zsh and bash with no `#` lines, ending with a `curl …/healthz` check: this computer is the image alone with `docker run` on port 7777 (host 127.0.0.1 by default; localhost and IPs allowed for it only), no HTTPS so no Claude connector, the SDKs take `GLYPHH_RUNTIME_URL=http://<host>:7777`; Docker is `curl -fsSL https://glyphh.ai/install.sh \| RROTOR_RUNTIME_ID=… sh`, or the image alone with `docker run`; Helm installs the released chart; Terraform's module is `git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/<cloud>?ref=main`; on a paid plan, how to set the licence key, as text beside the block, for an air-gapped node only). Then the connector URL `https://<host>/mcp` and the SDK and plugin install commands. Closing it reads the runtimes again |
+| `/licence` | Licence | `GET /v1/me`, `GET /v1/license/keys`, `GET /v1/license/nodes` | The key the org's runtimes are sent now (`license_key`), masked with Reveal and Copy: its tier, runtime nodes, precedents per node, sync and expiry. How it reaches rrotor: on its own at the link and the daily heartbeat, renewed at each payment; an air-gapped node takes it as `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key`. The runtime nodes "N of M" and each node, local or self-hosted (runtime, node id, role, version, precedents, last seen), over the plan shown, never blocking. Older keys with their state (live, expired, revoked). Free has none: Community, 1 node, 5,000 precedents, no sync. `/settings/licence` goes here |
+| `/runtime-keys` (Ada Cloud on), `/keys` (off) | Runtime keys, API Keys | `GET /v1/runtime/keys`, `GET /v1/runtimes/self` | Make one for a self-hosted runtime (`POST /v1/runtime/keys {name, runtime_id, expires_in_days?}`: the runtime, the first until another is chosen; 7, 30, 60, 90 or 365 days, or never; shown once; with no runtime registered, the way to Runtimes), revoke (`DELETE /v1/runtime/keys/{id}`), delete a revoked or expired one (`DELETE /v1/runtime/keys/{id}/record`). With Ada Cloud off, `/runtime-keys` goes to `/keys` |
+| `/usage` (Ada Cloud off) | Usage | `GET /v1/me`, `GET /v1/runtime/keys`, `GET /v1/license/nodes` | The fullest node's precedents against the plan's per node; the runtime nodes and each node, as on Licence; each API key's calls. `/settings/usage` goes here |
+| `/models` (Ada Cloud off) | Models | `GET /v1/models` | Each Ada model's versions by commit and where each is active. Delete (`DELETE /v1/models/{id}`) |
 | `/settings/general` | General | `GET /v1/org`, `GET /v1/me` | Rename the org (`PATCH /v1/org`) |
-| `/settings/billing` | Billing | `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | The plan, its renewal and hosting this month; the plans above it; the hosted machine rates (hosting on). Invoices and payment (`POST /v1/billing/portal`) |
-| `/settings/plans` | Plans (full window) | `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates` | Choose a plan: Stripe Checkout without a subscription (`POST /v1/billing/checkout {plan}`), else a prorated change (`POST /v1/billing/plan {plan}`). Enterprise is Talk to us (`mailto:sales@glyphh.ai`) |
-| `/settings/licence` | Licence | `GET /v1/me`, `GET /v1/license/keys` | The key the org's runtimes are sent now (`license_key`), masked with Reveal and Copy: its tier, runtime nodes, precedents per node, sync and expiry. How it reaches rrotor: on its own at the link and the daily heartbeat, renewed at each payment; an air-gapped node takes it as `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key`. Older keys with their state (live, expired, revoked). Free has none: Community, 1 node, 5,000 precedents, no sync |
-| `/settings/usage` | Usage | `GET /v1/me`, `GET /v1/plans`, `GET /v1/rates`, `GET /v1/runtime/keys`, `GET /v1/license/nodes` | The fullest node's precedents against the plan's per node; runtime nodes "N of M" and each node (runtime, node id, role, version, precedents, last seen), over the plan shown, never blocking; hosting this month by machine (hosting on), each API key's calls |
-| `/settings/logs` | Logs | `GET /v1/telemetry/logs?runtime&node&level&since&text&limit&cursor`, `GET /v1/telemetry/audit?runtime&node&kind&since&limit&cursor`, `GET /v1/telemetry/metrics`, `GET /v1/license/nodes` | What the org's runtimes send with rrotor's opt-in server logs (`RROTOR_SERVER_LOGS=on`). Tabs Logs, Audit and Metrics (`?tab=audit`, `?tab=metrics`). Logs and Audit: newest first, filtered by runtime, node and time (`since`), with level and above and words (`text`) on Logs and `kind` (run.call, …) on Audit; 50 a page, Load older by the answer's `next_cursor`; a cursor refused (422 `reason: cursor`) starts again from the newest. An audit event's actor, route and outcome come from its flattened attributes (`actor.type`, `via`, `outcome.status`). Metrics: the latest point of each series, gathered by node: `rrotor.runs`, `rrotor.run.seconds`, `rrotor.precedents` against `rrotor.precedents.cap`, `rrotor.link.state`, `rrotor.drain.dropped`; any other series listed as it came. Read again every 10 seconds while open; fields the platform does not know are kept and shown under Details. Audit says rrotor records it on Enterprise (below, the events arrive as log lines). With nothing sent, rrotor's default: the data stays on the rrotor; recommended, your own OpenTelemetry collector (`OTEL_EXPORTER_OTLP_ENDPOINT`, rrotor's self-hosting docs); or `RROTOR_SERVER_LOGS=on`, which sends logs, metrics, traces and audit events to Glyphh, never inputs, results or client addresses |
+| `/settings/billing` | Billing | `GET /v1/me`, `GET /v1/plans` | The plan, its renewal and what it includes. Invoices and payment (`POST /v1/billing/portal`) |
+| `/settings/plans` | Plans (full window) | `GET /v1/me`, `GET /v1/plans` | Choose a plan: Stripe Checkout without a subscription (`POST /v1/billing/checkout {plan}`), else a prorated change (`POST /v1/billing/plan {plan}`). Enterprise is Talk to us (`mailto:sales@glyphh.ai`) |
 | `/settings/members` | Members | `GET /v1/org`, `GET /v1/org/members`, `GET /v1/org/invites`, `GET /v1/me` | Invite (`POST /v1/org/invites {email}`, valid seven days), cancel an invite (`DELETE /v1/org/invites/{id}`), remove a member (`DELETE /v1/org/members/{id}`) |
 | `/settings/profile` | Profile | `GET /v1/me` | Rename (`PATCH /v1/me`), link a provider (`POST /v1/me/identities` → its link), unlink (`DELETE /v1/me/identities/{provider}`) |
 | `/settings/installs` | Installs | `GET /v1/installs` | Sign out an install (`DELETE /v1/installs/{id}`) |
@@ -195,10 +195,8 @@ Node 22 or later.
 ```bash
 npm ci
 cp .env.example .env        # then set PLATFORM_CLIENT_ID, PLATFORM_CLIENT_SECRET and SESSION_SECRET
-npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080); hosting off as
-                            # the server has it, FAKE_HOSTING=on to turn it on; no telemetry, as rrotor sends none by
-                            # default, FAKE_SERVER_LOGS=on for sample logs, audit events and metrics; FAKE_ADA=on
-                            # for Ada Cloud (its API at /ada/v1)
+npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080): licences only,
+                            # as the server is, the org on Free; FAKE_ADA=on for Ada Cloud (its API at /ada/v1)
 npm run dev                 # the platform on PLATFORM_URL (default http://localhost:3000), hot reload
 npm test                    # route handlers, API calls and every page, against fake servers
 npm run typecheck
