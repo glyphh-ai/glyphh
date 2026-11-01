@@ -33,6 +33,42 @@ describe('Ada Home', () => {
   });
 });
 
+describe('Ada Models, searched and paged', () => {
+  const many = () => Array.from({ length: 30 }, (_, i) => ({ ...tickets(), name: `model-${i + 1}`, id: `m-${i + 1}` }));
+  const links = () => within(screen.getByRole('table')).getAllByRole('link');
+
+  it('searches by name or Ada once typing pauses, with the query in the URL, and says when nothing matches', async () => {
+    on([tickets(), { ...tickets(), name: 'triage', id: 'm-triage', ada: 'ada-1-2-beta' }]);
+    const { user, router } = renderApp('/models');
+    await screen.findByRole('table');
+    expect(links()).toHaveLength(2);
+    await user.type(screen.getByLabelText('Search'), 'beta');
+    await vi.waitFor(() => expect(router.state.location.search).toBe('?q=beta'));
+    await vi.waitFor(() => expect(links()).toHaveLength(1));
+    expect(links()[0]).toHaveTextContent('triage');
+    await user.clear(screen.getByLabelText('Search'));
+    await user.type(screen.getByLabelText('Search'), 'nothing here');
+    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
+    expect(screen.getByText('No model matches “nothing here”.')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('opens on the page the URL names, and pages through 24 at a time', async () => {
+    on(many());
+    const { user, router } = renderApp('/models?page=2');
+    await screen.findByRole('table');
+    expect(links()).toHaveLength(6);
+    expect(links()[0]).toHaveTextContent('model-25');
+    const pager = screen.getByRole('navigation', { name: 'Pages' });
+    expect(within(pager).getByText('25–30 of 30')).toBeInTheDocument();
+    expect(within(pager).getByRole('button', { name: 'Next' })).toBeDisabled();
+    await user.click(within(pager).getByRole('button', { name: 'Previous' }));
+    await vi.waitFor(() => expect(links()).toHaveLength(24));
+    expect(router.state.location.search).toBe('?page=1');
+    expect(within(screen.getByRole('navigation', { name: 'Pages' })).getByText('1–24 of 30')).toBeInTheDocument();
+  });
+});
+
 describe('Ada Models', () => {
   it('lists each model with its version and precedents', async () => {
     on();
@@ -193,6 +229,33 @@ describe('New model', () => {
     await user.click(within(refusal).getByRole('button', { name: 'Choose ada-1-1' }));
     expect(screen.getByRole('combobox', { name: 'Ada' })).toHaveValue('ada-1-1');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('Ada API Keys, searched and paged', () => {
+  const rows = () => within(screen.getByRole('list', { name: 'API keys' })).getAllByRole('listitem');
+  const manyKeys = () =>
+    Array.from({ length: 30 }, (_, i) => ({ id: `ak-${i + 1}`, name: `App ${i + 1}`, clearance: 1, created_at: '2026-10-02T09:00:00Z', expires_at: null, revoked_at: null }));
+
+  it('searches by name, with the query in the URL, and pages through 24 at a time', async () => {
+    const fake = on();
+    fake.state.keys.push(...manyKeys());
+    const { user, router } = renderApp('/keys?page=2');
+    await screen.findByRole('list', { name: 'API keys' });
+    expect(rows()).toHaveLength(6);
+    expect(within(rows()[0]!).getByText('App 25')).toBeInTheDocument();
+    const pager = screen.getByRole('navigation', { name: 'Pages' });
+    expect(within(pager).getByText('25–30 of 30')).toBeInTheDocument();
+    await user.click(within(pager).getByRole('button', { name: 'Previous' }));
+    await vi.waitFor(() => expect(rows()).toHaveLength(24));
+    expect(router.state.location.search).toBe('?page=1');
+    await user.type(screen.getByLabelText('Search'), 'app 1');
+    await vi.waitFor(() => expect(rows()).toHaveLength(11)); // App 1 and App 10 to App 19
+    expect(router.state.location.search).toBe('?q=app+1');
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Search'));
+    await user.type(screen.getByLabelText('Search'), 'nothing here');
+    expect(await screen.findByText('No key matches “nothing here”.')).toBeInTheDocument();
   });
 });
 

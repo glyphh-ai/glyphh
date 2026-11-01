@@ -1,0 +1,26 @@
+/* The search above a list and the pager under it, the same on every searchable page. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.search {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.pagerButtons {
+  display: flex;
+  gap: var(--space-2);
+}

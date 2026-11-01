@@ -100,7 +100,10 @@ nodes, precedents per node or runtime features (sync, HA, offline licences).
 
 The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
 Runtimes & licences (Runtimes, Licence, Artifacts, and Runtime keys with Ada Cloud on or API Keys and Usage with it off) is in the
-sidebar either way; with Ada Cloud off, `/` goes to `/runtimes`.
+sidebar either way; with Ada Cloud off, `/` goes to `/runtimes`. Models, API Keys, Runtime keys and Artifacts are searchable
+and paged alike (`src/components/SearchPaged.tsx`): a search field whose text reaches the URL as `?q=` once typing pauses, 24
+a page with Previous/Next as `?page=` and "25–30 of 30"; Artifacts sends both to the server, the others filter and page the
+whole list the server answered.
 
 | Route | Page | Server calls | Does |
 |---|---|---|---|

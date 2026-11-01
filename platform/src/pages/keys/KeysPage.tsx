@@ -6,10 +6,13 @@ import type { NewRuntimeKey, RuntimeKey } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
+import { NoMatch, Pager, SearchField, useSearchPaging } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { ago, date, plural } from '@/lib/format';
 import { Button, Chip, CopyField, Dialog, EmptyState, ErrorNotice, LoadingCard, Select, TextField } from '@/ui';
 import styles from './KeysPage.module.css';
+
+const matchesKey = (key: RuntimeKey, q: string) => key.name.toLowerCase().includes(q);
 
 /** A key lasts up to a year, or never expires; never gets a warning before it is made. */
 const lifetimes = [
@@ -44,6 +47,7 @@ export function KeysPage() {
   const revoke = useRevokeRuntimeKey();
   const [deleting, setDeleting] = useState<RuntimeKey | null>(null);
   const remove = useDeleteRuntimeKey();
+  const paged = useSearchPaging(keys.data, matchesKey);
 
   const newKey = (
     <Button variant="primary" icon="plus" onClick={() => setMaking(true)}>
@@ -66,9 +70,11 @@ export function KeysPage() {
           Make one for each app that calls your runtime, so you can revoke one without the others.
         </EmptyState>
       )}
-      {keys.data && keys.data.length > 0 && (
+      {keys.data && keys.data.length > 0 && <SearchField typed={paged.typed} onChange={paged.setTyped} placeholder="Key name" />}
+      {keys.data && keys.data.length > 0 && paged.total === 0 && <NoMatch q={paged.q} noun="key" />}
+      {keys.data && paged.total > 0 && (
         <List label="API keys">
-          {keys.data.map((key) => {
+          {paged.shown.map((key) => {
             const status = keyStatus(key, new Date());
             return (
               <Row
@@ -92,6 +98,7 @@ export function KeysPage() {
           })}
         </List>
       )}
+      {keys.data && <Pager page={paged.page} total={paged.total} from={paged.from} to={paged.to} last={paged.last} onPage={paged.setPage} />}
 
       {making && <NewKeyDialog onClose={() => setMaking(false)} />}
 

@@ -4,6 +4,7 @@ import { useAdaModels, useAdaReleases, type AdaModelRow } from '@/api/ada';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import { AdaName } from './AdaRelease';
 import { DeleteModelDialog } from './model/DeleteModelDialog';
+import { NoMatch, Pager, SearchField, useSearchPaging } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
 import { isBeta } from '@/lib/releases';
@@ -11,6 +12,7 @@ import { Button, Card, EmptyState, LoadingCard, Menu, MenuItem, useToast } from 
 import styles from './ada.module.css';
 
 const modelPath = (name: string) => `/models/${encodeURIComponent(name)}`;
+const matchesModel = (model: AdaModelRow, q: string) => [model.name, model.ada, `v${model.version}`].some((s) => s.toLowerCase().includes(q));
 
 /**
  * Models, with Ada Cloud on: every model of the org, its active version and the precedents it holds. The whole row
@@ -22,6 +24,7 @@ export function AdaModelsPage() {
   const models = useAdaModels();
   const releases = useAdaReleases();
   const [deleting, setDeleting] = useState<AdaModelRow | null>(null);
+  const paged = useSearchPaging(models.data, matchesModel);
   const newModel = (
     <Button variant="primary" icon="plus" onClick={() => navigate('/models/new')}>
       New model
@@ -38,7 +41,9 @@ export function AdaModelsPage() {
           Describe your cases once as a spec. Claude can write it with you through the connector.
         </EmptyState>
       )}
-      {models.data && models.data.length > 0 && (
+      {models.data && models.data.length > 0 && <SearchField typed={paged.typed} onChange={paged.setTyped} placeholder="Model name or Ada version" />}
+      {models.data && models.data.length > 0 && paged.total === 0 && <NoMatch q={paged.q} noun="model" />}
+      {models.data && paged.total > 0 && (
         <Card>
           {/* No scrolling box round this table: it would clip a row's menu. */}
           <table className={styles.table}>
@@ -55,7 +60,7 @@ export function AdaModelsPage() {
               </tr>
             </thead>
             <tbody>
-              {models.data.map((model) => (
+              {paged.shown.map((model) => (
                 <tr key={model.id} className={styles.rowLink} onClick={() => navigate(modelPath(model.name))}>
                   <td>
                     <Link to={modelPath(model.name)} className={styles.link} onClick={(e) => e.stopPropagation()}>
@@ -100,6 +105,7 @@ export function AdaModelsPage() {
           </table>
         </Card>
       )}
+      {models.data && <Pager page={paged.page} total={paged.total} from={paged.from} to={paged.to} last={paged.last} onPage={paged.setPage} />}
       {deleting && (
         <DeleteModelDialog
           model={deleting}
