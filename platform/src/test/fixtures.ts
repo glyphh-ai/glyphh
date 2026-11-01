@@ -70,6 +70,18 @@ export const runtimeKeys: RuntimeKey[] = [
   { id: 'k-3', runtime_id: 'rt-self-2', name: 'Old script', created_at: '2026-09-12T11:00:00Z', expires_at: '2026-12-11T11:00:00Z', revoked_at: '2026-10-01T08:00:00Z', calls: 0, last_used_at: null },
 ];
 
+/** Thirty live keys, "Worker 1" to "Worker 30", for the search and the pages. */
+export const manyRuntimeKeys: RuntimeKey[] = Array.from({ length: 30 }, (_, i) => ({
+  id: `k-${100 + i}`,
+  runtime_id: 'rt-self-1',
+  name: `Worker ${i + 1}`,
+  created_at: '2026-10-02T09:00:00Z',
+  expires_at: '2027-10-02T09:00:00Z',
+  revoked_at: null,
+  calls: i,
+  last_used_at: null,
+}));
+
 export const selfRuntimes: SelfRuntime[] = [
   {
     id: 'rt-self-1',

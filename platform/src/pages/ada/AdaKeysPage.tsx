@@ -4,10 +4,13 @@ import { useSession } from '@/api/session';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
+import { NoMatch, Pager, SearchField, useSearchPaging } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
 import { Button, Chip, CopyField, Dialog, EmptyState, ErrorNotice, LoadingCard, Select, TextField } from '@/ui';
 import styles from './ada.module.css';
+
+const matchesKey = (key: CloudKey, q: string) => key.name.toLowerCase().includes(q);
 
 /** A key lasts up to a year, or never expires; never gets a warning before it is made. */
 const lifetimes = [
@@ -37,6 +40,7 @@ export function AdaKeysPage() {
   const [deleting, setDeleting] = useState<CloudKey | null>(null);
   const remove = useDeleteCloudKey();
   const address = session.data?.adaUrl ?? 'Ada';
+  const paged = useSearchPaging(keys.data, matchesKey);
 
   const newKey = (
     <Button variant="primary" icon="plus" onClick={() => setMaking(true)}>
@@ -58,9 +62,11 @@ export function AdaKeysPage() {
           Make one for each app that calls Ada, so you can revoke one without the others.
         </EmptyState>
       )}
-      {keys.data && keys.data.length > 0 && (
+      {keys.data && keys.data.length > 0 && <SearchField typed={paged.typed} onChange={paged.setTyped} placeholder="Key name" />}
+      {keys.data && keys.data.length > 0 && paged.total === 0 && <NoMatch q={paged.q} noun="key" />}
+      {keys.data && paged.total > 0 && (
         <List label="API keys">
-          {keys.data.map((key) => {
+          {paged.shown.map((key) => {
             const status = keyStatus(key, new Date());
             return (
               <Row
@@ -84,6 +90,7 @@ export function AdaKeysPage() {
           })}
         </List>
       )}
+      {keys.data && <Pager page={paged.page} total={paged.total} from={paged.from} to={paged.to} last={paged.last} onPage={paged.setPage} />}
 
       {making && <NewKeyDialog onClose={() => setMaking(false)} />}
 

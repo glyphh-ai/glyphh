@@ -1,7 +1,47 @@
 import { screen, within } from '@testing-library/react';
-import { runtimeKeys } from '@/test/fixtures';
+import { manyRuntimeKeys, runtimeKeys } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+
+const rows = () => within(screen.getByRole('list', { name: 'API keys' })).getAllByRole('listitem');
+
+describe('API Keys, searched and paged', () => {
+  it('searches by name once typing pauses, with the query in the URL, and says when nothing matches', async () => {
+    const { user, router } = renderApp('/keys');
+    await screen.findByRole('list', { name: 'API keys' });
+    expect(rows()).toHaveLength(3);
+    await user.type(screen.getByLabelText('Search'), 'bot');
+    await vi.waitFor(() => expect(router.state.location.search).toBe('?q=bot'));
+    await vi.waitFor(() => expect(rows()).toHaveLength(1));
+    expect(within(rows()[0]!).getByText('Support bot')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Search'));
+    await user.type(screen.getByLabelText('Search'), 'nothing here');
+    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
+    expect(screen.getByText('No key matches “nothing here”.')).toBeInTheDocument();
+  });
+
+  it('opens on the page the URL names, and pages through 24 at a time', async () => {
+    server.use(http.get(v1('/runtime/keys'), () => HttpResponse.json(manyRuntimeKeys)));
+    const { user, router } = renderApp('/keys?page=2');
+    await screen.findByRole('list', { name: 'API keys' });
+    expect(rows()).toHaveLength(6);
+    expect(within(rows()[0]!).getByText('Worker 25')).toBeInTheDocument();
+    const pager = screen.getByRole('navigation', { name: 'Pages' });
+    expect(within(pager).getByText('25–30 of 30')).toBeInTheDocument();
+    expect(within(pager).getByRole('button', { name: 'Next' })).toBeDisabled();
+    await user.click(within(pager).getByRole('button', { name: 'Previous' }));
+    await vi.waitFor(() => expect(rows()).toHaveLength(24));
+    expect(router.state.location.search).toBe('?page=1');
+    expect(within(screen.getByRole('navigation', { name: 'Pages' })).getByText('1–24 of 30')).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Pages' })).getByRole('button', { name: 'Previous' })).toBeDisabled();
+    // A search starts again at the first page, and narrows the count.
+    await user.type(screen.getByLabelText('Search'), 'worker 3');
+    await vi.waitFor(() => expect(rows()).toHaveLength(2));
+    expect(router.state.location.search).toBe('?q=worker+3');
+    expect(rows().map((row) => row.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Worker 3'), expect.stringContaining('Worker 30')]));
+  });
+});
 
 describe('API Keys', () => {
   it('lists keys, live and revoked', async () => {

@@ -119,7 +119,8 @@ describe('Artifacts', () => {
       );
       const { user } = renderApp('/artifacts?state=draft');
       await screen.findByRole('list', { name: 'Artifacts' });
-      await user.click(screen.getByRole('button', { name: 'Reject' }));
+      // The published cards stand in while the drafts load (placeholder data): wait for the draft's own button.
+      await user.click(await screen.findByRole('button', { name: 'Reject' }));
       const dialog = await screen.findByRole('dialog', { name: 'Reject Cloud cost board?' });
       expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
       await user.type(within(dialog).getByLabelText('Reason'), 'Too wide.');
@@ -153,7 +154,7 @@ describe('Artifacts', () => {
       server.use(asReviewer(), http.post(v1('/artifacts/:id/approve'), () => apiError(409, 'E_CONFLICT', 'Cloud cost board is approved already.')));
       const { user } = renderApp('/artifacts?state=draft');
       await screen.findByRole('list', { name: 'Artifacts' });
-      await user.click(screen.getByRole('button', { name: 'Approve' }));
+      await user.click(await screen.findByRole('button', { name: 'Approve' }));
       expect(await screen.findByText('Cloud cost board is approved already.')).toBeInTheDocument();
     });
 
