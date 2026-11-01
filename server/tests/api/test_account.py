@@ -29,7 +29,7 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "self_serve": True,
         "limits": {"machines": 10, "precedents": 500_000},
         "features": {"sync": True, "ha": False, "offline": False, "sso": False},
-        "built": {"sync": False, "ha": False, "offline": True, "sso": False},
+        "built": {"sync": False, "ha": False, "offline": True, "sso": True},
         "cloud": None,  # Ada Cloud is off
     }
     assert me["precedents"] == {"used": 0, "limit": 500_000} and "hosting" not in me

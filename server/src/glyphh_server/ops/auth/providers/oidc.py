@@ -47,7 +47,14 @@ async def discover(http: httpx.AsyncClient, issuer: str) -> Endpoints:
     held = _found.get(issuer)
     if held is not None and held[1] > now:
         return held[0]
-    doc = await json_call(http, NAME, "GET", issuer + WELL_KNOWN, headers={"accept": "application/json"})
+    try:
+        doc = await json_call(http, NAME, "GET", issuer + WELL_KNOWN, headers={"accept": "application/json"})
+    except Unavailable:
+        raise Unavailable(
+            f"{issuer}'s OpenID configuration could not be read ({issuer}{WELL_KNOWN}). Check the issuer.",
+            provider=NAME,
+            reason="discovery",
+        ) from None
     try:
         found = Endpoints(
             str(doc["issuer"]).rstrip("/"),
