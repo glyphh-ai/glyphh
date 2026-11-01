@@ -5,7 +5,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderSurface } from 'claude-code'
 
-import type { AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { ArtifactsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import { FIRST_VIEW } from './artifacts'
 import { glyphhCommand, startGlyphh } from './command'
 import type { Host } from './host'
 import { openUrl } from './open'
@@ -21,6 +22,7 @@ const me = atom({ plugin: 'glyphh', key: 'me' } as const, null as Json | null)
 const lists = atom({ plugin: 'glyphh', key: 'lists' } as const, {} as Record<string, Json[]>)
 const note = atom({ plugin: 'glyphh', key: 'note' } as const, null as GlyphhNote | null)
 const inviteLink = atom({ plugin: 'glyphh', key: 'inviteLink' } as const, null as string | null)
+const artifacts = atom({ plugin: 'glyphh', key: 'artifacts' } as const, FIRST_VIEW as ArtifactsView)
 
 function hostState($: EngineInterface): Host['state'] {
   return {
@@ -30,6 +32,7 @@ function hostState($: EngineInterface): Host['state'] {
     lists: { get: () => read($, lists), set: async fn => void (await update($, lists, fn)) },
     note: { get: () => read($, note), set: async fn => void (await update($, note, fn)) },
     inviteLink: { get: () => read($, inviteLink), set: async fn => void (await update($, inviteLink, fn)) },
+    artifacts: { get: () => read($, artifacts), set: async fn => void (await update($, artifacts, fn)) },
   }
 }
 
@@ -75,9 +78,9 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
-  const description = 'Glyphh: sign in, account, org, plan, billing'
+  const description = 'Glyphh: sign in, account, org, plan, billing, artifacts, publish'
   await $.command
-    .register({ name: 'glyphh', description, argumentHint: '[section | signin | signout]' })
+    .register({ name: 'glyphh', description, argumentHint: '[section | signin | signout | publish <file>]' })
     .catch(() => $.command.register({ name: 'glyphh-account', description }))
   // Claude's way in to the same sign-in: a tool of this mod's own; its result
   // draws the inline sign-in.
@@ -145,7 +148,7 @@ export function registerGlyphh(on: On) {
     }
     const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
     const gh = host($)
-    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists) }
+    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), artifacts: await read($, artifacts) }
     return Panel(ctx, await read($, auth), await read($, section), await read($, note))
   })
 }

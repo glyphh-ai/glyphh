@@ -51,7 +51,10 @@ Say which you did, in one line each.
 
 ## 4. Publish
 
-Call the rrotor's `app_publish` tool (on the rrotor the organisation runs; the rrotor skill connects it):
+Call the rrotor's `app_publish` tool (on the rrotor the organisation runs; the rrotor skill connects it). The
+person can do the same from the mod without Claude: `/glyphh publish <file> [--name n] [--title t] [--description
+d] [--roles a,b]` sends the one file to the local rrotor, and `/glyphh artifacts` shows the organisation's list
+(with a reviewer's Approve, Reject and Retire) in the panel.
 
 ```json
 {

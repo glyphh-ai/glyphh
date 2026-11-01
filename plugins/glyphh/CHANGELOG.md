@@ -4,7 +4,16 @@ Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace'
 
 ## 1.6.0 — 2026-11-01
 
-Pages published to the organisation. Nothing of the Ada skills, the account panel or the ledger changes.
+Pages published to the organisation. Nothing of the Ada skills or the ledger changes.
+
+- The panel gains **Artifacts** (`/glyphh artifacts`): the organisation's published pages as cards (title,
+  description, the rrotor and version, roles, who published it and when, Open at the rrotor), a search field and
+  Previous/Next over pages of 24; a reviewer sees Published, Awaiting review and Rejected, and approves, rejects
+  (with a reason) or retires from the card. The server's refusals are shown in its words.
+- `/glyphh publish <file> [--name n] [--title t] [--description d] [--roles a,b]`: the page Claude wrote (one
+  `.html` or `.md` file) goes to the local rrotor (`POST /v1/apps`, the token from `~/.glyphh/rrotor/token`) as an
+  app awaiting review; the reply says the version, who reviews it and the Open link. No rrotor, rrotor not running,
+  or rrotor refusing is each said plainly.
 
 - A new skill, `publish`: *"publish this to my org"* takes the page Claude made in the session (a Claude Code
   artifact, one `.html` or `.md` file), agrees its name, title, description and the roles that may open it,
