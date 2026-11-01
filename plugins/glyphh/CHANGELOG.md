@@ -2,6 +2,22 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.5.0 — 2026-10-31
+
+rrotor, your local runtime, from Claude. Nothing of the Ada skills, the account panel or the ledger changes.
+
+- A new skill, `rrotor`, installs and connects a local rrotor with `skills/rrotor/scripts/rrotor.sh`: it finds a
+  container runtime (Apple's `container` on macOS 26 on Apple silicon, then OrbStack, then Docker), makes a local
+  token once (`~/.glyphh/rrotor/token`, 0600, never printed; the container gets its SHA-256), pulls
+  `ghcr.io/glyphh-ai/rrotor:0.1.0`, runs it as `glyphh-rrotor` on `127.0.0.1:7777` with the volume
+  `glyphh-rrotor-data`, waits for it and checks the token. `connect` adds rrotor's `/mcp` to Claude Code (`claude
+  mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat
+  ~/.glyphh/rrotor/token)"`); `status`, `start`, `stop`, `uninstall [--purge]`, and `deploy <folder> [commit]` (a
+  program's folder as a git bundle). The skill then drives rrotor's tools: programs, runs, approvals (always the
+  person's), secrets (never shown back), schedules and CLIs.
+- A new skill, `rrotor-programs`: how to write a program (`glyphh.json`, `program.py`, its tests) and a CLI manifest
+  (`"kind": "cli"`), from rrotor's examples.
+
 ## 1.4.0 — 2026-10-29
 
 The glyphh command. A new skill, glyphh-cli, does the Ada skill's work through the shell with `glyphh` (the Python

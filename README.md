@@ -1,13 +1,16 @@
 # Glyphh
 
-Glyphh's developer surface for Ada Cloud: the Claude Code plugin, the SDKs and the contract they share.
+Glyphh's developer surface for its two products: **Ada Cloud** (Ada as an API that Glyphh runs) and **rrotor** (the
+runtime you run yourself, which hosts your programs and CLIs). The Claude Code plugin, the SDKs, the contracts they
+share and the files that run rrotor.
 
 | Folder | Install | What |
 |---|---|---|
-| [`plugins/glyphh`](plugins/glyphh) | `/plugin marketplace add glyphh-ai/glyphh`, then `/plugin install glyphh@glyphh` | The plugin: your Glyphh account in Claude Code, the Ada skill, the file ledger |
-| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command |
-| [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"` |
-| [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server |
+| [`plugins/glyphh`](plugins/glyphh) | `/plugin marketplace add glyphh-ai/glyphh`, then `/plugin install glyphh@glyphh` | The plugin: your Glyphh account in Claude Code, the Ada skill, rrotor installed and connected from Claude, the file ledger |
+| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command; `Runtime`, a client for your rrotor |
+| [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"`; `Runtime`, a client for your rrotor |
+| [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server; `runtime.json` and `runtime-fixtures.json`, rrotor's answers, apart |
+| [`deploy`](deploy) | | rrotor with Docker Compose (on your own computer, or self-hosted with HTTPS, air-gapped or as a cluster), Helm and Terraform |
 | [`benchmarks`](benchmarks) | | Ada against Claude on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
 
 **Ada Cloud is Ada as an API.** You describe your cases once as a JSON spec, load your history, and ask: every
@@ -63,8 +66,52 @@ Claude through the connector). A refusal is `{"error": {code, message, trace_id,
 | `GET /v1/usage` | The plan, the month (UTC) and when it starts again, the models, the precedents held and the month's requests against the plan's (`over` past it on Basic, Pro and Team, metered), and the calls a second |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | SDK 3.0's call shape, answered at once as a `done` Result |
 
-The shapes are in [`contract/contract.json`](contract/contract.json) (version 4), with
+The shapes are in [`contract/contract.json`](contract/contract.json) (version 5), with
 [`contract/fixtures.json`](contract/fixtures.json).
+
+## rrotor, your runtime
+
+**rrotor is a runtime you run yourself**, a container on your machine (or your servers), driven from Claude. It hosts
+two things, each sandboxed (bubblewrap, seccomp, Landlock, and an egress proxy that lets a run reach only the hosts
+its manifest names):
+
+- **Programs**: a folder with a `glyphh.json` manifest and `program.py`, deployed by commit. Its functions run with
+  a local secrets vault (values encrypted on the runtime, never shown back), cron schedules the runtime fires itself,
+  a SQLite database (`ctx.db`), and approvals that wait for a person before a step acts.
+- **CLIs**: a kind of program (`"kind": "cli"`): a pinned command-line tool (gh, the `glyphh` command, your own)
+  installed into the runtime and run one command at a time, its arguments checked against allow and approval
+  patterns.
+
+Programs are not Ada models, and rrotor runs no Ada. Glyphh's server only grants rrotor its licence; with none it runs
+as Community (one node), and nothing a licence does refuses a run. Nothing of a run goes through Glyphh.
+
+- **From Claude:** with the plugin, ask *"install rrotor"*. It finds Apple's `container`, OrbStack or Docker, runs
+  `ghcr.io/glyphh-ai/rrotor` on `127.0.0.1:7777` only with a local token (kept in `~/.glyphh/rrotor/token`), and adds
+  rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp
+  --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Claude then writes, deploys, calls and schedules
+  programs and runs CLIs with rrotor's tools (`programs_list`, `program_call`, `program_continue`, `approvals`,
+  `secret_set`, `schedules_list`, `cli_run`, ...).
+- **From code:** `Runtime` in both SDKs (`from glyphh import Runtime`; `import { Runtime } from "@glyphh-ai/glyphh"`).
+- **By hand, or on your servers:** [`deploy/`](deploy): Docker Compose on your own computer
+  (`docker-compose.local.yml`) or self-hosted with HTTPS, air-gapped or as a cluster, Helm, Terraform.
+
+The image is published as `ghcr.io/glyphh-ai/rrotor`; until a glyphh-ai organisation admin makes the package public
+(GitHub, the organisation's Packages, `rrotor`, Package settings, Change visibility), pulling it needs a `docker
+login ghcr.io` with access.
+
+| Route (with `Authorization: Bearer <the local token>`, or a self-hosted rrotor's runtime key) | Does |
+|---|---|
+| `GET /v1/programs`; `POST /v1/programs/deploy` `{bundle, commit}` or `{repo, commit, token?}` | Programs and CLIs; a commit as the next version |
+| `POST /v1/runs` `{program, function?, inputs?}`; `POST /v1/runs/{id}/continue` `{answer}`, `…/cancel`; `GET /v1/runs/{id}`, `…/log` | A run and its Result (`done`, `needs_input`, `needs_approval`, `failed`); answer it, stop it, read it |
+| `GET /v1/approvals` | Runs waiting for a person |
+| `GET /v1/programs/{name}/secrets`; `PUT`, `DELETE …/secrets/{secret}` | A program's secrets: names only back |
+| `GET /v1/schedules`; `POST /v1/schedules/{program}/{name}/pause`, `…/resume` | The schedules rrotor fires |
+| `GET /v1/clis`; `POST /v1/clis/{name}/run` `{args, stdin?, files?}` | The CLIs; one command: exit code, stdout, stderr |
+| `GET`, `PUT /v1/licence` | The licence held and its limits; a key handed in (a local rrotor) |
+| `POST /mcp` | The same, as MCP tools |
+
+The shapes are in [`contract/runtime.json`](contract/runtime.json), with
+[`contract/runtime-fixtures.json`](contract/runtime-fixtures.json) (written from rrotor's code).
 
 ## Develop
 
@@ -75,6 +122,8 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/glyphh
 (cd sdk/typescript && npm ci && npm test)
 (cd sdk/python && python -m pip install '.[dev]' && python -m pytest -q)
 ADA_SERVER_IMAGE=<an image of glyphh-ai/server> sh sdk/integration/run.sh   # both SDKs against a real server, in Docker
+sh -n plugins/glyphh/skills/rrotor/scripts/rrotor.sh                         # the rrotor installer parses
+helm lint --strict deploy/helm/rrotor && terraform fmt -check -recursive deploy/terraform
 ```
 
 CI (`.github/workflows`): `plugins.yml` and `sdks.yml` check every pull request. Changes come in only by pull request,
@@ -82,5 +131,6 @@ and only Glyphh maintainers release (the SDKs and the plugin): see [CONTRIBUTING
 
 ## License
 
-By folder (`LICENSE`): `plugins/` under Glyphh's terms; `sdk/`, `contract/` and `benchmarks/` MIT. The benchmarks'
-data sets keep their own licences (CC BY 4.0).
+By folder (`LICENSE`): `plugins/` under Glyphh's terms; `sdk/`, `contract/`, `deploy/` and `benchmarks/` MIT (the
+rrotor image the deploy files run is not covered by it). The benchmarks' data sets keep their own licences (CC BY
+4.0).

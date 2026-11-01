@@ -2,6 +2,36 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.6.0
+
+`Runtime`, in both packages: a client for your local rrotor, the runtime you install (a Docker image on
+`127.0.0.1:7777`) that hosts your programs and CLIs. It sits beside the Ada Cloud client and changes nothing of it:
+`Ada`, its contract (5) and every Ada call answer as in 3.5.
+
+- The address is `RROTOR_URL`, else `http://127.0.0.1:7777`; the token is `RROTOR_TOKEN`, else the local token the
+  plugin's installer keeps in `~/.glyphh/rrotor/token`. A self-hosted rrotor takes its URL and a runtime key.
+- Programs: `programs()`, `program(name)`, `deploy` (a folder at a commit, sent as a git bundle; a GitHub repo and its
+  full commit; or a bundle's bytes), `call(program, function, inputs)`, `resume` (MCP's program_continue),
+  `approve(run_id, approved)`, `cancel`, `run` (a run's status), `log`, `approvals()`. These are the 3.0 calls for a
+  self-hosted runtime (`deploy`, `run`, `log`, `resume`, `cancel`), renamed to programs and pointed at rrotor's
+  paths (`/v1/programs/deploy`, `/v1/runs/...`); the `Ada` methods of those names stay as they were.
+- Secrets: `secrets(program)` (names, declared, set), `set_secret` / `setSecret`, `delete_secret` / `deleteSecret`.
+  No call ever answers a value.
+- Schedules: `schedules()`, `pause_schedule` / `pauseSchedule`, `resume_schedule` / `resumeSchedule`.
+- CLIs: `clis()`, `run_cli(cli, args, stdin=, files=)` / `runCli(cli, args, { stdin, files })`: exit code, stdout and
+  stderr, or `needs_approval`.
+- The runtime: `licence()`, `set_licence(key)` / `setLicence(key)` (a local rrotor only), `health()`.
+- Typed answers (`Run`, `RunInfo`, `Program`, `ProgramVersion`, `Approval`, `Secret`, `Schedule`, `Cli`, `Licence`;
+  TypeScript also `CliOutput`) and typed refusals, each a `RrotorError` and so an `AdaError`: `RrotorAuthError`,
+  `RrotorForbiddenError`, `LocalOnlyError`, `ProgramMissingError`, `FunctionMissingError`, `RunMissingError`,
+  `ScheduleMissingError`, `ManifestError`, `DeployError`, `InputsError`, `RunStateError`, `NotProgramError`,
+  `NotCliError`, `CliDeniedError`, `NotHeadError` (`head`), `LicenceError`, `NotInPlanError`. A cluster's
+  `E_NO_HEAD`, `E_RUN_LOST` and the rest keep their 3.1 classes.
+- Reads are sent again while rrotor is unreachable for a moment; writes never are (a cluster's `E_NO_HEAD` and a 429
+  are waited out). A cluster's `Rrotor-Cluster-Seq` is sent back as `Rrotor-Min-Seq`.
+- `contract/runtime.json` and `contract/runtime-fixtures.json`: the runtime's shapes and the cases both SDKs are
+  tested against, written from rrotor's code; `contract/contract.json` is Ada Cloud's alone, unchanged.
+
 ## 3.5.0
 
 The `glyphh` command (Python): Ada Cloud from a terminal, for people and for agents with a shell. Nothing of 3.4

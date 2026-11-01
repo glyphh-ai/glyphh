@@ -1,0 +1,308 @@
+{
+  "runtime": 1,
+  "description": "A local rrotor's API (the runtime a person installs, a Docker image on 127.0.0.1:7777, that hosts their programs and CLIs), as the SDKs' Runtime client reads it. Its own contract beside Ada Cloud's contract.json, which it does not touch: rrotor sends no Glyphh-Contract header. Written from rrotor's code (glyphh-ai/rrotor, src/rrotord/api/routes.py and ops.py, docs/architecture.md section 7), not recorded from a running image. Every route takes Authorization: Bearer <the local token> (a self-hosted rrotor: a runtime key); a refusal is {error: {code, message, ...}}.",
+  "routes": {
+    "GET /v1/programs": "programs",
+    "POST /v1/programs/deploy {bundle, commit} | {repo, commit, token?}": "program_version (201)",
+    "POST /v1/runs {program, function?, inputs?, version?, clearance?}": "run",
+    "POST /v1/runs/{id}/continue {answer}": "run",
+    "POST /v1/runs/{id}/cancel": "run",
+    "GET /v1/runs/{id}": "run_info",
+    "GET /v1/runs/{id}/log": "log",
+    "GET /v1/approvals": "approvals",
+    "GET /v1/programs/{name}/secrets": "secrets",
+    "PUT /v1/programs/{name}/secrets/{secret} {value}": "secret",
+    "DELETE /v1/programs/{name}/secrets/{secret}": "secret",
+    "GET /v1/schedules": "schedules",
+    "POST /v1/schedules/{program}/{name}/pause": "schedule",
+    "POST /v1/schedules/{program}/{name}/resume": "schedule",
+    "GET /v1/clis": "clis",
+    "POST /v1/clis/{name}/run {args, stdin?, files?}": "run",
+    "GET /v1/licence": "licence",
+    "PUT /v1/licence <the key>": "licence (and kept)"
+  },
+  "run": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Run",
+    "description": "A run's Result: a call, a continue, a cancel or a CLI command. data is the function's answer when done (a CLI command's: exit_code, stdout, stderr, stdout_bytes, stderr_bytes, truncated, files, files_skipped); step and prompt say what a waiting run asks",
+    "type": "object",
+    "required": ["run_id", "program", "version", "function", "status", "data", "step", "prompt", "seconds"],
+    "properties": {
+      "run_id": { "type": "string" },
+      "program": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 },
+      "function": { "type": "string" },
+      "status": { "$ref": "#/$defs/status" },
+      "data": {},
+      "step": { "type": ["string", "null"] },
+      "prompt": { "type": ["string", "null"] },
+      "seconds": { "type": "number", "minimum": 0 }
+    },
+    "$defs": { "status": { "enum": ["running", "done", "needs_input", "needs_approval", "failed", "expired", "cancelled"] } }
+  },
+  "run_info": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "RunInfo",
+    "description": "GET /v1/runs/{id}: the run, who called it and from where, its times and its last Result",
+    "type": "object",
+    "required": ["run_id", "program", "version", "function", "status", "seconds", "result"],
+    "properties": {
+      "run_id": { "type": "string" },
+      "program": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 },
+      "function": { "type": "string" },
+      "caller": { "type": ["string", "null"] },
+      "origin": { "type": ["string", "null"] },
+      "status": { "enum": ["running", "done", "needs_input", "needs_approval", "failed", "expired", "cancelled"] },
+      "created_at": {},
+      "updated_at": {},
+      "ended_at": {},
+      "seconds": { "type": "number", "minimum": 0 },
+      "result": { "type": ["object", "null"] }
+    }
+  },
+  "program_version": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ProgramVersion",
+    "description": "A deployed version: what a deploy answers (201), and each of a program's versions",
+    "type": "object",
+    "required": ["program", "version", "commit_sha", "deployed_at"],
+    "properties": {
+      "program": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,62}$" },
+      "version": { "type": "integer", "minimum": 1 },
+      "commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+      "deployed_at": {}
+    }
+  },
+  "programs": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Programs",
+    "description": "GET /v1/programs: every program and CLI, its kind, its active version, its functions (a CLI has none) and its versions",
+    "type": "object",
+    "required": ["programs"],
+    "properties": {
+      "programs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "kind", "description", "active", "functions", "versions"],
+          "properties": {
+            "name": { "type": "string" },
+            "kind": { "enum": ["program", "cli"] },
+            "description": { "type": "string" },
+            "active": { "type": ["integer", "null"] },
+            "functions": { "type": "object" },
+            "versions": { "type": "array" }
+          }
+        }
+      }
+    }
+  },
+  "log": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Log",
+    "description": "GET /v1/runs/{id}/log: the run's log lines, secret values masked",
+    "type": "object",
+    "required": ["run_id", "lines"],
+    "properties": { "run_id": { "type": "string" }, "lines": { "type": "array" } }
+  },
+  "approvals": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Approvals",
+    "description": "GET /v1/approvals: the runs waiting for the person's approval",
+    "type": "object",
+    "required": ["approvals"],
+    "properties": {
+      "approvals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["run_id", "program", "function", "step", "prompt"],
+          "properties": {
+            "run_id": { "type": "string" },
+            "program": { "type": "string" },
+            "function": { "type": "string" },
+            "origin": { "type": ["string", "null"] },
+            "step": { "type": ["string", "null"] },
+            "prompt": { "type": ["string", "null"] },
+            "asked_at": {}
+          }
+        }
+      }
+    }
+  },
+  "secrets": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Secrets",
+    "description": "GET /v1/programs/{name}/secrets: each name, whether the active version declares it and whether it is set; never a value",
+    "type": "object",
+    "required": ["program", "secrets"],
+    "properties": {
+      "program": { "type": "string" },
+      "secrets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "declared", "set"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+            "declared": { "type": "boolean" },
+            "set": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  },
+  "secret": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Secret",
+    "description": "A secret set or deleted: its program, its name and whether it is set now; never its value",
+    "type": "object",
+    "required": ["program", "name", "set"],
+    "additionalProperties": false,
+    "properties": { "program": { "type": "string" }, "name": { "type": "string" }, "set": { "type": "boolean" } }
+  },
+  "schedule": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Schedule",
+    "description": "A schedule the runtime fires itself: next_at null while paused; last {run_id, at, status, code}; skipped {at, run_id, count}",
+    "type": "object",
+    "required": ["id", "program", "name", "version", "function", "cron", "tz", "input", "paused", "next_at", "last", "skipped"],
+    "properties": {
+      "id": { "type": "string" },
+      "program": { "type": "string" },
+      "name": { "type": "string" },
+      "version": { "type": "integer", "minimum": 1 },
+      "function": { "type": "string" },
+      "cron": { "type": "string" },
+      "tz": { "type": "string" },
+      "input": { "type": "object" },
+      "paused": { "type": "boolean" },
+      "next_at": { "type": ["string", "null"] },
+      "last": { "type": ["object", "null"] },
+      "skipped": { "type": ["object", "null"] }
+    }
+  },
+  "schedules": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Schedules",
+    "type": "object",
+    "required": ["schedules"],
+    "properties": { "schedules": { "type": "array", "items": { "type": "object", "required": ["id", "program", "name", "paused"] } } }
+  },
+  "clis": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Clis",
+    "description": "GET /v1/clis: each CLI's version, command, install {source, pinned}, allow and approval patterns, home and hosts",
+    "type": "object",
+    "required": ["clis"],
+    "properties": {
+      "clis": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "description", "version", "command", "install", "allow", "approvals", "needs_approval", "home", "hosts"],
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "version": { "type": "integer", "minimum": 1 },
+            "command": { "type": "string" },
+            "install": {
+              "type": "object",
+              "required": ["source", "pinned"],
+              "properties": { "source": { "enum": ["url", "npm", "pypi", "image"] }, "pinned": { "type": "string" } }
+            },
+            "allow": { "type": "array", "items": { "type": "string" } },
+            "approvals": { "type": "array", "items": { "type": "string" } },
+            "needs_approval": { "type": "boolean" },
+            "home": { "type": "boolean" },
+            "hosts": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    }
+  },
+  "licence": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Licence",
+    "description": "GET /v1/licence: {licence}; PUT adds kept. No key at all is Community: tier free, community true, state none",
+    "type": "object",
+    "required": ["licence"],
+    "properties": {
+      "kept": { "type": "boolean" },
+      "licence": {
+        "type": "object",
+        "required": ["tier", "community", "license_id", "customer_id", "source", "issued_at", "expires_at", "state", "days_left", "max_nodes", "cluster_sync_enabled", "ha"],
+        "properties": {
+          "tier": { "enum": ["free", "pro", "team", "enterprise"] },
+          "community": { "type": "boolean" },
+          "license_id": { "type": ["string", "null"] },
+          "customer_id": { "type": ["string", "null"] },
+          "source": { "type": ["string", "null"] },
+          "issued_at": { "type": ["string", "null"] },
+          "expires_at": { "type": ["string", "null"] },
+          "state": { "enum": ["live", "grace", "expired", "bad", "none"] },
+          "days_left": { "type": ["integer", "null"] },
+          "max_nodes": { "type": ["integer", "null"], "minimum": 1 },
+          "cluster_sync_enabled": { "type": "boolean" },
+          "ha": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "error": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Error",
+    "description": "Every refusal: a stable code and a message, with the refusal's own detail beside them (E_NOT_HEAD: head; E_SCHEDULE_MISSING: schedule)",
+    "type": "object",
+    "required": ["error"],
+    "properties": {
+      "error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": { "code": { "type": "string", "pattern": "^E_[A-Z_]+$" }, "message": { "type": "string" } }
+      }
+    }
+  },
+  "codes": [
+    "E_AUTH",
+    "E_FORBIDDEN",
+    "E_HOST",
+    "E_ORIGIN",
+    "E_LOCAL_ONLY",
+    "E_BAD_REQUEST",
+    "E_PROGRAM_MISSING",
+    "E_FUNCTION_MISSING",
+    "E_RUN_MISSING",
+    "E_SCHEDULE_MISSING",
+    "E_VERSION_MISSING",
+    "E_MANIFEST",
+    "E_DEPLOY",
+    "E_BUNDLE",
+    "E_COMMIT",
+    "E_COMMIT_MISSING",
+    "E_GIT",
+    "E_REPO",
+    "E_DEPS",
+    "E_VENV",
+    "E_TOO_BIG",
+    "E_CLI_INSTALL",
+    "E_CLI_CHECKSUM",
+    "E_INPUTS",
+    "E_CLI_INPUTS",
+    "E_RUN_STATE",
+    "E_NOT_PROGRAM",
+    "E_NOT_CLI",
+    "E_CLI_DENIED",
+    "E_NOT_HEAD",
+    "E_NO_HEAD",
+    "E_NOT_COMMITTED",
+    "E_RUN_LOST",
+    "E_LICENCE",
+    "E_NOT_IN_PLAN",
+    "E_VAULT",
+    "E_SCHEDULER",
+    "E_UNAVAILABLE"
+  ]
+}

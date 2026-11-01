@@ -6,6 +6,9 @@
  *     const d = await ada.decide("tickets", { ticket: { ... } });
  *     if (d.ask) await sendToAPerson(d);                     // d.outcome is the best guess, for them to see
  *     else act(d.outcome);
+ *
+ * And `Runtime` (at the end of this file): a client for your local rrotor, the runtime you install that hosts your
+ * programs and CLIs. It is not Ada Cloud and shares only the wire's helpers with it.
  */
 
 /** Where Ada answers. GLYPHH_ADA_URL (or 3.0's GLYPHH_RUNTIME_URL) moves it, e.g. to a local server under test. */
@@ -1270,5 +1273,564 @@ export class AdaModel {
       return { ...r, data: job.result };
     }
     return r;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A local rrotor: the runtime you install (a Docker image on 127.0.0.1:7777) that hosts your programs (glyphh.json and
+// program.py, sandboxed, with a local secrets vault, cron schedules, a SQLite database and approvals) and your CLIs (a
+// kind of program, run one command at a time in the same sandbox). Not Ada Cloud: programs are not Ada models, and
+// the Glyphh server only grants the runtime its licence.
+//
+//     const rt = new Runtime();                          // http://127.0.0.1:7777, the local token the installer kept
+//     await rt.deploy({ path: "./daily_sales" });         // the folder's HEAD commit, as a git bundle
+//     let run = await rt.call("daily_sales", "start", { day: "2026-10-30" });
+//     if (run.status === "needs_approval") run = await rt.approve(run.run_id);   // only as the person decides
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Where a local rrotor answers: the host's loopback only, the port the installer publishes. */
+export const DEFAULT_RUNTIME_URL = "http://127.0.0.1:7777";
+
+export type RunStatus = Status | "running";
+
+/** A run's Result: a call, a continue, a cancel or a CLI command (`data` then a CliOutput). */
+export interface Run<T = unknown> {
+  run_id: string;
+  program: string;
+  version: number;
+  function: string;
+  status: RunStatus;
+  data: T;
+  step: string | null;
+  prompt: string | null;
+  seconds: number;
+}
+
+/** A CLI command's answer, a done Run's `data`: a nonzero exit is still done. stdout and stderr: their first 64 KB. */
+export interface CliOutput {
+  exit_code: number;
+  stdout: string;
+  stderr: string;
+  stdout_bytes: number;
+  stderr_bytes: number;
+  truncated: boolean;
+  files: Record<string, unknown>;
+  files_skipped: string[];
+}
+
+/** `GET /v1/runs/{id}`: who called it (`caller`: claude, schedule), from where, its times and its last Result. */
+export interface RunInfo {
+  run_id: string;
+  program: string;
+  version: number;
+  function: string;
+  caller?: string | null;
+  origin?: string | null;
+  status: RunStatus;
+  created_at?: unknown;
+  updated_at?: unknown;
+  ended_at?: unknown;
+  seconds: number;
+  result: Record<string, unknown> | null;
+}
+
+/** A deployed version; what a deploy answers (active at once). */
+export interface ProgramVersion {
+  program: string;
+  version: number;
+  commit_sha: string;
+  deployed_at: unknown;
+}
+
+/** A program (or a CLI, `kind` "cli") deployed here. */
+export interface Program {
+  name: string;
+  kind: "program" | "cli";
+  description: string;
+  active: number | null;
+  functions: Record<string, { description?: string; inputs?: Data; approvals?: string[]; writes?: boolean | null }>;
+  versions: ProgramVersion[];
+}
+
+/** A run waiting for the person's approval: approve or decline only as they decide. */
+export interface Approval {
+  run_id: string;
+  program: string;
+  function: string;
+  origin?: string | null;
+  step: string | null;
+  prompt: string | null;
+  asked_at?: unknown;
+}
+
+/** A secret by name: declared by the active version, set here. Never its value. */
+export interface Secret {
+  name: string;
+  declared: boolean;
+  set: boolean;
+}
+
+/** A schedule the runtime fires itself: `next_at` null while paused. */
+export interface Schedule {
+  id: string;
+  program: string;
+  name: string;
+  version: number;
+  function: string;
+  cron: string;
+  tz: string;
+  input: Data;
+  paused: boolean;
+  next_at: string | null;
+  last: { run_id: string | null; at: string; status: string; code: string | null } | null;
+  skipped: { at: string; run_id: string; count: number } | null;
+}
+
+/** A CLI installed here. */
+export interface Cli {
+  name: string;
+  description: string;
+  version: number;
+  command: string;
+  install: { source: "url" | "npm" | "pypi" | "image"; pinned: string };
+  allow: string[];
+  approvals: string[];
+  needs_approval: boolean;
+  home: boolean;
+  hosts: string[];
+}
+
+/** The licence key held and the limits that apply; none at all is Community (one node, no sync). */
+export interface Licence {
+  tier: "free" | "pro" | "team" | "enterprise";
+  community: boolean;
+  license_id: string | null;
+  customer_id: string | null;
+  source: string | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  state: "live" | "grace" | "expired" | "bad" | "none";
+  days_left: number | null;
+  max_nodes: number | null;
+  cluster_sync_enabled: boolean;
+  ha: boolean;
+}
+
+export interface RuntimeOptions {
+  /** rrotor's address; else RROTOR_URL, or http://127.0.0.1:7777. */
+  url?: string;
+  /** The local token (a self-hosted rrotor: a runtime key); else RROTOR_TOKEN, else ~/.glyphh/rrotor/token. */
+  token?: string;
+  transport?: Transport;
+  /** Seconds a read keeps being sent again while rrotor is unreachable; 0: never. Default 30. */
+  retryDeadline?: number;
+  /** A cluster's read-your-writes (Rrotor-Min-Seq). Default true. */
+  readYourWrites?: boolean;
+  /** @internal The tests' clock. */
+  clock?: { now(): number; sleep(seconds: number): Promise<void> };
+  /** @internal Where the kept token is read from; default ~/.glyphh/rrotor/token. */
+  tokenFile?: string;
+}
+
+export type Deploy =
+  | { path: string; commit?: string }
+  | { repo: string; commit: string; token?: string }
+  | { bundle: Uint8Array; commit: string };
+
+/** rrotor refused, or could not be reached (E_UNREACHABLE: is it running?). An AdaError too. */
+export class RrotorError extends AdaError {
+  override name = "RrotorError";
+}
+/** E_AUTH (401): no token, or not this rrotor's (the local token is in ~/.glyphh/rrotor/token). */
+export class RrotorAuthError extends RrotorError {
+  override name = "RrotorAuthError";
+}
+/** E_FORBIDDEN, E_HOST, E_ORIGIN: a local rrotor answers only on its loopback address, never to a web page. */
+export class RrotorForbiddenError extends RrotorError {
+  override name = "RrotorForbiddenError";
+}
+/** E_LOCAL_ONLY (403): changing the runtime itself (its licence, its parts) is for a local rrotor. */
+export class LocalOnlyError extends RrotorError {
+  override name = "LocalOnlyError";
+}
+/** E_PROGRAM_MISSING (404). */
+export class ProgramMissingError extends RrotorError {
+  override name = "ProgramMissingError";
+}
+/** E_FUNCTION_MISSING (404). */
+export class FunctionMissingError extends RrotorError {
+  override name = "FunctionMissingError";
+}
+/** E_RUN_MISSING (404). */
+export class RunMissingError extends RrotorError {
+  override name = "RunMissingError";
+}
+/** E_SCHEDULE_MISSING (404). */
+export class ScheduleMissingError extends RrotorError {
+  override name = "ScheduleMissingError";
+}
+/** E_MANIFEST (422): glyphh.json refused at deploy; the message says where. */
+export class ManifestError extends RrotorError {
+  override name = "ManifestError";
+}
+/** A deploy refused: E_DEPLOY, E_BUNDLE, E_COMMIT, E_GIT, E_REPO, E_DEPS, E_VENV, E_TOO_BIG, E_CLI_INSTALL, ... */
+export class DeployError extends RrotorError {
+  override name = "DeployError";
+}
+/** E_INPUTS, E_CLI_INPUTS (400): the inputs do not fit the function's schema, or a CLI call is past its bounds. */
+export class InputsError extends RrotorError {
+  override name = "InputsError";
+}
+/** E_RUN_STATE (409): the run is not waiting, or has ended. */
+export class RunStateError extends RrotorError {
+  override name = "RunStateError";
+}
+/** E_NOT_PROGRAM (400): a CLI called as a program: use `runCli`. */
+export class NotProgramError extends RrotorError {
+  override name = "NotProgramError";
+}
+/** E_NOT_CLI (400): a program run as a CLI: use `call`. */
+export class NotCliError extends RrotorError {
+  override name = "NotCliError";
+}
+/** E_CLI_DENIED (403): the CLI's allow patterns do not take these arguments. */
+export class CliDeniedError extends RrotorError {
+  override name = "CliDeniedError";
+}
+/** E_NOT_HEAD (503): in a cluster, secrets and schedules change on the head (`head`). */
+export class NotHeadError extends RrotorError {
+  override name = "NotHeadError";
+  get head(): string | undefined {
+    return str(this.detail.head);
+  }
+}
+/** E_LICENCE (400): the licence key handed in is not a good one. */
+export class LicenceError extends RrotorError {
+  override name = "LicenceError";
+}
+/** E_NOT_IN_PLAN (403). */
+export class NotInPlanError extends RrotorError {
+  override name = "NotInPlanError";
+}
+
+export const RUNTIME_TYPED: Record<string, typeof AdaError> = {
+  E_AUTH: RrotorAuthError,
+  E_UNAUTHORIZED: RrotorAuthError,
+  E_FORBIDDEN: RrotorForbiddenError,
+  E_HOST: RrotorForbiddenError,
+  E_ORIGIN: RrotorForbiddenError,
+  E_LOCAL_ONLY: LocalOnlyError,
+  E_PROGRAM_MISSING: ProgramMissingError,
+  E_FUNCTION_MISSING: FunctionMissingError,
+  E_RUN_MISSING: RunMissingError,
+  E_SCHEDULE_MISSING: ScheduleMissingError,
+  E_MANIFEST: ManifestError,
+  E_DEPLOY: DeployError,
+  E_BUNDLE: DeployError,
+  E_COMMIT: DeployError,
+  E_COMMIT_MISSING: DeployError,
+  E_GIT: DeployError,
+  E_REPO: DeployError,
+  E_DEPS: DeployError,
+  E_VENV: DeployError,
+  E_TOO_BIG: DeployError,
+  E_CLI_INSTALL: DeployError,
+  E_CLI_CHECKSUM: DeployError,
+  E_INPUTS: InputsError,
+  E_CLI_INPUTS: InputsError,
+  E_RUN_STATE: RunStateError,
+  E_NOT_PROGRAM: NotProgramError,
+  E_NOT_CLI: NotCliError,
+  E_CLI_DENIED: CliDeniedError,
+  E_NOT_HEAD: NotHeadError,
+  E_LICENCE: LicenceError,
+  E_NOT_IN_PLAN: NotInPlanError,
+};
+/** What a runtime shares with a self-hosted cluster's refusals: those classes, as they were. */
+const SHARED = ["E_NO_HEAD", "E_HEAD_LOST", "E_NOT_COMMITTED", "E_RUN_LOST", "E_READ_ONLY", "E_VERSION_MISSING"];
+
+/** The typed error for a runtime's code (RrotorError for one the SDK does not know). */
+export function runtimeError(code: string, message: string, status = 0, detail: Record<string, unknown> = {}, after?: number): AdaError {
+  const cls = RUNTIME_TYPED[code] ?? (SHARED.includes(code) ? TYPED[code] : undefined) ?? RrotorError;
+  return new cls(code, message, status, detail, after);
+}
+
+function runtimeParsed<T>(status: number, text: string, headers: Record<string, string>): T {
+  let body: unknown = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = {};
+  }
+  if (status < 400) return body as T;
+  const err = ((body as { error?: Record<string, unknown> } | null)?.error ?? {}) as Record<string, unknown>;
+  const { code, message, ...detail } = err;
+  const named = str(code) ?? BY_STATUS[status] ?? "E_RUNTIME";
+  throw runtimeError(named, str(message) ?? `rrotor answered ${status}`, status, detail, retryAfter(headers["retry-after"]));
+}
+
+const SHA = /^[0-9a-f]{40}$/;
+
+function base64(bytes: Uint8Array): string {
+  const B = (globalThis as { Buffer?: { from(b: Uint8Array): { toString(enc: string): string } } }).Buffer;
+  if (B) return B.from(bytes).toString("base64");
+  let text = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
+
+type Exec = (
+  file: string,
+  args: string[],
+  options: { encoding: "buffer"; maxBuffer: number },
+  done: (err: Error | null, stdout: Uint8Array, stderr: Uint8Array) => void,
+) => unknown;
+const CHILD = "node:child_process";
+const OS = "node:os";
+
+async function git(folder: string, args: string[]): Promise<{ ok: boolean; out: Uint8Array; err: string }> {
+  const { execFile } = (await import(CHILD)) as { execFile: Exec };
+  return new Promise((resolve) => {
+    execFile("git", ["-C", folder, ...args], { encoding: "buffer", maxBuffer: 96 * 1024 * 1024 }, (e, out, err) =>
+      resolve({ ok: e === null, out: out ?? new Uint8Array(), err: new TextDecoder().decode(err ?? new Uint8Array()).trim() }),
+    );
+  });
+}
+
+async function gitText(folder: string, args: string[]): Promise<string> {
+  const r = await git(folder, args);
+  if (!r.ok) throw new RrotorError("E_GIT", r.err.split("\n")[0] || "git failed");
+  return new TextDecoder().decode(r.out);
+}
+
+/**
+ * A program's folder at a commit, as rrotor deploys it: `{bundle, commit}`, a git bundle in base64 and the commit's
+ * full SHA (Node only). The folder must be a git repo with the commit made, glyphh.json at its root.
+ */
+export async function bundleOf(folder: string, commit?: string): Promise<{ bundle: string; commit: string }> {
+  const wanted = commit ?? "HEAD";
+  const sha = (await gitText(folder, ["rev-parse", "--verify", `${wanted}^{commit}`])).trim();
+  if (!SHA.test(sha)) throw new RrotorError("E_COMMIT", `${wanted} is not a commit in ${folder}.`);
+  if (!(await git(folder, ["cat-file", "-e", `${sha}:glyphh.json`])).ok) {
+    throw new RrotorError("E_MANIFEST", `The commit ${sha.slice(0, 12)} has no glyphh.json at the folder's root.`);
+  }
+  const onHead = (await git(folder, ["merge-base", "--is-ancestor", sha, "HEAD"])).ok;
+  const made = await git(folder, ["bundle", "create", "-", onHead ? "HEAD" : "--all"]);
+  if (!made.ok || made.out.length === 0) throw new RrotorError("E_GIT", made.err.split("\n")[0] || "git could not bundle the commit.");
+  return { bundle: base64(made.out), commit: sha };
+}
+
+/**
+ * A rrotor: your local one by default (http://127.0.0.1:7777 and its local token), or a self-hosted one by its URL
+ * and a runtime key. Reads are sent again while it is unreachable for a moment; a write never is, but a cluster's
+ * E_NO_HEAD and a 429 are waited out (the write was not made).
+ */
+export class Runtime {
+  readonly url: string;
+  readonly retryDeadline: number;
+  readonly readYourWrites: boolean;
+  #token: string | undefined;
+  readonly #tokenFile: string | undefined;
+  readonly #send: Transport;
+  readonly #clock: { now(): number; sleep(seconds: number): Promise<void> };
+  #seq = 0;
+
+  constructor(options: RuntimeOptions = {}) {
+    this.url = (options.url ?? env("RROTOR_URL") ?? DEFAULT_RUNTIME_URL).replace(/\/+$/, "");
+    this.#token = options.token ?? env("RROTOR_TOKEN");
+    this.#tokenFile = options.tokenFile;
+    this.#send = options.transport ?? fetchTransport;
+    this.retryDeadline = options.retryDeadline ?? RETRY_DEADLINE;
+    this.readYourWrites = options.readYourWrites ?? true;
+    this.#clock = options.clock ?? realClock;
+  }
+
+  /** A cluster's highest `Rrotor-Cluster-Seq` answered (0: none, or a standalone rrotor). */
+  get clusterSeq(): number {
+    return this.#seq;
+  }
+
+  async #tokenNow(): Promise<string> {
+    if (this.#token) return this.#token;
+    try {
+      const path = this.#tokenFile ?? `${((await import(OS)) as { homedir(): string }).homedir()}/.glyphh/rrotor/token`;
+      const text = new TextDecoder().decode(await (await files()).readFile(path)).trim();
+      if (text) this.#token = text;
+    } catch {
+      // no file: said below
+    }
+    if (!this.#token) {
+      throw new RrotorError(
+        "E_CONFIG",
+        "A token is needed: install a local rrotor with the glyphh plugin's rrotor skill (it keeps the local token in ~/.glyphh/rrotor/token), or set RROTOR_TOKEN (a self-hosted rrotor's runtime key).",
+      );
+    }
+    return this.#token;
+  }
+
+  /** One request to rrotor's API; a read is sent again while rrotor is unreachable and the deadline allows. */
+  async request<T = unknown>(method: string, path: string, body?: unknown, raw?: string): Promise<T> {
+    const content = raw ?? (body === undefined ? undefined : JSON.stringify(body));
+    const deadline = this.#clock.now() + this.retryDeadline;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.#once<T>(method, path, content, raw === undefined);
+      } catch (e) {
+        if (!(e instanceof AdaError) || !retryable(e, method === "GET")) throw e;
+        const wait = e.retryAfter ?? Math.min(2, 0.25 * 2 ** attempt) * (0.5 + Math.random() / 2);
+        if (this.#clock.now() + wait > deadline) throw e;
+        await this.#clock.sleep(wait);
+      }
+    }
+  }
+
+  async #once<T>(method: string, path: string, content: string | undefined, json: boolean): Promise<T> {
+    const headers: Record<string, string> = { authorization: `Bearer ${await this.#tokenNow()}`, accept: "application/json" };
+    if (content !== undefined) headers["content-type"] = json ? "application/json" : "text/plain";
+    if (this.readYourWrites && this.#seq) headers[MIN_SEQ] = String(this.#seq);
+    let answer: Awaited<ReturnType<Transport>>;
+    try {
+      answer = await this.#send(method, `${this.url}${path}`, headers, content);
+    } catch (e) {
+      throw new RrotorError(
+        "E_UNREACHABLE",
+        `rrotor is not answering at ${this.url}: ${(e as Error).message}. Is it running? (docker ps --filter name=glyphh-rrotor; the glyphh plugin's rrotor skill installs and starts it.)`,
+      );
+    }
+    const got: Record<string, string> = {};
+    for (const [k, v] of Object.entries(answer.headers ?? {})) got[k.toLowerCase()] = String(v);
+    const seq = Number(got[CLUSTER_SEQ]);
+    if (Number.isInteger(seq) && seq > this.#seq) this.#seq = seq;
+    return runtimeParsed<T>(answer.status, answer.body, got);
+  }
+
+  // the runtime
+
+  /** Its version, mode, sandbox layers, licence, cluster, runs waiting for approval and how many programs. */
+  health(): Promise<Data> {
+    return this.request("GET", "/v1/health");
+  }
+
+  /** The licence key held and the limits that apply (Community with none). */
+  async licence(): Promise<Licence> {
+    return (await this.request<{ licence: Licence }>("GET", "/v1/licence")).licence;
+  }
+
+  /** Hand a licence key to a local rrotor (a self-hosted one: LocalOnlyError; a bad key: LicenceError). */
+  setLicence(key: string): Promise<{ licence: Licence; kept: boolean }> {
+    return this.request("PUT", "/v1/licence", undefined, key.trim());
+  }
+
+  // programs
+
+  /** Every program and CLI deployed here: its versions, the active one, its functions. */
+  async programs(): Promise<Program[]> {
+    return (await this.request<{ programs: Program[] }>("GET", "/v1/programs")).programs;
+  }
+
+  async program(name: string): Promise<Program> {
+    const found = (await this.programs()).find((p) => p.name === name);
+    if (!found) throw new ProgramMissingError("E_PROGRAM_MISSING", `No program ${name} is deployed here.`, 404, { program: name });
+    return found;
+  }
+
+  /**
+   * A program's (or a CLI's) next version, active at once: from a folder at a commit (`path`, HEAD by default: commit
+   * first; Node only), from a GitHub repo (`repo` owner/name, `commit` the full SHA, `token` for a private one), or
+   * from a git bundle's bytes and its commit. A refused manifest: ManifestError.
+   */
+  async deploy(what: Deploy): Promise<ProgramVersion> {
+    let body: Data;
+    if ("path" in what) body = await bundleOf(what.path, what.commit);
+    else if ("repo" in what) {
+      if (!SHA.test(what.commit)) throw new RrotorError("E_COMMIT", "A deploy from a repo names its commit: the full 40-character SHA.");
+      body = { repo: what.repo, commit: what.commit, ...drop({ token: what.token }) };
+    } else body = { bundle: base64(what.bundle), commit: what.commit };
+    return this.request("POST", "/v1/programs/deploy", body);
+  }
+
+  /** Open a run of a program's function in the sandbox: its first Result. A failed run is a Result, never thrown. */
+  call<T = unknown>(program: string, fn = "start", inputs: Data = {}, options: { version?: number; clearance?: number } = {}): Promise<Run<T>> {
+    return this.request("POST", "/v1/runs", { program, function: fn, inputs, ...drop(options) });
+  }
+
+  /**
+   * Answer a waiting run (MCP's program_continue): for needs_approval `{approved: true | false}`, only as the person
+   * decided; for needs_input the value or choice. The next Result.
+   */
+  resume<T = unknown>(runId: string, answer: unknown): Promise<Run<T>> {
+    return this.request("POST", `/v1/runs/${q(runId)}/continue`, { answer });
+  }
+
+  /** `resume(runId, {approved})`: the person's decision on a needs_approval run. */
+  approve<T = unknown>(runId: string, approved = true): Promise<Run<T>> {
+    return this.resume(runId, { approved });
+  }
+
+  /** Stop a run; its `end` runs; `cancelled`. */
+  cancel<T = unknown>(runId: string): Promise<Run<T>> {
+    return this.request("POST", `/v1/runs/${q(runId)}/cancel`, {});
+  }
+
+  /** A run's status, times and last Result. */
+  run(runId: string): Promise<RunInfo> {
+    return this.request("GET", `/v1/runs/${q(runId)}`);
+  }
+
+  /** A run's log lines (secret values masked). */
+  async log(runId: string): Promise<unknown[]> {
+    return (await this.request<{ lines: unknown[] }>("GET", `/v1/runs/${q(runId)}/log`)).lines;
+  }
+
+  /** The runs waiting for the person's approval. */
+  async approvals(): Promise<Approval[]> {
+    return (await this.request<{ approvals: Approval[] }>("GET", "/v1/approvals")).approvals;
+  }
+
+  // secrets: names only, never a value back
+
+  async secrets(program: string): Promise<Secret[]> {
+    return (await this.request<{ secrets: Secret[] }>("GET", `/v1/programs/${q(program)}/secrets`)).secrets;
+  }
+
+  /** Keep a secret's value for a program, encrypted on the runtime; answers its name, never the value. */
+  async setSecret(program: string, name: string, value: string): Promise<Secret> {
+    if (typeof value !== "string") throw new RrotorError("E_BAD_REQUEST", "A secret's value is a string.");
+    const got = await this.request<{ name?: string; set?: boolean }>("PUT", `/v1/programs/${q(program)}/secrets/${q(name)}`, { value });
+    return { name: got.name ?? name, declared: true, set: got.set ?? true };
+  }
+
+  async deleteSecret(program: string, name: string): Promise<Secret> {
+    const got = await this.request<{ name?: string; set?: boolean }>("DELETE", `/v1/programs/${q(program)}/secrets/${q(name)}`);
+    return { name: got.name ?? name, declared: true, set: got.set ?? false };
+  }
+
+  // schedules
+
+  async schedules(): Promise<Schedule[]> {
+    return (await this.request<{ schedules: Schedule[] }>("GET", "/v1/schedules")).schedules;
+  }
+
+  /** Pause a schedule, kept across restarts and new versions. */
+  pauseSchedule(program: string, name: string): Promise<Schedule> {
+    return this.request("POST", `/v1/schedules/${q(program)}/${q(name)}/pause`, {});
+  }
+
+  resumeSchedule(program: string, name: string): Promise<Schedule> {
+    return this.request("POST", `/v1/schedules/${q(program)}/${q(name)}/resume`, {});
+  }
+
+  // CLIs
+
+  async clis(): Promise<Cli[]> {
+    return (await this.request<{ clis: Cli[] }>("GET", "/v1/clis")).clis;
+  }
+
+  /**
+   * One command of a CLI in the sandbox (MCP's cli_run): done with a CliOutput (a nonzero exit is still done), or
+   * needs_approval when its arguments match an approval pattern (then `approve`). Not allowed: CliDeniedError.
+   */
+  runCli(cli: string, args: Array<string | number> = [], options: { stdin?: string; files?: Record<string, unknown> } = {}): Promise<Run<CliOutput | null>> {
+    return this.request("POST", `/v1/clis/${q(cli)}/run`, { args: args.map(String), ...drop(options) });
   }
 }

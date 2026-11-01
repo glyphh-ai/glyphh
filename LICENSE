@@ -4,9 +4,11 @@ This repository holds work under two licences:
 
 - plugins/, the Glyphh plugin for Claude Code: the Glyphh terms below (also
   in plugins/glyphh/LICENSE).
-- sdk/, the SDKs (glyphh on PyPI, @glyphh-ai/glyphh on npm), contract/ and
-  benchmarks/: the MIT License, in sdk/python/LICENSE, sdk/typescript/LICENSE,
-  contract/LICENSE and benchmarks/LICENSE. The benchmarks' data sets keep
+- sdk/, the SDKs (glyphh on PyPI, @glyphh-ai/glyphh on npm), contract/,
+  deploy/ (the files that run a local or self-hosted rrotor) and benchmarks/:
+  the MIT License, in sdk/python/LICENSE, sdk/typescript/LICENSE,
+  contract/LICENSE, deploy/LICENSE and benchmarks/LICENSE. The rrotor image
+  the deploy files run is not covered by it; the benchmarks' data sets keep
   their own licences.
 
 The Glyphh terms, for plugins/:

@@ -1,4 +1,5 @@
-"""Ada for Python: your models in Ada Cloud (https://ada.glyphh.ai), called with an API key."""
+"""Ada for Python: your models in Ada Cloud (https://ada.glyphh.ai), called with an API key. And `Runtime`: your
+local rrotor, the runtime you install that hosts your programs and CLIs (glyphh.runtime)."""
 
 from .client import (
     DEFAULT_URL,
@@ -64,8 +65,70 @@ from .errors import (
     VersionGoneError,
     VersionMissingError,
 )
+from .errors import (
+    CliDeniedError,
+    DeployError,
+    FunctionMissingError,
+    InputsError,
+    LicenceError,
+    LocalOnlyError,
+    ManifestError,
+    NotCliError,
+    NotHeadError,
+    NotInPlanError,
+    NotProgramError,
+    ProgramMissingError,
+    RrotorAuthError,
+    RrotorError,
+    RrotorForbiddenError,
+    RunMissingError,
+    RunStateError,
+    ScheduleMissingError,
+)
+from .runtime import (
+    DEFAULT_RUNTIME_URL,
+    Approval,
+    Cli,
+    Licence,
+    Program,
+    ProgramVersion,
+    Run,
+    RunInfo,
+    Runtime,
+    Schedule,
+    Secret,
+)
 
 __all__ = [
+    "DEFAULT_RUNTIME_URL",
+    "Approval",
+    "Cli",
+    "CliDeniedError",
+    "DeployError",
+    "FunctionMissingError",
+    "InputsError",
+    "Licence",
+    "LicenceError",
+    "LocalOnlyError",
+    "ManifestError",
+    "NotCliError",
+    "NotHeadError",
+    "NotInPlanError",
+    "NotProgramError",
+    "Program",
+    "ProgramMissingError",
+    "ProgramVersion",
+    "RrotorAuthError",
+    "RrotorError",
+    "RrotorForbiddenError",
+    "Run",
+    "RunInfo",
+    "RunMissingError",
+    "RunStateError",
+    "Runtime",
+    "Schedule",
+    "ScheduleMissingError",
+    "Secret",
     "DEFAULT_URL",
     "FINAL",
     "SUPPORTED_ADA",
@@ -127,4 +190,4 @@ __all__ = [
     "VersionGoneError",
     "VersionMissingError",
 ]
-__version__ = "3.5.0"
+__version__ = "3.6.0"

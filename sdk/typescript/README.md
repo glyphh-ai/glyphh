@@ -104,6 +104,35 @@ decision never waits for input: it says `ask`.
 
 The API and its answers' shapes are in [`contract/contract.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract).
 
+## Your local runtime: programs and CLIs
+
+`Runtime` is a client for rrotor, the runtime you install on your own machine (a Docker image, bound to
+`127.0.0.1:7777`; the glyphh plugin's `rrotor` skill installs it from Claude). It is not Ada Cloud: it hosts your
+**programs** (a `glyphh.json` manifest and `program.py`, sandboxed, with a local secrets vault, cron schedules, a
+SQLite database and approvals) and your **CLIs** (a kind of program, `"kind": "cli"`, run one command at a time in
+the same sandbox). Glyphh only grants it a licence; with none it runs as Community.
+
+```ts
+import { Runtime } from "@glyphh-ai/glyphh";
+
+const rt = new Runtime();                          // RROTOR_URL or http://127.0.0.1:7777; RROTOR_TOKEN or ~/.glyphh/rrotor/token
+await rt.deploy({ path: "./daily_sales" });         // the folder's HEAD commit (Node), or { repo, commit, token? }
+let run = await rt.call("daily_sales", "start", { day: "2026-10-30" });
+if (run.status === "needs_approval") run = await rt.approve(run.run_id);   // only on the person's yes
+await rt.setSecret("github", "GH_TOKEN", token);   // kept encrypted on the runtime; never read back
+const out = await rt.runCli("github", ["pr", "list"]);   // out.data.exit_code, stdout, stderr
+```
+
+| | |
+|---|---|
+| `Runtime` | `programs()`, `program(name)`, `deploy({ path, commit? } \| { repo, commit, token? } \| { bundle, commit })`; `call(program, fn, inputs, { version, clearance })`, `resume(runId, answer)`, `approve(runId, approved?)`, `cancel(runId)`, `run(runId)`, `log(runId)`, `approvals()`; `secrets(program)`, `setSecret`, `deleteSecret`; `schedules()`, `pauseSchedule`, `resumeSchedule`; `clis()`, `runCli(cli, args, { stdin, files })`; `licence()`, `setLicence(key)`, `health()` |
+| `Run`, `CliOutput`, `RunInfo`, `Program`, `ProgramVersion`, `Approval`, `Secret`, `Schedule`, `Cli`, `Licence` | The API's answers, typed |
+| `RrotorError` | An `AdaError` too; typed by code: `RrotorAuthError`, `RrotorForbiddenError`, `LocalOnlyError`, `ProgramMissingError`, `FunctionMissingError`, `RunMissingError`, `ScheduleMissingError`, `ManifestError`, `DeployError`, `InputsError`, `RunStateError`, `NotProgramError`, `NotCliError`, `CliDeniedError`, `NotHeadError`, `LicenceError`, `NotInPlanError`; `E_UNREACHABLE` when rrotor is not running |
+
+Reads are sent again while rrotor is unreachable for a moment; a write never is. A self-hosted rrotor is
+`new Runtime({ url: "https://rrotor.example.com", token: "<a runtime key>" })`. Its shapes are in
+[`contract/runtime.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract), apart from Ada's contract.
+
 ## License
 
 MIT (`LICENSE`).
