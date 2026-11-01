@@ -54,8 +54,8 @@ describe('Artifacts', () => {
     expect(asked.at(-1)).toBe('?page=1&per_page=24&state=approved&q=on-call');
     await user.clear(screen.getByLabelText('Search'));
     await user.type(screen.getByLabelText('Search'), 'nothing here');
-    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
-    expect(screen.getByText('No artifact matches “nothing here”.')).toBeInTheDocument();
+    expect(await screen.findByText('No artifact matches “nothing here”.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing matches')).toBeInTheDocument();
   });
 
   it('opens on the page the URL names, and pages through 24 at a time', async () => {

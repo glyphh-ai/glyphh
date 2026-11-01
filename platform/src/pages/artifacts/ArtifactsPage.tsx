@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { useApproveArtifact, useArtifacts, useMe, useRejectArtifact, useRetireArtifact } from '@/api/queries';
 import type { Artifact, ArtifactState } from '@/api/types';
@@ -54,12 +54,22 @@ export function ArtifactsPage() {
       { replace },
     );
 
-  // What is typed reaches the URL (and the server) once typing pauses.
+  // What is typed reaches the URL (and the server) once typing pauses. A `q` from elsewhere (a link, Back) replaces
+  // what is typed; our own landing never does, or keystrokes made while it was landing would be lost.
   const [typed, setTyped] = useState(q);
-  useEffect(() => setTyped(q), [q]);
+  const committed = useRef(q);
+  useEffect(() => {
+    if (q !== committed.current) {
+      committed.current = q;
+      setTyped(q);
+    }
+  }, [q]);
   useEffect(() => {
     if (typed === q) return;
-    const timer = setTimeout(() => setParam({ q: typed, page: null }, true), SEARCH_DELAY_MS);
+    const timer = setTimeout(() => {
+      committed.current = typed;
+      setParam({ q: typed, page: null }, true);
+    }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [typed, q]); // eslint-disable-line react-hooks/exhaustive-deps
 

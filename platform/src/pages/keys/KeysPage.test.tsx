@@ -17,8 +17,9 @@ describe('API Keys, searched and paged', () => {
     expect(screen.queryByRole('navigation', { name: 'Pages' })).not.toBeInTheDocument();
     await user.clear(screen.getByLabelText('Search'));
     await user.type(screen.getByLabelText('Search'), 'nothing here');
-    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
-    expect(screen.getByText('No key matches “nothing here”.')).toBeInTheDocument();
+    // The search settles after the last keystroke: wait for the whole query, not a partial one's empty state.
+    expect(await screen.findByText('No key matches “nothing here”.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing matches')).toBeInTheDocument();
   });
 
   it('opens on the page the URL names, and pages through 24 at a time', async () => {
