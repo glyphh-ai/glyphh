@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { me, org, plans } from '@/test/fixtures';
+import { me, org, plans, sso } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, http, HttpResponse, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
 describe('Settings', () => {
   it('opens on General, with the settings sidebar and breadcrumb', async () => {
@@ -102,6 +102,97 @@ describe('Settings', () => {
       await user.click(await screen.findByRole('button', { name: 'Cancel' }));
       await user.click(within(screen.getByRole('dialog', { name: 'Cancel this invite?' })).getByRole('button', { name: 'Cancel invite' }));
       await vi.waitFor(() => expect(calls).toEqual(['member u-sam', 'invite inv-2']));
+    });
+  });
+
+  describe('Auth', () => {
+    // Single sign-on is Enterprise's: the org's admin, on it.
+    const onEnterprise = () => http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: plans[4] }));
+
+    it('is in the settings sidebar, and turns single sign-on on from the form', async () => {
+      let sent: unknown;
+      server.use(
+        onEnterprise(),
+        http.put(v1('/org/sso'), async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json(sso);
+        }),
+      );
+      const { user } = renderApp('/settings/auth');
+      expect(await screen.findByRole('heading', { name: 'Auth' })).toBeInTheDocument();
+      const main = screen.getByRole('complementary', { name: 'Main' });
+      expect(within(main).getByRole('link', { name: 'Auth' })).toHaveAttribute('href', '/settings/auth');
+      expect(await screen.findByText('http://api.test/auth/sso/callback')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Turn on' })).toBeDisabled();
+      await user.type(screen.getByLabelText('Issuer'), 'https://acme.okta.com');
+      await user.type(screen.getByLabelText('Client ID'), '0oa1example');
+      await user.type(screen.getByLabelText('Client secret'), 's3cret');
+      await user.type(screen.getByLabelText('Email domains'), 'Acme.com, acme.co.uk');
+      await user.click(screen.getByRole('switch', { name: 'Require single sign-on' }));
+      await user.click(screen.getByRole('button', { name: 'Turn on' }));
+      await vi.waitFor(() =>
+        expect(sent).toEqual({ issuer: 'https://acme.okta.com', client_id: '0oa1example', client_secret: 's3cret', domains: ['acme.com', 'acme.co.uk'], enforced: true }),
+      );
+      expect(await screen.findByText('Single sign-on saved.')).toBeInTheDocument();
+    });
+
+    it('shows what is set, saves without the secret, and turns it off', async () => {
+      const calls: string[] = [];
+      server.use(
+        onEnterprise(),
+        http.get(v1('/org/sso'), () => HttpResponse.json(sso)),
+        http.put(v1('/org/sso'), async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          calls.push(`put ${'client_secret' in body ? 'with' : 'without'} secret ${body.domains}`);
+          return HttpResponse.json({ ...sso, domains: body.domains as string[] });
+        }),
+        http.delete(v1('/org/sso'), () => {
+          calls.push('delete');
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      const { user } = renderApp('/settings/auth');
+      const issuer = await screen.findByLabelText('Issuer');
+      await vi.waitFor(() => expect(issuer).toHaveValue('https://acme.okta.com'));
+      expect(screen.getByLabelText('Email domains')).toHaveValue('acme.com');
+      expect(screen.getByText('Set. Leave empty to keep it; it is never shown.')).toBeInTheDocument();
+      await user.type(screen.getByLabelText('Email domains'), ', acme.de');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await vi.waitFor(() => expect(calls).toEqual(['put without secret acme.com,acme.de']));
+      await user.click(screen.getByRole('button', { name: 'Turn off' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Turn off single sign-on?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Turn off' }));
+      await vi.waitFor(() => expect(calls).toEqual(['put without secret acme.com,acme.de', 'delete']));
+      expect(await screen.findByText('Single sign-on is off.')).toBeInTheDocument();
+    });
+
+    it('is read-only for a member', async () => {
+      server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member', plan: plans[4] })));
+      renderApp('/settings/auth');
+      expect(await screen.findByText('Only your org’s admin can change this.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Issuer')).toBeDisabled();
+    });
+
+    it('points at the plans off Enterprise', async () => {
+      server.use(...onFreeHandlers());
+      renderApp('/settings/auth');
+      expect(await screen.findByText(/Single sign-on is on Enterprise\./)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/settings/plans');
+      expect(screen.getByLabelText('Issuer')).toBeDisabled();
+    });
+
+    it('shows the server’s refusal', async () => {
+      server.use(
+        onEnterprise(),
+        http.put(v1('/org/sso'), () => apiError(503, 'E_UNAVAILABLE', 'https://acme.okta.com’s OpenID configuration does not name its endpoints.', { reason: 'discovery' })),
+      );
+      const { user } = renderApp('/settings/auth');
+      await user.type(await screen.findByLabelText('Issuer'), 'https://acme.okta.com');
+      await user.type(screen.getByLabelText('Client ID'), '0oa1');
+      await user.type(screen.getByLabelText('Client secret'), 's3cret');
+      await user.type(screen.getByLabelText('Email domains'), 'acme.com');
+      await user.click(screen.getByRole('button', { name: 'Turn on' }));
+      expect(await screen.findByText('https://acme.okta.com’s OpenID configuration does not name its endpoints.')).toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
-import { useProviders, useSession } from '@/api/session';
+import { startUrl, useProviders, useSession } from '@/api/session';
 import { ProviderButtons } from '@/components/ProviderButtons';
 import { AuthLayout } from '@/layout/AuthLayout/AuthLayout';
 import { Button, Skeleton, TextField } from '@/ui';
@@ -41,7 +41,11 @@ export function DevicePage() {
       </div>
       {(providers.isPending || session.isPending) && <Skeleton height={44} />}
       {providers.data && serverUrl && (
-        <ProviderButtons providers={providers.data} href={(p) => `${serverUrl}/auth/${p}/start?code=${encodeURIComponent(code)}`} />
+        <ProviderButtons
+          providers={providers.data.providers}
+          sso={providers.data.sso}
+          href={(p, email) => startUrl(serverUrl, p, `code=${encodeURIComponent(code)}`, email)}
+        />
       )}
     </AuthLayout>
   );

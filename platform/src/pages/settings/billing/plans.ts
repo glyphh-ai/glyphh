@@ -35,7 +35,7 @@ const featureText: Record<FeatureName, string> = {
   sync: 'Sync across runtimes',
   ha: 'High availability',
   offline: 'Offline licences for air-gapped runtimes',
-  sso: 'SSO and SAML',
+  sso: 'Single sign-on',
   rbac: 'Roles',
   audit: 'Audit logs',
 };

@@ -42,7 +42,13 @@ export function LoginPage() {
       )}
       {providers.error && <ErrorNotice message="Glyphh could not be reached. Try again in a moment." />}
       {providers.data && (
-        <ProviderButtons providers={providers.data} verb="Log in with" href={() => loginUrl(returnTo)} onChoose={rememberLogin} />
+        <ProviderButtons
+          providers={providers.data.providers}
+          sso={providers.data.sso}
+          verb="Log in with"
+          href={() => loginUrl(returnTo)}
+          onChoose={rememberLogin}
+        />
       )}
     </AuthLayout>
   );

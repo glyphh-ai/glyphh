@@ -16,6 +16,8 @@ import type {
   RuntimeKey,
   RuntimeNodes,
   SelfRuntime,
+  Sso,
+  SsoIn,
 } from './types';
 
 /**
@@ -33,6 +35,7 @@ export const keys = {
   org: ['org'] as const,
   members: ['org', 'members'] as const,
   invites: ['org', 'invites'] as const,
+  sso: ['org', 'sso'] as const,
 };
 
 // Reads
@@ -49,6 +52,8 @@ export const useRuntimeNodes = () => useQuery({ queryKey: keys.nodes, queryFn: (
 export const useOrg = () => useQuery({ queryKey: keys.org, queryFn: () => api.get<Org>('/org') });
 export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () => api.get<Member[]>('/org/members') });
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });
+/** The org's single sign-on, or null when it has none. */
+export const useSso = () => useQuery({ queryKey: keys.sso, queryFn: () => api.get<Sso | null>('/org/sso') });
 
 // Writes
 
@@ -93,6 +98,8 @@ export const useRenameOrg = () => useWrite((name: string) => api.patch<Org>('/or
 export const useInvite = () => useWrite((email: string) => api.post<NewInvite>('/org/invites', { email }), [keys.invites, keys.org]);
 export const useCancelInvite = () => useWrite((id: string) => api.delete(`/org/invites/${id}`), [keys.invites, keys.org]);
 export const useRemoveMember = () => useWrite((id: string) => api.delete(`/org/members/${id}`), [keys.members, keys.org]);
+export const useSetSso = () => useWrite((body: SsoIn) => api.put<Sso>('/org/sso', body), [keys.sso]);
+export const useRemoveSso = () => useWrite(() => api.delete('/org/sso'), [keys.sso]);
 
 export const useCheckout = () => useWrite((plan: string) => api.post<{ url: string }>('/billing/checkout', { plan }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);

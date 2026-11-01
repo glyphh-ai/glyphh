@@ -19,6 +19,7 @@ import { DeviceApprovePage } from '@/pages/flows/DeviceApprovePage';
 import { DevicePage } from '@/pages/flows/DevicePage';
 import { LoginPage } from '@/pages/flows/LoginPage';
 import { DeviceDonePage, ErrorPage, GitHubInstalledPage, NotFoundPage } from '@/pages/flows/ResultPages';
+import { AuthPage } from '@/pages/settings/AuthPage';
 import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
@@ -137,6 +138,7 @@ export const routes: RouteObject[] = [
       { path: 'usage', element: <Moved to="/usage" /> },
       { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
+      { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
     ],

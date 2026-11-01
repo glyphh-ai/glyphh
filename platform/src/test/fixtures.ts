@@ -1,14 +1,15 @@
-import type { CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime } from '@/api/types';
+import type { CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime, Sso } from '@/api/types';
 
 /**
  * One org's data in the server's shapes, shared by the page tests and the local fake server: on Pro, as if every
- * feature were built, and below, `onFree`, as the server answers a Free org today (only offline licences built).
+ * feature were built, and below, `onFree`, as the server answers a Free org today (offline licences and single
+ * sign-on built).
  * Glyphh hosts no runtime: the org's runtimes are a local rrotor and the ones it runs at its own address.
  */
 
-// The server's four flags; roles and audit logs ride on sso. As if every feature were built.
+// The server's four flags; roles and audit logs are included where sso is. As if every feature were built.
 const none = { sync: false, ha: false, offline: false, sso: false };
-const built = { sync: true, ha: true, offline: true, sso: true };
+const built = { sync: true, ha: true, offline: true, sso: true, rbac: true, audit: true };
 
 // In the server's order: Free, Basic, Pro, Team, Enterprise. Basic ($20, an Ada Cloud plan) has no licence key, so a
 // self-hosted node on it runs as Free's.
@@ -129,6 +130,16 @@ export const members: Member[] = [{ id: 'u-chris', email: 'chris@example.com', n
 
 export const invites: Invite[] = [];
 
+/** The org's single sign-on, once set: Okta, with one domain, not required. */
+export const sso: Sso = {
+  issuer: 'https://acme.okta.com',
+  client_id: '0oa1example',
+  domains: ['acme.com'],
+  enforced: false,
+  callback_url: 'http://api.test/auth/sso/callback',
+  updated_at: '2026-10-30T09:00:00Z',
+};
+
 export const installs: Install[] = [
   {
     id: 'i-1',
@@ -156,7 +167,7 @@ export const installs: Install[] = [
  * As the server answers a Free org today: each feature saying whether it is built (as the server's BUILT, only offline
  * licences work), no subscription and no licence key.
  */
-const unbuilt = { sync: false, ha: false, offline: true, sso: false };
+const unbuilt = { sync: false, ha: false, offline: true, sso: true };
 // The runtime nodes stay as they are: they count local and self-hosted runtimes alike.
 const freePlans: Plan[] = plans.map((plan) => ({ ...plan, built: unbuilt }));
 const freeMe: Me = {

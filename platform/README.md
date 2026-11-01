@@ -34,10 +34,10 @@ server's `glyphh_signin` cookie (ten minutes, on the server's domain), so each a
 
 | Route | Arrives from | Shows | Answers with |
 |---|---|---|---|
-| `/device?code=` | `GET {server}/v1/device?code=` (without a code, asks for it) | The code, to match Claude's; a button per provider from `GET {server}/auth/providers` | Link to `GET {server}/auth/{provider}/start?code=` |
+| `/device?code=` | `GET {server}/v1/device?code=` (without a code, asks for it) | The code, to match Claude's; a button per provider from `GET {server}/auth/providers`, and single sign-on when it says `sso` (the work email, whose domain names the org) | Link to `GET {server}/auth/{provider}/start?code=` (`/auth/sso/start?code=&email=`) |
 | `/device/approve?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "device", code, name, surface, email}` | Link to `GET {server}/auth/approve?consent=&decision=approve` or `deny` |
 | `/device/done?result=approved\|denied` | `/auth/approve` | "Signed in" or "Nothing was signed in" | — |
-| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` | "<client> wants to use your Glyphh account"; a button per provider | Link to `GET {server}/auth/{provider}/start?oauth=` |
+| `/authorize?oauth=&client=` | `GET {server}/oauth/authorize` | "<client> wants to use your Glyphh account"; a button per provider, and single sign-on as on `/device` | Link to `GET {server}/auth/{provider}/start?oauth=` (`&email=` for single sign-on) |
 | `/allow?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "oauth", client, returns_to, resource, email}` | Link to `GET {server}/auth/oauth/allow?consent=&decision=allow` or `deny` |
 | `/account?linked=<provider>` | a provider link's callback | Redirects to `/settings/profile`, which confirms the link | — |
 | `/billing?done=1` | Stripe Checkout and the portal | Redirects to `/settings/billing`, read afresh | — |
@@ -57,9 +57,15 @@ A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message
   to its Add a runtime.
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
   with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
-  "offline": true, "sso": false}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
-  and audit logs missing from `built` (or with no map) are not built; roles and audit logs follow `sso` when the server
-  does not name them. Plans are listed, priced and bought as before.
+  "offline": true, "sso": true}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
+  and audit logs missing from `built` (or with no map) are not built; roles and audit logs are included where `sso`
+  is when the server does not name them, and built only when it says so. Plans are listed, priced and bought as before.
+- **Single sign-on** (Enterprise) is set on Settings → Auth (`GET`/`PUT`/`DELETE /v1/org/sso`): the OpenID Connect
+  issuer, client id and secret (never shown back), the email domains that route a sign-in to the org, the redirect URI
+  to register at the identity provider, and whether it is required (then Google and GitHub are refused for the org's
+  people). The sign-in pages offer "Continue with single sign-on" when `GET {server}/auth/providers` says `sso`: the
+  person gives their work email and goes to `{server}/auth/sso/start?…&email=`; the platform's own log-in remembers
+  the email beside the provider so `/authorize` continues without asking again.
 
 ## Ada Cloud
 

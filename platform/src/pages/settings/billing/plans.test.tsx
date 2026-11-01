@@ -7,7 +7,7 @@ describe('plan wording with Ada Cloud on', () => {
     expect(planFacts(free!, true).map(factText)).toEqual(['1,000 precedents', '5,000 requests a month', '5 requests a second']);
     expect(planFacts(basic!, true).map(factText)).toEqual(['10,000 precedents', '50,000 requests a month', '10 requests a second', 'Then $1 per 10,000 requests']);
     expect(planFacts(pro!, true).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
-    expect(planFacts(enterprise!, true).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'SSO and SAML', 'Roles', 'Audit logs']);
+    expect(planFacts(enterprise!, true).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'Single sign-on', 'Roles', 'Audit logs']);
   });
 
   it('says nothing of the cloud with Ada Cloud off, or when an older server sends no cloud limits', () => {
@@ -49,14 +49,13 @@ describe('plan wording while sync is not built', () => {
 
   it('shows only what is built as included', () => {
     const facts = planFacts(enterprise!);
-    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Unlimited runtime nodes', 'Unlimited precedents per node', 'Offline licences for air-gapped runtimes']);
-    expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual([
-      'Sync across runtimes',
-      'High availability',
-      'SSO and SAML',
-      'Roles',
-      'Audit logs',
+    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual([
+      'Unlimited runtime nodes',
+      'Unlimited precedents per node',
+      'Offline licences for air-gapped runtimes',
+      'Single sign-on',
     ]);
+    expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual(['Sync across runtimes', 'High availability', 'Roles', 'Audit logs']);
   });
 
   it('names a feature it has no words for as the server does', () => {

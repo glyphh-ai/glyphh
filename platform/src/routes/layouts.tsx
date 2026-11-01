@@ -119,6 +119,9 @@ export function SettingsLayout() {
             <NavItem to="/settings/members" icon="team">
               Members
             </NavItem>
+            <NavItem to="/settings/auth" icon="key">
+              Auth
+            </NavItem>
           </NavGroup>
           <NavGroup label="Personal">
             <NavItem to="/settings/profile" icon="user">

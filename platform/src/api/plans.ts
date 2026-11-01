@@ -3,7 +3,10 @@ import type { FeatureState, Plan } from './types';
 /** Features that are not built unless the server's `built` map says they are. Offline licences (and any other) are. */
 const unbuiltUnlessSaid = new Set(['sync', 'ha', 'sso', 'rbac', 'audit']);
 
-/** Roles and audit logs ride on the server's `sso` flag (SSO and SAML, roles and audit logs) when not named alone. */
+/**
+ * Roles and audit logs are included where the server's `sso` flag is, when not named alone; whether they are built
+ * is their own (single sign-on is built; they are not until the server says so).
+ */
 const ridesOn: Record<string, string> = { rbac: 'sso', audit: 'sso' };
 
 /**
@@ -13,10 +16,12 @@ const ridesOn: Record<string, string> = { rbac: 'sso', audit: 'sso' };
  */
 export function feature(plan: Plan, name: string): FeatureState {
   const value = plan.features[name];
-  if (value === undefined && ridesOn[name]) return feature(plan, ridesOn[name]);
+  if (value === undefined && ridesOn[name]) {
+    const included = feature(plan, ridesOn[name]).included;
+    return { included, built: plan.built?.[name] ?? false };
+  }
   if (typeof value === 'object' && value !== null) return { included: value.included, built: value.built };
-  const built = plan.built?.[name] ?? (ridesOn[name] ? plan.built?.[ridesOn[name]] : undefined);
-  return { included: value === true, built: built ?? !unbuiltUnlessSaid.has(name) };
+  return { included: value === true, built: plan.built?.[name] ?? !unbuiltUnlessSaid.has(name) };
 }
 
 /** The feature names the plan states, in the server's order. */

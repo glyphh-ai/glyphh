@@ -202,7 +202,25 @@ export type Member = { id: Uuid; email: string; name: string | null; role: strin
 export type Invite = { id: Uuid; email: string; expires_at: IsoDate; created_at: IsoDate };
 export type NewInvite = { invite: Invite; link: string };
 
+/** The sign-in providers the server offers, in its order, and whether any org signs in with single sign-on. */
+export type Providers = { providers: string[]; sso: boolean };
+
+/** An org's single sign-on by OpenID Connect, as `GET /v1/org/sso` shows it: never the client secret. */
+export type Sso = {
+  issuer: string;
+  client_id: string;
+  domains: string[];
+  /** The org's people sign in with it and nothing else. */
+  enforced: boolean;
+  /** The redirect URI to register at the identity provider. */
+  callback_url: string;
+  updated_at: IsoDate;
+};
+/** What `PUT /v1/org/sso` takes; the secret left out keeps the one set. */
+export type SsoIn = { issuer: string; client_id: string; client_secret?: string; domains: string[]; enforced: boolean };
+
 export type Provider = 'google' | 'github';
+export const SSO = 'sso';
 
 export type DeviceConsent = { kind: 'device'; code: string; name: string; surface: string; email: string };
 export type OAuthConsent = { kind: 'oauth'; client: string; returns_to: string | null; resource: string; email: string };

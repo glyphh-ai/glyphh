@@ -49,7 +49,7 @@ app.get('/oauth/authorize', (c) => {
   const oauth = Buffer.from(JSON.stringify({ redirect: q.redirect_uri, state: q.state })).toString('base64url');
   return c.redirect(`${platform}/authorize?oauth=${oauth}&client=Glyphh`);
 });
-app.get('/auth/providers', (c) => c.json({ providers: ['github', 'google'] }));
+app.get('/auth/providers', (c) => c.json({ providers: ['github', 'google'], sso: true }));
 app.get('/auth/:provider/start', (c) => {
   const oauth = c.req.query('oauth');
   if (oauth) return c.redirect(`${platform}/allow?consent=${oauth}`);
@@ -154,6 +154,19 @@ app.patch('/v1/org', async (c) => {
 });
 app.get('/v1/org/members', (c) => c.json(state.members));
 app.get('/v1/org/invites', (c) => c.json(state.invites));
+// Single sign-on (Enterprise): set, read and removed; the secret is never shown back.
+let sso: typeof fixtures.sso | null = null;
+app.get('/v1/org/sso', (c) => c.json(sso));
+app.put('/v1/org/sso', async (c) => {
+  if (!feature(state.me.plan, 'sso').included) return refuse(403, 'E_NOT_IN_PLAN', 'Single sign-on is on Enterprise, not Free: talk to us at sales@glyphh.ai.', 'sso');
+  const { issuer, client_id, domains, enforced } = await c.req.json();
+  sso = { ...fixtures.sso, issuer, client_id, domains, enforced, callback_url: `http://localhost:${port}/auth/sso/callback`, updated_at: new Date().toISOString() };
+  return c.json(sso);
+});
+app.delete('/v1/org/sso', (c) => {
+  sso = null;
+  return c.body(null, 204);
+});
 // Members are unlimited on every plan.
 app.post('/v1/org/invites', async (c) => {
   const created = new Date();

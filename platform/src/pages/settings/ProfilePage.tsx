@@ -2,13 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { useLinkProvider, useMe, useRenameMe, useUnlinkProvider } from '@/api/queries';
 import { useProviders } from '@/api/session';
-import type { Provider } from '@/api/types';
+import { SSO, type Provider } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { List, Row } from '@/components/List';
 import { providerLabel } from '@/components/ProviderButtons';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
-import { Button, Chip, Icon, LoadingCard, TextField, useToast } from '@/ui';
+import { Button, Chip, Icon, LoadingCard, TextField, useToast, type IconName } from '@/ui';
 import { SettingsTitle } from './SettingsTitle';
 import styles from './settings.module.css';
 
@@ -41,7 +41,7 @@ export function ProfilePage() {
   };
 
   const linkedProviders = me.data?.providers ?? [];
-  const allProviders = Array.from(new Set([...(providers.data ?? []), ...linkedProviders]));
+  const allProviders = Array.from(new Set([...(providers.data?.providers ?? []), ...linkedProviders]));
 
   return (
     <>
@@ -68,18 +68,20 @@ export function ProfilePage() {
           <List label="Sign-in methods">
             {allProviders.map((provider) => {
               const isLinked = linkedProviders.includes(provider);
+              const icon: IconName = provider === 'github' ? 'github' : provider === SSO ? 'key' : 'google';
               return (
                 <Row
                   key={provider}
                   title={
                     <>
-                      <Icon name={provider === 'github' ? 'github' : 'google'} size={18} />
+                      <Icon name={icon} size={18} />
                       {providerLabel(provider)}
                     </>
                   }
                   badges={isLinked && <Chip tone="green">Linked</Chip>}
+                  meta={provider === SSO ? 'Your organisation’s sign-in; its admin sets it up.' : undefined}
                   actions={
-                    isLinked ? (
+                    provider === SSO ? null : isLinked ? (
                       <Button size="sm" variant="ghost" disabled={linkedProviders.length < 2} onClick={() => setUnlinking(provider as Provider)}>
                         Unlink
                       </Button>
