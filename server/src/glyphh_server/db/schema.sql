@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     source JSONB,
+    groups TEXT[] DEFAULT '{}'::text[] NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT users_role CHECK (role IN ('admin', 'member')),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE RESTRICT
@@ -238,6 +239,7 @@ CREATE TABLE IF NOT EXISTS org_sso (
     enforced BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    reviewers TEXT[] DEFAULT '{}'::text[] NOT NULL,
     PRIMARY KEY (org_id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
@@ -358,6 +360,35 @@ CREATE TABLE IF NOT EXISTS rrotors (
     UNIQUE (token_hash)
 );
 CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
+
+-- artifacts: the catalogue of apps on an org's rrotors (docs/specs/artifacts.md), one row per app per rrotor
+CREATE TABLE IF NOT EXISTS artifacts (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    runtime_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    commit_sha TEXT NOT NULL,
+    roles TEXT[] DEFAULT '{}'::text[] NOT NULL,
+    state TEXT DEFAULT 'draft' NOT NULL,
+    submitted_by UUID,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    reviewed_by UUID,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT artifacts_state CHECK (state IN ('draft', 'approved', 'rejected', 'retired')),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(runtime_id) REFERENCES rrotors (id) ON DELETE CASCADE,
+    FOREIGN KEY(submitted_by) REFERENCES users (id) ON DELETE SET NULL,
+    FOREIGN KEY(reviewed_by) REFERENCES users (id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS artifacts_one_per_app ON artifacts (runtime_id, name);
+CREATE INDEX IF NOT EXISTS ix_artifacts_org_id ON artifacts (org_id);
 
 -- nodes
 CREATE TABLE IF NOT EXISTS nodes (
@@ -576,6 +607,10 @@ ALTER TABLE rrotors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rrotors FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON rrotors;
 CREATE POLICY tenant ON rrotors USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
+ALTER TABLE artifacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE artifacts FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON artifacts;
+CREATE POLICY tenant ON artifacts USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;

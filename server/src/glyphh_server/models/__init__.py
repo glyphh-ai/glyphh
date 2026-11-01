@@ -1,6 +1,7 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
 from glyphh_server.models.ada_usage import AdaMeterEvent, AdaModelDay, AdaUsage
+from glyphh_server.models.artifact import STATES, Artifact
 from glyphh_server.models.base import Base
 from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
@@ -40,6 +41,7 @@ __all__ = [
     "ROLES",
     "ROLES_IN_CLUSTER",
     "SEVERITIES",
+    "STATES",
     "SURFACES",
     "TIERS",
     "TOKEN_KINDS",
@@ -47,6 +49,7 @@ __all__ = [
     "AdaModelDay",
     "AdaUsage",
     "AdminAudit",
+    "Artifact",
     "Base",
     "ConnectorGrant",
     "ConnectorToken",

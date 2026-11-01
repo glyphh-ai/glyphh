@@ -126,8 +126,14 @@ async def test_the_admin_sets_single_sign_on_and_anyone_in_the_org_reads_it(
     async with engine.begin() as conn:
         kept = (await conn.execute(select(OrgSso.client_secret).where(OrgSso.org_id == ada.org_id))).scalar_one()
     assert kept.startswith("v1.") and "s3cret" not in kept and unseal(SECRET_KEY, kept) == "s3cret"
-    again = await set_sso(http, ada, domain, client_secret=None, domains=[domain, domain.upper(), other], enforced=True)
-    assert again["domains"] == sorted([domain, other]) and again["enforced"] is True
+    assert view["reviewers"] == []
+    groups = [domain, domain.upper(), other]
+    again = await set_sso(
+        http, ada, domain, client_secret=None, domains=groups, enforced=True, reviewers=["SRE", "sre "]
+    )
+    assert again["domains"] == sorted([domain, other]) and again["enforced"] is True and again["reviewers"] == ["sre"]
+    bad = await http.put("/v1/org/sso", json=body(domain, reviewers=["  "]), headers=ada.headers)
+    assert bad.status_code == 422
     async with engine.begin() as conn:
         kept = (await conn.execute(select(OrgSso.client_secret).where(OrgSso.org_id == ada.org_id))).scalar_one()
     assert unseal(SECRET_KEY, kept) == "s3cret"
@@ -184,8 +190,10 @@ async def test_a_person_signs_in_by_work_email_and_lands_in_the_org_as_a_member(
     ada = await person(engine, "Enterprise")
     domain = a_domain()
     pat = f"pat@{domain}"
-    async for http in app_with(stripe, idp_as(pat.capitalize())):  # the provider's own casing of the email
-        await set_sso(http, ada, domain)
+    async for http in app_with(
+        stripe, idp_as(pat.capitalize(), groups=["SRE", "Everyone"])
+    ):  # the provider's own casing
+        await set_sso(http, ada, domain, reviewers=["sre"])
         invited = await http.post("/v1/org/invites", json={"email": pat}, headers=ada.headers)
         assert invited.status_code == 201
         code = await new_code(http)
@@ -204,8 +212,12 @@ async def test_a_person_signs_in_by_work_email_and_lands_in_the_org_as_a_member(
             ["sso"],
         )
         assert me["plan"]["name"] == "Enterprise"
+        assert me["groups"] == ["sre", "everyone"] and me["reviewer"] is True  # in a reviewer group
         again = await device_sign_in(http, pat)  # returning: the same person
         assert again["id"] == me["id"]
+    async for http in app_with(stripe, idp_as(pat, groups=["Everyone"])):  # the groups follow each sign-in
+        me = await device_sign_in(http, pat)
+        assert me["groups"] == ["everyone"] and me["reviewer"] is False
         members = (await http.get("/v1/org/members", headers=ada.headers)).json()
         assert [m["email"] for m in members] == [ada.email, pat]
         assert (await http.get("/v1/org/invites", headers=ada.headers)).json() == []  # the invite was taken

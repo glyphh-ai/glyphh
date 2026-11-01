@@ -113,6 +113,7 @@ async def test_who_came_back_is_read_from_userinfo_with_the_code_exchanged_by_th
         "Pat Lee",
         ORG,
     )
+    assert p.groups == []  # no groups claim: none
     exchange, who = idp.seen
     assert exchange.url == f"{IDP}/oauth2/token" and exchange.headers["authorization"].startswith("Basic ")
     assert parse_qs(exchange.content.decode()) == {
@@ -130,6 +131,18 @@ async def test_a_name_from_its_parts_and_an_email_the_issuer_does_not_vouch_for(
     bare = {"sub": "00u3", "email": "b@acme.test"}
     p = await _provider().profile(Idp({("GET", "/oauth2/userinfo"): bare}).http, SETTINGS, "c", CB)
     assert (p.name, p.email_verified) == (None, True)
+
+
+def test_the_groups_claim_becomes_roles_lower_cased_deduplicated_and_capped() -> None:
+    assert oidc.groups_of(["SRE", " Finance ", "sre", "", 7, "x" * 200]) == ["sre", "finance", "x" * 120]
+    assert oidc.groups_of("sre") == [] and oidc.groups_of(None) == []
+    assert len(oidc.groups_of([f"g{i}" for i in range(500)])) == 200
+
+
+async def test_the_groups_come_with_the_profile() -> None:
+    me = {"sub": "00u4", "email": "g@acme.test", "groups": ["Everyone", "SRE"]}
+    p = await _provider().profile(Idp({("GET", "/oauth2/userinfo"): me}).http, SETTINGS, "c", CB)
+    assert p.groups == ["everyone", "sre"]
 
 
 @pytest.mark.parametrize(

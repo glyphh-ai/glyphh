@@ -41,6 +41,7 @@ class ProviderProfile(BaseModel):
     email_verified: bool
     name: str | None = None
     org_id: uuid.UUID | None = None  # a single sign-on's org: the person lands there and nowhere else
+    groups: list[str] = []  # a single sign-on's groups claim, the person's roles (docs/specs/artifacts.md, 2)
 
 
 async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:
@@ -91,12 +92,13 @@ async def _sign_in_sso(conn: AsyncConnection, profile: ProviderProfile) -> uuid.
     if found is not None and found.org_id != org_id:
         raise Forbidden(OTHER_ORG, provider=SSO, reason="other_org")
     if found is None:
-        made = insert(User).values(org_id=org_id, email=email, name=profile.name, role="member").returning(User.id)
-        user_id = (await conn.execute(made)).scalar_one()
+        values = {"org_id": org_id, "email": email, "name": profile.name, "role": "member", "groups": profile.groups}
+        user_id = (await conn.execute(insert(User).values(**values).returning(User.id))).scalar_one()
         waiting = update(Invite).where(Invite.org_id == org_id, func.lower(Invite.email) == email, *is_open())
         await conn.execute(waiting.values(accepted_at=func.now()))
     else:
         user_id = found.id
+        await conn.execute(update(User).where(User.id == user_id).values(groups=profile.groups))
     if how != "returning":
         await conn.execute(insert(Identity).values(user_id=user_id, provider=SSO, provider_user_id=profile.subject))
     log.info("signed in", extra=fields(user=str(user_id), provider=SSO, how=how, org=str(org_id)))

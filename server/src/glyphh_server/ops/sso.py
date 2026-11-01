@@ -34,7 +34,9 @@ from glyphh_server.ops.plans import org_version
 log = logging.getLogger("glyphh.sso")
 
 NAME: str = oidc.NAME
+GROUP_LEN: int = oidc.GROUP_LEN
 DOMAINS_MAX: int = 20
+REVIEWERS_MAX: int = 50
 DOMAIN = re.compile(r"^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 NO_SSO: str = "No single sign-on is set up for {domain}. Sign in with Google or GitHub, or ask your admin."
 GONE: str = "Single sign-on is no longer set up for your organisation. Start again."
@@ -49,6 +51,7 @@ class SsoIn(BaseModel):
     client_secret: str | None = Field(None, min_length=1, max_length=2000, description="Left out: keep the one set")
     domains: list[str] = Field(min_length=1, max_length=DOMAINS_MAX)
     enforced: bool = Field(False, description="The org's people sign in with it and nothing else")
+    reviewers: list[str] = Field([], max_length=REVIEWERS_MAX, description="Groups that review artifacts")
 
     @field_validator("domains")
     @classmethod
@@ -62,12 +65,25 @@ class SsoIn(BaseModel):
                 out.append(domain)
         return out
 
+    @field_validator("reviewers")
+    @classmethod
+    def _reviewers(cls, given: list[str]) -> list[str]:
+        out: list[str] = []
+        for raw in given:
+            group = raw.strip().lower()
+            if not group or len(group) > GROUP_LEN:
+                raise ValueError(f"{raw.strip()!r} is not a group name (1 to {GROUP_LEN} characters).")
+            if group not in out:
+                out.append(group)
+        return out
+
 
 class SsoView(BaseModel):
     issuer: str
     client_id: str
     domains: list[str]
     enforced: bool
+    reviewers: list[str] = Field(description="The groups whose members review artifacts beside the admin")
     callback_url: str = Field(description="The redirect URI to register at the identity provider")
     updated_at: datetime
 
@@ -79,7 +95,9 @@ def callback_url(settings: Settings) -> str:
 async def view(conn: AsyncConnection, org_id: uuid.UUID, settings: Settings) -> SsoView | None:
     row = (
         await conn.execute(
-            select(OrgSso.issuer, OrgSso.client_id, OrgSso.enforced, OrgSso.updated_at).where(OrgSso.org_id == org_id)
+            select(OrgSso.issuer, OrgSso.client_id, OrgSso.enforced, OrgSso.reviewers, OrgSso.updated_at).where(
+                OrgSso.org_id == org_id
+            )
         )
     ).first()
     if row is None:
@@ -110,6 +128,7 @@ async def set_sso(
         "client_id": body.client_id,
         "client_secret": seal(settings.secret_key, body.client_secret) if body.client_secret else kept,
         "enforced": body.enforced,
+        "reviewers": body.reviewers,
         "updated_at": func.now(),
     }
     await conn.execute(

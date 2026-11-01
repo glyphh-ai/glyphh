@@ -1,6 +1,6 @@
 """What every tool is: a name, what it does, its arguments as a Pydantic model (their JSON Schema is the tool's input
-schema), whether it only reads, whether the account panel shows its result, and its handler. A handler answers a
-short text and the same as structured content."""
+schema), whether it only reads, whether a panel shows its result (the account panel, or the one `resource` names),
+and its handler. A handler answers a short text and the same as structured content."""
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -54,6 +54,7 @@ class Tool:
     handler: Handler
     read_only: bool = False
     panel: bool = False
+    resource: str | None = None  # the panel that shows its result; None: the account panel (mcp/panel.py)
 
 
 def dump(model: BaseModel) -> dict[str, Any]:

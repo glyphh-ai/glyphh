@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_ada.usage import CloudUsage
 from glyphh_server.models import Identity, Org, User
+from glyphh_server.ops.artifacts import is_reviewer
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import PlanView
 from glyphh_server.ops.usage import Precedents, usage
@@ -29,6 +30,8 @@ class Me(BaseModel):
     name: str | None
     role: str
     providers: list[str]
+    groups: list[str] = Field([], description="The identity provider's groups, from single sign-on: the roles")
+    reviewer: bool = Field(False, description="Reviews the org's artifacts: the admin, or in a reviewer group")
     org: MeOrg
     plan: PlanView
     precedents: Precedents
@@ -41,19 +44,24 @@ class Me(BaseModel):
 
 async def me(conn: AsyncConnection, who: Principal, cloud: Redis | None = None) -> Me:
     """cloud: with Ada Cloud on, the Redis its reads are counted on (the plan's cloud limits and use are shown)."""
-    person = (await conn.execute(select(User.email, User.name, User.role).where(User.id == who.user_id))).one()
+    person = (
+        await conn.execute(select(User.email, User.name, User.role, User.groups).where(User.id == who.user_id))
+    ).one()
     columns = (Org.id, Org.name, Org.billing_status, Org.renews_at, Org.plan_until)
     org = (await conn.execute(select(*columns).where(Org.id == who.org_id))).one()
     providers = await conn.execute(
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)
     )
     used = await usage(conn, who.org_id, cloud)
+    groups = list(person.groups)
     return Me(
         id=who.user_id,
         email=person.email,
         name=person.name,
         role=person.role,
         providers=list(providers.scalars()),
+        groups=groups,
+        reviewer=await is_reviewer(conn, who.org_id, person.role, groups),
         org=MeOrg(**org._mapping),
         plan=used.plan,
         precedents=used.precedents,

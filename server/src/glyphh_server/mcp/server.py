@@ -13,7 +13,9 @@ INSTRUCTIONS: str = (
     "Glyphh's account, from Claude: who you are (whoami), your plan (plan) and what you use of it (usage), what each "
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
     "members and invites, your self-hosted runtimes, their keys and offline licences, and the apps allowed to use "
-    "this connector (connector_grants)."
+    "this connector (connector_grants). Your org's artifacts, Claude's pages published to its rrotors (artifacts, "
+    "shown as cards with Open; a reviewer approves, rejects or retires one: artifact_approve, artifact_reject, "
+    "artifact_retire)."
 )
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "
@@ -49,11 +51,10 @@ def discover(ctx: Context) -> dict[str, Any]:
 
 
 def read_resource(call: Call) -> dict[str, Any]:
-    if call.params.get("uri") != panel.URI:
-        raise RpcError(
-            INVALID_PARAMS, f"There is no resource {call.params.get('uri')!r}.", data={"uri": call.params.get("uri")}
-        )
-    return {"contents": [panel.contents()]}
+    uri = call.params.get("uri")
+    if uri not in panel.PAGES:
+        raise RpcError(INVALID_PARAMS, f"There is no resource {uri!r}.", data={"uri": uri})
+    return {"contents": [panel.contents(uri)]}
 
 
 async def handle(ctx: Context, call: Call) -> dict[str, Any]:
@@ -69,7 +70,7 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":
-            return {"resources": [panel.RESOURCE]}
+            return {"resources": list(panel.RESOURCES)}
         case "resources/templates/list":
             return {"resourceTemplates": []}
         case "resources/read":

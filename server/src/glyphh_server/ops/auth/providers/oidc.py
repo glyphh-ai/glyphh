@@ -21,6 +21,8 @@ NAME: str = "sso"
 SCOPE: str = "openid email profile"
 WELL_KNOWN: str = "/.well-known/openid-configuration"
 KEEP: float = 3600.0
+GROUPS_MAX: int = 200
+GROUP_LEN: int = 120
 FAILED: str = "Signing in with your organisation's single sign-on didn't work. Try again."
 
 
@@ -80,6 +82,23 @@ async def discover(http: httpx.AsyncClient, issuer: str) -> Endpoints:
     return found
 
 
+def groups_of(claim: Any) -> list[str]:
+    """The `groups` claim as roles (docs/specs/artifacts.md, 2): lower-cased, deduplicated, at most GROUPS_MAX of
+    at most GROUP_LEN characters; anything that is not a list of strings is no groups."""
+    if not isinstance(claim, list):
+        return []
+    out: list[str] = []
+    for raw in claim:
+        if not isinstance(raw, str):
+            continue
+        group = raw.strip().lower()[:GROUP_LEN]
+        if group and group not in out:
+            out.append(group)
+        if len(out) == GROUPS_MAX:
+            break
+    return out
+
+
 @dataclass(frozen=True)
 class Oidc:
     """An org's provider, ready to send a person to and to ask who came back: the same steps as Google or GitHub
@@ -128,6 +147,7 @@ class Oidc:
         given = " ".join(n for n in (me.get("given_name"), me.get("family_name")) if n)
         return ProviderProfile(
             provider=NAME,
+            groups=groups_of(me.get("groups")),
             subject=f"{self.endpoints.issuer}#{me['sub']}",
             email=str(me["email"]),
             email_verified=bool(me.get("email_verified", True)),

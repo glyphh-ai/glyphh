@@ -2,16 +2,18 @@
 src/rrotord/link/protocol.py). Protocol 2 names a program `program` where protocol 1 said `model`; a hello of any other
 protocol is closed 4426 (`upgrade_needed`).
 
-The link carries licensing only: the hello (who the runtime is, the node it is), the welcome (the org's licence key, and
-a self-hosted runtime's licence and runtime keys), `keys` when those change, and rrotor's `usage` (each runtime key's
-calls, its precedents). rrotor may still send a `result`, an `event` or a `deployed`: the server keeps none of them and
-acks each, so rrotor stops owing it. Every message is checked here; anything the models refuse is unreadable, logged and
-skipped, and the link stays. `usage` carries `seq`, one rising counter per runtime: the server acks each by its `id`
-and applies a `seq` once, so a replay after a reconnect is never doubled."""
+The link carries licensing, and the catalogue of apps: the hello (who the runtime is, the node it is), the welcome
+(the org's licence key, a self-hosted runtime's licence and runtime keys, the runtime's artifacts and the org's
+reviewer groups), `keys` when those change, `artifact` after each review (docs/specs/artifacts.md), and rrotor's
+`usage` (each runtime key's calls, its precedents) and `deployed` (an app's makes its catalogue row). rrotor may still
+send a `result` or an `event`: the server keeps neither and acks each, so rrotor stops owing it. Every message is
+checked here; anything the models refuse is unreadable, logged and skipped, and the link stays. `usage` carries
+`seq`, one rising counter per runtime: the server acks each by its `id` and applies a `seq` once, so a replay after
+a reconnect is never doubled."""
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, TypeAdapter
 
@@ -77,9 +79,22 @@ class Usage(Message):
 
 
 class Passed(Message):
-    """A run's result, a program's event or a deployed version: rrotor still sends them, the server keeps none."""
+    """A run's result or a program's event: rrotor still sends them, the server keeps none."""
 
-    type: Literal["result", "event", "deployed"]
+    type: Literal["result", "event"]
+
+
+class Deployed(Message):
+    """A version deployed on the rrotor, with its manifest: an app's (`kind` app) makes or updates the catalogue row
+    (docs/specs/artifacts.md, 3.2), submitted by the Glyphh subject `by` names; any other deploy is kept nowhere."""
+
+    type: Literal["deployed"]
+    program: Name
+    version: int = Field(ge=1)
+    commit_sha: Annotated[str, Field(min_length=1, max_length=64)]
+    repo: str | None = None
+    manifest: dict[str, Any] | None = None
+    by: str | None = None
 
 
 class Ping(Message):
@@ -95,8 +110,20 @@ class Ack(Message):
     of: Id
 
 
-Inbound = Annotated[Usage | Passed | Ping | Pong | Ack, Field(discriminator="type")]
+Inbound = Annotated[Usage | Passed | Deployed | Ping | Pong | Ack, Field(discriminator="type")]
 INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
+
+
+class ArtifactState(BaseModel):
+    """An app's standing in the catalogue, as the rrotor is told it: in the welcome (every row of the runtime) and
+    as an `artifact` message after each review."""
+
+    type: Literal["artifact"] = "artifact"
+    id: Id = Field(default_factory=new_id)
+    program: Name
+    version: int
+    state: Literal["draft", "approved", "rejected", "retired"]
+    roles: list[str] = []
 
 
 # server → rrotor
@@ -108,6 +135,8 @@ class Welcome(Message):
     licence: License | None = None  # a self-hosted runtime's plan licence: it has no mod to hand one in
     license_key: str | None = None  # the org's newest licence key (ops/license_keys.py), to every runtime
     keys: list[str] | None = None  # a self-hosted runtime's live runtime keys, as SHA-256s: what it checks bearers by
+    artifacts: list[ArtifactState] = []  # the catalogue's rows for this runtime (docs/specs/artifacts.md, 3.4)
+    reviewers: list[str] = []  # the org's reviewer groups: who may open a draft to review it
 
 
 class Keys(Message):

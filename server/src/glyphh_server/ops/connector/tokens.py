@@ -28,6 +28,8 @@ class Introspection(BaseModel):
     org: str | None = None
     scope: str | None = None
     exp: int | None = None
+    role: str | None = None  # admin or member (docs/specs/artifacts.md, 2)
+    groups: list[str] | None = None  # the identity provider's groups, the person's roles
 
 
 class TokenAnswer(BaseModel):
@@ -106,6 +108,7 @@ async def _live(conn: AsyncConnection, token: str, resource: str) -> Row | None:
         await conn.execute(
             select(ConnectorToken.grant_id, User.id, User.org_id, User.role, ConnectorGrant.scope)
             .add_columns(ConnectorToken.expires_at, ConnectorGrant.client_id, User.email, Org.suspended_at)
+            .add_columns(User.groups)
             .join(ConnectorGrant, ConnectorGrant.id == ConnectorToken.grant_id)
             .join(User, User.id == ConnectorGrant.user_id)
             .join(Org, Org.id == User.org_id)
@@ -154,5 +157,11 @@ async def introspect(conn: AsyncConnection, token: str, resource: str) -> Intros
     if row is None:
         return Introspection(active=False)
     return Introspection(
-        active=True, sub=str(row.id), org=str(row.org_id), scope=row.scope, exp=int(row.expires_at.timestamp())
+        active=True,
+        sub=str(row.id),
+        org=str(row.org_id),
+        scope=row.scope,
+        exp=int(row.expires_at.timestamp()),
+        role=row.role,
+        groups=list(row.groups),
     )
