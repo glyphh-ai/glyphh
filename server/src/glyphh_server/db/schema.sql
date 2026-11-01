@@ -224,10 +224,32 @@ CREATE TABLE IF NOT EXISTS identities (
     user_id UUID NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (provider, provider_user_id),
-    CONSTRAINT identities_provider CHECK (provider IN ('google', 'github')),
+    CONSTRAINT identities_provider CHECK (provider IN ('google', 'github', 'sso')),
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS ix_identities_user_id ON identities (user_id);
+
+-- org_sso: an org's single sign-on by OpenID Connect (Enterprise); the client secret is sealed (ops/auth/sealed.py)
+CREATE TABLE IF NOT EXISTS org_sso (
+    org_id UUID NOT NULL,
+    issuer TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    client_secret TEXT NOT NULL,
+    enforced BOOLEAN DEFAULT false NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (org_id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+
+-- sso_domains: the email domains that route a sign-in to an org's single sign-on; a domain is one org's
+CREATE TABLE IF NOT EXISTS sso_domains (
+    domain TEXT NOT NULL,
+    org_id UUID NOT NULL,
+    PRIMARY KEY (domain),
+    FOREIGN KEY(org_id) REFERENCES org_sso (org_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_sso_domains_org_id ON sso_domains (org_id);
 
 -- installs
 CREATE TABLE IF NOT EXISTS installs (
@@ -530,6 +552,14 @@ ALTER TABLE ada_meter_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ada_meter_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON ada_meter_events;
 CREATE POLICY tenant ON ada_meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE org_sso ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_sso FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON org_sso;
+CREATE POLICY tenant ON org_sso USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE sso_domains ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sso_domains FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON sso_domains;
+CREATE POLICY tenant ON sso_domains USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identities FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON identities;

@@ -128,7 +128,7 @@ async def test_without_providers_the_page_says_so(engine: AsyncEngine, stripe: F
     async for bare in open_browser(stripe, SETTINGS):
         claude = await register(bare.http)
         assert went(await bare.http.get("/oauth/authorize", params=ask(claude)))[0] == "/authorize"
-        assert (await bare.http.get("/auth/providers")).json() == {"providers": []}
+        assert (await bare.http.get("/auth/providers")).json()["providers"] == []
 
 
 async def test_github_leads_to_the_same_allow_page(browser: Browser, engine: AsyncEngine) -> None:

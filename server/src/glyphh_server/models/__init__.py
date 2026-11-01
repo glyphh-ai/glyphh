@@ -15,6 +15,7 @@ from glyphh_server.models.node import ROLES_IN_CLUSTER, Node
 from glyphh_server.models.oauth_client import AUTH_METHODS, OAuthClient
 from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
+from glyphh_server.models.org_sso import OrgSso, SsoDomain
 from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.runtime_key import RuntimeKey
@@ -64,10 +65,12 @@ __all__ = [
     "OAuthCode",
     "OpsEvent",
     "Org",
+    "OrgSso",
     "Plan",
     "PlanVersion",
     "Rrotor",
     "RuntimeKey",
+    "SsoDomain",
     "Token",
     "TrafficDay",
     "TrafficTop",
