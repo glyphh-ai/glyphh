@@ -39,7 +39,8 @@ describe('Who sees the staff view', () => {
     staff();
     const { user, router } = renderApp('/admin');
     await user.click(await screen.findByRole('button', { name: 'Your org’s view' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // Home, which with Ada Cloud off is Runtimes.
+    await waitFor(() => expect(router.state.location.pathname).toBe('/runtimes'));
     expect(sessionStorage.getItem('glyphh.view')).toBe('org');
     await user.click(await screen.findByRole('link', { name: 'Staff view' }));
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
@@ -217,9 +218,8 @@ describe('One organisation', () => {
     const dialog = screen.getByRole('dialog', { name: 'Grant Enterprise' });
     await user.type(within(dialog).getByLabelText('Last day'), '2027-10-31');
     await user.type(within(dialog).getByLabelText('Stripe subscription'), 'sub_deal');
-    await user.type(within(dialog).getByLabelText('Markup on hosting, %'), '15');
     await user.click(within(dialog).getByRole('button', { name: 'Grant' }));
-    await waitFor(() => expect(sent).toEqual([{ until: '2027-10-31', subscription: 'sub_deal', markup: 15 }]));
+    await waitFor(() => expect(sent).toEqual([{ until: '2027-10-31', subscription: 'sub_deal' }]));
     expect(await screen.findByText('Acme is on Enterprise through 2027-10-31.')).toBeInTheDocument();
   });
 

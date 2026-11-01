@@ -1,7 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { adaPlans, hostingOff, plans, rates } from '@/test/fixtures';
-import { HostingRates } from './HostingRates';
-import { factText, hasHosting, machinesText, planFacts, precedentsText, priceText } from './plans';
+import { adaPlans, onFree, plans } from '@/test/fixtures';
+import { factText, machinesText, planFacts, precedentsText, priceText } from './plans';
 
 describe('plan wording with Ada Cloud on', () => {
   it('shows each plan’s cloud caps in place of runtime nodes and precedents per node, and the price past a metered month', () => {
@@ -36,25 +34,15 @@ describe('plan wording', () => {
     expect(plans.map(priceText)).toEqual(['Free', '$20 / month', '$99 / month', '$299 / month', 'By contract']);
   });
 
-  it('takes hosting from the server, and from the price on a server that does not say', () => {
-    expect(plans.map(hasHosting)).toEqual([false, false, true, true, true]);
-    expect(plans.map(({ hosting: _, ...plan }) => hasHosting(plan))).toEqual([false, true, true, true, true]);
+  it('says nothing of hosted machines on any plan', () => {
+    expect(plans.flatMap((plan) => planFacts(plan)).map(factText).join(' ')).not.toMatch(/host|machine/i);
   });
 });
 
-describe('the hosted machine rates', () => {
-  it('shows a dash for a self-serve plan the server gives no rates, and the contract for one sold by contract', () => {
-    render(<HostingRates rates={{ ...rates, plans: {} }} plans={[plans[2]!, plans[4]!]} />);
-    const table = screen.getByRole('table', { name: 'Hosted machine rates' });
-    expect(within(table).getAllByText('—')).toHaveLength(4);
-    expect(within(table).getAllByText('Set in your contract.')).toHaveLength(4);
-  });
-});
+describe('plan wording while sync is not built', () => {
+  const [free, , pro, , enterprise] = onFree.plans;
 
-describe('plan wording while Glyphh hosts nothing and sync is not built', () => {
-  const [free, , pro, , enterprise] = hostingOff.plans;
-
-  it('shows the runtime nodes and precedents per node as with hosting on, and marks sync as coming soon', () => {
+  it('shows the runtime nodes and precedents per node, and marks sync as coming soon', () => {
     expect(planFacts(free!).map(factText)).toEqual(['1 runtime node', '5,000 precedents per node']);
     expect(planFacts(pro!).map(factText)).toEqual(['3 runtime nodes', '50,000 precedents per node', 'Coming soon: Sync across runtimes']);
   });

@@ -10,22 +10,18 @@ import { mountAda } from './fake-ada.js';
  * A stand-in Glyphh server for working on the platform without the real one: the OAuth steps (which
  * approve at once), the browser steps and /v1 with the shared fixtures. Not for tests of the server itself.
  *
- * It answers as the real server does by default: hosting off (the hosted machine routes and the rates refused with
- * 503 E_UNAVAILABLE reason hosting_off), each plan's runtime nodes as they are, and each feature saying whether it is
- * built. FAKE_HOSTING=on turns hosting back on, as GLYPHH_HOSTING=on does. Its runtimes send no telemetry, as rrotor
- * sends none by default; FAKE_SERVER_LOGS=on has them send logs, audit events and metrics, as RROTOR_SERVER_LOGS=on does.
- * FAKE_ADA=on turns Ada Cloud on, as GLYPHH_ADA_CLOUD=on does: /v1/me says so and Ada's API answers at /ada/v1
- * (dev/fake-ada.ts; the platform's GLYPHH_ADA_URL=http://localhost:8080/ada).
+ * It answers as the real server does: it only grants licences to the rrotors a person runs, and hosts none (no hosted
+ * runtimes, rates or telemetry). The org starts on Free, each plan's runtime nodes as they are and each feature saying
+ * whether it is built. FAKE_ADA=on turns Ada Cloud on, as GLYPHH_ADA_CLOUD=on does: /v1/me says so and Ada's API
+ * answers at /ada/v1 (dev/fake-ada.ts; the platform's GLYPHH_ADA_URL=http://localhost:8080/ada).
  *
  *   npm run fake-server   → http://localhost:8080
  */
 process.loadEnvFile?.('.env');
 const platform = process.env.PLATFORM_URL ?? 'http://localhost:3000';
 const port = Number(process.env.FAKE_SERVER_PORT ?? 8080);
-const hosting = process.env.FAKE_HOSTING === 'on';
-const serverLogs = process.env.FAKE_SERVER_LOGS === 'on';
 const adaCloud = process.env.FAKE_ADA === 'on';
-const data = hosting ? { ...fixtures } : { ...fixtures, ...fixtures.hostingOff };
+const data = { ...fixtures, ...fixtures.onFree };
 const app = new Hono();
 // With Ada Cloud on each plan carries its cloud limits, and /v1/me and /v1/billing the org's use of them (`cloud`).
 if (adaCloud) data.plans = data.plans.map((plan) => ({ ...plan, cloud: fixtures.cloudLimits[plan.name] ?? null }));
@@ -43,7 +39,6 @@ if (process.env.FAKE_STAFF === 'on') {
 }
 let nextKey = 10;
 let nextSelf = 10;
-let nextMachine = 10;
 const selfToken = () => `glyphh_rt_${crypto.randomUUID().replaceAll('-', '')}`;
 
 app.use('/auth/consent', cors({ origin: platform, credentials: true }));
@@ -90,15 +85,16 @@ app.delete('/v1/installs/:id', (c) => {
   state.installs = state.installs.filter((i) => i.id !== c.req.param('id'));
   return c.body(null, 204);
 });
-app.get('/v1/runtime', (c) => c.json(state.runtime));
-app.post('/v1/runtime/start', (c) => hostingOff() ?? c.json(Object.assign(state.runtime, { state: 'online' })));
-app.post('/v1/runtime/stop', (c) => c.json(Object.assign(state.runtime, { state: 'stopped' })));
+const refuse = (status: number, code: string, message: string, reason: string) =>
+  Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
 app.get('/v1/runtime/keys', (c) => c.json(state.runtimeKeys));
+// A key calls one of the person's self-hosted runtimes; anything else is not found.
 app.post('/v1/runtime/keys', async (c) => {
-  const { name, expires_in_days: days } = await c.req.json();
+  const { name, runtime_id, expires_in_days: days } = await c.req.json();
+  if (!state.selfRuntimes.some((r) => r.id === runtime_id)) return refuse(404, 'E_NOT_FOUND', 'No such self-hosted runtime of yours.', 'runtime');
   const created = new Date();
   const expires = days ? new Date(created.getTime() + days * 86_400_000).toISOString() : null;
-  const key = { id: `k-${nextKey++}`, name, created_at: created.toISOString(), expires_at: expires, revoked_at: null, calls: 0, last_used_at: null };
+  const key = { id: `k-${nextKey++}`, runtime_id, name, created_at: created.toISOString(), expires_at: expires, revoked_at: null, calls: 0, last_used_at: null };
   state.runtimeKeys.push(key);
   return c.json({ ...key, key: `glyphh_rk_${crypto.randomUUID().replaceAll('-', '')}` }, 201);
 });
@@ -111,40 +107,7 @@ app.delete('/v1/runtime/keys/:id/record', (c) => {
   state.runtimeKeys = state.runtimeKeys.filter((k) => k.id !== c.req.param('id'));
   return c.body(null, 204);
 });
-// Hosted machines, as many runtime nodes as the plan allows (none on Free). The old /v1/runtime above stands for the first.
-const refuse = (status: number, code: string, message: string, reason: string) =>
-  Response.json({ error: { code, message, trace_id: 'dev-trace', reason } }, { status });
-// With hosting off no hosted machine is made or started.
-const hostingOff = () => (hosting ? undefined : refuse(503, 'E_UNAVAILABLE', 'Glyphh is not hosting machines now. Run rrotor yourself.', 'hosting_off'));
-const machine = (id: string) => state.machines.find((m) => m.id === id);
-const setMachine = (id: string, to: 'online' | 'stopped') => {
-  const found = machine(id);
-  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
-  // A machine past what the plan allows stays stopped.
-  const allowed = state.me.plan.limits.machines;
-  if (to === 'online' && !hosting) return hostingOff()!;
-  if (to === 'online' && allowed !== null && state.machines.indexOf(found) >= allowed) {
-    return refuse(403, 'E_LIMIT', `${state.me.plan.name} allows ${allowed} machines.`, 'machines');
-  }
-  return Response.json(Object.assign(found, { state: to }));
-};
-app.get('/v1/runtimes', (c) => c.json(state.machines));
-app.post('/v1/runtimes', async (c) => {
-  const off = hostingOff();
-  if (off) return off;
-  const { name, size } = await c.req.json();
-  const { name: plan, limits } = state.me.plan;
-  // Hosted machines are on the plans with hosting (not Free or Basic); each counts as one of the plan's runtime nodes,
-  // as a self-hosted one does.
-  if (!(state.me.plan.hosting ?? state.me.plan.price_cents !== 0)) return refuse(403, 'E_LIMIT', 'Hosted machines are on Pro and Team.', 'machines');
-  if (limits.machines !== null && state.machines.length + state.selfRuntimes.length >= limits.machines) {
-    return refuse(403, 'E_LIMIT', `${plan} allows ${limits.machines} runtime nodes.`, 'machines');
-  }
-  const id = `rt-${nextMachine++}`;
-  const made = { id, name, size, state: 'online' as const, address: `https://chris-${id.slice(3)}.glyphh.app`, month_seconds: 0, created_at: new Date().toISOString() };
-  state.machines.push(made);
-  return c.json(made, 201);
-});
+// The runtimes a person runs at their own address: registered, their token rotated, deleted. Glyphh hosts none.
 app.get('/v1/runtimes/self', (c) => c.json(state.selfRuntimes));
 app.post('/v1/runtimes/self', async (c) => {
   const { name, public_url } = await c.req.json();
@@ -161,22 +124,14 @@ app.post('/v1/runtimes/self', async (c) => {
   return c.json({ id: runtime.id, name, public_url, token, env }, 201);
 });
 app.post('/v1/runtimes/self/:id/token', (c) => c.json({ token: selfToken() }));
+// Its record, keys and nodes go; its own volume is untouched.
 app.delete('/v1/runtimes/self/:id', (c) => {
-  state.selfRuntimes = state.selfRuntimes.filter((r) => r.id !== c.req.param('id'));
-  return c.body(null, 204);
-});
-app.get('/v1/runtimes/:id', (c) => {
-  const found = machine(c.req.param('id'));
-  return found ? c.json(found) : refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
-});
-app.post('/v1/runtimes/:id/start', (c) => setMachine(c.req.param('id'), 'online'));
-app.post('/v1/runtimes/:id/stop', (c) => setMachine(c.req.param('id'), 'stopped'));
-app.post('/v1/runtimes/:id/restart', (c) => setMachine(c.req.param('id'), 'online'));
-app.delete('/v1/runtimes/:id', (c) => {
-  const found = machine(c.req.param('id'));
-  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such machine.', 'runtime');
-  if (c.req.query('confirm') !== found.name) return refuse(422, 'E_INVALID', 'Type the machine’s name to delete it.', 'confirm');
-  state.machines = state.machines.filter((m) => m !== found);
+  const id = c.req.param('id');
+  state.selfRuntimes = state.selfRuntimes.filter((r) => r.id !== id);
+  state.runtimeKeys = state.runtimeKeys.filter((k) => k.runtime_id !== id);
+  state.nodes.nodes = state.nodes.nodes.filter((n) => n.runtime_id !== id);
+  state.nodes.count = state.nodes.nodes.length;
+  state.nodes.over = state.nodes.max_nodes !== null && state.nodes.count > state.nodes.max_nodes;
   return c.body(null, 204);
 });
 app.post('/v1/runtimes/:id/offline-licence', async (c) => {
@@ -187,72 +142,10 @@ app.post('/v1/runtimes/:id/offline-licence', async (c) => {
   const token = Buffer.from(JSON.stringify({ payload, signature: 'dev-signature' })).toString('base64url');
   return c.json({ token, expires_at });
 });
-app.get('/v1/models', (c) => c.json(state.models));
-app.delete('/v1/models/:id', (c) => {
-  state.models = state.models.filter((m) => m.id !== c.req.param('id'));
-  return c.body(null, 204);
-});
 // The licence key: one for the paid month, none on Free (rrotor runs as Community). The runtime nodes, counted softly.
 app.get('/v1/license/keys', (c) => c.json(state.licenceKeys));
 app.get('/v1/license/nodes', (c) => c.json(state.nodes));
-// rrotor's opt-in telemetry, newest first, filtered and paged as the server does: `level` is it and above, `text` in
-// the message, `kind` one audit kind; `next_cursor` is opaque, and one no page gave is refused 422 reason cursor.
-// Empty unless FAKE_SERVER_LOGS=on; then a record more arrives with each read, and the runs go up, as from a live
-// runtime.
-type Row = { at: string; runtime_id?: string | null; node_id?: string | null };
-const least: Record<string, number> = { trace: 1, debug: 5, info: 9, warn: 13, error: 17, fatal: 21 };
-const telemetry = {
-  logs: serverLogs ? [...fixtures.logs] : [],
-  audit: serverLogs ? [...fixtures.auditEvents] : [],
-  metrics: serverLogs ? fixtures.metrics.map((m) => ({ ...m })) : [],
-};
-let beats = 0;
-const liveRecord = () => {
-  if (!serverLogs) return;
-  beats += 1;
-  const at = new Date().toISOString();
-  telemetry.logs.unshift({ id: `l-live-${beats}`, at, runtime_id: 'rt-self-1', runtime: 'Acme production', node_id: 'rrotor-1', level: 'debug', severity: 5, body: `Heartbeat ${beats} sent`, trace_id: null, span_id: null, attributes: { beat: beats } });
-  for (const m of telemetry.metrics) {
-    m.at = at;
-    if (m.name === 'rrotor.runs' && m.attributes?.status === 'done') m.value = (m.value ?? 0) + 3;
-    if (m.name === 'rrotor.run.seconds') Object.assign(m, { value: (m.value ?? 0) + 10, count: (m.count ?? 0) + 3 });
-  }
-};
-const cursorOf = (index: number) => Buffer.from(`page|${index}`).toString('base64url');
-function page<T extends Row>(rows: T[], q: Record<string, string>, matches: (row: T) => boolean) {
-  let start = 0;
-  if (q.cursor) {
-    const [mark, index] = Buffer.from(q.cursor, 'base64url').toString().split('|');
-    start = Number(index);
-    if (mark !== 'page' || !Number.isInteger(start) || start < 0) return { refused: refuse(422, 'E_INVALID', 'This cursor is not one a page gave.', 'cursor') };
-  }
-  const limit = Number(q.limit ?? 100);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 500) return { refused: refuse(422, 'E_INVALID', 'limit is 1 to 500.', 'limit') };
-  const since = q.since ? new Date(q.since).getTime() : -Infinity;
-  const found = rows.filter(
-    (row) => (!q.runtime || row.runtime_id === q.runtime) && (!q.node || row.node_id === q.node) && new Date(row.at).getTime() >= since && matches(row),
-  );
-  return { found: found.slice(start, start + limit), next_cursor: start + limit < found.length ? cursorOf(start + limit) : null };
-}
-app.get('/v1/telemetry/logs', (c) => {
-  const q = c.req.query();
-  if (!q.cursor) liveRecord();
-  const words = q.text?.toLowerCase();
-  const read = page(telemetry.logs, q, (r) => (!q.level || (r.severity ?? 0) >= (least[q.level] ?? 0)) && (!words || (r.body ?? '').toLowerCase().includes(words)));
-  return read.refused ?? c.json({ records: read.found, next_cursor: read.next_cursor });
-});
-app.get('/v1/telemetry/audit', (c) => {
-  const q = c.req.query();
-  const read = page(telemetry.audit, q, (event) => !q.kind || event.kind === q.kind);
-  return read.refused ?? c.json({ events: read.found, next_cursor: read.next_cursor });
-});
-app.get('/v1/telemetry/metrics', (c) => {
-  const { runtime, node, name } = c.req.query();
-  const metrics = telemetry.metrics.filter((m) => (!runtime || m.runtime_id === runtime) && (!node || m.node_id === node) && (!name || m.name === name));
-  return c.json({ metrics });
-});
 app.get('/v1/plans', (c) => c.json(data.plans));
-app.get('/v1/rates', (c) => hostingOff() ?? c.json(data.rates));
 app.get('/v1/org', (c) => c.json(state.org));
 app.patch('/v1/org', async (c) => {
   const name = (await c.req.json()).name;
@@ -273,8 +166,8 @@ app.delete('/v1/org/invites/:id', (c) => {
   return c.body(null, 204);
 });
 app.get('/v1/billing', (c) => {
-  const { plan, org, precedents, hosting } = state.me;
-  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, hosting, cloud: cloudUsage() });
+  const { plan, org, precedents } = state.me;
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, cloud: cloudUsage() });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
 // A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free and
@@ -303,14 +196,13 @@ const licenceFor = (plan: (typeof data.plans)[number]) => {
   state.licenceKeys.license_key = key;
 };
 
-// A change of plan applies at once; down to Free, the hosted machines must go first.
+// A change of plan applies at once.
 const subscribed = () => !['none', 'canceled', 'incomplete_expired'].includes(state.me.org.billing_status);
 const setPlan = (name: string) => {
   const plan = data.plans.find((p) => p.name === name);
   if (!plan) return refuse(422, 'E_INVALID', `${name} isn't sold through Stripe.`, 'not_sold');
   if (!plan.self_serve) return refuse(422, 'E_INVALID', `${name} is by contract: talk to us at sales@glyphh.ai.`, 'not_self_serve');
   if (!state.me.plan.self_serve) return refuse(409, 'E_CONFLICT', `Your ${state.me.plan.name} plan is by contract: talk to us at sales@glyphh.ai.`, 'contract');
-  if (plan.price_cents === 0 && state.machines.length > 0) return refuse(409, 'E_CONFLICT', 'Delete your hosted machines first.', 'machines');
   state.me.plan = plan;
   state.org.plan = plan;
   state.me.precedents.limit = plan.limits.precedents;

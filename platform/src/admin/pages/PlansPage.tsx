@@ -14,7 +14,7 @@ function price(v: PlanVersionRow): string {
   return `${money(v.price_cents)} a ${v.billing_interval ?? 'month'}`;
 }
 
-/** Every plan and each of its versions: price, Stripe price, caps, markup and the orgs on it. */
+/** Every plan and each of its versions: price, Stripe price, caps and the orgs on it. */
 export function PlansPage() {
   const plans = useAdminPlans();
   return (
@@ -41,7 +41,6 @@ export function PlansPage() {
                   <th className={styles.num}>Calls a second</th>
                   <th>Past the month</th>
                   <th className={styles.num}>Runtime nodes</th>
-                  <th className={styles.num}>Markup</th>
                   <th className={styles.num}>Orgs</th>
                   <th>Made</th>
                 </tr>
@@ -59,7 +58,6 @@ export function PlansPage() {
                     <td className={styles.num}>{limit(v.cloud_rps)}</td>
                     <td>{v.cloud_overage ? 'Metered' : 'Refused'}</td>
                     <td className={styles.num}>{limit(v.max_machines)}</td>
-                    <td className={styles.num}>{v.hosting_markup_pct === null ? '–' : `${v.hosting_markup_pct}%`}</td>
                     <td className={styles.num}>{n(v.orgs)}</td>
                     <td className={styles.num}>{date(v.created_at)}</td>
                   </tr>

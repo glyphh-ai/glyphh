@@ -18,10 +18,11 @@ describe('when the platform’s sign-in ends mid-visit', () => {
 
   it('a write does the same', async () => {
     const location = stubLocation();
-    server.use(http.post(v1('/runtime/stop'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
+    server.use(http.post(v1('/runtimes/self/:id/token'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
     try {
-      const { user } = renderApp('/');
-      await user.click(await screen.findByRole('button', { name: 'Stop' }));
+      const { user } = renderApp('/runtimes');
+      await user.click((await screen.findAllByRole('button', { name: 'Rotate token' }))[0]!);
+      await user.click(screen.getByRole('button', { name: 'Rotate' }));
       await vi.waitFor(() => expect(location.assign).toHaveBeenCalledTimes(1));
       expect(location.assign.mock.calls[0]![0]).toMatch(/^\/login\?returnTo=/);
     } finally {

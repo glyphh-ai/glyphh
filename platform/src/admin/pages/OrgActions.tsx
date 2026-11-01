@@ -82,13 +82,9 @@ function GrantDialog({ org, onClose }: DialogProps) {
   const grant = useGrantEnterprise(org.id);
   const [until, setUntil] = useState('');
   const [subscription, setSubscription] = useState('');
-  const [markup, setMarkup] = useState('');
   const ready = /^\d{4}-\d{2}-\d{2}$/.test(until) && /^sub_\w+$/.test(subscription.trim());
   const save = () =>
-    grant.mutate(
-      { until, subscription: subscription.trim(), markup: markup.trim() ? Number(markup) : null },
-      { onSuccess: (done) => (toast.show(done.message), onClose()) },
-    );
+    grant.mutate({ until, subscription: subscription.trim() }, { onSuccess: (done) => (toast.show(done.message), onClose()) });
   return (
     <Dialog
       open
@@ -108,9 +104,7 @@ function GrantDialog({ org, onClose }: DialogProps) {
     >
       <div className={styles.form}>
         <TextField label="Last day" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
-        <TextField label="Stripe subscription" mono placeholder="sub_…" value={subscription} onChange={(e) => setSubscription(e.target.value)} />
-        <TextField label="Markup on hosting, %" hint="Optional; only with hosting on" inputMode="numeric" value={markup} onChange={(e) => setMarkup(e.target.value)} />
-        <ApiErrorNotice error={grant.error} />
+        <TextField label="Stripe subscription" mono placeholder="sub_…" value={subscription} onChange={(e) => setSubscription(e.target.value)} />        <ApiErrorNotice error={grant.error} />
       </div>
     </Dialog>
   );
@@ -153,7 +147,7 @@ function RevokeDialog({ org, onClose }: DialogProps) {
     <ConfirmDialog
       open
       title="Revoke Enterprise"
-      description={`${org.name} goes back on Free, its hosting due reported first. Cancel its subscription in Stripe afterwards.`}
+      description={`${org.name} goes back on Free, its licence keys revoked. Cancel its subscription in Stripe afterwards.`}
       confirmLabel="Revoke"
       pending={revoke.isPending}
       error={revoke.error}

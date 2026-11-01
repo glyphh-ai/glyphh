@@ -389,8 +389,6 @@ export function adaFake({
     sessionHandler(),
     http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: planView, ada_cloud: true, cloud: usage() })),
     http.get(v1('/plans'), () => HttpResponse.json(adaPlans)),
-    // Glyphh hosts no machines with Ada Cloud on.
-    http.get(v1('/rates'), () => apiError(503, 'E_UNAVAILABLE', 'Hosting is off.', { reason: 'hosting_off' })),
     http.all(ada('/*'), async ({ request }) => {
       await record(request, new URL(request.url).pathname.replace('/api/ada/v1', ''));
       return undefined;

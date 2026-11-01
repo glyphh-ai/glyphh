@@ -163,7 +163,6 @@ const version = (id: string, n: number, newest: boolean, orgs: number) => ({
   ha: false,
   offline: false,
   sso: false,
-  hosting_markup_pct: 20,
   cloud_precedents: 100_000,
   cloud_requests: 1_000_000,
   cloud_rps: 50,

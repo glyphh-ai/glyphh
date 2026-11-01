@@ -33,6 +33,13 @@
   overflow-wrap: anywhere;
 }
 
+/* The node count above the list of nodes. */
+.nodes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .masked {
   align-self: center;
   font-family: var(--font-mono);

@@ -2,18 +2,14 @@ import { useNavigate } from 'react-router';
 import { usePortal } from '@/api/queries';
 import type { Me } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { date, money } from '@/lib/format';
+import { date } from '@/lib/format';
 import { Button, Card, CardEyebrow, Chip, Menu, MenuItem } from '@/ui';
 import { isSubscribed, statusChip } from './billingStatus';
-import { factText, hasHosting, planFacts, priceText } from './plans';
-import { contractRates } from './HostingRates';
+import { factText, planFacts, priceText } from './plans';
 import styles from './billing.module.css';
 
-/**
- * The org's plan: its price, renewal, what it includes, hosting so far this month, and the ways to change it. While
- * Glyphh hosts nothing (`hosting` false) it says nothing of hosting.
- */
-export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; hosting: boolean }) {
+/** The org's plan: its price, renewal, what it includes, and the ways to change it. */
+export function PlanCard({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
   const portal = usePortal();
   const navigate = useNavigate();
   const { plan, org } = me;
@@ -33,9 +29,7 @@ export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; h
           <Chip key={fact.text}>{factText(fact)}</Chip>
         ))}
       </div>
-      {hosting && !plan.self_serve && <p className={styles.description}>Hosting rates: {contractRates.toLowerCase()}</p>}
-
-      {/* With Ada Cloud on, the month's requests in place of hosting: the count, and what is past it on a metered plan. */}
+      {/* With Ada Cloud on, the month's requests: the count, and what is past it on a metered plan. */}
       {me.ada_cloud === true && me.cloud && (
         <div className={styles.usageLine}>
           <span>Requests this month</span>
@@ -45,13 +39,6 @@ export function PlanCard({ me, isAdmin, hosting }: { me: Me; isAdmin: boolean; h
               : `${me.cloud.requests.used.toLocaleString('en-GB')} of ${me.cloud.requests.max.toLocaleString('en-GB')}`}
             {me.cloud.requests.over > 0 && ` · ${me.cloud.requests.over.toLocaleString('en-GB')} over`}
           </span>
-        </div>
-      )}
-
-      {hosting && hasHosting(plan) && (
-        <div className={styles.usageLine}>
-          <span>Hosting this month</span>
-          <span>{money(me.hosting.month_to_date_cents)}</span>
         </div>
       )}
 

@@ -153,7 +153,6 @@ export type PlanVersionRow = {
   ha: boolean;
   offline: boolean;
   sso: boolean;
-  hosting_markup_pct: number | null;
   cloud_precedents: number | null;
   cloud_requests: number | null;
   cloud_rps: number | null;
@@ -299,5 +298,5 @@ export const useChangePlan = (org: string) => useAdminMutation((plan_version_id:
 export const useSuspend = (org: string) => useAdminMutation((reason: string) => api.post(`/admin/orgs/${org}/suspend`, { reason }));
 export const useUnsuspend = (org: string) => useAdminMutation(() => api.delete(`/admin/orgs/${org}/suspend`));
 export const useGrantEnterprise = (org: string) =>
-  useAdminMutation((body: { until: string; subscription: string; markup: number | null }) => api.post<{ message: string }>(`/admin/orgs/${org}/enterprise`, body));
+  useAdminMutation((body: { until: string; subscription: string }) => api.post<{ message: string }>(`/admin/orgs/${org}/enterprise`, body));
 export const useRevokeEnterprise = (org: string) => useAdminMutation(() => api.delete<{ message: string }>(`/admin/orgs/${org}/enterprise`));

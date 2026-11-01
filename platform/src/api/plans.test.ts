@@ -1,17 +1,17 @@
-import { hostingOff, plans } from '@/test/fixtures';
+import { onFree, plans } from '@/test/fixtures';
 import { feature, featureNames } from './plans';
 import type { Plan } from './types';
 
 describe('a plan’s features', () => {
   it('reads a boolean with the plan’s built map beside it', () => {
-    const pro = hostingOff.plans[2]!;
+    const pro = onFree.plans[2]!;
     expect(feature(pro, 'sync')).toEqual({ included: true, built: false });
     expect(feature(pro, 'offline')).toEqual({ included: false, built: true });
-    expect(feature(hostingOff.plans[4]!, 'offline')).toEqual({ included: true, built: true });
+    expect(feature(onFree.plans[4]!, 'offline')).toEqual({ included: true, built: true });
   });
 
   it('takes roles and audit logs from sso when the server names neither', () => {
-    const enterprise = hostingOff.plans[4]!;
+    const enterprise = onFree.plans[4]!;
     expect(feature(enterprise, 'rbac')).toEqual({ included: true, built: false });
     expect(feature(enterprise, 'audit')).toEqual({ included: true, built: false });
     expect(feature(plans[4]!, 'audit')).toEqual({ included: true, built: true });

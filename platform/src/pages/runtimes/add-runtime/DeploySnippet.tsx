@@ -3,15 +3,13 @@ import { Link } from 'react-router';
 import { useMe } from '@/api/queries';
 import { CodeBlock, Select, TextField } from '@/ui';
 import {
+  composeCommands,
   defaultOptions,
   deploymentDocsUrl,
-  dockerInstall,
   dockerRun,
   helmCommand,
   image,
   licenceKeyAddition,
-  localInstall,
-  localRun,
   sizes,
   terraformCommands,
   terraformModule,
@@ -39,37 +37,16 @@ export function DeploySnippet({ deployment, env }: { deployment: Deployment; env
   const size = <Select label="Size" value={options.size} onChange={(e) => set({ size: e.target.value as Size })} options={sizes} />;
   const host = env.RROTOR_PUBLIC_HOST;
 
-  if (deployment === 'local') {
-    return (
-      <div className={styles.part}>
-        <h3 className={styles.subTitle}>Run it on this computer</h3>
-        <span className={styles.meta}>
-          In a terminal, with Docker running. The script runs the image alone on port 7777, no Compose; the last line waits until rrotor answers.
-        </span>
-        <CodeBlock code={localInstall(env)} label="install command" />
-        <details className={styles.details}>
-          <summary className={styles.summary}>Rather run the image yourself?</summary>
-          <CodeBlock code={localRun(env)} label="docker run command" />
-        </details>
-        <span className={styles.meta}>
-          There is no HTTPS here, so Claude’s connector cannot reach it: that needs a public HTTPS host, so use Docker or Helm on a server for
-          Claude. Your code can use it now.
-        </span>
-        <Note paid={paid} deployment={deployment} />
-      </div>
-    );
-  }
-
   if (deployment === 'compose') {
     return (
       <div className={styles.part}>
-        <h3 className={styles.subTitle}>Run it with Docker</h3>
+        <h3 className={styles.subTitle}>Run it with Docker Compose</h3>
         <span className={styles.meta}>
-          Point {host ?? 'the host'}’s DNS at the server first; the script serves it over HTTPS. Then paste this on the server. The last line waits
-          until rrotor answers.
+          Point {host ?? 'the host'}’s DNS at the server first; Caddy, in front of rrotor, serves it over HTTPS. Then paste this on the server: it
+          fetches the compose file and the Caddyfile, writes .env and starts both. The last line waits until rrotor answers.
         </span>
         <div className={styles.formRow}>{size}</div>
-        <CodeBlock code={dockerInstall(env, options.size)} label="install command" />
+        <CodeBlock code={composeCommands(env, options.size)} label="Docker Compose commands" />
         <details className={styles.details}>
           <summary className={styles.summary}>HTTPS already in front? Run the image alone:</summary>
           <CodeBlock code={dockerRun(env)} label="docker run command" />

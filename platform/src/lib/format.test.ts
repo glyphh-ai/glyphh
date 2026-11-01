@@ -1,4 +1,4 @@
-import { ago, date, duration, listText, money, plural, stamp, usd, usdPerSecond } from './format';
+import { ago, date, duration, listText, money, plural, stamp } from './format';
 
 describe('format', () => {
   it.each([
@@ -11,14 +11,6 @@ describe('format', () => {
   it('writes dates as 16 Nov 2026, the same in every time zone', () => {
     expect(date('2026-11-16T00:00:00Z')).toBe('16 Nov 2026');
     expect(date('2026-09-20T23:30:00Z')).toBe('20 Sep 2026');
-  });
-
-  it('writes rates in dollars: to the cent a month, to two figures a second, from numbers or strings', () => {
-    expect(usd(8.71)).toBe('$8.71');
-    expect(usd('117.00')).toBe('$117');
-    expect(usd(0.195)).toBe('$0.20');
-    expect(usdPerSecond(8.71 / 2_592_000)).toBe('$0.0000034');
-    expect(usdPerSecond('0.0000451')).toBe('$0.000045');
   });
 
   it('lists names as a sentence', () => {

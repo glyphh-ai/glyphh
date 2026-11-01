@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAdaCloud } from '@/api/ada';
-import { ApiError } from '@/api/client';
-import { useChangePlan, useCheckout, useHosting, useMe, usePlans, useRates } from '@/api/queries';
+import { useChangePlan, useCheckout, useMe, usePlans } from '@/api/queries';
 import type { Plan } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { cx } from '@/lib/cx';
 import { salesUrl } from '@/lib/links';
 import { isSubscribed } from '@/pages/settings/billing/billingStatus';
-import { HostingRates, ratesNote } from '@/pages/settings/billing/HostingRates';
-import { hasHosting, planFacts, priceParts } from '@/pages/settings/billing/plans';
+import { planFacts, priceParts } from '@/pages/settings/billing/plans';
 import { Avatar, Button, ButtonLink, Chip, Dialog, Icon, LoadingCard } from '@/ui';
 import styles from './PlansPage.module.css';
 
@@ -17,17 +15,14 @@ const BILLING = '/settings/billing';
 
 /**
  * Choosing a plan, over the whole window: no sidebar, closed with the X (or Escape) back to Billing. Each plan shows
- * what the server says it includes, and below them the hosted machine rates of each plan with hosting. With a
- * subscription a change applies at once (Stripe prorates it), after a confirm; without one, the person pays in
- * Stripe's checkout first. A plan sold by contract is Talk to us. A feature not yet built is marked coming soon. While
- * Glyphh hosts nothing, no plan speaks of hosted machines and there are no rates.
+ * what the server says it includes. With a subscription a change applies at once (Stripe prorates it), after a
+ * confirm; without one, the person pays in Stripe's checkout first. A plan sold by contract is Talk to us. A feature
+ * not yet built is marked coming soon.
  */
 export function PlansPage() {
   const navigate = useNavigate();
   const me = useMe();
   const plans = usePlans();
-  const rates = useRates();
-  const hosting = useHosting();
   const ada = useAdaCloud() === true;
   const [switching, setSwitching] = useState<Plan | null>(null);
   const change = useChangePlan();
@@ -47,8 +42,6 @@ export function PlansPage() {
   const at = list.findIndex((plan) => plan.name === current?.name);
   // The next self-serve plan up is the one recommended.
   const recommended = list.find((plan, index) => index > at && plan.self_serve);
-  const hostingPlans = hosting ? list.filter(hasHosting) : [];
-  const machinesInTheWay = hosting === true && change.error instanceof ApiError && change.error.code === 'E_CONFLICT' && change.error.detail.reason === 'machines';
 
   const closeConfirm = () => {
     change.reset();
@@ -88,8 +81,8 @@ export function PlansPage() {
         </p>
 
         <ApiErrorNotice error={me.error ?? plans.error ?? checkout.error} />
-        {(me.isPending || plans.isPending || hosting === undefined) && <LoadingCard lines={6} />}
-        {me.data && plans.data && hosting !== undefined && (
+        {(me.isPending || plans.isPending) && <LoadingCard lines={6} />}
+        {me.data && plans.data && (
           <div className={styles.grid}>
             {plans.data.map((plan, index) => (
               <PlanOption
@@ -113,17 +106,6 @@ export function PlansPage() {
             Your plan is by contract. To change it, <a href={salesUrl}>talk to us</a>.
           </p>
         )}
-
-        {rates.data && hostingPlans.length > 0 && (
-          <section className={styles.rates} aria-labelledby="rates-title">
-            <h2 id="rates-title" className={styles.ratesTitle}>
-              Hosted machines
-            </h2>
-            <p className={styles.note}>{ratesNote}</p>
-            <HostingRates rates={rates.data} plans={hostingPlans} />
-          </section>
-        )}
-        <ApiErrorNotice error={rates.error} />
       </main>
 
       <Dialog
@@ -142,7 +124,7 @@ export function PlansPage() {
           </>
         }
       >
-        <ApiErrorNotice error={change.error} action={machinesInTheWay ? <Link to="/machines">Machines</Link> : undefined} />
+        <ApiErrorNotice error={change.error} />
       </Dialog>
     </div>
   );
