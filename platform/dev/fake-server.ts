@@ -159,13 +159,45 @@ let sso: typeof fixtures.sso | null = null;
 app.get('/v1/org/sso', (c) => c.json(sso));
 app.put('/v1/org/sso', async (c) => {
   if (!feature(state.me.plan, 'sso').included) return refuse(403, 'E_NOT_IN_PLAN', 'Single sign-on is on Enterprise, not Free: talk to us at sales@glyphh.ai.', 'sso');
-  const { issuer, client_id, domains, enforced } = await c.req.json();
-  sso = { ...fixtures.sso, issuer, client_id, domains, enforced, callback_url: `http://localhost:${port}/auth/sso/callback`, updated_at: new Date().toISOString() };
+  const { issuer, client_id, domains, enforced, reviewers = [] } = await c.req.json();
+  sso = { ...fixtures.sso, issuer, client_id, domains, enforced, reviewers, callback_url: `http://localhost:${port}/auth/sso/callback`, updated_at: new Date().toISOString() };
   return c.json(sso);
 });
 app.delete('/v1/org/sso', (c) => {
   sso = null;
   return c.body(null, 204);
+});
+// The catalogue of artifacts (the pages Claude published to the org's rrotors): listed by state, searched, paged;
+// a review changes the state. The person is the admin, so a reviewer.
+const artifacts = structuredClone(fixtures.artifacts);
+app.get('/v1/artifacts', (c) => {
+  const state = c.req.query('state') ?? 'approved';
+  const q = (c.req.query('q') ?? '').toLowerCase();
+  const page = Math.max(1, Number(c.req.query('page') ?? '1'));
+  const perPage = Math.min(100, Math.max(1, Number(c.req.query('per_page') ?? '24')));
+  if (state !== 'approved' && state.me.role !== 'admin') return refuse(403, 'E_FORBIDDEN', 'Only a reviewer sees artifacts awaiting review.', 'reviewer');
+  const found = artifacts.filter((a) => a.state === state && (!q || [a.title, a.description, a.name].some((s) => s.toLowerCase().includes(q))));
+  return c.json({ artifacts: found.slice((page - 1) * perPage, page * perPage), page, per_page: perPage, total: found.length });
+});
+app.get('/v1/artifacts/:id', (c) => {
+  const found = artifacts.find((a) => a.id === c.req.param('id'));
+  return found ? c.json(found) : refuse(404, 'E_NOT_FOUND', 'No such artifact.', 'artifact');
+});
+app.post('/v1/artifacts/:id/:action', async (c) => {
+  const found = artifacts.find((a) => a.id === c.req.param('id'));
+  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such artifact.', 'artifact');
+  const action = c.req.param('action');
+  const reviewed = { reviewed_by: { id: state.me.id, name: state.me.name, email: state.me.email }, reviewed_at: new Date().toISOString() };
+  if (action === 'approve') {
+    if (found.state === 'approved' || found.state === 'retired') return refuse(409, 'E_CONFLICT', `${found.title} is ${found.state} already.`, 'state');
+    Object.assign(found, { state: 'approved', reason: null }, reviewed);
+  } else if (action === 'reject') {
+    const { reason } = await c.req.json();
+    Object.assign(found, { state: 'rejected', reason }, reviewed);
+  } else if (action === 'retire') {
+    Object.assign(found, { state: 'retired' }, reviewed);
+  } else return refuse(404, 'E_NOT_FOUND', 'No such action.', 'action');
+  return c.json(found);
 });
 // Members are unlimited on every plan.
 app.post('/v1/org/invites', async (c) => {

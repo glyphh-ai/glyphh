@@ -41,6 +41,24 @@ export const onFreeHandlers = (): HttpHandler[] => [
   http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.onFree.nodes)),
 ];
 
+/**
+ * `GET /v1/artifacts` as the server pages it: the state asked (approved by default), `q` against title, description
+ * and name, `per_page` (24) from `page`. Pass the fixtures (or many) and tests assert the query from what comes back.
+ */
+export const artifactsHandler = (all = fixtures.artifacts) =>
+  http.get(v1('/artifacts'), ({ request }) => {
+    const url = new URL(request.url);
+    const state = url.searchParams.get('state') ?? 'approved';
+    const q = (url.searchParams.get('q') ?? '').toLowerCase();
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const perPage = Number(url.searchParams.get('per_page') ?? '24');
+    const found = all.filter((a) => a.state === state && (!q || [a.title, a.description, a.name].some((s) => s.toLowerCase().includes(q))));
+    const artifacts = found.slice((page - 1) * perPage, page * perPage);
+    return HttpResponse.json({ artifacts, page, per_page: perPage, total: found.length });
+  });
+
+defaultHandlers.push(artifactsHandler());
+
 export const server = setupServer(...defaultHandlers);
 
 export { http, HttpResponse, v1 };

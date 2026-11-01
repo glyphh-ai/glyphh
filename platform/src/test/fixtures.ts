@@ -1,4 +1,4 @@
-import type { CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime, Sso } from '@/api/types';
+import type { Artifact, CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime, Sso } from '@/api/types';
 
 /**
  * One org's data in the server's shapes, shared by the page tests and the local fake server: on Pro, as if every
@@ -137,8 +137,48 @@ export const sso: Sso = {
   domains: ['acme.com'],
   enforced: false,
   callback_url: 'http://api.test/auth/sso/callback',
+  reviewers: ['platform-leads'],
   updated_at: '2026-10-30T09:00:00Z',
 };
+
+const chris = { id: 'u-chris', name: 'Chris Timmerman', email: 'chris@example.com' };
+const sam = { id: 'u-sam', name: 'Sam Rivera', email: 'sam@example.com' };
+
+function artifact(n: number, over: Partial<Artifact> = {}): Artifact {
+  const name = over.name ?? `report-${n}`;
+  return {
+    id: `art-${n}`,
+    runtime_id: 'rt-self-1',
+    runtime_name: 'Acme production',
+    runtime_url: 'https://rrotor.acme.com',
+    name,
+    title: over.title ?? `Report ${n}`,
+    description: over.description ?? `Report number ${n}, from the deploy log.`,
+    version: 1,
+    commit_sha: `${n}`.padStart(40, 'a'),
+    roles: [],
+    state: 'approved',
+    submitted_by: chris,
+    submitted_at: '2026-10-28T09:00:00Z',
+    reviewed_by: chris,
+    reviewed_at: '2026-10-28T10:00:00Z',
+    reason: null,
+    url: `https://rrotor.acme.com/apps/${name}/`,
+    ...over,
+  };
+}
+
+/** The org's artifacts, every state: three published (one for a role), one awaiting review, one rejected. */
+export const artifacts: Artifact[] = [
+  artifact(1, { name: 'deploy-failures', title: 'Deploy failures', description: "Last week's deploy failures by service, from the deploy log and GitHub." }),
+  artifact(2, { name: 'open-prs', title: 'Open pull requests', description: 'Every open pull request across the org, oldest first.', roles: ['sre', 'admin'], submitted_by: sam }),
+  artifact(3, { name: 'on-call', title: 'On-call handover', description: 'The pages and incidents of the week, for the handover.', runtime_id: 'rt-self-2', runtime_name: 'Lab', runtime_url: 'https://rrotor.lab.acme.com', url: 'https://rrotor.lab.acme.com/apps/on-call/' }),
+  artifact(4, { name: 'cost-board', title: 'Cloud cost board', description: 'Spend by account and service, month to date.', state: 'draft', submitted_by: sam, submitted_at: '2026-10-31T15:00:00Z', reviewed_by: null, reviewed_at: null }),
+  artifact(5, { name: 'churn', title: 'Churn risk', description: 'Accounts likely to churn this quarter.', state: 'rejected', submitted_by: sam, reason: 'Names customers; use account ids.', reviewed_at: '2026-10-30T12:00:00Z' }),
+];
+
+/** Thirty published artifacts, for the pages. */
+export const manyArtifacts: Artifact[] = Array.from({ length: 30 }, (_, i) => artifact(100 + i));
 
 export const installs: Install[] = [
   {

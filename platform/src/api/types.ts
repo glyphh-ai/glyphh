@@ -81,6 +81,10 @@ export type Me = {
   name: string | null;
   role: 'admin' | 'member';
   providers: string[];
+  /** The identity provider's groups, from single sign-on; missing on an older server. */
+  groups?: string[];
+  /** Reviews the org's artifacts: the admin, or a member in a reviewer group. Missing on an older server. */
+  reviewer?: boolean;
   /** `plan_until`: when an Enterprise grant ends; null on any other plan. */
   org: { id: Uuid; name: string; billing_status: string; renews_at: IsoDate | null; plan_until: IsoDate | null };
   plan: Plan;
@@ -214,10 +218,40 @@ export type Sso = {
   enforced: boolean;
   /** The redirect URI to register at the identity provider. */
   callback_url: string;
+  /** The groups whose members review the org's artifacts, beside the admin. Missing on an older server. */
+  reviewers?: string[];
   updated_at: IsoDate;
 };
 /** What `PUT /v1/org/sso` takes; the secret left out keeps the one set. */
-export type SsoIn = { issuer: string; client_id: string; client_secret?: string; domains: string[]; enforced: boolean };
+export type SsoIn = { issuer: string; client_id: string; client_secret?: string; domains: string[]; enforced: boolean; reviewers?: string[] };
+
+export type ArtifactState = 'draft' | 'approved' | 'rejected' | 'retired';
+
+/** An app published to one of the org's rrotors, as the catalogue lists it (`GET /v1/artifacts`); the page itself never passes through the server. */
+export type Artifact = {
+  id: Uuid;
+  runtime_id: Uuid;
+  runtime_name: string;
+  runtime_url: string;
+  name: string;
+  title: string;
+  description: string;
+  version: number;
+  commit_sha: string;
+  /** The roles that may open it; empty: everyone in the org. */
+  roles: string[];
+  state: ArtifactState;
+  submitted_by: { id: Uuid; name: string | null; email: string } | null;
+  submitted_at: IsoDate;
+  reviewed_by: { id: Uuid; name: string | null; email: string } | null;
+  reviewed_at: IsoDate | null;
+  /** A rejection's reason. */
+  reason: string | null;
+  /** Where it opens: `{runtime_url}/apps/{name}/`. */
+  url: string;
+};
+
+export type ArtifactPage = { artifacts: Artifact[]; page: number; per_page: number; total: number };
 
 export type Provider = 'google' | 'github';
 export const SSO = 'sso';

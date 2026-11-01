@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import type {
+  Artifact,
+  ArtifactPage,
+  ArtifactState,
   Install,
   Invite,
   LicenceKeys,
@@ -36,6 +39,7 @@ export const keys = {
   members: ['org', 'members'] as const,
   invites: ['org', 'invites'] as const,
   sso: ['org', 'sso'] as const,
+  artifacts: ['artifacts'] as const,
 };
 
 // Reads
@@ -54,6 +58,20 @@ export const useMembers = () => useQuery({ queryKey: keys.members, queryFn: () =
 export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () => api.get<Invite[]>('/org/invites') });
 /** The org's single sign-on, or null when it has none. */
 export const useSso = () => useQuery({ queryKey: keys.sso, queryFn: () => api.get<Sso | null>('/org/sso') });
+
+export type ArtifactsQuery = { q?: string; page?: number; state?: ArtifactState };
+
+/** A page of the org's artifacts: the approved ones the person's roles allow, or for a reviewer any state. */
+export const useArtifacts = ({ q = '', page = 1, state = 'approved' }: ArtifactsQuery) =>
+  useQuery({
+    queryKey: [...keys.artifacts, { q, page, state }],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), per_page: '24', state });
+      if (q) params.set('q', q);
+      return api.get<ArtifactPage>(`/artifacts?${params}`);
+    },
+    placeholderData: (previous) => previous,
+  });
 
 // Writes
 
@@ -100,6 +118,12 @@ export const useCancelInvite = () => useWrite((id: string) => api.delete(`/org/i
 export const useRemoveMember = () => useWrite((id: string) => api.delete(`/org/members/${id}`), [keys.members, keys.org]);
 export const useSetSso = () => useWrite((body: SsoIn) => api.put<Sso>('/org/sso', body), [keys.sso]);
 export const useRemoveSso = () => useWrite(() => api.delete('/org/sso'), [keys.sso]);
+
+// A review changes which list an artifact is in: every page is read again.
+export const useApproveArtifact = () => useWrite((id: string) => api.post<Artifact>(`/artifacts/${id}/approve`), [keys.artifacts]);
+export const useRejectArtifact = () =>
+  useWrite(({ id, reason }: { id: string; reason: string }) => api.post<Artifact>(`/artifacts/${id}/reject`, { reason }), [keys.artifacts]);
+export const useRetireArtifact = () => useWrite((id: string) => api.post<Artifact>(`/artifacts/${id}/retire`), [keys.artifacts]);
 
 export const useCheckout = () => useWrite((plan: string) => api.post<{ url: string }>('/billing/checkout', { plan }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);
