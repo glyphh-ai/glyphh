@@ -87,6 +87,7 @@ const freshState = (): Host['state'] => ({
   lists: value({}),
   note: value(null),
   inviteLink: value(null),
+  artifacts: value({ q: '', page: 1, state: 'approved', total: 0, rejecting: null }),
 })
 
 export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}) {

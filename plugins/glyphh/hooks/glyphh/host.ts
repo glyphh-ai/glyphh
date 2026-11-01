@@ -5,7 +5,7 @@
 // plain to test.)
 import type { FsEntry, HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
 
-import type { AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { ArtifactsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 
 /** One state value: read it, or change it from what it is. */
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
@@ -37,5 +37,6 @@ export type Host = {
     lists: Value<Record<string, Json[]>>
     note: Value<GlyphhNote | null>
     inviteLink: Value<string | null>
+    artifacts: Value<ArtifactsView>
   }
 }

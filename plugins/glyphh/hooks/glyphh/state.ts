@@ -6,6 +6,7 @@ export const SECTIONS: { id: GlyphhSection; label: string }[] = [
   { id: 'org', label: 'Org' },
   { id: 'plan', label: 'Plan' },
   { id: 'billing', label: 'Billing' },
+  { id: 'artifacts', label: 'Artifacts' },
 ]
 
 /** The panel's last word. */

@@ -3,9 +3,33 @@
 import type { HttpInit, HttpResponse } from 'claude-code'
 
 type Json = Record<string, unknown>
-export type Call = { method: string; path: string; body: Json; bearer?: string }
+export type Call = { method: string; path: string; body: Json; bearer?: string; query: Record<string, string> }
 
 const TOKEN = 'tok-secret-1'
+/** The local rrotor's token (~/.glyphh/rrotor/token), as the rrotor skill keeps it. */
+export const RROTOR_TOKEN = 'rt-local-1'
+
+/** One of the organisation's artifacts, as GET /v1/artifacts lists them. */
+export const artifact = (n: number, state = 'approved', more: Json = {}): Json => ({
+  id: `a${n}`,
+  runtime_id: 'rt-1',
+  runtime_name: 'acme-prod',
+  runtime_url: 'https://rrotor.acme.test',
+  name: `page-${n}`,
+  title: `Page ${n}`,
+  description: `The ${n}th page.`,
+  version: 1,
+  commit_sha: 'c'.repeat(40),
+  roles: n % 2 ? [] : ['sre'],
+  state,
+  submitted_by: { id: 'u1', name: 'Chris', email: 'chris@example.com' },
+  submitted_at: '2026-11-01T10:00:00Z',
+  reviewed_by: null,
+  reviewed_at: null,
+  reason: state === 'rejected' ? 'Not yet.' : null,
+  url: `https://rrotor.acme.test/apps/page-${n}/`,
+  ...more,
+})
 
 const version = (name: string, status: string, models: number, more: Json = {}) => ({
   name,
@@ -48,6 +72,14 @@ function newState() {
     invites: [] as Json[],
     installs: [{ id: 'i1', name: 'mac', surface: 'desktop' }, { id: 'i2', name: 'laptop', surface: 'cli' }] as Json[],
     role: 'admin',
+    /** /v1/me's `reviewer`: the admin, or a member of a reviewer group. */
+    reviewer: true,
+    groups: ['sre'] as string[],
+    /** The catalogue: three published, one awaiting review, one rejected. */
+    artifacts: [artifact(1), artifact(2), artifact(3), artifact(4, 'draft'), artifact(5, 'rejected')] as Json[],
+    /** The local rrotor: the apps published to it; `rrotorDown` makes its address unreachable. */
+    apps: [] as Json[],
+    rrotorDown: false,
     providers: ['google'] as string[],
     name: 'Chris',
     orgName: 'Glyphh',
@@ -93,6 +125,8 @@ const meOf = (s: State) => {
     email: 'chris@example.com',
     name: s.name,
     role: s.role,
+    reviewer: s.reviewer,
+    groups: [...s.groups],
     providers: [...s.providers],
     org: { id: 'o1', name: s.orgName, billing_status: s.billingStatus, renews_at: null, plan_until: s.plan === 'Enterprise' ? '2027-10-18T23:59:59Z' : null },
     plan: p,
@@ -120,8 +154,11 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
   const ok = (body: unknown = {}) => ({ status: 200, body })
   const open = ['/v1/device/code', '/v1/device/token', '/v1/plans']
   if (!open.includes(c.path) && c.bearer !== TOKEN) return refuse(401, 'E_UNAUTHORIZED', 'Bad token.')
-  const key = `${c.method} ${c.path.replace(/\/v1\/(installs|org\/members|org\/invites|me\/identities)\/[^/]+$/, '/v1/$1/:id')}`
+  const key = `${c.method} ${c.path
+    .replace(/\/v1\/(installs|org\/members|org\/invites|me\/identities)\/[^/]+$/, '/v1/$1/:id')
+    .replace(/\/v1\/artifacts\/[^/]+\/(approve|reject|retire)$/, '/v1/artifacts/:id/$1')}`
   const id = decodeURIComponent(c.path.split('/').pop() ?? '')
+  if (key.startsWith('GET /v1/artifacts') || key.startsWith('POST /v1/artifacts/')) return artifactsRoute(s, c, key, ok)
   switch (key) {
     case 'POST /v1/device/code':
       return ok({ device_code: 'dc-1', user_code: 'ABCD-EFGH', verification_uri: 'https://glyphh.test/v1/device', verification_uri_complete: 'https://glyphh.test/v1/device?code=ABCD-EFGH', interval: 5, expires_in: 600 })
@@ -170,6 +207,43 @@ function adminRoute(s: State, c: Call, key: string, id: string, ok: (b?: unknown
 }
 
 
+// The catalogue (server/docs/specs/artifacts.md, 3.3): a page of the state
+// asked, searched by title, description and name; a review changes a state
+// and is a reviewer's; a member asking for drafts is refused.
+function artifactsRoute(s: State, c: Call, key: string, ok: (b?: unknown) => { status: number; body: unknown }) {
+  if (key === 'GET /v1/artifacts') {
+    const state = c.query.state ?? 'approved'
+    if (state !== 'approved' && !s.reviewer) return refuse(403, 'E_FORBIDDEN', 'Reviewers see the drafts.')
+    const q = (c.query.q ?? '').toLowerCase()
+    const page = Number(c.query.page ?? '1')
+    const per = Number(c.query.per_page ?? '24')
+    const found = s.artifacts.filter(a => a.state === state && (!q || [a.title, a.description, a.name].some(t => String(t).toLowerCase().includes(q))))
+    return ok({ artifacts: found.slice((page - 1) * per, page * per), page, per_page: per, total: found.length })
+  }
+  const id = c.path.split('/')[3] ?? ''
+  const verb = key.split('/').pop()
+  const a = s.artifacts.find(x => x.id === id)
+  if (!a) return refuse(404, 'E_NOT_FOUND', 'No such artifact.')
+  if (!s.reviewer) return refuse(403, 'E_FORBIDDEN', 'Only a reviewer may do that.')
+  if (verb === 'approve' && !['draft', 'rejected'].includes(String(a.state))) return refuse(409, 'E_CONFLICT', `It is ${a.state}, not awaiting review.`)
+  if (verb === 'reject' && !String(c.body.reason ?? '').trim()) return refuse(422, 'E_INVALID', 'A rejection says why.')
+  a.state = verb === 'approve' ? 'approved' : verb === 'reject' ? 'rejected' : 'retired'
+  a.reason = verb === 'reject' ? c.body.reason : null
+  return ok(a)
+}
+
+// The local rrotor's POST /v1/apps (rrotor's docs/architecture.md, 5.8).
+function rrotorRoute(s: State, c: Call): { status: number; body: unknown } {
+  if (c.bearer !== RROTOR_TOKEN) return refuse(401, 'E_AUTH', 'Send the local token: Authorization: Bearer <local token>.')
+  if (c.method !== 'POST' || c.path !== '/v1/apps') return refuse(404, 'E_NOT_FOUND', `No route ${c.method} ${c.path}`)
+  const name = String(c.body.name ?? '')
+  if (!/^[a-z][a-z0-9-]{0,62}$/.test(name)) return refuse(400, 'E_MANIFEST', `${name || '(none)'} is not a program name: ^[a-z][a-z0-9-]{0,62}$.`)
+  const version = s.apps.filter(a => a.program === name).length + 1
+  const made = { program: name, version, commit_sha: 'd'.repeat(40), deployed_at: '2026-11-01T12:00:00Z', active: version === 1, state: 'draft', url: `http://127.0.0.1:7777/apps/${name}/`, body: c.body }
+  s.apps.push(made)
+  return { status: 201, body: made }
+}
+
 // The server's refusals: Enterprise is never checked out, a subscribed org
 // changes plan instead, an Enterprise org's plan is its contract's.
 function checkout(s: State, c: Call, ok: (b?: unknown) => { status: number; body: unknown }) {
@@ -192,8 +266,14 @@ export function fakeServer() {
   async function fetch(url: string, init: HttpInit = {}): Promise<HttpResponse> {
     const u = new URL(url)
     const bearer = init.headers?.Authorization?.replace(/^Bearer /, '')
-    const call: Call = { method: init.method ?? 'GET', path: u.pathname, body: init.body ? (JSON.parse(init.body) as Json) : {}, bearer }
+    const query = Object.fromEntries(u.searchParams.entries())
+    const call: Call = { method: init.method ?? 'GET', path: u.pathname, body: init.body ? (JSON.parse(init.body) as Json) : {}, bearer, query }
     s.calls.push(call)
+    if (u.host === '127.0.0.1:7777') {
+      if (s.rrotorDown) throw new Error('ECONNREFUSED')
+      const r = rrotorRoute(s, call)
+      return { status: r.status, ok: r.status < 300, headers: {}, text: JSON.stringify(r.body) }
+    }
     const r = await route(s, call)
     return { status: r.status, ok: r.status < 300, headers: {}, text: r.status === 204 ? "" : JSON.stringify(r.body) }
   }

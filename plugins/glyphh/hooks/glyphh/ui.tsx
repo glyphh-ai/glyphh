@@ -1,6 +1,6 @@
 import type { Elements, RenderSurface } from 'claude-code'
 
-import type { Json } from '../../types'
+import type { ArtifactsView, Json } from '../../types'
 import type { Host } from './host'
 
 /** The elements every panel uses: the terminal's and the desktop's alike. */
@@ -13,6 +13,8 @@ export type Ctx = {
   surface: RenderSurface
   me: Json | null
   lists: Record<string, Json[]>
+  /** Where the Artifacts section stands (its search, page and view). */
+  artifacts: ArtifactsView
 }
 
 /** Whether a surface draws `href` as a link: https, or http on localhost (a
