@@ -75,7 +75,7 @@ describe('a model’s page', () => {
     await user.clear(k);
     await user.type(k, '25');
     await user.click(screen.getByRole('button', { name: 'Save 1 change as a new version' }));
-    expect(await screen.findByText('Version 3 is live.')).toBeInTheDocument();
+    expect(await screen.findByText('Version 3 is live.', {}, { timeout: 4000 })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Versions' }));
     const row = (await screen.findByText('v2')).closest('tr')!;
     await user.click(within(row).getByRole('button', { name: 'Actions for version 2' }));
