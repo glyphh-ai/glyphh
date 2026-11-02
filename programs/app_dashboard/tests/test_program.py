@@ -36,8 +36,11 @@ def test_the_manifest_is_an_app_whose_page_calls_its_one_function():
     assert MANIFEST["kind"] == "app" and MANIFEST["app"]["entry"] == "index.html"
     assert MANIFEST["app"]["functions"] == ["failures"] and set(MANIFEST["functions"]) == {"failures"}
     assert MANIFEST["app"]["roles"] == ["sre", "admin"] and MANIFEST["hosts"] == ["api.github.com"]
+    assert MANIFEST["app"]["run_as"] == "viewer" and "clis" not in MANIFEST and "secrets" not in MANIFEST
     page = (HERE / "index.html").read_text()
-    assert "/apps/deploy_failures/call/failures" in page and "connector" not in page.lower().replace("never a connector", "")
+    assert '<script src="/apps/_/rrotor.js"></script>' in page
+    assert page.index("await rrotor.ready()") < page.index('rrotor.call("failures"')
+    assert "fetch(" not in page and "connector" not in page.lower().replace("never a connector", "")
 
 
 def test_failures_are_counted_by_workflow_most_first(tmp_path):

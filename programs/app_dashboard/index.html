@@ -31,8 +31,11 @@
   <thead><tr><th>Workflow</th><th class="n">Failures</th><th></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
+<script src="/apps/_/rrotor.js"></script>
 <script>
   // The page's data comes from its own function on the rrotor, run as the viewer: never a connector, never a key.
+  // rrotor.js calls the function; ready() would show the sign-in card for a CLI the viewer has not signed in to
+  // (this app has none: it reaches api.github.com directly), so it resolves at once.
   const $ = (id) => document.getElementById(id);
   const since = $("since");
   const weekAgo = new Date(Date.now() - 7 * 86400000);
@@ -40,17 +43,15 @@
 
   async function load() {
     $("status").textContent = "Loading…";
-    const res = await fetch("/apps/deploy_failures/call/failures", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ since: since.value }),
-    });
-    const result = await res.json();
-    if (result.status !== "done") {
-      $("status").textContent = `Could not load: ${result.data?.reason || result.status}`;
+    let data;
+    try {
+      await rrotor.ready();
+      data = await rrotor.call("failures", { since: since.value });
+    } catch (err) {
+      $("status").textContent = `Could not load: ${err.message}`;
       return;
     }
-    const rows = result.data.by_workflow;
+    const rows = data.by_workflow;
     const most = Math.max(1, ...rows.map((r) => r.failures));
     $("rows").replaceChildren(...rows.map((r) => {
       const tr = document.createElement("tr");
@@ -62,7 +63,7 @@
       tr.append(name, n, cell);
       return tr;
     }));
-    $("status").textContent = `${result.data.total} failed runs since ${result.data.since}`;
+    $("status").textContent = `${data.total} failed runs since ${data.since}`;
   }
   $("refresh").addEventListener("click", load);
   load();

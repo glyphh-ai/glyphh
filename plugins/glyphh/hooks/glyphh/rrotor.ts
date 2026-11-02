@@ -9,7 +9,7 @@ export const RROTOR_URL = 'http://127.0.0.1:7777'
 
 /** The rrotor release this plugin was made against: what the rrotor skill's script installs (its PINNED_VERSION,
  *  which CI holds equal to this), and what the Account section offers to update to. */
-export const RROTOR_PINNED = '0.3.0'
+export const RROTOR_PINNED = '0.4.0'
 
 /** Whether a running rrotor is older than the pinned release (a dev build's odd version counts as current). */
 export function isBehind(version: string): boolean {

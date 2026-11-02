@@ -78,7 +78,8 @@ token: only when the person asks for exactly that.
 
 **Updating.** Each plugin release pins the rrotor release it was made against; a rrotor behind it lacks what the
 newer plugin and skills expect (a rrotor before 0.2.0 has no `app_publish`, before 0.3.0 no React pages, documents,
-diagrams or images). When the person asks to update rrotor, when `status` says `update_available`, or when a tool
+diagrams or images, before 0.4.0 no sign-in from an app's page, no `run_as`, no `cli_login {shared}` and no `env`
+for `ctx.cli`). When the person asks to update rrotor, when `status` says `update_available`, or when a tool
 this skill names is missing from `mcp__rrotor__*` while others are there:
 
 ```sh
@@ -105,16 +106,22 @@ Once connected, rrotor's tools are `mcp__rrotor__*`:
 | `approvals` | Runs waiting for the person |
 | `secrets_list {program}`, `secret_set {program, name, value}`, `secret_delete` | A program's secrets: names back, never a value |
 | `schedules_list`, `schedule_pause`, `schedule_resume` `{program, name}` | The schedules rrotor fires itself |
-| `clis_list`, `cli_run {cli, args, stdin?, files?}` | The CLIs; one command: exit code, stdout, stderr, or `needs_approval` |
-| `cli_login {cli}` | Signs a CLI in from the person's phone, into their own HOME on the rrotor (each signed-in person signs in as themselves; `clis_list` says `signed_in` for the caller) |
-| `apps_list {type?}` | The apps published to this rrotor: name, title, type, version, roles, review state, Open URL; `type` keeps one of page, dashboard, doc, diagram, deck, design |
-| `app_publish {name, title, description, type?, roles?, files, entry?, functions?, program?, ...}` | One file (a page, a document, a diagram, an image; a PDF or an image as `{"base64": …}`) as a new version of an app, awaiting review in the organisation's catalogue (the `publish` skill); `type` one of the six, else the entry's own (never `dashboard` or `deck`) |
+| `clis_list`, `cli_run {cli, args, stdin?, files?}` | The CLIs (each with `signed_in` for the caller and `shared_signed_in` for its shared HOME); one command: exit code, stdout, stderr, or `needs_approval` |
+| `cli_login {cli, shared?}` | Signs a CLI in from the person's phone, into their own HOME on the rrotor (each signed-in person signs in as themselves). `shared: true` signs it in to the CLI's own shared HOME instead, for apps that run as the app, schedules and runtime keys: an admin's act (`E_FORBIDDEN` for a member; the local token may) |
+| `apps_list {type?}` | The apps published to this rrotor: name, title, type, version, roles, `run_as`, review state, Open URL; `type` keeps one of page, dashboard, doc, diagram, deck, design |
+| `app_publish {name, title, description, type?, roles?, run_as?, files, entry?, functions?, program?, ...}` | One file (a page, a document, a diagram, an image; a PDF or an image as `{"base64": …}`) as a new version of an app, awaiting review in the organisation's catalogue (the `publish` skill); `type` one of the six, else the entry's own (never `dashboard` or `deck`); `run_as` `viewer` (the default: its functions run as the person viewing it) or `app` (as the app itself, with its shared sign-ins and its vault) |
 | `audit_query` | The audit log (Enterprise) |
 
 The organisation's catalogue of apps is the Glyphh connector's (`https://api.glyphh.ai/mcp`): `apps {q?, page?,
 state?, type?}` lists them as cards (search, a type filter, Open; a reviewer sees Awaiting review with Approve and
 Reject), `app_approve`, `app_reject {reason}` and `app_retire` act on one by id; `whoami` says whether the person is
 a reviewer (`reviewer`) and their groups.
+
+**An app's sign-ins.** An app whose page calls functions runs them as the viewer (each person signs the app's CLIs
+in once, from the page's sign-in card or with `cli_login`) or as the app (`run_as: app`: an admin signs each CLI
+in once with `cli_login {cli, shared: true}`, or the app hands a declared secret to the CLI with `ctx.cli(...,
+env=...)` and no one signs in; `secret_set` sets it). The catalogue's card says which and names a secret not yet
+set. Choosing between them, the page's `rrotor.js` and the keys are the `publish` skill's.
 
 - **A folder on this machine** deploys with the script (the MCP tool takes a GitHub repo): commit first, then
   `sh "${CLAUDE_SKILL_DIR}/scripts/rrotor.sh" deploy /abs/path/to/program` (HEAD, or a commit after

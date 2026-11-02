@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open issues</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 32px 24px; max-width: 760px; margin-inline: auto; font-family: system-ui, sans-serif; line-height: 1.5; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: GrayText; margin: 0 0 24px; }
+  .row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, .5); background: transparent; color: inherit; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid rgba(128, 128, 128, .25); }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+  .note { color: GrayText; }
+</style>
+</head>
+<body>
+<h1>Open issues</h1>
+<p class="sub">The repository's open issues, the same for everyone who opens this page.</p>
+<div class="row">
+  <button id="refresh" type="button">Refresh</button>
+  <span id="status" class="note"></span>
+</div>
+<table aria-label="Open issues">
+  <thead><tr><th class="n">#</th><th>Title</th><th>Opened</th><th>By</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<script src="/apps/_/rrotor.js"></script>
+<script>
+  // The page's data comes from its own function on the rrotor, run as the app with the organisation's token: no
+  // viewer signs in, so rrotor.ready() resolves at once and shows no card. Never a connector in the path.
+  const $ = (id) => document.getElementById(id);
+
+  async function load() {
+    $("status").textContent = "Loading…";
+    let data;
+    try {
+      await rrotor.ready();
+      data = await rrotor.call("issues", { limit: 50 });
+    } catch (err) {
+      $("status").textContent = `Could not load: ${err.message}`;
+      return;
+    }
+    $("rows").replaceChildren(...data.issues.map((i) => {
+      const tr = document.createElement("tr");
+      const n = document.createElement("td"); n.className = "n"; n.textContent = `#${i.number}`;
+      const title = document.createElement("td");
+      const link = document.createElement("a"); link.href = i.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = i.title;
+      title.append(link);
+      const opened = document.createElement("td"); opened.textContent = i.opened;
+      const by = document.createElement("td"); by.textContent = i.author || "";
+      tr.append(n, title, opened, by);
+      return tr;
+    }));
+    $("status").textContent = `${data.total} open in ${data.repo} · refreshed ${data.refreshed_at}`;
+  }
+  $("refresh").addEventListener("click", load);
+  load();
+</script>
+</body>
+</html>

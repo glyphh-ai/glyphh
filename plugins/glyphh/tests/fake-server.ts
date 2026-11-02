@@ -26,6 +26,12 @@ export const app = (n: number, state = 'approved', more: Json = {}): Json => ({
   commit_sha: 'c'.repeat(40),
   roles: n % 2 ? [] : ['sre'],
   state,
+  // What each needs (the spec's 4.7), spread as the platform's fixtures: app 2 runs as the viewer with two CLIs,
+  // app 3 as the app with gh and a secret not yet set, the rest need nothing.
+  run_as: n === 3 ? 'app' : 'viewer',
+  clis: n === 2 ? ['bq', 'gh'] : n === 3 ? ['gh'] : [],
+  secrets: n === 3 ? ['GH_TOKEN'] : [],
+  secrets_missing: n === 3 ? ['GH_TOKEN'] : [],
   submitted_by: { id: 'u1', name: 'Chris', email: 'chris@example.com' },
   submitted_at: '2026-11-01T10:00:00Z',
   reviewed_by: null,

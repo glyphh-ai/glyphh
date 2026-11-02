@@ -7,15 +7,20 @@ tests. Copy one, change it, and deploy it to your rrotor. More are on the way.
 |---|---|---|
 | [`launch_watch`](launch_watch) | Each morning, takes a project's GitHub stars, forks, new issues and PRs, and its PyPI and npm downloads. Keeps them day by day in its database and emails you the summary through Claude's Gmail connector | A schedule, an approval, SQLite, the built-in `claude` CLI |
 | [`app_static`](app_static) | A page published to the organisation (`"kind": "app"`): one `index.html`, served at `/apps/release_notes/` to everyone signed in, once a reviewer approves it | An app with nothing behind it |
-| [`app_dashboard`](app_dashboard) | A dashboard (`"type": "dashboard"`) of failed GitHub Actions runs by workflow, for the `sre` group: the page calls its own function, run as the person viewing it | An app with a function, roles, a declared host |
+| [`app_dashboard`](app_dashboard) | A dashboard (`"type": "dashboard"`) of failed GitHub Actions runs by workflow, for the `sre` group: the page calls its own function through `rrotor.js`, run as the person viewing it (`"run_as": "viewer"`) | An app with a function, roles, a declared host |
+| [`app_report`](app_report) | A report of a repository's open issues, the same for everyone: the page's function runs as the app (`"run_as": "app"`) and hands the organisation's token from the vault to `gh` (`ctx.cli(..., env=...)`), so no viewer signs in | An app with a CLI, a secret, run as the app |
 | [`app_react`](app_react) | A React page: one `index.tsx` with a recharts bar chart and Tailwind classes, served by rrotor's React shell with no build | An app of one `.tsx` file |
 | [`app_diagram`](app_diagram) | A diagram: one `index.mmd` (a Mermaid sequence diagram of the browser sign-in), rendered by rrotor's diagram shell; the type `diagram` is inferred from the entry | An app of one `.mmd` file |
 
 An **app** is what Claude made (a Claude Code artifact, a React page, a document, a diagram, a deck, a design, a
 dashboard) published to the organisation's own rrotor and reviewed before anyone opens it; the plugin's `publish`
 skill does it from the session (*"publish this to my org"*). Its manifest is a program's with `"kind": "app"` and an
-`app` block (`entry`, `type`, `title`, `roles`, `functions`); the type is one of `page`, `dashboard`, `doc`,
+`app` block (`entry`, `type`, `title`, `roles`, `run_as`, `functions`); the type is one of `page`, `dashboard`, `doc`,
 `diagram`, `deck`, `design`, and follows the entry's extension when absent (`dashboard` and `deck` are always said).
+An app whose page calls functions loads rrotor's own script (`/apps/_/rrotor.js`, rrotor 0.4.0) and awaits
+`rrotor.ready()` before `rrotor.call(...)`; its functions run as the viewer (`"run_as": "viewer"`, the default: each
+viewer signs the app's CLIs in once, from the page's sign-in card) or as the app (`"run_as": "app"`: the same for
+everyone, with the CLIs an admin signed in once with `cli_login {shared: true}` or a key from the vault).
 
 ## Deploy one
 

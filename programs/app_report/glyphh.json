@@ -1,0 +1,28 @@
+{
+  "name": "open_issues",
+  "kind": "app",
+  "description": "A repository's open issues, the same for everyone: read by gh as the organisation's token",
+  "python": "3.13",
+  "app": {
+    "entry": "index.html",
+    "type": "dashboard",
+    "title": "Open issues",
+    "roles": [],
+    "run_as": "app",
+    "functions": ["issues"]
+  },
+  "functions": {
+    "issues": {
+      "description": "The repository's open issues, newest first, read by gh with the organisation's token",
+      "inputs": {
+        "type": "object",
+        "properties": { "limit": { "type": "integer", "minimum": 1, "maximum": 200 } },
+        "additionalProperties": false
+      },
+      "writes": false
+    }
+  },
+  "clis": ["gh"],
+  "secrets": ["GH_TOKEN"],
+  "limits": { "seconds": 60, "memory_mb": 256 }
+}

@@ -140,6 +140,19 @@ test('apps: the cards say the type, who published them, when, and for whom', () 
   expect(R.rolesLine(app(2))).toBe('sre')
 })
 
+test('apps: the cards say what an app needs, and name a secret not set on the rrotor', () => {
+  expect(R.needsLine(app(1))).toBeNull()
+  expect(R.needsLine({})).toBeNull()
+  expect(R.needsLine(app(2))).toBe('Runs as the viewer · bq, gh (each viewer signs in)')
+  expect(R.needsLine(app(3))).toBe('Runs as the app · gh (signed in once by an admin) · secrets: GH_TOKEN')
+  expect(R.needsLine({ run_as: 'app' })).toBe('Runs as the app')
+  expect(R.needsLine({ run_as: 'viewer', secrets: ['DSN'] })).toBe('Runs as the viewer · secrets: DSN')
+  expect(R.missingLine(app(2), true)).toBeNull()
+  expect(R.missingLine(app(3), false)).toBe('GH_TOKEN not set on the rrotor')
+  expect(R.missingLine(app(3), true)).toBe('GH_TOKEN not set on the rrotor · set it with secret_set')
+  expect(R.missingLine({ secrets_missing: ['A', 'B'] }, true)).toBe('A, B not set on the rrotor · set them with secret_set')
+})
+
 test('publish: the command words, a path then --key value pairs, quotes kept', () => {
   expect(R.parsePublish('/tmp/x/board.html --name deploy-board --title "Deploy board" --type Dashboard --roles sre,Admin')).toEqual({
     path: '/tmp/x/board.html',
@@ -222,7 +235,7 @@ test('publish: no file, not an entry, a type outside the six, unreadable, no rro
   w.s.rrotorDown = false
   w.s.rrotorOld = true
   expect((await glyphhCommand(w.gh, 'publish /tmp/board.html')).text).toBe(
-    'This rrotor is older than 0.3.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").',
+    'This rrotor is older than 0.4.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").',
   )
   w.s.rrotorOld = false
   const refused = await glyphhCommand(w.gh, 'publish /tmp/board.html --name "Not A Name"')

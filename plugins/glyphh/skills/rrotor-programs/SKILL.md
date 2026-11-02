@@ -85,6 +85,10 @@ def start(ctx: Ctx, inputs: dict) -> Result:
 - `ctx.http` (HTTPS to the declared hosts), `ctx.files` (its folder), `ctx.data`, `ctx.db`, `ctx.secrets["NAME"]`,
   `ctx.log(message, **detail)`, `ctx.today()`, `ctx.yesterday()`, `ctx.caller` (`claude` or `schedule`),
   `ctx.clearance`. `rrotor` is in the sandbox already: never install it or list it in `requirements.lock`.
+- `ctx.cli(name, args, stdin=None, env=None)`: one command of a CLI the manifest's `clis` names, run in that CLI's
+  own sandbox with its sign-in (its exit code, stdout, stderr; once per run). `env` maps names (`[A-Z_][A-Z0-9_]*`,
+  at most 32) to values the command gets for that one call, beside the CLI's own: the way to hand it a key from the
+  vault, `env={"GH_TOKEN": ctx.secrets["GH_TOKEN"]}` (a value of four characters or more is masked in the log).
 - Its tests use `rrotor.testing.Harness` (inputs, answers, a folder, an `http` that answers what the test says,
   `secrets={...}`, `database=<a file>`). rrotor's `examples/daily_sales` is the model to follow.
 

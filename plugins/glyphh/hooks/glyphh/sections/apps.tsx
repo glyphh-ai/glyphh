@@ -1,6 +1,7 @@
 // Apps: what Claude made and published to the organisation, as cards (a type
-// chip, search, a type filter, a page of 24, Open at the rrotor); for a
-// reviewer the views Published, Awaiting review and Rejected, with Approve,
+// chip, search, a type filter, a page of 24, Open at the rrotor, and what the
+// app needs: who it runs as, its CLIs, its secrets and which are not set); for
+// a reviewer the views Published, Awaiting review and Rejected, with Approve,
 // Reject (a reason) and Retire.
 import type { Json } from '../../../types'
 import {
@@ -9,6 +10,8 @@ import {
   askReason,
   cycleType,
   isReviewer,
+  missingLine,
+  needsLine,
   openApp,
   pageLine,
   pages,
@@ -38,6 +41,8 @@ function Card(ctx: Ctx, a: Json, reviewer: boolean) {
   const id = idOf(a, 'app_id')
   const state = str(a.state)
   const chip = STATE_CHIP[state]
+  const needs = needsLine(a)
+  const missing = missingLine(a, reviewer)
   const actions = [
     { key: `app-open-${id}`, label: 'Open', primary: true, onPress: () => openApp(gh, a, surface) },
     ...(reviewer && (state === 'draft' || state === 'rejected') ? [{ key: `app-approve-${id}`, label: 'Approve', onPress: () => approveApp(gh, id) }] : []),
@@ -66,6 +71,12 @@ function Card(ctx: Ctx, a: Json, reviewer: boolean) {
         </Text>
         {k.Actions(actions)}
       </Box>
+      {needs ? (
+        <Box gap={1} alignItems="center">
+          <Text size="footnote" dimColor>{needs}</Text>
+          {missing ? <Text size="footnote" color="warning">{missing}</Text> : null}
+        </Box>
+      ) : null}
       {state === 'rejected' && a.reason ? <Text size="footnote" color="error">Rejected: {str(a.reason)}</Text> : null}
       {reviewer && v.rejecting === id && (
         <Box gap={1} alignItems="center">

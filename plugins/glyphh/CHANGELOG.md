@@ -2,6 +2,35 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.8.0 — 2026-11-02
+
+An app's sign-ins and keys, from the page. An app that needs a CLI works for the person opening it as it does from
+Claude, and an app can run as itself with a key the organisation set. Needs rrotor 0.4.0 (pinned here; "update
+rrotor" pulls it).
+
+- **Sign in from the page.** A page that calls functions loads rrotor's own script (`/apps/_/rrotor.js`) and awaits
+  `rrotor.ready()` before `rrotor.call(...)`: a viewer not yet signed in to one of the app's CLIs gets rrotor's
+  sign-in card (the link, the device code, Copy, then "Signed in") instead of an error, and signs in once, as
+  themselves. The publish skill writes pages this way and no longer hands a page raw `fetch` calls.
+- **Apps that run as the app.** `run_as: app` in the manifest and in `app_publish`: the page's functions run as
+  the app itself, the same for every viewer, with CLIs an admin signed in once (`cli_login {cli, shared: true}`)
+  or a key from the vault handed to the CLI for one command (`ctx.cli(..., env={"GH_TOKEN":
+  ctx.secrets["GH_TOKEN"]})`). The publish skill decides `viewer` or `app` with the person (their own data, or the
+  same for everyone) and says which secrets to set with `secret_set`.
+- **The card says what an app needs.** The Apps section's cards carry one dim line when there is anything to say:
+  "Runs as the viewer · bq, gh (each viewer signs in)" or "Runs as the app · gh (signed in once by an admin) ·
+  secrets: GH_TOKEN"; a secret not set on the rrotor is named in the warning colour, with "set it with secret_set"
+  for a reviewer. The platform's page and the connector's panel say the same line.
+- **The catalogue without Claude Code.** The publish skill tells the person where viewers without the plugin find the
+  apps: the Glyphh connector's `apps` tool in claude.ai (the cards inline in the chat) and the rrotor's own `/apps/`
+  page.
+- The rrotor skill's table gains `cli_login {cli, shared?}`, `clis_list`'s `shared_signed_in` and `app_publish`'s
+  `run_as`; the rrotor-programs skill documents `ctx.cli`'s `env`. `programs/app_dashboard` says `"run_as":
+  "viewer"` and calls its function through `rrotor.js`; a new `programs/app_report` runs as the app with `gh` and a
+  `GH_TOKEN` secret.
+- rrotor 0.4.0 pinned: the skill's script, the Account section's "Update to 0.4.0", the compose default and the Helm
+  chart (0.5.0).
+
 ## 1.7.2 — 2026-11-02
 
 rrotor kept at the release this plugin was made against. Until now the rrotor skill's script pinned 0.1.0 while

@@ -8,6 +8,7 @@
     "type": "dashboard",
     "title": "Deploy failures",
     "roles": ["sre", "admin"],
+    "run_as": "viewer",
     "functions": ["failures"]
   },
   "functions": {

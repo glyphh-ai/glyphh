@@ -126,6 +126,29 @@ export function publishedLine(a: Json): string {
 
 export const rolesLine = (a: Json): string => (Array.isArray(a.roles) && a.roles.length ? a.roles.map(r => str(r)).join(', ') : 'Everyone')
 
+const names = (v: unknown): string[] => (Array.isArray(v) ? v.map(x => str(x)).filter(Boolean) : [])
+
+/** What the app needs (the spec's 4.7), as the platform's card says it: who its functions run as, its CLIs and who
+ *  signs them in, its secrets. Null when it needs nothing (no CLIs, no secrets, run as the viewer). */
+export function needsLine(a: Json): string | null {
+  const clis = names(a.clis)
+  const secrets = names(a.secrets)
+  const asApp = str(a.run_as) === 'app'
+  if (!clis.length && !secrets.length && !asApp) return null
+  const parts = [asApp ? 'Runs as the app' : 'Runs as the viewer']
+  if (clis.length) parts.push(`${clis.join(', ')} (${asApp ? 'signed in once by an admin' : 'each viewer signs in'})`)
+  if (secrets.length) parts.push(`secrets: ${secrets.join(', ')}`)
+  return parts.join(' · ')
+}
+
+/** The declared secrets not set on the rrotor, in the warning colour; a reviewer is told how to set them. */
+export function missingLine(a: Json, reviewer: boolean): string | null {
+  const missing = names(a.secrets_missing)
+  if (!missing.length) return null
+  const named = `${missing.join(', ')} not set on the rrotor`
+  return reviewer ? `${named} · set ${missing.length > 1 ? 'them' : 'it'} with secret_set` : named
+}
+
 // /glyphh publish <file> [--name n] [--title t] [--description d] [--type t] [--roles a,b]
 
 type PublishArgs = { path?: string; name?: string; title?: string; description?: string; type?: string; roles: string[] }
