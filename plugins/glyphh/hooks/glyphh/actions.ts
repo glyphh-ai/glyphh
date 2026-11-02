@@ -6,14 +6,21 @@ import type { GlyphhSection, Json } from '../../types'
 import { api, listOf } from './api'
 import { act, forget, loadMe } from './account'
 import { loadArtifacts } from './artifacts'
+import { linkRrotor, rrotorHealth } from './link'
 import { openUrl } from './open'
 import { say, setList } from './state'
 import type { Host } from './host'
 
 const enc = encodeURIComponent
 
+/** This machine's rrotor, as the Account section shows it (one entry: its health). */
+const loadRrotor = async (gh: Host) => setList(gh, 'rrotor', [await rrotorHealth(gh).catch((err: unknown): Json => ({ status: 'down', error: String(err) }))])
+
 const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
-  account: gh => api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs'))),
+  account: async gh => {
+    await api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs')))
+    await loadRrotor(gh)
+  },
   org: async gh => {
     await api(gh, 'GET', '/v1/org').then(b => setList(gh, 'org', [b]))
     await api(gh, 'GET', '/v1/org/members').then(b => setList(gh, 'members', listOf(b, 'members')))
@@ -48,6 +55,16 @@ export const revokeInstall = (gh: Host, id: string) =>
     const a = await gh.state.auth.get()
     if (a.status === 'in' && a.install_id === id) return forget(gh, 'This install was revoked.')
     await reload(gh)
+  })
+
+/** The Account section's Link: this machine's rrotor linked to Glyphh (again), then shown as it stands. */
+export const linkLocalRrotor = (gh: Host) =>
+  act(gh, undefined, async () => {
+    try {
+      await say(gh, await linkRrotor(gh))
+    } finally {
+      await loadRrotor(gh)
+    }
   })
 
 export const renameOrg = (gh: Host, name: string) =>

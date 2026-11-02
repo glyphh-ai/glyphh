@@ -148,6 +148,26 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Button', key: 'art-retire-a2' })).toBeUndefined()
   })
 
+  test(`${surface}: Account shows this machine's rrotor and links it to Glyphh`, async ($, on) => {
+    const w = world(on, surface)
+    w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
+    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
+    const ui = await $.ui.mount(pane(surface))
+    await ui.press({ key: 'sec-account' })
+    expect(await ui.find({ type: 'Text', text: 'No rrotor on this machine: ask Claude to "install rrotor".' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'rrotor-link' })).toBeUndefined()
+
+    w.files.set(`${HOME}/.glyphh/rrotor/token`, 'rt-local-1\n')
+    await ui.press({ key: 'sec-account' })
+    expect(await ui.find({ type: 'Text', text: 'Not linked (rrotor 0.2.0)' })).toBeDefined()
+    expect((await ui.find({ type: 'Button', key: 'rrotor-link' }))?.props.label).toBe('link')
+    await ui.press({ key: 'rrotor-link' })
+    expect(await ui.find({ type: 'Text', text: /Linked to Glyphh as rt-local-1/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Linked as rt-local-1 (rrotor 0.2.0)' })).toBeDefined()
+    expect((await ui.find({ type: 'Button', key: 'rrotor-link' }))?.props.label).toBe('link again')
+    expect(w.server.s.tokens).toEqual([{ runtime_id: 'rt-local-1', token: 'rtok-1' }])
+  })
+
   test(`${surface}: Plan shows the cloud use and the plans' caps; Billing offers checkout, Talk to us and no seats`, async ($, on) => {
     const w = world(on, surface)
     w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))

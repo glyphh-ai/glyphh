@@ -1,6 +1,6 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.6.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill, rrotor
+The Glyphh plugin for Claude Code, 1.6.1 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the Ada skill, rrotor
 (your local runtime for programs and CLIs), pages published to your organisation's rrotor, and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing
 to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said
 plainly in the panel and by the skill, with how to update the plugin. rrotor is the other way round: a container you
@@ -31,6 +31,7 @@ the Ada skills never touch rrotor.
 |---|---|
 | `/glyphh [section]` | The panel: Sign in, Account, Org, Plan, Billing, Artifacts. Where another command or skill has the name, it is `/glyphh-account` |
 | `/glyphh publish <file> [--name n] [--title t] [--description d] [--roles a,b]` | A page Claude wrote (one `.html` or `.md` file) to the local rrotor (`POST /v1/apps` on `127.0.0.1:7777`, the token from `~/.glyphh/rrotor/token`) as an app awaiting review; the reply says the version, who reviews it and the Open link. The name comes from the title (the page's `<title>` or first heading) when not given; roles default to everyone |
+| `/glyphh link` | This machine's rrotor linked to Glyphh: the server issues the local runtime's token to this install (`POST /v1/runtime/local`, rotated each time), rrotor takes it (`PUT /v1/runtime/token` on `127.0.0.1:7777`) and connects out; the reply says when it is online. Linked, it shows on the platform's Runtimes page, its apps reach the organisation's catalogue, and it gets the organisation's licence key. The Account section's **link** does the same |
 | `/glyphh signin`, `/glyphh signout` | Sign in by device flow (the code and link are also printed); sign this device out |
 | *"sign in to Glyphh"* | The sign-in card in the chat (the `glyphh-sign-in` skill) |
 
@@ -45,7 +46,7 @@ token>`.
 | Section | Does |
 |---|---|
 | Sign in | `POST /v1/device/code {name, surface, mod_version, machine_id}`; shows the code and link (opened in the browser pane on the desktop, printed in a terminal); polls `POST /v1/device/token` at `interval`, 5 s slower on `slow_down`, until the token, `expired_token` or `access_denied`. Copy link, Cancel |
-| Account | Name (Enter renames), email, sign-in providers (link, unlink), installs (revoke one; revoking this one signs out), Sign out |
+| Account | Name (Enter renames), email, sign-in providers (link, unlink), installs (revoke one; revoking this one signs out), this machine's rrotor (its link state from `GET /v1/health`: none installed, not running, not linked, linking, linked as its runtime id; **link** or **link again**), Sign out |
 | Org | Name (an admin renames), members and roles (an admin removes, never the admin), invites: send (the link to copy), revoke |
 | Plan | The plan and the org's Ada Cloud use this month (`/v1/me`'s `cloud`): precedents held of the plan's, reads of the plan's, the reads past it (metered), and the day the count starts again; the org's models by Ada version (`cloud.ada`, the shape of the Ada host's `GET /v1/ada`): the latest stable, each version's status (a beta labelled, a deprecated one with its end date) and models, and for a deprecated one what happens on that date and what to do; a newer contract than the plugin's 5 is one line saying to update it; every plan by price with its precedents, reads a month and what reads past the month cost (`/v1/plans`'s `cloud`) |
 | Billing (admin) | Stripe Checkout for Basic, Pro or Team without a subscription (`POST /v1/billing/checkout`), else a change of plan (`POST /v1/billing/plan`); **Talk to us** for Enterprise (`sales@glyphh.ai`, copied); card and invoices (`POST /v1/billing/portal`). Stripe opens in the browser pane, or as a link in a terminal |
@@ -152,6 +153,7 @@ through the engine on both surfaces. `mcp/test` checks install.json's mode and a
 | `hooks/glyphh/actions.ts`, `panel.tsx`, `sections/`, `ui.tsx`, `shape.ts`, `inline.tsx` | What each section does; the panel and its sections; reading the server's answers; the inline sign-in |
 | `hooks/glyphh/command.ts`, `open.ts`, `openreq.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the card's open requests; the panel's note |
 | `hooks/glyphh/artifacts.ts`, `rrotor.ts`, `sections/artifacts.tsx` | The catalogue's cards, search, paging and reviews; `/glyphh publish`; the one call to the local rrotor (`POST /v1/apps`) |
+| `hooks/glyphh/link.ts` | This machine's rrotor linked to Glyphh: its health, the token from `POST /v1/runtime/local` handed to `PUT /v1/runtime/token`, the wait for it to connect; `/glyphh link` |
 | `mcp/src/` | The MCP server: `server.ts` (the tools and the card), `flow.ts` (the device flow), `install.ts` (install.json, the device id's probe) |
 | `mcp/card/` | `sign-in.html`, and `mcp-app.js`: `@modelcontextprotocol/ext-apps` 2.0.3's bridge, vendored |
 | `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md`, `rrotor/SKILL.md` (with `scripts/rrotor.sh`), `rrotor-programs/SKILL.md`, `publish/SKILL.md` |
