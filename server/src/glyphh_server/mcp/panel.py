@@ -1,7 +1,7 @@
 """The panels: MCP App resources (MCP Apps 2026-01-26), each an HTML page that renders what its tools answer and acts
-by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/4`) and the artifacts
-panel (`ui://glyphh/artifacts/1`, docs/specs/artifacts.md, 3.5: the org's artifacts as cards, searchable and paged,
-with Open; a reviewer's Awaiting review with Approve and Reject). Each inlines the MCP Apps client
+by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/4`) and the apps
+panel (`ui://glyphh/apps/1`, docs/specs/apps.md, 3.5: the org's apps as cards, searchable, paged and filtered by
+type, with Open; a reviewer's Awaiting review with Approve and Reject). Each inlines the MCP Apps client
 (@modelcontextprotocol/ext-apps 2.0.3, the bundle the glyphh mod's sign-in card ships). An address carries its
 version: a new panel, a new address."""
 
@@ -12,7 +12,7 @@ from typing import Any
 from glyphh_server.mcp.protocol import Call
 
 URI: str = "ui://glyphh/account/4"
-ARTIFACTS_URI: str = "ui://glyphh/artifacts/1"
+APPS_URI: str = "ui://glyphh/apps/1"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {
@@ -22,16 +22,16 @@ RESOURCE: dict[str, str] = {
     "description": "Your Glyphh account: plan, each mod's limits and use, upgrade, billing, installs and grants.",
     "mimeType": MIME,
 }
-ARTIFACTS_RESOURCE: dict[str, str] = {
-    "uri": ARTIFACTS_URI,
-    "name": "artifacts",
-    "title": "Org artifacts",
-    "description": "Your org's artifacts: Claude's pages published to its rrotors, searchable, with Open; "
-    "a reviewer approves or rejects the ones awaiting review.",
+APPS_RESOURCE: dict[str, str] = {
+    "uri": APPS_URI,
+    "name": "apps",
+    "title": "Org apps",
+    "description": "Your org's apps: what Claude made, published to its rrotors, searchable and filtered by type, "
+    "with Open; a reviewer approves or rejects the ones awaiting review.",
     "mimeType": MIME,
 }
-RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, ARTIFACTS_RESOURCE)
-PAGES: dict[str, str] = {URI: "account.html", ARTIFACTS_URI: "artifacts.html"}
+RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, APPS_RESOURCE)
+PAGES: dict[str, str] = {URI: "account.html", APPS_URI: "apps.html"}
 
 
 @lru_cache

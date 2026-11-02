@@ -1,5 +1,5 @@
-"""The catalogue (docs/specs/artifacts.md, 3): one row per app on an org's rrotor, filled from the rrotor's own
-`deployed` message up the link and reviewed here. Never the page itself."""
+"""The catalogue (docs/specs/apps.md, 3): one row per app on an org's rrotor, filled from the rrotor's own `deployed`
+message up the link and reviewed here. Never the files themselves."""
 
 import uuid
 from datetime import datetime
@@ -11,13 +11,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 from glyphh_server.models.base import Base, created_at, guid
 
 STATES: tuple[str, ...] = ("draft", "approved", "rejected", "retired")
+TYPES: tuple[str, ...] = ("page", "dashboard", "doc", "diagram", "deck", "design")
 
 
-class Artifact(Base):
-    __tablename__ = "artifacts"
+class App(Base):
+    __tablename__ = "apps"
     __table_args__ = (
-        CheckConstraint(f"state IN {STATES}", name="artifacts_state"),
-        Index("artifacts_one_per_app", "runtime_id", "name", unique=True),
+        CheckConstraint(f"state IN {STATES}", name="apps_state"),
+        CheckConstraint(f"type IN {TYPES}", name="apps_type"),
+        Index("apps_one_per_app", "runtime_id", "name", unique=True),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -26,6 +28,7 @@ class Artifact(Base):
     name: Mapped[str] = mapped_column(Text)  # the program's name on that rrotor
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(Text, server_default="page")  # what it is: a page, a dashboard, a doc, ...
     version: Mapped[int] = mapped_column(Integer)  # the rrotor's version number, the one reviewed
     commit_sha: Mapped[str] = mapped_column(Text)
     roles: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))

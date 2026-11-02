@@ -361,14 +361,15 @@ CREATE TABLE IF NOT EXISTS rrotors (
 );
 CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
 
--- artifacts: the catalogue of apps on an org's rrotors (docs/specs/artifacts.md), one row per app per rrotor
-CREATE TABLE IF NOT EXISTS artifacts (
+-- apps: the catalogue of apps on an org's rrotors (docs/specs/apps.md), one row per app per rrotor
+CREATE TABLE IF NOT EXISTS apps (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID NOT NULL,
     runtime_id UUID NOT NULL,
     name TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
+    type TEXT DEFAULT 'page' NOT NULL,
     version INTEGER NOT NULL,
     commit_sha TEXT NOT NULL,
     roles TEXT[] DEFAULT '{}'::text[] NOT NULL,
@@ -381,14 +382,15 @@ CREATE TABLE IF NOT EXISTS artifacts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT artifacts_state CHECK (state IN ('draft', 'approved', 'rejected', 'retired')),
+    CONSTRAINT apps_state CHECK (state IN ('draft', 'approved', 'rejected', 'retired')),
+    CONSTRAINT apps_type CHECK (type IN ('page', 'dashboard', 'doc', 'diagram', 'deck', 'design')),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(runtime_id) REFERENCES rrotors (id) ON DELETE CASCADE,
     FOREIGN KEY(submitted_by) REFERENCES users (id) ON DELETE SET NULL,
     FOREIGN KEY(reviewed_by) REFERENCES users (id) ON DELETE SET NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS artifacts_one_per_app ON artifacts (runtime_id, name);
-CREATE INDEX IF NOT EXISTS ix_artifacts_org_id ON artifacts (org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS apps_one_per_app ON apps (runtime_id, name);
+CREATE INDEX IF NOT EXISTS ix_apps_org_id ON apps (org_id);
 
 -- nodes
 CREATE TABLE IF NOT EXISTS nodes (
@@ -607,10 +609,10 @@ ALTER TABLE rrotors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rrotors FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON rrotors;
 CREATE POLICY tenant ON rrotors USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
-ALTER TABLE artifacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE artifacts FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON artifacts;
-CREATE POLICY tenant ON artifacts USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE apps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE apps FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON apps;
+CREATE POLICY tenant ON apps USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;

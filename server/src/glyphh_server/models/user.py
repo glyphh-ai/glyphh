@@ -28,6 +28,6 @@ class User(Base):
     created_at: Mapped[datetime] = created_at()
     # Where their sign-up came from: the website's campaign tags (ops/attribution.py); null when untagged.
     source: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    # The identity provider's groups, as single sign-on last said (docs/specs/artifacts.md, 2): the roles an
-    # artifact may be restricted to. Empty for a Google or GitHub sign-in.
+    # The identity provider's groups, as single sign-on last said (docs/specs/apps.md, 2): the roles an app may be
+    # restricted to. Empty for a Google or GitHub sign-in.
     groups: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))

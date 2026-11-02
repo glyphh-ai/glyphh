@@ -13,9 +13,8 @@ INSTRUCTIONS: str = (
     "Glyphh's account, from Claude: who you are (whoami), your plan (plan) and what you use of it (usage), what each "
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
     "members and invites, your self-hosted runtimes, their keys and offline licences, and the apps allowed to use "
-    "this connector (connector_grants). Your org's artifacts, Claude's pages published to its rrotors (artifacts, "
-    "shown as cards with Open; a reviewer approves, rejects or retires one: artifact_approve, artifact_reject, "
-    "artifact_retire)."
+    "this connector (connector_grants). Your org's apps, what Claude made and published to its rrotors (apps, shown "
+    "as cards with Open; a reviewer approves, rejects or retires one: app_approve, app_reject, app_retire)."
 )
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "

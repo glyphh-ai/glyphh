@@ -28,5 +28,5 @@ async def test_a_rrotor_gone_before_its_hello_is_let_go() -> None:
 
 async def test_a_ping_that_finds_the_rrotor_gone_ends_the_heartbeat(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(session, "PING_EVERY", 0.01)
-    link = Link(_HungUp(), uuid.uuid4())  # type: ignore[arg-type]
+    link = Link(_HungUp(), uuid.uuid4(), 3)  # type: ignore[arg-type]
     await session._heartbeat(link, session.Clock())

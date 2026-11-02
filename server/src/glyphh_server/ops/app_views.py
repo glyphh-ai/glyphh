@@ -1,5 +1,5 @@
-"""An artifact as the API and the connector show it (docs/specs/artifacts.md, 3.3): the row joined with its rrotor
-(name, address, mode) and the people who submitted and reviewed it, and `url`, where the app is."""
+"""An app as the API and the connector show it (docs/specs/apps.md, 3.3): the row joined with its rrotor (name,
+address, mode) and the people who submitted and reviewed it, and `url`, where the app is."""
 
 import uuid
 from datetime import datetime
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import aliased
 
-from glyphh_server.models import Artifact, Rrotor, User
+from glyphh_server.models import App, Rrotor, User
 
 LOCAL_URL: str = "http://127.0.0.1:7777"
 
@@ -20,7 +20,7 @@ class Person(BaseModel):
     email: str
 
 
-class ArtifactView(BaseModel):
+class AppView(BaseModel):
     id: uuid.UUID
     runtime_id: uuid.UUID
     runtime_name: str
@@ -28,6 +28,7 @@ class ArtifactView(BaseModel):
     name: str
     title: str
     description: str
+    type: str = Field(description="page, dashboard, doc, diagram, deck or design")
     version: int
     commit_sha: str
     roles: list[str]
@@ -41,7 +42,7 @@ class ArtifactView(BaseModel):
 
 
 class Page(BaseModel):
-    artifacts: list[ArtifactView]
+    apps: list[AppView]
     page: int
     per_page: int
     total: int
@@ -59,18 +60,19 @@ def app_url(mode: str, public_url: str | None, name: str) -> str:
 Submitter = aliased(User, name="submitter")
 Reviewer = aliased(User, name="reviewer")
 COLUMNS = (
-    Artifact.id,
-    Artifact.runtime_id,
-    Artifact.name,
-    Artifact.title,
-    Artifact.description,
-    Artifact.version,
-    Artifact.commit_sha,
-    Artifact.roles,
-    Artifact.state,
-    Artifact.submitted_at,
-    Artifact.reviewed_at,
-    Artifact.reason,
+    App.id,
+    App.runtime_id,
+    App.name,
+    App.title,
+    App.description,
+    App.type,
+    App.version,
+    App.commit_sha,
+    App.roles,
+    App.state,
+    App.submitted_at,
+    App.reviewed_at,
+    App.reason,
     Rrotor.name.label("runtime_name"),
     Rrotor.mode,
     Rrotor.public_url,
@@ -87,9 +89,9 @@ def query():  # type: ignore[no-untyped-def]
     """The rows with their rrotor and people, to filter and order."""
     return (
         select(*COLUMNS)
-        .join(Rrotor, Rrotor.id == Artifact.runtime_id)
-        .outerjoin(Submitter, Submitter.id == Artifact.submitted_by)
-        .outerjoin(Reviewer, Reviewer.id == Artifact.reviewed_by)
+        .join(Rrotor, Rrotor.id == App.runtime_id)
+        .outerjoin(Submitter, Submitter.id == App.submitted_by)
+        .outerjoin(Reviewer, Reviewer.id == App.reviewed_by)
     )
 
 
@@ -100,8 +102,8 @@ def _person(row: Row, prefix: str) -> Person | None:
     return Person(id=found, name=getattr(row, f"{prefix}_name"), email=getattr(row, f"{prefix}_email"))
 
 
-def view(row: Row) -> ArtifactView:
-    return ArtifactView(
+def view(row: Row) -> AppView:
+    return AppView(
         id=row.id,
         runtime_id=row.runtime_id,
         runtime_name=row.runtime_name or "local",
@@ -109,6 +111,7 @@ def view(row: Row) -> ArtifactView:
         name=row.name,
         title=row.title,
         description=row.description,
+        type=row.type,
         version=row.version,
         commit_sha=row.commit_sha,
         roles=list(row.roles),

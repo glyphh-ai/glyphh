@@ -1,6 +1,6 @@
-"""The first message on a link: the rrotor's `hello`, within 10 seconds, of protocol 2, naming the runtime its token
-is. Anything else closes the link with its reason: another protocol (1 included) 4426 (update the rrotor), the rest
-4400."""
+"""The first message on a link: the rrotor's `hello`, within 10 seconds, of protocol 3 (or 2, a 0.2.0 rrotor's),
+naming the runtime its token is. Anything else closes the link with its reason: another protocol (1 included) 4426
+(update the rrotor), the rest 4400."""
 
 import json
 
@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocket
 
 from glyphh_server.ops.link.presence import Runtime
-from glyphh_server.ops.link.protocol import BAD_HELLO, PROTOCOL, UPGRADE, Hello
+from glyphh_server.ops.link.protocol import ACCEPTED, BAD_HELLO, PROTOCOL, UPGRADE, Hello
 
 HELLO_WAIT: float = 10.0
 
@@ -36,7 +36,7 @@ async def read_hello(ws: WebSocket, runtime: Runtime) -> Hello | None:
         if raw is None:
             return None
         data = _json(raw)
-        if isinstance(data, dict) and data.get("type") == "hello" and data.get("protocol") != PROTOCOL:
+        if isinstance(data, dict) and data.get("type") == "hello" and data.get("protocol") not in ACCEPTED:
             await ws.close(UPGRADE, f"This server speaks protocol {PROTOCOL}. Update the rrotor.")
             return None
         try:

@@ -1,18 +1,18 @@
 """The hub: which server process holds which runtime's link.
 
-Each process keeps its own links in memory, one per runtime. A message for a runtime held here goes straight down
-its link; otherwise it is published on the runtime's Redis channel, `runtime:{id}`, which the process holding that
-link listens on, and nobody hearing it means the runtime is not connected. A newer link of the same runtime takes
-over: here at once, elsewhere by a `takeover` on the channel, and the older link is closed (4409). A runtime whose
-token is gone (rotated, or the runtime deleted) is dropped the same way, by a `drop`, and closed 4401. Frames never
-cross processes: they stay with the process holding the link, best effort."""
+Each process keeps its own links in memory, one per runtime, each with the protocol its hello said. A message for a
+runtime held here goes straight down its link, said in that protocol; otherwise it is published on the runtime's
+Redis channel, `runtime:{id}`, in protocol 3's names, which the process holding that link listens on and says in
+the link's own protocol, and nobody hearing it means the runtime is not connected. A newer link of the same runtime
+takes over: here at once, elsewhere by a `takeover` on the channel, and the older link is closed (4409). A runtime
+whose token is gone (rotated, or the runtime deleted) is dropped the same way, by a `drop`, and closed 4401. Frames
+never cross processes: they stay with the process holding the link, best effort."""
 
 import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from typing import Any
 
 import anyio
 from redis.asyncio import Redis
@@ -21,7 +21,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from glyphh_server.db.signals import publish
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops.link.protocol import REFUSED, REPLACED, RESTART
+from glyphh_server.ops.link.protocol import OUTBOUND, PROTOCOL, REFUSED, REPLACED, RESTART, Message
 
 log = logging.getLogger("glyphh.link")
 
@@ -31,17 +31,19 @@ def channel(runtime_id: uuid.UUID) -> str:
 
 
 class Link:
-    """One rrotor's open WebSocket. Sends are taken one at a time; a send to a link already gone answers False."""
+    """One rrotor's open WebSocket, speaking the protocol its hello said. Sends are taken one at a time; a send to a
+    link already gone answers False."""
 
-    def __init__(self, ws: WebSocket, runtime_id: uuid.UUID) -> None:
-        self.id, self.ws, self.runtime_id = uuid.uuid4(), ws, runtime_id
+    def __init__(self, ws: WebSocket, runtime_id: uuid.UUID, protocol: int) -> None:
+        self.id, self.ws, self.runtime_id, self.protocol = uuid.uuid4(), ws, runtime_id, protocol
         self.replaced = False
         self._sending = anyio.Lock()
 
-    async def send(self, message: dict[str, Any]) -> bool:
+    async def send(self, message: Message) -> bool:
+        frame = json.dumps(message.for_protocol(self.protocol), separators=(",", ":"))
         async with self._sending:
             try:
-                await self.ws.send_text(json.dumps(message, separators=(",", ":")))
+                await self.ws.send_text(frame)
             except (RuntimeError, WebSocketDisconnect):
                 return False
         return True
@@ -73,12 +75,12 @@ class Hub:
         if self.links.get(link.runtime_id) is link:
             del self.links[link.runtime_id]
 
-    async def deliver(self, runtime_id: uuid.UUID, message: dict[str, Any]) -> bool:
-        """Down the runtime's link, wherever it is held. False: no process holds it."""
+    async def deliver(self, runtime_id: uuid.UUID, message: Message) -> bool:
+        """Down the runtime's link, wherever it is held, in its protocol. False: no process holds it."""
         link = self.links.get(runtime_id)
         if link is not None:
             return await link.send(message)
-        return await publish(self.redis, channel(runtime_id), "send", message) > 0
+        return await publish(self.redis, channel(runtime_id), "send", message.for_protocol(PROTOCOL)) > 0
 
     async def drop(self, runtime_id: uuid.UUID, reason: str) -> None:
         """Close the runtime's link wherever it is held: its token no longer stands."""
@@ -107,7 +109,7 @@ class Hub:
                 continue
             signal = json.loads(heard["data"])
             if signal["event"] == "send":
-                await link.send(signal["data"])
+                await link.send(OUTBOUND.validate_python(signal["data"]))
             elif signal["event"] == "drop":
                 await link.close(REFUSED, signal["data"]["reason"])
                 return

@@ -1,15 +1,18 @@
-"""Protocol 2: JSON messages over the WebSocket, one per frame, each with `type` and `id` (rrotor's
-src/rrotord/link/protocol.py). Protocol 2 names a program `program` where protocol 1 said `model`; a hello of any other
-protocol is closed 4426 (`upgrade_needed`).
+"""Protocol 3: JSON messages over the WebSocket, one per frame, each with `type` and `id` (rrotor's
+src/rrotord/link/protocol.py). Protocol 3 names the catalogue's messages `app` and `apps` where protocol 2 said
+`artifact` and `artifacts`; protocol 2 named a program `program` where protocol 1 said `model`. A hello of protocol 2
+or 3 is accepted (ACCEPTED), and the catalogue's messages go down that link in the names its protocol knows: NAMES is
+the one place the two differ, read by `for_protocol`, and nothing else branches on it. A hello of any other protocol
+is closed 4426 (`upgrade_needed`). The protocol 2 names leave once no rrotor of 0.2.0 is heard any more.
 
 The link carries licensing, and the catalogue of apps: the hello (who the runtime is, the node it is), the welcome
-(the org's licence key, a self-hosted runtime's licence and runtime keys, the runtime's artifacts and the org's
-reviewer groups), `keys` when those change, `artifact` after each review (docs/specs/artifacts.md), and rrotor's
-`usage` (each runtime key's calls, its precedents) and `deployed` (an app's makes its catalogue row). rrotor may still
-send a `result` or an `event`: the server keeps neither and acks each, so rrotor stops owing it. Every message is
-checked here; anything the models refuse is unreadable, logged and skipped, and the link stays. `usage` carries
-`seq`, one rising counter per runtime: the server acks each by its `id` and applies a `seq` once, so a replay after
-a reconnect is never doubled."""
+(the org's licence key, a self-hosted runtime's licence and runtime keys, the runtime's apps and the org's reviewer
+groups), `keys` when those change, `app` after each review (docs/specs/apps.md), and rrotor's `usage` (each runtime
+key's calls, its precedents) and `deployed` (an app's makes its catalogue row). rrotor may still send a `result` or
+an `event`: the server keeps neither and acks each, so rrotor stops owing it. Every message is checked here; anything
+the models refuse is unreadable, logged and skipped, and the link stays. `usage` carries `seq`, one rising counter
+per runtime: the server acks each by its `id` and applies a `seq` once, so a replay after a reconnect is never
+doubled."""
 
 import uuid
 from datetime import datetime
@@ -21,7 +24,9 @@ from glyphh_server.models import MODES
 from glyphh_server.ops.license import License
 from glyphh_server.ops.nodes import NodeId, Role
 
-PROTOCOL: int = 2  # 1 named a program `model`
+PROTOCOL: int = 3  # 2 said artifact for an app; 1 named a program `model`
+ACCEPTED: tuple[int, ...] = (2, 3)  # 2: a 0.2.0 rrotor, told the catalogue in its own names
+NAMES: dict[int, tuple[str, str]] = {2: ("artifact", "artifacts"), 3: ("app", "apps")}  # one app, the welcome's list
 
 # How a link is closed, so the rrotor knows whether to reconnect.
 REFUSED: int = 4401  # the runtime token is not valid, or its install was signed out: do not retry with it
@@ -44,6 +49,10 @@ def new_id() -> str:
 
 class Message(BaseModel):
     id: Id = Field(default_factory=new_id)
+
+    def for_protocol(self, protocol: int) -> dict[str, Any]:
+        """The frame as a rrotor of this protocol reads it: the same for every message but the catalogue's."""
+        return self.model_dump(mode="json")
 
 
 # rrotor → server
@@ -86,7 +95,7 @@ class Passed(Message):
 
 class Deployed(Message):
     """A version deployed on the rrotor, with its manifest: an app's (`kind` app) makes or updates the catalogue row
-    (docs/specs/artifacts.md, 3.2), submitted by the Glyphh subject `by` names; any other deploy is kept nowhere."""
+    (docs/specs/apps.md, 3.2), submitted by the Glyphh subject `by` names; any other deploy is kept nowhere."""
 
     type: Literal["deployed"]
     program: Name
@@ -114,19 +123,21 @@ Inbound = Annotated[Usage | Passed | Deployed | Ping | Pong | Ack, Field(discrim
 INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
 
 
-class ArtifactState(BaseModel):
-    """An app's standing in the catalogue, as the rrotor is told it: in the welcome (every row of the runtime) and
-    as an `artifact` message after each review."""
+# server → rrotor
 
-    type: Literal["artifact"] = "artifact"
-    id: Id = Field(default_factory=new_id)
+
+class AppState(Message):
+    """An app's standing in the catalogue, as the rrotor is told it: in the welcome (every row of the runtime) and
+    as an `app` message after each review. A protocol 2 rrotor reads it as `artifact`."""
+
+    type: Literal["app"] = "app"
     program: Name
     version: int
     state: Literal["draft", "approved", "rejected", "retired"]
     roles: list[str] = []
 
-
-# server → rrotor
+    def for_protocol(self, protocol: int) -> dict[str, Any]:
+        return {**super().for_protocol(protocol), "type": NAMES[protocol][0]}
 
 
 class Welcome(Message):
@@ -135,8 +146,14 @@ class Welcome(Message):
     licence: License | None = None  # a self-hosted runtime's plan licence: it has no mod to hand one in
     license_key: str | None = None  # the org's newest licence key (ops/license_keys.py), to every runtime
     keys: list[str] | None = None  # a self-hosted runtime's live runtime keys, as SHA-256s: what it checks bearers by
-    artifacts: list[ArtifactState] = []  # the catalogue's rows for this runtime (docs/specs/artifacts.md, 3.4)
+    apps: list[AppState] = []  # the catalogue's rows for this runtime (docs/specs/apps.md, 3.4)
     reviewers: list[str] = []  # the org's reviewer groups: who may open a draft to review it
+
+    def for_protocol(self, protocol: int) -> dict[str, Any]:
+        """The welcome with its list of apps under the name this protocol gives it, each app in its name too."""
+        frame = self.model_dump(mode="json", exclude={"apps"})
+        frame[NAMES[protocol][1]] = [app.for_protocol(protocol) for app in self.apps]
+        return frame
 
 
 class Keys(Message):
@@ -144,3 +161,8 @@ class Keys(Message):
 
     type: Literal["keys"] = "keys"
     hashes: list[str]
+
+
+# What one process publishes for a link another holds (ops/link/hub.py), always in protocol 3's names.
+Outbound = Annotated[AppState | Keys, Field(discriminator="type")]
+OUTBOUND: TypeAdapter[Outbound] = TypeAdapter(Outbound)

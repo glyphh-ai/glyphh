@@ -83,7 +83,7 @@ async def discover(http: httpx.AsyncClient, issuer: str) -> Endpoints:
 
 
 def groups_of(claim: Any) -> list[str]:
-    """The `groups` claim as roles (docs/specs/artifacts.md, 2): lower-cased, deduplicated, at most GROUPS_MAX of
+    """The `groups` claim as roles (docs/specs/apps.md, 2): lower-cased, deduplicated, at most GROUPS_MAX of
     at most GROUP_LEN characters; anything that is not a list of strings is no groups."""
     if not isinstance(claim, list):
         return []

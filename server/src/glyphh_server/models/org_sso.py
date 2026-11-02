@@ -20,7 +20,7 @@ class OrgSso(Base):
     client_secret: Mapped[str] = mapped_column(Text)  # sealed (ops/auth/sealed.py)
     # Its people sign in with it and nothing else: Google or GitHub is refused for them.
     enforced: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
-    # The groups whose members review the org's artifacts beside its admin (docs/specs/artifacts.md, 2).
+    # The groups whose members review the org's apps beside its admin (docs/specs/apps.md, 2).
     reviewers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Org artifacts</title>
+<title>Org apps</title>
 <style>
 :root{color-scheme:light dark}
 body{margin:0;padding:16px;background:transparent;color:var(--color-text-primary,CanvasText);
@@ -9,35 +9,47 @@ body{margin:0;padding:16px;background:transparent;color:var(--color-text-primary
 h1{margin:0 0 8px;font-size:var(--font-heading-sm-size,16px);font-weight:var(--font-weight-semibold,600)}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .tabs{display:flex;gap:4px} .tabs button[aria-selected=true]{background:var(--color-background-primary,Canvas);font-weight:600}
-input{flex:1 1 180px;font:inherit;padding:6px 10px;border-radius:var(--border-radius-md,8px);
+input,select{font:inherit;padding:6px 10px;border-radius:var(--border-radius-md,8px);
   border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
   background:var(--color-background-primary,Canvas);color:inherit}
+input{flex:1 1 180px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .card{border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
   border-radius:var(--border-radius-lg,12px);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.head{display:flex;gap:8px;align-items:center;justify-content:space-between}
 .card h2{margin:0;font-size:var(--font-text-md-size,14px);font-weight:var(--font-weight-semibold,600)}
 .card p{margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .sub{color:var(--color-text-secondary,GrayText);font-size:var(--font-text-sm-size,12px)}
 .chips{display:flex;gap:4px;flex-wrap:wrap} .chip{font-size:var(--font-text-sm-size,12px);padding:1px 8px;border-radius:999px;
-  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35))}
+  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));white-space:nowrap}
+.type{background:var(--color-background-secondary,transparent)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:auto}
 button{font:inherit;padding:4px 12px;border-radius:var(--border-radius-md,8px);cursor:pointer;
   border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
   background:var(--color-background-secondary,transparent);color:var(--color-text-primary,CanvasText)}
-button:focus-visible,input:focus-visible{outline:2px solid var(--color-ring-primary,Highlight);outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-primary,Highlight);outline-offset:2px}
 .pages{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px}
 .empty{color:var(--color-text-secondary,GrayText);padding:12px 0}
 .bad{color:var(--color-text-danger,inherit)} [hidden]{display:none!important}
 </style></head>
 <body>
-<h1>Org artifacts</h1>
+<h1>Org apps</h1>
 <div class="bar">
   <div class="tabs" role="tablist" id="tabs" hidden>
     <button role="tab" data-state="approved" aria-selected="true">Published</button>
     <button role="tab" data-state="draft" aria-selected="false">Awaiting review</button>
     <button role="tab" data-state="rejected" aria-selected="false">Rejected</button>
   </div>
-  <input id="q" type="search" placeholder="Search artifacts" aria-label="Search artifacts">
+  <input id="q" type="search" placeholder="Search apps" aria-label="Search apps">
+  <select id="type" aria-label="Type">
+    <option value="">All types</option>
+    <option value="page">Pages</option>
+    <option value="dashboard">Dashboards</option>
+    <option value="doc">Docs</option>
+    <option value="diagram">Diagrams</option>
+    <option value="deck">Decks</option>
+    <option value="design">Designs</option>
+  </select>
 </div>
 <div class="cards" id="cards"></div>
 <p class="empty" id="empty" hidden></p>
@@ -46,8 +58,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--color-ring-prim
 <script type="module">__APP_JS__</script>
 <script type="module">
 const $ = (id) => document.getElementById(id);
-const app = new window.McpApp({ name: "glyphh-artifacts", version: "1" }, {}, { autoResize: true });
-const view = { state: "approved", q: "", page: 1, reviewer: false, total: 0, per_page: 24 };
+const app = new window.McpApp({ name: "glyphh-apps", version: "1" }, {}, { autoResize: true });
+const view = { state: "approved", q: "", type: "", page: 1, reviewer: false, total: 0, per_page: 24 };
+const TYPES = { page: "Page", dashboard: "Dashboard", doc: "Doc", diagram: "Diagram", deck: "Deck", design: "Design" };
 
 function theme(ctx) {
   if (!ctx) return;
@@ -70,7 +83,9 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 
 function card(a) {
   const c = el("div", "card");
-  c.append(el("h2", "", a.title), el("p", "", a.description || "No description."));
+  const head = el("div", "head");
+  head.append(el("h2", "", a.title), el("span", "chip type", TYPES[a.type] || a.type));
+  c.append(head, el("p", "", a.description || "No description."));
   const by = a.submitted_by ? (a.submitted_by.name || a.submitted_by.email) : "a deploy";
   c.append(el("div", "sub", `${a.runtime_name} · v${a.version} · published by ${by} · ${a.submitted_at.slice(0, 10)}`));
   const chips = el("div", "chips");
@@ -80,11 +95,11 @@ function card(a) {
   const row = el("div", "row");
   const open = el("button", "", "Open"); open.onclick = () => app.openLink({ url: a.url }); row.append(open);
   if (view.reviewer && a.state === "draft") {
-    const ok = el("button", "", "Approve"); ok.onclick = () => act("artifact_approve", { artifact_id: a.id }); row.append(ok);
-    const no = el("button", "", "Reject"); no.onclick = () => { const reason = prompt("Why is it rejected?"); if (reason) act("artifact_reject", { artifact_id: a.id, reason }); }; row.append(no);
+    const ok = el("button", "", "Approve"); ok.onclick = () => act("app_approve", { app_id: a.id }); row.append(ok);
+    const no = el("button", "", "Reject"); no.onclick = () => { const reason = prompt("Why is it rejected?"); if (reason) act("app_reject", { app_id: a.id, reason }); }; row.append(no);
   }
   if (view.reviewer && a.state === "approved") {
-    const off = el("button", "", "Retire"); off.onclick = () => { if (confirm(`Retire ${a.title}?`)) act("artifact_retire", { artifact_id: a.id }); }; row.append(off);
+    const off = el("button", "", "Retire"); off.onclick = () => { if (confirm(`Retire ${a.title}?`)) act("app_retire", { app_id: a.id }); }; row.append(off);
   }
   c.append(row);
   return c;
@@ -92,17 +107,17 @@ function card(a) {
 
 function show(page) {
   view.total = page.total; view.per_page = page.per_page;
-  $("cards").replaceChildren(...page.artifacts.map(card));
-  const none = page.artifacts.length === 0;
+  $("cards").replaceChildren(...page.apps.map(card));
+  const none = page.apps.length === 0;
   $("empty").hidden = !none;
-  $("empty").textContent = view.q ? "Nothing matches." : view.state === "approved" ? "Nothing published yet. Ask Claude to publish an artifact to your org." : `Nothing ${view.state === "draft" ? "awaiting review" : view.state}.`;
+  $("empty").textContent = view.q || view.type ? "Nothing matches." : view.state === "approved" ? "Nothing published yet. Ask Claude to publish what it made to your org." : `Nothing ${view.state === "draft" ? "awaiting review" : view.state}.`;
   const last = Math.max(1, Math.ceil(page.total / page.per_page));
   $("where").textContent = `${page.total} · page ${page.page} of ${last}`;
   $("prev").disabled = page.page <= 1; $("next").disabled = page.page >= last;
 }
 
 async function refresh() {
-  try { show(await call("artifacts", { q: view.q || undefined, page: view.page, state: view.state })); failed(""); }
+  try { show(await call("apps", { q: view.q || undefined, type: view.type || undefined, page: view.page, state: view.state })); failed(""); }
   catch (e) { failed(e.message); }
 }
 
@@ -114,6 +129,7 @@ for (const tab of $("tabs").querySelectorAll("button")) tab.onclick = () => {
 };
 let typing;
 $("q").oninput = () => { clearTimeout(typing); typing = setTimeout(() => { view.q = $("q").value.trim(); view.page = 1; refresh(); }, 300); };
+$("type").onchange = () => { view.type = $("type").value; view.page = 1; refresh(); };
 $("prev").onclick = () => { view.page = Math.max(1, view.page - 1); refresh(); };
 $("next").onclick = () => { view.page += 1; refresh(); };
 app.ontoolresult = () => refresh();

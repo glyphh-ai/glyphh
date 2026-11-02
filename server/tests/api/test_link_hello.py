@@ -86,17 +86,19 @@ async def test_a_link_without_a_good_token_is_refused_with_its_reason(engine: As
     ("said", "code", "reason"),
     [
         ("not json", 4400, "must be hello"),
+        ({"type": "hello", "protocol": 3}, 4400, "must be hello"),
         ({"type": "hello", "protocol": 2}, 4400, "must be hello"),
-        ({"type": "result", "protocol": 2}, 4400, "must be hello"),
-        ({"type": "hello", "protocol": 1}, 4426, "protocol 2"),
-        ({"type": "hello", "protocol": 3}, 4426, "protocol 2"),
+        ({"type": "result", "protocol": 3}, 4400, "must be hello"),
+        ({"type": "hello", "protocol": 1}, 4426, "protocol 3"),
+        ({"type": "hello", "protocol": 4}, 4426, "protocol 3"),
+        ({"type": "hello"}, 4426, "protocol 3"),
         ("protocol 1", 4426, "Update the rrotor"),
         ("other runtime", 4400, "another runtime"),
         ("other mode", 4400, "another runtime"),
         ("hosted", 4400, "must be hello"),
     ],
 )
-async def test_the_first_message_must_be_a_hello_of_protocol_2_for_this_runtime(
+async def test_the_first_message_must_be_a_hello_of_protocol_3_or_2_for_this_runtime(
     engine: AsyncEngine, said: object, code: int, reason: str
 ) -> None:
     ada, eve = await person(engine), await person(engine)

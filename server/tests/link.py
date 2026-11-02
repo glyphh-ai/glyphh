@@ -80,7 +80,7 @@ async def server() -> AsyncIterator[Server]:
 
 
 def hello(rt: Rt, **over: Any) -> dict[str, Any]:
-    said = {"type": "hello", "id": "h1", "protocol": 2, "version": "1.2.3", "mode": rt.mode, "runtime_id": str(rt.id)}
+    said = {"type": "hello", "id": "h1", "protocol": 3, "version": "1.2.3", "mode": rt.mode, "runtime_id": str(rt.id)}
     return {**said, "deployed": [], **over}
 
 

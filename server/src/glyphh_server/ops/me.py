@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_ada.usage import CloudUsage
 from glyphh_server.models import Identity, Org, User
-from glyphh_server.ops.artifacts import is_reviewer
+from glyphh_server.ops.apps import is_reviewer
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import PlanView
 from glyphh_server.ops.usage import Precedents, usage
@@ -31,7 +31,7 @@ class Me(BaseModel):
     role: str
     providers: list[str]
     groups: list[str] = Field([], description="The identity provider's groups, from single sign-on: the roles")
-    reviewer: bool = Field(False, description="Reviews the org's artifacts: the admin, or in a reviewer group")
+    reviewer: bool = Field(False, description="Reviews the org's apps: the admin, or in a reviewer group")
     org: MeOrg
     plan: PlanView
     precedents: Precedents

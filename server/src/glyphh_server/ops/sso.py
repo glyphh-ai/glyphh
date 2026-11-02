@@ -51,7 +51,7 @@ class SsoIn(BaseModel):
     client_secret: str | None = Field(None, min_length=1, max_length=2000, description="Left out: keep the one set")
     domains: list[str] = Field(min_length=1, max_length=DOMAINS_MAX)
     enforced: bool = Field(False, description="The org's people sign in with it and nothing else")
-    reviewers: list[str] = Field([], max_length=REVIEWERS_MAX, description="Groups that review artifacts")
+    reviewers: list[str] = Field([], max_length=REVIEWERS_MAX, description="Groups that review apps")
 
     @field_validator("domains")
     @classmethod
@@ -83,7 +83,7 @@ class SsoView(BaseModel):
     client_id: str
     domains: list[str]
     enforced: bool
-    reviewers: list[str] = Field(description="The groups whose members review artifacts beside the admin")
+    reviewers: list[str] = Field(description="The groups whose members review apps beside the admin")
     callback_url: str = Field(description="The redirect URI to register at the identity provider")
     updated_at: datetime
 

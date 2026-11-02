@@ -28,7 +28,7 @@ class Introspection(BaseModel):
     org: str | None = None
     scope: str | None = None
     exp: int | None = None
-    role: str | None = None  # admin or member (docs/specs/artifacts.md, 2)
+    role: str | None = None  # admin or member (docs/specs/apps.md, 2)
     groups: list[str] | None = None  # the identity provider's groups, the person's roles
 
 

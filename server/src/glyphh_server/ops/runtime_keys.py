@@ -77,7 +77,7 @@ async def hashes_for(conn: AsyncConnection, runtime_id: uuid.UUID) -> list[str]:
 
 async def push_keys(conn: AsyncConnection, hub: Hub, runtime_id: uuid.UUID) -> bool:
     """The live list down the runtime's link; False when no process holds it (its welcome carries the list)."""
-    sent = await hub.deliver(runtime_id, Keys(hashes=await hashes_for(conn, runtime_id)).model_dump(mode="json"))
+    sent = await hub.deliver(runtime_id, Keys(hashes=await hashes_for(conn, runtime_id)))
     if not sent:
         log.info("keys wait for the runtime's next welcome", extra=fields(runtime=str(runtime_id)))
     return sent

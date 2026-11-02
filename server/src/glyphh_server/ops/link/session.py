@@ -1,11 +1,12 @@
 """One runtime's link, from its token to its close.
 
 The link is accepted, then refused with a close and its reason when the token is not good (4401). The first message
-must be `hello` (ops/link/hello.py): another protocol is closed 4426, anything else 4400. Then the server answers
-`welcome`, the runtime is online, and three things run until one ends: reading the rrotor's messages, a ping every 20
-seconds (nothing heard for three closes it, 4408), and the hub's relay of what other processes send it (`keys`). An
-unreadable message is logged and skipped; one that cannot be recorded closes the link (1011) and is not acked, so the
-rrotor replays it after it reconnects."""
+must be `hello` (ops/link/hello.py), of protocol 3 or 2: another protocol is closed 4426, anything else 4400. The
+link remembers the protocol the hello said and says everything down it in that protocol's names. Then the server
+answers `welcome`, the runtime is online, and three things run until one ends: reading the rrotor's messages, a ping
+every 20 seconds (nothing heard for three closes it, 4408), and the hub's relay of what other processes send it
+(`keys`, `app`). An unreadable message is logged and skipped; one that cannot be recorded closes the link (1011) and
+is not acked, so the rrotor replays it after it reconnects."""
 
 import logging
 from dataclasses import dataclass, field
@@ -20,8 +21,7 @@ from starlette.websockets import WebSocket
 from glyphh_server.db import tenancy
 from glyphh_server.obs.context import bound
 from glyphh_server.obs.logs import fields
-from glyphh_server.ops import catalogue as artifacts
-from glyphh_server.ops import license_keys
+from glyphh_server.ops import catalogue, license_keys
 from glyphh_server.ops.license import GRACE_DAYS, LINK, Stamp, sign_license
 from glyphh_server.ops.link import inbound, reports
 from glyphh_server.ops.link.hello import next_text, read_hello
@@ -73,7 +73,7 @@ async def serve(ws: WebSocket, ctx: Context, token: str | None) -> None:
             return
         await mark(ctx.engine, runtime, ONLINE, hello.version)
         await inbound.record_hello(ctx.engine, runtime, hello)
-        link = Link(ws, runtime.id)
+        link = Link(ws, runtime.id, hello.protocol)
         log.info("runtime linked", extra=fields(runtime=str(runtime.id), mode=runtime.mode, version=hello.version))
         try:
             await _run(ctx, runtime, link)
@@ -88,7 +88,7 @@ async def serve(ws: WebSocket, ctx: Context, token: str | None) -> None:
 async def _run(ctx: Context, runtime: Runtime, link: Link) -> None:
     async with ctx.hub.listening(link) as pubsub:
         await ctx.hub.attach(link)
-        await link.send((await _welcome(ctx, runtime)).model_dump(mode="json"))
+        await link.send(await _welcome(ctx, runtime))
         clock = Clock()
         async with anyio.create_task_group() as jobs:
 
@@ -107,15 +107,15 @@ async def _welcome(ctx: Context, runtime: Runtime) -> Welcome:
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         license_key = await license_keys.newest(conn, runtime.org_id)
-        catalogue = await artifacts.for_runtime(conn, runtime.id)
-        reviewers = await artifacts.reviewer_groups(conn, runtime.org_id)
+        apps = await catalogue.for_runtime(conn, runtime.id)
+        reviewers = await catalogue.reviewer_groups(conn, runtime.org_id)
         if runtime.mode == "local":
-            return Welcome(license_key=license_key, artifacts=catalogue, reviewers=reviewers)
+            return Welcome(license_key=license_key, apps=apps, reviewers=reviewers)
         keys, licence = await hashes_for(conn, runtime.id), None
         if ctx.signing_key is not None:
             stamp = Stamp(runtime.id, LINK, GRACE_DAYS)
             licence = await sign_license(conn, ctx.signing_key, runtime.user_id, runtime.org_id, None, stamp)
-    return Welcome(licence=licence, license_key=license_key, keys=keys, artifacts=catalogue, reviewers=reviewers)
+    return Welcome(licence=licence, license_key=license_key, keys=keys, apps=apps, reviewers=reviewers)
 
 
 async def _heartbeat(link: Link, clock: Clock) -> None:
@@ -125,7 +125,7 @@ async def _heartbeat(link: Link, clock: Clock) -> None:
         if anyio.current_time() - clock.heard > every * MISSED:
             await link.close(SILENT, f"Nothing heard for {every * MISSED:g} seconds.")
             return
-        if not await link.send(Ping().model_dump()):
+        if not await link.send(Ping()):
             return
 
 
@@ -149,7 +149,7 @@ async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -
     event (Passed) is acked and kept nowhere; a deployed app makes its catalogue row."""
     if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
-            await link.send(Pong().model_dump())
+            await link.send(Pong())
         return True
     if isinstance(message, Usage | Deployed):
         try:
@@ -158,7 +158,7 @@ async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -
             log.exception("message not recorded", extra=fields(runtime=str(runtime.id), type=message.type))
             await link.close(FAILED, "That message could not be recorded. Reconnect and replay it.")
             return False
-    await link.send(Ack(of=message.id).model_dump())
+    await link.send(Ack(of=message.id))
     return True
 
 
@@ -166,7 +166,7 @@ async def _record(ctx: Context, runtime: Runtime, message: Usage | Deployed) -> 
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         if isinstance(message, Deployed):
-            await artifacts.catalogue_deployed(conn, runtime, message)
+            await catalogue.catalogue_deployed(conn, runtime, message)
         elif await inbound.first_time(conn, runtime, message.seq):
             await reports.apply_usage(conn, runtime, message)
         else:
