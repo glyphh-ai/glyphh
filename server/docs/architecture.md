@@ -783,7 +783,7 @@ Nothing in this section works today.
 |---|---|
 | What the paid tiers are sold on | Centralised precedent-store sync across instances (`sync`), multi-node HA (`ha`), SAML and SCIM (single sign-on by OpenID Connect is built: above, The platform), RBAC, audit logs: only the licence's flags ship |
 | The licensing engine | rrotor's side of the key (its start, its three enforcement modules) and the key in Stripe's receipt email; the server signs, issues, revokes and delivers keys (above, The licence key). How the rest differs is [pricing.md](pricing.md#against-what-is-built) |
-| The local runtime from the plugin | The server issues its token (`POST /v1/runtime/local`) and takes its link; no plugin installs or starts rrotor locally. Then Windows (WSL2) and Linux (Docker or Podman) |
+| The local runtime from the plugin | The server issues its token (`POST /v1/runtime/local`) and takes its link, and the plugin links it (`/glyphh link`, the Account section's **link**, the rrotor skill's `connect` and `start`: the token handed to rrotor's `PUT /v1/runtime/token`); the rrotor skill installs and starts it on macOS and Linux with Docker or OrbStack. Not built: Windows (WSL2) and Podman |
 | Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
 | Rate limiting | None anywhere, the OAuth endpoints included |
 | OAuth client ID metadata documents | Registration is RFC 7591 only |
