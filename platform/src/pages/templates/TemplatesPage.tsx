@@ -1,98 +1,60 @@
-import { useState } from 'react';
-import { useInstallTemplate, useRemoveTemplate, useTemplates, type Template } from '@/api/templates';
-import { List, Row } from '@/components/List';
+import { Link } from 'react-router';
+import { useTemplates, type Template } from '@/api/templates';
+import { NoMatch, Pager, SearchField, useSearchPaging } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
-import { Button, Card, Chip, Dialog, EmptyState, LoadingCard, TextField, useToast } from '@/ui';
+import { plural } from '@/lib/format';
+import { Chip, EmptyState, Icon, LoadingCard } from '@/ui';
 import { AdaErrorNotice } from '../ada/AdaErrorNotice';
-import styles from '../ada/ada.module.css';
+import styles from './templates.module.css';
 
-/** Removing takes the slug typed again: the template's models go with everything in them, and it is not undone. */
-function RemoveDialog({ template, onClose }: { template: Template; onClose: () => void }) {
-  const remove = useRemoveTemplate();
-  const toast = useToast();
-  const [typed, setTyped] = useState('');
-  const removed = () => {
-    toast.show(`${template.name} is removed.`);
-    onClose();
-  };
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={`Remove ${template.name}?`}
-      description={
-        <>
-          Its tools leave your connector and its models are deleted with everything in them, for every AI you use. This cannot be undone.
-        </>
-      }
-      actions={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="danger" loading={remove.isPending} disabled={typed !== template.slug} onClick={() => remove.mutate(template.slug, { onSuccess: removed })}>
-            Remove
-          </Button>
-        </>
-      }
-    >
-      <TextField label={`Type ${template.slug}`} mono value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus />
-      <AdaErrorNotice error={remove.error} />
-    </Dialog>
-  );
-}
+export const templatePath = (slug: string) => `/templates/${encodeURIComponent(slug)}`;
 
-function TemplateCard({ template, onRemove }: { template: Template; onRemove: () => void }) {
-  const install = useInstallTemplate();
-  const toast = useToast();
+const matchesTemplate = (t: Template, q: string) =>
+  [t.name, t.category, t.summary, ...t.tools.map((tool) => tool.name)].some((s) => s.toLowerCase().includes(q));
+
+/** One template as a card; the whole card opens its details. */
+function TemplateCard({ template }: { template: Template }) {
   const title = `${template.slug}-title`;
-  const action = template.installed ? (
-    <Button variant="ghost" icon="trash" onClick={onRemove}>
-      Remove
-    </Button>
-  ) : (
-    <Button variant="primary" icon="plus" loading={install.isPending} onClick={() => install.mutate(template.slug, { onSuccess: () => toast.show(`${template.name} is installed: your connector has its tools.`) })}>
-      Install
-    </Button>
-  );
   return (
-    <Card id={template.slug} aria-labelledby={title} className={styles.release}>
-      <div className={styles.leverHead}>
-        <div className={styles.chips}>
-          <h2 id={title} className={styles.cardTitle}>
-            {template.name}
-          </h2>
-          <Chip>{template.category}</Chip>
-          {template.installed && <Chip tone="green">Installed</Chip>}
+    <li>
+      <Link to={templatePath(template.slug)} className={styles.card} aria-labelledby={title}>
+        <div className={styles.cardHead}>
+          <span className={styles.mark} aria-hidden="true">
+            <Icon name="layers" />
+          </span>
+          <div className={styles.cardTitles}>
+            <h2 id={title} className={styles.name}>
+              {template.name}
+            </h2>
+            <div className={styles.chips}>
+              <Chip>{template.category}</Chip>
+              {template.installed && <Chip tone="green">Installed</Chip>}
+            </div>
+          </div>
         </div>
-        {action}
-      </div>
-      <p className={styles.summary}>{template.summary}</p>
-      <AdaErrorNotice error={install.error} />
-      <h3 className={styles.label}>What it keeps</h3>
-      <List label={`${template.name}'s models`}>
-        {template.models.map((m) => (
-          <Row key={m.key} title={m.title} meta={m.about} />
-        ))}
-      </List>
-      <h3 className={styles.label}>The tools it adds to your connector</h3>
-      <List label={`${template.name}'s tools`}>
-        {template.tools.map((t) => (
-          <Row key={t.name} title={<span className={styles.mono}>{t.name}</span>} meta={t.description} />
-        ))}
-      </List>
-      <p className={styles.details}>Version {template.version} · yours alone, not your org’s</p>
-    </Card>
+        <p className={styles.summary}>{template.summary}</p>
+        <div className={styles.cardFoot}>
+          <span>
+            {plural(template.models.length, 'model')} · {plural(template.tools.length, 'tool')} · v{template.version}
+          </span>
+          <span className={styles.open}>
+            Details <Icon name="chevronRight" />
+          </span>
+        </div>
+      </Link>
+    </li>
   );
 }
 
 /**
- * Templates: the library a person installs from for themselves. Each makes Ada models of their own and adds tools to
- * their own Glyphh connector, so any AI on it shares them; Agentic memory is their glyphh.
+ * Templates: the library a person installs from for themselves, as cards with a search and pages, like Models and
+ * API Keys. Each template makes Ada models of the person's own and adds tools to their own Glyphh connector, so any
+ * AI on it shares them; a card opens the template's details (TemplatePage), where it is installed or removed.
  */
 export function TemplatesPage() {
   const templates = useTemplates();
-  const [removing, setRemoving] = useState<Template | null>(null);
+  const paged = useSearchPaging(templates.data, matchesTemplate);
+  const some = templates.data !== undefined && templates.data.length > 0;
   return (
     <>
       <PageHeader
@@ -102,14 +64,16 @@ export function TemplatesPage() {
       {templates.isPending && <LoadingCard />}
       <AdaErrorNotice error={templates.error} />
       {templates.data?.length === 0 && <EmptyState icon="layers" title="No templates yet" />}
-      {templates.data && (
-        <div className={styles.stack}>
-          {templates.data.map((template) => (
-            <TemplateCard key={template.slug} template={template} onRemove={() => setRemoving(template)} />
+      {some && <SearchField typed={paged.typed} onChange={paged.setTyped} placeholder="Template name, kind or tool" />}
+      {some && paged.total === 0 && <NoMatch q={paged.q} noun="template" />}
+      {paged.total > 0 && (
+        <ul className={styles.grid} aria-label="Templates">
+          {paged.shown.map((template) => (
+            <TemplateCard key={template.slug} template={template} />
           ))}
-        </div>
+        </ul>
       )}
-      {removing && <RemoveDialog template={removing} onClose={() => setRemoving(null)} />}
+      {some && <Pager page={paged.page} total={paged.total} from={paged.from} to={paged.to} last={paged.last} onPage={paged.setPage} />}
     </>
   );
 }

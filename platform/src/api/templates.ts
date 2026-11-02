@@ -25,6 +25,10 @@ export const templateKeys = { all: ['templates'] as const };
 export const useTemplates = () =>
   useQuery({ queryKey: templateKeys.all, queryFn: async () => (await api.get<{ templates: Template[] }>('/templates')).templates });
 
+/** One template, for its details page (`GET /v1/templates/{slug}`); under the list's key, so an install refreshes it. */
+export const useTemplate = (slug: string) =>
+  useQuery({ queryKey: [...templateKeys.all, slug], queryFn: () => api.get<Template>(`/templates/${encodeURIComponent(slug)}`) });
+
 function useTemplateWrite(fn: (slug: string) => Promise<Template>) {
   const client = useQueryClient();
   return useMutation({ mutationFn: fn, onSuccess: () => client.invalidateQueries({ queryKey: templateKeys.all }) });

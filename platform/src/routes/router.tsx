@@ -13,6 +13,7 @@ import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
+import { TemplatePage } from '@/pages/templates/TemplatePage';
 import { TemplatesPage } from '@/pages/templates/TemplatesPage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { RuntimesPage } from '@/pages/runtimes/RuntimesPage';
@@ -138,6 +139,15 @@ export const routes: RouteObject[] = [
           </AdaOnly>
         ),
         handle: { crumbs: [{ label: 'Ada' }, { label: 'Templates' }] },
+      },
+      {
+        path: 'templates/:name',
+        element: (
+          <AdaOnly otherwise="/">
+            <TemplatePage />
+          </AdaOnly>
+        ),
+        handle: { crumbs: [{ label: 'Ada' }, { label: 'Templates', to: '/templates' }, { label: ':name' }] },
       },
       {
         path: 'usage',
