@@ -1,0 +1,70 @@
+{
+  "slug": "agentic-memory",
+  "name": "Agentic memory",
+  "category": "Memory",
+  "version": 1,
+  "summary": "Your glyphh: what any AI you use knows about you, the rules you have given it and the personality it has grown with you, kept as your own Ada models and carried from one AI to the next.",
+  "spec": {
+    "seed": 7,
+    "dimension": 2048,
+    "layers": [
+      {
+        "name": "m",
+        "segments": [
+          {
+            "name": "s",
+            "roles": [
+              {"name": "cue", "text_encoding": "bag_of_words"},
+              {"name": "kind", "similarity_weight": 0.1},
+              {"name": "key", "key_part": true, "similarity_weight": 0}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {"key": "memory", "title": "What it knows about you", "about": "facts about the person: who they are, their work, their projects, their people, their tools"},
+    {"key": "instructions", "title": "Your rules", "about": "rules the person has given: how to work, what never to do, how to answer"},
+    {"key": "personality", "title": "Its personality", "about": "how to be with the person: tone, humour, directness, length, what annoys them"}
+  ],
+  "tools": [
+    {
+      "name": "glyphh_remember",
+      "title": "Remember",
+      "op": "remember",
+      "description": "Keep something in the person's glyphh, their memory across every AI they use: a fact about them (memory), a rule they have given (instructions) or how they like you to be (personality). Call it whenever they tell you something about themselves, correct you, state a preference or react to how you answered. `when` is the situation it applies to; remembering the same text again replaces it."
+    },
+    {
+      "name": "glyphh_recall",
+      "title": "Recall",
+      "op": "recall",
+      "description": "What the person's glyphh holds that bears on `about`: the facts, rules and personality closest to it, best first. Call it before answering or acting on anything about them, their work or how they want things done."
+    },
+    {
+      "name": "glyphh_personality",
+      "title": "Personality",
+      "op": "list",
+      "kinds": ["personality"],
+      "description": "The personality the person's glyphh has grown with them: how to talk to them, newest first. Call it at the start of a conversation and follow it."
+    },
+    {
+      "name": "glyphh_instructions",
+      "title": "Instructions",
+      "op": "list",
+      "kinds": ["instructions"],
+      "description": "Every rule the person has given, newest first; with `about`, only the ones that apply to it. Follow them over your own defaults."
+    },
+    {
+      "name": "glyphh_forget",
+      "title": "Forget",
+      "op": "forget",
+      "description": "Take one thing out of the person's glyphh, by its kind and id (recall and the lists answer them). Call it when they say something is wrong or no longer true."
+    }
+  ],
+  "context": {
+    "session": [{"kind": "personality", "top": 20}, {"kind": "instructions", "top": 30}],
+    "prompt": [{"kind": "instructions", "top": 5}, {"kind": "memory", "top": 8}]
+  },
+  "instructions": "This person has a glyphh: their memory across every AI they use. At the start of a conversation call glyphh_personality and glyphh_instructions and follow them. Before answering anything about them or their work, call glyphh_recall. Whenever they tell you something about themselves, give you a rule, correct you or react to how you answered, call glyphh_remember. When something is wrong or no longer true, glyphh_forget it."
+}

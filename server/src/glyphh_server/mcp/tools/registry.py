@@ -24,15 +24,19 @@ from glyphh_server.mcp.tools import (
     people,
     runtime,
     self_hosted,
+    templates,
 )
 from glyphh_server.mcp.tools.base import Context, Tool
+from glyphh_server.ops.templates import installs
 
 _WORKERS = (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_jobs.TOOLS, *ada_releases.TOOLS)
-ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS)}
+ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templates.TOOLS)}
 # Tools that wait on an Ada worker (up to 30 s, a job up to 50): run after the request's transaction has ended, on
 # short transactions of their own. A transaction open across the wait holds back the database's oldest snapshot, and an
-# import's concurrent index build waits out every such transaction.
-DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS)
+# import's concurrent index build waits out every such transaction. A tool an installed template adds (glyphh_*, the
+# person's own: listed by `listing`) waits on a worker too.
+DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
+MINE: str = "glyphh_"
 TOOLS: dict[str, Tool] = {t.name: t for t in (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS)}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps. Shelved (2026-11-02):
 # offered only while GLYPHH_RROTOR is on.
@@ -45,10 +49,30 @@ def available(ctx: Context) -> dict[str, Tool]:
     return tools | ADA if ctx.ada is not None else tools
 
 
+async def listing(ctx: Context) -> dict[str, Tool]:
+    """The tools this person sees: what the server offers, and while Ada Cloud is on, their installed templates'."""
+    offered = available(ctx)
+    if ctx.ada is None:
+        return offered
+    return offered | templates.mine(await installs.installed(ctx.conn, ctx.who))
+
+
+def _mine(ctx: Context, name: str) -> bool:
+    return ctx.ada is not None and name.startswith(MINE) and name not in available(ctx)
+
+
 def detached(ctx: Context, method: str, params: dict[str, Any]) -> bool:
-    """A call of a tool that waits on a worker (DETACHED), while it is offered."""
+    """A call of a tool that waits on a worker (DETACHED, or a template's), while it is offered."""
     name = params.get("name", "")
-    return method == "tools/call" and name in DETACHED and name in available(ctx)
+    return method == "tools/call" and ((name in DETACHED and name in available(ctx)) or _mine(ctx, name))
+
+
+async def _found(ctx: Context, name: str) -> Tool | None:
+    """The tool called: one the server offers, else one of the person's templates' (read on a short transaction of
+    its own, the request's having ended)."""
+    if _mine(ctx, name):
+        return templates.mine(await installs.installed_by(ctx.ada.engine, ctx.who)).get(name)
+    return available(ctx).get(name)
 
 
 def listed(tool: Tool, with_panel: bool) -> dict[str, Any]:
@@ -70,7 +94,7 @@ def refused(err: GlyphhError) -> dict[str, Any]:
 
 
 async def call(ctx: Context, params: dict[str, Any]) -> dict[str, Any]:
-    tool = available(ctx).get(params.get("name", ""))
+    tool = await _found(ctx, params.get("name", ""))
     if tool is None:
         raise RpcError(INVALID_PARAMS, f"There is no tool {params.get('name')!r}.")
     try:
@@ -79,7 +103,7 @@ async def call(ctx: Context, params: dict[str, Any]) -> dict[str, Any]:
         problems = jsonable_encoder(err.errors(include_url=False))
         return refused(Invalid("The tool's arguments are not valid.", problems=problems))
     try:
-        if tool.name in DETACHED:  # no request transaction: its own short ones
+        if tool.name in DETACHED or _mine(ctx, tool.name):  # no request transaction: its own short ones
             done = await tool.handler(ctx, args)
         else:
             async with ctx.conn.begin_nested():

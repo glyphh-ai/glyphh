@@ -21,6 +21,7 @@ from glyphh_server.models.plan import Plan, PlanVersion
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.runtime_key import RuntimeKey
 from glyphh_server.models.staff import SEVERITIES, AdminAudit, OpsEvent
+from glyphh_server.models.template import Template, TemplateInstall
 from glyphh_server.models.token import Token
 from glyphh_server.models.traffic import (
     GitHubTrafficDay,
@@ -75,6 +76,8 @@ __all__ = [
     "Rrotor",
     "RuntimeKey",
     "SsoDomain",
+    "Template",
+    "TemplateInstall",
     "Token",
     "TrafficDay",
     "TrafficTop",
