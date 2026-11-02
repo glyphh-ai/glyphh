@@ -5,6 +5,7 @@ import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
 import { UserMenu } from '@/layout/UserMenu/UserMenu';
+import { RROTOR_SHOWN } from '@/lib/shelved';
 
 /**
  * Each route names its own crumbs in `handle.crumbs`, and in `adaCrumbs` where they differ with Ada Cloud on; the
@@ -66,21 +67,24 @@ function AdaNav() {
           Usage
         </NavItem>
       </NavGroup>
-      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31). */}
-      <NavGroup label="Runtimes & licences">
-        <NavItem to="/runtimes" icon="chip">
-          Runtimes
-        </NavItem>
-        <NavItem to="/licence" icon="card">
-          Licence
-        </NavItem>
-        <NavItem to="/apps" icon="layers">
-          Apps
-        </NavItem>
-        <NavItem to="/runtime-keys" icon="key">
-          Runtime keys
-        </NavItem>
-      </NavGroup>
+      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31); shelved
+          (2026-11-02), see lib/shelved. */}
+      {RROTOR_SHOWN ? (
+        <NavGroup label="Runtimes & licences">
+          <NavItem to="/runtimes" icon="chip">
+            Runtimes
+          </NavItem>
+          <NavItem to="/licence" icon="card">
+            Licence
+          </NavItem>
+          <NavItem to="/apps" icon="layers">
+            Apps
+          </NavItem>
+          <NavItem to="/runtime-keys" icon="key">
+            Runtime keys
+          </NavItem>
+        </NavGroup>
+      ) : null}
     </>
   );
 }

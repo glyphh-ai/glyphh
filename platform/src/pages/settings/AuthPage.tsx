@@ -6,6 +6,7 @@ import { useSession } from '@/api/session';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
+import { RROTOR_SHOWN } from '@/lib/shelved';
 import { Button, CopyField, LoadingCard, Switch, TextField, useToast } from '@/ui';
 import { AdminOnlyNote, SettingsTitle } from './SettingsTitle';
 import styles from './settings.module.css';
@@ -105,14 +106,16 @@ export function AuthPage() {
               disabled={!canEdit}
               required
             />
-            <TextField
-              label="Reviewer groups"
-              value={reviewers}
-              onChange={(e) => setReviewers(e.target.value)}
-              placeholder="platform-leads, security"
-              hint="Groups from your identity provider whose members review the apps published to your rrotors, beside the admin."
-              disabled={!canEdit}
-            />
+            {RROTOR_SHOWN ? (
+              <TextField
+                label="Reviewer groups"
+                value={reviewers}
+                onChange={(e) => setReviewers(e.target.value)}
+                placeholder="platform-leads, security"
+                hint="Groups from your identity provider whose members review the apps published to your rrotors, beside the admin."
+                disabled={!canEdit}
+              />
+            ) : null}
             <CopyField value={callbackUrl} label="Redirect URI" />
             <p className={styles.note}>Register this redirect URI with the client at your identity provider.</p>
             <label className={styles.switchRow}>

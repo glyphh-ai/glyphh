@@ -3,6 +3,9 @@ import { adaFake, tickets } from '@/test/ada';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
+// rrotor's pages as they are when shown (lib/shelved); Shelved.test.tsx covers them shelved.
+vi.mock('@/lib/shelved', () => ({ RROTOR_SHOWN: true }));
+
 const sidebar = () => screen.getByRole('complementary', { name: 'Main' });
 
 describe('with Ada Cloud on', () => {
