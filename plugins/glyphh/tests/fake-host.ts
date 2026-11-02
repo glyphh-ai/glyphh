@@ -46,6 +46,12 @@ function fakeFiles() {
       if (t === undefined) throw new Error(`ENOENT ${p}`)
       return t
     },
+    // A binary file is kept as its bytes' characters; the engine's `{ as: 'bytes' }` read answers base64.
+    readBytes: async p => {
+      const t = files.get(p)
+      if (t === undefined) throw new Error(`ENOENT ${p}`)
+      return btoa(t)
+    },
     write: async (p, t) => void files.set(p, t),
     exists: async p => files.has(p) || [...files.keys()].some(k => k.startsWith(`${p}/`)),
     list: async (dir): Promise<FsEntry[]> =>
@@ -87,7 +93,7 @@ const freshState = (): Host['state'] => ({
   lists: value({}),
   note: value(null),
   inviteLink: value(null),
-  artifacts: value({ q: '', page: 1, state: 'approved', total: 0, rejecting: null }),
+  apps: value({ q: '', page: 1, state: 'approved', type: '', total: 0, rejecting: null }),
 })
 
 export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}) {

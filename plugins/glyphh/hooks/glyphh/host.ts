@@ -5,7 +5,7 @@
 // plain to test.)
 import type { FsEntry, HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
 
-import type { ArtifactsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 
 /** One state value: read it, or change it from what it is. */
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
@@ -15,6 +15,8 @@ export type Host = {
   http: { fetch(url: string, init?: HttpInit): Promise<HttpResponse> }
   fs: {
     read(path: string): Promise<string>
+    /** A binary file's bytes, as base64 (the engine's `{ as: 'bytes' }` read). */
+    readBytes(path: string): Promise<string>
     write(path: string, text: string): Promise<void>
     exists(path: string): Promise<boolean>
     list(path: string): Promise<FsEntry[]>
@@ -37,6 +39,6 @@ export type Host = {
     lists: Value<Record<string, Json[]>>
     note: Value<GlyphhNote | null>
     inviteLink: Value<string | null>
-    artifacts: Value<ArtifactsView>
+    apps: Value<AppsView>
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "sign_in_flow",
+  "kind": "app",
+  "description": "How a browser signs in to an app on the organisation's rrotor, as a sequence diagram",
+  "app": {
+    "entry": "index.mmd",
+    "title": "Sign-in flow",
+    "roles": []
+  },
+  "limits": { "seconds": 30, "memory_mb": 128 }
+}

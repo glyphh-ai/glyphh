@@ -5,6 +5,7 @@
   "python": "3.13",
   "app": {
     "entry": "index.html",
+    "type": "dashboard",
     "title": "Deploy failures",
     "roles": ["sre", "admin"],
     "functions": ["failures"]
