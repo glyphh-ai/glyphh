@@ -62,11 +62,12 @@ never inferred: say them in `type`. Any other file is refused by rrotor (`E_INPU
 
 A `.jsx` or `.tsx` entry is what claude.ai's React artifacts are, and rrotor builds nothing: it serves the file in
 its React shell, an HTML page with an import map for `react`, `react-dom` (and `react-dom/client`), `recharts`,
-`lucide-react`, `d3`, `three`, `framer-motion`, `date-fns`, `lodash`, `papaparse`, `mathjs` and `@radix-ui/*` from
-jsDelivr, the Tailwind CDN, and Babel in the browser (the TypeScript preset for `.tsx`). So:
+`lucide-react`, `d3`, `three`, `framer-motion`, `date-fns`, `lodash`, `papaparse`, `mathjs` and `@radix-ui/*` (the
+React family from esm.sh so the page holds one React, the rest from jsDelivr), the Tailwind CDN, and Babel in the
+browser (the automatic JSX runtime, and TypeScript for `.tsx`). So:
 
-- One file, with ES imports of those packages only (`import React from 'react'` included: the JSX compiles to
-  `React.createElement`); Tailwind classes are fine; `export default` the component, which the shell mounts into
+- One file, with ES imports of those packages only (`import React from 'react'` is not needed for JSX, hooks are
+  imported from `react`); Tailwind classes are fine; `export default` the component, which the shell mounts into
   `#root`.
 - A package outside that list fails in the browser as it would on claude.ai: inline what it did, or drop it.
 - No build step, no `package.json`, no CSS file: styles as Tailwind classes or a `<style>` element.

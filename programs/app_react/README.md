@@ -8,7 +8,8 @@ A React page published to the organisation: one `.tsx` file, nothing behind it.
   reviewer has approved it. The type is `page` (`app.type`; a `.tsx` entry is a page when none is said).
 - **No build.** The shell is an HTML page with an import map sending `react`, `react-dom`, `recharts`,
   `lucide-react`, `d3`, `three`, `framer-motion`, `date-fns`, `lodash`, `papaparse`, `mathjs` and `@radix-ui/*` to
-  jsDelivr, the Tailwind CDN, and Babel transforming the file in the browser (the TypeScript preset for `.tsx`);
+  esm.sh (the React family, one React on the page) and jsDelivr (the rest), the Tailwind CDN, and Babel transforming
+  the file in the browser (the automatic JSX runtime, and TypeScript for `.tsx`);
   the default export is mounted into `#root`. A package outside that list fails in the browser, as on claude.ai.
 - **What it calls:** nothing. For live numbers, make each chart a function the page calls as the viewer
   (`programs/app_dashboard`) and say `"type": "dashboard"`.
