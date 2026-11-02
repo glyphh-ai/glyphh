@@ -1,6 +1,6 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.9.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
+The Glyphh plugin for Claude Code, 1.9.1 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
 Ada skill, your glyphh, the glyphh command and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing to install or
 host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said plainly in the panel
 and by the skill, with how to update the plugin.

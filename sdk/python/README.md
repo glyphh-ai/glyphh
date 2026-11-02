@@ -60,7 +60,7 @@ glyphh export tickets --to tickets.zip
 | `record`, `record-many`, `grade`, `forget`, `import` | Cases in: one, a JSON Lines file, an outcome later, one out, a whole history file |
 | `decide`, `query`, `probabilities`, `facts` | Ask |
 | `learn`, `calibrate`, `backtest`, `settings`, `versions`, `activate`, `upgrade` | Tune, compare, roll back, move Ada versions |
-| `export`, `job` | Everything out; any job's state (`--wait`) |
+| `export`, `job`, `cancel` | Everything out; any job's state and stage (`--wait`); stop a job |
 
 Every answer is the API's own JSON on stdout, so it pipes into `jq`; a refusal is `{"error": {code, message}}` on
 stderr with exit code 1 (2 for a usage mistake). A JSON argument is the JSON itself, `@file` for a file's, or `-` for
@@ -131,7 +131,7 @@ half-understood: `ClientTooOldError` (`contract`, `supported`), saying to `pip i
 
 | | |
 |---|---|
-| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `models()`, `model(name)`, `create_model(name, spec, ada=)`, `delete_model(name)`; `ada.versions()`, `ada.latest_stable()`; `job(id)`, `wait(job, timeout=, on_progress=)`, `download(job)`; `usage()` |
+| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `models()`, `model(name)`, `create_model(name, spec, ada=)`, `delete_model(name)`; `ada.versions()`, `ada.latest_stable()`; `job(id)` (its `stage`: what it is doing now), `wait(job, timeout=, on_progress=)`, `cancel_job(job)` (ends `failed`, `E_CANCELLED`; `job.cancelled`), `download(job)`; `usage()` |
 | `Model` | `info()` (a `ModelInfo`: `ada`, `ada_status`, `ada_notice`), `spec()`, `set_spec(spec, note=, backtest=)`, `settings()` and `settings(changes, note=, backtest=)`, `versions()` (each with `ada`, `kernel`), `activate(version)`, `upgrade(ada=, note=, backtest=, wait=)`, `delete()`; `record_many(cases)` (a thousand a request, in chunks), `grade(id, value, output=)`, `forget(id)`; `decide(data, ...)`; `learn()`, `learn_job()`, `calibrate()`, `backtest(candidates, ada=, holdout=, output=)`; `import_file(path or bytes, format=, mapping=, partial=, learn=)`, `export(format=, to=)` |
 | `Decision` | `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`, `version`, `ada`; reads as 3.0's `Result` too (`done`, `status`, `data`) |
 | `AdaVersions` | `latest_stable`, `contract`, `versions` (each an `AdaVersion`: `name`, `kernel`, `status`, `beta`, `open`, `released`, `deprecated`, `ends`, `changes_answers`, `aliases`, `summary`, `notes`, `models`); iterates over the versions; `get(name)` |

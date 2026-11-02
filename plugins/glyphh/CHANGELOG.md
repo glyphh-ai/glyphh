@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.9.1 — 2026-11-02
+
+Jobs can be stopped. The Ada skill names the connector's `ada_job_cancel` (a job not started ends at once, a running
+one at its next step, failed `E_CANCELLED`) and the stage `ada_job` now answers (what a job is doing now); the
+glyphh-cli skill names `glyphh cancel ID` (SDK 3.7).
+
 ## 1.9.0 — 2026-11-02
 
 Your glyphh: a memory of you that any AI on the Glyphh connector shares, built from the server's new template

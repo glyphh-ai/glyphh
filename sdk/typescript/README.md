@@ -85,7 +85,7 @@ half-understood: `ClientTooOldError` (`contract`, `supported`), saying to `npm i
 
 | | |
 |---|---|
-| `Ada` | `decide(model, data, { output, outputs, include: ["facts"], clearance })` (`POST /v1/decide`); `models()`, `model(name)`, `createModel(name, spec, { ada })`, `deleteModel(name)`; `ada.versions()`, `ada.latestStable()`; `job(id)`, `wait(job, { timeout, onProgress })`, `download(job)`; `usage()` |
+| `Ada` | `decide(model, data, { output, outputs, include: ["facts"], clearance })` (`POST /v1/decide`); `models()`, `model(name)`, `createModel(name, spec, { ada })`, `deleteModel(name)`; `ada.versions()`, `ada.latestStable()`; `job(id)` (its `stage`: what it is doing now), `wait(job, { timeout, onProgress })`, `cancelJob(job)` (ends `failed`, `E_CANCELLED`), `download(job)`; `usage()` |
 | `AdaModel` | `info()` (`ada`, `ada_status`, `ada_notice`), `spec()`, `setSpec(spec, { note, backtest })`, `settings()` and `settings(changes, { note, backtest })`, `versions()` (each with `ada`, `kernel`), `activate(version)`, `upgrade({ ada, note, backtest, wait })`, `delete()`; `recordMany(cases)` (a thousand a request, in chunks), `grade(id, value, { output })`, `forget(id)`; `decide(data, ...)`; `learn()`, `learnJob()`, `calibrate()`, `backtest(candidates, { ada, holdout, output })`; `importFile(path or bytes, { format, mapping, partial, learn })`, `export({ format, to })` |
 | `Decision` | `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`, `version`, `ada`; reads as 3.0's `Result` too (`status`, `data`) |
 | `AdaVersions` | `latest_stable`, `contract`, `versions` (each `name`, `kernel`, `status`, `beta`, `open`, `released`, `deprecated`, `ends`, `changes_answers`, `aliases`, `summary`, `notes`, `models`) |
