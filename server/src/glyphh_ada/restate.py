@@ -14,19 +14,22 @@ from psycopg import sql
 from glyphh_ada import limits
 
 BATCH: int = limits.BATCH
+# A restatement's batch: each is one transaction rewriting its rows (and their entries in the store's index), then a
+# step of the job's progress, so a learn's progress moves every few seconds on a large model.
+RESTATE_BATCH: int = 200
 
 
-def _batch(store: PostgresStore, after: int) -> list[tuple]:
-    query = store._select() + sql.SQL(" WHERE seq > %s ORDER BY seq LIMIT {}").format(sql.Literal(BATCH))
+def _batch(store: PostgresStore, after: int, size: int = BATCH) -> list[tuple]:
+    query = store._select() + sql.SQL(" WHERE seq > %s ORDER BY seq LIMIT {}").format(sql.Literal(size))
     with store._conn.transaction(), store._conn.cursor(binary=True) as cur:
         cur.execute(query, (after,))
         return cur.fetchall()
 
 
-def batches(store: PostgresStore, after: int = 0) -> Iterator[list[tuple]]:
+def batches(store: PostgresStore, after: int = 0, size: int = BATCH) -> Iterator[list[tuple]]:
     """The store's rows written after sequence `after`, oldest written first, a batch at a time: each row (id,
     situation JSON, outcome, dim, glyph bits, author, ts, events, seq)."""
-    while rows := _batch(store, after):
+    while rows := _batch(store, after, size):
         yield rows
         after = rows[-1][8]
 
@@ -46,13 +49,15 @@ def events(blob: bytes | None, dim: int) -> list | None:
 
 
 def restate_rest(
-    store: PostgresStore, model: glyphh_spec.Model, progress: Callable[[float], None], held: Container[str]
+    store: PostgresStore, model: glyphh_spec.Model, progress: Callable[[float, int], None], held: Container[str]
 ) -> int:
     """Every precedent of the store but those `held` (restated by the kernel already: its sampled Space), restated
-    by the model's learned spec. Returns how many changed."""
+    by the model's learned spec, a RESTATE_BATCH at a time; progress(fraction, precedents seen) after each. Restating
+    is idempotent (a precedent restated already comes out as it is and is not written), so a learn taken again after
+    its worker died goes quickly over what was done. Returns how many changed."""
     encoder = kernel.Space(dim=store.dim, seed=model.spec.seed, lexicon=model.settings.lexicon)
     total, seen, changed = max(store.count(), 1), 0, 0
-    for rows in batches(store):
+    for rows in batches(store, size=RESTATE_BATCH):
         updates = []
         for rid, text, _, dim, _, _, _, blob, _ in rows:
             if rid in held:
@@ -65,5 +70,5 @@ def restate_rest(
         store.rewrite(updates)
         changed += len(updates)
         seen += len(rows)
-        progress(min(seen / total, 1.0))
+        progress(min(seen / total, 1.0), seen)
     return changed

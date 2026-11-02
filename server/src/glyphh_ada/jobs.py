@@ -1,7 +1,8 @@
 """Jobs: work too long for a request (learn, calibrate, imports, exports, re-encodes, backtests), each a row in the
 org's `jobs` table, which is the truth (Redis only carries the work), with its state and progress
-({state: awaiting | queued | running | done | failed, percent, result, error}) written as it goes. An import waits
-in `awaiting` for its file.
+({state: awaiting | queued | running | done | failed, percent, stage, result, error}) written as it goes. An import
+waits in `awaiting` for its file; `stage` says what a running job is doing ("restating 41,000 of 52,000 precedents").
+A job's beat, stall, loss and cancel are jobstate.py's.
 
 learn weighs the model's roles, values, words and pairs from its graded precedents and then calibrates its
 temperature, as rrotor's learn does; calibrate fits the temperature alone. Both read at most limits.JOB_SAMPLE of the
@@ -18,50 +19,70 @@ import glyphh_spec
 import psycopg
 from glyphh_postgres import PostgresStore
 from psycopg.types.json import Jsonb
+from redis import Redis
 
-from glyphh_ada import catalog, limits
+from glyphh_ada import catalog, jobstate, limits
 from glyphh_ada.catalog import q
 from glyphh_ada.errors import Refusal
+from glyphh_ada.jobstate import LEARNED_AT
 from glyphh_ada.restate import restate_rest
 from glyphh_ada.sample import Sampled
 
 _VIEW = """
     SELECT j.id, m.name, j.kind, j.state, j.percent, j.args, j.result, j.error, j.created_at, j.started_at,
-           j.finished_at, j.made_by FROM {s}.jobs j JOIN {s}.models m ON m.id = j.model_id WHERE j.id = %s
+           j.finished_at, j.made_by, j.stage, j.cancel_by,
+           j.state = 'running' AND j.started_at < now() - make_interval(secs => %s)
+    FROM {s}.jobs j JOIN {s}.models m ON m.id = j.model_id WHERE j.id = %s
 """
-_KEYS = (
-    "id",
-    "model",
-    "kind",
-    "state",
-    "percent",
-    "args",
-    "result",
-    "error",
-    "created_at",
-    "started_at",
-    "finished_at",
-    "made_by",
-)
+_KEYS = ("id", "model", "kind", "state", "percent", "args", "result", "error", "created_at", "started_at")
+_KEYS += ("finished_at", "made_by", "stage")
 _OPEN = """
     SELECT id, kind FROM {s}.jobs WHERE model_id = %s AND kind = ANY(%s)
     AND (state IN ('queued', 'running') OR (state = 'awaiting' AND created_at > now() - make_interval(secs => %s)))
 """
-Progress = Callable[[float], None]
+Progress = Callable[..., None]  # (percent, stage=None): Tracker
 BUSY_KINDS: list[str] = ["import", "reencode"]  # at most one of these at a time per model
 
 
-def view(conn: psycopg.Connection, schema: str, job_id: str) -> dict[str, Any]:
+def _row(conn: psycopg.Connection, schema: str, job_id: str) -> tuple:
     try:
         jid: uuid.UUID | None = uuid.UUID(job_id)
     except ValueError:
         jid = None
     found = None
     if jid is not None and catalog.has(conn, schema, "jobs"):
-        found = conn.execute(q(schema, _VIEW), (jid,)).fetchone()
+        found = conn.execute(q(schema, _VIEW), (jobstate.STALL_SECONDS, jid)).fetchone()
     if found is None:
         raise Refusal("E_JOB_MISSING", f"No job {job_id} in this org.", 404, job=job_id)
-    return dict(zip(_KEYS, found, strict=True))
+    return tuple(found)
+
+
+def view(conn: psycopg.Connection, schema: str, job_id: str, redis: Redis | None = None) -> dict[str, Any]:
+    """The job as it stands; given Redis, a running one long started whose worker no longer beats is failed first
+    (jobstate: E_JOB_STALLED, or E_CANCELLED when someone had asked to cancel it)."""
+    found = _row(conn, schema, job_id)
+    if found[14] and redis is not None and not jobstate.beating(redis, job_id):
+        jobstate.fail_open(conn, schema, job_id, jobstate.gone_error(found[2], found[4], found[13]))
+        found = _row(conn, schema, job_id)
+    return dict(zip(_KEYS, found[: len(_KEYS)], strict=True))
+
+
+def cancel(conn: psycopg.Connection, schema: str, job_id: str, by: str, redis: Redis | None = None) -> dict[str, Any]:
+    """Cancel the job: not started yet (awaiting its file, queued), or its worker gone, it is failed E_CANCELLED at
+    once; running, it is asked to stop and does at its next progress (jobstate.Tracker), within seconds. A job
+    already cancelled is answered as it stands; one that has ended otherwise is refused, 409 E_JOB_ENDED."""
+    found = _row(conn, schema, job_id)
+    state = found[3]
+    if state in ("done", "failed"):
+        if state == "failed" and (found[7] or {}).get("code") == "E_CANCELLED":
+            return view(conn, schema, job_id)
+        raise Refusal("E_JOB_ENDED", f"This job has already ended ({state}).", 409, job=job_id, state=state)
+    if state in ("awaiting", "queued"):
+        jobstate.fail_open(conn, schema, job_id, jobstate.cancelled(by, jobstate.NOT_STARTED))
+        return view(conn, schema, job_id)
+    asked = "UPDATE {s}.jobs SET cancel_by = %s, stage = 'cancelling' WHERE id = %s AND cancel_by IS NULL"
+    conn.execute(q(schema, asked), (by, job_id))
+    return view(conn, schema, job_id, redis)
 
 
 def add(
@@ -95,7 +116,8 @@ def open_of(conn: psycopg.Connection, schema: str, model_id: uuid.UUID, kinds: l
 def mark(conn: psycopg.Connection, schema: str, job_id: str, state: str, **values: Any) -> None:
     """The job's state, and its percent, result or error; started and finished stamped as it moves."""
     sets = ["state = %s"] + [f"{k} = %s" for k in values]
-    stamp = {"running": ", started_at = now()", "done": ", finished_at = now()", "failed": ", finished_at = now()"}
+    ended = ", finished_at = now(), stage = NULL"
+    stamp = {"running": ", started_at = now()", "done": ended, "failed": ended}
     text = f"UPDATE {{s}}.jobs SET {', '.join(sets)}{stamp.get(state, '')} WHERE id = %s"
     params = [state, *(Jsonb(v) if k in ("result", "error") else v for k, v in values.items()), job_id]
     conn.execute(q(schema, text), params)
@@ -128,11 +150,17 @@ def _learn(
         base.set_meta("restating", dirty)
         raise
     out: dict[str, Any] = {"learned": {k: summary(v) for k, v in learned.items()} if spec.outputs else summary(learned)}
-    progress(60)
     changed = _tables(model) != before  # the kernel restated the precedents it holds (the newest JOB_SAMPLE)
     if dirty or (changed and total > limits.JOB_SAMPLE):
+        progress(LEARNED_AT, f"restating 0 of {total:,} precedents")
         held = model.space._at if changed else {}
-        out["restated"] = restate_rest(base, model, lambda f: progress(60 + 30 * f), held)
+
+        def restated(fraction: float, done: int) -> None:
+            progress(LEARNED_AT + 30 * fraction, f"restating {done:,} of {total:,} precedents")
+
+        out["restated"] = restate_rest(base, model, restated, held)
+    else:
+        progress(LEARNED_AT, "learned")
     base.set_meta("restating", False)
     return out
 
@@ -145,12 +173,15 @@ def fit(
     total = base.count()
     model = glyphh_spec.Model(spec, store=Sampled(base, limits.JOB_SAMPLE))  # type: ignore[arg-type]
     model.refresh_every = None
+    progress(5, f"reading {min(total, limits.JOB_SAMPLE):,} of {total:,} precedents")
     model.space.load()
-    progress(30)
-    out: dict[str, Any] = {"precedents": total, "sampled": min(total, limits.JOB_SAMPLE)}
+    sampled = min(total, limits.JOB_SAMPLE)
+    progress(30, f"learning from {sampled:,} precedents" if kind == "learn" else "calibrating")
+    out: dict[str, Any] = {"precedents": total, "sampled": sampled}
     try:
         if kind == "learn":
             out.update(_learn(base, model, spec, total, progress))
+            progress(90, "calibrating")
         out["tau"] = model.calibrate()
     except ValueError as e:  # the spec's (SpecError, naming where), or too few cases to calibrate on
         raise Refusal("E_SPEC", str(e), 422, path=getattr(e, "path", "")) from None

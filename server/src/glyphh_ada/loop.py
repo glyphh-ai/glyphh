@@ -94,10 +94,17 @@ class Alive:
 
 class Loop:
     def __init__(
-        self, queue: str, redis: Redis, consumer: str, dispatch: Dispatch, streams: list[str] | None = None
+        self,
+        queue: str,
+        redis: Redis,
+        consumer: str,
+        dispatch: Dispatch,
+        streams: list[str] | None = None,
+        given_up: Callable[[Message], None] | None = None,
     ) -> None:
         self.queue, self.redis, self.consumer, self.dispatch = queue, redis, consumer, dispatch
         self.streams = streams or [protocol.STREAMS[queue]]
+        self.given_up = given_up  # told of a message dropped after MAX_DELIVERIES (a job's is failed, process.lost)
 
     def ensure_group(self) -> None:
         """Each stream and its group, made once; consumers long gone with nothing pending removed."""
@@ -149,6 +156,8 @@ class Loop:
             return
         if deliveries > protocol.MAX_DELIVERIES:
             log.error("dropped: it stopped too many workers", extra=about)
+            if self.given_up is not None:
+                self.given_up(msg)
             return self._reply(msg, protocol.refused("E_INTERNAL", "This request could not be answered.", 500))
         data: Any = None
         try:

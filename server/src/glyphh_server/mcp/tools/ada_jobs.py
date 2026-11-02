@@ -19,6 +19,7 @@ from glyphh_server.mcp.tools.base import Context, Done, Tool
 
 POLL: float = 0.5
 WAIT_MAX: int = 50
+CANCEL_WAIT: float = 10.0  # how long ada_job_cancel waits for a running job to stop
 
 
 class Backtest(NewBacktest):
@@ -47,9 +48,15 @@ class JobArgs(BaseModel):
     wait_seconds: int = Field(0, ge=0, le=WAIT_MAX, description="Wait up to this long for it to end")
 
 
+class CancelArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=64, description="The job's id")
+
+
 def said(job: dict[str, Any]) -> str:
-    """A job in a line or two: its state, then what it found or why it failed."""
-    line = f"Job {job['id']} ({job['kind']} of {job['model']}): {job['state']}, {job['percent']:.0f}%."
+    """A job in a line or two: its state and what it is doing, then what it found or why it failed."""
+    stage = f" ({job['stage']})" if job.get("stage") and job["state"] == "running" else ""
+    line = f"Job {job['id']} ({job['kind']} of {job['model']}): {job['state']}, {job['percent']:.0f}%{stage}."
     if job["state"] == "failed":
         return f"{line} {job['error'].get('message', '')}".rstrip()
     if job.get("download"):
@@ -124,6 +131,17 @@ async def job(ctx: Context, args: JobArgs) -> Done:
     return Done(said(found), found)
 
 
+async def cancel(ctx: Context, args: CancelArgs) -> Done:
+    """Cancel the job, then wait a little for a running one to stop."""
+    who = await caller(ctx)
+    found, _v = await send(ctx.ada, who, "", "job_cancel", {"id": args.id})
+    deadline = time.monotonic() + CANCEL_WAIT
+    while found["state"] not in ("done", "failed") and time.monotonic() < deadline:
+        await asyncio.sleep(POLL)
+        found, _v = await send(ctx.ada, who, "", "job", {"id": args.id})
+    return Done(said(found), found)
+
+
 TOOLS: tuple[Tool, ...] = (
     Tool(
         "ada_learn",
@@ -164,10 +182,18 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "ada_job",
         "Ada job",
-        "A job's state and progress (awaiting its file, queued, running, done, failed) and its result; waits up to "
-        "wait_seconds for it to end; a done export's download link.",
+        "A job's state and progress (awaiting its file, queued, running, done, failed), what it is doing now (stage), "
+        "and its result; waits up to wait_seconds for it to end; a done export's download link.",
         JobArgs,
         job,
         True,
+    ),
+    Tool(
+        "ada_job_cancel",
+        "Ada job cancel",
+        "Cancel a job: one not started ends at once, a running one stops at its next step, within seconds. It ends "
+        "failed with E_CANCELLED, saying what of its work stays.",
+        CancelArgs,
+        cancel,
     ),
 )

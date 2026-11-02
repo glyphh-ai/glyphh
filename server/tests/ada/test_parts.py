@@ -275,9 +275,22 @@ async def test_learning_past_the_sample_restates_every_precedent(
     org = str(who.org_id)
     schema = pg.enter(idle.ctx.conn, org)
     seen: list[float] = []
-    result = jobs.run(idle.ctx.conn, schema, "words", "learn", seen.append)
+    stages: list[str] = []
+
+    def progress(percent: float, stage: str | None = None) -> None:
+        seen.append(percent)
+        stages.extend([stage] if stage else [])
+
+    result = jobs.run(idle.ctx.conn, schema, "words", "learn", progress)
     assert (result["precedents"], result["sampled"]) == (61, 20)
     assert result["restated"] == 40 and seen[-1] == 90.0
+    assert stages == [
+        "reading 20 of 61 precedents",
+        "learning from 20 precedents",
+        "restating 0 of 61 precedents",
+        "restating 61 of 61 precedents",
+        "calibrating",
+    ]
     # A learn that died after the kernel kept what it learned, before every precedent was restated: when the next
     # learn learns the same, the kernel restates nothing, and the job restates them all.
     found = catalog.live(idle.ctx.conn, schema, "words")
@@ -290,5 +303,5 @@ async def test_learning_past_the_sample_restates_every_precedent(
     idle.ctx.conn.execute(
         f'UPDATE "{schema}".meta SET value = %s WHERE model = %s AND key = %s', ("true", found.store, "restating")
     )
-    again = jobs.run(idle.ctx.conn, schema, "words", "learn", seen.append)
+    again = jobs.run(idle.ctx.conn, schema, "words", "learn", progress)
     assert again["restated"] == 1

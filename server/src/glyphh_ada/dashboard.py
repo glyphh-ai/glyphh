@@ -38,7 +38,7 @@ _GROWTH = (
 )
 _JOBS = """
     SELECT j.id, m.name, j.kind, j.state, j.percent, j.args, j.result, j.error, j.created_at, j.started_at,
-           j.finished_at, j.made_by FROM {s}.jobs j JOIN {s}.models m ON m.id = j.model_id
+           j.finished_at, j.made_by, j.stage FROM {s}.jobs j JOIN {s}.models m ON m.id = j.model_id
     WHERE j.model_id = %s ORDER BY j.created_at DESC LIMIT %s
 """
 

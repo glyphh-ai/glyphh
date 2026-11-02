@@ -68,6 +68,11 @@ MIGRATIONS: tuple[str, ...] = (
     ALTER TABLE {s}.spec_versions ADD COLUMN IF NOT EXISTS kernel text NOT NULL DEFAULT '3.12.2';
     ALTER TABLE {s}.spec_versions ALTER COLUMN ada DROP DEFAULT, ALTER COLUMN kernel DROP DEFAULT;
     """,
+    # A job's stage (what it is doing now, with its counts), and who asked to cancel it (jobs.py).
+    """
+    ALTER TABLE {s}.jobs ADD COLUMN IF NOT EXISTS stage text;
+    ALTER TABLE {s}.jobs ADD COLUMN IF NOT EXISTS cancel_by text;
+    """,
 )
 
 _UNFENCED = """
