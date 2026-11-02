@@ -4,6 +4,7 @@ import type { GlyphhSection } from '../../types'
 import { initAccount, signOut } from './account'
 import { openSection } from './actions'
 import { publishFromCommand } from './artifacts'
+import { linkFromCommand } from './link'
 import { openUrl } from './open'
 import { watchOpenRequests } from './openreq'
 import { resumePolling } from './device'
@@ -14,7 +15,7 @@ import { SECTIONS } from './state'
 
 export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.'
 
-export const USAGE = '/glyphh [login | logout | account | org | plan | billing | artifacts | publish <file>]'
+export const USAGE = '/glyphh [login | logout | account | org | plan | billing | artifacts | publish <file> | link]'
 
 /** At session start: the sign-in. */
 export async function startGlyphh(gh: Host) {
@@ -49,6 +50,11 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
   if (/^publish(\s|$)/.test(arg)) {
     if ((await gh.state.auth.get()).status !== 'in') return { text: `Sign in to Glyphh first: /glyphh signin\n${ASK_CLAUDE}` }
     return { text: await publishFromCommand(gh, args.trim().replace(/^publish\s*/i, '')) }
+  }
+  // /glyphh link: this machine's rrotor gets its runtime token from the server and connects out.
+  if (arg === 'link') {
+    if ((await gh.state.auth.get()).status !== 'in') return { text: `Sign in to Glyphh first: /glyphh signin\n${ASK_CLAUDE}` }
+    return { text: (await linkFromCommand(gh)).text }
   }
   // /glyphh login and logout stay inline in the chat (their reply row draws the
   // sign-in); only the other sections open the side panel.

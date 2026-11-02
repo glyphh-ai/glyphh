@@ -60,9 +60,20 @@ claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp \
 If `claude` is not on the PATH, give the person that line to run themselves (`mcp-command` prints it). Never print
 the token or put it in the chat. Then ask them to restart Claude Code (or open `/mcp`) so rrotor's tools load.
 
-`status` says whether the container runs and answers, and its version; `start` and `stop` do what they say;
-`uninstall` removes the container and the MCP entry and keeps the volume; `uninstall --purge` also deletes the volume
-(every program, run, schedule and secret) and the token: only when the person asks for exactly that.
+**The link to Glyphh.** `connect` (and `start`) also link the rrotor to Glyphh when this machine is signed in
+(`~/.glyphh/install.json`, from `/glyphh signin` or the sign-in card): the server issues the local runtime's token to
+this sign-in (`POST /v1/runtime/local`), the script hands it to rrotor (`PUT /v1/runtime/token`, on loopback, never
+printed) and waits up to twenty seconds for the link to come online; the answer's `link` is `linked`, `connecting`
+(it will show once online), `skipped` (not signed in: say to run `/glyphh signin`, then `link`), or a stop state to
+say plainly. `link` does only that, any time (asking again rotates the token). Linked, the rrotor shows on the
+platform's Runtimes page, the apps published to it reach the organisation's catalogue (the `publish` skill), and
+it gets the organisation's licence key; unlinked, it still runs everything locally. The mod does the same with
+`/glyphh link` and the Account section's **link**.
+
+`status` says whether the container runs and answers, its version, the link's state (`online`, `no_token`,
+`connecting`, …) and its runtime id; `start` and `stop` do what they say; `uninstall` removes the container and the
+MCP entry and keeps the volume; `uninstall --purge` also deletes the volume (every program, run, schedule and
+secret) and the token: only when the person asks for exactly that.
 
 ## Using it
 

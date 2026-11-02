@@ -2,6 +2,19 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.6.1 — 2026-11-01
+
+The local rrotor linked to Glyphh. Nothing else changes.
+
+- `/glyphh link`, and **link** beside "This machine's rrotor" in the Account section: the server issues the local
+  runtime's token to this install (`POST /v1/runtime/local`, rotated each time it is asked), rrotor takes it
+  (`PUT /v1/runtime/token`) and connects out; the reply says when it is online, or that it is still connecting, or
+  why not, in the server's or rrotor's words. Linked, the rrotor shows on the platform's Runtimes page, the apps
+  published to it reach the organisation's catalogue, and it gets the organisation's licence key. Until now nothing
+  in the plugin made this link, so a local rrotor never appeared on the platform.
+- The rrotor skill's `connect` (and `start`) link the rrotor the same way once it answers, when this machine is
+  signed in; `status` says the link's state; `link` does it alone.
+
 ## 1.6.0 — 2026-11-01
 
 Pages published to the organisation. Nothing of the Ada skills or the ledger changes.

@@ -3,7 +3,8 @@
 # on this machine, its API on 127.0.0.1 only. Used by the glyphh plugin's rrotor skill; runs by hand too.
 #
 #   rrotor.sh install [--port 7777] [--image IMAGE|pinned] [--runtime auto|container|orbstack|docker]
-#   rrotor.sh connect            # adds rrotor's /mcp to Claude Code (user scope), the token read from its file
+#   rrotor.sh connect            # adds rrotor's /mcp to Claude Code (user scope), the token read from its file; then links
+#   rrotor.sh link               # links rrotor to Glyphh: the runtime token from the server (this machine's sign-in) handed to rrotor
 #   rrotor.sh status | start | stop
 #   rrotor.sh deploy FOLDER [COMMIT]   # a program's folder at a commit (HEAD), as a git bundle
 #   rrotor.sh uninstall [--purge]      # the container; --purge also its volume (every program, run and secret) and the token
@@ -280,7 +281,71 @@ cmd_connect() {
   claude mcp add --transport http --scope user rrotor "$(url)/mcp" \
     --header "Authorization: Bearer $(tr -d ' \n' <"$TOKEN_FILE")" >/dev/null 2>&1 \
     || fail "claude mcp add refused. Run this yourself: $(mcp_command)"
-  say "{\"ok\": true, \"mcp\": \"rrotor\", \"url\": \"$(url)/mcp\", \"scope\": \"user\", \"next\": \"Restart Claude Code (or run /mcp) to load rrotor's tools.\"}"
+  link=skipped
+  if [ -s "$INSTALL_FILE" ] && curl -fsS --max-time 2 "$(url)/healthz" >/dev/null 2>&1; then
+    header_file
+    link_state
+    if [ "$LINK_STATE" = no_token ]; then do_link; link="$LINK_RESULT"; else link="${LINK_STATE:-unknown}"; fi
+  fi
+  say "{\"ok\": true, \"mcp\": \"rrotor\", \"url\": \"$(url)/mcp\", \"scope\": \"user\", \"link\": \"$(json_str "$link")\", \"next\": \"Restart Claude Code (or run /mcp) to load rrotor's tools.\"}"
+}
+
+# --- the link to Glyphh: the runtime token the server issues to this machine's sign-in, handed to rrotor ----------------
+
+INSTALL_FILE="${GLYPHH_HOME:-$HOME/.glyphh}/install.json"
+
+json_field() { sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" | head -n 1; }
+
+link_state() {
+  # The link's state and runtime id as rrotor reports them (GET /v1/health); empty when it cannot be asked.
+  health="$(api GET /v1/health 2>/dev/null || true)"
+  LINK_STATE="$(printf '%s' "$health" | sed -n 's/.*"link": *{[^}]*"state": *"\([^"]*\)".*/\1/p' | head -n 1)"
+  LINK_RUNTIME="$(printf '%s' "$health" | json_field runtime_id)"
+}
+
+do_link() {
+  # Links rrotor to Glyphh; sets LINK_RESULT (linked | connecting | <state>) and LINK_RUNTIME. Fails on a refusal.
+  [ -s "$INSTALL_FILE" ] || fail "This machine is not signed in to Glyphh: run /glyphh signin (or ask Claude to sign in to Glyphh), then link again."
+  install_token="$(json_field token <"$INSTALL_FILE")"
+  [ -n "$install_token" ] || fail "No sign-in token in $INSTALL_FILE: sign in to Glyphh again."
+  auth="$(mktemp "${TMPDIR:-/tmp}/glyphh-auth.XXXXXX")"
+  chmod 600 "$auth"
+  printf 'Authorization: Bearer %s\n' "$install_token" >"$auth"
+  issued="$(curl -sS --max-time 30 -X POST -H "@$auth" -H 'content-type: application/json' "$SERVER/v1/runtime/local" 2>&1)"
+  rm -f "$auth"
+  runtime_id="$(printf '%s' "$issued" | json_field runtime_id)"
+  runtime_token="$(printf '%s' "$issued" | json_field token)"
+  if [ -z "$runtime_id" ] || [ -z "$runtime_token" ]; then
+    message="$(printf '%s' "$issued" | json_field message)"
+    fail "The server issued no runtime token: ${message:-$issued}"
+  fi
+  body="$(mktemp "${TMPDIR:-/tmp}/rrotor-link.XXXXXX")"
+  chmod 600 "$body"
+  printf '{"runtime_id": "%s", "token": "%s"}' "$runtime_id" "$runtime_token" >"$body"
+  handed="$(api PUT /v1/runtime/token "$body")"
+  rm -f "$body"
+  printf '%s' "$handed" | grep -q '"error"' && fail "rrotor refused the token: $(printf '%s' "$handed" | json_field message)"
+  i=0
+  LINK_RESULT=connecting
+  while [ "$i" -lt 20 ]; do
+    link_state
+    case "$LINK_STATE" in
+      online) LINK_RESULT=linked; break ;;
+      connecting | backoff | no_token | follower | "") ;;
+      *) LINK_RESULT="$LINK_STATE"; break ;;
+    esac
+    sleep 1
+    i=$((i + 1))
+  done
+  LINK_RUNTIME="$runtime_id"
+}
+
+cmd_link() {
+  [ -s "$TOKEN_FILE" ] || fail "No local token yet: install first."
+  curl -fsS --max-time 2 "$(url)/healthz" >/dev/null 2>&1 || fail "rrotor is not answering at $(url): start it first."
+  header_file
+  do_link
+  say "{\"ok\": true, \"link\": \"$(json_str "$LINK_RESULT")\", \"runtime_id\": \"$(json_str "$LINK_RUNTIME")\", \"shows\": \"the platform's Runtimes page, its apps in the organisation's catalogue, the organisation's licence key\"}"
 }
 
 cmd_status() {
@@ -289,18 +354,27 @@ cmd_status() {
   up=false
   curl -fsS --max-time 2 "$(url)/healthz" >/dev/null 2>&1 && up=true
   version=""
+  LINK_STATE=""
+  LINK_RUNTIME=""
   if [ "$up" = true ] && [ -s "$TOKEN_FILE" ]; then
     header_file
-    version="$(api GET /v1/health | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')"
+    version="$(api GET /v1/health | json_field version)"
+    link_state
   fi
-  say "{\"ok\": true, \"runtime\": \"$KIND\", \"container\": \"$1\", \"answering\": $up, \"version\": \"$(json_str "$version")\", \"image\": \"$(json_str "$3")\", \"url\": \"$(url)\"}"
+  say "{\"ok\": true, \"runtime\": \"$KIND\", \"container\": \"$1\", \"answering\": $up, \"version\": \"$(json_str "$version")\", \"image\": \"$(json_str "$3")\", \"url\": \"$(url)\", \"link\": \"$(json_str "${LINK_STATE:-unknown}")\", \"runtime_id\": \"$(json_str "$LINK_RUNTIME")\"}"
 }
 
 cmd_start() {
   detect
   $CLI start "$NAME" >/dev/null 2>&1 || fail "No container $NAME: install first."
   wait_up || fail "rrotor did not answer within a minute."
-  say "{\"ok\": true, \"container\": \"running\", \"url\": \"$(url)\"}"
+  link=skipped
+  if [ -s "$INSTALL_FILE" ] && [ -s "$TOKEN_FILE" ]; then
+    header_file
+    link_state
+    if [ "$LINK_STATE" = no_token ]; then do_link; link="$LINK_RESULT"; else link="${LINK_STATE:-unknown}"; fi
+  fi
+  say "{\"ok\": true, \"container\": \"running\", \"url\": \"$(url)\", \"link\": \"$(json_str "$link")\"}"
 }
 
 cmd_stop() {
@@ -344,11 +418,12 @@ cmd_deploy() {
 case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   connect) cmd_connect ;;
+  link) cmd_link ;;
   status) cmd_status ;;
   start) cmd_start ;;
   stop) cmd_stop ;;
   uninstall) shift; cmd_uninstall "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
   mcp-command) mcp_command; printf '\n' ;;
-  *) say "usage: rrotor.sh install|connect|status|start|stop|uninstall [--purge]|deploy FOLDER [COMMIT]|mcp-command"; exit 2 ;;
+  *) say "usage: rrotor.sh install|connect|link|status|start|stop|uninstall [--purge]|deploy FOLDER [COMMIT]|mcp-command"; exit 2 ;;
 esac

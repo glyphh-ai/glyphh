@@ -80,6 +80,17 @@ function newState() {
     /** The local rrotor: the apps published to it; `rrotorDown` makes its address unreachable. */
     apps: [] as Json[],
     rrotorDown: false,
+    /** The local rrotor's link (its /v1/health): the runtime id and token it holds, and the link's state;
+     *  `linkStalls` keeps it `connecting` after a token; `tokens` is what PUT /v1/runtime/token received. */
+    rrotor: { runtime_id: null as string | null, link: 'no_token', version: '0.2.0' },
+    linkStalls: false,
+    /** The link's state once a token lands (not stalling): online, or a stop such as `refused`. */
+    linkOutcome: 'online',
+    tokens: [] as Json[],
+    /** POST /v1/runtime/local: the runtime ids and tokens the server issued (each call rotates the token). */
+    issued: 0,
+    /** The install's token is a connector's, which the server refuses a local runtime for. */
+    noInstall: false,
     providers: ['google'] as string[],
     name: 'Chris',
     orgName: 'Glyphh',
@@ -179,6 +190,10 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
     case 'GET /v1/installs': return ok({ installs: s.installs })
     case 'DELETE /v1/installs/:id': s.installs = s.installs.filter(i => i.id !== id); return ok()
     case 'POST /v1/sign-out': return ok()
+    case 'POST /v1/runtime/local':
+      if (s.noInstall) return refuse(422, 'E_INVALID', 'A local runtime belongs to an install: link it from Claude Code.', { reason: 'no_install' })
+      s.issued += 1
+      return ok({ runtime_id: 'rt-local-1', token: `rtok-${s.issued}` })
     default: return adminRoute(s, c, key, id, ok)
   }
 }
@@ -232,9 +247,20 @@ function artifactsRoute(s: State, c: Call, key: string, ok: (b?: unknown) => { s
   return ok(a)
 }
 
-// The local rrotor's POST /v1/apps (rrotor's docs/architecture.md, 5.8).
+// The local rrotor's POST /v1/apps (rrotor's docs/architecture.md, 5.8), its
+// GET /v1/health (the link's state) and PUT /v1/runtime/token (the link made).
 function rrotorRoute(s: State, c: Call): { status: number; body: unknown } {
   if (c.bearer !== RROTOR_TOKEN) return refuse(401, 'E_AUTH', 'Send the local token: Authorization: Bearer <local token>.')
+  if (c.method === 'GET' && c.path === '/v1/health') {
+    return { status: 200, body: { version: s.rrotor.version, mode: 'local', runtime_id: s.rrotor.runtime_id, link: { state: s.rrotor.link, since: 0, last_close: null, owed: 0, seq: 0 } } }
+  }
+  if (c.method === 'PUT' && c.path === '/v1/runtime/token') {
+    if (!c.body.runtime_id || !c.body.token) return refuse(400, 'E_INVALID', 'Send {runtime_id, token}.')
+    s.tokens.push(c.body)
+    s.rrotor.runtime_id = String(c.body.runtime_id)
+    s.rrotor.link = s.linkStalls ? 'connecting' : s.linkOutcome
+    return { status: 200, body: { runtime_id: s.rrotor.runtime_id, link: 'connecting' } }
+  }
   if (c.method !== 'POST' || c.path !== '/v1/apps') return refuse(404, 'E_NOT_FOUND', `No route ${c.method} ${c.path}`)
   const name = String(c.body.name ?? '')
   if (!/^[a-z][a-z0-9-]{0,62}$/.test(name)) return refuse(400, 'E_MANIFEST', `${name || '(none)'} is not a program name: ^[a-z][a-z0-9-]{0,62}$.`)
