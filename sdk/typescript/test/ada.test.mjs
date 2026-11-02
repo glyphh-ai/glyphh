@@ -262,6 +262,28 @@ test("a backtest, and tuning by versions", async () => {
   for (const k of calls) if (k.method !== "GET") assert.ok(k.headers["idempotency-key"]);
 });
 
+test("a job is cancelled and says what it is doing", async () => {
+  const running = job("running", "learn", { percent: 72, stage: "restating 41,000 of 52,000 precedents" });
+  const stopping = job("running", "learn", { percent: 72, stage: "cancelling" });
+  const error = { code: "E_CANCELLED", message: "Cancelled by u1. The model is as it was before this learn.", by: "u1" };
+  const stopped = job("failed", "learn", { percent: 72, stage: null, error });
+  const f = fake([200, running], [200, stopping], [200, stopped], [200, stopped]);
+  const seen = await f.ada.job("j1");
+  assert.equal(seen.stage, "restating 41,000 of 52,000 precedents");
+  assert.equal((await f.ada.cancelJob(seen)).stage, "cancelling");
+  await assert.rejects(f.ada.wait("j1"), (e) => e instanceof JobFailedError && e.code === "E_CANCELLED");
+  const again = await f.ada.cancelJob("j1");
+  assert.deepEqual([again.state, again.error.code, again.stage], ["failed", "E_CANCELLED", null]);
+  assert.deepEqual(f.calls.map((c) => [c.method, c.path]), [
+    ["GET", "/v1/jobs/j1"],
+    ["POST", "/v1/jobs/j1/cancel"],
+    ["GET", "/v1/jobs/j1"],
+    ["POST", "/v1/jobs/j1/cancel"],
+  ]);
+  const ended = fake([409, { error: { code: "E_JOB_ENDED", message: "This job has already ended (done).", trace_id: "t" } }]);
+  await assert.rejects(ended.ada.cancelJob("j1"), (e) => e instanceof AdaError && e.code === "E_JOB_ENDED" && e.status === 409);
+});
+
 test("a job that fails, and one that outlasts the wait", async () => {
   const { clock } = fakeClock();
   const failed = job("failed", "learn", { error: { code: "E_SPEC", message: "Too few graded precedents.", path: "output" } });

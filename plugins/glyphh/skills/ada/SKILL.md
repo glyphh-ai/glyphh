@@ -27,7 +27,8 @@ with Google or GitHub. Its Ada tools:
 | `ada_record {name, data, outcome?}`, `ada_record_many {name, cases}` | One case, or up to 1,000 `{data, outcome?, outcomes?, ts?}` |
 | `ada_grade {name, id, value, output?}`, `ada_forget {name, id}` | An outcome on a case already in; forget one case |
 | `ada_import {name, format, mapping?, content?, rows?}` | An import, as a job: a one-hour upload link for the file, or the file's text or its rows inline (5 MB) |
-| `ada_job {id, wait_seconds?}` | Any job's state and progress, waiting up to 50 s for it to end; a done export's download link |
+| `ada_job {id, wait_seconds?}` | Any job's state, progress and stage (what it is doing now), waiting up to 50 s for it to end; a done export's download link |
+| `ada_job_cancel {id}` | Stop a job the user wants stopped: one not started ends at once, a running one at its next step; it ends failed, `E_CANCELLED`, its message saying what of its work stays (tell the user that part) |
 | `ada_learn {name}`, `ada_calibrate {name}` | Weigh the roles from the precedents, then calibrate; calibrate alone. Jobs |
 | `ada_decide`, `ada_query`, `ada_probabilities`, `ada_facts` `{name, data, ...}` | Ask |
 | `ada_backtest {name, candidates, holdout?, ada?}` | Score the live version and candidates on held-out cases, the live model untouched; `ada` (or a candidate's own `ada`) scores on another Ada version. A job |

@@ -146,6 +146,9 @@ export interface Job<R = any> {
   started_at: string | null;
   finished_at: string | null;
   made_by: string | null;
+  /** What a running job is doing now, with its counts ("restating 41,000 of 52,000 precedents"); `cancelling` once
+   * asked to stop. A cancelled job ends `failed`, its error `E_CANCELLED`. */
+  stage?: string | null;
   /** A done export's one-hour download link. */
   download?: Link;
   /** An import's one-hour upload link, while it waits for its file. */
@@ -882,6 +885,17 @@ export class Ada {
   /** A job's state and progress. */
   job<R = any>(id: string): Promise<Job<R>> {
     return this.call("GET", `/v1/jobs/${q(id)}`);
+  }
+
+  /**
+   * Stop a job (`POST /v1/jobs/{id}/cancel`). One not started ends at once; a running one stops at its next step,
+   * within seconds, `stage` `cancelling` until then. It ends `failed` with `E_CANCELLED` (`wait` throws
+   * JobFailedError), its message saying what of its work stays. Asking again answers the job as it stands; a job
+   * that has already ended is refused, E_JOB_ENDED (409). (`cancel(runId)` stays the 3.0 call for a run.)
+   */
+  cancelJob<R = any>(job: Job<R> | string): Promise<Job<R>> {
+    const id = typeof job === "string" ? job : job.id;
+    return this.call("POST", `/v1/jobs/${q(id)}/cancel`, undefined, true);
   }
 
   /** Wait for a job to end: the done job, or `JobFailedError` with the job's own error. */

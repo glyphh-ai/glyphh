@@ -358,8 +358,9 @@ def _too_old(contract: Any) -> Optional[ClientTooOldError]:
 @dataclass(frozen=True)
 class Job:
     """Work too long for a request (learn, calibrate, import, export, backtest, re-encode): its state (`awaiting`
-    its file, `queued`, `running`, `done`, `failed`), `percent`, and its `result` or `error`. A done export carries
-    `download` ({url, expires_at}); an import waiting for its file, `upload`."""
+    its file, `queued`, `running`, `done`, `failed`), `percent`, `stage` (what a running job is doing now, with its
+    counts; `cancelling` once asked to stop), and its `result` or `error`. A done export carries `download`
+    ({url, expires_at}); an import waiting for its file, `upload`. A cancelled job is `failed`, `cancelled`."""
 
     id: str
     model: str
@@ -371,6 +372,7 @@ class Job:
     download: Optional[Dict[str, Any]] = None
     upload: Optional[Dict[str, Any]] = None
     data: Dict[str, Any] = field(default_factory=dict, repr=False)
+    stage: Optional[str] = None
 
     @property
     def done(self) -> bool:
@@ -379,6 +381,11 @@ class Job:
     @property
     def failed(self) -> bool:
         return self.state == "failed"
+
+    @property
+    def cancelled(self) -> bool:
+        """Ended by `Ada.cancel_job`: failed with E_CANCELLED, its message saying what of its work stays."""
+        return self.failed and (self.error or {}).get("code") == "E_CANCELLED"
 
     @property
     def ended(self) -> bool:
@@ -397,6 +404,7 @@ class Job:
             download=body.get("download"),
             upload=body.get("upload"),
             data=dict(body),
+            stage=body.get("stage"),
         )
 
 
@@ -731,6 +739,13 @@ class Ada:
     def job(self, job_id: str) -> Job:
         """A job's state and progress."""
         return Job.of(self._call("GET", f"/v1/jobs/{_quote(job_id)}"))
+
+    def cancel_job(self, job: Union[Job, str]) -> Job:
+        """Stop a job (`POST /v1/jobs/{id}/cancel`). One not started ends at once; a running one stops at its next
+        step, within seconds, `stage` `cancelling` until then (`wait` for it: it ends failed, `cancelled`). Asking
+        again answers the job as it stands; a job that has already ended is refused, E_JOB_ENDED (409)."""
+        job_id = job if isinstance(job, str) else job.id
+        return Job.of(self._call("POST", f"/v1/jobs/{_quote(job_id)}/cancel", read=True))
 
     def wait(
         self,

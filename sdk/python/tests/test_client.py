@@ -294,6 +294,33 @@ def test_a_backtest_and_tuning_by_versions(clock):
     assert all("idempotency-key" in c[2] for c in fake.calls if c[0] != "GET")
 
 
+def test_a_job_is_cancelled_and_says_what_it_is_doing(clock):
+    running = job("running", percent=72.0, stage="restating 41,000 of 52,000 precedents")
+    stopping = job("running", percent=72.0, stage="cancelling")
+    error = {"code": "E_CANCELLED", "message": "Cancelled by u1. The model is as it was before this learn.", "by": "u1"}
+    stopped = job("failed", percent=72.0, stage=None, error=error)
+    client, fake = ada((200, running), (200, stopping), (200, stopped), (200, stopped))
+    seen = client.job("j1")
+    assert (seen.stage, seen.cancelled) == ("restating 41,000 of 52,000 precedents", False)
+    asked = client.cancel_job(seen)
+    assert asked.stage == "cancelling" and not asked.ended
+    with pytest.raises(JobFailedError) as caught:
+        client.wait("j1")
+    assert caught.value.code == "E_CANCELLED"
+    again = client.cancel_job("j1")
+    assert again.cancelled and again.stage is None and again.error["by"] == "u1"
+    assert paths(fake) == [
+        ("GET", "/v1/jobs/j1"),
+        ("POST", "/v1/jobs/j1/cancel"),
+        ("GET", "/v1/jobs/j1"),
+        ("POST", "/v1/jobs/j1/cancel"),
+    ]
+    client, _ = ada((409, {"error": {"code": "E_JOB_ENDED", "message": "This job has already ended (done).", "trace_id": "t"}}))
+    with pytest.raises(AdaError) as ended:
+        client.cancel_job("j1")
+    assert (ended.value.code, ended.value.status) == ("E_JOB_ENDED", 409)
+
+
 def test_a_job_that_fails_and_one_that_outlasts_the_wait(clock):
     failed = job("failed", error={"code": "E_SPEC", "message": "Too few graded precedents.", "path": "output"})
     client, _ = ada((202, job("queued")), (200, failed))
@@ -558,7 +585,7 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (path.name, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.6.0"
+    assert glyphh.__version__ == "3.7.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

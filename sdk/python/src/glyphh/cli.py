@@ -64,7 +64,8 @@ def _progress(quiet: bool):
         return None
 
     def show(job: Job) -> None:
-        print(f"{job.kind} {job.state} {job.percent:g}%", file=sys.stderr)
+        stage = f" ({job.stage})" if job.stage else ""
+        print(f"{job.kind} {job.state} {job.percent:g}%{stage}", file=sys.stderr)
 
     return show
 
@@ -220,6 +221,10 @@ def job(a: argparse.Namespace) -> None:
     _out(ada.wait(a.id, on_progress=_progress(a.quiet)) if a.wait else ada.job(a.id))
 
 
+def cancel(a: argparse.Namespace) -> None:
+    _out(Ada().cancel_job(a.id))
+
+
 def usage(_: argparse.Namespace) -> None:
     _out(Ada().usage())
 
@@ -325,6 +330,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("id", help="the job's id")
     p.add_argument("--wait", action="store_true", help="wait for it to end")
     p.add_argument("--quiet", "-q", action="store_true", help="no progress on stderr")
+    p = cmd("cancel", cancel, "Stop a job: one not started at once, a running one at its next step", model_arg=False)
+    p.add_argument("id", help="the job's id")
     return top
 
 
