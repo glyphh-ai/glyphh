@@ -1,6 +1,6 @@
 ---
 name: rrotor
-description: Install, start and connect rrotor, the local Glyphh runtime that hosts the person's programs and CLIs in a container on their machine, and drive it from Claude Code (deploy, call, approvals, secrets, schedules, CLIs). Use when the person asks to install or set up rrotor or "the runtime", to run a program or a CLI locally in a sandbox, to schedule a program, or when rrotor's tools (programs_list, program_call, cli_run, ...) are missing or rrotor is not answering. Not for Ada: Ada models live in Ada Cloud (the ada skill).
+description: Install, update, start and connect rrotor, the local Glyphh runtime that hosts the person's programs, CLIs and apps in a container on their machine, and drive it from Claude Code (deploy, call, approvals, secrets, schedules, CLIs, publishing). Use when the person asks to install, set up or update rrotor or "the runtime", to run a program or a CLI locally in a sandbox, to schedule a program, or when rrotor's tools (programs_list, program_call, cli_run, app_publish, ...) are missing, some of them are missing (an older rrotor: update it), or rrotor is not answering. Not for Ada: Ada models live in Ada Cloud (the ada skill).
 ---
 
 # rrotor, the local runtime
@@ -70,10 +70,26 @@ platform's Runtimes page, the apps published to it reach the organisation's cata
 it gets the organisation's licence key; unlinked, it still runs everything locally. The mod does the same with
 `/glyphh link` and the Account section's **link**.
 
-`status` says whether the container runs and answers, its version, the link's state (`online`, `no_token`,
-`connecting`, …) and its runtime id; `start` and `stop` do what they say; `uninstall` removes the container and the
-MCP entry and keeps the volume; `uninstall --purge` also deletes the volume (every program, run, schedule and
-secret) and the token: only when the person asks for exactly that.
+`status` says whether the container runs and answers, its version, the release this plugin pins (`pinned`) and
+whether the running one is behind it (`update_available`), the link's state (`online`, `no_token`, `connecting`, …)
+and its runtime id; `start` and `stop` do what they say; `uninstall` removes the container and the MCP entry and
+keeps the volume; `uninstall --purge` also deletes the volume (every program, run, schedule and secret) and the
+token: only when the person asks for exactly that.
+
+**Updating.** Each plugin release pins the rrotor release it was made against; a rrotor behind it lacks what the
+newer plugin and skills expect (a rrotor before 0.2.0 has no `app_publish`, before 0.3.0 no React pages, documents,
+diagrams or images). When the person asks to update rrotor, when `status` says `update_available`, or when a tool
+this skill names is missing from `mcp__rrotor__*` while others are there:
+
+```sh
+sh "${CLAUDE_SKILL_DIR}/scripts/rrotor.sh" update
+```
+
+It pulls the pinned release, makes the container again on the same volume, port and token (every program, run,
+schedule, secret and app stays), drops any developer `--image` override, waits for it to answer and links it again.
+The answer says `from` and `to`. Then say that Claude Code loads rrotor's tools again at `/mcp` or its next start:
+the session that ran the update still holds the old tool list. The Account section of `/glyphh` shows the same:
+"Update to <version>" beside this machine's rrotor, with **update** doing exactly this.
 
 ## Using it
 

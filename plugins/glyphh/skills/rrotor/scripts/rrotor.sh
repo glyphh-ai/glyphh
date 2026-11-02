@@ -5,6 +5,7 @@
 #   rrotor.sh install [--port 7777] [--image IMAGE|pinned] [--runtime auto|container|orbstack|docker]
 #   rrotor.sh connect            # adds rrotor's /mcp to Claude Code (user scope), the token read from its file; then links
 #   rrotor.sh link               # links rrotor to Glyphh: the runtime token from the server (this machine's sign-in) handed to rrotor
+#   rrotor.sh update             # the rrotor release this plugin pins: pulled, the container made again on its volume, linked
 #   rrotor.sh status | start | stop
 #   rrotor.sh deploy FOLDER [COMMIT]   # a program's folder at a commit (HEAD), as a git bundle
 #   rrotor.sh uninstall [--purge]      # the container; --purge also its volume (every program, run and secret) and the token
@@ -15,7 +16,7 @@
 # {"ok": false, "error": ...}.
 set -eu
 
-PINNED_VERSION="0.1.0"                      # the rrotor release this plugin release was made against
+PINNED_VERSION="0.3.0"                      # the rrotor release this plugin release was made against (tests/rrotor-pin.test.ts holds it to deploy/)
 IMAGE_REPO="ghcr.io/glyphh-ai/rrotor"
 NAME="glyphh-rrotor"
 VOLUME="glyphh-rrotor-data"
@@ -361,7 +362,31 @@ cmd_status() {
     version="$(api GET /v1/health | json_field version)"
     link_state
   fi
-  say "{\"ok\": true, \"runtime\": \"$KIND\", \"container\": \"$1\", \"answering\": $up, \"version\": \"$(json_str "$version")\", \"image\": \"$(json_str "$3")\", \"url\": \"$(url)\", \"link\": \"$(json_str "${LINK_STATE:-unknown}")\", \"runtime_id\": \"$(json_str "$LINK_RUNTIME")\"}"
+  behind=false
+  [ -n "$version" ] && [ "$version" != "$PINNED_VERSION" ] && [ "$(printf '%s\n%s\n' "$version" "$PINNED_VERSION" | sort -t. -k1,1n -k2,2n -k3,3n | head -n 1)" = "$version" ] && behind=true
+  say "{\"ok\": true, \"runtime\": \"$KIND\", \"container\": \"$1\", \"answering\": $up, \"version\": \"$(json_str "$version")\", \"pinned\": \"$PINNED_VERSION\", \"update_available\": $behind, \"image\": \"$(json_str "$3")\", \"url\": \"$(url)\", \"link\": \"$(json_str "${LINK_STATE:-unknown}")\", \"runtime_id\": \"$(json_str "$LINK_RUNTIME")\"}"
+}
+
+# The pinned release, pulled and run on the same volume, port and token: what `install` does once the pin moved,
+# with a developer's `--image` override dropped (an update is to the release). Then the link, as `start` makes it.
+cmd_update() {
+  detect
+  set -- $(found_state)
+  before=""
+  if [ "$1" = running ] && [ -s "$TOKEN_FILE" ]; then
+    header_file
+    before="$(api GET /v1/health | json_field version)"
+  fi
+  IMAGE_OVERRIDE=""
+  out="$(cmd_install --image pinned)" || { say "$out"; exit 1; }
+  header_file
+  after="$(api GET /v1/health | json_field version)"
+  link=skipped
+  if [ -s "$INSTALL_FILE" ]; then
+    link_state
+    if [ "$LINK_STATE" = no_token ]; then do_link; link="$LINK_RESULT"; else link="${LINK_STATE:-unknown}"; fi
+  fi
+  say "{\"ok\": true, \"from\": \"$(json_str "$before")\", \"to\": \"$(json_str "$after")\", \"image\": \"$IMAGE_REPO:$PINNED_VERSION\", \"url\": \"$(url)\", \"link\": \"$(json_str "$link")\", \"note\": \"Claude Code loads rrotor's tools again at /mcp or its next start.\"}"
 }
 
 cmd_start() {
@@ -420,10 +445,11 @@ case "${1:-}" in
   connect) cmd_connect ;;
   link) cmd_link ;;
   status) cmd_status ;;
+  update) cmd_update ;;
   start) cmd_start ;;
   stop) cmd_stop ;;
   uninstall) shift; cmd_uninstall "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
   mcp-command) mcp_command; printf '\n' ;;
-  *) say "usage: rrotor.sh install|connect|link|status|start|stop|uninstall [--purge]|deploy FOLDER [COMMIT]|mcp-command"; exit 2 ;;
+  *) say "usage: rrotor.sh install|connect|link|update|status|start|stop|uninstall [--purge]|deploy FOLDER [COMMIT]|mcp-command"; exit 2 ;;
 esac

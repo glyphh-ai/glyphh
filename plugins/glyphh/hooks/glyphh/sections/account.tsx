@@ -2,8 +2,9 @@
 // rrotor (link), installs (revoke), sign out.
 import type { AuthState } from '../../../types'
 import { signOut } from '../account'
-import { linkLocalRrotor, rename, revokeInstall } from '../actions'
+import { linkLocalRrotor, rename, revokeInstall, updateRrotor } from '../actions'
 import { isLinked, linkLine, type RrotorHealth } from '../link'
+import { RROTOR_PINNED, isBehind } from '../rrotor'
 import { idOf, str, userOf } from '../shape'
 import { SignIns } from './signins'
 import { day, kit, type Ctx, type Tone } from '../ui'
@@ -14,6 +15,7 @@ function LocalRrotor(ctx: Ctx) {
   const k = kit(ctx)
   const health = (lists.rrotor?.[0] ?? { status: 'none' }) as unknown as RrotorHealth
   const tone: Tone | undefined = isLinked(health) ? 'success' : health.status === 'up' ? 'warning' : undefined
+  const behind = health.status === 'up' && isBehind(health.version)
   return k.Group(
     'rrotor',
     "This machine's rrotor",
@@ -21,10 +23,20 @@ function LocalRrotor(ctx: Ctx) {
       key: 'rrotor-row',
       primary: linkLine(health),
       tone,
+      chip: behind ? { text: `Update to ${RROTOR_PINNED}`, tone: 'warning' } : undefined,
       actions:
-        health.status === 'up' ? [{ key: 'rrotor-link', label: isLinked(health) ? 'link again' : 'link', onPress: () => linkLocalRrotor(gh) }] : [],
+        health.status === 'up'
+          ? [
+              ...(behind ? [{ key: 'rrotor-update', label: 'update', onPress: () => updateRrotor(gh) }] : []),
+              { key: 'rrotor-link', label: isLinked(health) ? 'link again' : 'link', onPress: () => linkLocalRrotor(gh) },
+            ]
+          : [],
     }),
-    health.status === 'none' || health.status === 'down' ? undefined : 'Linked, it shows on the platform’s Runtimes page and its apps reach your organisation’s catalogue.',
+    health.status === 'none' || health.status === 'down'
+      ? undefined
+      : behind
+        ? `rrotor ${health.version} is older than this plugin’s ${RROTOR_PINNED}: update pulls the release and keeps everything on the volume.`
+        : 'Linked, it shows on the platform’s Runtimes page and its apps reach your organisation’s catalogue.',
   )
 }
 

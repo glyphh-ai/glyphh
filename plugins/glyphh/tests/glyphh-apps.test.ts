@@ -220,6 +220,11 @@ test('publish: no file, not an entry, a type outside the six, unreadable, no rro
   w.s.rrotorDown = true
   expect((await glyphhCommand(w.gh, 'publish /tmp/board.html')).text).toBe('rrotor is not answering at http://127.0.0.1:7777: start it ("start rrotor", the rrotor skill).')
   w.s.rrotorDown = false
+  w.s.rrotorOld = true
+  expect((await glyphhCommand(w.gh, 'publish /tmp/board.html')).text).toBe(
+    'This rrotor is older than 0.3.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").',
+  )
+  w.s.rrotorOld = false
   const refused = await glyphhCommand(w.gh, 'publish /tmp/board.html --name "Not A Name"')
   expect(refused.text).toBe('Not A Name is not a program name: ^[a-z][a-z0-9-]{0,62}$.')
   expect(await w.gh.state.note.get()).toMatchObject({ isError: true })

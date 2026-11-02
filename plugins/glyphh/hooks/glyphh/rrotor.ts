@@ -7,6 +7,23 @@ import type { Host } from './host'
 
 export const RROTOR_URL = 'http://127.0.0.1:7777'
 
+/** The rrotor release this plugin was made against: what the rrotor skill's script installs (its PINNED_VERSION,
+ *  which CI holds equal to this), and what the Account section offers to update to. */
+export const RROTOR_PINNED = '0.3.0'
+
+/** Whether a running rrotor is older than the pinned release (a dev build's odd version counts as current). */
+export function isBehind(version: string): boolean {
+  const parts = (v: string) => v.split('.').map(n => Number.parseInt(n, 10))
+  const have = parts(version)
+  const want = parts(RROTOR_PINNED)
+  if (have.length !== 3 || have.some(n => Number.isNaN(n))) return false
+  for (let i = 0; i < 3; i++) {
+    if (have[i]! < want[i]!) return true
+    if (have[i]! > want[i]!) return false
+  }
+  return false
+}
+
 /** The local token the rrotor skill kept; none means rrotor was never installed here. */
 export async function rrotorToken(gh: Host): Promise<string | undefined> {
   const path = await glyphhPath(gh, 'rrotor/token')
@@ -52,6 +69,10 @@ export async function publishApp(gh: Host, body: AppPublish): Promise<AppPublish
   if (!r.ok) {
     const err = (parsed as { error?: { code?: unknown; message?: unknown } }).error
     const code = String(err?.code ?? `E_HTTP_${r.status}`)
+    if (r.status === 404) {
+      // A rrotor before 0.2.0 has no /v1/apps: the one answer it gives is Not Found.
+      throw new ApiError('E_RROTOR_OLD', `This rrotor is older than ${RROTOR_PINNED} and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").`, 404)
+    }
     throw new ApiError(code, String(err?.message ?? `rrotor refused the publish (HTTP ${r.status}).`), r.status)
   }
   return parsed as AppPublished

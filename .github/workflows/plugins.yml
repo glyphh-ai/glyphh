@@ -38,6 +38,14 @@ jobs:
             claude plugin validate --strict "$dir"
             echo "::endgroup::"
           done
+      - name: The rrotor release is pinned once, the same everywhere
+        run: |
+          script=$(sed -n 's/^PINNED_VERSION="\([0-9.]*\)".*/\1/p' plugins/glyphh/skills/rrotor/scripts/rrotor.sh)
+          hooks=$(sed -n "s/^export const RROTOR_PINNED = '\([0-9.]*\)'.*/\1/p" plugins/glyphh/hooks/glyphh/rrotor.ts)
+          compose=$(sed -n 's/.*rrotor:\${RROTOR_VERSION:-\([0-9.]*\)}.*/\1/p' deploy/compose/docker-compose.local.yml)
+          helm=$(sed -n 's/^appVersion: "\([0-9.]*\)".*/\1/p' deploy/helm/rrotor/Chart.yaml)
+          echo "script=$script hooks=$hooks compose=$compose helm=$helm"
+          [ -n "$script" ] && [ "$script" = "$hooks" ] && [ "$script" = "$compose" ] && [ "$script" = "$helm" ] || { echo "::error::the rrotor pin differs: rrotor.sh PINNED_VERSION, hooks/glyphh/rrotor.ts RROTOR_PINNED, deploy/compose/docker-compose.local.yml and deploy/helm/rrotor/Chart.yaml appVersion must agree"; exit 1; }
       - name: Each marketplace entry is its plugin's name and version
         run: |
           node -e '

@@ -102,6 +102,12 @@ person can do the same from the mod without Claude: `/glyphh publish <file> [--n
 d] [--type t] [--roles a,b]` sends one file to the local rrotor, and `/glyphh apps` shows the organisation's list
 (a type filter; a reviewer's Approve, Reject and Retire) in the panel.
 
+**No `app_publish` among `mcp__rrotor__*`** while `programs_list` is there: the rrotor is older than this plugin
+(before 0.2.0 it had no apps; before 0.3.0 only HTML and Markdown). Never write the page to a file and hand it to the
+person instead: run the rrotor skill's `rrotor.sh update` (it keeps everything on the volume), tell them Claude Code
+loads the tools again at `/mcp` or its next start, and publish from there; or publish now with `/glyphh publish
+<file>`, which the mod sends to the updated rrotor without the tools.
+
 ```json
 {
   "name": "deploy-failures",
