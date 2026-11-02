@@ -14,6 +14,6 @@ catalogue shows) and `roles` (who may open it: group names from the organisation
 ## Publish it
 
 Ask Claude to *"publish programs/app_static to my org"* (the plugin's `publish` skill): it calls the rrotor's
-`app_publish` with the page, and the app waits for review in the organisation's catalogue (the platform's
-Artifacts page, or the `artifacts` tool in Claude). Deploying the folder as a program (`rrotor.sh deploy
+`app_publish` with the page, and the app waits for review in the organisation's catalogue (the platform's Apps
+page, the `apps` tool in Claude, or `/glyphh apps`). Deploying the folder as a program (`rrotor.sh deploy
 programs/app_static`) does the same.

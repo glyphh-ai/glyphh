@@ -1,5 +1,5 @@
 // The local rrotor (the rrotor skill installs it on 127.0.0.1:7777 with a
-// local token in ~/.glyphh/rrotor/token): one call, publishing a page as an
+// local token in ~/.glyphh/rrotor/token): one call, publishing a file as an
 // app. Refusals come back in rrotor's own words, as the server's do.
 import { ApiError } from './api'
 import { glyphhPath } from './home'
@@ -14,18 +14,21 @@ export async function rrotorToken(gh: Host): Promise<string | undefined> {
   return (await gh.fs.read(path).catch(() => '')).trim() || undefined
 }
 
-/** What `POST /v1/apps` takes: the page's files and what the catalogue shows. */
+/** What `POST /v1/apps` takes: the app's files (text, or `{base64}` for a PDF
+ *  or an image) and what the catalogue shows; `type` one of page, dashboard,
+ *  doc, diagram, deck, design (absent: the entry's own). */
 export type AppPublish = {
   name: string
   title: string
   description: string
+  type?: string
   roles: string[]
-  files: Record<string, string>
+  files: Record<string, string | { base64: string }>
   entry: string
 }
 
-/** What rrotor answers: the version made, whether it is served already, and where. */
-export type AppPublished = { program: string; version: number; state?: string; active?: boolean; url?: string }
+/** What rrotor answers: the version made, its type, whether it is served already, and where. */
+export type AppPublished = { program: string; version: number; type?: string; state?: string; active?: boolean; url?: string }
 
 export async function publishApp(gh: Host, body: AppPublish): Promise<AppPublished> {
   const token = await rrotorToken(gh)

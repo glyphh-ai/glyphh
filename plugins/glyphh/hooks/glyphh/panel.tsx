@@ -3,7 +3,7 @@
 import type { AuthState, GlyphhNote, GlyphhSection } from '../../types'
 import { openSection } from './actions'
 import { Account } from './sections/account'
-import { Artifacts } from './sections/artifacts'
+import { Apps } from './sections/apps'
 import { Billing } from './sections/billing'
 import { Org } from './sections/org'
 import { Plan } from './sections/plan'
@@ -19,7 +19,7 @@ async function sectionBody(ctx: Ctx, a: AuthState, open: GlyphhSection) {
     case 'org': return Org(ctx)
     case 'plan': return Plan(ctx)
     case 'billing': return Billing(ctx)
-    case 'artifacts': return Artifacts(ctx)
+    case 'apps': return Apps(ctx)
   }
 }
 

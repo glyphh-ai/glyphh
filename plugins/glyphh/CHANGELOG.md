@@ -2,6 +2,32 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.7.0 — 2026-11-02
+
+One word everywhere: **app**. What Claude makes and publishes to the organisation is an app, whatever it is, and
+publishing now takes every kind. Nothing of the Ada skills, the account panel or the ledger changes.
+
+- **Artifacts is now Apps.** `/glyphh artifacts` is `/glyphh apps`, the panel's tab says Apps, and the server's API it
+  reads is `/v1/apps` (nothing answers at the old address, and there is no alias). "Artifact" is Claude's word for
+  the file in the session; what sits on your rrotor, in the catalogue, in Claude's `apps` tools and on the platform's
+  Apps page is an app, and the ruling of 2026-11-02 is one word for it everywhere.
+- Every app has a **type**: page, dashboard, doc, diagram, deck or design. Each card's first line says it (`Dashboard
+  · acme-prod · v3`), and a **type filter** beside the search cycles All types → Pages → Dashboards → Docs → Diagrams
+  → Decks → Designs → All types.
+- `/glyphh publish <file>` takes every file rrotor serves: a page (`.html`, `.jsx`, `.tsx`), a document (`.md`,
+  `.pdf`), a diagram (`.mmd`, `.svg`) or an image (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`). The type follows the
+  extension unless `--type` says it (a `dashboard` or a `deck` is always said, never inferred); a PDF or an image goes
+  as base64; any other file is refused before rrotor is called, in rrotor's words. The reply names the type.
+- The `publish` skill finds the file for each source (a Claude Code artifact; a path; a Claude Doc exported to
+  Markdown; a Claude Slides deck or a Claude Design exported to PDF or PNG by the person; a Claude Dashboard, which
+  has no export, rebuilt as a dashboard app with one function per chart, run as the viewer with their own CLI
+  sign-ins and cached with a schedule when the source is slow), knows rrotor's React shell (one `.jsx` or `.tsx`,
+  the packages claude.ai's React artifacts import, Tailwind classes, a default export) and offers `app_approve` to a
+  reviewer. The rrotor skill names the tools as they are now: `apps`, `app_approve`, `app_reject`, `app_retire`,
+  `app_publish` (with `type`) and `apps_list`.
+- Two more example apps under `programs/`: `app_react` (one `.tsx`, a recharts bar chart) and `app_diagram` (one
+  `.mmd`, a sequence diagram); `app_dashboard` says `"type": "dashboard"`.
+
 ## 1.6.1 — 2026-11-01
 
 The local rrotor linked to Glyphh. Nothing else changes.

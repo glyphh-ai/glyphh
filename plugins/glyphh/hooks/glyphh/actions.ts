@@ -5,7 +5,7 @@ import type { RenderSurface } from 'claude-code'
 import type { GlyphhSection, Json } from '../../types'
 import { api, listOf } from './api'
 import { act, forget, loadMe } from './account'
-import { loadArtifacts } from './artifacts'
+import { loadApps } from './apps'
 import { linkRrotor, rrotorHealth } from './link'
 import { openUrl } from './open'
 import { say, setList } from './state'
@@ -28,7 +28,7 @@ const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
   },
   plan: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
   billing: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
-  artifacts: loadArtifacts,
+  apps: loadApps,
 }
 
 /** Opens a section and loads what it shows (signed out: nothing to load). */

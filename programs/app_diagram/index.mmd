@@ -1,0 +1,13 @@
+sequenceDiagram
+    actor V as Viewer (browser)
+    participant R as rrotor (the org's host)
+    participant G as Glyphh server
+    V->>R: GET /apps/sign_in_flow/
+    R-->>V: 302 to /auth/start (no session yet)
+    V->>G: /oauth/authorize (PKCE, rrotor as the client)
+    G-->>V: sign in to Glyphh, approve
+    V->>R: GET /auth/callback?code=
+    R->>G: POST /oauth/token
+    R-->>V: session cookie, then back to /apps/sign_in_flow/
+    R->>G: POST /v1/runtime/introspect (sub, role, groups)
+    R-->>V: the diagram, when approved and a role allows

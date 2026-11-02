@@ -2,6 +2,8 @@
 
 A dashboard published to the organisation, with one function behind it.
 
+- **What it is:** an app of `"type": "dashboard"` (the manifest's `app.type`; a dashboard is always said, never
+  inferred from the entry): a page whose numbers come from the app's own functions, one per chart.
 - **What it shows:** failed GitHub Actions runs since a date, counted by workflow, with a bar each.
 - **Where the data comes from:** the page's own function, `failures`, which the page calls at
   `/apps/deploy_failures/call/failures` each time it loads. The rrotor runs it as the person viewing the page,

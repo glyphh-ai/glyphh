@@ -5,8 +5,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderSurface } from 'claude-code'
 
-import type { ArtifactsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
-import { FIRST_VIEW } from './artifacts'
+import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import { FIRST_VIEW } from './apps'
 import { glyphhCommand, startGlyphh } from './command'
 import type { Host } from './host'
 import { openUrl } from './open'
@@ -22,7 +22,7 @@ const me = atom({ plugin: 'glyphh', key: 'me' } as const, null as Json | null)
 const lists = atom({ plugin: 'glyphh', key: 'lists' } as const, {} as Record<string, Json[]>)
 const note = atom({ plugin: 'glyphh', key: 'note' } as const, null as GlyphhNote | null)
 const inviteLink = atom({ plugin: 'glyphh', key: 'inviteLink' } as const, null as string | null)
-const artifacts = atom({ plugin: 'glyphh', key: 'artifacts' } as const, FIRST_VIEW as ArtifactsView)
+const apps = atom({ plugin: 'glyphh', key: 'apps' } as const, FIRST_VIEW as AppsView)
 
 function hostState($: EngineInterface): Host['state'] {
   return {
@@ -32,7 +32,7 @@ function hostState($: EngineInterface): Host['state'] {
     lists: { get: () => read($, lists), set: async fn => void (await update($, lists, fn)) },
     note: { get: () => read($, note), set: async fn => void (await update($, note, fn)) },
     inviteLink: { get: () => read($, inviteLink), set: async fn => void (await update($, inviteLink, fn)) },
-    artifacts: { get: () => read($, artifacts), set: async fn => void (await update($, artifacts, fn)) },
+    apps: { get: () => read($, apps), set: async fn => void (await update($, apps, fn)) },
   }
 }
 
@@ -42,6 +42,7 @@ function host($: EngineInterface): Host {
     http: { fetch: (url, init) => $.http.fetch(url, init) },
     fs: {
       read: async path => String(await $.fs.read(path)),
+      readBytes: async path => (await $.fs.read(path, { as: 'bytes' })).base64,
       write: (path, text) => $.fs.write(path, text),
       exists: path => $.fs.exists(path),
       list: path => $.fs.list(path),
@@ -78,7 +79,7 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
-  const description = 'Glyphh: sign in, account, org, plan, billing, artifacts, publish'
+  const description = 'Glyphh: sign in, account, org, plan, billing, apps, publish'
   await $.command
     .register({ name: 'glyphh', description, argumentHint: '[section | signin | signout | publish <file>]' })
     .catch(() => $.command.register({ name: 'glyphh-account', description }))
@@ -148,7 +149,7 @@ export function registerGlyphh(on: On) {
     }
     const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
     const gh = host($)
-    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), artifacts: await read($, artifacts) }
+    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), apps: await read($, apps) }
     return Panel(ctx, await read($, auth), await read($, section), await read($, note))
   })
 }

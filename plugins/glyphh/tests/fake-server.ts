@@ -9,15 +9,19 @@ const TOKEN = 'tok-secret-1'
 /** The local rrotor's token (~/.glyphh/rrotor/token), as the rrotor skill keeps it. */
 export const RROTOR_TOKEN = 'rt-local-1'
 
-/** One of the organisation's artifacts, as GET /v1/artifacts lists them. */
-export const artifact = (n: number, state = 'approved', more: Json = {}): Json => ({
+/** The six types, in the order the fixtures take them: app 1 is a page, app 2 a dashboard, … */
+export const TYPES = ['page', 'dashboard', 'doc', 'diagram', 'deck', 'design']
+
+/** One of the organisation's apps, as GET /v1/apps lists them. */
+export const app = (n: number, state = 'approved', more: Json = {}): Json => ({
   id: `a${n}`,
   runtime_id: 'rt-1',
   runtime_name: 'acme-prod',
   runtime_url: 'https://rrotor.acme.test',
-  name: `page-${n}`,
-  title: `Page ${n}`,
-  description: `The ${n}th page.`,
+  name: `app-${n}`,
+  title: `App ${n}`,
+  description: `The ${n}th app.`,
+  type: TYPES[(n - 1) % TYPES.length],
   version: 1,
   commit_sha: 'c'.repeat(40),
   roles: n % 2 ? [] : ['sre'],
@@ -27,7 +31,7 @@ export const artifact = (n: number, state = 'approved', more: Json = {}): Json =
   reviewed_by: null,
   reviewed_at: null,
   reason: state === 'rejected' ? 'Not yet.' : null,
-  url: `https://rrotor.acme.test/apps/page-${n}/`,
+  url: `https://rrotor.acme.test/apps/app-${n}/`,
   ...more,
 })
 
@@ -75,10 +79,10 @@ function newState() {
     /** /v1/me's `reviewer`: the admin, or a member of a reviewer group. */
     reviewer: true,
     groups: ['sre'] as string[],
-    /** The catalogue: three published, one awaiting review, one rejected. */
-    artifacts: [artifact(1), artifact(2), artifact(3), artifact(4, 'draft'), artifact(5, 'rejected')] as Json[],
-    /** The local rrotor: the apps published to it; `rrotorDown` makes its address unreachable. */
-    apps: [] as Json[],
+    /** The catalogue: three published (a page, a dashboard, a doc), one awaiting review, one rejected. */
+    apps: [app(1), app(2), app(3), app(4, 'draft'), app(5, 'rejected')] as Json[],
+    /** The local rrotor: what was published to it (POST /v1/apps); `rrotorDown` makes its address unreachable. */
+    published: [] as Json[],
     rrotorDown: false,
     /** The local rrotor's link (its /v1/health): the runtime id and token it holds, and the link's state;
      *  `linkStalls` keeps it `connecting` after a token; `tokens` is what PUT /v1/runtime/token received. */
@@ -167,9 +171,9 @@ async function route(s: State, c: Call): Promise<{ status: number; body: unknown
   if (!open.includes(c.path) && c.bearer !== TOKEN) return refuse(401, 'E_UNAUTHORIZED', 'Bad token.')
   const key = `${c.method} ${c.path
     .replace(/\/v1\/(installs|org\/members|org\/invites|me\/identities)\/[^/]+$/, '/v1/$1/:id')
-    .replace(/\/v1\/artifacts\/[^/]+\/(approve|reject|retire)$/, '/v1/artifacts/:id/$1')}`
+    .replace(/\/v1\/apps\/[^/]+\/(approve|reject|retire)$/, '/v1/apps/:id/$1')}`
   const id = decodeURIComponent(c.path.split('/').pop() ?? '')
-  if (key.startsWith('GET /v1/artifacts') || key.startsWith('POST /v1/artifacts/')) return artifactsRoute(s, c, key, ok)
+  if (key.startsWith('GET /v1/apps') || key.startsWith('POST /v1/apps/')) return appsRoute(s, c, key, ok)
   switch (key) {
     case 'POST /v1/device/code':
       return ok({ device_code: 'dc-1', user_code: 'ABCD-EFGH', verification_uri: 'https://glyphh.test/v1/device', verification_uri_complete: 'https://glyphh.test/v1/device?code=ABCD-EFGH', interval: 5, expires_in: 600 })
@@ -222,23 +226,27 @@ function adminRoute(s: State, c: Call, key: string, id: string, ok: (b?: unknown
 }
 
 
-// The catalogue (server/docs/specs/artifacts.md, 3.3): a page of the state
-// asked, searched by title, description and name; a review changes a state
-// and is a reviewer's; a member asking for drafts is refused.
-function artifactsRoute(s: State, c: Call, key: string, ok: (b?: unknown) => { status: number; body: unknown }) {
-  if (key === 'GET /v1/artifacts') {
+// The catalogue (server/docs/specs/apps.md, 3.3): a page of the state asked,
+// searched by title, description and name, one type or every type; a review
+// changes a state and is a reviewer's; a member asking for drafts is refused.
+function appsRoute(s: State, c: Call, key: string, ok: (b?: unknown) => { status: number; body: unknown }) {
+  if (key === 'GET /v1/apps') {
     const state = c.query.state ?? 'approved'
     if (state !== 'approved' && !s.reviewer) return refuse(403, 'E_FORBIDDEN', 'Reviewers see the drafts.')
+    const type = c.query.type ?? ''
+    if (type && !TYPES.includes(type)) return refuse(422, 'E_INVALID', 'type is one of page, dashboard, doc, diagram, deck, design.')
     const q = (c.query.q ?? '').toLowerCase()
     const page = Number(c.query.page ?? '1')
     const per = Number(c.query.per_page ?? '24')
-    const found = s.artifacts.filter(a => a.state === state && (!q || [a.title, a.description, a.name].some(t => String(t).toLowerCase().includes(q))))
-    return ok({ artifacts: found.slice((page - 1) * per, page * per), page, per_page: per, total: found.length })
+    const found = s.apps.filter(
+      a => a.state === state && (!type || a.type === type) && (!q || [a.title, a.description, a.name].some(t => String(t).toLowerCase().includes(q))),
+    )
+    return ok({ apps: found.slice((page - 1) * per, page * per), page, per_page: per, total: found.length })
   }
   const id = c.path.split('/')[3] ?? ''
   const verb = key.split('/').pop()
-  const a = s.artifacts.find(x => x.id === id)
-  if (!a) return refuse(404, 'E_NOT_FOUND', 'No such artifact.')
+  const a = s.apps.find(x => x.id === id)
+  if (!a) return refuse(404, 'E_NOT_FOUND', 'No such app.')
   if (!s.reviewer) return refuse(403, 'E_FORBIDDEN', 'Only a reviewer may do that.')
   if (verb === 'approve' && !['draft', 'rejected'].includes(String(a.state))) return refuse(409, 'E_CONFLICT', `It is ${a.state}, not awaiting review.`)
   if (verb === 'reject' && !String(c.body.reason ?? '').trim()) return refuse(422, 'E_INVALID', 'A rejection says why.')
@@ -264,9 +272,11 @@ function rrotorRoute(s: State, c: Call): { status: number; body: unknown } {
   if (c.method !== 'POST' || c.path !== '/v1/apps') return refuse(404, 'E_NOT_FOUND', `No route ${c.method} ${c.path}`)
   const name = String(c.body.name ?? '')
   if (!/^[a-z][a-z0-9-]{0,62}$/.test(name)) return refuse(400, 'E_MANIFEST', `${name || '(none)'} is not a program name: ^[a-z][a-z0-9-]{0,62}$.`)
-  const version = s.apps.filter(a => a.program === name).length + 1
-  const made = { program: name, version, commit_sha: 'd'.repeat(40), deployed_at: '2026-11-01T12:00:00Z', active: version === 1, state: 'draft', url: `http://127.0.0.1:7777/apps/${name}/`, body: c.body }
-  s.apps.push(made)
+  const version = s.published.filter(a => a.program === name).length + 1
+  const type = String(c.body.type ?? 'page')
+  if (!TYPES.includes(type)) return refuse(400, 'E_INPUTS', 'type is one of page, dashboard, doc, diagram, deck, design.')
+  const made = { program: name, version, commit_sha: 'd'.repeat(40), deployed_at: '2026-11-01T12:00:00Z', type, active: version === 1, state: 'draft', url: `http://127.0.0.1:7777/apps/${name}/`, body: c.body }
+  s.published.push(made)
   return { status: 201, body: made }
 }
 

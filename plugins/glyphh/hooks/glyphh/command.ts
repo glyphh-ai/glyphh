@@ -3,7 +3,7 @@
 import type { GlyphhSection } from '../../types'
 import { initAccount, signOut } from './account'
 import { openSection } from './actions'
-import { publishFromCommand } from './artifacts'
+import { publishFromCommand } from './apps'
 import { linkFromCommand } from './link'
 import { openUrl } from './open'
 import { watchOpenRequests } from './openreq'
@@ -15,7 +15,7 @@ import { SECTIONS } from './state'
 
 export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.'
 
-export const USAGE = '/glyphh [login | logout | account | org | plan | billing | artifacts | publish <file> | link]'
+export const USAGE = '/glyphh [login | logout | account | org | plan | billing | apps | publish <file> | link]'
 
 /** At session start: the sign-in. */
 export async function startGlyphh(gh: Host) {
@@ -46,7 +46,7 @@ export async function glyphhCommand(gh: Host, args: string): Promise<{ text: str
   }
   // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
-  // /glyphh publish <file>: the page goes to the local rrotor, as an app awaiting review.
+  // /glyphh publish <file>: the file goes to the local rrotor, as an app awaiting review.
   if (/^publish(\s|$)/.test(arg)) {
     if ((await gh.state.auth.get()).status !== 'in') return { text: `Sign in to Glyphh first: /glyphh signin\n${ASK_CLAUDE}` }
     return { text: await publishFromCommand(gh, args.trim().replace(/^publish\s*/i, '')) }

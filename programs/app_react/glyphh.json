@@ -1,0 +1,12 @@
+{
+  "name": "deploys_chart",
+  "kind": "app",
+  "description": "Deploys this week by environment, as a React page with a recharts bar chart",
+  "app": {
+    "entry": "index.tsx",
+    "type": "page",
+    "title": "Deploys this week",
+    "roles": []
+  },
+  "limits": { "seconds": 30, "memory_mb": 128 }
+}
