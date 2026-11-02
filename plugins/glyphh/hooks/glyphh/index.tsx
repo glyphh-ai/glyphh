@@ -8,6 +8,7 @@ import type { EngineInterface, On, RenderSurface } from 'claude-code'
 import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 import { FIRST_VIEW } from './apps'
 import { glyphhCommand, startGlyphh } from './command'
+import { rrotorShown } from './shelved'
 import type { Host } from './host'
 import { openUrl } from './open'
 import { InlineSignIn } from './inline'
@@ -38,7 +39,7 @@ function hostState($: EngineInterface): Host['state'] {
 
 function host($: EngineInterface): Host {
   return {
-    env: { home: () => $.env.get('HOME'), server: () => $.env.get('GLYPHH_SERVER_URL') },
+    env: { home: () => $.env.get('HOME'), server: () => $.env.get('GLYPHH_SERVER_URL'), rrotor: () => $.env.get('GLYPHH_RROTOR') },
     http: { fetch: (url, init) => $.http.fetch(url, init) },
     fs: {
       read: async path => String(await $.fs.read(path)),
@@ -79,9 +80,12 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
-  const description = 'Glyphh: sign in, account, org, plan, billing, apps, publish'
+  // rrotor shelved (2026-11-02, ./shelved): apps and publish only while it is shown.
+  const shown = await rrotorShown(host($))
+  const description = shown ? 'Glyphh: sign in, account, org, plan, billing, apps, publish' : 'Glyphh: sign in, account, org, plan, billing'
+  const argumentHint = shown ? '[section | signin | signout | publish <file>]' : '[section | signin | signout]'
   await $.command
-    .register({ name: 'glyphh', description, argumentHint: '[section | signin | signout | publish <file>]' })
+    .register({ name: 'glyphh', description, argumentHint })
     .catch(() => $.command.register({ name: 'glyphh-account', description }))
   // Claude's way in to the same sign-in: a tool of this mod's own; its result
   // draws the inline sign-in.
@@ -149,7 +153,7 @@ export function registerGlyphh(on: On) {
     }
     const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
     const gh = host($)
-    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), apps: await read($, apps) }
+    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), apps: await read($, apps), rrotor: await rrotorShown(gh) }
     return Panel(ctx, await read($, auth), await read($, section), await read($, note))
   })
 }

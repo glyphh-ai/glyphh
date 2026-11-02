@@ -7,6 +7,7 @@ import { api, listOf } from './api'
 import { act, forget, loadMe } from './account'
 import { loadApps } from './apps'
 import { linkRrotor, rrotorHealth } from './link'
+import { rrotorShown } from './shelved'
 import { openUrl } from './open'
 import { say, setList } from './state'
 import type { Host } from './host'
@@ -19,7 +20,8 @@ const loadRrotor = async (gh: Host) => setList(gh, 'rrotor', [await rrotorHealth
 const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
   account: async gh => {
     await api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs')))
-    await loadRrotor(gh)
+    // Shelved (./shelved): the local rrotor is not asked after unless it is shown.
+    if (await rrotorShown(gh)) await loadRrotor(gh)
   },
   org: async gh => {
     await api(gh, 'GET', '/v1/org').then(b => setList(gh, 'org', [b]))
@@ -74,7 +76,7 @@ const UPDATE_WAIT_MS = 10 * 60 * 1000 // a pull of the image over a slow line
 export const updateRrotor = (gh: Host) =>
   act(gh, undefined, async () => {
     try {
-      const script = `${gh.pluginRoot}/skills/rrotor/scripts/rrotor.sh`
+      const script = `${gh.pluginRoot}/shelved/skills/rrotor/scripts/rrotor.sh`
       const r = await gh.process.run(['sh', script, 'update'], { timeoutMs: UPDATE_WAIT_MS })
       let out: Json = {}
       try {

@@ -2,6 +2,17 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.8.0 — 2026-11-02
+
+rrotor shelved: the plugin is Glyphh's account, Ada and the ledger again. Nothing is deleted.
+
+- The rrotor, rrotor-programs and publish skills move to `shelved/skills/`, where Claude Code does not load them:
+  "install rrotor" and "publish this to my org" no longer reach a skill.
+- The panel has no Apps section, the Account section no rrotor row, and `/glyphh publish`, `/glyphh link` and
+  `/glyphh apps` answer the usage line. The mod no longer asks after a local rrotor. `GLYPHH_RROTOR=1` in Claude
+  Code's environment brings all of it back (`hooks/glyphh/shelved.ts`).
+- `/glyphh`'s description and argument hint name the sections it has.
+
 ## 1.7.2 — 2026-11-02
 
 rrotor kept at the release this plugin was made against. Until now the rrotor skill's script pinned 0.1.0 while

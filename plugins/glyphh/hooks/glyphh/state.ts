@@ -9,6 +9,9 @@ export const SECTIONS: { id: GlyphhSection; label: string }[] = [
   { id: 'apps', label: 'Apps' },
 ]
 
+/** The sections the panel offers: Apps only while rrotor is shown (shelved, 2026-11-02). */
+export const shownSections = (rrotor: boolean) => SECTIONS.filter(s => s.id !== 'apps' || rrotor)
+
 /** The panel's last word. */
 export const say = (gh: Host, text: string, isError = false, link?: string) =>
   gh.state.note.set((): GlyphhNote => (link ? { text, isError, link } : { text, isError }))

@@ -19,6 +19,8 @@ export type Ctx = {
   lists: Record<string, Json[]>
   /** Where the Apps section stands (its search, page, view and type). */
   apps: AppsView
+  /** rrotor's parts of the panel shown (GLYPHH_RROTOR=1); shelved otherwise (2026-11-02, ./shelved). */
+  rrotor?: boolean
 }
 
 /** A colour with a meaning, from Claude's theme. */

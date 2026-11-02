@@ -1,8 +1,9 @@
 # Glyphh
 
-Glyphh's developer surface for its two products: **Ada Cloud** (Ada as an API that Glyphh runs) and **rrotor** (the
-runtime you run yourself, which hosts your programs and CLIs). The Claude Code plugin, the SDKs, the contracts they
-share and the files that run rrotor.
+Glyphh's developer surface for **Ada Cloud** (Ada as an API that Glyphh runs): the Claude Code plugin, the SDKs and
+the contracts they share. **rrotor**, the runtime you run yourself, is shelved (2026-11-02): it is not offered or
+supported now, and its files below (`programs`, `deploy`, the SDKs' `Runtime` client, the plugin's `shelved/skills`)
+stay as they are.
 
 | Folder | Install | What |
 |---|---|---|
@@ -70,7 +71,10 @@ Claude through the connector). A refusal is `{"error": {code, message, trace_id,
 The shapes are in [`contract/contract.json`](contract/contract.json) (version 5), with
 [`contract/fixtures.json`](contract/fixtures.json).
 
-## rrotor, your runtime
+## rrotor, your runtime (shelved)
+
+**Shelved (2026-11-02):** not offered or supported now, and the plugin no longer installs or drives it. What follows
+describes it as it was built, kept for reference.
 
 **rrotor is a runtime you run yourself**, a container on your machine (or your servers), driven from Claude. It hosts
 two things, each sandboxed (bubblewrap, seccomp, Landlock, and an egress proxy that lets a run reach only the hosts
