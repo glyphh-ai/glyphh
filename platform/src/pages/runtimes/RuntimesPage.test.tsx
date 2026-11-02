@@ -41,6 +41,29 @@ describe('Runtimes', () => {
     expect(localCompose).toContain('http://127.0.0.1:7777/mcp');
   });
 
+  it('lists the rrotors linked from the organisation’s own machines, named after the machine', async () => {
+    renderApp('/runtimes');
+    const list = await screen.findByRole('list', { name: 'Local runtimes' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(list).getByText('studio-mac')).toBeInTheDocument();
+    expect(within(list).getByText('Away')).toBeInTheDocument();
+    expect(within(list).getByText(/rrotor 1\.4\.2 · last seen .* · 18,240 precedents/)).toBeInTheDocument();
+    expect(screen.queryByText('Acme production')).not.toBeInTheDocument(); // self-hosted nodes are listed below
+  });
+
+  it('says how to link a local rrotor when none is linked, and shows one online as it links', async () => {
+    const { nodes } = await import('@/test/fixtures');
+    server.use(http.get(v1('/license/nodes'), () => HttpResponse.json({ ...nodes, count: 0, nodes: [] })));
+    renderApp('/runtimes');
+    expect(await screen.findByText(/None linked yet/)).toBeInTheDocument();
+    expect(screen.getByText('/glyphh link')).toBeInTheDocument();
+    const fresh = { ...nodes.nodes[2]!, seen_at: new Date().toISOString() };
+    server.use(http.get(v1('/license/nodes'), () => HttpResponse.json({ ...nodes, nodes: [fresh] })));
+    renderApp('/runtimes');
+    const list = await screen.findByRole('list', { name: 'Local runtimes' });
+    expect(within(list).getByText('Online')).toBeInTheDocument();
+  });
+
   it('offers to run rrotor on a server when none is registered, in Add a runtime', async () => {
     const { user, router } = renderApp('/runtimes');
     expect(await screen.findByText('No self-hosted runtime yet')).toBeInTheDocument();

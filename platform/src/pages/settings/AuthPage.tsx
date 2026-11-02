@@ -115,11 +115,14 @@ export function AuthPage() {
             />
             <CopyField value={callbackUrl} label="Redirect URI" />
             <p className={styles.note}>Register this redirect URI with the client at your identity provider.</p>
-            <div className={styles.formRow}>
+            <label className={styles.switchRow}>
               <Switch checked={enforced} onChange={setEnforced} label="Require single sign-on" disabled={!canEdit} />
-              <span className={styles.note}>Require single sign-on: your people can no longer sign in with Google or GitHub.</span>
-            </div>
-            <div className={styles.formRow}>
+              <span>
+                <span className={styles.switchTitle}>Require single sign-on</span>
+                <span className={styles.note}>Your people can no longer sign in with Google or GitHub.</span>
+              </span>
+            </label>
+            <div className={styles.actions}>
               <Button type="submit" variant="primary" loading={set.isPending} disabled={!canEdit || !issuer.trim() || !clientId.trim() || !domains.trim()}>
                 {sso.data ? 'Save' : 'Turn on'}
               </Button>

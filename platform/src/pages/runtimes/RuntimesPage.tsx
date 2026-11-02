@@ -5,6 +5,7 @@ import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { Button, EmptyState, LoadingCard } from '@/ui';
 import { AddRuntimeDialog } from './add-runtime/AddRuntimeDialog';
 import { InstallRrotor } from './InstallRrotor';
+import { LocalRuntimes } from './LocalRuntimes';
 import { SelfRuntimes } from './SelfRuntimes';
 import styles from './RuntimesPage.module.css';
 
@@ -56,6 +57,7 @@ export function RuntimesPage() {
 
       <div className={styles.stack}>
         <InstallRrotor />
+        <LocalRuntimes />
 
         {self.isPending && <LoadingCard />}
         {self.data?.length === 0 && (
