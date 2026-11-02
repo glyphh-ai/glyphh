@@ -383,6 +383,7 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_GITHUB_TRAFFIC_TOKEN` | none | A GitHub token that may read the repositories' traffic (fine-grained: Administration read) for the staff view's GitHub figures, pulled each hour by the tick; without it they say they are not connected |
 | `GLYPHH_GITHUB_TRAFFIC_REPOS` | `glyphh-ai/glyphh` | The repositories whose traffic is pulled, owner/name, comma-separated |
 | `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
+| `GLYPHH_RROTOR` | off | rrotor is shelved (2026-11-02): off, the connector neither lists nor calls its runtime-key, self-hosted-runtime, offline-licence and apps tools, says nothing of them in its instructions and lists no apps panel. The API's routes and the link stay as they are |
 | `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
 | `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model, a new version |
 | `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups for the latest stable Ada version's kernel; 0, one per vCPU |

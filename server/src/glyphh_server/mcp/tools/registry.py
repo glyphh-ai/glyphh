@@ -33,23 +33,16 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS)}
 # short transactions of their own. A transaction open across the wait holds back the database's oldest snapshot, and an
 # import's concurrent index build waits out every such transaction.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS)
-TOOLS: dict[str, Tool] = {
-    t.name: t
-    for t in (
-        *account.TOOLS,
-        *billing.TOOLS,
-        *people.TOOLS,
-        *grants.TOOLS,
-        *runtime.TOOLS,
-        *self_hosted.TOOLS,
-        *apps.TOOLS,
-    )
-}
+TOOLS: dict[str, Tool] = {t.name: t for t in (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS)}
+# rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps. Shelved (2026-11-02):
+# offered only while GLYPHH_RROTOR is on.
+RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
 
 
 def available(ctx: Context) -> dict[str, Tool]:
-    """The tools this server offers: Ada Cloud's too while it is on."""
-    return TOOLS | ADA if ctx.ada is not None else TOOLS
+    """The tools this server offers: Ada Cloud's too while it is on, and rrotor's while it is shown."""
+    tools = TOOLS | RROTOR if ctx.settings.rrotor else TOOLS
+    return tools | ADA if ctx.ada is not None else tools
 
 
 def detached(ctx: Context, method: str, params: dict[str, Any]) -> bool:
