@@ -114,8 +114,9 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount(pane(surface))
     await ui.press({ key: 'sec-apps' })
     expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Page · acme-prod · v1/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Dashboard · acme-prod · v1/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Page' })).toBeDefined() // the type chip
+    expect(await ui.find({ type: 'Text', text: 'Dashboard' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /acme-prod · v1/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /Everyone · Published by Chris · 2026-11-01/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /sre · Published by Chris/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: '1–3 of 3' })).toBeDefined()
@@ -148,7 +149,7 @@ for (const surface of SURFACES) {
     expect(w.server.s.apps.find(a => a.id === 'a4')?.reason).toBe('Numbers are wrong.')
     expect(await ui.find({ type: 'Text', text: 'Rejected, with the reason.' })).toBeDefined()
     await ui.press({ key: 'app-view-rejected' })
-    expect(await ui.find({ type: 'Text', text: /rejected: Numbers are wrong\./ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Rejected: Numbers are wrong\./ })).toBeDefined()
     await ui.press({ key: 'app-approve-a5' })
     expect(w.server.s.apps.find(a => a.id === 'a5')?.state).toBe('approved')
 
@@ -194,8 +195,10 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Text', text: /Precedents: 432 of 1,000, in 2 models/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /Reads 2026-10: 1,234 of 5,000/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /start again 2026-11-01/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Team · \$299\/month · 1,000,000 precedents · 5,000,000 reads a month · then \$1 per 10,000/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Enterprise · By contract/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Team' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^\$299\/month · 1,000,000 precedents · 5,000,000 reads a month · then \$1 per 10,000$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Enterprise' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^By contract/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /seat/ })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /[Ll]icen[cs]e|machine|runtime|[Hh]osting|self-hosted/ })).toBeUndefined()
 
