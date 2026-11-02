@@ -40,7 +40,7 @@ jobs:
           done
       - name: The rrotor release is pinned once, the same everywhere
         run: |
-          script=$(sed -n 's/^PINNED_VERSION="\([0-9.]*\)".*/\1/p' plugins/glyphh/skills/rrotor/scripts/rrotor.sh)
+          script=$(sed -n 's/^PINNED_VERSION="\([0-9.]*\)".*/\1/p' plugins/glyphh/shelved/skills/rrotor/scripts/rrotor.sh)
           hooks=$(sed -n "s/^export const RROTOR_PINNED = '\([0-9.]*\)'.*/\1/p" plugins/glyphh/hooks/glyphh/rrotor.ts)
           compose=$(sed -n 's/.*rrotor:\${RROTOR_VERSION:-\([0-9.]*\)}.*/\1/p' deploy/compose/docker-compose.local.yml)
           helm=$(sed -n 's/^appVersion: "\([0-9.]*\)".*/\1/p' deploy/helm/rrotor/Chart.yaml)

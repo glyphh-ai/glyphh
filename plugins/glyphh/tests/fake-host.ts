@@ -96,7 +96,7 @@ const freshState = (): Host['state'] => ({
   apps: value({ q: '', page: 1, state: 'approved', type: '', total: 0, rejecting: null }),
 })
 
-export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}) {
+export function fakeHost(opts: { surface?: RenderSurface; server?: string; rrotor?: boolean } = {}) {
   const server = fakeServer()
   const disk = fakeFiles()
   const time = fakeClock()
@@ -108,7 +108,8 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}
     return { content: [{ type: 'text', text: '{"tabId":"t1"}' }], isError: false } as McpToolResult
   }
   const gh: Host = {
-    env: { home: async () => HOME, server: async () => opts.server },
+    // rrotor's parts shown unless a test says shelved (GLYPHH_RROTOR, hooks/glyphh/shelved.ts).
+    env: { home: async () => HOME, server: async () => opts.server, rrotor: async () => (opts.rrotor === false ? undefined : '1') },
     http: { fetch: (url, init) => server.fetch(url, init) },
     fs: disk.fs,
     process: { run: disk.run },

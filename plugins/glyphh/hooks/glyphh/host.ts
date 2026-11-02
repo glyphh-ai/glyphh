@@ -11,7 +11,8 @@ import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../..
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
 
 export type Host = {
-  env: { home(): Promise<string | undefined>; server(): Promise<string | undefined> }
+  /** `rrotor`: GLYPHH_RROTOR, '1' to show rrotor's parts of the panel (shelved, ./shelved). */
+  env: { home(): Promise<string | undefined>; server(): Promise<string | undefined>; rrotor(): Promise<string | undefined> }
   http: { fetch(url: string, init?: HttpInit): Promise<HttpResponse> }
   fs: {
     read(path: string): Promise<string>

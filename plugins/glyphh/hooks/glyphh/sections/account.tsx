@@ -55,7 +55,7 @@ export function Account(ctx: Ctx, a: AuthState) {
         {k.Field('me-email', 'Email', str(user.email, '—'))}
       </Box>
       {SignIns(ctx)}
-      {LocalRrotor(ctx)}
+      {ctx.rrotor ? LocalRrotor(ctx) : null}
       {k.Group(
         'installs',
         'Installs',

@@ -10,7 +10,7 @@ import { Org } from './sections/org'
 import { Plan } from './sections/plan'
 import { SignIn } from './sections/signin'
 import { str, userOf } from './shape'
-import { SECTIONS } from './state'
+import { shownSections } from './state'
 import { kit, linkOrText, type Ctx } from './ui'
 
 async function sectionBody(ctx: Ctx, a: AuthState, open: GlyphhSection) {
@@ -20,7 +20,7 @@ async function sectionBody(ctx: Ctx, a: AuthState, open: GlyphhSection) {
     case 'org': return Org(ctx)
     case 'plan': return Plan(ctx)
     case 'billing': return Billing(ctx)
-    case 'apps': return Apps(ctx)
+    case 'apps': return ctx.rrotor ? Apps(ctx) : Account(ctx, a)
   }
 }
 
@@ -33,7 +33,7 @@ export async function Panel(ctx: Ctx, a: AuthState, open: GlyphhSection, said: G
   return (
     <Box flexDirection="column" gap="md" paddingX={1} paddingY="xs">
       <Box justifyContent="space-between" alignItems="center" gap={1}>
-        {k.Tabs(SECTIONS.map(s => ({ key: `sec-${s.id}`, label: s.label, active: s.id === open, onPress: () => openSection(gh, s.id) })))}
+        {k.Tabs(shownSections(!!ctx.rrotor).map(s => ({ key: `sec-${s.id}`, label: s.label, active: s.id === open || (s.id === 'account' && open === 'apps' && !ctx.rrotor), onPress: () => openSection(gh, s.id) })))}
         <Text size="footnote" dimColor wrap="truncate-start">{who}</Text>
       </Box>
       {said && k.Note('note', said.text, said.isError ? 'error' : 'success', said.link ? linkOrText(ctx.ui, 'note-link', said.link) : null)}

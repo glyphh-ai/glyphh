@@ -8,11 +8,13 @@ import { fakeServer } from './fake-server'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
-function world(on: On, surface: 'terminal' | 'desktop') {
+// rrotor's parts of the panel shown (GLYPHH_RROTOR=1) unless a test says shelved, as the plugin ships.
+function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
   const server = fakeServer()
   const files = new Map<string, string>()
   const opened: string[] = []
-  mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty' } : { HOME })
+  const shown = rrotor ? { GLYPHH_RROTOR: '1' } : {}
+  mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty', ...shown } : { HOME, ...shown })
   mock.store(on)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
@@ -105,6 +107,31 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   await ui.input({ key: 'me-name', text: 'Christopher' })
   expect(w.server.s.name).toBe('Christopher')
 })
+
+// rrotor shelved (his ruling, 2026-11-02; hooks/glyphh/shelved.ts): without GLYPHH_RROTOR=1 the panel is the account's
+// and Ada's alone, and /glyphh publish, link and apps are not commands.
+for (const surface of SURFACES) {
+  test(`${surface}: rrotor shelved: no Apps tab, no rrotor row, and publish, link and apps answer the usage`, async ($, on) => {
+    const w = world(on, surface, false)
+    w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
+    w.files.set(`${HOME}/.glyphh/rrotor/token`, 'rt-local-1\n')
+    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
+    const ui = await $.ui.mount(pane(surface))
+    await ui.press({ key: 'sec-account' })
+    expect(await ui.find({ type: 'Input', key: 'me-name' })).toBeDefined()
+    expect(await ui.find({ key: 'sec-plan' })).toBeDefined()
+    expect(await ui.find({ key: 'sec-apps' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'rrotor-link' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /rrotor/ })).toBeUndefined()
+    const run = async (args: string) =>
+      (await $.command.run({ command: 'glyphh', args } as unknown as CommandRunInput)) as { text: string }
+    for (const args of ['publish page.html', 'link', 'apps']) {
+      expect((await run(args)).text).toBe('Usage: /glyphh [login | logout | account | org | plan | billing]')
+    }
+    expect(w.server.s.tokens).toEqual([])
+    expect(w.server.s.calls.some(c => c.path.startsWith('/v1/apps') || c.path === '/v1/runtime/local')).toBe(false)
+  })
+}
 
 test('/glyphh after the sign-in card signed in (install.json written mid-session) says who is signed in', async ($, on) => {
   const w = world(on, 'desktop')
