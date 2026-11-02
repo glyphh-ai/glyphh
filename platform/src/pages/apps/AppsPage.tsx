@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
-import { useApproveArtifact, useArtifacts, useMe, useRejectArtifact, useRetireArtifact } from '@/api/queries';
-import type { Artifact, ArtifactState } from '@/api/types';
+import { useApproveApp, useApps, useMe, useRejectApp, useRetireApp } from '@/api/queries';
+import type { App, AppState, AppType } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
-import { Button, ButtonLink, Chip, Dialog, EmptyState, LoadingCard, panelId, tabId, Tabs, TextField, useToast } from '@/ui';
-import styles from './ArtifactsPage.module.css';
+import { Button, ButtonLink, Chip, Dialog, EmptyState, LoadingCard, panelId, Select, tabId, Tabs, TextField, useToast } from '@/ui';
+import styles from './AppsPage.module.css';
 
 const PER_PAGE = 24;
 const SEARCH_DELAY_MS = 300;
@@ -19,18 +19,31 @@ const tabs: ReadonlyArray<{ id: Tab; label: string }> = [
   { id: 'rejected', label: 'Rejected' },
 ];
 
+/** The six types, in the filter's order: the chip's word for one, the filter's word for many. */
+const types: ReadonlyArray<{ id: AppType; one: string; many: string }> = [
+  { id: 'page', one: 'Page', many: 'Pages' },
+  { id: 'dashboard', one: 'Dashboard', many: 'Dashboards' },
+  { id: 'doc', one: 'Doc', many: 'Docs' },
+  { id: 'diagram', one: 'Diagram', many: 'Diagrams' },
+  { id: 'deck', one: 'Deck', many: 'Decks' },
+  { id: 'design', one: 'Design', many: 'Designs' },
+];
+const typeOptions = [{ value: '', label: 'All types' }, ...types.map((t) => ({ value: t.id, label: t.many }))];
+const isType = (value: string | null): value is AppType => types.some((t) => t.id === value);
+const typeLabel = (type: AppType): string => types.find((t) => t.id === type)?.one ?? 'Page';
+
 const empty: Record<Tab, { title: string; text: string }> = {
-  approved: { title: 'Nothing published yet', text: 'Ask Claude to publish an artifact to your org.' },
-  draft: { title: 'Nothing awaiting review', text: 'A page Claude publishes to one of your rrotors shows here until it is reviewed.' },
-  rejected: { title: 'Nothing rejected', text: 'A page a reviewer turned down shows here with the reason.' },
+  approved: { title: 'Nothing published yet', text: 'Ask Claude to publish what it made to your org.' },
+  draft: { title: 'Nothing awaiting review', text: 'An app Claude publishes to one of your rrotors shows here until it is reviewed.' },
+  rejected: { title: 'Nothing rejected', text: 'An app a reviewer turned down shows here with the reason.' },
 };
 
 /**
- * Artifacts, in Runtimes & licences: the pages Claude published to the org's rrotors, from the catalogue
- * (`GET /v1/artifacts`), as cards with Open; a reviewer sees the ones awaiting review and the rejected ones too,
- * and approves, rejects (with a reason) or retires. The search and the page live in the URL.
+ * Apps, in Runtimes & licences: what Claude made and published to the org's rrotors, from the catalogue
+ * (`GET /v1/apps`), as cards with Open; a reviewer sees the ones awaiting review and the rejected ones too, and
+ * approves, rejects (with a reason) or retires. The search, the type and the page live in the URL.
  */
-export function ArtifactsPage() {
+export function AppsPage() {
   const [params, setParams] = useSearchParams();
   const me = useMe();
   const reviewer = me.data?.reviewer === true;
@@ -38,8 +51,10 @@ export function ArtifactsPage() {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const asked = params.get('state');
   const tab: Tab = reviewer && (asked === 'draft' || asked === 'rejected') ? asked : 'approved';
-  const state: ArtifactState = tab;
-  const artifacts = useArtifacts({ q, page, state });
+  const state: AppState = tab;
+  const askedType = params.get('type');
+  const type = isType(askedType) ? askedType : undefined;
+  const apps = useApps({ q, page, state, type });
 
   const setParam = (changes: Record<string, string | null>, replace = false) =>
     setParams(
@@ -73,28 +88,34 @@ export function ArtifactsPage() {
     return () => clearTimeout(timer);
   }, [typed, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const total = artifacts.data?.total ?? 0;
+  const total = apps.data?.total ?? 0;
   const from = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
   const to = Math.min(page * PER_PAGE, total);
   const last = Math.max(1, Math.ceil(total / PER_PAGE));
 
+  const nothing = q
+    ? { title: 'Nothing matches', text: `No app matches “${q}”.` }
+    : type
+      ? { title: 'Nothing matches', text: `No ${types.find((t) => t.id === type)!.many.toLowerCase()} match.` }
+      : empty[tab];
+
   const list = (
     <>
-      {artifacts.isPending && <LoadingCard />}
-      {artifacts.error && <ApiErrorNotice error={artifacts.error} />}
-      {artifacts.data && artifacts.data.artifacts.length === 0 && (
-        <EmptyState icon="layers" title={q ? 'Nothing matches' : empty[tab].title}>
-          {q ? `No artifact matches “${q}”.` : empty[tab].text}
+      {apps.isPending && <LoadingCard />}
+      {apps.error && <ApiErrorNotice error={apps.error} />}
+      {apps.data && apps.data.apps.length === 0 && (
+        <EmptyState icon="layers" title={nothing.title}>
+          {nothing.text}
         </EmptyState>
       )}
-      {artifacts.data && artifacts.data.artifacts.length > 0 && (
-        <ul className={styles.grid} aria-label="Artifacts">
-          {artifacts.data.artifacts.map((artifact) => (
-            <ArtifactCard key={artifact.id} artifact={artifact} reviewer={reviewer} />
+      {apps.data && apps.data.apps.length > 0 && (
+        <ul className={styles.grid} aria-label="Apps">
+          {apps.data.apps.map((app) => (
+            <AppCard key={app.id} app={app} reviewer={reviewer} />
           ))}
         </ul>
       )}
-      {artifacts.data && total > PER_PAGE && (
+      {apps.data && total > PER_PAGE && (
         <nav className={styles.pager} aria-label="Pages">
           <span>
             {from}–{to} of {total}
@@ -114,7 +135,7 @@ export function ArtifactsPage() {
 
   return (
     <>
-      <PageHeader title="Artifacts" description="The pages Claude published to your org’s rrotors. Open one at the rrotor it lives on." />
+      <PageHeader title="Apps" description="What Claude made and published to your org’s rrotors. Open one at the rrotor it lives on." />
       <div className={styles.stack}>
         <div className={styles.toolbar}>
           <TextField
@@ -125,10 +146,13 @@ export function ArtifactsPage() {
             onChange={(e) => setTyped(e.target.value)}
             placeholder="Title, description or name"
           />
+          <div className={styles.type}>
+            <Select label="Type" options={typeOptions} value={type ?? ''} onChange={(e) => setParam({ type: e.target.value || null, page: null }, true)} />
+          </div>
         </div>
         {reviewer ? (
           <>
-            <Tabs label="Artifacts" tabs={tabs} value={tab} onChange={(id) => setParam({ state: id === 'approved' ? null : id, page: null }, true)} />
+            <Tabs label="Apps" tabs={tabs} value={tab} onChange={(id) => setParam({ state: id === 'approved' ? null : id, page: null }, true)} />
             <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} className={styles.stack}>
               {list}
             </div>
@@ -141,15 +165,15 @@ export function ArtifactsPage() {
   );
 }
 
-function who(by: Artifact['submitted_by']): string {
+function who(by: App['submitted_by']): string {
   return by?.name ?? by?.email ?? 'someone';
 }
 
-function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: boolean }) {
+function AppCard({ app, reviewer }: { app: App; reviewer: boolean }) {
   const toast = useToast();
-  const approve = useApproveArtifact();
-  const reject = useRejectArtifact();
-  const retire = useRetireArtifact();
+  const approve = useApproveApp();
+  const reject = useRejectApp();
+  const retire = useRetireApp();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [retiring, setRetiring] = useState(false);
@@ -157,42 +181,45 @@ function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: bo
   const submitReject = (event: FormEvent) => {
     event.preventDefault();
     reject.mutate(
-      { id: artifact.id, reason: reason.trim() },
+      { id: app.id, reason: reason.trim() },
       {
         onSuccess: () => {
           setRejecting(false);
           setReason('');
-          toast.show(`${artifact.title} is rejected.`);
+          toast.show(`${app.title} is rejected.`);
         },
       },
     );
   };
 
   return (
-    <li className={styles.card} aria-label={artifact.title}>
-      <div className={styles.title}>{artifact.title}</div>
-      {artifact.description && <p className={styles.description}>{artifact.description}</p>}
+    <li className={styles.card} aria-label={app.title}>
+      <div className={styles.head}>
+        <div className={styles.title}>{app.title}</div>
+        <Chip>{typeLabel(app.type)}</Chip>
+      </div>
+      {app.description && <p className={styles.description}>{app.description}</p>}
       <div className={styles.meta}>
-        {artifact.runtime_name} · v{artifact.version}
+        {app.runtime_name} · v{app.version}
       </div>
       <div className={styles.chips}>
-        {artifact.roles.length === 0 ? <Chip>Everyone</Chip> : artifact.roles.map((role) => <Chip key={role} tone="blue">{role}</Chip>)}
+        {app.roles.length === 0 ? <Chip>Everyone</Chip> : app.roles.map((role) => <Chip key={role} tone="blue">{role}</Chip>)}
       </div>
       <div className={styles.meta}>
-        Published by {who(artifact.submitted_by)} · {date(artifact.submitted_at)}
+        Published by {who(app.submitted_by)} · {date(app.submitted_at)}
       </div>
-      {artifact.state === 'rejected' && artifact.reason && (
+      {app.state === 'rejected' && app.reason && (
         <p className={styles.reason}>
-          Rejected{artifact.reviewed_by ? ` by ${who(artifact.reviewed_by)}` : ''}: {artifact.reason}
+          Rejected{app.reviewed_by ? ` by ${who(app.reviewed_by)}` : ''}: {app.reason}
         </p>
       )}
       <div className={styles.actions}>
-        <ButtonLink href={artifact.url} target="_blank" rel="noopener noreferrer" size="sm" variant="primary">
+        <ButtonLink href={app.url} target="_blank" rel="noopener noreferrer" size="sm" variant="primary">
           Open
         </ButtonLink>
-        {reviewer && artifact.state === 'draft' && (
+        {reviewer && app.state === 'draft' && (
           <>
-            <Button size="sm" loading={approve.isPending} onClick={() => approve.mutate(artifact.id, { onSuccess: () => toast.show(`${artifact.title} is published.`) })}>
+            <Button size="sm" loading={approve.isPending} onClick={() => approve.mutate(app.id, { onSuccess: () => toast.show(`${app.title} is published.`) })}>
               Approve
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setRejecting(true)}>
@@ -200,7 +227,7 @@ function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: bo
             </Button>
           </>
         )}
-        {reviewer && artifact.state === 'approved' && (
+        {reviewer && app.state === 'approved' && (
           <Button size="sm" variant="ghost" onClick={() => setRetiring(true)}>
             Retire
           </Button>
@@ -214,7 +241,7 @@ function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: bo
           reject.reset();
           setRejecting(false);
         }}
-        title={`Reject ${artifact.title}?`}
+        title={`Reject ${app.title}?`}
         description="The person who published it sees the reason."
         actions={
           <>
@@ -226,13 +253,13 @@ function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: bo
             >
               Cancel
             </Button>
-            <Button type="submit" form={`reject-${artifact.id}`} variant="danger" loading={reject.isPending} disabled={!reason.trim()}>
+            <Button type="submit" form={`reject-${app.id}`} variant="danger" loading={reject.isPending} disabled={!reason.trim()}>
               Reject
             </Button>
           </>
         }
       >
-        <form id={`reject-${artifact.id}`} className={styles.form} onSubmit={submitReject}>
+        <form id={`reject-${app.id}`} className={styles.form} onSubmit={submitReject}>
           <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} autoFocus required />
           <ApiErrorNotice error={reject.error} />
         </form>
@@ -240,16 +267,16 @@ function ArtifactCard({ artifact, reviewer }: { artifact: Artifact; reviewer: bo
 
       <ConfirmDialog
         open={retiring}
-        title={`Retire ${artifact.title}?`}
+        title={`Retire ${app.title}?`}
         description="It is no longer served or listed. Publishing a new version brings it back for review."
         confirmLabel="Retire"
         pending={retire.isPending}
         error={retire.error}
         onConfirm={() =>
-          retire.mutate(artifact.id, {
+          retire.mutate(app.id, {
             onSuccess: () => {
               setRetiring(false);
-              toast.show(`${artifact.title} is retired.`);
+              toast.show(`${app.title} is retired.`);
             },
           })
         }

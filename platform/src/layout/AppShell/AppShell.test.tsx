@@ -93,6 +93,6 @@ describe('the main sidebar', () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
     await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'Artifacts', 'API Keys', 'Usage']);
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'Apps', 'API Keys', 'Usage']);
   });
 });

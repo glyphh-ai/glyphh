@@ -19,13 +19,13 @@ describe('with Ada Cloud on', () => {
       'Usage',
       'Runtimes',
       'Licence',
-      'Artifacts',
+      'Apps',
       'Runtime keys',
     ]);
     const ada = within(sidebar()).getByRole('group', { name: 'Ada' });
     expect(within(ada).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'API Keys', 'Usage']);
     const runtimes = within(sidebar()).getByRole('group', { name: 'Runtimes & licences' });
-    expect(within(runtimes).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/runtimes', '/licence', '/artifacts', '/runtime-keys']);
+    expect(within(runtimes).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/runtimes', '/licence', '/apps', '/runtime-keys']);
     expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaHome');
   });

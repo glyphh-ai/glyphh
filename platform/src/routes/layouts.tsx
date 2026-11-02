@@ -74,8 +74,8 @@ function AdaNav() {
         <NavItem to="/licence" icon="card">
           Licence
         </NavItem>
-        <NavItem to="/artifacts" icon="layers">
-          Artifacts
+        <NavItem to="/apps" icon="layers">
+          Apps
         </NavItem>
         <NavItem to="/runtime-keys" icon="key">
           Runtime keys
@@ -95,8 +95,8 @@ function RuntimeNav() {
       <NavItem to="/licence" icon="card">
         Licence
       </NavItem>
-      <NavItem to="/artifacts" icon="layers">
-        Artifacts
+      <NavItem to="/apps" icon="layers">
+        Apps
       </NavItem>
       <NavItem to="/keys" icon="key">
         API Keys

@@ -167,25 +167,28 @@ app.delete('/v1/org/sso', (c) => {
   sso = null;
   return c.body(null, 204);
 });
-// The catalogue of artifacts (the pages Claude published to the org's rrotors): listed by state, searched, paged;
-// a review changes the state. The person is the admin, so a reviewer.
-const artifacts = structuredClone(fixtures.artifacts);
-app.get('/v1/artifacts', (c) => {
-  const state = c.req.query('state') ?? 'approved';
+// The catalogue of apps (what Claude made and published to the org's rrotors): listed by state, one type or every
+// type, searched, paged; a review changes the state. The person is the admin, so a reviewer.
+const apps = structuredClone([...fixtures.apps, ...fixtures.manyApps]);
+app.get('/v1/apps', (c) => {
+  const wanted = c.req.query('state') ?? 'approved';
+  const type = c.req.query('type');
   const q = (c.req.query('q') ?? '').toLowerCase();
   const page = Math.max(1, Number(c.req.query('page') ?? '1'));
   const perPage = Math.min(100, Math.max(1, Number(c.req.query('per_page') ?? '24')));
-  if (state !== 'approved' && state.me.role !== 'admin') return refuse(403, 'E_FORBIDDEN', 'Only a reviewer sees artifacts awaiting review.', 'reviewer');
-  const found = artifacts.filter((a) => a.state === state && (!q || [a.title, a.description, a.name].some((s) => s.toLowerCase().includes(q))));
-  return c.json({ artifacts: found.slice((page - 1) * perPage, page * perPage), page, per_page: perPage, total: found.length });
+  if (wanted !== 'approved' && state.me.role !== 'admin') return refuse(403, 'E_FORBIDDEN', 'Only a reviewer sees apps awaiting review.', 'reviewer');
+  const found = apps.filter(
+    (a) => a.state === wanted && (!type || a.type === type) && (!q || [a.title, a.description, a.name].some((s) => s.toLowerCase().includes(q))),
+  );
+  return c.json({ apps: found.slice((page - 1) * perPage, page * perPage), page, per_page: perPage, total: found.length });
 });
-app.get('/v1/artifacts/:id', (c) => {
-  const found = artifacts.find((a) => a.id === c.req.param('id'));
-  return found ? c.json(found) : refuse(404, 'E_NOT_FOUND', 'No such artifact.', 'artifact');
+app.get('/v1/apps/:id', (c) => {
+  const found = apps.find((a) => a.id === c.req.param('id'));
+  return found ? c.json(found) : refuse(404, 'E_NOT_FOUND', 'No such app.', 'app');
 });
-app.post('/v1/artifacts/:id/:action', async (c) => {
-  const found = artifacts.find((a) => a.id === c.req.param('id'));
-  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such artifact.', 'artifact');
+app.post('/v1/apps/:id/:action', async (c) => {
+  const found = apps.find((a) => a.id === c.req.param('id'));
+  if (!found) return refuse(404, 'E_NOT_FOUND', 'No such app.', 'app');
   const action = c.req.param('action');
   const reviewed = { reviewed_by: { id: state.me.id, name: state.me.name, email: state.me.email }, reviewed_at: new Date().toISOString() };
   if (action === 'approve') {

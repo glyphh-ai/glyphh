@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import type {
-  Artifact,
-  ArtifactPage,
-  ArtifactState,
+  App,
+  AppPage,
+  AppState,
+  AppType,
   Install,
   Invite,
   LicenceKeys,
@@ -39,7 +40,7 @@ export const keys = {
   members: ['org', 'members'] as const,
   invites: ['org', 'invites'] as const,
   sso: ['org', 'sso'] as const,
-  artifacts: ['artifacts'] as const,
+  apps: ['apps'] as const,
 };
 
 // Reads
@@ -59,16 +60,17 @@ export const useInvites = () => useQuery({ queryKey: keys.invites, queryFn: () =
 /** The org's single sign-on, or null when it has none. */
 export const useSso = () => useQuery({ queryKey: keys.sso, queryFn: () => api.get<Sso | null>('/org/sso') });
 
-export type ArtifactsQuery = { q?: string; page?: number; state?: ArtifactState };
+export type AppsQuery = { q?: string; page?: number; state?: AppState; type?: AppType };
 
-/** A page of the org's artifacts: the approved ones the person's roles allow, or for a reviewer any state. */
-export const useArtifacts = ({ q = '', page = 1, state = 'approved' }: ArtifactsQuery) =>
+/** A page of the org's apps: the approved ones the person's roles allow, or for a reviewer any state; one type, or every type. */
+export const useApps = ({ q = '', page = 1, state = 'approved', type }: AppsQuery) =>
   useQuery({
-    queryKey: [...keys.artifacts, { q, page, state }],
+    queryKey: [...keys.apps, { q, page, state, type: type ?? null }],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), per_page: '24', state });
       if (q) params.set('q', q);
-      return api.get<ArtifactPage>(`/artifacts?${params}`);
+      if (type) params.set('type', type);
+      return api.get<AppPage>(`/apps?${params}`);
     },
     placeholderData: (previous) => previous,
   });
@@ -119,11 +121,10 @@ export const useRemoveMember = () => useWrite((id: string) => api.delete(`/org/m
 export const useSetSso = () => useWrite((body: SsoIn) => api.put<Sso>('/org/sso', body), [keys.sso]);
 export const useRemoveSso = () => useWrite(() => api.delete('/org/sso'), [keys.sso]);
 
-// A review changes which list an artifact is in: every page is read again.
-export const useApproveArtifact = () => useWrite((id: string) => api.post<Artifact>(`/artifacts/${id}/approve`), [keys.artifacts]);
-export const useRejectArtifact = () =>
-  useWrite(({ id, reason }: { id: string; reason: string }) => api.post<Artifact>(`/artifacts/${id}/reject`, { reason }), [keys.artifacts]);
-export const useRetireArtifact = () => useWrite((id: string) => api.post<Artifact>(`/artifacts/${id}/retire`), [keys.artifacts]);
+// A review changes which list an app is in: every page is read again.
+export const useApproveApp = () => useWrite((id: string) => api.post<App>(`/apps/${id}/approve`), [keys.apps]);
+export const useRejectApp = () => useWrite(({ id, reason }: { id: string; reason: string }) => api.post<App>(`/apps/${id}/reject`, { reason }), [keys.apps]);
+export const useRetireApp = () => useWrite((id: string) => api.post<App>(`/apps/${id}/retire`), [keys.apps]);
 
 export const useCheckout = () => useWrite((plan: string) => api.post<{ url: string }>('/billing/checkout', { plan }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);

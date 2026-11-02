@@ -6,7 +6,7 @@ import { RequireSession } from '@/components/RequireSession';
 import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
-import { ArtifactsPage } from '@/pages/artifacts/ArtifactsPage';
+import { AppsPage } from '@/pages/apps/AppsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
@@ -57,7 +57,9 @@ export const routes: RouteObject[] = [
       // runtime (2026-10-31): the old Machines and Logs pages go to Runtimes, and Getting started to its Add a runtime.
       { path: 'runtimes', element: <RuntimesPage />, handle: runtimeCrumbs('Runtimes') },
       { path: 'licence', element: <LicencePage />, handle: runtimeCrumbs('Licence') },
-      { path: 'artifacts', element: <ArtifactsPage />, handle: runtimeCrumbs('Artifacts') },
+      { path: 'apps', element: <AppsPage />, handle: runtimeCrumbs('Apps') },
+      // The first cut's path (2026-11-01); the search (q, type, state, page) comes along.
+      { path: 'artifacts', element: <Moved to="/apps" /> },
       {
         path: 'runtime-keys',
         element: <AdaOr ada={<KeysPage />} off={<Moved to="/keys" />} />,

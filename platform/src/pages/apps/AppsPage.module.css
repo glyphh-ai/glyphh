@@ -16,6 +16,12 @@
   max-width: 420px;
 }
 
+/* The type filter, beside the search. */
+.type {
+  flex: 0 1 180px;
+  min-width: 150px;
+}
+
 /* The cards: three across on a wide window, one on a phone. */
 .grid {
   display: grid;
@@ -37,7 +43,16 @@
   background: var(--surface);
 }
 
+/* The title with the type chip beside it. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .title {
+  min-width: 0;
   font-size: var(--text-md);
   font-weight: 600;
   overflow-wrap: anywhere;

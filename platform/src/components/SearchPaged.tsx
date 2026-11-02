@@ -8,7 +8,7 @@ const SEARCH_DELAY_MS = 300;
 
 /**
  * The search and the page a list is on, kept in the URL (`?q=`, `?page=`) so a link lands on the same view: what is
- * typed reaches the URL once typing pauses, and a new search starts at the first page. Artifacts sends both to the
+ * typed reaches the URL once typing pauses, and a new search starts at the first page. Apps sends both to the
  * server; the lists the server answers whole (models, keys) filter and page here with `useSearchPaging`.
  */
 export function useUrlSearch() {

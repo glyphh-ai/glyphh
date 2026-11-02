@@ -110,7 +110,7 @@ export function AuthPage() {
               value={reviewers}
               onChange={(e) => setReviewers(e.target.value)}
               placeholder="platform-leads, security"
-              hint="Groups from your identity provider whose members review the artifacts published to your rrotors, beside the admin."
+              hint="Groups from your identity provider whose members review the apps published to your rrotors, beside the admin."
               disabled={!canEdit}
             />
             <CopyField value={callbackUrl} label="Redirect URI" />
