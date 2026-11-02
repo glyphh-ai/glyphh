@@ -18,6 +18,7 @@ from glyphh_server.db.drift import refuse_drift
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.seed import seed_mods, seed_plans
 from glyphh_server.db.seed_clients import seed_platform_client
+from glyphh_server.ops.templates.library import seed_templates
 
 log = logging.getLogger("glyphh.schema")
 
@@ -92,6 +93,7 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await seed_mods(conn)
         await seed_plans(conn, settings)
         await seed_platform_client(conn, settings)
+        await seed_templates(conn)
 
 
 async def main() -> None:

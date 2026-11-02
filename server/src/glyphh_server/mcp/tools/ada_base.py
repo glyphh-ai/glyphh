@@ -13,7 +13,9 @@ from glyphh_ada.allowance import allowance
 from glyphh_ada.api.auth import AdaCaller
 from glyphh_ada.api.call import keyed, send
 from glyphh_server.db import tenancy
+from glyphh_server.errors import NotFound
 from glyphh_server.mcp.tools.base import Context
+from glyphh_server.ops.templates import glyphh
 
 NAME = Field(pattern=limits.NAME_PATTERN, description="The model's name (ada_models lists them)")
 IDEMPOTENCY = Field(None, max_length=200, description="Sent again with the same key and cases, the write is made once")
@@ -36,7 +38,10 @@ async def caller(ctx: Context) -> AdaCaller:
 async def ada(
     ctx: Context, model: str, op: str, args: dict[str, Any], clearance: float | None = None, key: str | None = None
 ) -> tuple[Any, int | None]:
-    """One op of one model, answered by a worker: (answer, the model's active version)."""
+    """One op of one model, answered by a worker: (answer, the model's active version). Another person's glyphh
+    model (a template's, ops/templates/glyphh.py) is not there for anyone else."""
+    if not glyphh.mine(ctx.who.user_id, model):
+        raise NotFound(f"No model named {model} in this org.", model=model)
     return await send(ctx.ada, await caller(ctx), model, op, args, clearance, keyed(key or ""))
 
 

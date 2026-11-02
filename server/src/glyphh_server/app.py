@@ -32,6 +32,7 @@ from glyphh_server.api import (
     plans,
     runtime,
     self_hosted,
+    templates,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
@@ -60,6 +61,7 @@ ROUTERS = (
     runtime,
     self_hosted,
     apps,
+    templates,
     github,
     github_pages,
     oauth_meta,
