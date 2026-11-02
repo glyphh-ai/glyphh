@@ -84,6 +84,8 @@ function newState() {
     /** The local rrotor: what was published to it (POST /v1/apps); `rrotorDown` makes its address unreachable. */
     published: [] as Json[],
     rrotorDown: false,
+    /** A rrotor before 0.2.0: no /v1/apps, only Not Found. */
+    rrotorOld: false,
     /** The local rrotor's link (its /v1/health): the runtime id and token it holds, and the link's state;
      *  `linkStalls` keeps it `connecting` after a token; `tokens` is what PUT /v1/runtime/token received. */
     rrotor: { runtime_id: null as string | null, link: 'no_token', version: '0.2.0' },
@@ -269,7 +271,7 @@ function rrotorRoute(s: State, c: Call): { status: number; body: unknown } {
     s.rrotor.link = s.linkStalls ? 'connecting' : s.linkOutcome
     return { status: 200, body: { runtime_id: s.rrotor.runtime_id, link: 'connecting' } }
   }
-  if (c.method !== 'POST' || c.path !== '/v1/apps') return refuse(404, 'E_NOT_FOUND', `No route ${c.method} ${c.path}`)
+  if (c.method !== 'POST' || c.path !== '/v1/apps' || s.rrotorOld) return refuse(404, 'E_NOT_FOUND', 'Not Found')
   const name = String(c.body.name ?? '')
   if (!/^[a-z][a-z0-9-]{0,62}$/.test(name)) return refuse(400, 'E_MANIFEST', `${name || '(none)'} is not a program name: ^[a-z][a-z0-9-]{0,62}$.`)
   const version = s.published.filter(a => a.program === name).length + 1

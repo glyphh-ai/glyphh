@@ -67,6 +67,32 @@ export const linkLocalRrotor = (gh: Host) =>
     }
   })
 
+const UPDATE_WAIT_MS = 10 * 60 * 1000 // a pull of the image over a slow line
+
+/** The Account section's update: the rrotor skill's script pulls the release this plugin pins and makes the
+ *  container again on its volume, then links it; the script's one JSON line becomes the panel's word. */
+export const updateRrotor = (gh: Host) =>
+  act(gh, undefined, async () => {
+    try {
+      const script = `${gh.pluginRoot}/skills/rrotor/scripts/rrotor.sh`
+      const r = await gh.process.run(['sh', script, 'update'], { timeoutMs: UPDATE_WAIT_MS })
+      let out: Json = {}
+      try {
+        out = JSON.parse(r.stdout.trim().split('\n').pop() ?? '{}') as Json
+      } catch {
+        out = {}
+      }
+      if (r.exitCode !== 0 || out.ok !== true) {
+        await say(gh, `rrotor was not updated: ${String(out.error ?? r.stdout.trim() ?? '').slice(0, 300) || `the script exited ${r.exitCode}`}`, true)
+        return
+      }
+      const from = out.from ? ` from ${String(out.from)}` : ''
+      await say(gh, `rrotor updated${from} to ${String(out.to ?? '')}. Claude Code loads its tools again at /mcp or its next start.`)
+    } finally {
+      await loadRrotor(gh)
+    }
+  })
+
 export const renameOrg = (gh: Host, name: string) =>
   act(gh, 'Org renamed.', async () => {
     await api(gh, 'PATCH', '/v1/org', { name: name.trim() })

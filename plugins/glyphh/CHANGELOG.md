@@ -2,6 +2,20 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.7.2 — 2026-11-02
+
+rrotor kept at the release this plugin was made against. Until now the rrotor skill's script pinned 0.1.0 while
+the plugin shipped apps for 0.2.0 and every type for 0.3.0, so "install rrotor" gave a rrotor without
+`app_publish` and a session could not publish at all.
+
+- The script pins rrotor 0.3.0, and CI holds that pin, the compose file's default and the Helm chart's `appVersion`
+  to one value; `rrotor.sh update` pulls the pinned release and makes the container again on the same volume, port
+  and token, then links it; `status` says `pinned` and `update_available`.
+- The Account section marks this machine's rrotor "Update to 0.3.0" when it is behind, with **update** doing the
+  same from the panel; `/glyphh publish` to a rrotor without apps says to update rather than Not Found.
+- The rrotor skill triggers on "update rrotor" and on a tool missing from rrotor's set; the publish skill says what
+  to do when `app_publish` is not among the tools, instead of handing the person a file.
+
 ## 1.7.1 — 2026-11-02
 
 The panel redrawn in Claude's own look, every section on one kit. Nothing of what it does changes.
