@@ -3,6 +3,9 @@ import { me, org, plans, sso } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
+// The Auth page's reviewer groups as they are when rrotor is shown (lib/shelved); Shelved.test.tsx covers it shelved.
+vi.mock('@/lib/shelved', () => ({ RROTOR_SHOWN: true }));
+
 describe('Settings', () => {
   it('opens on General, with the settings sidebar and breadcrumb', async () => {
     renderApp('/settings');

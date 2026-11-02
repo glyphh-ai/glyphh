@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { RROTOR_SHOWN } from '@/lib/shelved';
 import { adminRoutes } from '@/admin/routes';
 import { StaffHome } from '@/admin/StaffGate';
 import { AdaOnly, AdaOr } from '@/components/AdaGate';
@@ -43,6 +45,14 @@ function Moved({ to }: { to: string }) {
 /** The crumbs of a page in Runtimes & licences. */
 const runtimeCrumbs = (label: string): RouteHandle => ({ crumbs: [{ label: 'Runtimes & licences' }, { label }] });
 
+/**
+ * A page of rrotor's. Shelved (2026-11-02, lib/shelved): with Ada Cloud on it lands on Home; with it off the runtimes'
+ * pages are all there is, so they stay.
+ */
+function Shelved({ page }: { page: ReactNode }) {
+  return RROTOR_SHOWN ? <>{page}</> : <AdaOr ada={<Navigate to="/" replace />} off={page} />;
+}
+
 export const routes: RouteObject[] = [
   // Signed-in pages.
   {
@@ -55,14 +65,14 @@ export const routes: RouteObject[] = [
       // With Ada Cloud on (the server's ada_cloud), Home, Models, API Keys and Usage are Ada's. Runtimes & licences sits
       // beside it in both: the rrotors a person runs themselves and the licence key they run on. Glyphh hosts no
       // runtime (2026-10-31): the old Machines and Logs pages go to Runtimes, and Getting started to its Add a runtime.
-      { path: 'runtimes', element: <RuntimesPage />, handle: runtimeCrumbs('Runtimes') },
-      { path: 'licence', element: <LicencePage />, handle: runtimeCrumbs('Licence') },
-      { path: 'apps', element: <AppsPage />, handle: runtimeCrumbs('Apps') },
+      { path: 'runtimes', element: <Shelved page={<RuntimesPage />} />, handle: runtimeCrumbs('Runtimes') },
+      { path: 'licence', element: <Shelved page={<LicencePage />} />, handle: runtimeCrumbs('Licence') },
+      { path: 'apps', element: <Shelved page={<AppsPage />} />, handle: runtimeCrumbs('Apps') },
       // The first cut's path (2026-11-01); the search (q, type, state, page) comes along.
       { path: 'artifacts', element: <Moved to="/apps" /> },
       {
         path: 'runtime-keys',
-        element: <AdaOr ada={<KeysPage />} off={<Moved to="/keys" />} />,
+        element: <AdaOr ada={RROTOR_SHOWN ? <KeysPage /> : <Navigate to="/" replace />} off={<Moved to="/keys" />} />,
         handle: runtimeCrumbs('Runtime keys'),
       },
       { path: 'getting-started', element: <Navigate to="/runtimes?add=1" replace /> },
