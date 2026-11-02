@@ -15,7 +15,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import Node, Rrotor, User
+from glyphh_server.models import Install, Node, Rrotor, User
 from glyphh_server.ops.plans import org_version
 
 NODE_WINDOW: timedelta = timedelta(hours=48)  # two daily heartbeats
@@ -67,9 +67,12 @@ def _counts(row: Row, cutoff: datetime) -> bool:
 async def nodes(conn: AsyncConnection, org_id: uuid.UUID) -> Nodes:
     cutoff = datetime.now(UTC) - NODE_WINDOW
     people = select(User.id).where(User.org_id == org_id)
-    runtimes = select(Rrotor.id, Rrotor.name, Rrotor.mode, Rrotor.state, Rrotor.image_version, Rrotor.precedents)
-    runtimes = runtimes.add_columns(Rrotor.last_seen_at, Rrotor.last_heartbeat_at).where(Rrotor.user_id.in_(people))
-    found = list(await conn.execute(runtimes.order_by(Rrotor.name, Rrotor.id)))
+    # A local runtime has no name of its own: it is named after the install (the machine) it was started from.
+    named = func.coalesce(Rrotor.name, Install.name).label("name")
+    runtimes = select(Rrotor.id, named, Rrotor.mode, Rrotor.state, Rrotor.image_version, Rrotor.precedents)
+    runtimes = runtimes.add_columns(Rrotor.last_seen_at, Rrotor.last_heartbeat_at)
+    runtimes = runtimes.outerjoin(Install, Install.id == Rrotor.install_id).where(Rrotor.user_id.in_(people))
+    found = list(await conn.execute(runtimes.order_by(named, Rrotor.id)))
     said = select(Node).where(Node.rrotor_id.in_([r.id for r in found]), Node.seen_at > cutoff)
     by_runtime: dict[uuid.UUID, list[Row]] = {}
     for node in await conn.execute(said.order_by(Node.node_id)):

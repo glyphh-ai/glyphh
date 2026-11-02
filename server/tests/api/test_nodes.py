@@ -128,6 +128,8 @@ async def test_the_orgs_nodes_are_counted_softly_against_the_plan(
     ]
     seen = {n["runtime_id"]: n["seen_at"] for n in body["nodes"]}
     assert seen[str(local.id)] is not None and seen[str(online)] is not None
+    named = {n["runtime_id"]: n["runtime"] for n in body["nodes"]}
+    assert named[str(local.id)] == "Mac"  # a local runtime is named after its install, the machine
     _, auth = await granted(engine, ada)
     used = (await tool(client, auth, "usage"))["content"][0]["text"]
     assert used.startswith("Runtime nodes: 5 of 1 (over the plan: shown, never stopped).\n")
