@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button, EmptyState, TextField } from '@/ui';
 import styles from './SearchPaged.module.css';
@@ -30,10 +30,21 @@ export function useUrlSearch() {
     );
 
   const [typed, setTyped] = useState(q);
-  useEffect(() => setTyped(q), [q]);
+  // What this hook last sent to the URL: a `q` that arrives from elsewhere (a link, Back) replaces what is typed,
+  // but our own landing never does, or keystrokes made while it was landing would be lost.
+  const committed = useRef(q);
+  useEffect(() => {
+    if (q !== committed.current) {
+      committed.current = q;
+      setTyped(q);
+    }
+  }, [q]);
   useEffect(() => {
     if (typed === q) return;
-    const timer = setTimeout(() => setParam({ q: typed, page: null }, true), SEARCH_DELAY_MS);
+    const timer = setTimeout(() => {
+      committed.current = typed;
+      setParam({ q: typed, page: null }, true);
+    }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [typed, q]); // eslint-disable-line react-hooks/exhaustive-deps
 

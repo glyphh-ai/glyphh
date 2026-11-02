@@ -48,8 +48,9 @@ describe('Ada Models, searched and paged', () => {
     expect(links()[0]).toHaveTextContent('triage');
     await user.clear(screen.getByLabelText('Search'));
     await user.type(screen.getByLabelText('Search'), 'nothing here');
-    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
-    expect(screen.getByText('No model matches “nothing here”.')).toBeInTheDocument();
+    // The search settles after the last keystroke: wait for the whole query, not a partial one's empty state.
+    expect(await screen.findByText('No model matches “nothing here”.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing matches')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
