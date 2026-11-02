@@ -41,7 +41,7 @@ A JSON argument is the JSON itself, `@file` for a file's, or `-` for stdin's.
 | `glyphh versions NAME`, `glyphh activate NAME N` | The versions; roll back |
 | `glyphh upgrade NAME [--ada V] [--backtest JOB]` | Another Ada version; backtest first, as the ada skill says |
 | `glyphh export NAME [--to FILE]` | Everything out, written to the file |
-| `glyphh job ID [--wait]`, `glyphh usage`, `glyphh releases` | A job; the plan's use this month; every Ada version |
+| `glyphh job ID [--wait]`, `glyphh cancel ID`, `glyphh usage`, `glyphh releases` | A job (its stage: what it is doing now); stop a job (SDK 3.7); the plan's use this month; every Ada version |
 
 Jobs (import, learn, backtest, settings, spec, upgrade, export) are waited for; `--no-wait` answers the job at once,
 and `glyphh job ID --wait` waits for it later. Read the JSON and tell the user what it means in plain words, as the

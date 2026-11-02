@@ -211,7 +211,7 @@
   "job": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Job",
-    "description": "Work too long for a request, from GET /v1/jobs/{id} and every call that starts one (learn, calibrate, imports, export, backtest; a spec or settings change, or an activation, that re-encodes answers one as its job): its state and percent, then its result or error. A done export carries download {url, expires_at}; an import waiting for its file, upload {url, expires_at}: one-hour signed links, each its own credential",
+    "description": "Work too long for a request, from GET /v1/jobs/{id} and every call that starts one (learn, calibrate, imports, export, backtest; a spec or settings change, or an activation, that re-encodes answers one as its job): its state and percent, then its result or error. A done export carries download {url, expires_at}; an import waiting for its file, upload {url, expires_at}: one-hour signed links, each its own credential. POST /v1/jobs/{id}/cancel answers the job too: one not started ends at once, a running one at its next step, failed with E_CANCELLED (its message saying what of its work stays); an ended one is refused, 409 E_JOB_ENDED. A running job whose worker is gone ends failed E_JOB_STALLED, one that stopped its worker three times E_JOB_LOST",
     "type": "object",
     "required": ["id", "model", "kind", "state", "percent", "args", "result", "error", "created_at", "started_at", "finished_at", "made_by"],
     "properties": {
@@ -232,6 +232,7 @@
       "started_at": { "type": ["string", "null"] },
       "finished_at": { "type": ["string", "null"] },
       "made_by": { "type": ["string", "null"] },
+      "stage": { "type": ["string", "null"], "description": "What a running job is doing now, with its counts (\"restating 41,000 of 52,000 precedents\"); `cancelling` once asked to stop. Null when not running" },
       "download": { "$ref": "#/$defs/link" },
       "upload": { "$ref": "#/$defs/link" }
     },
@@ -349,6 +350,7 @@
     "E_AUTH", "E_INVALID", "E_TOO_LARGE", "E_LIMIT", "E_RATE", "E_MODEL_MISSING", "E_JOB_MISSING", "E_PRECEDENT_MISSING",
     "E_VERSION_MISSING", "E_SPEC", "E_SPEC_LIMIT", "E_SPEC_READING", "E_FEW_ROLES", "E_MAPPING", "E_IMPORT", "E_BACKTEST",
     "E_BUSY", "E_NOT_READY", "E_NO_CHANGE", "E_IDEMPOTENCY", "E_CONFLICT", "E_VERSION_GONE", "E_EXPIRED", "E_TIMEOUT",
-    "E_UNAVAILABLE", "E_ADA_UNKNOWN", "E_ADA_RETIRED", "E_ADA_DEPRECATED", "E_ADA_BETA", "E_ADA_UNAVAILABLE"
+    "E_UNAVAILABLE", "E_ADA_UNKNOWN", "E_ADA_RETIRED", "E_ADA_DEPRECATED", "E_ADA_BETA", "E_ADA_UNAVAILABLE",
+    "E_JOB_ENDED", "E_CANCELLED", "E_JOB_STALLED", "E_JOB_LOST"
   ]
 }

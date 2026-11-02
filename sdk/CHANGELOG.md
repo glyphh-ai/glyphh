@@ -2,6 +2,21 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.7.0
+
+Jobs can be stopped, and say what they are doing. Contract 5 still: both additions are additive.
+
+- `cancel_job(job)` (Python) and `cancelJob(job)` (TypeScript) on `Ada`, by the job or its id
+  (`POST /v1/jobs/{id}/cancel`): a job not started ends at once, a running one at its next step, within seconds. It
+  ends `failed` with `E_CANCELLED`, its message saying what of its work stays, so `wait` raises (throws)
+  `JobFailedError`. Asking again answers the job as it stands; a job that has already ended is refused,
+  `E_JOB_ENDED` (409). `cancel(run_id)` is still 3.0's call for a run.
+- `Job.stage`: what a running job is doing now, with its counts ("restating 41,000 of 52,000 precedents"), and
+  `cancelling` once asked to stop. Python's `Job.cancelled` says a job ended by a cancel.
+- The `glyphh` command: `glyphh cancel <job id>`, and progress on stderr shows the stage.
+- The contract names the job's `stage` and the codes `E_JOB_ENDED`, `E_CANCELLED`, `E_JOB_STALLED` (a running job
+  whose worker stopped and no other took up) and `E_JOB_LOST` (one that stopped its worker three times).
+
 ## 3.6.0
 
 `Runtime`, in both packages: a client for your local rrotor, the runtime you install (a Docker image on

@@ -122,6 +122,21 @@ def test_record_and_record_many(api, capsys, tmp_path):
     assert json.loads(capsys.readouterr().out)["added"] == 2 and len(fake.calls[1][3]["cases"]) == 2
 
 
+def test_cancel_stops_a_job_and_a_waited_job_shows_its_stage(api, capsys, monkeypatch):
+    save_key("glyphh_ak_kept")
+    base = {"id": "j1", "model": "tickets", "kind": "learn", "percent": 72.0, "args": {}, "result": None, "error": None}
+    stopping = {**base, "state": "running", "stage": "cancelling"}
+    fake = api((200, stopping))
+    assert cli.main(["cancel", "j1"]) == 0
+    assert json.loads(capsys.readouterr().out)["stage"] == "cancelling"
+    assert fake.calls[0][:2] == ("POST", "https://ada.glyphh.ai/v1/jobs/j1/cancel")
+    restating = {**base, "state": "running", "stage": "restating 41,000 of 52,000 precedents"}
+    monkeypatch.setattr(glyphh.client, "_sleep", lambda _: None)
+    api((200, restating), (200, {**base, "state": "done", "percent": 100.0, "result": {"tau": 1.0}}))
+    assert cli.main(["job", "j1", "--wait"]) == 0
+    assert "learn running 72% (restating 41,000 of 52,000 precedents)" in capsys.readouterr().err
+
+
 def test_a_refusal_is_json_on_stderr_and_exit_1(api, capsys):
     save_key("glyphh_ak_kept")
     api((404, {"error": {"code": "E_MODEL_MISSING", "message": "No model tickets.", "trace_id": "t"}}))
