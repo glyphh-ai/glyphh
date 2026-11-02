@@ -12,9 +12,13 @@ CAPABILITIES: dict[str, Any] = {"tools": {}, "resources": {}}
 INSTRUCTIONS: str = (
     "Glyphh's account, from Claude: who you are (whoami), your plan (plan) and what you use of it (usage), what each "
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
-    "members and invites, your self-hosted runtimes, their keys and offline licences, and the apps allowed to use "
-    "this connector (connector_grants). Your org's apps, what Claude made and published to its rrotors (apps, shown "
-    "as cards with Open; a reviewer approves, rejects or retires one: app_approve, app_reject, app_retire)."
+    "members and invites, and the apps allowed to use this connector (connector_grants)."
+)
+# rrotor shelved (2026-11-02): said only while GLYPHH_RROTOR is on (its tools are offered only then too).
+RROTOR_INSTRUCTIONS: str = (
+    " Your self-hosted runtimes, their keys and offline licences. Your org's apps, what Claude made and published to "
+    "its rrotors (apps, shown as cards with Open; a reviewer approves, rejects or retires one: app_approve, "
+    "app_reject, app_retire)."
 )
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "
@@ -30,7 +34,11 @@ def server_info(ctx: Context) -> dict[str, str]:
 
 
 def instructions(ctx: Context) -> str:
-    return INSTRUCTIONS + (ADA_INSTRUCTIONS if ctx.ada is not None else "")
+    return (
+        INSTRUCTIONS
+        + (RROTOR_INSTRUCTIONS if ctx.settings.rrotor else "")
+        + (ADA_INSTRUCTIONS if ctx.ada is not None else "")
+    )
 
 
 def initialize(ctx: Context, call: Call) -> dict[str, Any]:
@@ -69,7 +77,8 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":
-            return {"resources": list(panel.RESOURCES)}
+            # The apps panel only while rrotor is shown (shelved, 2026-11-02).
+            return {"resources": [r for r in panel.RESOURCES if ctx.settings.rrotor or r["uri"] != panel.APPS_URI]}
         case "resources/templates/list":
             return {"resourceTemplates": []}
         case "resources/read":

@@ -70,6 +70,9 @@ class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
+    # rrotor shelved (his ruling, 2026-11-02): off, the connector neither lists nor calls its runtime, licence and
+    # apps tools, and its instructions name Glyphh's account and Ada only. The API's routes stay as they are.
+    rrotor: bool = False
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
     # Lets db/reset.py, run by hand, drop every table and make the schema again (development, emergencies). Off by
     # default and never set on deploy: production keeps its data.
