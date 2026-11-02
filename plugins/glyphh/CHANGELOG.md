@@ -2,6 +2,19 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.9.0 — 2026-11-02
+
+Your glyphh: a memory of you that any AI on the Glyphh connector shares, built from the server's new template
+library (glyphh-ai/server `docs/specs/templates.md`).
+
+- The glyphh-memory skill: "build my glyphh" installs the Agentic memory template through the connector
+  (`templates`, `template_install`), seeds it with what the person wants every AI to know, and from then on keeps
+  what they tell Claude, their rules and corrections, and how they like it to be (`glyphh_remember`), recalls before
+  acting (`glyphh_recall`) and forgets on their word (`glyphh_forget`).
+- Two command hooks (`hooks/glyphh_context.py`): `SessionStart` puts the person's personality and rules before
+  Claude, `UserPromptSubmit` what their glyphh holds that bears on the prompt. Signed out, with nothing installed,
+  offline or slow (4 s), they add nothing.
+
 ## 1.8.0 — 2026-11-02
 
 rrotor shelved: the plugin is Glyphh's account, Ada and the ledger again. Nothing is deleted.

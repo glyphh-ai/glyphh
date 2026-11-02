@@ -1,12 +1,16 @@
 {
   "modules": ["./register.tsx"],
   "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/glyphh_context.py\" session", "timeout": 6 }] }
+    ],
     "PostToolUse": [
       { "matcher": "Edit|Write|MultiEdit", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" record", "timeout": 10 }] },
       { "matcher": "Read", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" recall", "timeout": 10 }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" prompt", "timeout": 10 }] }
+      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ledger.py\" prompt", "timeout": 10 }] },
+      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/glyphh_context.py\" prompt", "timeout": 6 }] }
     ]
   }
 }
