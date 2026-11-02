@@ -13,7 +13,7 @@ describe('rrotor shelved, with Ada Cloud on', () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
     await within(main).findByRole('link', { name: 'Home' });
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'API Keys', 'Usage']);
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Ada', 'Templates', 'API Keys', 'Usage']);
     expect(within(main).queryByRole('group', { name: 'Runtimes & licences' })).not.toBeInTheDocument();
   });
 

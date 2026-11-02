@@ -60,6 +60,10 @@ function AdaNav() {
         <NavItem to="/ada" icon="layers">
           Ada
         </NavItem>
+        {/* The template library: your glyphh, beside the models it is made of (2026-11-02). */}
+        <NavItem to="/templates" icon="layers">
+          Templates
+        </NavItem>
         <NavItem to="/keys" icon="key">
           API Keys
         </NavItem>
