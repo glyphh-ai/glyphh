@@ -2,6 +2,21 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.7.1 — 2026-11-02
+
+The panel redrawn in Claude's own look, every section on one kit. Nothing of what it does changes.
+
+- One kit (`hooks/glyphh/ui.tsx`) draws every section: a title with one line under it, groups under small labels,
+  rows with the thing first, a dim line under it and its actions at the right, labelled fields that line up, chips
+  for a state or a kind (This device, Admin, Your plan, Awaiting review, the app's type), one quiet line for an empty
+  list, the panel's last word in a bordered note, and the section tabs as text with the open one in Claude's colour.
+  The terminal gets the same shapes on one line each.
+- Apps: a card's title row carries the type chip and the state, the rrotor and version sit at the right, the
+  roles and who published it on one dim line with the actions beside them; a rejected app says its reason in red;
+  an empty list says so once, and the page line shows only when there is something to page.
+- Account, Org, Plan and Billing: the same rows and fields; a member's row says Admin or You; the plan the org is on
+  is marked on Plan and Billing alike; Billing's standing (status, renewal) reads as fields.
+
 ## 1.7.0 — 2026-11-02
 
 One word everywhere: **app**. What Claude makes and publishes to the organisation is an app, whatever it is, and

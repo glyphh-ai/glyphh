@@ -4,71 +4,85 @@
 import { removeMember, renameOrg, revokeInvite, sendInvite } from '../actions'
 import { idOf, isAdmin, obj, orgOf, str, userOf } from '../shape'
 import { say } from '../state'
-import { linkOrText, type Ctx } from '../ui'
+import { day, kit, linkOrText, type Ctx } from '../ui'
 
 async function Invites(ctx: Ctx, admin: boolean) {
   const { gh, lists, surface } = ctx
-  const { Box, Text, Button, Input } = ctx.ui
+  const { Box, Input } = ctx.ui
+  const k = kit(ctx)
   const link = await gh.state.inviteLink.get()
   const invites = (lists.invites ?? []).filter(i => !i.accepted_at)
-  return (
-    <Box flexDirection="column">
-      <Text bold>Invites</Text>
-      {invites.length === 0 && <Text dimColor>No pending invites.</Text>}
+  return k.Group(
+    'invites',
+    'Invites',
+    <Box flexDirection="column" gap="xs">
+      {invites.length === 0 && k.Empty('inv-none', 'No pending invites.')}
       {invites.map(i => {
         const id = idOf(i, 'invite_id')
-        return (
-          <Box key={`inv-row-${id}`} gap={1}>
-            <Text>{str(i.email)}{i.expires_at ? ` · expires ${str(i.expires_at)}` : ''}</Text>
-            {admin && <Button key={`inv-revoke-${id}`} plain label="revoke" onPress={() => revokeInvite(gh, id)} />}
-          </Box>
-        )
+        return k.Row({
+          key: `inv-row-${id}`,
+          primary: str(i.email),
+          secondary: i.expires_at ? `Expires ${day(i.expires_at)}` : 'Pending',
+          actions: admin ? [{ key: `inv-revoke-${id}`, label: 'revoke', onPress: () => revokeInvite(gh, id) }] : [],
+        })
       })}
-      {admin && <Input key="inv-email" label="Invite " placeholder="email" submitLabel="send" onSubmit={v => sendInvite(gh, v)} />}
-      {link && (
-        <Box gap={1}>
-          {linkOrText(ctx.ui, 'inv-link', link)}
-          <Button
-            key="inv-copy"
-            label="Copy link"
-            onPress={async () => {
-              const copied = await gh.copy(link, surface)
-              await say(gh, copied ? 'Invite link copied.' : 'Copy the invite link above.')
-            }}
-          />
-        </Box>
-      )}
-    </Box>
+      {admin && <Input key="inv-email" label="Invite" placeholder="email" submitLabel="send" onSubmit={v => sendInvite(gh, v)} />}
+      {link &&
+        k.Row({
+          key: 'inv-link-row',
+          primary: 'Invite link',
+          below: <Box paddingLeft={0}>{linkOrText(ctx.ui, 'inv-link', link)}</Box>,
+          actions: [
+            {
+              key: 'inv-copy',
+              label: 'Copy link',
+              onPress: async () => {
+                const copied = await gh.copy(link, surface)
+                await say(gh, copied ? 'Invite link copied.' : 'Copy the invite link above.')
+              },
+            },
+          ],
+        })}
+    </Box>,
+    admin ? 'An invite is a link: send it yourself, or the email on it opens the same door.' : undefined,
   )
 }
 
 export async function Org(ctx: Ctx) {
   const { gh, me, lists } = ctx
-  const { Box, Text, Button, Input } = ctx.ui
+  const { Box, Input } = ctx.ui
+  const k = kit(ctx)
   const admin = isAdmin(me)
   const org = { ...orgOf(me), ...obj(lists.org?.[0]) }
   const self = idOf(userOf(me), 'user_id')
   const members = lists.members ?? []
   return (
-    <Box flexDirection="column" gap={1}>
+    <Box flexDirection="column" gap="md">
+      {k.Head('Organisation', 'Your organisation on Glyphh: its people, and who is invited.')}
       {admin ? (
-        <Input key="org-name" label="Org " value={str(org.name)} submitLabel="rename" onSubmit={v => renameOrg(gh, v)} />
+        <Input key="org-name" label="Name" value={str(org.name)} submitLabel="rename" onSubmit={v => renameOrg(gh, v)} />
       ) : (
-        <Text>Org: {str(org.name, '—')}</Text>
+        k.Field('org-name', 'Name', str(org.name, '—'))
       )}
-      <Box flexDirection="column">
-        <Text bold>Members</Text>
-        {members.map(m => {
-          const id = idOf(m, 'user_id')
-          const canRemove = admin && id !== self && str(m.role) !== 'admin'
-          return (
-            <Box key={`mem-row-${id}`} gap={1}>
-              <Text>{str(m.name || m.email)} · {str(m.email)} · {str(m.role, 'member')}</Text>
-              {canRemove && <Button key={`mem-remove-${id}`} plain label="remove" onPress={() => removeMember(gh, id)} />}
-            </Box>
-          )
-        })}
-      </Box>
+      {k.Group(
+        'members',
+        `Members · ${members.length}`,
+        <Box flexDirection="column" gap="xs">
+          {members.length === 0 && k.Empty('mem-none', 'Nobody yet.')}
+          {members.map(m => {
+            const id = idOf(m, 'user_id')
+            const role = str(m.role, 'member')
+            const canRemove = admin && id !== self && role !== 'admin'
+            return k.Row({
+              key: `mem-row-${id}`,
+              primary: str(m.name || m.email),
+              chip: role === 'admin' ? { text: 'Admin', tone: 'claude' } : id === self ? { text: 'You' } : undefined,
+              secondary: str(m.email),
+              actions: canRemove ? [{ key: `mem-remove-${id}`, label: 'remove', onPress: () => removeMember(gh, id) }] : [],
+            })
+          })}
+        </Box>,
+      )}
       {await Invites(ctx, admin)}
     </Box>
   )

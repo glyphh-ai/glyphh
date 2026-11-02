@@ -41,7 +41,11 @@ After the plugin adds a command, the desktop app may need **View › Reload** be
 
 Signed out, every section shows **Sign in**. The API is the server's (`GLYPHH_SERVER_URL`, default
 `https://api.glyphh.ai`); every call but the device flow's and `/v1/plans` carries `Authorization: Bearer <install
-token>`.
+token>`. Every section is drawn from one kit (`hooks/glyphh/ui.tsx`) in Claude's own type scale and theme colours:
+a title with one line under it, groups under small labels, rows (the thing, a dim line under it, its actions at the
+right), fields whose labels line up, chips for a kind or a state, one quiet line for an empty list, the panel's last
+word in a bordered note, and tabs as text with the open one in Claude's colour; the terminal gets the same shapes on
+one line each.
 
 | Section | Does |
 |---|---|

@@ -5,7 +5,7 @@
 import type { Json } from '../../../types'
 import { changePlan, checkout, portal, talkToUs } from '../actions'
 import { isAdmin, isSelfServe, isSubscribed, orgOf, planName, planOf, priceText, str } from '../shape'
-import type { Ctx } from '../ui'
+import { day, kit, type Ctx } from '../ui'
 
 type Offer = { label: string; run: () => Promise<unknown> } | null
 
@@ -23,52 +23,64 @@ function offer(ctx: Ctx, plan: Json, current: string, subscribed: boolean): Offe
 }
 
 function renewal(org: Json): string {
-  if (org.plan_until) return ` · until ${str(org.plan_until)}`
-  return org.renews_at ? ` · renews ${str(org.renews_at)}` : ''
+  if (org.plan_until) return `Until ${day(org.plan_until)}`
+  return org.renews_at ? `Renews ${day(org.renews_at)}` : ''
 }
 
 export function Billing(ctx: Ctx) {
   const { gh, me, lists, surface } = ctx
-  const { Box, Text, Button } = ctx.ui
-  if (!isAdmin(me)) return <Text dimColor>Billing is the org admin's.</Text>
+  const { Box } = ctx.ui
+  const k = kit(ctx)
+  if (!isAdmin(me)) {
+    return (
+      <Box flexDirection="column" gap="md">
+        {k.Head('Billing', 'Billing is the organisation admin’s.')}
+      </Box>
+    )
+  }
   const subscribed = isSubscribed(me)
   const org = orgOf(me)
   const current = planOf(me)
   const contract = !isSelfServe(current)
   const plans = lists.plans ?? []
+  const status = org.billing_status && org.billing_status !== 'none' ? str(org.billing_status) : ''
+  const standing = [status, renewal(org)].filter(Boolean).join(' · ')
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text>
-        {planName(me)}
-        {org.billing_status && org.billing_status !== 'none' ? ` · ${str(org.billing_status)}` : ''}
-        {renewal(org)}
-      </Text>
-      {contract ? (
-        <Box gap={1}>
-          <Text>Your plan is set in your contract. To change it, talk to us.</Text>
-          <Button key="bill-talk" plain label="Talk to us" onPress={() => talkToUs(gh, surface)} />
-        </Box>
-      ) : (
-        <Box flexDirection="column">
-          <Text bold>{subscribed ? 'Change plan' : 'Subscribe'}</Text>
-          {plans.map(p => {
-            const name = str(p.name)
-            const o = offer(ctx, p, str(current.name), subscribed)
-            return (
-              <Box key={`bill-row-${name}`} gap={1}>
-                <Text>
-                  {name} · {priceText(p)}
-                  {name.toLowerCase() === str(current.name).toLowerCase() ? ' · your plan' : ''}
-                </Text>
-                {o && <Button key={`bill-plan-${name}`} plain label={o.label} onPress={o.run} />}
-              </Box>
-            )
-          })}
-        </Box>
-      )}
-      <Box>
-        <Button key="bill-portal" label="Card and invoices" onPress={() => portal(gh, surface)} />
-      </Box>
+    <Box flexDirection="column" gap="md">
+      {k.Head('Billing', 'Your organisation’s subscription, its card and its invoices.')}
+      {k.Field('bill-plan', 'Plan', planName(me), 'claude')}
+      {standing ? k.Field('bill-standing', 'Standing', standing) : null}
+      {contract
+        ? k.Group(
+            'contract',
+            'Your plan',
+            k.Row({
+              key: 'bill-contract',
+              primary: 'Your plan is set in your contract.',
+              secondary: 'To change it, talk to us.',
+              actions: [{ key: 'bill-talk', label: 'Talk to us', onPress: () => talkToUs(gh, surface) }],
+            }),
+          )
+        : k.Group(
+            'subscribe',
+            subscribed ? 'Change plan' : 'Subscribe',
+            <Box flexDirection="column" gap="xs">
+              {plans.map(p => {
+                const name = str(p.name)
+                const mine = name.toLowerCase() === str(current.name).toLowerCase()
+                const o = offer(ctx, p, str(current.name), subscribed)
+                return k.Row({
+                  key: `bill-row-${name}`,
+                  primary: name,
+                  tone: mine ? 'claude' : undefined,
+                  chip: mine ? { text: 'Your plan', tone: 'claude' } : undefined,
+                  secondary: priceText(p),
+                  actions: o ? [{ key: `bill-plan-${name}`, label: o.label, onPress: o.run }] : [],
+                })
+              })}
+            </Box>,
+          )}
+      {k.Buttons([{ key: 'bill-portal', label: 'Card and invoices', onPress: () => portal(gh, surface) }])}
     </Box>
   )
 }
