@@ -62,7 +62,16 @@ async def export(name: str, who: AdaWho, request: Request, body: NewExport | Non
 
 @router.get("/v1/jobs/{job_id}", operation_id="getAdaJob")
 async def get_job(job_id: str, who: AdaWho, request: Request) -> dict[str, Any]:
-    """A job's state (awaiting its file, queued, running, done, failed), percent, and result or error; a done
-    export's download link."""
+    """A job's state (awaiting its file, queued, running, done, failed), percent, stage (what it is doing now), and
+    result or error; a done export's download link. A running job whose worker stopped and that no other took up is
+    failed, E_JOB_STALLED."""
     job = dict(await call(request, who, "", "job", {"id": job_id}))
     return with_link(base_of(request), request.app.state.settings.secret_key, who, job)
+
+
+@router.post("/v1/jobs/{job_id}/cancel", operation_id="cancelAdaJob")
+async def cancel_job(job_id: str, who: AdaWho, request: Request) -> dict[str, Any]:
+    """Cancel a job. Not started yet, it ends at once; running, it stops at its next step, within seconds (its stage
+    says `cancelling` until then). It ends failed, with E_CANCELLED saying what of its work stays. A job that has
+    already ended is refused, 409 E_JOB_ENDED."""
+    return dict(await call(request, who, "", "job_cancel", {"id": job_id}))

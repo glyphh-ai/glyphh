@@ -33,7 +33,7 @@ from glyphh_ada.imported import build_index
 from glyphh_ada.pg import org_of
 from glyphh_ada.situations import restated, set_learned
 
-Progress = Callable[[float], None]
+Progress = Callable[..., None]  # (percent, stage=None): jobs.Tracker
 _CHANGED = (
     " WHERE (seq > %s OR NOT EXISTS (SELECT 1 FROM {t} t WHERE t.id = {s}.id)) AND seq > %s ORDER BY seq LIMIT {n}"
 )
@@ -148,7 +148,9 @@ def run(
     top = copy(move.source, move.target, move.model(), since, lambda f: progress(60 * f))
     if not move.sync:
         try:
-            out["learned"] = jobs.fit(conn, schema, move.key, move.spec, "learn", lambda p: progress(60 + p / 4))
+            out["learned"] = jobs.fit(
+                conn, schema, move.key, move.spec, "learn", lambda p, stage=None: progress(60 + p / 4, stage)
+            )
         except Refusal as r:
             out["learned"] = {"error": {"code": r.code, "message": r.message}}
     build_index(move.target)

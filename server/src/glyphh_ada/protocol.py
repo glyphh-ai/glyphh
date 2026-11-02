@@ -37,11 +37,14 @@ VERSIONS: frozenset[str] = frozenset({"spec", "settings", "activate", "upgrade"}
 WRITES: frozenset[str] = (
     frozenset({"create", "delete", "job_start", "import_start", "import_go", "note"}) | CASES | VERSIONS
 )
-LOOKS: frozenset[str] = frozenset({"models", "model", "job", "versions", "stats", "map", "precedent"})
+# job_cancel writes only the job's own row (jobs.cancel): no model's cases or spec, so no write lock or key
+LOOKS: frozenset[str] = frozenset({"models", "model", "job", "job_cancel", "versions", "stats", "map", "precedent"})
 SYNC_OPS: frozenset[str] = READS | WRITES | LOOKS
 JOB_KINDS: frozenset[str] = frozenset({"learn", "calibrate", "import", "export", "reencode", "backtest"})
 # What any worker answers, whatever kernel the model runs: no kernel reads or writes the model's cases or spec
-ANY_KERNEL: frozenset[str] = frozenset({"models", "model", "job", "note", "delete", "activate", "upgrade"})
+ANY_KERNEL: frozenset[str] = frozenset(
+    {"models", "model", "job", "job_cancel", "note", "delete", "activate", "upgrade"}
+)
 
 
 def kernel_stream(queue: str, kernel: str) -> str:
@@ -62,6 +65,21 @@ def version_key(org: str, name: str) -> str:
     """Bumped by every write that changes what a worker caches of a model: made, deleted, learned, calibrated, a
     version made active, an import ended."""
     return f"ada:ver:{org}:{name}"
+
+
+def data_key(org: str, name: str) -> str:
+    """Bumped by every change to a model's precedents (a record, a grade, a forget, a job's batch): a worker keeps a
+    model read whole (cache.py) only while this has not moved."""
+    return f"ada:data:{org}:{name}"
+
+
+def job_beat_key(job_id: str) -> str:
+    """Set by the worker running a job, every HEARTBEAT[JOBS] seconds, to expire JOB_BEAT_TTL after: a running job
+    whose beat has gone has lost its worker (jobs.view)."""
+    return f"ada:jobbeat:{job_id}"
+
+
+JOB_BEAT_TTL: int = 120
 
 
 @dataclass(frozen=True)

@@ -229,7 +229,11 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   thread) read the streams `ada:sync` and `ada:jobs` as one consumer group: a message a worker took is claimed by
   another once it stops heartbeating (5 s sync, 60 s jobs), one that stopped three workers is answered `E_INTERNAL`,
   and a sync message past its deadline is dropped. Learn and calibrate are jobs: a row in the org's `jobs`, `202`, then
-  `GET /v1/jobs/{id}`.
+  `GET /v1/jobs/{id}` (its percent and `stage`, what it is doing now); `POST /v1/jobs/{id}/cancel` stops one (not
+  started: at once; running: at its next step), failed `E_CANCELLED`. A running job beats in Redis; one whose worker
+  is gone is failed `E_JOB_STALLED` when looked at, one that stopped three workers `E_JOB_LOST` (`glyphh_ada/jobstate.py`).
+  A sync worker keeps a model read whole until its precedents change (a per-model data counter in Redis) and the
+  answers of its last reads of an unchanged model (`glyphh_ada/cache.py`).
 - **Storage: a schema per org.** `ada_<org id>`, made with its first model and migrated by every worker at start
   (`glyphh_ada/orgschema.py`, its own version table `ada_schema`): the server's `models`, `spec_versions`, `jobs` and
   `requests`, and the kernel's `precedents` (a partition per model, an HNSW index on its glyphs, `m` 64,
@@ -330,7 +334,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
 | `POST /v1/models/{name}/record`, `/record_many` (1,000 cases, all or none), `/grade`; `DELETE …/precedents/{id}` | Writes, each taking an `Idempotency-Key` |
 | `POST /v1/models/{name}/query`, `/probabilities`, `/facts` (`top` 50), `/decide` (`outputs`, `include: ["facts"]`) | The kernel's answers; `clearance` lower than the key's |
 | `POST /v1/decide` `{model, data, …}` | `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
-| `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}` | Jobs |
+| `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}`; `POST /v1/jobs/{id}/cancel` | Jobs |
 | `POST /v1/models/{name}/imports` `{format, mapping?, partial?, learn?, content?, content_base64?}`; `GET …/imports/{id}`; `PUT /v1/uploads/{link}` | An import: the job and its upload link, or the file in the body (5 MB) |
 | `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | An export: the job, then its download link |
 | `PUT /v1/models/{name}/spec` `{spec, note?, backtest?}`; `GET`, `PATCH …/settings` `{changes, note?, backtest?}` | A new version: `{version, active, job}` |

@@ -335,7 +335,7 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | `POST /v1/models/{name}/backtest` | Score candidates before they go live (5.3) | job |
 | `POST /v1/models/{name}/imports`, `GET …/imports/{id}`; **built:** `PUT /v1/uploads/{link}` | Bulk load (section 6): the job and its upload link, or the file in the body (5 MB) | job |
 | ~~`GET /v1/models/{name}/export`~~ **built:** `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | Everything back out (section 6): a job (so not a GET), whose done state carries the download link | job |
-| `GET /v1/jobs/{id}` | Any job's state and progress | API |
+| `GET /v1/jobs/{id}`; **built (2026-11-02):** `POST /v1/jobs/{id}/cancel` | Any job's state, progress and `stage`; cancel one (failed `E_CANCELLED`, saying what of its work stays; an ended one `409 E_JOB_ENDED`) | API |
 | `GET /v1/usage` | Precedents, requests this period, against the plan. **Built:** `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}` (`max` null: by contract), the one shape the platform, SDK 3.2 and the connector's `usage` read | API |
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** rrotor's call shape (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
 
@@ -363,7 +363,7 @@ held a snapshot through the wait, and an import's `CREATE INDEX CONCURRENTLY` wa
 | `ada_model_create` `{name, spec}`, `ada_spec_update` `{name, spec, note}`, `ada_model_delete` `{name, confirm}` | Make, change, delete |
 | `ada_versions`, `ada_activate` `{name, version}` | Versions; roll back |
 | `ada_record` `{name, data, outcome?}`, `ada_record_many` `{name, cases}` | Record one, or up to 1,000 |
-| `ada_import` `{name, format, mapping?}`, `ada_job` `{id}` | Start an import (answers a one-hour upload URL that Claude Code can `curl` the file to); a job's progress |
+| `ada_import` `{name, format, mapping?}`, `ada_job` `{id}`, `ada_job_cancel` `{id}` | Start an import (answers a one-hour upload URL that Claude Code can `curl` the file to); a job's progress and stage; cancel a job |
 | `ada_decide`, `ada_query`, `ada_probabilities`, `ada_facts` | Ask |
 | `ada_learn`, `ada_settings` `{name, changes?}`, `ada_backtest` | Learn and tune (section 5) |
 | `ada_export` `{name}` | A one-hour download link |

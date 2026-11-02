@@ -30,12 +30,19 @@ def enqueue(ctx: Any, msg: Message, kind: str, job_id: str) -> None:
 
 
 def cases(ctx: Any, schema: str, msg: Message) -> Answer:
+    """A write to the model's cases. It never runs on (nor leaves behind) a copy read whole: what the kernel changes in
+    memory would outlive a transaction rolled back. Once it commits, every worker's copy read whole is stale."""
     ctx.conn.execute("SELECT pg_advisory_xact_lock_shared(hashtext(%s))", (versions.write_lock(schema, msg.model),))
+    ctx.models.unload(msg.org, msg.model)
     entry = ctx.models.get(msg.org, schema, msg.model)
     entry.model.space.author = msg.author
-    if msg.op in ("record", "record_many"):
-        within_cap(ctx.conn, schema, entry.model, msg.args.get("cases") or [msg.args], msg.cap)
-    answer = WRITERS[msg.op](entry.model, msg.args)
+    try:
+        if msg.op in ("record", "record_many"):
+            within_cap(ctx.conn, schema, entry.model, msg.args.get("cases") or [msg.args], msg.cap)
+        answer = WRITERS[msg.op](entry.model, msg.args)
+    finally:
+        ctx.models.unload(msg.org, msg.model)
+    ctx.after.append(lambda: ctx.models.changed(msg.org, msg.model))
     if refresh_due(entry.model, msg.op, answer) and not jobs.open_of(ctx.conn, schema, entry.model_id, ["learn"]):
         enqueue(ctx, msg, "learn", jobs.add(ctx.conn, schema, entry.model_id, "learn", {"refresh": True}, msg.author))
     return answer, entry.version

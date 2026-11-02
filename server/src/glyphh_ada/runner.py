@@ -10,7 +10,7 @@ import psycopg
 
 from glyphh_ada import backtest, export, importer, jobs, reencode
 
-Progress = Callable[[float], None]
+Progress = Callable[..., None]  # (percent, stage=None): jobs.Tracker
 
 
 def run(

@@ -161,7 +161,9 @@ def finish(
     if learn and not kept:
         spec = glyphh_spec.Spec.from_json(found.spec)
         try:
-            out["learned"] = jobs.fit(conn, schema, found.store, spec, "learn", lambda p: progress(80 + p * 0.15))
+            out["learned"] = jobs.fit(
+                conn, schema, found.store, spec, "learn", lambda p, stage=None: progress(80 + p * 0.15, stage)
+            )
         except Refusal as r:
             out["learned"] = {"error": {"code": r.code, "message": r.message}}
     progress(95)

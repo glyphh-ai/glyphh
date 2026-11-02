@@ -55,7 +55,9 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
         found = catalog.view(ctx.conn, schema, msg.model)
         return found, found["version"]
     if msg.op == "job":
-        return jobs.view(ctx.conn, schema, str(msg.args.get("id"))), None
+        return jobs.view(ctx.conn, schema, str(msg.args.get("id")), ctx.redis), None
+    if msg.op == "job_cancel":
+        return jobs.cancel(ctx.conn, schema, str(msg.args.get("id")), msg.author, ctx.redis), None
     if msg.op == "versions":
         if msg.args.get("levers"):
             levers = versions.levers(ctx.conn, schema, msg.model)
@@ -75,7 +77,13 @@ def _look(ctx: Context, schema: str, msg: Message) -> Answer:
     try:
         if msg.op == "map":
             return glyphmap.glyph_map(ctx.conn, schema, entry, msg.args, msg.clearance), entry.version
-        return reads.read(entry.model, msg.op, msg.args, msg.clearance), entry.version
+        # A read (protocol.READS): the same read of the model as it stands is this worker's answer of before.
+        kept = ctx.models.answer(msg.org, msg.model, entry, msg.op, msg.args, msg.clearance)
+        if kept is not None:
+            return kept
+        data = reads.read(entry.model, msg.op, msg.args, msg.clearance)
+        ctx.models.keep(msg.org, msg.model, entry, msg.op, msg.args, msg.clearance, data)
+        return data, entry.version
     finally:
         ctx.models.settle(msg.org, msg.model, entry)
 

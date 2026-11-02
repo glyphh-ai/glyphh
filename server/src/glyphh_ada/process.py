@@ -15,7 +15,7 @@ from typing import Any
 import psycopg
 from redis import Redis
 
-from glyphh_ada import files, jobs, orgschema, pg, registry, retirement, routing, runner
+from glyphh_ada import files, jobs, jobstate, orgschema, pg, registry, retirement, routing, runner
 from glyphh_ada.backtest import Handoff
 from glyphh_ada.cache import Models
 from glyphh_ada.errors import Refusal
@@ -40,7 +40,7 @@ class Worker:
         self.used = time.monotonic()
         consumer = f"{socket.gethostname()}-{os.getpid()}-{threading.get_ident()}"
         streams = [kernel_stream(queue, self.kernel)] + ([STREAMS[queue]] if self.front else [])
-        self.loop = Loop(queue, self.redis, consumer, self.dispatch, streams)
+        self.loop = Loop(queue, self.redis, consumer, self.dispatch, streams, self.given_up)
         self.swept: float | None = None
 
     def _connect(self) -> Context:
@@ -70,6 +70,11 @@ class Worker:
         except psycopg.OperationalError:
             return False
         return True
+
+    def given_up(self, msg: Message) -> None:
+        """A message dropped after stopping MAX_DELIVERIES workers: a job's is failed (lost), not left running."""
+        if self.queue == JOBS:
+            lost(self.ctx, msg)
 
     def dispatch(self, msg: Message) -> tuple[Any, ...]:
         if not self._alive():
@@ -103,30 +108,55 @@ class Worker:
                 self.loop.one()
 
 
-def work(ctx: Context, msg: Message, worker: Worker) -> None:
-    """One job, on its own kernel (else passed to that kernel's stream), its row moved through running to done or
-    failed; the model's workers reload it after. Files no job needs any more go first."""
-    schema = pg.enter(ctx.conn, msg.org)
+def lost(ctx: Context, msg: Message) -> None:
+    """A job's message that stopped its worker MAX_DELIVERIES times: the job is failed, E_JOB_LOST, not left running."""
+    try:
+        schema = pg.enter(ctx.conn, msg.org)
+        jobstate.fail_open(ctx.conn, schema, str(msg.args["job"]), jobstate.LOST)
+    except (Refusal, KeyError, psycopg.Error):
+        log.exception("a lost job could not be marked", extra=fields(org=msg.org))
+
+
+def _taken(ctx: Context, schema: str, msg: Message, worker: Worker) -> dict[str, Any] | None:
+    """The job to run here: None when it has ended, its model is gone, or it runs on another kernel (passed on)."""
     job_id = str(msg.args["job"])
     try:
         job = jobs.view(ctx.conn, schema, job_id)
         if job["state"] in ("done", "failed"):
-            return
+            return None
         kernel = routing.for_job(ctx.conn, schema, job)
     except Refusal:  # its model was deleted, and its jobs with it
-        return
+        return None
     if kernel != worker.kernel:
         try:
             worker.forward(kernel, msg)
         except Refusal as r:
             jobs.mark(ctx.conn, schema, job_id, "failed", error={"code": r.code, "message": r.message, **r.detail})
-            return
+            return None
+    return job
+
+
+def work(ctx: Context, msg: Message, worker: Worker) -> None:
+    """One job, on its own kernel (else passed to that kernel's stream), its row moved through running to done or
+    failed (cancelled: failed E_CANCELLED); the model's workers reload it after. Files no job needs go first."""
+    schema = pg.enter(ctx.conn, msg.org)
+    job = _taken(ctx, schema, msg, worker)
+    if job is None:
+        return
+    job_id = str(job["id"])
     files.prune(ctx.conn, schema)
     jobs.mark(ctx.conn, schema, job_id, "running", percent=0)
+    progress = jobstate.Tracker(ctx.conn, schema, job_id, ctx.redis, lambda: ctx.models.changed(msg.org, msg.model))
     try:
-        progress = lambda p: jobs.mark(ctx.conn, schema, job_id, "running", percent=round(p, 1))  # noqa: E731
-        bump = lambda: ctx.models.bump(msg.org, msg.model)  # noqa: E731
-        result = runner.run(ctx.conn, schema, job, progress, bump, worker.kernel)
+        with jobstate.Beat(ctx.redis, job_id):
+            progress(0, "starting")
+            bump = lambda: ctx.models.bump(msg.org, msg.model)  # noqa: E731
+            result = runner.run(ctx.conn, schema, job, progress, bump, worker.kernel)
+    except jobstate.Cancelled as c:
+        error = jobstate.cancelled(c.by, jobstate.kept(job["kind"], progress.percent))
+        jobs.mark(ctx.conn, schema, job_id, "failed", error=error)
+        ctx.models.bump(msg.org, msg.model)
+        return
     except Handoff as h:  # a backtest's candidates on another kernel: that kernel's job worker goes on with it
         jobs.mark(ctx.conn, schema, job_id, "queued", result=h.partial)
         ctx.redis.xadd(kernel_stream(JOBS, h.kernel), msg.fields(), maxlen=STREAM_MAX, approximate=True)
