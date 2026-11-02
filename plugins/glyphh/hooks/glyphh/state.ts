@@ -9,6 +9,15 @@ export const SECTIONS: { id: GlyphhSection; label: string }[] = [
   { id: 'apps', label: 'Apps' },
 ]
 
+/** The one section a member of the org has: the admin runs the account, the org, the plan and billing. */
+export const MEMBER_SECTION: GlyphhSection = 'apps'
+
+/** The sections a person sees: every one for the org's admin, Apps alone for a member. */
+export const sectionsFor = (admin: boolean) => (admin ? SECTIONS : SECTIONS.filter(s => s.id === MEMBER_SECTION))
+
+/** The section a person may open: a member asking for another lands on Apps. */
+export const sectionFor = (admin: boolean, id: GlyphhSection): GlyphhSection => (admin ? id : MEMBER_SECTION)
+
 /** The panel's last word. */
 export const say = (gh: Host, text: string, isError = false, link?: string) =>
   gh.state.note.set((): GlyphhNote => (link ? { text, isError, link } : { text, isError }))

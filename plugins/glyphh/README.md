@@ -45,7 +45,8 @@ token>`. Every section is drawn from one kit (`hooks/glyphh/ui.tsx`) in Claude's
 a title with one line under it, groups under small labels, rows (the thing, a dim line under it, its actions at the
 right), fields whose labels line up, chips for a kind or a state, one quiet line for an empty list, the panel's last
 word in a bordered note, and tabs as text with the open one in Claude's colour; the terminal gets the same shapes on
-one line each.
+one line each. The org's admin has every section; a member has **Apps** alone (the account, the org, the plan and
+billing are the admin's), and any other section asked for lands there.
 
 | Section | Does |
 |---|---|

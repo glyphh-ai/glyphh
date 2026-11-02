@@ -8,7 +8,8 @@ import { act, forget, loadMe } from './account'
 import { loadApps } from './apps'
 import { linkRrotor, rrotorHealth } from './link'
 import { openUrl } from './open'
-import { say, setList } from './state'
+import { isAdmin } from './shape'
+import { say, sectionFor, setList } from './state'
 import type { Host } from './host'
 
 const enc = encodeURIComponent
@@ -36,8 +37,10 @@ export async function openSection(gh: Host, id: GlyphhSection) {
   await gh.state.section.set(() => id)
   if ((await gh.state.auth.get()).status !== 'in') return
   await act(gh, undefined, async () => {
-    await loadMe(gh)
-    await LOADERS[id](gh)
+    const me = await loadMe(gh)
+    const open = sectionFor(isAdmin(me), id) // a member has Apps alone: another section asked lands there
+    if (open !== id) await gh.state.section.set(() => open)
+    await LOADERS[open](gh)
   })
 }
 

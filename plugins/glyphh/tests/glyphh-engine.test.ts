@@ -208,6 +208,31 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Button', key: 'rrotor-update' })).toBeUndefined()
   })
 
+  test(`${surface}: a member sees Apps alone; the admin every section`, async ($, on) => {
+    const w = world(on, surface)
+    w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
+    w.server.s.role = 'member'
+    w.server.s.reviewer = false
+    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
+    const ui = await $.ui.mount(pane(surface))
+    // Opening a section loads who this is: a member then has Apps, the one tab, whatever was asked for.
+    await ui.press({ key: 'sec-account' })
+    expect(await ui.find({ type: 'Button', key: 'sec-apps' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'sec-account' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'sec-org' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'sec-billing' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeDefined()
+    expect(await ui.find({ type: 'Input', key: 'me-name' })).toBeUndefined()
+    // /glyphh org asked by a member opens Apps too.
+    await $.command.run({ command: 'glyphh', args: 'org' } as unknown as CommandRunInput)
+    expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeDefined()
+    expect(await ui.find({ type: 'Input', key: 'org-name' })).toBeUndefined()
+
+    w.server.s.role = 'admin'
+    await ui.press({ key: 'sec-apps' })
+    for (const id of ['account', 'org', 'plan', 'billing', 'apps']) expect(await ui.find({ type: 'Button', key: `sec-${id}` })).toBeDefined()
+  })
+
   test(`${surface}: Plan shows the cloud use and the plans' caps; Billing offers checkout, Talk to us and no seats`, async ($, on) => {
     const w = world(on, surface)
     w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))

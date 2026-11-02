@@ -8,6 +8,9 @@ An app's sign-ins and keys, from the page. An app that needs a CLI works for the
 Claude, and an app can run as itself with a key the organisation set. Needs rrotor 0.4.0 (pinned here; "update
 rrotor" pulls it).
 
+- **A member sees Apps alone.** The panel's Account, Org, Plan and Billing are the org admin's; a member gets the
+  one tab, Apps, and `/glyphh org` or any other section asked for lands there too. Until now every person was shown
+  the admin's sections and refused at each action.
 - **Sign in from the page.** A page that calls functions loads rrotor's own script (`/apps/_/rrotor.js`) and awaits
   `rrotor.ready()` before `rrotor.call(...)`: a viewer not yet signed in to one of the app's CLIs gets rrotor's
   sign-in card (the link, the device code, Copy, then "Signed in") instead of an error, and signs in once, as
