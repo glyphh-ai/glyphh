@@ -40,6 +40,7 @@ the Ada skills never touch rrotor.
 | `/glyphh publish <file> [--name n] [--title t] [--description d] [--type t] [--roles a,b]` | One file Claude wrote, a page (`.html`, `.jsx`, `.tsx`), a document (`.md`, `.pdf`), a diagram (`.mmd`, `.svg`) or an image (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`), to the local rrotor (`POST /v1/apps` on `127.0.0.1:7777`, the token from `~/.glyphh/rrotor/token`) as an app awaiting review; the reply says the type, the version, who reviews it and the Open link. The type follows the extension unless `--type` (page, dashboard, doc, diagram, deck, design) says it; a PDF or an image goes as base64; any other file is refused before rrotor is called. The name comes from the title (the page's `<title>` or first heading, else the file's name) when not given; roles default to everyone |
 | `/glyphh link` | This machine's rrotor linked to Glyphh: the server issues the local runtime's token to this install (`POST /v1/runtime/local`, rotated each time), rrotor takes it (`PUT /v1/runtime/token` on `127.0.0.1:7777`) and connects out; the reply says when it is online. Linked, it shows on the platform's Runtimes page, its apps reach the organisation's catalogue, and it gets the organisation's licence key. The Account section's **link** does the same |
 | `/glyphh signin`, `/glyphh signout` | Sign in by device flow (the code and link are also printed); sign this device out |
+| `/dip [<layout> \| save <name> \| rm <name> \| off]` | Workspaces: `/dip api` bounces the session to the layout `api` (its folder, browser tabs with one in front, side panes, terminal tabs, and a brief Claude reads while it is active); `/dip` alone opens the Dip pane, where layouts are made and edited; `save` keeps the session as it is now. Where another plugin has the name, it is `/glyphh-dip`. No sign-in needed |
 | *"sign in to Glyphh"* | The sign-in card in the chat (the `glyphh-sign-in` skill) |
 
 After the plugin adds a command, the desktop app may need **View › Reload** before it recognises it.
@@ -82,6 +83,17 @@ the device signs out.
 sha256(`"glyphh:" + value`) in hex, the value never sent. The value (`hooks/glyphh/machine.ts`, shared with the MCP
 server): macOS's IOPlatformUUID, Linux's `/etc/machine-id`, Windows' MachineGuid (or `wmic csproduct get uuid`);
 else the default route's MAC; else a random id kept in `~/.glyphh/machine.json`.
+
+## Dip (`/dip`)
+
+A layout is a workspace: Claude's folder, the browser pane's tabs (`*` marks the one in front), the side panes
+(Browser, Terminal, Files, Diff, PR, Tasks, Plan, Artifacts), the terminal tabs (`title | folder | command` each, a bare
+shell when the command is empty) and a brief. `/dip <name>` calls the desktop app's own tools for each part, through
+the permission check: the folder moves (at the end of the turn), the tabs the last dip opened close and this layout's
+open with the one in front last, the terminal tabs start, the panes show. A step a tool refused goes to Claude as
+one prompt listing exactly what is left. While a layout is active its name, folder, tabs and brief are a section of
+Claude's system prompt; `/dip off` ends that. Layouts are kept in the plugin's store across sessions. In a terminal
+there are no panes or browser: the folder and the brief still apply.
 
 ## The sign-in card
 
@@ -165,6 +177,7 @@ through the engine on both surfaces. `mcp/test` checks install.json's mode and a
 | `hooks/glyphh/command.ts`, `open.ts`, `openreq.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the card's open requests; the panel's note |
 | `hooks/glyphh/apps.ts`, `rrotor.ts`, `sections/apps.tsx` | The catalogue's cards, search, type filter, paging and reviews; `/glyphh publish` (the type by extension, binary files as base64); the one call to the local rrotor (`POST /v1/apps`) |
 | `hooks/glyphh/link.ts` | This machine's rrotor linked to Glyphh: its health, the token from `POST /v1/runtime/local` handed to `PUT /v1/runtime/token`, the wait for it to connect; `/glyphh link` |
+| `hooks/glyphh/dip.ts`, `dippanel.tsx` | `/dip`: layouts kept, dipping through the app's tools, capturing the session as a layout, the brief; the Dip pane and its editor |
 | `mcp/src/` | The MCP server: `server.ts` (the tools and the card), `flow.ts` (the device flow), `install.ts` (install.json, the device id's probe) |
 | `mcp/card/` | `sign-in.html`, and `mcp-app.js`: `@modelcontextprotocol/ext-apps` 2.0.3's bridge, vendored |
 | `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md` |

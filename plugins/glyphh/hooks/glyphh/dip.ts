@@ -1,0 +1,315 @@
+// /dip <layout>: bounces the session between workspaces. A layout is the
+// session's folder, the browser pane's tabs (one in front), the side panes,
+// the terminal tabs and a brief Claude reads while it is active; dipping
+// calls the desktop app's own tools for each, and whatever a call could not do
+// goes to Claude as one prompt with the steps left. Layouts live in the store
+// across sessions; the Dip pane writes them.
+import type { DipDraft, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
+import type { Host } from './host'
+
+export const PANES: { id: DipPane; label: string }[] = [
+  { id: 'preview', label: 'Browser' },
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'file', label: 'Files' },
+  { id: 'diff', label: 'Diff' },
+  { id: 'pr', label: 'PR' },
+  { id: 'tasks', label: 'Tasks' },
+  { id: 'plan', label: 'Plan' },
+  { id: 'artifact', label: 'Artifacts' },
+]
+
+export const FIRST_DIP: DipView = { layouts: [], active: null, draft: null, note: null }
+
+const LAYOUTS = 'dip.layouts'
+const ACTIVE = 'dip.active'
+/** The browser tabs the last dip opened, closed by the next. */
+const OPENED = 'dip.opened'
+
+export const USAGE_DIP = '/dip [<layout> | save <name> | rm <name> | off]'
+
+const T = {
+  dir: 'mcp__ccd_directory__change_directory',
+  pane: 'mcp__ccd_view__show_pane',
+  layout: 'mcp__ccd_view__get_layout',
+  open: 'mcp__Claude_Browser__preview_start',
+  tabs: 'mcp__Claude_Browser__tabs_context',
+  close: 'mcp__Claude_Browser__tabs_close',
+  js: 'mcp__Claude_Browser__javascript_tool',
+  shell: 'mcp__terminal__open_terminal_tab',
+  run: 'mcp__terminal__run_in_terminal',
+  shells: 'mcp__terminal__list_terminal_tabs',
+}
+
+/** Layouts from the store into the pane's state, at session start. */
+export async function loadDip(gh: Host) {
+  const layouts = asLayouts(await gh.store.get(LAYOUTS).catch(() => undefined))
+  const active = await gh.store.get(ACTIVE).catch(() => undefined)
+  await gh.state.dip.set(v => ({ ...v, layouts, active: typeof active === 'string' && layouts.some(l => l.name === active) ? active : null }))
+}
+
+const say = (gh: Host, text: string, isError = false) => gh.state.dip.set(v => ({ ...v, note: { text, isError } }))
+
+async function keep(gh: Host, layouts: DipLayout[]) {
+  await gh.store.set(LAYOUTS, layouts)
+  await gh.state.dip.set(v => ({ ...v, layouts }))
+}
+
+async function setActive(gh: Host, name: string | null) {
+  await gh.store.set(ACTIVE, name)
+  await gh.state.dip.set(v => ({ ...v, active: name }))
+}
+
+/** A name as typed: exact, then any case, then the one layout it starts. */
+export function findLayout(layouts: DipLayout[], typed: string): DipLayout | undefined {
+  const t = typed.trim().toLowerCase()
+  const exact = layouts.find(l => l.name === typed.trim()) ?? layouts.find(l => l.name.toLowerCase() === t)
+  if (exact) return exact
+  const starts = layouts.filter(l => l.name.toLowerCase().startsWith(t))
+  return starts.length === 1 ? starts[0] : undefined
+}
+
+/** The text a tool answered, and the JSON in it when there is some. */
+function jsonIn(text: string): unknown {
+  for (const s of [text, text.match(/\{[\s\S]*\}/)?.[0] ?? '']) {
+    try {
+      return JSON.parse(s)
+    } catch {
+      // not JSON
+    }
+  }
+  return undefined
+}
+
+type Tab = { tabId: string; isActive: boolean; origin: string }
+
+async function browserTabs(gh: Host): Promise<Tab[]> {
+  const r = await gh.tool.call(T.tabs, {})
+  const tabs = (jsonIn(r.text) as { tabs?: unknown } | undefined)?.tabs
+  return Array.isArray(tabs) ? tabs.filter((t): t is Tab => !!t && typeof (t as Tab).tabId === 'string') : []
+}
+
+/** /dip <name>: the layout, made the session's workspace. */
+export async function dip(gh: Host, typed: string): Promise<string> {
+  const { layouts } = await gh.state.dip.get()
+  const l = findLayout(layouts, typed)
+  if (!l) {
+    const names = layouts.map(x => x.name).join(', ')
+    return names ? `No layout "${typed.trim()}". Layouts: ${names}.` : 'No layouts yet: /dip opens the Dip pane to make one, or /dip save <name> keeps this one.'
+  }
+  const left: string[] = []
+  const step = async (tool: string, input: Record<string, unknown>, words: string) => {
+    const r = await gh.tool.call(tool, input)
+    if (!r.ok) left.push(words)
+    return r
+  }
+
+  if (l.folder && l.folder !== (await gh.cwd().catch(() => ''))) {
+    await step(T.dir, { path: l.folder }, `move the session to ${l.folder} (ccd_directory change_directory)`)
+  }
+
+  // The tabs the last dip opened go; this layout's open, the one in front last.
+  const stale = asStrings(await gh.store.get(OPENED).catch(() => undefined))
+  for (const tabId of stale) await gh.tool.call(T.close, { tabId })
+  const before = new Set((await browserTabs(gh)).map(t => t.tabId))
+  const order = l.tabs.map((url, i) => ({ url, i })).sort((a, b) => Number(a.i === l.focus) - Number(b.i === l.focus))
+  for (const { url } of order) await step(T.open, { url }, `open ${url} in the browser pane (Claude_Browser preview_start)`)
+  const opened = (await browserTabs(gh)).map(t => t.tabId).filter(id => !before.has(id))
+  await gh.store.set(OPENED, opened)
+
+  for (const t of l.terminals) {
+    const at = t.cwd ? { cwd: t.cwd } : {}
+    const title = t.title || 'shell'
+    if (t.command) await step(T.run, { command: t.command, title, ...at }, `run \`${t.command}\` in a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
+    else await step(T.shell, { title, ...at }, `open a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
+  }
+
+  // The browser pane last, so the tab in front is what shows.
+  const panes = [...l.panes].sort((a, b) => Number(a === 'preview') - Number(b === 'preview'))
+  for (const pane of panes) {
+    if (pane === 'preview' && !l.tabs.length) continue
+    await step(T.pane, { pane }, `show the ${pane} pane (ccd_view show_pane)`)
+  }
+
+  await setActive(gh, l.name)
+  const what = [l.folder && l.folder.split('/').pop(), l.tabs.length && `${l.tabs.length} tab${l.tabs.length > 1 ? 's' : ''}`, l.terminals.length && `${l.terminals.length} terminal${l.terminals.length > 1 ? 's' : ''}`, ...l.panes.map(p => PANES.find(x => x.id === p)?.label)].filter(Boolean)
+  const done = `Dipped into ${l.name}${what.length ? `: ${what.join(', ')}` : ''}.`
+  if (!left.length) {
+    await say(gh, done)
+    return done
+  }
+  await gh.ask(
+    `/dip ${l.name} could not finish the layout on its own. With your own tools do exactly these and nothing else, then say "Dipped into ${l.name}." in one line:\n` +
+      left.map((s, i) => `${i + 1}. ${s}`).join('\n'),
+  )
+  await say(gh, `${done} Claude is finishing ${left.length} step${left.length > 1 ? 's' : ''}.`)
+  return `${done} Claude is finishing ${left.length} step${left.length > 1 ? 's' : ''} it could not do directly.`
+}
+
+/** What the session looks like now, as a layout: the folder, the browser tabs (full addresses where the page
+ *  answers), the open panes and the terminal tabs. */
+export async function capture(gh: Host, name: string, brief = ''): Promise<DipLayout> {
+  const folder = await gh.cwd().catch(() => '')
+  const tabs = await browserTabs(gh)
+  const urls: string[] = []
+  let focus = -1
+  for (const t of tabs) {
+    const r = await gh.tool.call(T.js, { action: 'javascript_exec', text: 'location.href', tabId: t.tabId })
+    const href = r.ok ? String(jsonIn(r.text) ?? r.text).match(/https?:\/\/\S+?(?="|$|\s)/)?.[0] : undefined
+    const url = href ?? t.origin
+    if (!/^https?:\/\//.test(url)) continue
+    if (t.isActive) focus = urls.length
+    urls.push(url)
+  }
+  const layout = await gh.tool.call(T.layout, {})
+  const openPanes = layout.ok ? JSON.stringify(jsonIn(layout.text) ?? layout.text) : ''
+  const panes = PANES.map(p => p.id).filter(p => new RegExp(`"${p}"`).test(openPanes))
+  const shells = jsonIn((await gh.tool.call(T.shells, {})).text)
+  const list = Array.isArray(shells) ? shells : Array.isArray((shells as { tabs?: unknown })?.tabs) ? (shells as { tabs: unknown[] }).tabs : []
+  const terminals: DipTerminal[] = list.map(t => {
+    const s = (t ?? {}) as Record<string, unknown>
+    return { title: String(s.title ?? 'shell'), cwd: String(s.cwd ?? s.directory ?? ''), command: '' }
+  })
+  return { name, folder, tabs: urls, focus, panes, terminals, brief }
+}
+
+/** /dip save <name>: the session as it is, kept as that layout (its brief kept when it existed). */
+export async function saveCurrent(gh: Host, name: string): Promise<string> {
+  const n = name.trim()
+  if (!n) return `Name it: ${USAGE_DIP}`
+  const { layouts } = await gh.state.dip.get()
+  const old = layouts.find(l => l.name === n)
+  const l = await capture(gh, n, old?.brief ?? '')
+  await keep(gh, old ? layouts.map(x => (x.name === n ? l : x)) : [...layouts, l])
+  const text = `Kept ${n}: ${l.folder || 'no folder'}, ${l.tabs.length} tab${l.tabs.length === 1 ? '' : 's'}, ${l.terminals.length} terminal${l.terminals.length === 1 ? '' : 's'}.`
+  await say(gh, text)
+  return text
+}
+
+export async function removeLayout(gh: Host, name: string): Promise<string> {
+  const { layouts, active } = await gh.state.dip.get()
+  const l = findLayout(layouts, name)
+  if (!l) return `No layout "${name.trim()}".`
+  await keep(gh, layouts.filter(x => x !== l))
+  if (active === l.name) await setActive(gh, null)
+  await say(gh, `Removed ${l.name}.`)
+  return `Removed ${l.name}.`
+}
+
+/** /dip [args]: the pane with no args, else dip, save, rm or off. */
+export async function dipCommand(gh: Host, args: string): Promise<{ text: string }> {
+  const a = args.trim()
+  if (!a) {
+    const placed = await gh.openDip()
+    const { layouts, active } = await gh.state.dip.get()
+    const line = layouts.length ? `Layouts: ${layouts.map(l => (l.name === active ? `${l.name} (active)` : l.name)).join(', ')}.` : 'No layouts yet.'
+    return { text: placed ? line : `${line} ${USAGE_DIP}` }
+  }
+  const [verb, ...rest] = a.split(/\s+/)
+  const tail = rest.join(' ')
+  if (verb === 'save') return { text: await saveCurrent(gh, tail) }
+  if (verb === 'rm' || verb === 'remove' || verb === 'delete') return { text: await removeLayout(gh, tail) }
+  if (verb === 'off' && !findLayout((await gh.state.dip.get()).layouts, 'off')) {
+    await setActive(gh, null)
+    return { text: 'No layout active.' }
+  }
+  return { text: await dip(gh, a) }
+}
+
+/** What Claude reads while a layout is active: its name, folder and brief. */
+export function brief(view: DipView): string | null {
+  const l = view.layouts.find(x => x.name === view.active)
+  if (!l) return null
+  const lines = [`The person's active workspace (/dip) is "${l.name}".`]
+  if (l.folder) lines.push(`Its folder: ${l.folder}.`)
+  if (l.tabs.length) lines.push(`Its browser tabs: ${l.tabs.join(', ')}.`)
+  if (l.brief.trim()) lines.push(l.brief.trim())
+  return lines.join('\n')
+}
+
+// The pane's editor.
+
+export const draftOf = (l: DipLayout | null): DipDraft =>
+  l
+    ? {
+        original: l.name,
+        name: l.name,
+        folder: l.folder,
+        tabs: l.tabs.map((u, i) => (i === l.focus ? `* ${u}` : u)).join('\n'),
+        panes: [...l.panes],
+        terminals: l.terminals.map(t => [t.title, t.cwd, t.command].join(' | ')).join('\n'),
+        brief: l.brief,
+      }
+    : { original: null, name: '', folder: '', tabs: '', panes: ['preview'], terminals: '', brief: '' }
+
+export function layoutOf(d: DipDraft): DipLayout {
+  const lines = d.tabs.split('\n').map(s => s.trim()).filter(Boolean)
+  const focus = lines.findIndex(s => s.startsWith('*'))
+  const tabs = lines.map(s => s.replace(/^\*\s*/, '')).map(s => (/^[a-z]+:\/\//i.test(s) ? s : `https://${s}`))
+  const terminals = d.terminals
+    .split('\n')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      const [title = '', cwd = '', ...command] = s.split('|').map(x => x.trim())
+      return { title: title || 'shell', cwd, command: command.join(' | ') }
+    })
+  return { name: d.name.trim(), folder: d.folder.trim(), tabs, focus, panes: d.panes, terminals, brief: d.brief }
+}
+
+export const editDraft = (gh: Host, fn: (d: DipDraft) => DipDraft) => gh.state.dip.set(v => (v.draft ? { ...v, draft: fn(v.draft) } : v))
+
+export async function openDraft(gh: Host, name: string | null) {
+  const { layouts } = await gh.state.dip.get()
+  const l = name ? layouts.find(x => x.name === name) ?? null : null
+  await gh.state.dip.set(v => ({ ...v, draft: draftOf(l), note: null }))
+}
+
+/** A new draft from the session as it is now. */
+export async function draftFromNow(gh: Host) {
+  const l = await capture(gh, '')
+  await gh.state.dip.set(v => ({ ...v, draft: { ...draftOf(l), original: null }, note: null }))
+}
+
+export async function saveDraft(gh: Host) {
+  const { draft, layouts, active } = await gh.state.dip.get()
+  if (!draft) return
+  const l = layoutOf(draft)
+  if (!l.name) return say(gh, 'Give the layout a name.', true)
+  if (/\s/.test(l.name)) return say(gh, 'A layout name is one word (/dip <name>).', true)
+  if (['save', 'rm', 'remove', 'delete', 'off'].includes(l.name.toLowerCase())) return say(gh, `"${l.name}" is one of /dip's own words.`, true)
+  if (l.name !== draft.original && layouts.some(x => x.name === l.name)) return say(gh, `There is a layout ${l.name} already.`, true)
+  const next = draft.original && layouts.some(x => x.name === draft.original) ? layouts.map(x => (x.name === draft.original ? l : x)) : [...layouts, l]
+  await keep(gh, next)
+  if (active && active === draft.original) await setActive(gh, l.name)
+  await gh.state.dip.set(v => ({ ...v, draft: null, note: { text: `Saved ${l.name}: /dip ${l.name}`, isError: false } }))
+}
+
+export const closeDraft = (gh: Host) => gh.state.dip.set(v => ({ ...v, draft: null }))
+
+function asStrings(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+}
+
+/** Layouts as the store holds them, any older or broken entry made whole or left out. */
+export function asLayouts(v: unknown): DipLayout[] {
+  if (!Array.isArray(v)) return []
+  return v.flatMap(x => {
+    const o = (x ?? {}) as Record<string, unknown>
+    if (typeof o.name !== 'string' || !o.name) return []
+    const terms = Array.isArray(o.terminals) ? o.terminals : []
+    return [
+      {
+        name: o.name,
+        folder: typeof o.folder === 'string' ? o.folder : '',
+        tabs: asStrings(o.tabs),
+        focus: typeof o.focus === 'number' ? o.focus : -1,
+        panes: asStrings(o.panes).filter((p): p is DipPane => PANES.some(x => x.id === p)),
+        terminals: terms.map(t => {
+          const s = (t ?? {}) as Record<string, unknown>
+          return { title: String(s.title ?? 'shell'), cwd: String(s.cwd ?? ''), command: String(s.command ?? '') }
+        }),
+        brief: typeof o.brief === 'string' ? o.brief : '',
+      },
+    ]
+  })
+}
