@@ -113,7 +113,9 @@ function fakeTools(refuse: string[]) {
     } else if (short === 'tabs_close') {
       tabs.splice(tabs.findIndex(t => t.tabId === input.tabId) >>> 0, 1)
     } else if (short === 'tabs_context') {
-      return { ok: true, text: JSON.stringify({ browserOpen: true, tabs: tabs.map(t => ({ tabId: t.tabId, origin: new URL(t.url).origin, isActive: t.isActive })) }) }
+      // As the app answers: the JSON, then a sentence that itself holds braces.
+      const json = JSON.stringify({ browserOpen: true, tabs: tabs.map(t => ({ tabId: t.tabId, origin: new URL(t.url).origin, isActive: t.isActive })) }, null, 2)
+      return { ok: true, text: `${json}\nCall preview_start or navigate with {"url": "https://…"} to open one.` }
     } else if (short === 'javascript_tool') {
       return { ok: true, text: JSON.stringify(tabs.find(t => t.tabId === input.tabId)?.url ?? '') }
     } else if (short === 'get_layout') {

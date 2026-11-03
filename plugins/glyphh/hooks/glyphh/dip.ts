@@ -68,14 +68,23 @@ export function findLayout(layouts: DipLayout[], typed: string): DipLayout | und
   return starts.length === 1 ? starts[0] : undefined
 }
 
-/** The text a tool answered, and the JSON in it when there is some. */
+/** The JSON a tool answered: the whole text, or its first JSON value with words after it (the browser's
+ *  tabs_context adds a sentence). */
 function jsonIn(text: string): unknown {
-  for (const s of [text, text.match(/\{[\s\S]*\}/)?.[0] ?? '']) {
+  const parse = (s: string) => {
     try {
-      return JSON.parse(s)
+      return { v: JSON.parse(s) as unknown }
     } catch {
-      // not JSON
+      return undefined
     }
+  }
+  const whole = parse(text)
+  if (whole) return whole.v
+  const start = text.search(/[[{]/)
+  if (start < 0) return undefined
+  for (let end = text.indexOf(text[start] === '{' ? '}' : ']', start); end > 0; end = text.indexOf(text[start] === '{' ? '}' : ']', end + 1)) {
+    const part = parse(text.slice(start, end + 1))
+    if (part) return part.v
   }
   return undefined
 }
