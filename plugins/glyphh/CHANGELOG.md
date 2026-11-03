@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.9.2 — 2026-11-03
+
+The glyphh hooks reach the server again. Cloudflare in front of api.glyphh.ai refused urllib's own `Python-urllib`
+User-Agent with error 1010 (a 403), and a refused hook says nothing, so no personality, rules or recall reached
+Claude. `hooks/glyphh_context.py` now sends `User-Agent: glyphh-hook/1.9.2`.
+
 ## 1.9.1 — 2026-11-02
 
 Jobs can be stopped. The Ada skill names the connector's `ada_job_cancel` (a job not started ends at once, a running
