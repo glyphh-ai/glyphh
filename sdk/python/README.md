@@ -172,7 +172,28 @@ asks make_bot, then a builder (`claude -p` with Read and Write, in the new bot's
 (a bot that may send, pay or delete with no approval step, or touches more than you said, is set aside), installed
 and trusted `ask_all`. Every run is kept in the orchestrator's memory.
 
+The gates (3.9), each declared in bot.json and enforced by the runner:
+
+- **Per-item gates**: a `gate` step with `"each": "$fetch.items"` decides every item of a list; the items Ada is sure
+  of at once, the unsure ones asked as one batch a run (one by one at a terminal; in a routine the run stops with the
+  list and `glyphh bot continue SLUG 1=read 2=skip rest=skip` answers them all). The step's data is a list per
+  outcome (`$worth.read`) and each item's decision, who made it and P.
+- **Asking policy per gate**: `ask_below`, `min_precedents`, `audit` (a share of sure calls still asked), `shadow`
+  (always asked, agreement measured), `max_questions` a run and a `default` for the rest.
+- **World-answered gates** (`"world": true`): the case is kept until `glyphh bot outcome` (or
+  `ctx.gate(g).record_outcome`) records what really happened. **Ladders** (a `ladder` step): the cheapest of ordered
+  options a gate predicts will work, up a rung on a failed `check`, what it took recorded. **Learned approvals**
+  (`approval_gate`): a yes/no gate that stands in for the person only when it is sure and trust allows; trust
+  `ask_outward` asks only for steps that send, pay or delete, and nothing pays or deletes alone. **Agent output
+  gates**: an agent step's `schema` (JSON Schema) and `check`, one retry, then the run fails.
+- **Hard gates**: `limits` (`usd_per_run`, `usd_per_day` from Claude's reported cost and `ctx.spend`;
+  `runs_per_day`; `quiet_hours`; `max_items`; `seconds`, `agent_turns`, `steps`), `requires` (a small safe
+  expression over earlier data: skip the step or end the run), `glyphh bot pause`; all refused at load if malformed.
+
 ```bash
+glyphh bot install examples/bots/hn_reader        # the demo: a per-item gate on Hacker News's front page
+glyphh bot run hn_reader                          # asks you about the stories it is unsure of, one batch a run
+glyphh bot report hn_reader                       # report.html: who decided each story, the ask rate falling
 glyphh bot install examples/bots/launch_watch     # its gate and memory models in Ada, its seed lines
 glyphh bot run launch_watch                       # asks you at the gate until it has learned your days
 glyphh bot wrong launch_watch <run> skip          # the gate got that run wrong: what it should have been
@@ -186,15 +207,18 @@ glyphh bot verdict launch_watch trust ask_outward
 |---|---|
 | `glyphh bot init`, `check FOLDER`, `install FOLDER\|SLUG [--job J]` | The orchestrator's models; a package checked (every problem at once); a bot installed |
 | `glyphh bot new JOB [--recurs N] [--touches T] [--answer make\|not_yet\|no]` | make_bot, then the builder; `needs_input` until Ada or you decide |
-| `glyphh bot run SLUG [--routine]`, `continue SLUG [ANSWER]` | One run; a question at the terminal is asked there, in a routine (or with no terminal) the run stops `needs_input` until `continue` |
-| `glyphh bot wrong SLUG RUN OUTCOME [--gate G]` | A gate's call corrected, kept as a precedent and counted against the bot's record |
+| `glyphh bot run SLUG [--routine]`, `continue SLUG [ANSWER ...]` | One run; a question at the terminal is asked there, in a routine (or with no terminal) the run stops `needs_input` until `continue` (a batch: `1=read 2=skip rest=skip`, or a JSON map) |
+| `glyphh bot wrong SLUG RUN\|last OUTCOME [--gate G] [--item N]` | A gate's call (or one item's) corrected, kept as a precedent and counted against the bot's record |
+| `glyphh bot outcome SLUG RUN\|last GATE [ITEM] OUTCOME` | What really happened to a case a gate decided, kept as a precedent |
+| `glyphh bot gates SLUG [--runs N]`, `report SLUG` | Each gate's record (precedents, Ada vs you, ask rate, audits, shadow, overrules); `report.html` in the bot's folder |
+| `glyphh bot pause SLUG [--why W]`, `resume SLUG` | The kill switch: a paused bot refuses to run, its routine included |
 | `glyphh bot status [SLUG]`, `review [--answer BOT.GATE=OUTCOME ...]`, `verdict SLUG trust\|keep OUTCOME` | The orchestrator and its bots, or one bot's gates, memory and runs; trust and keep from records; your call |
 | `glyphh bot routine SLUG [--remove]` | `glyphh bot run SLUG --routine` on the bot's cron: `~/Library/LaunchAgents/ai.glyphh.bot.<slug>.plist` on a Mac, else the cron line |
 
 The API key is `GLYPHH_API_KEY`, else `GLYPHH_API_KEY=` in `~/.glyphh/bots/.env` (keep it mode 600), else the key
 `glyphh login` kept. Ada model names: `bot-<slug>-gate-<gate>`, `bot-<slug>-<memory|instructions|personality>` and
 `orch-<...>`, at most 63 characters (a slug is at most 46). From Python, `glyphh.bots`: `Orchestrator(ada)`
-(`install`, `new`, `runner(slug)`, `review`, `verdict`, `status`), `Runner` (`run`, `resume`, `wrong`, `status`),
+(`install`, `new`, `runner(slug)`, `review`, `verdict`, `status`), `Runner` (`run`, `resume`, `wrong`, `outcome`, `pause`, `unpause`, `gates`, `report`, `status`),
 `Bot.load(folder)`. Examples: [`examples/bots`](https://github.com/glyphh-ai/glyphh/tree/main/examples/bots).
 
 ## Your local runtime: programs and CLIs

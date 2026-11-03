@@ -36,6 +36,10 @@ class FakeModel:
     def decide(self, data: Dict[str, Any]) -> Decision:
         self._there()
         self.ada.decided.append((self.name, data))
+        if self.name in self.ada.rule:
+            outcome, p = self.ada.rule[self.name](data)
+            ask_below = float((self.ada.specs[self.name].get("output") or {}).get("ask_below", 0.6))
+            return Decision.of({"outcome": outcome, "probabilities": {outcome: p}, "ask": p < ask_below}, self.name)
         if self.name in self.ada.sure:
             outcome = self.ada.sure[self.name]
             return Decision.of({"outcome": outcome, "probabilities": {outcome: 0.95}, "ask": False}, self.name)
@@ -52,12 +56,14 @@ class FakeModel:
 
 
 class FakeAda:
-    """Ada Cloud in memory. `sure[model] = outcome` makes a model decide that, sure; else it asks."""
+    """Ada Cloud in memory. `sure[model] = outcome` makes a model decide that, sure; `rule[model] = f(case) ->
+    (outcome, p)` decides each case, asking under the spec's ask_below; else it asks."""
 
     def __init__(self) -> None:
         self.specs: Dict[str, Dict[str, Any]] = {}
         self.cases: Dict[str, List[Tuple[Dict[str, Any], Any]]] = defaultdict(list)
         self.sure: Dict[str, str] = {}
+        self.rule: Dict[str, Callable[[Dict[str, Any]], Tuple[str, float]]] = {}
         self.decided: List[Tuple[str, Dict[str, Any]]] = []
 
     def models(self) -> List[ModelInfo]:
@@ -88,6 +94,7 @@ class FakeClaude:
         self.answers: List[str] = []
         self.build: Optional[Callable[[Path], None]] = None
         self.fail: Optional[str] = None
+        self.cost: float = 0.0
 
     def __call__(self, argv: List[str], **kw: Any) -> "subprocess.CompletedProcess[str]":
         self.calls.append((argv, kw["cwd"]))
@@ -96,7 +103,8 @@ class FakeClaude:
         if "Read,Write" in argv and self.build:
             self.build(Path(kw["cwd"]))
         result = self.answers.pop(0) if self.answers else "an answer"
-        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps({"result": result}), stderr="")
+        said = {"result": result, "total_cost_usd": self.cost} if self.cost else {"result": result}
+        return subprocess.CompletedProcess(argv, 0, stdout=json.dumps(said), stderr="")
 
 
 @pytest.fixture

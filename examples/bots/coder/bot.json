@@ -32,8 +32,10 @@
   },
   "loop": [
     {"id": "seed", "run": "seed"},
-    {"id": "work", "run": "work"},
+    {"id": "tasks", "run": "queue"},
+    {"id": "work", "ladder": "route", "each": "$tasks.items", "label": "id", "key": "id", "start": "sonnet",
+     "try": "attempt", "check": "passed"},
     {"id": "report", "run": "report", "input": "$work"}
   ],
-  "limits": {"seconds": 3600}
+  "limits": {"seconds": 3600, "usd_per_run": 10}
 }

@@ -28,7 +28,7 @@ from glyphh.bots import (
     slug_of,
 )
 from glyphh.bots import routine as routines
-from glyphh.bots.orchestrator import EXAMPLE, FIRST_RULE
+from glyphh.bots.orchestrator import EXAMPLE, EXAMPLE_ITEMS, FIRST_RULE
 
 REPO = Path(__file__).resolve().parents[3]
 EXAMPLES = REPO / "examples" / "bots"
@@ -69,14 +69,15 @@ def digest(orch: Orchestrator, bot_folder: Path) -> Orchestrator:
 # the package
 
 
-def test_the_examples_load_and_the_builders_example_is_launch_watch_as_shipped():
-    for name in ("launch_watch", "lab", "coder"):
+def test_the_examples_load_and_the_builders_examples_are_launch_watch_and_hn_reader_as_shipped():
+    for name in ("launch_watch", "lab", "coder", "hn_reader"):
         bot = Bot.load(EXAMPLES / name)
         assert bot.slug == name and all(len(m) <= 63 for m in bot.models())
-    shipped = sorted(p.relative_to(EXAMPLE) for p in EXAMPLE.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
-    assert shipped == [Path("agent.md"), Path("bot.json"), Path("program.py"), Path("skills/launch-summary/SKILL.md")]
-    for rel in shipped:
-        assert (EXAMPLE / rel).read_text() == (EXAMPLES / "launch_watch" / rel).read_text(), rel
+    for folder, name, skill in ((EXAMPLE, "launch_watch", "launch-summary"), (EXAMPLE_ITEMS, "hn_reader", "hn-digest")):
+        shipped = sorted(p.relative_to(folder) for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+        assert shipped == [Path("agent.md"), Path("bot.json"), Path("program.py"), Path(f"skills/{skill}/SKILL.md")]
+        for rel in shipped:
+            assert (folder / rel).read_text() == (EXAMPLES / name / rel).read_text(), rel
 
 
 def test_a_package_names_its_models_within_adas_63():
@@ -112,7 +113,7 @@ def test_every_problem_with_a_package_is_said_at_once(tmp_path):
     for said in ("slug must be snake_case", "name is missing", "touches must be one of", "hosts must be",
                  "seed must map", "limits must be", "routine must be", "outcomes must be two or more",
                  "gate Bad Gate: its name", "gate x: case must", "gate x: outcomes must differ", "gate x: spec",
-                 "on must map each", "on send goes to nowhere", "no skills/missing", "exactly one of run, gate or agent", "no gate nope",
+                 "on must map each", "on send goes to nowhere", "no skills/missing", "exactly one of run, gate, agent or ladder", "no gate nope",
                  "run must be a non-empty", "approval must say"):
         assert said in found, said
 

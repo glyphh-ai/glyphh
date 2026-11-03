@@ -2,6 +2,17 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.11.0 — 2026-11-03
+
+Bots' gates (SDK 3.9). The glyphh-bots skill says which gate suits which job (per-item gates for lists, ladders for
+cost, learned approvals for outward actions, world-answered gates for outcomes that arrive later, hard limits
+always), how a gate asks (`ask_below`, `min_precedents`, `audit`, `shadow`, `max_questions`, `default`), and the new
+commands: a batch of items answered at once (`glyphh bot continue <slug> 1=read 2=skip rest=skip`), `outcome` (what
+really happened), `wrong --item`, `gates` (what each gate learned), `report` (an HTML page with the ask rate falling
+run by run), and `pause` / `resume` (the kill switch). The demo: make the Hacker News reader through the
+orchestrator, answer its batches, watch the report. Claude still never answers a gate, a batch or an approval for
+the person. The glyphh-cli skill's pointer names the new commands; the hook's User-Agent is `glyphh-hook/1.11.0`.
+
 ## 1.10.0 — 2026-11-03
 
 Glyphh bots: programs that run a Claude agent behind gates that learn, made and trained from Claude (SDK 3.8's

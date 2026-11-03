@@ -35,6 +35,7 @@ HERE = Path(__file__).resolve().parent
 #: The package format the builder follows, and the bot it is shown as an example.
 BUILDING = HERE / "BUILDING.md"
 EXAMPLE = HERE / "example"
+EXAMPLE_ITEMS = HERE / "example_items"
 TRUST = ("autonomous", "ask_outward", "ask_all")
 KEEP = ("keep", "fix", "retire")
 OUTCOMES = {"make_bot": ["make", "not_yet", "no"], "trust_bot": list(TRUST), "keep_bot": list(KEEP)}
@@ -44,7 +45,8 @@ FIRST_RULE = (
     "agree it may."
 )
 STOPWORDS = {"a", "an", "the", "and", "of", "to", "for", "my", "me", "every", "each", "in", "on", "at", "it"}
-COPY_SKIP = shutil.ignore_patterns("runs.sqlite", "data.sqlite", "__pycache__", "*.pyc", "routine.log")
+COPY_SKIP = shutil.ignore_patterns("runs.sqlite", "data.sqlite", "__pycache__", "*.pyc", "routine.log",
+                                   "report.html")
 
 
 def _text_spec(extra: List[Dict[str, Any]], costs: Dict[str, Dict[str, float]], ask_below: float) -> Dict[str, Any]:
@@ -106,6 +108,13 @@ def connect(root: Optional[Path] = None) -> Ada:
     return Ada(key=api_key(root))
 
 
+def _files(folder: Path, title: str) -> str:
+    """An example bot's files, for the builder's brief."""
+    files = sorted(p for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+    shown = "\n\n".join(f"=== {p.relative_to(folder)} ===\n{p.read_text('utf-8')}" for p in files)
+    return f"## {title}\n\n{shown}"
+
+
 def slug_of(job: str) -> str:
     """A bot's slug from its job: its first three words that say something, snake_case."""
     words = [w for w in re.findall(r"[a-z0-9]+", job.lower()) if w not in STOPWORDS][:3]
@@ -128,12 +137,13 @@ class Orchestrator:
         notify: Optional[Callable[[str, str], None]] = None,
         fetch: Optional[Fetch] = None,
         today: Optional[Callable[[], dt.date]] = None,
+        now: Optional[Callable[[], dt.datetime]] = None,
     ) -> None:
         self.ada = ada
         self.root = Path(root) if root else bots_root()
         self.claude = claude or Claude()
         self.ask, self.echo = ask, echo or (lambda line: None)
-        self._runner_kw: Dict[str, Any] = {"notify": notify, "fetch": fetch, "today": today}
+        self._runner_kw: Dict[str, Any] = {"notify": notify, "fetch": fetch, "today": today, "now": now}
         self.root.mkdir(parents=True, exist_ok=True)
         with self._db() as c, c:
             c.execute("CREATE TABLE IF NOT EXISTS bots (slug TEXT PRIMARY KEY, job TEXT, made REAL, trust TEXT, keep TEXT)")
@@ -304,8 +314,10 @@ class Orchestrator:
         return found
 
     def _brief(self, job: str, slug: str, touches: str, learned: List[str]) -> str:
-        files = sorted(p for p in EXAMPLE.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
-        example = "\n\n".join(f"=== {p.relative_to(EXAMPLE)} ===\n{p.read_text('utf-8')}" for p in files)
+        example = "\n\n".join(_files(folder, title) for folder, title in (
+            (EXAMPLE, "A bot with one gate on the whole run (is today worth a summary?)"),
+            (EXAMPLE_ITEMS, "A bot with a per-item gate (each story of a list: read or skip), the gate for lists"),
+        ))
         before = (
             "What you have learned from the bots you made before (use what worked, avoid what didn't):\n"
             + "\n".join(f"- {x}" for x in learned)
@@ -317,7 +329,7 @@ class Orchestrator:
             f"agent.md, program.py and skills/*/SKILL.md, following the format below exactly. The most outward thing "
             f"it may do is `{touches}`: its bot.json says `\"touches\": \"{touches}\"` or less, and any step that "
             f"sends, posts, pays or deletes has an `approval`.\n\n{BUILDING.read_text('utf-8')}\n\n"
-            f"An example bot that works:\n\n{example}\n\n{before}\n\n"
+            f"Two example bots that work:\n\n{example}\n\n{before}\n\n"
             "When the files are written, answer with one line: the bot's gates and why each is there."
         )
 
@@ -350,7 +362,8 @@ class Orchestrator:
         run finished."""
         rows = RunStore(self.root / slug).recent()
         gates = [g for r in rows for g in (r["data"].get("_gates") or {}).values()]
-        asked = sum(1 for g in gates if g.get("by") == "person")
+        calls = sum(g.get("asked", 0) + g.get("decided", 0) + g.get("defaulted", 0) if g.get("each") else 1 for g in gates)
+        asked = sum(g.get("asked", 0) if g.get("each") else int(g.get("by") == "person") for g in gates)
         with self._db() as c:
             wrong = c.execute("SELECT COUNT(*) FROM wrong WHERE slug = ?", (slug,)).fetchone()[0]
         done = sum(1 for r in rows if r["status"] == "done")
@@ -358,7 +371,7 @@ class Orchestrator:
         def pct(a: int, b: int) -> int:
             return min(100, round(100 * a / b)) if b else 0
 
-        return {"runs": len(rows), "ask_pct": pct(asked, len(gates)), "overruled_pct": pct(wrong, len(rows)),
+        return {"runs": len(rows), "ask_pct": pct(asked, calls), "overruled_pct": pct(wrong, len(rows)),
                 "done_pct": pct(done, len(rows))}
 
     def case_for(self, slug: str, name: str) -> Dict[str, Any]:
@@ -407,8 +420,10 @@ class Orchestrator:
         bots = []
         for b in self.adopted():
             there = (self.root / b["bot"] / "bot.json").exists()
+            paused = RunStore(self.root / b["bot"]).state("_paused") if there else None
             bots.append({**{k: v for k, v in b.items() if k != "made"},
-                         **({"record": self.record_of(b["bot"])} if there else {"missing": True})})
+                         **({"record": self.record_of(b["bot"])} if there else {"missing": True}),
+                         **({"paused": paused} if paused else {})})
         return {
             "bots_home": str(self.root),
             "gates": {n: have.get(self.model(n), 0) for n in GATES},

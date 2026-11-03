@@ -1,0 +1,66 @@
+{
+  "slug": "hn_reader",
+  "name": "HN reader",
+  "summary": "Each morning: the Hacker News front page, every story judged worth reading or not by a gate that learns your taste (it asks only about the ones it is unsure of), and a short digest of the ones worth it",
+  "version": 1,
+  "agent": "agent.md",
+  "reads_glyphh": true,
+  "touches": "read_only",
+  "hosts": ["hn.algolia.com"],
+  "seed": {
+    "personality": ["Plain and short; no hype words, no exclamation marks."],
+    "instructions": ["Say only what a story's title, site and numbers say; never make up what an article contains."],
+    "memory": []
+  },
+  "gates": {
+    "worth": {
+      "case": "story_case",
+      "outcomes": ["read", "skip"],
+      "question": "Worth reading?",
+      "min_precedents": 10,
+      "ask_below": 0.75,
+      "audit": 0.1,
+      "max_questions": 10,
+      "default": "skip",
+      "spec": {
+        "name": "worth",
+        "layers": [
+          {"name": "story", "segments": [
+            {"name": "what", "roles": [
+              {"name": "title", "text_encoding": "bag_of_words"},
+              {"name": "domain"},
+              {"name": "kind"}
+            ]},
+            {"name": "pull", "roles": [
+              {"name": "points", "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+              {"name": "comments", "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+              {"name": "age_hours", "numeric_config": {"min_value": 0, "max_value": 72, "bin_width": 6}}
+            ]},
+            {"name": "id", "roles": [
+              {"name": "story", "key_part": true, "similarity_weight": 0}
+            ]}
+          ]}
+        ],
+        "output": {"costs": {"skip": {"read": 2}, "read": {"skip": 1}}, "ask_below": 0.75}
+      }
+    }
+  },
+  "loop": [
+    {"id": "stories", "run": "front_page"},
+    {"id": "worth", "gate": "worth", "each": "$stories.items", "label": "title", "key": "id",
+     "on": {"empty:read": "end"}},
+    {"id": "digest", "agent": "Write today's digest of these Hacker News stories, the ones the person will want to read (title, url, site, points, comments, the discussion link):\n\n$worth.read",
+     "skill": "hn-digest", "check": "digest_ok", "remember": true},
+    {"id": "deliver", "run": "deliver", "input": "$digest"}
+  ],
+  "routine": {"cron": "17 8 * * *"},
+  "limits": {
+    "seconds": 300,
+    "agent_turns": 2,
+    "usd_per_run": 0.5,
+    "usd_per_day": 2,
+    "runs_per_day": 8,
+    "quiet_hours": "22:00-07:00",
+    "max_items": 30
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@glyphh-ai/glyphh",
-  "version": "3.8.0",
+  "version": "3.9.0",
   "description": "Ada for TypeScript and JavaScript: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key; and a client for your local rrotor, the runtime that hosts your programs and CLIs.",
   "type": "module",
   "main": "./dist/index.js",

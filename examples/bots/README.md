@@ -1,6 +1,6 @@
 # Bots
 
-Example bots for `glyphh bot` (`pip install glyphh`, SDK 3.8). A bot is a folder: `bot.json` (its loop of steps,
+Example bots for `glyphh bot` (`pip install glyphh`, SDK 3.9). A bot is a folder: `bot.json` (its loop of steps,
 its gates, what it touches), `agent.md` (its Claude agent), `program.py` (its code steps) and `skills/*/SKILL.md`.
 Its program controls its agent: the runner walks the loop, runs the code steps itself, asks Ada at the gates (Ada
 models that learn from your answers, so they ask less run after run), and calls Claude (`claude -p`, lean: no tools,
@@ -9,12 +9,18 @@ no MCP servers, no settings) only for the steps that need judgment. The format i
 
 | Bot | What it does | Shows |
 |---|---|---|
+| [`hn_reader`](hn_reader) | Each morning: the Hacker News front page (hn.algolia.com), every story judged read or skip by a gate that learns your taste from its title, site, points, comments and age; it asks you only about the stories it is unsure of (at most 10 a run, the rest skipped), and the agent writes a digest of the kept ones into `out/digest.md` | The demo: a per-item gate with its asking policy (`min_precedents`, `ask_below`, `audit`, `max_questions`, `default`), an agent answer held to a `check`, hard limits (spend, runs a day, quiet hours, items), and `glyphh bot report` showing the ask rate fall |
 | [`launch_watch`](launch_watch) | Each morning: a project's GitHub stars, new issues and PRs, PyPI and npm downloads, kept day by day; a gate learns which days are worth a summary, and the agent writes it into `out/` | A routine, a learned gate that ends the run, an agent step with a skill and memory, declared hosts |
 | [`lab`](lab) | The orchestrator as a bot: it has Claude propose experiments on how Claude does coding work best, keeps the ones its hard rules allow and its `promising` gate rates best, makes each an experiment bot beside it, runs them on the tasks in `tasks/` judged by hidden tests, and writes the playbook | A bot that makes and runs bots (`ctx.orchestrator`), hard gates in code (a $20 budget in `trials.py`, allowed arms), a gate recorded from what the world answered |
-| [`coder`](coder) | Does the lab's held-out tasks (`lab/heldout/`), choosing for each the cheapest model its `route` gate learned gets it done, up the ladder on a failure, learning from every task | Knowledge handed from one bot to another; a gate the program asks and records itself (`ctx.gate`) |
+| [`coder`](coder) | Does the lab's held-out tasks (`lab/heldout/`), choosing for each the cheapest model its `route` gate learned gets it done, up the ladder on a failure, learning from every task | Knowledge handed from one bot to another (the lab's trials seed its gate through `ctx.gate`); a `ladder` step: the gate picks each task's cheapest rung, `check` reads the tests, a failure climbs, what it took is recorded; a spend limit |
 
 ```bash
 pipx install glyphh && glyphh login          # an Ada Cloud API key (or GLYPHH_API_KEY, or ~/.glyphh/bots/.env)
+glyphh bot install examples/bots/hn_reader
+glyphh bot run hn_reader                     # at a terminal it asks you story by story; from Claude, one batch:
+glyphh bot continue hn_reader 1=read 2=skip rest=skip
+glyphh bot gates hn_reader                   # what its gate learned: Ada vs you, the ask rate, audits
+glyphh bot report hn_reader                  # report.html in the bot's folder
 glyphh bot install examples/bots/launch_watch
 glyphh bot run launch_watch                  # the gate asks you until it has learned your days
 glyphh bot routine launch_watch              # each morning at 8:47 (launchd on a Mac; elsewhere the cron line)
