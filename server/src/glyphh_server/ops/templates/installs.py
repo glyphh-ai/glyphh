@@ -1,6 +1,7 @@
 """Templates as a person sees them, and installing and removing one for themselves (docs/specs/templates.md): an
 install makes the template's models in Ada Cloud, named as theirs (ops/templates/glyphh.model_name), then records the
-install; a removal deletes those models and every precedent in them, then the install. Each step's database work is a
+install; a removal deletes those models (and any its `make` op made, ops/templates/bots.py) and every precedent in
+them, then the install. Each step's database work is a
 short transaction of its own, never held while a worker answers. A model already there (an install made again after
 one that failed half way) is kept as it is."""
 
@@ -17,6 +18,7 @@ from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Template, TemplateInstall
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.templates.ada import ask
+from glyphh_server.ops.templates.bots import made_by
 from glyphh_server.ops.templates.glyphh import model_name
 from glyphh_server.ops.templates.library import Body
 
@@ -37,7 +39,9 @@ class TemplateView(BaseModel):
 
 
 def view(body: Body, who: Principal, installed: int | None) -> TemplateView:
-    models = [{**m.model_dump(), "model": model_name(who.user_id, body.slug, m.key)} for m in body.models]
+    models = [
+        {**m.model_dump(exclude={"spec"}), "model": model_name(who.user_id, body.slug, m.key)} for m in body.models
+    ]
     tools = [{"name": t.name, "title": t.title, "description": t.description} for t in body.tools]
     return TemplateView(
         **body.model_dump(include={"slug", "name", "category", "summary", "version", "instructions"}),
@@ -100,7 +104,7 @@ async def _make(state: Any, who: Principal, body: Body) -> None:
     for part in body.models:
         name = model_name(who.user_id, body.slug, part.key)
         try:
-            await ask(state, who, name, "create", {"spec": {**body.spec, "name": part.key}})
+            await ask(state, who, name, "create", {"spec": {**body.spec_of(part), "name": part.key}})
         except Refused as err:
             if err.code != "E_CONFLICT":
                 raise
@@ -129,16 +133,16 @@ async def install(state: Any, engine: AsyncEngine, who: Principal, slug: str) ->
 
 
 async def remove(state: Any, engine: AsyncEngine, who: Principal, slug: str) -> TemplateView:
-    """Delete the template's models of this person, every precedent in them, then the install."""
+    """Delete the template's models of this person and the ones it made, every precedent in them, then the install."""
     async with engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)
         mine = {b.slug: b for b in await installed(conn, who)}
     body = mine.get(slug)
     if body is None:
         raise NotFound("You have not installed that template.", slug=slug)
-    for part in body.models:
+    for name in [*(part.key for part in body.models), *await made_by(engine, who, slug)]:
         try:
-            await ask(state, who, model_name(who.user_id, slug, part.key), "delete", {})
+            await ask(state, who, model_name(who.user_id, slug, name), "delete", {})
         except Refused as err:
             if err.code != "E_MODEL_MISSING":
                 raise
