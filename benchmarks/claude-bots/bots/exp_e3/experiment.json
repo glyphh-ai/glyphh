@@ -1,0 +1,19 @@
+{
+ "id": "e3",
+ "question": "Does writing tests first make Haiku pass more bugfix tasks than plain?",
+ "arms": [
+  {
+   "strategy": "tests_first",
+   "model": "haiku"
+  },
+  {
+   "strategy": "plain",
+   "model": "haiku"
+  }
+ ],
+ "kinds": [
+  "bugfix"
+ ],
+ "max_per_arm": 12,
+ "batch": 6
+}

@@ -1,0 +1,24 @@
+{
+ "id": "e1",
+ "question": "Does Haiku pass as many bugfix tasks as Sonnet with the plain strategy (is the cheaper model enough)?",
+ "kinds": [
+  "bugfix"
+ ],
+ "arms": [
+  {
+   "arm": "plain/haiku",
+   "n": 6,
+   "pass_pct": 100,
+   "cost": 0.0026,
+   "seconds": 18.8
+  },
+  {
+   "arm": "plain/sonnet",
+   "n": 6,
+   "pass_pct": 100,
+   "cost": 0.0251,
+   "seconds": 19.3
+  }
+ ],
+ "call": "decisive: plain/haiku matches at 9.7x less cost"
+}

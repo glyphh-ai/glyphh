@@ -1,0 +1,85 @@
+{
+ "slug": "exp_e1",
+ "name": "Experiment e1",
+ "summary": "Does Haiku pass as many bugfix tasks as Sonnet with the plain strategy (is the cheaper model enough)?",
+ "version": 1,
+ "agent": "agent.md",
+ "reads_glyphh": false,
+ "touches": "read_only",
+ "hosts": [],
+ "seed": {},
+ "gates": {
+  "trial": {
+   "case": "trial_case",
+   "outcomes": [
+    "pass",
+    "fail"
+   ],
+   "spec": {
+    "name": "trial",
+    "layers": [
+     {
+      "name": "t",
+      "segments": [
+       {
+        "name": "s",
+        "roles": [
+         {
+          "name": "task"
+         },
+         {
+          "name": "kind"
+         },
+         {
+          "name": "strategy"
+         },
+         {
+          "name": "model"
+         },
+         {
+          "name": "run",
+          "key_part": true,
+          "similarity_weight": 0
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "output": {
+     "costs": {
+      "pass": {
+       "fail": 1
+      },
+      "fail": {
+       "pass": 1
+      }
+     },
+     "ask_below": 0.8
+    }
+   }
+  }
+ },
+ "loop": [
+  {
+   "id": "budget",
+   "run": "budget"
+  },
+  {
+   "id": "pick",
+   "run": "pick"
+  },
+  {
+   "id": "trials",
+   "run": "run_trials",
+   "input": "$pick"
+  },
+  {
+   "id": "verdict",
+   "run": "verdict"
+  }
+ ],
+ "limits": {
+  "seconds": 1800
+ }
+}

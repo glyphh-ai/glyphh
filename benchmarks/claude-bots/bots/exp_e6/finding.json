@@ -1,0 +1,24 @@
+{
+ "id": "e6",
+ "question": "Does asking Haiku to cover edge cases make it pass more implement tasks than plain?",
+ "kinds": [
+  "implement"
+ ],
+ "arms": [
+  {
+   "arm": "edge_cases/haiku",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.0057,
+   "seconds": 44.8
+  },
+  {
+   "arm": "plain/haiku",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.0029,
+   "seconds": 20.5
+  }
+ ],
+ "call": "open"
+}

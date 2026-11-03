@@ -1,0 +1,24 @@
+{
+ "id": "e2",
+ "question": "Does Haiku pass as many implement tasks as Sonnet with the plain strategy?",
+ "kinds": [
+  "implement"
+ ],
+ "arms": [
+  {
+   "arm": "plain/haiku",
+   "n": 6,
+   "pass_pct": 100,
+   "cost": 0.0028,
+   "seconds": 20.5
+  },
+  {
+   "arm": "plain/sonnet",
+   "n": 6,
+   "pass_pct": 100,
+   "cost": 0.0323,
+   "seconds": 19.6
+  }
+ ],
+ "call": "decisive: plain/haiku matches at 11.5x less cost"
+}

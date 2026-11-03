@@ -1,0 +1,64 @@
+{
+ "done": [
+  {
+   "task": "h1_slugify",
+   "routed": "haiku",
+   "why": "P 1.00",
+   "tried": [
+    {
+     "model": "haiku",
+     "pass": 1,
+     "cost": 0.00314187
+    }
+   ]
+  },
+  {
+   "task": "h2_ratelimit",
+   "routed": "haiku",
+   "why": "P 1.00",
+   "tried": [
+    {
+     "model": "haiku",
+     "pass": 1,
+     "cost": 0.0029664
+    }
+   ]
+  },
+  {
+   "task": "h3_toposort",
+   "routed": "haiku",
+   "why": "P 1.00",
+   "tried": [
+    {
+     "model": "haiku",
+     "pass": 1,
+     "cost": 0.0034574199999999997
+    }
+   ]
+  },
+  {
+   "task": "h4_template",
+   "routed": "haiku",
+   "why": "P 1.00",
+   "tried": [
+    {
+     "model": "haiku",
+     "pass": 1,
+     "cost": 0.009802459999999999
+    }
+   ]
+  },
+  {
+   "task": "h5_events",
+   "routed": "haiku",
+   "why": "P 1.00",
+   "tried": [
+    {
+     "model": "haiku",
+     "pass": 1,
+     "cost": 0.005071000000000001
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+  "slug": "lab",
+  "name": "The lab",
+  "summary": "The orchestrator as a bot: it designs experiments on how Claude does coding work best, makes a bot for each, runs them against hidden tests, learns which experiments pay off, and writes the playbook",
+  "version": 1,
+  "agent": "agent.md",
+  "reads_glyphh": false,
+  "touches": "read_only",
+  "hosts": [],
+  "seed": {
+    "instructions": ["Propose experiments that change one thing at a time and could change how someone works with Claude."],
+    "personality": ["Plain and exact; numbers before opinions; say what a result does not show."],
+    "memory": []
+  },
+  "gates": {
+    "promising": {
+      "case": "promising_case",
+      "outcomes": ["decisive", "null"],
+      "spec": {
+        "name": "promising",
+        "layers": [{"name": "e", "segments": [{"name": "s", "roles": [
+          {"name": "question", "text_encoding": "bag_of_words"},
+          {"name": "varies"},
+          {"name": "kinds"},
+          {"name": "arm_a"},
+          {"name": "arm_b"},
+          {"name": "id", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {"costs": {"decisive": {"null": 1}, "null": {"decisive": 1}}, "ask_below": 0.6}
+      }
+    }
+  },
+  "loop": [
+    {"id": "budget", "run": "budget"},
+    {"id": "review", "run": "review"},
+    {"id": "propose", "agent": "Propose the next experiments.\n\nWhat the experiments found so far: $review\n\nBudget: $budget", "skill": "propose"},
+    {"id": "choose", "run": "choose", "input": "$propose"},
+    {"id": "run", "run": "run_all"},
+    {"id": "report", "run": "report"},
+    {"id": "playbook", "agent": "Write the playbook from what was measured.\n\nMeasured: $report", "skill": "playbook", "remember": true},
+    {"id": "deliver", "run": "deliver", "input": "$playbook"}
+  ],
+  "limits": {"seconds": 3600, "agent_turns": 3}
+}

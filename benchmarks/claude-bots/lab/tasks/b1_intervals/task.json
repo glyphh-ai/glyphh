@@ -1,0 +1,1 @@
+{"kind": "bugfix", "prompt": "intervals.py's merge() should merge overlapping or touching intervals ([1,3] and [3,5] become [1,5]) and work whatever order the input comes in, returning them sorted. Users report wrong results. Fix it."}

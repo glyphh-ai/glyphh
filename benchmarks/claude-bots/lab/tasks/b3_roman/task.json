@@ -1,0 +1,1 @@
+{"kind": "bugfix", "prompt": "roman.py's parse() should turn a Roman numeral (I to MMMCMXCIX) into an int, including the subtractive forms (IV, IX, XL, XC, CD, CM), and raise ValueError for anything that is not a valid numeral in standard form (like IIII, VV, IC or an empty string). It gets many of these wrong. Fix it."}

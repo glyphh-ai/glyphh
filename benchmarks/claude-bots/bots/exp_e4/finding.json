@@ -1,0 +1,24 @@
+{
+ "id": "e4",
+ "question": "Does Haiku pass as many multifile tasks as Sonnet with the plain strategy?",
+ "kinds": [
+  "multifile"
+ ],
+ "arms": [
+  {
+   "arm": "plain/haiku",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.0031,
+   "seconds": 29.8
+  },
+  {
+   "arm": "plain/sonnet",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.0427,
+   "seconds": 23.6
+  }
+ ],
+ "call": "open"
+}

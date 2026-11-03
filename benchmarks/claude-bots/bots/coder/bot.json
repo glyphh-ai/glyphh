@@ -1,0 +1,39 @@
+{
+  "slug": "coder",
+  "name": "Coder",
+  "summary": "Does coding tasks, choosing for each the cheapest model the lab learned gets it done, and learning from every task it does",
+  "version": 1,
+  "agent": "agent.md",
+  "reads_glyphh": false,
+  "touches": "read_only",
+  "hosts": [],
+  "seed": {},
+  "gates": {
+    "route": {
+      "case": "route_case",
+      "outcomes": ["haiku", "sonnet", "opus"],
+      "spec": {
+        "name": "route",
+        "layers": [{"name": "r", "segments": [{"name": "s", "roles": [
+          {"name": "kind"},
+          {"name": "text", "text_encoding": "bag_of_words"},
+          {"name": "key", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {
+          "costs": {
+            "haiku": {"sonnet": 3, "opus": 5},
+            "sonnet": {"haiku": 0.5, "opus": 3},
+            "opus": {"haiku": 1, "sonnet": 0.5}
+          },
+          "ask_below": 0.5
+        }
+      }
+    }
+  },
+  "loop": [
+    {"id": "seed", "run": "seed"},
+    {"id": "work", "run": "work"},
+    {"id": "report", "run": "report", "input": "$work"}
+  ],
+  "limits": {"seconds": 3600}
+}

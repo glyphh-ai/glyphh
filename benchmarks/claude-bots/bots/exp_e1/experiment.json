@@ -1,0 +1,19 @@
+{
+ "id": "e1",
+ "question": "Does Haiku pass as many bugfix tasks as Sonnet with the plain strategy (is the cheaper model enough)?",
+ "arms": [
+  {
+   "strategy": "plain",
+   "model": "haiku"
+  },
+  {
+   "strategy": "plain",
+   "model": "sonnet"
+  }
+ ],
+ "kinds": [
+  "bugfix"
+ ],
+ "max_per_arm": 12,
+ "batch": 6
+}

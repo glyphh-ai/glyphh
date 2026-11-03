@@ -1,0 +1,24 @@
+{
+ "id": "e5",
+ "question": "Does Sonnet pass as many multifile tasks as Opus with the plain strategy?",
+ "kinds": [
+  "multifile"
+ ],
+ "arms": [
+  {
+   "arm": "plain/sonnet",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.0422,
+   "seconds": 21.1
+  },
+  {
+   "arm": "plain/opus",
+   "n": 3,
+   "pass_pct": 100,
+   "cost": 0.1035,
+   "seconds": 30.4
+  }
+ ],
+ "call": "open"
+}

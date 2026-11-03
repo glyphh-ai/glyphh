@@ -1,0 +1,272 @@
+{
+ "always-opus": {
+  "tasks": 10,
+  "passed": 10,
+  "cost": 1.0573,
+  "seconds": 315.2,
+  "per_task": {
+   "bench-opus-1:h1_slugify": {
+    "pass": 1,
+    "cost": 0.077934,
+    "seconds": 22.6,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-1:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.065579,
+    "seconds": 20.5,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-1:h3_toposort": {
+    "pass": 1,
+    "cost": 0.1037256,
+    "seconds": 30.4,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-1:h4_template": {
+    "pass": 1,
+    "cost": 0.1746738,
+    "seconds": 53.4,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-1:h5_events": {
+    "pass": 1,
+    "cost": 0.116908,
+    "seconds": 31.2,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-2:h1_slugify": {
+    "pass": 1,
+    "cost": 0.08314,
+    "seconds": 27.3,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-2:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.0662898,
+    "seconds": 20.6,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-2:h3_toposort": {
+    "pass": 1,
+    "cost": 0.0841316,
+    "seconds": 26.3,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-2:h4_template": {
+    "pass": 1,
+    "cost": 0.1671388,
+    "seconds": 51.0,
+    "models": [
+     "opus"
+    ]
+   },
+   "bench-opus-2:h5_events": {
+    "pass": 1,
+    "cost": 0.11774879999999999,
+    "seconds": 31.9,
+    "models": [
+     "opus"
+    ]
+   }
+  },
+  "pass_pct": 100,
+  "cost_vs_opus": 1.0
+ },
+ "always-sonnet": {
+  "tasks": 10,
+  "passed": 9,
+  "cost": 0.4874,
+  "seconds": 279.5,
+  "per_task": {
+   "bench-sonnet-1:h1_slugify": {
+    "pass": 1,
+    "cost": 0.030881,
+    "seconds": 21.9,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-1:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.025362799999999998,
+    "seconds": 15.5,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-1:h3_toposort": {
+    "pass": 1,
+    "cost": 0.041603,
+    "seconds": 25.3,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-1:h4_template": {
+    "pass": 1,
+    "cost": 0.0662655,
+    "seconds": 31.5,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-1:h5_events": {
+    "pass": 1,
+    "cost": 0.0650239,
+    "seconds": 30.0,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-2:h1_slugify": {
+    "pass": 1,
+    "cost": 0.0348655,
+    "seconds": 30.7,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-2:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.0261708,
+    "seconds": 18.0,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-2:h3_toposort": {
+    "pass": 1,
+    "cost": 0.038083099999999995,
+    "seconds": 28.9,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-2:h4_template": {
+    "pass": 0,
+    "cost": 0.0942126,
+    "seconds": 49.2,
+    "models": [
+     "sonnet"
+    ]
+   },
+   "bench-sonnet-2:h5_events": {
+    "pass": 1,
+    "cost": 0.06491680000000001,
+    "seconds": 28.5,
+    "models": [
+     "sonnet"
+    ]
+   }
+  },
+  "pass_pct": 90,
+  "cost_vs_opus": 0.461
+ },
+ "routed": {
+  "tasks": 10,
+  "passed": 10,
+  "cost": 0.0504,
+  "seconds": 351.0,
+  "per_task": {
+   "bench-routed-1:h1_slugify": {
+    "pass": 1,
+    "cost": 0.00314187,
+    "seconds": 22.9,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-1:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.0029664,
+    "seconds": 24.1,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-1:h3_toposort": {
+    "pass": 1,
+    "cost": 0.0034574199999999997,
+    "seconds": 23.2,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-1:h4_template": {
+    "pass": 1,
+    "cost": 0.009802459999999999,
+    "seconds": 62.5,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-1:h5_events": {
+    "pass": 1,
+    "cost": 0.005071000000000001,
+    "seconds": 32.1,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-2:h1_slugify": {
+    "pass": 1,
+    "cost": 0.00411612,
+    "seconds": 39.7,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-2:h2_ratelimit": {
+    "pass": 1,
+    "cost": 0.00211729,
+    "seconds": 22.5,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-2:h3_toposort": {
+    "pass": 1,
+    "cost": 0.00320451,
+    "seconds": 21.6,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-2:h4_template": {
+    "pass": 1,
+    "cost": 0.011435889999999999,
+    "seconds": 71.6,
+    "models": [
+     "haiku"
+    ]
+   },
+   "bench-routed-2:h5_events": {
+    "pass": 1,
+    "cost": 0.0051203099999999994,
+    "seconds": 30.8,
+    "models": [
+     "haiku"
+    ]
+   }
+  },
+  "pass_pct": 100,
+  "cost_vs_opus": 0.048
+ }
+}

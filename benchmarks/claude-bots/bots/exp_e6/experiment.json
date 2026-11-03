@@ -1,0 +1,19 @@
+{
+ "id": "e6",
+ "question": "Does asking Haiku to cover edge cases make it pass more implement tasks than plain?",
+ "arms": [
+  {
+   "strategy": "edge_cases",
+   "model": "haiku"
+  },
+  {
+   "strategy": "plain",
+   "model": "haiku"
+  }
+ ],
+ "kinds": [
+  "implement"
+ ],
+ "max_per_arm": 12,
+ "batch": 6
+}
