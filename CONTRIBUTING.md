@@ -30,7 +30,7 @@ credentials.
 ## Licence
 
 By opening a pull request you agree that your contribution is licensed under the licence of the part you change (see
-[LICENSE](LICENSE)): the MIT License for sdk/, contract/, deploy/ and benchmarks/; the Glyphh terms for plugins/. No
+[LICENSE](LICENSE)): the MIT License for sdk/, contract/, deploy/, benchmarks/ and examples/; the Glyphh terms for plugins/. No
 separate agreement is needed: the pull request is your submission.
 
 ## Bugs, questions and security

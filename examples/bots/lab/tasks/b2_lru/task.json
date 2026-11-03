@@ -1,0 +1,1 @@
+{"kind": "bugfix", "prompt": "lru.py's LRUCache(capacity) should keep at most `capacity` items and, when full, evict the least recently used one; both get() and put() count as a use. It keeps evicting the wrong things. Fix it."}

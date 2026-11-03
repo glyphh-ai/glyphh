@@ -61,6 +61,7 @@ glyphh export tickets --to tickets.zip
 | `decide`, `query`, `probabilities`, `facts` | Ask |
 | `learn`, `calibrate`, `backtest`, `settings`, `versions`, `activate`, `upgrade` | Tune, compare, roll back, move Ada versions |
 | `export`, `job`, `cancel` | Everything out; any job's state and stage (`--wait`); stop a job |
+| `bot ...` | Bots: make one from a job, run it, answer and correct its gates, trust and keep it ([below](#bots)) |
 
 Every answer is the API's own JSON on stdout, so it pipes into `jq`; a refusal is `{"error": {code, message}}` on
 stderr with exit code 1 (2 for a usage mistake). A JSON argument is the JSON itself, `@file` for a file's, or `-` for
@@ -150,6 +151,51 @@ once, so a decision never waits for input: it says `ask`.
 
 The API and its answers' shapes are in [`contract/contract.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract).
 Pin `glyphh>=3`: versions up to 2.6.7 are a different, older library.
+
+## Bots
+
+A bot is a program that controls a Claude agent: a folder in `~/.glyphh/bots/<slug>/` (`GLYPHH_BOTS` moves it)
+holding `bot.json` (a loop of steps, its gates, what it touches), `agent.md` (its Claude agent), `program.py` (its
+code steps) and `skills/*/SKILL.md`. The runner walks the loop: a `run` step is a `program.py` function; a `gate` is
+an Ada model of the bot's own that learns from your answers (under its confidence, or with no precedent yet, you are
+asked, and your answer is kept as a precedent, so it asks less run after run); an `agent` step is Claude, called lean
+(`claude -p` with the bot's agent, no tools, no MCP servers, no settings, no session kept), with the step's skill and
+the bot's memory before it: its own memory, instructions and personality models, and your glyphh
+(`me-*-agentic-memory-*`) when you have one. Hard gates are code: a run step answering `{"_end": "why"}` ends the run,
+and a step with an `approval` waits for your yes until the bot is trusted to act alone. Claude Code's `claude` must
+be on the PATH (`GLYPHH_CLAUDE` names another).
+
+The orchestrator makes bots and learns to make them, with its own memory and three gates (`orch-make-bot`,
+`orch-trust-bot`, `orch-keep-bot`), each learning only from your verdicts and the bots' records: `glyphh bot new`
+asks make_bot, then a builder (`claude -p` with Read and Write, in the new bot's folder only) writes the package from
+[`BUILDING.md`](src/glyphh/bots/BUILDING.md), an example bot and what earlier bots taught it; the package is checked
+(a bot that may send, pay or delete with no approval step, or touches more than you said, is set aside), installed
+and trusted `ask_all`. Every run is kept in the orchestrator's memory.
+
+```bash
+glyphh bot install examples/bots/launch_watch     # its gate and memory models in Ada, its seed lines
+glyphh bot run launch_watch                       # asks you at the gate until it has learned your days
+glyphh bot wrong launch_watch <run> skip          # the gate got that run wrong: what it should have been
+glyphh bot routine launch_watch                   # launchd on a Mac (elsewhere, the cron line to add)
+glyphh bot new "each morning, sum up my repo's new issues" --recurs 7 --touches read_only
+glyphh bot review                                 # trust_bot and keep_bot for every bot, from its record
+glyphh bot verdict launch_watch trust ask_outward
+```
+
+| Command | Does |
+|---|---|
+| `glyphh bot init`, `check FOLDER`, `install FOLDER\|SLUG [--job J]` | The orchestrator's models; a package checked (every problem at once); a bot installed |
+| `glyphh bot new JOB [--recurs N] [--touches T] [--answer make\|not_yet\|no]` | make_bot, then the builder; `needs_input` until Ada or you decide |
+| `glyphh bot run SLUG [--routine]`, `continue SLUG [ANSWER]` | One run; a question at the terminal is asked there, in a routine (or with no terminal) the run stops `needs_input` until `continue` |
+| `glyphh bot wrong SLUG RUN OUTCOME [--gate G]` | A gate's call corrected, kept as a precedent and counted against the bot's record |
+| `glyphh bot status [SLUG]`, `review [--answer BOT.GATE=OUTCOME ...]`, `verdict SLUG trust\|keep OUTCOME` | The orchestrator and its bots, or one bot's gates, memory and runs; trust and keep from records; your call |
+| `glyphh bot routine SLUG [--remove]` | `glyphh bot run SLUG --routine` on the bot's cron: `~/Library/LaunchAgents/ai.glyphh.bot.<slug>.plist` on a Mac, else the cron line |
+
+The API key is `GLYPHH_API_KEY`, else `GLYPHH_API_KEY=` in `~/.glyphh/bots/.env` (keep it mode 600), else the key
+`glyphh login` kept. Ada model names: `bot-<slug>-gate-<gate>`, `bot-<slug>-<memory|instructions|personality>` and
+`orch-<...>`, at most 63 characters (a slug is at most 46). From Python, `glyphh.bots`: `Orchestrator(ada)`
+(`install`, `new`, `runner(slug)`, `review`, `verdict`, `status`), `Runner` (`run`, `resume`, `wrong`, `status`),
+`Bot.load(folder)`. Examples: [`examples/bots`](https://github.com/glyphh-ai/glyphh/tree/main/examples/bots).
 
 ## Your local runtime: programs and CLIs
 

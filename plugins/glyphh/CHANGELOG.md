@@ -2,6 +2,23 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.10.0 — 2026-11-03
+
+Glyphh bots: programs that run a Claude agent behind gates that learn, made and trained from Claude (SDK 3.8's
+`glyphh bot`).
+
+- The glyphh-bots skill: "make me a bot that ..." goes through the orchestrator (`glyphh bot new`: its make_bot gate,
+  then its builder writes the bot, checked and installed, trusted `ask_all`); Claude runs a bot, asks the person each
+  gate's or approval's question and carries the run on with their answer (`glyphh bot continue`), records a run a
+  gate got wrong (`wrong`), reviews trust and keep from each bot's record (`review`, `verdict`) and installs a
+  routine (launchd on a Mac). Hard gates are program code (`{"_end": why}`), learned gates are Ada; no bot acts
+  outward (sends, posts, pays, deletes) without the person's yes until its trust is `autonomous`, and Claude never
+  answers a gate or an approval for the person.
+- The glyphh hooks reach the server again (the fix of 1.9.2, which was not released on its own). Cloudflare in front
+  of api.glyphh.ai refused urllib's own `Python-urllib` User-Agent with error 1010 (a 403), and a refused hook says
+  nothing, so no personality, rules or recall reached Claude. `hooks/glyphh_context.py` now sends
+  `User-Agent: glyphh-hook/1.10.0`.
+
 ## 1.9.1 — 2026-11-02
 
 Jobs can be stopped. The Ada skill names the connector's `ada_job_cancel` (a job not started ends at once, a running

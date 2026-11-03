@@ -8,10 +8,11 @@ stay as they are.
 | Folder | Install | What |
 |---|---|---|
 | [`plugins/glyphh`](plugins/glyphh) | `/plugin marketplace add glyphh-ai/glyphh`, then `/plugin install glyphh@glyphh` | The plugin: your Glyphh account in Claude Code, the Ada skill, rrotor installed and connected from Claude, pages published to your organisation's rrotor for review, the file ledger |
-| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command; `Runtime`, a client for your rrotor |
+| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command; Glyphh bots (`glyphh bot`, `glyphh.bots`): programs that run a Claude agent behind gates that learn in Ada; `Runtime`, a client for your rrotor |
 | [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"`; `Runtime`, a client for your rrotor |
 | [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server; `runtime.json` and `runtime-fixtures.json`, rrotor's answers, apart |
 | [`programs`](programs) | | Example programs and apps for rrotor (a manifest, `program.py` or a page, and tests), to copy, change and deploy |
+| [`examples/bots`](examples/bots) | `glyphh bot install examples/bots/<bot>` | Example bots: `launch_watch` (a morning summary behind a gate that learns which days matter), `lab` (the orchestrator as a bot, running experiments on how Claude codes best) and `coder` (each task to the cheapest model a learned gate says gets it done) |
 | [`deploy`](deploy) | | rrotor with Docker Compose (on your own computer, or self-hosted with HTTPS, air-gapped or as a cluster), Helm and Terraform |
 | [`benchmarks`](benchmarks) | | Ada against Claude on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
 
@@ -136,6 +137,6 @@ and only Glyphh maintainers release (the SDKs and the plugin): see [CONTRIBUTING
 
 ## License
 
-By folder (`LICENSE`): `plugins/` under Glyphh's terms; `sdk/`, `contract/`, `deploy/` and `benchmarks/` MIT (the
+By folder (`LICENSE`): `plugins/` under Glyphh's terms; `sdk/`, `contract/`, `deploy/`, `benchmarks/` and `examples/` MIT (the
 rrotor image the deploy files run is not covered by it). The benchmarks' data sets keep their own licences (CC BY
 4.0).
