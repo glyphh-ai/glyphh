@@ -270,3 +270,30 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Button', key: 'bill-portal' })).toBeDefined()
   })
 }
+
+// /dip through the engine: the Dip pane's editor writes a layout, its Dip button calls the app's tools.
+const dipPane = (surface: (typeof SURFACES)[number]) => ({ ...pane(surface), requestId: 'glyphh-dip', props: { ...pane(surface).props, title: 'Dip' } })
+
+for (const surface of SURFACES) {
+  test(`${surface}: the Dip pane writes a layout and dips into it`, async ($, on) => {
+    world(on, surface)
+    const called: string[] = []
+    on('tool.call', (_$, e) => (called.push(`${e.tool} ${JSON.stringify(e)}`), { result: '{}' }))
+    on('session.cwd', () => ({ value: '/proj' }))
+    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
+    const ui = await $.ui.mount(dipPane(surface))
+    expect(await ui.find({ type: 'Text', text: 'No layouts yet.' })).toBeDefined()
+    await ui.press({ key: 'new' })
+    await ui.input({ key: 'dip-name', text: 'api', kind: 'change' })
+    await ui.input({ key: 'dip-tabs', text: '* localhost:3000', kind: 'change' })
+    await ui.press({ key: 'pane-terminal' })
+    await ui.press({ key: 'save' })
+    expect(await ui.find({ type: 'Text', text: 'Saved api: /dip api' })).toBeDefined()
+    await ui.press({ key: 'dip-api' })
+    expect(called.some(c => c.startsWith('mcp__Claude_Browser__preview_start') && c.includes('https://localhost:3000'))).toBe(true)
+    expect(called.some(c => c.startsWith('mcp__ccd_view__show_pane') && c.includes('"terminal"'))).toBe(true)
+    expect(await ui.find({ type: 'Text', text: 'active' })).toBeDefined()
+    const said = (await $.command.run({ command: 'dip', args: 'nope' } as unknown as CommandRunInput)) as { text: string }
+    expect(said.text).toBe('No layout "nope". Layouts: api.')
+  })
+}

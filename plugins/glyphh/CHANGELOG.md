@@ -2,6 +2,15 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.12.0 — 2026-11-03
+
+Dip: `/dip <layout>` bounces the session between workspaces. A layout holds Claude's folder, the browser pane's tabs
+(one in front), the side panes, the terminal tabs (each with a folder and a command) and a brief Claude reads while it
+is active. Dipping calls the desktop app's own tools (folder, browser, panes, terminal) through the permission check,
+closes the tabs the last dip opened, and hands any refused step to Claude as one prompt. `/dip` opens the Dip pane to
+make and edit layouts; `/dip save <name>` keeps the session as it is; `rm` and `off`. Layouts live in the plugin's
+store. No sign-in needed. The hook's User-Agent is `glyphh-hook/1.12.0`.
+
 ## 1.11.0 — 2026-11-03
 
 Bots' gates (SDK 3.9). The glyphh-bots skill says which gate suits which job (per-item gates for lists, ladders for

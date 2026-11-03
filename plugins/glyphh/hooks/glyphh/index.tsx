@@ -1,13 +1,15 @@
 // Glyphh's account, wired to the engine: the one file that holds `$` and the
 // state atoms (the engine's scan reads them only here), handing the rest of
 // hooks/glyphh a Host. Hooks: /glyphh, its panel and the session start
-// (~/.glyphh).
+// (~/.glyphh); /dip, its pane and the active layout's brief.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderSurface } from 'claude-code'
 
-import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { AppsView, AuthState, DipView, GlyphhNote, GlyphhSection, Json } from '../../types'
 import { FIRST_VIEW } from './apps'
 import { glyphhCommand, startGlyphh } from './command'
+import { brief, dipCommand, FIRST_DIP, loadDip, USAGE_DIP } from './dip'
+import { DipPanel } from './dippanel'
 import { rrotorShown } from './shelved'
 import type { Host } from './host'
 import { openUrl } from './open'
@@ -24,6 +26,7 @@ const lists = atom({ plugin: 'glyphh', key: 'lists' } as const, {} as Record<str
 const note = atom({ plugin: 'glyphh', key: 'note' } as const, null as GlyphhNote | null)
 const inviteLink = atom({ plugin: 'glyphh', key: 'inviteLink' } as const, null as string | null)
 const apps = atom({ plugin: 'glyphh', key: 'apps' } as const, FIRST_VIEW as AppsView)
+const dipView = atom({ plugin: 'glyphh', key: 'dip' } as const, FIRST_DIP as DipView)
 
 function hostState($: EngineInterface): Host['state'] {
   return {
@@ -34,6 +37,7 @@ function hostState($: EngineInterface): Host['state'] {
     note: { get: () => read($, note), set: async fn => void (await update($, note, fn)) },
     inviteLink: { get: () => read($, inviteLink), set: async fn => void (await update($, inviteLink, fn)) },
     apps: { get: () => read($, apps), set: async fn => void (await update($, apps, fn)) },
+    dip: { get: () => read($, dipView), set: async fn => void (await update($, dipView, fn)) },
   }
 }
 
@@ -73,6 +77,22 @@ function host($: EngineInterface): Host {
         if (home) await $.fs.write(`${home}/.glyphh/ask-log.txt`, `${new Date().toISOString()} ${String(err).slice(0, 300)}\n`).catch(() => undefined)
       }))
     },
+    // A tool the model could call, run by the mod through the permission check;
+    // a refusal or an error is an answer too (the caller hands that step to Claude).
+    tool: {
+      call: async (tool, input) => {
+        try {
+          const r = (await $.tool.call({ tool, ...input } as never)) as { deny?: string; result?: unknown; text?: string; isError?: boolean }
+          if (r.deny !== undefined) return { ok: false, text: r.deny }
+          const text = typeof r.text === 'string' ? r.text : typeof r.result === 'string' ? r.result : JSON.stringify(r.result ?? '')
+          return { ok: !r.isError, text }
+        } catch (err) {
+          return { ok: false, text: String(err).slice(0, 300) }
+        }
+      },
+    },
+    cwd: () => $.session.cwd(),
+    openDip: async () => (await $.ui.open({ id: 'glyphh-dip', title: 'Dip' })).isPlaced,
     pluginRoot: $.plugin.root,
     state: hostState($),
   }
@@ -80,6 +100,10 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
+  await loadDip(host($)).catch(() => undefined)
+  await $.command
+    .register({ name: 'dip', description: 'Dip: bounce to a workspace layout (folder, browser tabs, panes, terminals)', argumentHint: USAGE_DIP.replace('/dip ', '') })
+    .catch(() => $.command.register({ name: 'glyphh-dip', description: 'Dip: bounce to a workspace layout' }))
   // rrotor shelved (2026-11-02, ./shelved): apps and publish only while it is shown.
   const shown = await rrotorShown(host($))
   const description = shown ? 'Glyphh: sign in, account, org, plan, billing, apps, publish' : 'Glyphh: sign in, account, org, plan, billing'
@@ -144,6 +168,24 @@ export function registerGlyphh(on: On) {
     return InlineSignIn(ui, await read($, auth), await read($, me))
   })
   on('command.run', { command: 'glyphh' }, ($, e) => glyphhCommand(host($), e.args))
+  on('command.run', { command: 'dip' }, ($, e) => dipCommand(host($), e.args))
+  on('command.run', { command: 'glyphh-dip' }, ($, e) => dipCommand(host($), e.args))
+
+  // The active layout's name, folder, tabs and brief, for Claude.
+  on('prompt.compose', async ($, e, next) => {
+    const composed = await next(e)
+    const text = brief(await read($, dipView))
+    return text ? { ...composed, sections: [...composed.sections, { id: 'glyphh:dip', text, scope: 'session' as const }] } : composed
+  })
+
+  on('ui.render', { component: 'Pane', requestId: 'glyphh-dip' }, async ($, e) => {
+    if (e.surface === 'mobile') {
+      const { Text } = $.ui.resolve(e as typeof e & { surface: 'mobile' })
+      return <Text dimColor>Dip draws on the desktop or in a terminal.</Text>
+    }
+    const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
+    return DipPanel({ gh: host($), ui, surface: e.surface }, await read($, dipView))
+  })
   on('command.run', { command: 'glyphh-account' }, ($, e) => glyphhCommand(host($), e.args))
 
   on('ui.render', { component: 'Pane', requestId: 'glyphh' }, async ($, e) => {
