@@ -1,0 +1,52 @@
+{
+  "slug": "launch_watch",
+  "name": "Launch watch",
+  "summary": "Each morning: a project's GitHub stars, new issues and PRs, PyPI and npm downloads, kept day by day; a gate learns which days are worth a summary, and the agent writes it",
+  "version": 1,
+  "agent": "agent.md",
+  "reads_glyphh": true,
+  "touches": "read_only",
+  "hosts": ["api.github.com", "pypistats.org", "api.npmjs.org"],
+  "seed": {
+    "personality": ["Plain, short, numbers first; no hype words."],
+    "instructions": ["Lead with what changed since yesterday; say plainly when nothing did."],
+    "memory": []
+  },
+  "gates": {
+    "worth_sending": {
+      "case": "worth_case",
+      "outcomes": ["send", "skip"],
+      "question": "Is today worth a summary?",
+      "spec": {
+        "name": "worth_sending",
+        "layers": [
+          {"name": "day", "segments": [
+            {"name": "moved", "roles": [
+              {"name": "stars", "numeric_config": {"min_value": -5, "max_value": 50, "bin_width": 1}},
+              {"name": "issues", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+              {"name": "prs", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+              {"name": "pypi_pct", "numeric_config": {"min_value": -100, "max_value": 300, "bin_width": 20}},
+              {"name": "npm_pct", "numeric_config": {"min_value": -100, "max_value": 300, "bin_width": 20}}
+            ]},
+            {"name": "when", "roles": [
+              {"name": "weekday"},
+              {"name": "days_since_sent", "numeric_config": {"min_value": 0, "max_value": 14, "bin_width": 1}},
+              {"name": "run", "key_part": true, "similarity_weight": 0}
+            ]}
+          ]}
+        ],
+        "output": {"costs": {"skip": {"send": 2}, "send": {"skip": 1}}, "ask_below": 0.7}
+      }
+    }
+  },
+  "loop": [
+    {"id": "numbers", "run": "numbers"},
+    {"id": "keep", "run": "keep", "input": "$numbers"},
+    {"id": "worth", "gate": "worth_sending", "on": {"send": "summary", "skip": "end"}},
+    {"id": "summary", "agent": "Write today's launch summary from today's numbers and the days before.\n\nToday: $numbers\n\nThe days before (newest first): $keep",
+     "skill": "launch-summary", "remember": true},
+    {"id": "deliver", "run": "deliver", "input": "$summary"}
+  ],
+  "routine": {"cron": "47 8 * * *"},
+  "limits": {"seconds": 300, "agent_turns": 3}
+}

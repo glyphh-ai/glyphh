@@ -1,13 +1,14 @@
 # The SDKs' checks on every push to main and every pull request: both
-# packages' tests against contract/, and one version in both.
+# packages' tests against contract/ (and the example bots in examples/bots,
+# which the Python tests load), and one version in both.
 name: sdks
 
 on:
   push:
     branches: [main]
-    paths: ["sdk/**", "contract/**", ".github/workflows/sdks.yml"]
+    paths: ["sdk/**", "contract/**", "examples/**", ".github/workflows/sdks.yml"]
   pull_request:
-    paths: ["sdk/**", "contract/**", ".github/workflows/sdks.yml"]
+    paths: ["sdk/**", "contract/**", "examples/**", ".github/workflows/sdks.yml"]
 
 permissions:
   contents: read

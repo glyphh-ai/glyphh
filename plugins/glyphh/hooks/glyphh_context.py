@@ -20,6 +20,8 @@ SERVER = (os.environ.get("GLYPHH_SERVER_URL") or "https://api.glyphh.ai").rstrip
 TIMEOUT = 4.0  # seconds; the hook's own timeout in hooks.json is longer
 PROMPT_MAX = 2000
 EVENTS = {"session": "SessionStart", "prompt": "UserPromptSubmit"}
+# Cloudflare in front of api.glyphh.ai refuses urllib's own User-Agent (error 1010, a 403), so the hook names itself
+USER_AGENT = "glyphh-hook/1.10.0"
 
 
 def token() -> str | None:
@@ -32,7 +34,12 @@ def token() -> str | None:
 
 def context(bearer: str, prompt: str | None) -> str:
     body = json.dumps({"prompt": prompt[:PROMPT_MAX]} if prompt else {}).encode()
-    headers = {"Authorization": f"Bearer {bearer}", "Content-Type": "application/json", "Accept": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {bearer}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+    }
     req = urllib.request.Request(f"{SERVER}/v1/me/glyphh/context", body, headers, method="POST")
     with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
         return str(json.load(res).get("context") or "")

@@ -2,6 +2,35 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.8.0
+
+Glyphh bots, in the Python package: programs that control a Claude agent, behind gates that learn. Nothing of 3.7
+changes; contract 5 still. The TypeScript package changes only its version.
+
+- `glyphh.bots`: a bot is a folder (`bot.json`, `agent.md`, `program.py`, `skills/*/SKILL.md`) in
+  `~/.glyphh/bots/<slug>/` (`GLYPHH_BOTS`). `Bot.load` checks a package whole and names every problem
+  (`BotError`, `E_BOT`, its `problems`): the loop's steps and targets, the gates' outcomes and specs, the program's
+  functions, skills, hosts, a routine's cron, Ada model names within 63 characters, and no bot that sends, pays or
+  deletes without an approval step.
+- `Runner`: the loop's `run` steps (program functions; `{"_end": why}` ends the run), `gate` steps (an Ada model of
+  the bot's own, `bot-<slug>-gate-<gate>`: Ada's call when it is sure, else the person's answer, kept as a
+  precedent), `agent` steps (`claude -p` with the bot's agent and nothing else: no tools, no MCP servers, no settings,
+  no session; the step's skill and the bot's memory before it: its `bot-<slug>-memory|instructions|personality`
+  models and the person's glyphh), and `approval` (the person's yes until the bot is trusted `autonomous`). Runs are
+  kept in the bot's `runs.sqlite`; a question in a routine stops the run `needs_input` and `resume` carries it on;
+  `wrong` records a gate's correction. Code steps get `ctx`: `http_json` (https, the bot's hosts only, its own
+  User-Agent), `db()`, `state`, `gate`, `log`, `today`.
+- `Orchestrator`: its own memory and gates (`orch-make-bot`, `orch-trust-bot`, `orch-keep-bot`), learning only from
+  the person's verdicts and the bots' records; `install`, `new` (make_bot, then a builder agent with Read and Write in
+  the new bot's folder, from `BUILDING.md`, an example bot and what earlier bots taught it; a bot that is not right,
+  or touches more than asked, is set aside in `.rejected/`), `review` and `verdict` (trust and keep), `status`, and
+  every run kept in its memory. A retired bot does not run.
+- The `glyphh` command: `glyphh bot init|check|install|new|run|continue|wrong|status|review|verdict|routine`, JSON on
+  stdout as every command; a failed run exits 1. `routine` installs a launchd job on a Mac and prints the cron line
+  elsewhere. The key is `GLYPHH_API_KEY`, else `~/.glyphh/bots/.env`, else the one `glyphh login` kept.
+- Examples in `examples/bots/`: `launch_watch`, `lab` (the orchestrator as a bot running experiments on how Claude
+  codes best, under a hard budget) and `coder` (each task to the cheapest model a learned gate says gets it done).
+
 ## 3.7.0
 
 Jobs can be stopped, and say what they are doing. Contract 5 still: both additions are additive.

@@ -8,6 +8,7 @@ mistake exits 2. It runs on an API key: GLYPHH_API_KEY, or the one `glyphh login
     glyphh import tickets history.csv --mapping '{"Plan": "ticket.what.plan", "Result": "outcome"}'
     glyphh decide tickets '{"ticket": {"what": {"plan": "pro", "text": "charged twice"}}}'
     glyphh record tickets @case.json --outcome refund
+    glyphh bot new "each morning, sum up the repo's new issues"      (bots: glyphh.bots)
 
 A JSON argument is the JSON itself, `@file` for a file's, or `-` for stdin's."""
 
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
 from . import __version__
+from .bots import cli as bots_cli
 from .client import Ada, AdaVersions, Decision, Job, Usage
 from .credentials import KEY_PREFIX, credentials_path, forget_key, read_key, save_key
 from .errors import AdaError
@@ -332,6 +334,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--quiet", "-q", action="store_true", help="no progress on stderr")
     p = cmd("cancel", cancel, "Stop a job: one not started at once, a running one at its next step", model_arg=False)
     p.add_argument("id", help="the job's id")
+
+    bots_cli.register(sub, _out)
     return top
 
 
@@ -348,7 +352,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     except KeyboardInterrupt:
         return 130
-    return 0
+    return int(getattr(a, "exit_code", 0))
 
 
 if __name__ == "__main__":
