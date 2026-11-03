@@ -10,9 +10,21 @@ that step's job, its skill and its memory, and takes the agent's answer as the s
 makes the bot what it is, and the program keeps it on its job. So a bot does the same job the same way each run: it
 doesn't drift, skip a step or approve itself, and every run leaves the same record.
 
+**Gates make it learn.** Between steps, the program asks **Ada** (Ada Cloud, `ada-cloud.md`): go on, skip, take this
+branch, ask the person, or call the agent. Each gate is an Ada model of the bot's own, answering from precedent: every
+time the person approves, refuses or corrects, and every time a run's outcome comes back, that is a new precedent.
+So a gate that asked the person on day one stops asking once its precedents agree, and a gate in front of an agent
+step answers from precedent the cases it has seen and calls Claude only on the new ones. The program stays the same
+code; what it does at each gate is learned. That is what no prompt or agent alone gives: a bot that gets surer and
+cheaper with every run, the reason for each choice readable as the precedents behind it.
+
+And because a bot is a package of plain files, a Claude agent can make one: the `bot` skill (§6) is Claude as the
+orchestrator's builder, writing the loop, its gates, the agent and the skills from what the person says the job is.
+
 | Part | What | Where it comes from |
 |---|---|---|
 | **Program** | The loop: its steps in order, code steps run directly and agent steps handed to Claude, approvals, limits | Packaged with the bot |
+| **Gates** | The program's decisions between steps, each an Ada model that learns from the person's answers and the runs' outcomes | Ada Cloud, made per bot at install |
 | **Agent** | Who does each agent step: its name, its system prompt, the tools it may use, its model | A Claude agent definition, packaged with the bot |
 | **Memory** | The bot's own personality, rules and memory, plus the person's glyphh read alongside | A template (`templates.md`), installed per bot |
 | **Skills** | `SKILL.md` files: how the agent does each kind of step | Packaged with the bot |
@@ -47,7 +59,8 @@ read. `bot.json` (unknown keys refused, as everywhere):
 | `clis` | `{name: {command, allow[globs], approvals[globs], env{"X":"secret:NAME"}}}`, the rrotor CLI block without `install`, `home` or `image`: the CLI is one already on the computer or in the cloud environment |
 | `hosts` | The HTTPS hosts the program's code reaches |
 | `secrets` | Names only (`^[A-Z][A-Z0-9_]{0,63}$`); values come from the environment (§5), never the package |
-| `loop` | The program's steps, `[{id, run|agent, ...}]`, below |
+| `loop` | The program's steps, `[{id, run|agent|gate, ...}]`, below |
+| `gates` | `{name: {spec, outcomes[], ask_below, seed[]}}`: each gate's Ada spec (what it reads of the run), its outcomes, the confidence under which it asks the person, and precedents to start from |
 | `routine` | `{cron?, tz?, on?}`: when it runs by itself; `on` is `webhook` or `pr` |
 | `limits` | `{seconds, agent_turns}`: a run's bounds, and each agent step's |
 
@@ -57,11 +70,14 @@ read. `bot.json` (unknown keys refused, as everywhere):
 "loop": [
   { "id": "numbers", "run": "numbers" },
   { "id": "keep", "run": "keep", "input": "$numbers" },
+  { "id": "worth", "gate": "worth_sending", "reads": ["$numbers", "$keep"],
+    "on": { "send": "summary", "skip": "end" } },
   { "id": "summary", "agent": "Write today's launch summary from $numbers against the last week in $keep.",
     "skill": "launch-summary", "schema": { "type": "string" }, "remember": true },
   { "id": "email", "agent": "Email $summary to the person through Gmail.", "approval": "email" }
 ]
 ```
+
 
 - **`run`** calls a function of `program.py`, `def name(ctx, inputs) -> Result`, the rrotor shape kept (`done`,
   `needs_input`, `needs_approval`, `failed`; `ctx.cli`, `ctx.http`, `ctx.checkpoint`, `ctx.data`, `ctx.secrets`,
@@ -72,6 +88,10 @@ read. `bot.json` (unknown keys refused, as everywhere):
   holding its shell, and `agent_turns` bounding it. With `schema`, the answer must match it (one retry, then the step
   fails); without, it is the agent's text. A `run` function can also call the agent itself, `ctx.agent(prompt,
   schema?)`, for judgment inside code.
+- **`gate`** asks the bot's Ada model `gates.<name>` to decide from what the step `reads`, and `on` sends the run to
+  the step its outcome names (`end` ends the run). Under `ask_below` confidence, or for a case unlike any precedent,
+  the person is asked instead, their answer recorded as a precedent, so the gate asks less as it learns. A gate's
+  answer carries the precedents behind it, kept with the run.
 - **`approval`** stops the program before the step for the person's yes. Someone at the session is asked; a routine
   nobody is watching stops there as `needs_approval` and the person is told (§3). The agent is never the one asked.
 - **`remember`** keeps the step's answer in the bot's memory (`when`: the step and the run).
@@ -87,6 +107,12 @@ and removing a bot deletes only its memory. Its `seed` is remembered at install.
 puts the agent's memory for that step (and, with `reads_glyphh`, the person's rules and personality) in front of it,
 through the same `POST /v1/me/glyphh/context`, now taking `bot` and `step` (§4). The program keeps each run's outcome
 in that memory too, so the next run's agent knows what the last one did and how it went.
+
+Each gate is an Ada model of its own (`me-<user hex>-bot-<slug>-gate-<name>`), made from its `spec` with its `seed`
+at install. The program records a precedent at every gate the person answered, every approval given or refused, and
+every run whose outcome the person corrects (`/bot wrong <slug> <step>`), with the outcome that should have been.
+`ada_backtest` and `ada_settings` tune a gate as any Ada model, and `glyphh bot gates <slug>` shows each one's
+precedents, how often it asked and how often it was overruled.
 
 ## 3. Running it
 
@@ -116,7 +142,7 @@ step and why, and `/bot continue <slug>` (or answering the push) carries it on f
 
 The connector gets `bots`, `bot`, `bot_save` and `bot_remove`, so Cowork and claude.ai can make and keep a bot without
 a shell, and the library gains bots Glyphh makes (`category: "bot"`), installed by copying the package into the
-person's own. Bots count against the plan's models (each bot's memory is three) and reads, like any template.
+person's own. Bots count against the plan's models (each bot's memory is three, plus one per gate) and reads, like any template.
 
 ## 5. Secrets and safety
 
@@ -130,7 +156,7 @@ person's own. Bots count against the plan's models (each bot's memory is three) 
 
 ## 6. The tools Glyphh ships
 
-- **The `bot` skill** (plugin): "make me a bot that…" interviews the person for the job, writes the loop, `agent.md`,
+- **The `bot` skill** (plugin): "make me a bot that…" interviews the person for the job, writes the loop and its gates, `agent.md`,
   the skills and any code, runs it once with them watching, then saves it and sets its routine.
 - **`glyphh bot`** (SDK 3.8): `new`, `run`, `continue`, `test` (the loop with a fake agent, CLIs and HTTP, rrotor's
   Harness kept), `pull`, `save`, `list`, `remove`.
@@ -141,7 +167,9 @@ person's own. Bots count against the plan's models (each bot's memory is three) 
 
 1. The package, `glyphh bot run` with agent steps through the Agent SDK, on the computer, with `launch_watch` ported as
    the first bot.
-2. Bot memory (`bot-memory` template, `context` with `bot` and `step`) and the server's `/v1/me/bots`.
+2. Gates on Ada Cloud (made at install, asked between steps, a precedent from every answer and correction), then bot
+   memory (`bot-memory` template, `context` with `bot` and `step`) and the server's `/v1/me/bots`; the benchmark is
+   `launch_watch`'s gate asking less, run after run.
 3. The `bot` skill and `/bot`; routines as cloud scheduled tasks; the push on `needs_approval`.
 4. Cowork (the bot as a Cowork plugin) and the connector's bot tools, then the library's Glyphh-made bots and the
    platform page.
