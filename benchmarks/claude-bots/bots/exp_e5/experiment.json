@@ -1,0 +1,19 @@
+{
+ "id": "e5",
+ "question": "Does Sonnet pass as many multifile tasks as Opus with the plain strategy?",
+ "arms": [
+  {
+   "strategy": "plain",
+   "model": "sonnet"
+  },
+  {
+   "strategy": "plain",
+   "model": "opus"
+  }
+ ],
+ "kinds": [
+  "multifile"
+ ],
+ "max_per_arm": 12,
+ "batch": 6
+}

@@ -7,6 +7,7 @@ judges' brief (`judge_prompt.md`), the published answers in `results/` and the s
 | Folder | What |
 |---|---|
 | [`banking77`](banking77) | Routing a bank customer's message to one of 77 intents from its text alone (Banking77, PolyAI, CC BY 4.0) |
+| [`claude-bots`](claude-bots) | A bot that learned which Claude model a coding task needs, then did new tasks for a twentieth of always-Opus's cost (hidden tests, 2026-11-03) |
 | [`credit`](credit) | Approving or refusing a loan from 20 typed fields, at the bank's own cost (German Credit, UCI Statlog, CC BY 4.0) |
 | [`issues`](issues) | GitHub issue triage, free text, Ada's weakest fit; kept for the record |
 | [`session`](session) | What a Claude Code turn needs from the turns before it, and what carrying all of them costs |
