@@ -1,13 +1,15 @@
 """The coder: does coding tasks, choosing for each the cheapest model that gets it done, from what the lab learned.
 
-Its gate `route` is an Ada model of which model is the cheapest that gets a task of this kind done. It starts from the
-lab's trials (the knowledge handed over: for each task the lab tried, the cheapest model that passed every time),
-and keeps learning from its own work: a task the chosen model fails goes to the next model up, and that is recorded,
-so the gate escalates next time on tasks like it. Where the gate isn't sure, it takes DEFAULT.
+Its loop's `work` step is a ladder (SDK 3.9): the gate `route` is an Ada model of which model is the cheapest that
+gets a task of this kind done; the runner starts each task on the rung the gate predicts (`start`, the middle one,
+while it is unsure), `attempt` runs a trial, `passed` reads its hidden tests, a failure goes one rung up, and the
+rung that passed is recorded, so the gate escalates next time on tasks like it. The gate starts from the lab's
+trials (`seed`: for each task the lab tried, the cheapest model that passed every time).
 
-Hard gates, in code: only the lab's models; at most one escalation chain per task (cheapest first); the lab's
-budget. The check that a task is done is its tests (here the lab's hidden tests; in real work, the project's own).
-Its queue is the lab's held-out tasks, which no experiment saw. It needs the lab installed beside it."""
+Hard gates, in code: only the lab's models; one climb per task (cheapest first); the lab's budget (`trials.py`), and
+each trial's cost reported with `ctx.spend`. The check that a task is done is its tests (here the lab's hidden tests;
+in real work, the project's own). Its queue is the lab's held-out tasks, which no experiment saw. It needs the lab
+installed beside it."""
 
 import json
 import sys
@@ -16,16 +18,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lab"))  # the lab, beside this bot
 import trials  # noqa: E402
 
-LADDER = ["haiku", "sonnet", "opus"]  # Claude Code's model aliases, cheapest first
-DEFAULT = "sonnet"
+LADDER = ["haiku", "sonnet", "opus"]  # Claude Code's model aliases, cheapest first: the route gate's outcomes
 
 
 def _case(task, key):
     return {"r": {"s": {"kind": task["kind"], "text": task["prompt"], "key": key}}}
 
 
-def route_case(ctx, data):  # the gate's case shape; the program asks and records the gate itself
-    return _case({"kind": "bugfix", "prompt": "example"}, "example")
+def route_case(ctx, task):
+    """The route gate's case for one task."""
+    return _case(task, f"{ctx.run_id}-{task['id']}")
 
 
 def seed(ctx, inputs):
@@ -50,34 +52,29 @@ def seed(ctx, inputs):
     return {"seeded": kept}
 
 
-def work(ctx, inputs):
-    """Every task in the queue: route, do, check; up the ladder on a failure, and learn from it."""
-    exp = f"bench-routed-{ctx.run_id}"
-    gate, done = ctx.gate("route"), []
-    for task in trials.tasks(root=trials.HELDOUT):
-        try:
-            d = gate.decide(_case(task, f"{ctx.run_id}-{task['id']}"))
-            p = max(d.probabilities.values()) if d.probabilities else 0
-            model, why = (DEFAULT, f"not sure (P {p:.2f}): the default") if d.ask or d.outcome not in LADDER \
-                else (d.outcome, f"P {p:.2f}")
-        except Exception:
-            model, why = DEFAULT, "no precedents: the default"
-        tried = []
-        for m in LADDER[LADDER.index(model):]:
-            r = trials.trial(exp, task, "plain", m)
-            tried.append({"model": m, "pass": r.get("pass"), "cost": r.get("cost")})
-            if r.get("pass"):
-                break
-        passed = [t["model"] for t in tried if t["pass"]]
-        if passed:
-            gate.record(_case(task, f"{ctx.run_id}-{task['id']}"), passed[0])  # what it took, learned
-        ctx.log(f"{task['id']}: routed {model} ({why}); tried {[(t['model'], t['pass']) for t in tried]}")
-        done.append({"task": task["id"], "routed": model, "why": why, "tried": tried})
-    return {"done": done}
+def queue(ctx, inputs):
+    """The tasks to do: the lab's held-out ones."""
+    found = trials.tasks(root=trials.HELDOUT)
+    if not found:
+        return {"_end": "no task in the queue"}
+    return {"items": found}
+
+
+def attempt(ctx, rung, task):
+    """One trial of the task on this rung's model, its cost counted against the bot's spend."""
+    r = trials.trial(f"bench-routed-{ctx.run_id}", task, "plain", rung)
+    if r.get("cost"):
+        ctx.spend(r["cost"], f"trial {task['id']} {rung}")
+    return r
+
+
+def passed(ctx, rung, result, task):
+    """Did it work: the task's hidden tests passed (a trial the budget skipped did not)."""
+    return bool(result.get("pass")) and "skipped" not in result
 
 
 def report(ctx, inputs):
     out = ctx.dir / "out"
     out.mkdir(exist_ok=True)
-    (out / f"{ctx.run_id}.json").write_text(json.dumps(inputs, indent=1))
+    (out / f"{ctx.run_id}.json").write_text(json.dumps(inputs, indent=1, default=str))
     return {"path": str(out / f"{ctx.run_id}.json")}

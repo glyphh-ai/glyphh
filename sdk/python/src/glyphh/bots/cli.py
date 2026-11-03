@@ -73,16 +73,40 @@ def register(sub: Any, out: Out) -> None:
     p = cmd("run", "One run of a bot's loop", lambda a: orchestrator(a).runner(a.slug).run(routine=a.routine))
     p.add_argument("slug")
     p.add_argument("--routine", action="store_true", help="nobody watching: a question stops the run")
-    p = cmd("continue", "Carry on the bot's run that waits, with the answer to its question",
-            lambda a: orchestrator(a).runner(a.slug).resume(a.answer))
+    p = cmd("continue", "Carry on the bot's run that waits, with the answer to its question (or its batch's answers)",
+            lambda a: orchestrator(a).runner(a.slug).resume(_answer(a.answer)))
     p.add_argument("slug")
-    p.add_argument("answer", nargs="?", help="one of the question's options (asked here when left out)")
-    p = cmd("wrong", "A gate decided a run wrong: record what it should have been",
-            lambda a: orchestrator(a).runner(a.slug).wrong(a.run_id, a.outcome, a.gate))
+    p.add_argument("answer", nargs="*",
+                   help="one of the question's options; for a batch of items N=outcome for each (1=read 2=skip, "
+                        "rest=skip) or a JSON map; asked here when left out")
+    p = cmd("wrong", "A gate decided a run (or one item of it) wrong: record what it should have been",
+            lambda a: orchestrator(a).runner(a.slug).wrong(a.run_id, a.outcome, a.gate, a.item))
     p.add_argument("slug")
-    p.add_argument("run_id", metavar="run")
+    p.add_argument("run_id", metavar="run", help="the run's id, or last")
     p.add_argument("outcome")
     p.add_argument("--gate", help="which gate, when the run passed several")
+    p.add_argument("--item", help="which item of a per-item gate: its number in the run, or its key")
+    p = cmd("outcome", "What really happened to a case a gate decided (a world-answered gate): kept as a precedent",
+            _outcome)
+    p.add_argument("slug")
+    p.add_argument("run_id", metavar="run", help="the run's id, or last")
+    p.add_argument("gate")
+    p.add_argument("rest", nargs="+", metavar="[item] outcome", help="the item (its number or key) when the gate "
+                   "decided several, then the outcome")
+    p = cmd("pause", "The kill switch: the bot refuses to run, its routine included, until resume",
+            lambda a: orchestrator(a).runner(a.slug).pause(a.why or ""))
+    p.add_argument("slug")
+    p.add_argument("--why", help="why, kept with the pause")
+    p = cmd("resume", "Let a paused bot run again", lambda a: orchestrator(a).runner(a.slug).unpause())
+    p.add_argument("slug")
+    p = cmd("gates", "Each gate's record: precedents, Ada's calls and the person's, ask rate, audits, overrules",
+            lambda a: orchestrator(a).runner(a.slug).gates(a.runs))
+    p.add_argument("slug")
+    p.add_argument("--runs", type=int, default=10, help="the last N runs the ask rate is read over (default 10)")
+    p = cmd("report", "Write the bot's report.html (its last run's decisions, the ask rate run by run, its gates)",
+            lambda a: orchestrator(a).runner(a.slug).report(a.runs))
+    p.add_argument("slug")
+    p.add_argument("--runs", type=int, default=30, help="the last N runs it shows (default 30)")
     p = cmd("status", "The orchestrator and every bot; with a slug, that bot's gates, memory and last runs", _status)
     p.add_argument("slug", nargs="?")
     p = cmd("review", "trust_bot and keep_bot for every bot, from its record", _review)
@@ -96,6 +120,20 @@ def register(sub: Any, out: Out) -> None:
             lambda a: install_routine(orchestrator(a).bot(a.slug), remove=a.remove))
     p.add_argument("slug")
     p.add_argument("--remove", action="store_true", help="take the routine away")
+
+
+def _answer(words: List[str]) -> Any:
+    """`continue`'s answer: none (asked at the terminal), one word, or a batch's N=outcome words."""
+    if not words:
+        return None
+    return words[0] if len(words) == 1 else list(words)
+
+
+def _outcome(a: argparse.Namespace) -> Any:
+    if len(a.rest) > 2:
+        raise BotError("outcome takes [item] outcome: at most two words after the gate")
+    item, outcome = (a.rest[0], a.rest[1]) if len(a.rest) == 2 else (None, a.rest[0])
+    return orchestrator(a).runner(a.slug).outcome(a.run_id, a.gate, item, outcome)
 
 
 def _check(a: argparse.Namespace) -> Any:

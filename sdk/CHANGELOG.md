@@ -2,6 +2,58 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.9.0
+
+Bots' gates: a bot's program holds the hard gates (code and `limits`, never learned, never overridden) and calls
+learned gates (Ada models) for the judgment calls, each learning only from the person's answers, corrections and real
+outcomes. Everything is declared in bot.json, enforced by the runner and checked when a package loads. Bots of 3.8
+load and run as before; a run waiting from 3.8 carries on. Contract 5 still; the TypeScript package changes only its
+version.
+
+- **Per-item gates**: a `gate` step with `"each": "$step.path"` decides every item of a list (the gate's `case`
+  function gets one item; `ctx.data` is the run's data). The items Ada is sure of are decided at once; the unsure
+  ones are asked as one batch a run: one by one at a terminal, or (in a routine, with no terminal) the run stops
+  `needs_input` with `batch` and `answer_with`, and `resume` / `glyphh bot continue SLUG 1=read 2=skip rest=skip`
+  (or a JSON map, or interactively) answers them all. Every answer is a precedent. The step's data is a list per
+  outcome (`$worth.read`) plus `decisions` (each item's outcome, who decided, P, Ada's guess, agreement) and counts;
+  `on` routes after the loop (`empty:<o>`, `any:<o>`, `all:<o>`, `else`). `$id.path` now reads into a step's data
+  everywhere (`input`, prompts, `each`).
+- **Asking policy per gate** (`Policy`, `Call`): `ask_below` (overrides the spec's, and is written into it at
+  install), `min_precedents`, `audit` (a steady share of Ada's sure calls still asked: agreement or overrule),
+  `shadow` (always asked, agreement measured), `max_questions` a run (the rest take `default`, or wait for the next
+  run), `default` (never kept as a precedent). Single gates take the same policy.
+- **World-answered gates** (`"world": true`): the case is kept, the person's call meanwhile is not recorded, and
+  `Runner.outcome` / `glyphh bot outcome SLUG RUN|last GATE [ITEM] OUTCOME` / `ctx.gate(g).record_outcome(outcome,
+  item)` records what really happened (an overrule where Ada had decided otherwise). `ctx.gate(name)` is now a
+  `Gate`: `decide(case, item=None)` (a `Call` under the gate's policy, with the Ada Decision's `outcome`, `ask` and
+  `probabilities`), `record(case, outcome)`, `record_outcome`, and the model's own calls.
+- **Ladders**: a `ladder` step (`try`, `check`, `start`, `on_fail`, optionally `each`): the gate's outcomes are rungs,
+  cheapest first; it starts on the cheapest the gate predicts will work, climbs on a failed check, and records the
+  rung that worked. The `coder` example now runs on one.
+- **Learned approvals and trust**: an approval step may name an `approval_gate` (outcomes yes and no) that learns the
+  person's yes and no; it stands in only when it is sure and trust allows, and every answer is kept. Trust now means
+  what it says: `ask_all` asks every approval, `ask_outward` only steps that send, pay or delete (a step's own
+  `touches`, default the bot's), `autonomous` none, but never a pay or a delete without a sure approval gate.
+- **Agent output gates**: an agent step's `schema` (a JSON Schema subset) and `check` (a program function); a wrong
+  answer is sent back once with what is wrong, then the run fails. The step's data is the JSON.
+- **Hard limits**: `usd_per_run` and `usd_per_day` (from `claude -p`'s `total_cost_usd`, now read by
+  `Claude.answer`, and `ctx.spend(usd)`; `ctx.budget()`): a step that would pass one ends the run; `runs_per_day`
+  and `quiet_hours` (routine runs) answer `skipped`; `max_items` caps a list; `requires` on any step (a small safe
+  expression: comparisons, and/or/not, `len()`, numbers, strings, `$id.path`; no eval) skips it or, with
+  `"otherwise": "end"`, ends the run. Malformed limits, policies and steps are refused at load, each said.
+- **The kill switch**: `Runner.pause` / `unpause`, `glyphh bot pause SLUG [--why W]` and `glyphh bot resume SLUG`: a
+  paused bot refuses to run, its routine and `continue` included; `status` says it.
+- **Visibility**: `glyphh bot gates SLUG [--runs N]` (`gate_stats`): per gate, precedents, policy, decisions by Ada
+  vs the person and defaults, the ask rate overall and run by run, audit and shadow agreement, overrules (wrong,
+  audit, world), world outcomes waiting, ladders' escalations. `glyphh bot report SLUG` (`write_report`) writes a
+  self-contained dark `report.html` in the bot's folder: the last gated run's items with each decision, who made it
+  and P; asked you N, decided M by itself, you overruled K; the ask rate run by run as an inline SVG sparkline; the
+  gates' records; links to what the bot made in `out/`. `wrong` takes `--item` and `last`.
+- **The demo bot**, `examples/bots/hn_reader`: Hacker News's front page (hn.algolia.com), a per-item gate `worth`
+  (read or skip, from title, site, kind, points, comments and age) asking at most 10 unsure stories a run, a digest
+  held to a `check` (every kept story linked), `out/digest.md`, hard limits. The orchestrator's builder now gets it
+  as a second example, and `BUILDING.md` says which gate suits which job.
+
 ## 3.8.0
 
 Glyphh bots, in the Python package: programs that control a Claude agent, behind gates that learn. Nothing of 3.7

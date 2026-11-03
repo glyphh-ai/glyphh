@@ -8,12 +8,21 @@ import json
 import os
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from .package import BotError
 
 Run = Callable[..., "subprocess.CompletedProcess[str]"]
+
+
+@dataclass
+class Answer:
+    """What an agent step said, and what it cost in US dollars."""
+
+    text: str
+    cost_usd: float = 0.0
 
 
 class Claude:
@@ -46,6 +55,12 @@ class Claude:
 
     def agent(self, name: str, definition: Mapping[str, Any], prompt: str, *, turns: int = 3, seconds: int = 300) -> str:
         """One agent step: the bot's agent answers the prompt, with nothing else before it."""
+        return self.answer(name, definition, prompt, turns=turns, seconds=seconds).text
+
+    def answer(
+        self, name: str, definition: Mapping[str, Any], prompt: str, *, turns: int = 3, seconds: int = 300
+    ) -> "Answer":
+        """One agent step, with what it cost (`total_cost_usd`, as `claude -p` reports it; 0 when it says none)."""
         args = [
             "-p",
             "--agents",
@@ -64,7 +79,12 @@ class Claude:
             str(turns),
             prompt,
         ]
-        return str(self._call(args, Path(tempfile.gettempdir()), seconds).get("result") or "").strip()
+        got = self._call(args, Path(tempfile.gettempdir()), seconds)
+        try:
+            cost = float(got.get("total_cost_usd") or 0.0)
+        except (TypeError, ValueError):
+            cost = 0.0
+        return Answer(str(got.get("result") or "").strip(), max(0.0, cost))
 
     def build(self, prompt: str, folder: Path, *, turns: int = 20, seconds: int = 900) -> str:
         """The builder: Claude writes a bot's files into `folder` (Read and Write only, edits there accepted)."""
