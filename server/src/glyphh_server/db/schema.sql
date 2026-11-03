@@ -413,6 +413,7 @@ CREATE TABLE IF NOT EXISTS template_installs (
     user_id UUID NOT NULL,
     slug TEXT NOT NULL,
     version INTEGER NOT NULL,
+    made TEXT[] DEFAULT '{}'::text[] NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,

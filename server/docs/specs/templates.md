@@ -1,6 +1,6 @@
 # Templates: build your glyphh
 
-A template is a bundle a person installs for themselves: Ada models made from one spec, the tools it adds to that
+A template is a bundle a person installs for themselves: Ada models made from its specs, the tools it adds to that
 person's own connector (never their org's), what a hook puts before an AI, and the instructions an AI without hooks
 follows. The first, **Agentic memory**, is a person's glyphh: what any AI they use knows about them, the rules they have
 given it and the personality it has grown with them, kept as their own Ada models and carried from one AI to the next.
@@ -16,8 +16,8 @@ is retired (`active` false), never deleted, and its installs keep working. A tem
 | Field | What |
 |---|---|
 | `slug`, `name`, `category`, `version`, `summary` | What the library shows |
-| `spec` | The Ada spec every one of its models is made from |
-| `models` | `{key, title, about}` each: one Ada model per key, the person's own |
+| `spec` | The Ada spec its models are made from |
+| `models` | `{key, title, about, spec?}` each: one Ada model per key, the person's own, made from its own `spec` when it has one |
 | `tools` | `{name, title, op, description, kinds?}` each: a tool on the person's connector, one of the ops below over the models named by `kinds` (all, when left out); every name starts `glyphh_` |
 | `context` | `session` and `prompt`, each `[{kind, top}]`: what a hook puts before an AI at a session's start (a kind's newest) and with each prompt (a kind's closest to it) |
 | `instructions` | How an AI uses it, added to the connector's instructions for the person who installed it |
@@ -47,7 +47,36 @@ Agentic memory keeps three kinds: `memory` (facts about the person), `instructio
 (how to be with them), with `glyphh_remember`, `glyphh_recall`, `glyphh_personality`, `glyphh_instructions` and
 `glyphh_forget`.
 
-## 3. The connector
+Three more ops make bots of a template (`ops/templates/bots.py`), each over the install's own models alone: the
+template's (by key, within the tool's `kinds`) and the ones it made (by name, or either by its whole name); any other
+model is `E_NOT_FOUND`.
+
+| Op | Arguments | Does |
+|---|---|---|
+| `make` | `name` (`^[a-z][a-z0-9-]{0,40}$`, within a model name's 63 characters), `spec` | Makes `me-<hex>-<slug>-<name>` from `spec`, checked by the kernel as an install's models are; one already there is kept and answered (`made` false). At most 60 per install (`E_LIMIT`); kept in `template_installs.made`, so removing the template deletes them too. A template's own key is `E_CONFLICT` |
+| `decide` | `model`, `data` | The Ada decide: `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts` |
+| `record` | `model`, `data`, `outcome` | Records a precedent there |
+
+## 3. The Orchestrator
+
+**Orchestrator** (`orchestrator`, category Bots) is a person's Claude orchestrator: it makes Claude bots for the jobs they do again and again, each with Ada gates that learn, and learns itself from
+every bot. It keeps Agentic memory's three kinds for itself (`glyphh_orchestrator_remember`, `_recall`, `_forget`;
+a session's start gets its rules and personality, each prompt its memory of bots and runs) and three gates of its own,
+each with its own spec over `{"case": {"bot": {...}}}`:
+
+| Gate | Reads | Outcomes (the costliest mistake) | `ask_below` |
+|---|---|---|---|
+| `make_bot` | `job` (words), `recurs_per_week` 0..50, `touches` (`read_only`, `drafts`, `sends`, `pays`, `deletes`), `similar_bots` 0..20 | `make`, `not_yet`, `no` (making a harmful bot) | 0.7 |
+| `trust_bot` | `bot` (words), `runs` 0..500, `ask_pct`, `overruled_pct` 0..100, `touches` | `autonomous`, `ask_outward`, `ask_all` (granting autonomous wrongly) | 0.8 |
+| `keep_bot` | `bot` (words), `runs_30d`, `done_pct`, `failed_pct`, `overruled_pct`, `days_since_useful` | `keep`, `fix`, `retire` (retiring a useful bot) | 0.7 |
+
+`glyphh_bot_model` (make) makes each bot's own gates, `glyphh_bot_decide` (decide) asks one and `glyphh_bot_record`
+(record) teaches one. Its instructions: ask `make_bot` before making a bot (and the person when it says ask), make each
+bot's gates, keep every run's outcome in memory, record gate precedents only from the person's verdicts and real
+outcomes (never its own guesses), and let no bot act outward without the person's yes until `trust_bot` says so and
+they agree.
+
+## 4. The connector
 
 With Ada Cloud on, the connector offers `templates` (`q`), `template` (`slug`), `template_install` (`slug`) and
 `template_remove` (`slug`, `confirm` the slug again), and `tools/list` adds the tools of every template the person has
@@ -56,7 +85,7 @@ sees new tools when it lists them again (reconnecting). A template's tool waits 
 request's transaction has ended, as the other Ada tools do. Two templates may not add the same tool (`E_CONFLICT`
 naming them).
 
-## 4. The API
+## 5. The API
 
 | Call | Does |
 |---|---|
@@ -66,7 +95,7 @@ naming them).
 | `DELETE /v1/templates/{slug}/install` | Removes it, its models deleted; `E_NOT_FOUND` when not installed |
 | `POST /v1/me/glyphh/context` | `{prompt?}` → `{context}`: the hooks' text, a session's start without a prompt, what bears on it with one; `""` when there is nothing |
 
-## 5. The plugin and the platform
+## 6. The plugin and the platform
 
 The `glyphh` plugin's `SessionStart` and `UserPromptSubmit` hooks call `POST /v1/me/glyphh/context` with the install's
 token and put the answer in Claude's context, so Claude starts each session with the person's personality and rules

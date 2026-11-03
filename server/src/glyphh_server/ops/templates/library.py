@@ -1,8 +1,9 @@
 """The template library (docs/specs/templates.md): what a template is, the ones Glyphh ships (library/*.json, read
 once), and seeding them into `templates` at every start, a new version replacing the row. A template is a bundle a
-person installs for themselves: Ada models made from one spec, the tools it adds to that person's connector (each one
-of the ops in ops/templates/glyphh.py over those models), what a hook puts in an AI's context, and the instructions an
-AI without hooks follows. A template no longer shipped is retired, never deleted: its installs keep working."""
+person installs for themselves: Ada models made from its spec (or a model's own), the tools it adds to that person's
+connector (each one of the ops in ops/templates/glyphh.py and bots.py over those models), what a hook puts in an AI's
+context, and the instructions an AI without hooks follows. A template no longer shipped is retired, never deleted: its
+installs keep working."""
 
 import json
 from pathlib import Path
@@ -17,7 +18,8 @@ from glyphh_server.models import Template
 
 LIBRARY: Path = Path(__file__).with_name("library")
 KEY: str = r"^[a-z][a-z0-9_]{0,15}$"
-Op = Literal["remember", "recall", "list", "forget"]
+Op = Literal["remember", "recall", "list", "forget", "make", "decide", "record"]
+READS: frozenset[str] = frozenset({"recall", "list", "decide"})  # the ops that change nothing
 
 
 class Strict(BaseModel):
@@ -28,6 +30,7 @@ class ModelPart(Strict):
     key: str = Field(pattern=KEY)
     title: str
     about: str
+    spec: dict[str, Any] | None = None  # this model's own Ada spec; None: the template's
 
 
 class ToolPart(Strict):
@@ -62,6 +65,10 @@ class Body(Strict):
 
     def kinds(self, tool: ToolPart) -> list[str]:
         return tool.kinds or [m.key for m in self.models]
+
+    def spec_of(self, part: ModelPart) -> dict[str, Any]:
+        """The spec a model is made from: its own, else the template's."""
+        return part.spec if part.spec is not None else self.spec
 
 
 def shipped() -> tuple[Body, ...]:

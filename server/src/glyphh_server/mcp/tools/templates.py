@@ -10,7 +10,7 @@ from glyphh_server.errors import Conflict
 from glyphh_server.mcp.tools.base import Context, Done, Tool
 from glyphh_server.ops.templates import installs, run
 from glyphh_server.ops.templates.installs import TemplateView
-from glyphh_server.ops.templates.library import Body
+from glyphh_server.ops.templates.library import READS, Body
 
 SLUG = Field(pattern=r"^[a-z][a-z0-9-]{0,30}$", description="The template's slug (templates lists them)")
 
@@ -98,14 +98,23 @@ TOOLS: tuple[Tool, ...] = (
 DETACHED: frozenset[str] = frozenset({"template_install", "template_remove"})
 
 
-def _tool(body: Body, part: Any) -> Tool:
+def _over(body: Body, part: Any) -> str:
+    """What a tool works over, after its description: a make is over no model yet."""
     kinds = ", ".join(body.kinds(part))
-    description = f"{part.description} Kinds: {kinds}. From your {body.name} template."
+    if part.op == "make":
+        return ""
+    if part.op in ("decide", "record"):
+        return f" Models: {kinds}, and the ones it made."
+    return f" Kinds: {kinds}."
+
+
+def _tool(body: Body, part: Any) -> Tool:
+    description = f"{part.description}{_over(body, part)} From your {body.name} template."
 
     async def handler(ctx: Context, args: Any) -> Done:
         return Done(*await run.run(ctx.ada, ctx.who, body, part, args))
 
-    return Tool(part.name, part.title, description, run.ARGS[part.op], handler, part.op not in ("remember", "forget"))
+    return Tool(part.name, part.title, description, run.ARGS[part.op], handler, part.op in READS)
 
 
 def mine(bodies: list[Body]) -> dict[str, Tool]:

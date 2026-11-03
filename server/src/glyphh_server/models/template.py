@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, func, text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -36,4 +36,6 @@ class TemplateInstall(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     slug: Mapped[str] = mapped_column(ForeignKey("templates.slug", ondelete="CASCADE"))
     version: Mapped[int] = mapped_column(Integer)  # the template's version when installed
+    # the models its `make` op made for the person (ops/templates/bots.py), by name: deleted with the install
+    made: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))
     created_at: Mapped[datetime] = created_at()
