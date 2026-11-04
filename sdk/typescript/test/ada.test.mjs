@@ -118,7 +118,7 @@ test("the contract is 5, the SDK's, and every fixture's refusal is a code it nam
   assert.equal(contract.contract, 5);
   assert.equal(fixtures.contract, 5);
   assert.equal(SUPPORTED_CONTRACT, 5);
-  const names = ["decision", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"];
+  const names = ["decision", "beam", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"];
   for (const name of names) assert.ok(contract[name], name);
   for (const c of fixtures.cases) {
     if (c.response.status >= 400) assert.ok(contract.codes.includes(c.response.body.error.code), c.name);
@@ -156,6 +156,28 @@ test("a decision from /v1/decide reads as 3.0's Result too", async () => {
   assert.deepEqual(d.facts, body.facts);
   assert.equal(d.status, "done");
   assert.deepEqual(d.data, body);
+});
+
+test("a beam chains models and is a read", async () => {
+  const c = byName("a beam");
+  const { ada, calls } = fake(answered(c.name));
+  const sent = c.request.body;
+  const b = await ada.beam(sent.start, sent.hops, { width: 5, values: ["billing", "fraud", "support"], miss: 0.1, clearance: 0.5 });
+  assert.deepEqual(calls[0].body, sent);
+  assert.equal(calls[0].path, "/v1/beam");
+  const body = c.response.body;
+  assert.deepEqual([b.outcome, b.p, b.ends, b.lost, b.ada], ["billing", 0.78, body.ends, 0.04, "ada-1-0"]);
+  assert.deepEqual(b.paths, body.paths);
+  assert.equal(b.paths[0].steps[0], sent.start);
+  assert.deepEqual(b.hops.map((h) => h.model), ["tickets", "routing"]);
+  assert.deepEqual(b.data, body);
+  const none = fake([200, { outcome: null, p: 0, ends: {}, paths: [], lost: 1, hops: [{ model: "tickets", version: 1 }], ada: "ada-1-0" }]);
+  const empty = await none.ada.beam("card lost", [{ model: "tickets", role: "t.s.text" }]);
+  assert.deepEqual(none.calls[0].body, { start: "card lost", hops: [{ model: "tickets", role: "t.s.text" }] });
+  assert.deepEqual([empty.outcome, empty.p, empty.ends, empty.paths, empty.lost], [null, 0, {}, [], 1]);
+  const refused = byName("a beam through a model the key does not own");
+  const r = fake(answered(refused.name));
+  await assert.rejects(r.ada.beam("card lost", refused.request.body.hops), (e) => e instanceof ModelMissingError && e.status === 404);
 });
 
 test("a decision that asks, and one of several outputs", async () => {

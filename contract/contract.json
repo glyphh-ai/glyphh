@@ -2,7 +2,7 @@
   "contract": 5,
   "headers": {
     "Glyphh-Contract": "On every answer of the Ada host: the contract it speaks (5). A client that speaks an older one fails, asking to be upgraded, rather than read shapes it does not know",
-    "Glyphh-Ada": "On every answer about one model (its info, versions, decide and every read): the Ada version its active version runs, e.g. ada-1-0",
+    "Glyphh-Ada": "On every answer about one model (its info, versions, decide and every read): the Ada version its active version runs, e.g. ada-1-0. On a beam (POST /v1/beam, a chain of models), the last hop's model's",
     "Glyphh-Ada-Notice": "When the model runs a deprecated Ada version, or was just moved off a retired one: `<kind>: <message>`, kind deprecated or moved. The SDKs warn with it"
   },
   "ada_versions": {
@@ -206,6 +206,45 @@
           "author": { "type": ["string", "null"] }
         }
       }
+    }
+  },
+  "beam": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Beam",
+    "description": "What POST /v1/beam {start, hops: [{model, role, fixed?, output?}], width?, values?, miss?, clearance?} answers: a chain of models, one model's outcome the next model's question. The beam starts with start holding mass 1; each hop asks its model about every value the beam holds (the value placed in the hop's role, layer.segment.role, the fixed roles beside it) and passes each value's mass on by the model's calibrated probabilities, summing where paths meet. With values and miss (0..1, default 0), a model that does not know passes miss of the hop's mass evenly over values, all of it when it has nothing to say; without values such a path ends and its mass is lost. After every hop but the last only the width (default 10) heaviest values are kept. outcome is the heaviest end and p its share of the mass that arrived (null and 0.0 when none); ends is every end's share; paths has each end's likeliest single path, best first, its steps starting at start and trail_p that path's own share; lost is the mass that arrived nowhere; hops names each model and the version that answered. A read: one read per hop against the plan's month",
+    "type": "object",
+    "required": ["outcome", "p", "ends", "paths", "lost", "hops", "ada"],
+    "properties": {
+      "outcome": { "type": ["string", "null"] },
+      "p": { "type": "number", "minimum": 0, "maximum": 1 },
+      "ends": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+      "paths": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["value", "p", "trail_p", "steps"],
+          "properties": {
+            "value": { "type": "string" },
+            "p": { "type": "number", "minimum": 0, "maximum": 1 },
+            "trail_p": { "type": "number", "minimum": 0, "maximum": 1 },
+            "steps": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          }
+        }
+      },
+      "lost": { "type": "number", "minimum": 0, "maximum": 1 },
+      "hops": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["model", "version"],
+          "properties": {
+            "model": { "type": "string" },
+            "version": { "type": "integer", "minimum": 1 }
+          }
+        }
+      },
+      "ada": { "type": "string", "description": "The Ada version of the last hop's model, as the Glyphh-Ada header carries it" }
     }
   },
   "job": {

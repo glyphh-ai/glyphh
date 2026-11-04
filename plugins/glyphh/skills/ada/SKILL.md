@@ -31,6 +31,7 @@ with Google or GitHub. Its Ada tools:
 | `ada_job_cancel {id}` | Stop a job the user wants stopped: one not started ends at once, a running one at its next step; it ends failed, `E_CANCELLED`, its message saying what of its work stays (tell the user that part) |
 | `ada_learn {name}`, `ada_calibrate {name}` | Weigh the roles from the precedents, then calibrate; calibrate alone. Jobs |
 | `ada_decide`, `ada_query`, `ada_probabilities`, `ada_facts` `{name, data, ...}` | Ask |
+| `ada_beam {start, hops, width?, values?, miss?}` | Ask several models in a row: one model's outcome is the next model's question (below) |
 | `ada_backtest {name, candidates, holdout?, ada?}` | Score the live version and candidates on held-out cases, the live model untouched; `ada` (or a candidate's own `ada`) scores on another Ada version. A job |
 | `ada_settings {name, changes?, note?, backtest?}` | Every lever; with changes, a new version |
 | `ada_versions {name}`, `ada_activate {name, version}` | A model's versions, who made them and why, and the Ada version each runs; roll back |
@@ -103,6 +104,27 @@ what is new, and do not guess at fields you do not know.
 `ada_query` is the raw vote, `{sufficient, confidence, support, count, top, outcomes, receipts}`: trust `top` only
 when `sufficient` and `count` is more than one or two; `confidence` is a similarity-weighted vote, not a
 probability. A caller with a lower `clearance` sees less: secured roles are cut from what it reads.
+
+### Chaining models: the beam
+
+`ada_beam {start, hops, width?, values?, miss?}` is for a question that takes several models in a row: a state
+machine of gates (one model says which state comes next, the next model what to do in that state), or a pipeline
+where one model's answer is the next model's input (a kind model, then a team model that routes by the kind). Each
+hop is `{model, role: "layer.segment.role", fixed?: {role: value}, output?}`: the value the beam holds is placed in
+`role`, the `fixed` roles are given beside it, and `output` picks which named output passes the mass on. The beam
+starts with `start` holding all the mass; each hop asks its model about every value the beam holds and passes the
+value's mass on by the model's calibrated probabilities, summing where paths meet; after every hop but the last only
+the `width` (default 10) heaviest values are kept. `values` with `miss` (0..1, default 0) lets the chain pass
+through a model that does not know: `miss` of the hop's mass spreads evenly over `values`, all of it when the model
+has nothing to say. Without `values` such a path ends and its mass is lost.
+
+It answers `{outcome, p, ends, paths, lost, hops, ada}`: `outcome` is the heaviest end and `p` its share of the
+mass that arrived (null and 0.0 when nothing arrived); `ends` is every end's share; `paths` has each end's likeliest
+single path, best first, its `steps` from `start` and `trail_p` that path's own share (lower than the end's `p` when
+several paths meet there); `lost` is the mass that arrived nowhere (a high `lost` means a model in the chain does
+not know the values it was handed: say so, and suggest `values` and `miss` or more precedents); `hops` names each
+model and the version that answered. Tell the user the outcome, its `p`, the best path's steps, and what was lost.
+A beam counts as one read per hop against the plan's month.
 
 What to expect: on a public credit data set (800 cases learned, 200 held out) the learned, calibrated model matched
 Claude judging the same cases on accuracy and on the bank's cost, deterministically, at a tiny fraction of the cost
@@ -178,15 +200,26 @@ from glyphh import Ada                      # pip install glyphh
 d = Ada().decide("tickets", {"ticket": {"what": {"plan": "pro", "text": "charged twice"}}})
 if d.ask: send_to_a_person(d)               # d.outcome is the best guess
 else: act(d.outcome)
+
+b = Ada().beam("charged twice", [            # a chain: the kind model, then the team model (SDK 3.10)
+    {"model": "kinds", "role": "ticket.what.text", "fixed": {"ticket.what.plan": "pro"}},
+    {"model": "teams", "role": "ticket.what.kind"},
+], width=5)
+route(b.outcome, b.p, b.paths[0]["steps"])  # the heaviest end, its share, the likeliest path to it
 ```
 
 ```ts
 import { Ada } from "@glyphh-ai/glyphh";   // npm i @glyphh-ai/glyphh
 
 const d = await new Ada().decide("tickets", { ticket: { what: { plan: "pro", text: "charged twice" } } });
+const b = await new Ada().beam("charged twice", [
+  { model: "kinds", role: "ticket.what.text", fixed: { "ticket.what.plan": "pro" } },
+  { model: "teams", role: "ticket.what.kind" },
+], { width: 5 });
 ```
 
-Or `POST https://ada.glyphh.ai/v1/decide {model, data}` with `Authorization: Bearer <key>`. The SDKs also make
+Or `POST https://ada.glyphh.ai/v1/decide {model, data}` and `POST https://ada.glyphh.ai/v1/beam {start, hops,
+width?, values?, miss?}` with `Authorization: Bearer <key>`. The SDKs also make
 models, import files, backtest, tune and export, with typed errors (`LimitError`, `SpecReadingError`, ...), and know
 Ada versions (3.3 and later): `ada.ada.versions()`, `create_model(..., ada=)`, `model.info().ada`,
 `backtest(ada=)`, `upgrade(ada=)`, a warning when a model runs a deprecated Ada, and `ClientTooOldError` when the
@@ -197,8 +230,8 @@ server is newer than the SDK (upgrade it).
 Precedents are counted across the org's models, against the plan: Free 1,000, Basic 10,000, Pro 100,000, Team 1,000,000. A write
 or import past it is refused whole (`E_LIMIT`, `reason: "precedents"`, with `used` and `max`); an import with
 `partial` records up to the cap. Tell the user nothing was recorded past it and that a plan with a higher cap lifts
-it (`plan` and `upgrade` on the connector). Reads (`decide`, `query`, `probabilities`, `facts`; a decide per output)
-count against the plan's month (Free 5,000, refused past it with `E_LIMIT` `reason: "requests"`; Basic
+it (`plan` and `upgrade` on the connector). Reads (`decide`, `query`, `probabilities`, `facts`; a decide per output;
+a beam, one read per hop) count against the plan's month (Free 5,000, refused past it with `E_LIMIT` `reason: "requests"`; Basic
 50,000, Pro 1,000,000 and Team 5,000,000 go on past theirs, metered), and calls a second against its rate (`E_RATE`, wait as `Retry-After` says). A model over 100,000 precedents asked with under half its voting roles is
 refused (`E_FEW_ROLES`): ask with more of the case. A spec is at most 64 KB, 64 roles, 20 named outputs, 200 values
 an output, `k` 200, `dimension` 8,192. `ada_export` gives everything back (precedents, every spec version, what was

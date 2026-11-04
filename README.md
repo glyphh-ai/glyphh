@@ -19,7 +19,8 @@ stay as they are.
 **Ada Cloud is Ada as an API.** You describe your cases once as a JSON spec, load your history, and ask: every
 answer is typed (the spec's outcomes), with calibrated probabilities, the expected cost of each choice, whether a
 person should decide instead, and the precedents it stands on. No language model is in the path, the same question
-gets the same answer, and a model learns one confirmed case at a time. Glyphh runs it at `https://ada.glyphh.ai`:
+gets the same answer, and a model learns one confirmed case at a time. Models chain: a beam (`POST /v1/beam`) asks
+several models in a row, one model's outcome the next model's question. Glyphh runs it at `https://ada.glyphh.ai`:
 there is nothing to install or host. Claude reaches it through the Glyphh connector (`https://api.glyphh.ai/mcp`)
 and the Ada skill; your software through the SDKs with an API key; your terminal, scripts, CI and agents with a shell
 through the `glyphh` command.
@@ -57,6 +58,7 @@ Claude through the connector). A refusal is `{"error": {code, message, trace_id,
 | Route | Does |
 |---|---|
 | `POST /v1/decide` `{model, data, output?, outputs?, include?, clearance?}` | The headline: `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
+| `POST /v1/beam` `{start, hops: [{model, role, fixed?, output?}], width?, values?, miss?, clearance?}` | A chain of models, one model's outcome the next model's question: `{outcome, p, ends, paths, lost, hops, ada}`; one read per hop |
 | `GET`, `POST /v1/models` `{name, spec}`; `GET`, `DELETE /v1/models/{name}?confirm={name}` | The org's models; make one from its spec; one; delete one |
 | `PUT /v1/models/{name}/spec`; `GET`, `PATCH …/settings` `{changes, note?, backtest?}` | A new version (`{version, active, job}`; a job when it re-encodes the stored cases); every lever |
 | `GET …/versions`; `POST …/versions/{n}/activate` | Every version, who made it and why; roll back |

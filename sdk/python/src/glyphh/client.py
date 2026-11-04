@@ -50,7 +50,7 @@ RECORD_MANY_MAX = 1000
 WAITING = ("needs_input", "needs_approval")
 FINAL = ("done", "failed", "expired", "cancelled")
 #: An Ada model's functions that only read: safe to send again when Ada could not be reached.
-READS = ("query", "facts", "probabilities", "decide")
+READS = ("query", "facts", "probabilities", "decide", "beam")
 CLUSTER_SEQ, MIN_SEQ = "rrotor-cluster-seq", "rrotor-min-seq"
 #: An import's format by its file's extension.
 FORMATS = {
@@ -188,6 +188,37 @@ class Decision:
             value=body.get("value"),
             level=body.get("level"),
             applies=body.get("applies"),
+        )
+
+
+@dataclass(frozen=True)
+class Beam:
+    """`POST /v1/beam`: a chain of models, one model's outcome the next model's question (SDK 3.10). `outcome` is
+    the heaviest end and `p` its share of the mass that arrived (None and 0.0 when none); `ends` every end's share;
+    `paths` each end's likeliest single path, best first (`value`, `p`, `trail_p`: that path's own share, `steps`:
+    from the start); `lost` the mass that arrived nowhere; `hops` each model and the version that answered; `ada`
+    the last hop's Ada version. `data` is the answer as sent."""
+
+    outcome: Optional[str]
+    p: float
+    ends: Dict[str, float]
+    paths: List[Dict[str, Any]]
+    lost: float
+    hops: List[Dict[str, Any]]
+    ada: Optional[str] = None
+    data: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def of(cls, body: Mapping[str, Any]) -> "Beam":
+        return cls(
+            outcome=body.get("outcome"),
+            p=float(body.get("p") or 0.0),
+            ends=dict(body.get("ends") or {}),
+            paths=list(body.get("paths") or []),
+            lost=float(body.get("lost") or 0.0),
+            hops=list(body.get("hops") or []),
+            ada=body.get("ada"),
+            data=dict(body),
         )
 
 
@@ -733,6 +764,31 @@ class Ada:
             clearance=clearance,
         )
         return Decision.of(self._call("POST", "/v1/decide", body, read=True))
+
+    def beam(
+        self,
+        start: str,
+        hops: Sequence[Mapping[str, Any]],
+        *,
+        width: Optional[int] = None,
+        values: Optional[Sequence[str]] = None,
+        miss: Optional[float] = None,
+        clearance: Optional[float] = None,
+    ) -> Beam:
+        """A chain of models, `POST /v1/beam`: one model's outcome is the next model's question. Each hop is
+        `{model, role: "layer.segment.role", fixed?: {role: value}, output?}`: the value the beam holds is placed in
+        `role`, `fixed` beside it, and its mass passed on by the model's calibrated probabilities. `width` (default
+        10) keeps that many heaviest values between hops; `values` with `miss` (0..1) lets the chain pass through a
+        model that does not know. A read: one read per hop against the plan's month."""
+        body = _drop_none(
+            start=start,
+            hops=[dict(h) for h in hops],
+            width=width,
+            values=None if values is None else list(values),
+            miss=miss,
+            clearance=clearance,
+        )
+        return Beam.of(self._call("POST", "/v1/beam", body, read=True))
 
     # jobs
 

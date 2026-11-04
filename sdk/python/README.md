@@ -59,6 +59,7 @@ glyphh export tickets --to tickets.zip
 | `models`, `model`, `spec`, `create`, `delete` | The org's models; one; its spec (`--set` a new one); make one; delete one (`--confirm NAME`) |
 | `record`, `record-many`, `grade`, `forget`, `import` | Cases in: one, a JSON Lines file, an outcome later, one out, a whole history file |
 | `decide`, `query`, `probabilities`, `facts` | Ask |
+| `beam` | A chain of models: one model's outcome is the next model's question (`--hops JSON`, `--width`, `--values`, `--miss`) |
 | `learn`, `calibrate`, `backtest`, `settings`, `versions`, `activate`, `upgrade` | Tune, compare, roll back, move Ada versions |
 | `export`, `job`, `cancel` | Everything out; any job's state and stage (`--wait`); stop a job |
 | `bot ...` | Bots: make one from a job, run it, answer and correct its gates, trust and keep it ([below](#bots)) |
@@ -132,9 +133,10 @@ half-understood: `ClientTooOldError` (`contract`, `supported`), saying to `pip i
 
 | | |
 |---|---|
-| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `models()`, `model(name)`, `create_model(name, spec, ada=)`, `delete_model(name)`; `ada.versions()`, `ada.latest_stable()`; `job(id)` (its `stage`: what it is doing now), `wait(job, timeout=, on_progress=)`, `cancel_job(job)` (ends `failed`, `E_CANCELLED`; `job.cancelled`), `download(job)`; `usage()` |
+| `Ada` | `decide(model, data, output=, outputs=, include=["facts"], clearance=)` (`POST /v1/decide`); `beam(start, hops, width=, values=, miss=, clearance=)` (`POST /v1/beam`: a chain of models, one's outcome the next's question, one read per hop); `models()`, `model(name)`, `create_model(name, spec, ada=)`, `delete_model(name)`; `ada.versions()`, `ada.latest_stable()`; `job(id)` (its `stage`: what it is doing now), `wait(job, timeout=, on_progress=)`, `cancel_job(job)` (ends `failed`, `E_CANCELLED`; `job.cancelled`), `download(job)`; `usage()` |
 | `Model` | `info()` (a `ModelInfo`: `ada`, `ada_status`, `ada_notice`), `spec()`, `set_spec(spec, note=, backtest=)`, `settings()` and `settings(changes, note=, backtest=)`, `versions()` (each with `ada`, `kernel`), `activate(version)`, `upgrade(ada=, note=, backtest=, wait=)`, `delete()`; `record_many(cases)` (a thousand a request, in chunks), `grade(id, value, output=)`, `forget(id)`; `decide(data, ...)`; `learn()`, `learn_job()`, `calibrate()`, `backtest(candidates, ada=, holdout=, output=)`; `import_file(path or bytes, format=, mapping=, partial=, learn=)`, `export(format=, to=)` |
 | `Decision` | `outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`, `version`, `ada`; reads as 3.0's `Result` too (`done`, `status`, `data`) |
+| `Beam` | `outcome` (the heaviest end), `p` (its share of the mass that arrived), `ends`, `paths` (each end's likeliest path: `value`, `p`, `trail_p`, `steps`), `lost`, `hops` (each `model`, `version`), `ada`, `data` |
 | `AdaVersions` | `latest_stable`, `contract`, `versions` (each an `AdaVersion`: `name`, `kernel`, `status`, `beta`, `open`, `released`, `deprecated`, `ends`, `changes_answers`, `aliases`, `summary`, `notes`, `models`); iterates over the versions; `get(name)` |
 | `Job` | `id`, `model`, `kind`, `state` (`awaiting`, `queued`, `running`, `done`, `failed`), `percent`, `result`, `error`, `download`, `upload`; `done`, `failed`, `ended` |
 | `Usage` | `plan`, `month` (YYYY-MM, UTC), `resets_at` (YYYY-MM-DD), `models`, `precedents` (`used`, `max`), `requests` (`used`, `max`, `over`, `overage`: past the month metered on Basic, Pro and Team, refused on Free), `requests_per_second`; `None` is by contract, no cap |
