@@ -2,6 +2,11 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.18.3 — 2026-11-04
+
+`plugin.json` gives the directory listing its links: repository, documentation, support, privacy policy and terms.
+The hook's User-Agent is `glyphh-hook/1.18.3`.
+
 ## 1.18.2 — 2026-11-04
 
 `.mcp.json` names the Glyphh connector, `glyphh-cloud` at `https://api.glyphh.ai/mcp`, so the plugin brings the `ada_*`
