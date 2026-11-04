@@ -1,0 +1,17 @@
+One hidden world, 10 sessions, 20 questions each. The rules change at session 6.
+
+session     cold right   tokens   sec  notes right   tokens   sec  gates right   tokens   sec
+1                   20    10911    70           20    10020    67           20     8534    55
+2                   20    11072    74           20     8095    46           20        0     0
+3                   20    13207    92           20     9744    55           20        0     0
+4                   19     9797    64           20     8980    47           20     7067    46
+5                   20    12089    84           20     9579    51           20     8205    58
+6                   20    15282   113           20    15043    99           11     9846    73
+7                   20    11834    84           20     9423    44           16    10652    70
+8                   20    21204   172           20     9763    50           15    12725    93
+9                   20    10522    70           20     8838    42           12     9888    68
+10                  20    16641   125           20    10574    56           16    18755   144
+
+cold: 199 of 200 right, 132,559 tokens, $2.35, 0 failed calls
+notes: 200 of 200 right, 100,059 tokens, $1.59, 0 failed calls
+gates: 170 of 200 right, 85,672 tokens, $1.50, 0 failed calls

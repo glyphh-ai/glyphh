@@ -1,0 +1,20 @@
+Sessions 1-10 (rules may change between sessions; about 5% of lines are wrong). Sessions 1-5 fit one rule set. In session 6 the nim and fov rows CHANGED completely; fon, mut, piz, tot did not. Session 7: no change, 29 of 30 fit. Session 8: 27 of 30 fit; small change in mut. Session 9: 26 of 30 fit; mut vok/paz went back to old values. Session 10: 27 of 30 fit, no change made. Worked by hand.
+States: vir mub zip nif mod mob vin paz tid vok. Actions: fov mut piz nim fon tot.
+Every action has been a permutation (no two states map to the same target). This helps fill gaps.
+
+Current full table (as of session 10):
+- fon: vir->paz, paz->mob, tid->zip, vin->tid, nif->nif, vok->mod, zip->vir, mob->mub, mod->vin, mub->vok
+- mut: zip->tid, vir->vin, vin->vir, paz->mod, mod->mub, nif->paz, mob->zip, mub->nif, tid->mob, vok->vok
+- piz: zip->nif, mob->tid, tid->mob, mod->vin, vin->zip, paz->vok, mub->mod, vok->paz, nif->mub, vir->vir
+- tot: vin->vin, vir->vir, nif->nif, mob->zip, tid->paz, mod->mob, vok->mod, zip->tid, paz->vok, mub->mub
+- nim: vin->tid, paz->vok, vok->vin, mob->paz, zip->nif, mub->mub, tid->zip, nif->vir, mod->mob, vir->mod
+- fov: vok->vok, zip->paz, mob->tid, nif->mob, paz->vin, vin->mub, mub->mod, mod->vir, vir->nif, tid->zip
+
+mut vok/paz history: through session 7, vok->vok and paz->mod. Session 8: two lines gave vok->mod (paz->vok assumed by swap). Session 9: two lines gave vok->vok. Session 10: "paz mut piz mut->vir" confirms paz->mod. So the old pair stands; session 8 was temporary or a blip. Changes can be small (one or two entries), not only whole rows, and these two may flip again.
+
+Rejected as noise: session 6: vir piz piz->tid, mod nim fov->paz. Session 7: paz piz->mob (table gives vok). Session 8: vir tot piz->nif (table gives vir). Session 9: tid fon piz fov->tid (table gives mob), mob mut tot->vok (table gives tid). Session 10: mob fov->mob (table gives tid; only direct test of mob fov this session, and nif fov->mob confirmed twice, so accepting it would break the permutation), zip tot piz->mod (table gives mob; zip tot->tid supported by zip tot fov->zip, mub piz->mod supported by a chain), tid mut fon nim->nif (table gives mub; suspects tid mut, mub nim, neither tested otherwise).
+WATCH NEXT SESSION: mob fov (is it tid or mob?), tid piz, tid mut, mub nim. If any fails again in the same way, treat it as a real change.
+
+Old nim and fov rows (sessions 1-5), in case they return: fov: mob->vir, nif->nif, vin->vok, mod->mob, vir->mub, tid->vin, vok->paz, mub->tid, paz->mod, zip->zip. nim: vin->paz, vir->mod, tid->mob, mub->vin, mob->vok, vok->vir, paz->zip, mod->tid, nif->nif, zip->mub.
+
+Method: first trace every new line through the table (rules may change). If about 90-95% fit, keep it and answer by tracing step by step. Even then, check whether failing lines agree on the same entry: two failures pointing to one entry means a real change, not noise. If many lines fail, check which actions the failing lines share (a change can hit only some actions, as in session 6), keep the rows that still fit, and rebuild the others from single-step lines and chains, using the permutation assumption to eliminate options. Where lines conflict, trust the value other chains support.
