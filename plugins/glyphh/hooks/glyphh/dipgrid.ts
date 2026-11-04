@@ -38,6 +38,85 @@ export const panesOf = (g: DipGrid): DipPane[] =>
 export const openOrder = (g: DipGrid): DipPane[] =>
   [...g.cells].sort((a, b) => a.col - b.col || a.row - b.row).flatMap(c => (c.pane && c.pane !== 'claude' ? [c.pane] : []))
 
+/** A tile as the app's Move handles know it: a pane, or Claude. */
+const tileOf = (pane: DipCellPane) => (pane === 'claude' ? 'chat' : pane)
+
+export type Edge = 'left' | 'right' | 'top' | 'bottom'
+
+/** The grid as tiles taken off its outside, one at a time, outermost first, down to the last tile: how a dip builds it,
+ *  since a move to an edge of the window spans all the rest. `shown` leaves out panes that did not open; Claude,
+ *  always open, goes down the left of a grid without it. Null for a shape with no tile to take off, as a plain 2 × 2. */
+export function peels(g: DipGrid, shown: readonly DipPane[]): { tile: string; edge: Edge }[] | null {
+  let cells = g.cells.filter(c => c.pane === 'claude' || (c.pane !== '' && shown.includes(c.pane)))
+  const out: { tile: string; edge: Edge }[] = cells.some(c => c.pane === 'claude') ? [] : [{ tile: 'chat', edge: 'left' }]
+  while (cells.length > 1) {
+    const rest = (c: DipCell) => cells.filter(x => x !== c)
+    const left = Math.min(...cells.map(c => c.col))
+    const top = Math.min(...cells.map(c => c.row))
+    const right = Math.max(...cells.map(c => c.col + c.colSpan))
+    const bottom = Math.max(...cells.map(c => c.row + c.rowSpan))
+    const tall = (c: DipCell) => c.row <= top && c.row + c.rowSpan >= bottom
+    const wide = (c: DipCell) => c.col <= left && c.col + c.colSpan >= right
+    const off = cells.flatMap(c => {
+      if (tall(c) && rest(c).every(x => x.col >= c.col + c.colSpan)) return [{ c, edge: 'left' as const }]
+      if (tall(c) && rest(c).every(x => x.col + x.colSpan <= c.col)) return [{ c, edge: 'right' as const }]
+      if (wide(c) && rest(c).every(x => x.row >= c.row + c.rowSpan)) return [{ c, edge: 'top' as const }]
+      if (wide(c) && rest(c).every(x => x.row + x.rowSpan <= c.row)) return [{ c, edge: 'bottom' as const }]
+      return []
+    })[0]
+    if (!off) return null
+    out.push({ tile: tileOf(off.c.pane), edge: off.edge })
+    cells = rest(off.c)
+  }
+  return out
+}
+
+/** The keys for each Move handle, innermost tile first, each move then spanning all that came before. Two arrows
+ *  across a stack take a tile to the window's edge; from there one arrow along that edge takes it to the side. */
+export function moves(off: readonly { tile: string; edge: Edge }[]): { tile: string; keys: string[] }[] {
+  return [...off].reverse().flatMap(({ tile, edge }) => {
+    if (edge === 'top') return [{ tile, keys: ['up', 'up', 'enter'] }]
+    if (edge === 'bottom') return [{ tile, keys: ['down', 'down', 'enter'] }]
+    return [{ tile, keys: ['down', 'down', 'enter'] }, { tile, keys: [edge, 'enter'] }]
+  })
+}
+
+/** Where a tile ended up: x, y, width, height. */
+export type Rect = [number, number, number, number]
+
+/** Whether the tiles sit as the grid says: each left of and above what it should be. Tiles not measured are let by. */
+export function arranged(g: DipGrid, rects: Record<string, Rect>): boolean {
+  const slack = 30
+  return g.cells.every(a =>
+    g.cells.every(b => {
+      const ra = rects[tileOf(a.pane)]
+      const rb = rects[tileOf(b.pane)]
+      if (!a.pane || !b.pane || !ra || !rb) return true
+      if (a.col + a.colSpan <= b.col && ra[0] + ra[2] > rb[0] + slack) return false
+      return !(a.row + a.rowSpan <= b.row && ra[1] + ra[3] > rb[1] + slack)
+    }),
+  )
+}
+
+/** The grid tiles on screen make, for /dip save: their edges become the lines; null if it won't fit or isn't whole. */
+export function gridOfRects(rects: Record<string, Rect>, known: readonly string[]): DipGrid | null {
+  const lines = (values: number[]) => {
+    const out: number[] = []
+    for (const v of [...values].sort((a, b) => a - b)) if (!out.length || v - out[out.length - 1]! > 30) out.push(v)
+    return out
+  }
+  const all = Object.values(rects)
+  const xs = lines(all.flatMap(r => [r[0], r[0] + r[2]]))
+  const ys = lines(all.flatMap(r => [r[1], r[1] + r[3]]))
+  const at = (edges: number[], v: number) => edges.reduce((best, e, i) => (Math.abs(e - v) < Math.abs(edges[best]! - v) ? i : best), 0)
+  const cells = Object.entries(rects).map(([tile, r]) => {
+    const col = at(xs, r[0])
+    const row = at(ys, r[1])
+    return { pane: tile === 'chat' ? 'claude' : tile, col, row, colSpan: at(xs, r[0] + r[2]) - col, rowSpan: at(ys, r[1] + r[3]) - row }
+  })
+  return asGrid({ cols: xs.length - 1, rows: ys.length - 1, cells }, known)
+}
+
 /** Claude down the left and the panes beside it, in the order given: a layout from before grids, or a capture. */
 export function gridOfPanes(panes: readonly DipPane[]): DipGrid {
   if (!panes.length) return { cols: 1, rows: 1, cells: [{ pane: 'claude', col: 0, row: 0, colSpan: 1, rowSpan: 1 }] }

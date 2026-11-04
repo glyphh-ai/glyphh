@@ -5,8 +5,8 @@
 import type { RenderSurface } from 'claude-code'
 
 import type { DipCellPane, DipDraft, DipView } from '../../types'
-import { closeDraft, dip, draftFromNow, editDraft, FILLS, openDraft, removeLayout, saveDraft } from './dip'
-import { assign, canMergeDown, canMergeRight, canSplit, type Cut, cuts, MAX_GRID, merge, resizeGrid, splitCell } from './dipgrid'
+import { closeDraft, dip, draftFromNow, editDraft, FILLS, openDraft, PANES, removeLayout, saveDraft } from './dip'
+import { assign, canMergeDown, canMergeRight, canSplit, type Cut, cuts, MAX_GRID, merge, peels, resizeGrid, splitCell } from './dipgrid'
 import type { Host } from './host'
 import { kit, type Ui } from './ui'
 
@@ -58,7 +58,8 @@ function GridEditor(ctx: DipCtx, d: DipDraft) {
 
   return (
     <Box key="grid" flexDirection="column" gap="xs">
-      <Text size="footnote" dimColor>Layout: press a cell, then choose what fills it. The app places panes itself: Claude on the left, then two stacked, then a new column, opened down each column here.</Text>
+      <Text size="footnote" dimColor>Layout: press a cell, then choose what fills it</Text>
+      {peels(grid, PANES.map(p => p.id)) ? null : <Text size="footnote" color="warning">A dip can't build this shape: some tile has to reach an edge of the rest (a plain 2 × 2 has none). Merge cells to fix it.</Text>}
       <Box gap={1} alignItems="center">
         <Select key="dip-cols" label="Columns" value={String(grid.cols)} options={SIZES} onSelect={v => size(Number(v), grid.rows)} />
         <Select key="dip-rows" label="Rows" value={String(grid.rows)} options={SIZES} onSelect={v => size(grid.cols, Number(v))} />

@@ -6,8 +6,8 @@ import { expect, test } from 'claude-code/testing'
 
 import type { DipLayout } from '../types'
 import { asLayouts, brief, capture, dip, dipCheck, dipCommand, draftOf, layoutOf, loadDip, openDraft, saveDraft, editDraft } from '../hooks/glyphh/dip'
-import { asGrid, assign, canMergeDown, canMergeRight, cuts, emptyGrid, gridOfPanes, merge, panesOf, resizeGrid, splitCell } from '../hooks/glyphh/dipgrid'
-import { fakeHost } from './fake-host'
+import { arranged, asGrid, assign, canMergeDown, canMergeRight, cuts, emptyGrid, gridOfPanes, gridOfRects, merge, moves, panesOf, peels, resizeGrid, splitCell } from '../hooks/glyphh/dipgrid'
+import { arrangeAnswer, fakeHost } from './fake-host'
 
 const API: DipLayout = {
   name: 'api',
@@ -78,6 +78,50 @@ test('a dip closes every pane, then opens the layout\'s down each column, a pane
   expect(at('show_pane terminal')).toBeLessThan(at('show_pane diff'))
   expect(at('show_pane diff')).toBeLessThan(at('preview_start'))
   expect(at('preview_start')).toBeLessThan(at('show_pane preview'))
+})
+
+// Files across the top of two panes, Claude down the right: the layout that took a dip to the Move handles.
+const DEV = { cols: 3, rows: 2, cells: [
+  { pane: 'file' as const, col: 0, row: 0, colSpan: 2, rowSpan: 1 },
+  { pane: 'claude' as const, col: 2, row: 0, colSpan: 1, rowSpan: 2 },
+  { pane: 'diff' as const, col: 0, row: 1, colSpan: 1, rowSpan: 1 },
+  { pane: 'terminal' as const, col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+] }
+
+test('a grid comes off from the outside in, and its moves run innermost first', () => {
+  const off = peels(DEV, ['file', 'diff', 'terminal'])!
+  expect(off).toEqual([{ tile: 'chat', edge: 'right' }, { tile: 'file', edge: 'top' }, { tile: 'diff', edge: 'left' }])
+  expect(moves(off)).toEqual([
+    { tile: 'diff', keys: ['down', 'down', 'enter'] },
+    { tile: 'diff', keys: ['left', 'enter'] },
+    { tile: 'file', keys: ['up', 'up', 'enter'] },
+    { tile: 'chat', keys: ['down', 'down', 'enter'] },
+    { tile: 'chat', keys: ['right', 'enter'] },
+  ])
+  // Claude goes down the left of a grid without it; a pane that did not open is left out.
+  expect(peels(gridOfPanes(['plan']), ['plan'])).toEqual([{ tile: 'chat', edge: 'left' }])
+  expect(peels({ ...DEV, cells: DEV.cells.filter(c => c.pane !== 'claude') }, ['diff'])).toEqual([{ tile: 'chat', edge: 'left' }])
+  // A plain 2 × 2 has no tile to take off.
+  expect(peels(assign(assign(assign(assign(emptyGrid(2, 2), 0, 'claude'), 1, 'plan'), 2, 'diff'), 3, 'tasks'), ['plan', 'diff', 'tasks'])).toBe(null)
+})
+
+test('where the tiles landed is checked against the grid, and a grid is read back off them', () => {
+  const good = { chat: [1686, 15, 756, 1422], file: [930, 15, 756, 700], diff: [930, 715, 378, 700], terminal: [1308, 715, 378, 700] } as Record<string, [number, number, number, number]>
+  expect(arranged(DEV, good)).toBe(true)
+  expect(arranged(DEV, { ...good, chat: [0, 15, 756, 1422] })).toBe(false)
+  const back = gridOfRects(good, ['claude', 'file', 'diff', 'terminal', ''])!
+  expect([back.cols, back.rows]).toEqual([3, 2])
+  expect(back.cells.find(c => c.pane === 'claude')).toEqual({ pane: 'claude', col: 2, row: 0, colSpan: 1, rowSpan: 2 })
+  expect(back.cells.find(c => c.pane === 'file')?.colSpan).toBe(2)
+})
+
+test('a dip runs the helper, and says so when Accessibility is off', async () => {
+  const w = await withLayouts([{ ...API, grid: DEV, panes: ['file', 'diff', 'terminal'], tabs: [] }])
+  arrangeAnswer.text = '{"ok":false,"error":"accessibility","tiles":{}}'
+  const text = await dip(w.gh, 'api')
+  arrangeAnswer.text = '{"ok":true,"tiles":{}}'
+  expect(w.argvs.some(a => a[0] === 'python3' && a[1]!.endsWith('/hooks/dip_arrange.py'))).toBe(true)
+  expect(text.includes('Accessibility')).toBe(true)
 })
 
 test('a layout saved in another session is found, and survives a save here', async () => {
