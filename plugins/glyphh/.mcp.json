@@ -3,6 +3,10 @@
     "glyphh": {
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/dist/server.mjs"]
+    },
+    "glyphh-cloud": {
+      "type": "http",
+      "url": "https://api.glyphh.ai/mcp"
     }
   }
 }
