@@ -279,6 +279,8 @@ for (const surface of SURFACES) {
     world(on, surface)
     const called: string[] = []
     on('tool.call', (_$, e) => (called.push(`${e.tool} ${JSON.stringify(e)}`), { result: '{}' }))
+    // Auto mode with no request to read: everything beneath the mod's own answer is refused.
+    on('tool.check', () => ({ decision: 'deny' as const, reason: 'no verdict' }))
     on('session.cwd', () => ({ value: '/proj' }))
     await $.session.start({ cwd: '/proj', surface, isInteractive: true })
     const ui = await $.ui.mount(dipPane(surface))
@@ -298,6 +300,8 @@ for (const surface of SURFACES) {
     expect(called.some(c => c.startsWith('mcp__Claude_Browser__preview_start') && c.includes('https://localhost:3000'))).toBe(true)
     expect(called.some(c => c.startsWith('mcp__ccd_view__show_pane') && c.includes('"terminal"'))).toBe(true)
     expect(await ui.find({ type: 'Text', text: 'active' })).toBeDefined()
+    // The test's own check, as Claude's would be, gets no such answer from the mod.
+    expect((await $.tool.check({ tool: 'mcp__ccd_view__show_pane', input: { pane: 'diff' } })).decision).toBe('deny')
     const said = (await $.command.run({ command: 'dip', args: 'nope' } as unknown as CommandRunInput)) as { text: string }
     expect(said.text).toBe('No layout "nope". Layouts: api.')
   })
