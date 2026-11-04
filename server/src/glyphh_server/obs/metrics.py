@@ -1,7 +1,7 @@
 """The server's own request metrics, for its staff (admin/infra.py): every request's time in a histogram, Ada reads
-(decide, query, probabilities, facts) apart from the rest of the API, and every request counted by route and status
-class (2xx, 4xx, 5xx). Counted in the process as each request ends (a few dict additions, no I/O), and added to Redis
-every FLUSH_EVERY seconds in one pipeline: per minute, kept 7 days, and per hour, kept 8.
+(decide, query, probabilities, facts, beam) apart from the rest of the API, and every request counted by route and
+status class (2xx, 4xx, 5xx). Counted in the process as each request ends (a few dict additions, no I/O), and added to
+Redis every FLUSH_EVERY seconds in one pipeline: per minute, kept 7 days, and per hour, kept 8.
 
 Keys: `ops:lat:<read|api>:m:<YYYYMMDDHHMM>` and `…:h:<YYYYMMDDHH>`, a hash of bucket index → count with `n` (requests)
 and `ms` (their total time); `ops:http:m:<minute>` and `ops:http:h:<hour>`, a hash of `<METHOD> <route>|<class>` →
@@ -21,7 +21,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 log = logging.getLogger("glyphh.metrics")
 
 BOUNDS_MS: tuple[int, ...] = (5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000)
-READS: tuple[str, ...] = ("/query", "/probabilities", "/facts", "/decide")
+READS: tuple[str, ...] = ("/query", "/probabilities", "/facts", "/decide", "/beam")
 MINUTE_TTL: int = 7 * 86_400 + 3_600
 HOUR_TTL: int = 8 * 86_400
 FLUSH_EVERY: float = 5.0

@@ -267,6 +267,7 @@ cloud run one kernel.
 | Body | 1 MB (`record_many`: 5 MB) |
 | `record_many` | 1,000 cases |
 | `facts` `top` | 50 |
+| A beam (`POST /v1/beam`) | 32 hops, `width` 50, 200 `values` |
 | A read (`query`, `probabilities`, `decide`, `facts`) | 10 s end to end, then `504 E_TIMEOUT` |
 | `learn`, `calibrate`, `backtest`, imports, exports | Always jobs |
 | Rate | Per org per plan (section 7), `429 E_RATE` with `Retry-After` |
@@ -322,6 +323,7 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | Call | Does | How |
 |---|---|---|
 | `POST /v1/decide` `{model, data, output?, outputs?, clearance?, include?}` | The headline: the kernel's `decide` (or `decide_all` for `outputs`): `{outcome, expected_cost, probabilities, ask, receipts, model, version}`; `include: ["facts"]` adds the nearest fact tree | sync |
+| **Built (2026-11-04):** `POST /v1/beam` `{start, hops: [{model, role, fixed?, output?}], width?, values?, miss?, clearance?}` | Beam search across models (glyphh_ada/beam.py): `{outcome, p, ends, paths, lost, hops: [{model, version}], ada}`; one read per hop reached | sync |
 | `GET /v1/models`, `POST /v1/models` `{name, spec}`, `GET /v1/models/{name}`, `DELETE /v1/models/{name}?confirm=<name>` | The org's models; make one (version 1, its partition and index); one with its active version, size and settings; delete it | API (Postgres only); ~~delete is a job~~ **built:** delete is sync (dropping partitions is quick) |
 | `PUT /v1/models/{name}/spec` `{spec, note?, backtest?}` | A new spec version (5.2): **built,** `{version, active, job}` | sync; a job if it re-encodes |
 | `GET /v1/models/{name}/versions`, `POST …/versions/{n}/activate` | Every version, who made it and why; roll back. **Built** also: each version's changes against the one before (`{path, from, to, restates}`), the precedents when it was made (`precedents_at`, unknown before 2026-10-22), what it had learned, its newest backtest scores, its store (`active`, `kept` with `drop_after`, `making`, `dropped`); `GET …/versions/{n}` (with its spec and every lever), `GET …/versions/{n}/diff?against=`, `PATCH …/versions/{n}` `{note}` | sync; a job when the version reads another store |
@@ -340,6 +342,18 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** rrotor's call shape (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
 
 `decide` never answers `needs_input`: the cloud has no runs to continue. `ask: true` is the signal.
+
+**Beam search** (kernel 3.17.0's `glyphh_spec.beam`, built 2026-11-04): one model's outcome is the next model's
+question. The beam starts from one value holding all the mass. Each hop in turn asks its model about every value the
+beam holds (the value placed into the hop's `role`, `layer.segment.role`, with its `fixed` roles merged beside it)
+and passes each value's mass on by the model's probabilities, summing where paths meet; after every hop but the last
+only the `width` heaviest values go on (default 10, at most 50), and what is cut is `lost`. `values` with `miss` (0 to
+1) is what a model may not know: that share of a hop's mass spreads evenly over them, all of it when a model has
+nothing to say; without them a model with nothing to say ends that path. The answer is the heaviest end and its share
+of the mass that arrived (`outcome`, `p`; null and 0 when none did), every end's share (`ends`), each end's likeliest
+single path (`paths`: `{value, p, trail_p, steps}`, best first, the steps from `start`) and `lost`. The cloud computes
+it in the API over each hop's `probabilities` read (`glyphh_ada/beam.py`, `api/beam.py`), so hops may name models on
+different Ada versions; at most 32 hops, each counted as one read however many values it is asked about.
 
 ### 4.3 The connector: one URL
 
@@ -365,6 +379,7 @@ held a snapshot through the wait, and an import's `CREATE INDEX CONCURRENTLY` wa
 | `ada_record` `{name, data, outcome?}`, `ada_record_many` `{name, cases}` | Record one, or up to 1,000 |
 | `ada_import` `{name, format, mapping?}`, `ada_job` `{id}`, `ada_job_cancel` `{id}` | Start an import (answers a one-hour upload URL that Claude Code can `curl` the file to); a job's progress and stage; cancel a job |
 | `ada_decide`, `ada_query`, `ada_probabilities`, `ada_facts` | Ask |
+| `ada_beam` `{start, hops, width?, values?, miss?}` | Chain models: beam search over each hop's probabilities (4.2), one read per hop |
 | `ada_learn`, `ada_settings` `{name, changes?}`, `ada_backtest` | Learn and tune (section 5) |
 | `ada_export` `{name}` | A one-hour download link |
 | `ada_forget` `{name, id}` | Forget one case |
@@ -574,7 +589,9 @@ seats, models or installs (`docs/pricing.md`, the 2026-10-18 ruling).
 
 **What counts:** a request is one read (`decide`, `query`, `probabilities`, `facts`; `POST /v1/decide`; `/v1/runs`
 with a read function). Writes, learns, backtests, imports and exports are not counted as requests: they are bounded by
-the precedent cap and the rate limit. A `decide` with `outputs` counts once per output.
+the precedent cap and the rate limit. A `decide` with `outputs` counts once per output. A beam (`POST /v1/beam`,
+`ada_beam`) counts one read per hop it reaches, under its own name (`beam` in a model's days), however many values
+that hop is asked about.
 
 | | Free | Basic | Pro | Team | Enterprise |
 |---|---|---|---|---|---|

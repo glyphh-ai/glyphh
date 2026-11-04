@@ -17,7 +17,7 @@ from glyphh_server.db import tenancy
 
 router = APIRouter(prefix="/v1/models/{name}", tags=["dashboard"])
 DAYS_MAX: int = 90
-READS: tuple[str, ...] = ("decide", "query", "probabilities", "facts")
+READS: tuple[str, ...] = ("decide", "query", "probabilities", "facts", "beam")
 
 
 def _answers(window: list[date], counted: dict[date, dict[str, int]]) -> list[dict[str, Any]]:

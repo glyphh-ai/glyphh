@@ -1,6 +1,7 @@
 """The reads an org makes of Ada Cloud, by calendar month (docs/specs/ada-cloud.md, section 7): what a plan's
 cloud_requests counts. A read is decide, query, probabilities or facts (by the API, the connector or /v1/runs); a
-decide of several outputs counts once per output; nothing else counts.
+decide of several outputs counts once per output; a beam (api/beam.py) counts one read per hop it reaches, under its
+own name, however many values that hop is asked about; nothing else counts.
 
 Counted in Redis as they are made (api/meter.py): `ada:req:<org>:<YYYY-MM>`, the month's count, and
 `ada:reqp:<org>:<YYYY-MM>`, what the database has not been told yet, with the org in `ada:req:orgs:<YYYY-MM>`. The
@@ -21,6 +22,7 @@ from glyphh_server.db import tenancy
 from glyphh_server.models import AdaUsage, Org
 
 KEPT_SECONDS: int = 40 * 86_400  # a month's keys outlive the month, so the tick after it ends flushes them
+BEAM: str = "beam"  # a beam's hop, counted by the API itself (never a worker's op): one read per hop reached
 
 
 def period(now: datetime | None = None) -> str:
@@ -51,7 +53,10 @@ def orgs_key(month: str) -> str:
 
 
 def reads(op: str, args: dict[str, Any]) -> int:
-    """How many requests a call is: a read is one, a decide of several outputs one per output, anything else none."""
+    """How many requests a call is: a read is one (a beam's hop too), a decide of several outputs one per output,
+    anything else none."""
+    if op == BEAM:
+        return 1
     if op not in READS:
         return 0
     return max(1, len(args.get("outputs") or []))

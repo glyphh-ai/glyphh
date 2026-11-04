@@ -35,13 +35,17 @@ async def caller(ctx: Context) -> AdaCaller:
     return AdaCaller(ctx.who.org_id, ctx.who.user_id, 1.0, allowance=allowed)
 
 
+def owned(ctx: Context, model: str) -> None:
+    """Another person's glyphh model (a template's, ops/templates/glyphh.py) is not there for anyone else."""
+    if not glyphh.mine(ctx.who.user_id, model):
+        raise NotFound(f"No model named {model} in this org.", model=model)
+
+
 async def ada(
     ctx: Context, model: str, op: str, args: dict[str, Any], clearance: float | None = None, key: str | None = None
 ) -> tuple[Any, int | None]:
-    """One op of one model, answered by a worker: (answer, the model's active version). Another person's glyphh
-    model (a template's, ops/templates/glyphh.py) is not there for anyone else."""
-    if not glyphh.mine(ctx.who.user_id, model):
-        raise NotFound(f"No model named {model} in this org.", model=model)
+    """One op of one model, answered by a worker: (answer, the model's active version)."""
+    owned(ctx, model)
     return await send(ctx.ada, await caller(ctx), model, op, args, clearance, keyed(key or ""))
 
 

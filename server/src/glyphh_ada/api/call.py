@@ -66,12 +66,15 @@ async def send(
     clearance: float | None = None,
     key: str = "",
     about: dict[str, Any] | None = None,
+    metered: bool = True,
 ) -> tuple[Any, int | None]:
     """One op of one model, through the org's plan checks to a worker and back: (answer, active version). `about`,
-    when given, gets the model's Ada version and its notice ({name, notice}) when the answer was about one model."""
+    when given, gets the model's Ada version and its notice ({name, notice}) when the answer was about one model. A
+    beam's questions (api/beam.py) are sent unmetered: their hop's one read is counted before the first of them."""
     cfg = state.settings
     no_nul(args)
-    await admit(state, who, op, args, model)
+    if metered:
+        await admit(state, who, op, args, model)
     timeout = cfg.ada_write_timeout if op in SLOW else cfg.ada_read_timeout
     clear, deadline = who.clearance_for(clearance), time.time() + timeout
     msg = protocol.Message(str(who.org_id), model, op, args, clear, who.author, deadline, key, cap=who.cap)

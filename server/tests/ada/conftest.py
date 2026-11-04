@@ -126,7 +126,7 @@ def jobs_worker(streams: Redis) -> Iterator[Worker]:
     yield from _start(JOBS)
 
 
-BETA_KERNEL: str = "3.16.0"  # ada-1-2-beta's: its workers here run the venv's kernel under its name (the routing is
+BETA_KERNEL: str = "3.17.0"  # ada-1-2-beta's: its workers here run the venv's kernel under its name (the routing is
 # what these tests prove; that each kernel's own install answers is proved in Docker, docs/specs/ada-cloud.md 12.10)
 
 

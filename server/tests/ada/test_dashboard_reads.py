@@ -28,7 +28,7 @@ from tests.ada.test_outputs import MULTI
 from tests.conftest import REDIS_URL
 from tests.db.helpers import person
 
-NONE = {"decide": 0, "query": 0, "probabilities": 0, "facts": 0}
+NONE = {"decide": 0, "query": 0, "probabilities": 0, "facts": 0, "beam": 0}
 
 
 @pytest.fixture
@@ -74,7 +74,7 @@ async def test_every_way_a_read_comes_counts_on_the_dashboard_and_a_backtest_doe
     await _decided(counts, who.org_id, 4)
     got = await _stats(ada, session)  # before the minute tick: what Redis holds shows at once
     today = got["days"][-1]
-    assert today["reads"] == {"decide": 4, "query": 3, "probabilities": 2, "facts": 2}
+    assert today["reads"] == {"decide": 4, "query": 3, "probabilities": 2, "facts": 2, "beam": 0}
     assert today["decided"] == 4 and sum(got["sure"]) == 4 and got["answers"][0]["decided"] == 4
     assert all(d["reads"] == NONE for d in got["days"][:-1]) and len(got["days"]) == 30
     assert (await ada.get("/v1/usage", headers=key)).json()["requests"]["used"] == 11  # the backtest read nothing
