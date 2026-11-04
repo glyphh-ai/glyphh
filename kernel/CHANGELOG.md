@@ -26,6 +26,18 @@ release is tagged `v<version>` on `main`.
 Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
 to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
 
+## 3.17.0 — 2026-11-04 — compatible
+
+**Beam search across models: `glyphh_spec.beam`.** One model's answer can be the next model's question. `beam(start,
+hops, width)` carries the `width` likeliest values through a chain of models (`Hop`: a model, how to ask it about a
+value, and optionally which output), each value's probability multiplied by the next model's probabilities and summed
+where paths meet, so the answer is the dot product of the chain, cut to the beam at each hop. It answers the `outcome`,
+its `p`, every end's probability (`ends`), each end's likeliest path (`paths`, with that path's own `trail_p`) and the
+mass that reached nothing (`lost`). `values`, with `miss`, lets a chain pass through a model that doesn't know: `miss`
+of every hop's mass spreads evenly over `values`, and a model with nothing to say spreads all of it.
+
+- Compatible: nothing a model answers changes, and nothing stored changes. It only reads through `probabilities`.
+
 ## 3.16.0 — 2026-10-29 — compatible
 
 **Words read further: `settings.word_reach`.** 1 by default, the lexicon's reading before (a word and its own
