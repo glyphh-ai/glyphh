@@ -111,9 +111,13 @@ export async function dip(gh: Host, typed: string): Promise<string> {
     return names ? `No layout "${typed.trim()}". Layouts: ${names}.` : 'No layouts yet: /dip opens the Dip pane to make one, or /dip save <name> keeps this one.'
   }
   const left: string[] = []
+  const refused: string[] = []
   const step = async (tool: string, input: Record<string, unknown>, words: string) => {
     const r = await gh.tool.call(tool, input)
-    if (!r.ok) left.push(words)
+    if (!r.ok) {
+      left.push(words)
+      refused.push(`${tool}: ${r.text.slice(0, 300)}`)
+    }
     return r
   }
 
@@ -151,8 +155,12 @@ export async function dip(gh: Host, typed: string): Promise<string> {
     await say(gh, done)
     return done
   }
+  // Why each step was refused, for the next look; the last dip's alone.
+  const home = await gh.env.home().catch(() => undefined)
+  if (home) await gh.fs.write(`${home}/.glyphh/dip-log.txt`, `${refused.join('\n')}\n`).catch(() => undefined)
+  // Never opening on a slash: the engine refuses a prompt that would read as a command.
   await gh.ask(
-    `/dip ${l.name} could not finish the layout on its own. With your own tools do exactly these and nothing else, then say "Dipped into ${l.name}." in one line:\n` +
+    `Finish my workspace "${l.name}" (I ran /dip ${l.name}, and it could not do these itself). With your own tools do exactly these and nothing else, then say "Dipped into ${l.name}." in one line:\n` +
       left.map((s, i) => `${i + 1}. ${s}`).join('\n'),
   )
   await say(gh, `${done} Claude is finishing ${left.length} step${left.length > 1 ? 's' : ''}.`)

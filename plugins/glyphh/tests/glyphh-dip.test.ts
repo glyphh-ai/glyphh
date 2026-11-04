@@ -58,6 +58,7 @@ test('what a refused tool could not do goes to Claude as one prompt', async () =
   expect(w.asked.length).toBe(1)
   expect(w.asked[0]!.includes('move the session to /code/api')).toBe(true)
   expect(w.asked[0]!.includes('show the terminal pane')).toBe(true)
+  expect(w.files.get('/home/t/.glyphh/dip-log.txt')?.includes('mcp__ccd_view__show_pane: refused')).toBe(true)
   expect(text.includes('Claude is finishing 3 steps')).toBe(true)
 })
 
