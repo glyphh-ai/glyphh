@@ -153,7 +153,11 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string; rroto
     surface: async () => opts.surface ?? 'desktop',
     copy: async text => (copied.push(text), true),
     openPanel: async () => true,
-    ask: async text => void asked.push(text),
+    // As the engine: a prompt opening on a slash is refused (it would run as a command).
+    ask: async text => {
+      if (text.startsWith('/')) throw new Error('prompt.submit: a text beginning with / would run a command')
+      asked.push(text)
+    },
     tool: { call: tools.call },
     cwd: async () => '/code/web',
     openDip: async () => true,

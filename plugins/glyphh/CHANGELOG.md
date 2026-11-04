@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.13.1 — 2026-11-03
+
+A dip whose steps were refused now reaches Claude. Its prompt opened with `/dip`, and the engine refuses a prompt
+that opens on a slash, so the steps were dropped while the pane said Claude was finishing them. Why each step was
+refused goes to `~/.glyphh/dip-log.txt`. The hook's User-Agent is `glyphh-hook/1.13.1`.
+
 ## 1.13.0 — 2026-11-03
 
 Dip layouts have a grid. The Dip pane's editor draws the layout as the desktop app's layout editor does: columns and
