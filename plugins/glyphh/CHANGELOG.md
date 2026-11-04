@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.17.0 — 2026-11-03
+
+`/dip` left the plugin: it is its own plugin now, `dip@dip` from `timmetim/dip`. The command, the Dip pane, the layout
+brief, `hooks/dip_arrange.py` and the permission answers for a dip's calls are gone from here. The hook's User-Agent is
+`glyphh-hook/1.17.0`.
+
 ## 1.16.0 — 2026-11-03
 
 A dip builds the grid. No tool of the app places a pane, but each tile has a keyboard Move handle, and the new
