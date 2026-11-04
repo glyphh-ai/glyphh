@@ -2,6 +2,14 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.15.0 — 2026-11-03
+
+A dip arranges what the app lets it. The app places a pane by when it opens (the first beside Claude, the second under
+it, the third in a new column), so a dip now closes every pane and opens the layout's down each column, a pane's tabs
+or terminal tabs at its turn. Claude stays on the left and sizes stay the app's; the editor says so. Every use reads
+the layouts from the store first: a session that started before a layout was saved missed it, and saving from there
+would have lost it. The hook's User-Agent is `glyphh-hook/1.15.0`.
+
 ## 1.14.1 — 2026-11-03
 
 The Dip pane draws at three columns. A third of a row was a width of 33.33…%, which a Box refuses, and the whole pane

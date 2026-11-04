@@ -119,7 +119,7 @@ function fakeTools(refuse: string[]) {
     } else if (short === 'javascript_tool') {
       return { ok: true, text: JSON.stringify(tabs.find(t => t.tabId === input.tabId)?.url ?? '') }
     } else if (short === 'get_layout') {
-      return { ok: true, text: JSON.stringify({ views: [{ panes: ['preview', 'terminal'] }] }) }
+      return { ok: true, text: JSON.stringify({ views: [{ placement: 'primary' }], open_panes: ['preview', 'terminal'] }) }
     } else if (short === 'list_terminal_tabs') {
       return { ok: true, text: JSON.stringify([{ tab_id: '1', title: 'dev', cwd: '/code/api' }]) }
     }
