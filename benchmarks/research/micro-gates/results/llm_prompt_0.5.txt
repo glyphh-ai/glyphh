@@ -1,0 +1,587 @@
+A hidden machine has states and actions, all with made-up names. Each action moves every state to one state.
+Each line below is a start state, a list of actions applied in order, and the state it ended in. About 5% of
+the lines record a wrong end. Work out the machine, then give the end state of each numbered question.
+Reply with one line per question: the number, a space, the state.
+
+tar lis rir rir -> bup
+vez rir tir -> tav
+dut miv tir mun -> tar
+pep mun lis mun -> gor
+tar gak mun rir -> dop
+tar tir lis rir -> tav
+dop rir rir miv -> vez
+tor miv gak tir -> tar
+vez lis gak miv -> tav
+tar lis -> bup
+tav miv lis -> tor
+dut mun lis -> tor
+tav tir rir -> vez
+neg mun mun -> vez
+neg gak rir -> tar
+pep mun tir -> neg
+dop rir gak -> bup
+tav tir miv -> tav
+tav miv lis rir -> gor
+pep gak rir -> dut
+dop gak mun mun -> dop
+tor tir tir -> tar
+neg gak lis tir -> vez
+vez gak rir gak -> bup
+neg mun lis lis -> tar
+tor miv tir -> vez
+gor rir gak -> dut
+dop rir mun miv -> neg
+tor gak gak -> dut
+dop miv mun gak -> tor
+pep lis tir -> tar
+vez lis gak tir -> dut
+tar gak rir mun -> pep
+bup lis lis miv -> bup
+tar rir gak gak -> dop
+tav rir miv -> vez
+pep rir mun -> tar
+tor miv tir -> vez
+bup miv tir miv -> dop
+pep tir rir miv -> tav
+vez gak miv miv -> dut
+pep gak tir -> bup
+tar lis miv tir -> pep
+gor mun gak rir -> bup
+tar gak miv tir -> tor
+neg mun lis -> bup
+bup mun gak miv -> dut
+vez tir gak lis -> neg
+dut tir lis tir -> dut
+vez miv miv -> pep
+vez mun miv -> bup
+dut miv mun lis -> tav
+vez lis rir gak -> tar
+dop gak lis miv -> pep
+pep mun -> pep
+neg rir miv -> tav
+dut rir rir rir -> dut
+vez rir mun -> dut
+tav tir miv -> gor
+vez gak gak -> vez
+dut rir rir tir -> bup
+tar mun tir mun -> tav
+vez tir tir lis -> dut
+vez gak rir -> tav
+neg tir tir -> tav
+pep miv mun -> neg
+gor lis tir mun -> tar
+neg gak tir -> tor
+pep rir mun -> tor
+gor lis gak gak -> tar
+neg miv rir rir -> tor
+vez rir lis -> tor
+pep mun mun tir -> neg
+vez tir tir miv -> dut
+tor lis gak -> pep
+tor gak gak rir -> dut
+neg miv lis tir -> pep
+tav rir mun miv -> tar
+gor miv tir gak -> dop
+tav miv lis -> tor
+vez gak rir -> tav
+tav miv lis tir -> tav
+vez rir lis miv -> gor
+dop gak -> vez
+tor miv gak -> tav
+dut mun tir tir -> tar
+bup tir mun tir -> neg
+vez rir gak tir -> neg
+neg gak lis -> gor
+neg miv gak -> gor
+pep gak tir tir -> pep
+tav rir lis -> vez
+tav gak gak rir -> vez
+pep gak miv rir -> neg
+tav tir -> tar
+bup rir gak tir -> tav
+tor tir -> tav
+vez mun gak -> tor
+tar mun lis -> dut
+neg mun rir gak -> dop
+gor rir gak -> dut
+bup gak lis mun -> dut
+dop gak miv lis -> dop
+dut tir lis -> tar
+gor miv lis miv -> neg
+tav mun miv lis -> gor
+dop tir lis -> vez
+vez miv -> tar
+dut miv -> pep
+vez mun mun -> dop
+pep rir gak -> neg
+tor tir lis gak -> neg
+tor lis rir miv -> neg
+tor mun rir -> dut
+tar miv rir lis -> vez
+dut gak rir -> vez
+vez gak mun -> neg
+vez lis tir tir -> pep
+gor mun miv tir -> tav
+vez tir miv -> neg
+vez tir rir -> pep
+tor gak tir lis -> gor
+vez miv lis -> dop
+dop gak gak -> vez
+bup tir gak gak -> tar
+gor tir lis mun -> tor
+neg lis gak tir -> tar
+tar mun rir rir -> gor
+dut mun rir -> gor
+tav gak lis -> tar
+dop rir gak -> bup
+tor mun tir -> bup
+dop mun mun -> tar
+gor lis gak -> dut
+tav lis lis -> gor
+pep miv rir tir -> tar
+pep mun miv miv -> vez
+neg mun gak mun -> tav
+neg tir lis -> tor
+tav miv rir -> gor
+vez tir tir -> vez
+vez gak tir miv -> vez
+tor lis tir -> tav
+tor mun gak -> tar
+dop miv rir rir -> gor
+vez miv rir lis -> dop
+dut miv tir mun -> tar
+tor miv tir -> vez
+tar mun rir -> tor
+tav tir mun mun -> neg
+bup gak rir -> gor
+bup gak tir lis -> neg
+dut tir rir -> bup
+tor rir rir lis -> tav
+dut lis lis miv -> dut
+gor gak miv -> tor
+gor tir gak -> dop
+tav gak tir lis -> tav
+dut gak rir -> vez
+dop tir miv miv -> dut
+tar rir miv miv -> pep
+neg rir mun mun -> bup
+bup tir rir tir -> tor
+tor lis miv gak -> tav
+gor lis tir gak -> neg
+gor mun tir -> tar
+pep mun rir lis -> gor
+pep gak tir gak -> tor
+gor rir mun -> pep
+dut miv miv -> dop
+neg gak rir lis -> bup
+tav miv rir -> gor
+dop miv rir -> tor
+tar miv rir -> dop
+tar rir rir -> tor
+tav gak rir rir -> bup
+gor mun rir gak -> vez
+tav mun rir -> pep
+neg rir rir -> vez
+neg tir mun -> dut
+pep lis -> tav
+tav mun rir mun -> dut
+tar lis gak lis -> tor
+bup lis rir mun -> bup
+dut rir mun -> tor
+neg miv tir -> dut
+tav lis miv -> tar
+vez lis miv lis -> tav
+vez tir gak miv -> dop
+tar mun gak -> dop
+neg lis miv gak -> neg
+neg miv rir gak -> dop
+bup miv gak -> tor
+gor tir -> vez
+tav mun -> gor
+tav lis mun miv -> tav
+gor tir lis -> dut
+vez tir miv -> neg
+tav gak tir -> pep
+tor rir tir tir -> gor
+tav tir tir rir -> dut
+tav lis mun -> tar
+bup miv mun lis -> vez
+tav lis -> neg
+bup mun tir -> dop
+tor rir rir gak -> dut
+gor miv rir mun -> vez
+vez miv gak tir -> dut
+tav gak gak tir -> tav
+tav gak miv -> bup
+dut lis gak mun -> bup
+neg gak gak lis -> gor
+pep mun miv miv -> vez
+dut lis miv tir -> gor
+tar rir gak -> dop
+neg miv tir mun -> tor
+bup mun mun -> neg
+tar miv gak rir -> bup
+vez lis miv lis -> tav
+dop miv miv -> dut
+tar tir rir -> dut
+vez gak tir -> dop
+vez gak gak tir -> gor
+tor tir rir lis -> vez
+tor tir rir -> dop
+vez tir lis -> pep
+bup tir rir tir -> tor
+pep miv -> dop
+gor gak tir tir -> dut
+tav mun rir gak -> neg
+neg mun lis rir -> bup
+dut miv rir -> neg
+tar lis gak miv -> gor
+neg gak miv mun -> vez
+tav lis tir -> tor
+dop rir mun mun -> tav
+dut lis rir -> tav
+neg rir gak mun -> tav
+neg gak -> neg
+dut rir tir -> bup
+pep gak -> dut
+pep gak lis -> dop
+tar mun gak -> dop
+tar rir miv -> dut
+tor tir miv lis -> tor
+gor gak tir lis -> bup
+tar miv lis lis -> gor
+vez rir lis -> tor
+gor lis mun -> pep
+tav mun mun -> tav
+tar tir gak -> tar
+pep mun tir -> neg
+dop miv miv -> dut
+gor rir miv rir -> tav
+dop miv mun miv -> vez
+pep tir gak -> neg
+tar miv gak rir -> bup
+bup rir miv rir -> bup
+tar miv gak gak -> tor
+neg lis lis -> pep
+tav rir mun -> neg
+gor lis -> pep
+pep rir gak lis -> gor
+gor tir mun -> bup
+dut gak miv -> tav
+bup lis tir -> dut
+pep rir miv rir -> vez
+dut miv miv tir -> tar
+gor rir gak rir -> dut
+dut gak rir gak -> dop
+pep rir rir -> tar
+tar rir lis -> dut
+dut tir mun tir -> dop
+dut tir tir gak -> dut
+pep lis mun miv -> neg
+pep lis gak miv -> dut
+pep rir tir -> tor
+vez lis lis -> dop
+dut rir tir mun -> dop
+pep miv rir -> tav
+gor rir lis mun -> gor
+dop rir tir mun -> vez
+gor miv tir rir -> gor
+gor mun miv tir -> tav
+pep miv miv rir -> tor
+neg rir gak tir -> vez
+tar tir mun -> tor
+neg miv miv -> tav
+bup rir tir lis -> tav
+tar miv tir lis -> bup
+tav gak mun -> dop
+dop mun rir tir -> dut
+bup lis miv -> tav
+tar miv mun tir -> vez
+vez tir -> gor
+pep tir -> neg
+tar tir miv miv -> dop
+bup tir gak gak -> tar
+tav rir miv mun -> bup
+neg lis -> gor
+pep tir mun lis -> bup
+bup lis tir mun -> tor
+dop gak lis -> dut
+gor lis lis miv -> tor
+tav rir tir -> dop
+gor tir rir -> tor
+dut mun miv lis -> pep
+bup lis rir tir -> gor
+tav gak mun -> dop
+dut tir mun -> dop
+tor gak tir -> neg
+tav tir gak -> gor
+gor lis mun tir -> neg
+bup gak -> tor
+vez lis lis -> dop
+neg lis mun rir -> dop
+tar mun gak -> dop
+neg lis gak -> tav
+bup lis -> tar
+tar mun tir rir -> pep
+dop mun tir -> tor
+pep tir miv -> tar
+neg rir lis miv -> bup
+tar mun mun -> bup
+bup gak mun mun -> tor
+tar rir tir -> gor
+tav mun miv -> neg
+bup gak gak -> pep
+tav tir gak rir -> pep
+vez tir mun -> tav
+bup rir gak gak -> pep
+pep tir miv -> vez
+neg miv lis -> bup
+tar mun miv -> dut
+tav tir rir gak -> dop
+pep lis tir -> tar
+bup gak mun -> dut
+dut tir tir mun -> gor
+pep lis mun -> gor
+gor miv miv -> tar
+tav lis mun miv -> tav
+bup miv lis -> tar
+gor lis gak gak -> tar
+tor tir mun tir -> vez
+vez tir tir gak -> dop
+pep mun tir -> neg
+dut mun lis -> tor
+tar miv mun lis -> pep
+pep gak tir rir -> bup
+neg mun tir -> dut
+pep tir mun -> tar
+vez miv mun lis -> tor
+neg gak lis miv -> neg
+tav rir miv -> vez
+neg lis lis -> pep
+pep rir tir mun -> dut
+dop rir miv -> tor
+gor mun gak -> bup
+tav mun rir mun -> pep
+pep tir lis tir -> vez
+pep rir tir -> tor
+dut gak mun -> vez
+pep miv tir -> tor
+bup lis gak gak -> tav
+tav rir lis -> vez
+dop lis mun miv -> bup
+bup rir miv -> bup
+dop lis tir -> gor
+dut gak lis -> bup
+tar rir rir tir -> tav
+tav mun rir -> pep
+tar miv miv rir -> gor
+tar gak rir rir -> neg
+tor rir gak lis -> neg
+tor mun rir -> dut
+tor lis rir -> gor
+pep miv rir gak -> bup
+dop lis rir -> tor
+tar mun mun -> bup
+tav gak -> bup
+pep tir miv gak -> gor
+neg miv lis rir -> bup
+neg gak lis lis -> pep
+gor lis rir -> neg
+gor mun mun mun -> tav
+tav rir rir lis -> neg
+tar lis mun rir -> tav
+tar mun gak -> dop
+neg mun rir -> vez
+bup miv lis mun -> vez
+tor lis tir rir -> dop
+tav lis tir -> tor
+tor lis -> tor
+tor lis mun gak -> tar
+dop rir -> tav
+pep miv rir tir -> tar
+tar tir lis -> dop
+tor miv gak lis -> neg
+tar miv gak -> bup
+dop miv lis -> dut
+neg gak miv -> tar
+gor rir lis mun -> gor
+dut rir lis mun -> neg
+neg rir tir rir -> dut
+dut tir rir -> bup
+bup gak rir tir -> vez
+pep mun lis -> tav
+tav miv mun tir -> bup
+pep rir lis gak -> tav
+bup miv lis gak -> gor
+dut rir tir -> bup
+dop lis rir -> tor
+tar mun mun mun -> dop
+dop gak tir -> gor
+pep tir gak tir -> bup
+dut mun gak -> pep
+vez rir mun miv -> pep
+bup miv tir -> pep
+bup miv mun -> bup
+pep tir mun -> tar
+tor tir tir rir -> vez
+dut mun tir tir -> tar
+bup gak rir rir -> pep
+dop mun rir tir -> dut
+dut lis tir gak -> vez
+tor tir tir tir -> dut
+tor miv mun gak -> bup
+tar miv rir rir -> tav
+gor tir gak -> dop
+tor rir lis -> pep
+gor rir tir rir -> tar
+tar rir mun miv -> bup
+bup gak rir rir -> pep
+dut lis rir tir -> tar
+dop gak mun -> bup
+gor lis miv -> dop
+dop mun tir mun -> dut
+bup gak lis -> tor
+gor tir rir tir -> tav
+neg miv mun miv -> dut
+vez rir -> tor
+bup tir gak -> dut
+pep lis gak -> bup
+dut miv tir miv -> tar
+neg gak gak -> neg
+bup mun miv lis -> dut
+dop tir gak -> vez
+vez mun rir -> bup
+bup miv -> bup
+tav miv tir mun -> gor
+vez lis lis -> dop
+pep mun miv -> dop
+tav rir gak lis -> dut
+pep miv miv -> vez
+pep miv rir -> tav
+neg mun miv mun -> gor
+neg mun mun -> vez
+tor gak tir lis -> neg
+neg miv mun mun -> bup
+neg mun lis -> bup
+tav gak rir tir -> pep
+neg rir -> tar
+vez miv lis gak -> vez
+tar miv -> tav
+dut rir miv rir -> neg
+tav mun rir tir -> neg
+dop miv rir -> tor
+dut tir tir rir -> neg
+neg lis tir gak -> dop
+tar tir tir mun -> dop
+neg gak mun miv -> tav
+tav mun miv gak -> neg
+vez lis lis rir -> tav
+dop lis gak tir -> dop
+tav miv mun -> dut
+bup rir tir -> pep
+neg lis mun lis -> neg
+gor tir tir rir -> pep
+vez gak -> dop
+tar miv mun tir -> vez
+tav mun miv -> neg
+gor mun miv -> tor
+bup lis lis -> bup
+pep gak lis -> dop
+dop mun gak rir -> tar
+bup miv mun gak -> vez
+pep gak rir gak -> tar
+dop lis mun -> bup
+dut lis rir -> tav
+neg tir mun miv -> pep
+vez miv miv -> pep
+bup tir -> pep
+dut tir mun -> dop
+tav rir mun -> neg
+tav miv -> tor
+vez mun tir -> pep
+tar gak mun -> tav
+tor gak lis mun -> gor
+tar gak lis -> pep
+neg miv lis -> bup
+bup lis mun rir -> tor
+neg gak miv tir -> dop
+tor tir mun -> gor
+pep gak mun -> tor
+tav gak mun -> dop
+bup lis lis tir -> pep
+tav miv tir -> tav
+tav miv lis miv -> gor
+neg mun gak -> gor
+bup rir rir rir -> bup
+vez miv rir -> dut
+neg lis miv -> neg
+dut rir miv miv -> dop
+tor tir gak -> bup
+tar lis gak -> tor
+tar lis miv -> bup
+neg tir rir -> gor
+vez mun rir -> bup
+dop lis tir -> gor
+vez lis miv -> pep
+tav lis rir gak -> gor
+gor mun lis -> neg
+tar gak gak -> tav
+dut lis lis -> vez
+vez rir mun lis -> dop
+tor rir lis lis -> tav
+tor miv miv -> neg
+tar miv mun -> gor
+tor tir gak -> bup
+pep mun rir gak -> neg
+
+Questions:
+1 pep miv mun tir lis rir
+2 tor rir gak rir miv gak mun rir miv
+3 tor tir tir mun rir tir mun mun tir gak tir lis tir miv tir gak mun
+4 pep lis gak mun
+5 tor mun lis lis rir gak lis rir lis
+6 tav gak tir lis lis gak mun lis mun gak miv tir miv
+7 tor tir lis miv miv tir lis lis gak gak rir gak rir
+8 gor rir miv lis
+9 tar gak rir rir miv miv rir mun mun rir lis lis gak gak lis miv gak
+10 tor miv gak rir gak rir tir tir miv rir miv rir gak tir miv mun gak
+11 neg miv lis mun tir mun tir lis mun
+12 tar rir gak miv miv mun tir miv rir miv lis miv miv
+13 dut rir mun miv lis tir
+14 dop rir tir gak rir rir tir tir tir rir tir miv rir
+15 vez lis mun gak rir lis tir gak miv gak mun lis rir gak gak gak gak
+16 tar rir gak miv mun gak mun rir miv
+17 pep mun lis lis gak lis miv rir miv
+18 bup miv gak gak
+19 bup miv lis rir miv gak tir mun lis gak tir mun gak
+20 gor lis rir tir tir lis
+21 tav lis miv lis mun miv tir lis lis lis lis gak lis
+22 bup miv lis miv gak miv mun lis lis mun tir lis lis gak miv mun rir
+23 gor gak miv rir rir tir gak tir lis
+24 dop mun mun gak miv gak miv gak mun gak miv rir tir
+25 vez miv gak lis
+26 dut miv miv lis
+27 gor mun gak tir gak tir mun lis rir
+28 tar miv miv gak
+29 dut miv gak gak gak gak
+30 bup gak lis rir lis rir rir miv lis
+31 gor gak rir mun lis mun gak tir tir lis miv gak miv miv tir lis lis
+32 tar tir lis rir miv gak
+33 neg miv rir miv
+34 bup mun gak gak rir mun lis mun lis gak mun rir tir rir rir lis gak
+35 bup rir mun gak mun miv mun gak gak rir rir mun rir
+36 tav tir tir mun lis gak lis miv rir
+37 bup miv rir lis miv lis
+38 tav miv gak tir rir mun tir lis tir miv tir lis lis gak lis rir rir
+39 gor miv gak lis tir miv
+40 neg gak tir gak rir gak gak miv rir mun mun mun mun tir tir rir gak
+41 vez rir rir gak
+42 tor rir rir tir rir tir miv rir gak mun lis gak tir
+43 dut mun rir rir rir miv gak gak gak
+44 tar miv gak gak gak mun mun rir gak miv tir mun gak lis rir gak mun
+45 pep lis miv miv gak mun
+46 gor tir rir rir
+47 dop tir tir gak
+48 dut lis lis tir gak mun
+49 bup lis miv rir miv tir mun rir rir lis miv gak gak
+50 tor lis rir rir tir lis

@@ -1,0 +1,26 @@
+Transition table (state: action->next). Sessions 1-5 used an older table. In session 6 the rules CHANGED: all pip and les entries were re-derived (only rip les stayed the same). zen, bug, nid and gar were unchanged. Sessions 7, 8, 9 and 10: NO change. The table below fit 107 of 120 lines in session 10 (115 of 120 in session 9), and all entries are confirmed, with no guesses left.
+zuk: pip nuf, zen lov, bug kor, les nuf, nid dak, gar zuk
+bon: pip feb, zen dak, bug zuk, les lov, nid dev, gar feb
+feb: pip vab, zen bon, bug feb, les rip, nid bon, gar rip
+nuf: pip kor, zen nuf, bug rip, les vab, nid kor, gar kor
+dev: pip bon, zen dev, bug bon, les kor, nid vab, gar dak
+rip: pip lov, zen rip, bug dev, les dev, nid rip, gar dev
+lov: pip dak, zen kor, bug vab, les feb, nid lov, gar vab
+kor: pip rip, zen zuk, bug lov, les dak, nid nuf, gar lov
+vab: pip zuk, zen feb, bug dak, les bon, nid zuk, gar nuf
+dak: pip dev, zen vab, bug nuf, les zuk, nid feb, gar bon
+
+Every action has been a permutation of the states in every table so far. pip and les are currently 10-cycles.
+
+Old pip/les (sessions 1-5), for reference in case rules revert:
+pip: zuk zuk, bon rip, feb lov, nuf nuf, dev vab, rip dak, lov bon, kor dev, vab feb, dak kor
+les: zuk zuk, bon nuf, feb dak, nuf rip, dev vab, rip dev, lov lov, kor kor, vab feb, dak bon
+
+Noise lines, session 10 (13, treated as noise, each contradicted by other lines): vab zen zen->lov, dak pip->lov, dak bug->vab, dak bug->bon, dev nid->dak, dev gar->bon, bon pip pip->feb, rip les pip zen->rip, lov les nid pip->dak, bon gar bug nid->feb, bon gar bug les->lov, lov gar->kor, dev pip bug->dev.
+Only weakly checked entry: vab zen (feb) had no other line in session 10, but kor zen zuk was confirmed, so a swap is ruled out. Recheck vab zen if it appears next session.
+Noise history: sessions 1-10 had 5, 3, 8, 4, 7, 5, 6, 9, 5, 13 mismatches. Isolated one-offs, no repeated entry. Noise can reach 13, so a count like that alone does not mean a change.
+
+Change pattern: session 6's change hit whole actions (2 of 6 actions completely rewritten, still permutations), not scattered entries. A quick check is to compare single-action lines per action: if mismatches cluster on one action, re-derive that whole action. A real change should produce many mismatches (dozens of lines), not 13 scattered ones.
+
+Method: first trace single-action lines and list mismatches by action, then trace all lines. For each mismatch, check other lines using the same entry, including multi-action lines. A one-off mismatch contradicted elsewhere is noise (even a single-action line can be noise). Expect about 5% noise, or about 6 of 120 lines (3 to 13 seen).
+To re-derive: collect single-action lines with majority vote on repeats, then chain through multi-action lines using the trusted actions to fill gaps. Use the permutation property to narrow down unobserved entries. Answer questions by tracing step by step.

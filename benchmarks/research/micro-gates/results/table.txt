@@ -1,0 +1,34 @@
+Chance is 10%. Mean of 5 hidden worlds, 200 chains a length.
+
+Moves shown directly: 50%
+contestant              3      5      8     12     16
+most common end      9.9%   9.1%   8.8%  10.2%   8.9%
+one Ada model        8.0%   9.5%  10.0%   9.8%  10.3%
+gates, no credit     0.0%   0.0%   0.0%   0.0%   0.0%
+gates, credit       96.2%  94.9%  90.4%  88.0%  84.4%
+moves right 98.7%, wrong 1.3%, never-shown moves right 98.7%
+
+Moves shown directly: 25%
+contestant              3      5      8     12     16
+most common end      8.9%  10.7%   8.2%  10.2%   8.2%
+one Ada model        9.1%   9.6%  11.2%  10.5%  10.9%
+gates, no credit     0.8%   0.3%   0.0%   0.0%   0.0%
+gates, credit       68.3%  59.5%  52.9%  49.2%  45.6%
+moves right 86.7%, wrong 13.0%, never-shown moves right 83.6%
+
+Moves shown directly: 10%
+contestant              3      5      8     12     16
+most common end      8.9%  11.3%   9.1%  10.0%   7.2%
+one Ada model        8.6%   9.8%  10.6%  10.0%  10.0%
+gates, no credit     1.6%   0.5%   0.1%   0.1%   0.0%
+gates, credit        8.8%   7.5%   8.0%   7.6%   6.3%
+moves right 17.7%, wrong 77.3%, never-shown moves right 14.1%
+
+Moves shown directly: 0%
+contestant              3      5      8     12     16
+most common end      9.1%  11.3%   8.3%  10.3%   7.9%
+one Ada model        7.9%   9.4%  10.9%  10.5%  10.8%
+gates, no credit     0.0%   0.0%   0.0%   0.0%   0.0%
+gates, credit        0.0%   0.0%   0.0%   0.0%   0.0%
+moves right 0.0%, wrong 0.0%, never-shown moves right 0.0%
+

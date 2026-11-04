@@ -1,0 +1,12 @@
+Hidden-machine. S10 table, cols nim mut fov piz fon tot (fit by hand; skip Bash):
+zip nif tid paz nif vir tid
+paz vok mod vin vok nif vok
+vir mod vin nif vir paz zip
+vok vin vok vok paz mod mod
+mod mob mub vir vin vin mob
+mub mub nif mod mod vok mub
+vin tid vir mub zip tid vin
+tid zip tid zip mod zip vir
+mob paz zip mob tid mub zip
+nif vir paz mob mub nif nif
+Drift ~6-8 cells/session. Soft: tid mut/piz/tot, zip tot, paz piz. Model step stale; trust this note.
