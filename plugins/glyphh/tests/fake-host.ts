@@ -26,6 +26,9 @@ export const MACHINE_UUID = '0A1B2C3D-0000-4000-8000-00000000F00D'
 const IOREG = `+-o J316sAP  <class IOPlatformExpertDevice>\n    "IOPlatformUUID" = "${MACHINE_UUID}"\n`
 const done = (stdout = '') => ({ exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
 
+/** What hooks/dip_arrange.py answers; a test sets it. */
+export const arrangeAnswer = { text: '{"ok":true,"tiles":{}}' }
+
 /** Files in a map; the shell writer (umask 077) marks its file 0600. */
 function fakeFiles() {
   const files = new Map<string, string>()
@@ -34,6 +37,7 @@ function fakeFiles() {
   const run = async (argv: readonly string[], init?: { stdin?: string }) => {
     argvs.push([...argv])
     if (argv[0] === '/usr/sbin/ioreg') return done(IOREG)
+    if (argv[0] === 'python3') return done(arrangeAnswer.text)
     if (argv[0] === '/bin/sh' && argv.length > 5) {
       files.set(argv[5]!, init?.stdin ?? '')
       modes.set(argv[5]!, '600')

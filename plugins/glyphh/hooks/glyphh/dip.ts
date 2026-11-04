@@ -6,7 +6,7 @@
 // makes, and what could not be done is said in the reply. Layouts live in the
 // store across sessions; the Dip pane writes them.
 import type { DipCellPane, DipDraft, DipGrid, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
-import { asGrid, assign, emptyGrid, gridOfPanes, openOrder, panesOf } from './dipgrid'
+import { arranged, asGrid, assign, emptyGrid, gridOfPanes, gridOfRects, moves, openOrder, panesOf, peels, type Rect } from './dipgrid'
 import type { Host } from './host'
 
 export const PANES: { id: DipPane; label: string }[] = [
@@ -170,6 +170,15 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   if (!panes.includes('preview')) await openTabs()
   if (!panes.includes('terminal')) await openTerminals()
 
+  const shown = panes.filter(p => p !== 'preview' || l.tabs.length)
+  const off = peels(l.grid, shown)
+  if (!off) left.push('arrange this grid: the app can only build one tile at a time from the outside in')
+  else if (off.length) {
+    const placed = await runArrange(gh, moves(off))
+    if (placed.error) left.push(placed.error)
+    else if (!arranged(l.grid, placed.tiles)) left.push('arrange the panes as the grid says')
+  }
+
   await setActive(gh, l.name)
   const what = [l.folder && l.folder.split('/').pop(), l.tabs.length && `${l.tabs.length} tab${l.tabs.length > 1 ? 's' : ''}`, l.terminals.length && `${l.terminals.length} terminal${l.terminals.length > 1 ? 's' : ''}`, ...l.panes.map(p => PANES.find(x => x.id === p)?.label)].filter(Boolean)
   const done = `Dipped into ${l.name}${what.length ? `: ${what.join(', ')}` : ''}.`
@@ -183,6 +192,19 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   const text = `${done} Could not ${left.join('; ')}.`
   await say(gh, text, true)
   return text
+}
+
+/** hooks/dip_arrange.py, which works the app's Move handles and says where every tile is. No moves just measures. */
+async function runArrange(gh: Host, ops: { tile: string; keys: string[] }[]): Promise<{ tiles: Record<string, Rect>; error?: string }> {
+  try {
+    const r = await gh.process.run(['python3', `${gh.pluginRoot}/hooks/dip_arrange.py`, JSON.stringify({ ops })])
+    const said = jsonIn(r.stdout) as { ok?: boolean; error?: string; tiles?: Record<string, Rect> } | undefined
+    if (said?.ok) return { tiles: said.tiles ?? {} }
+    const why = said?.error === 'accessibility' ? 'arrange the panes: allow Claude under System Settings, Privacy & Security, Accessibility' : `arrange the panes (${said?.error ?? 'no answer'})`
+    return { tiles: said?.tiles ?? {}, error: why }
+  } catch (err) {
+    return { tiles: {}, error: `arrange the panes (${String(err).slice(0, 100)})` }
+  }
 }
 
 /** The Files pane: show_pane opens one file and needs its path, so the whole pane comes from the app's View menu
@@ -234,7 +256,10 @@ export async function capture(gh: Host, name: string, brief = ''): Promise<DipLa
     const s = (t ?? {}) as Record<string, unknown>
     return { title: String(s.title ?? 'shell'), cwd: String(s.cwd ?? s.directory ?? ''), command: '' }
   })
-  return { name, folder, tabs: urls, focus, grid: gridOfPanes(panes), panes, terminals, brief }
+  // The panes as they sit now, dragged or not; where they can't be measured, Claude with the panes beside it.
+  const measured = gridOfRects((await runArrange(gh, [])).tiles, FILLS.map(f => f.id))
+  const grid = measured ?? gridOfPanes(panes)
+  return { name, folder, tabs: urls, focus, grid, panes: panesOf(grid), terminals, brief }
 }
 
 /** /dip save <name>: the session as it is, kept as that layout (its brief kept when it existed). */

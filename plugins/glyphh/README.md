@@ -93,7 +93,11 @@ layout editor does: columns and rows up to 4, press a cell to choose what fills 
 Cancel for the whole layout. The app's tools open panes but cannot place them, so a dip shows the grid's panes in
 reading order and the arrangement itself is kept with the layout. `/dip <name>` calls the desktop app's own tools for each part, through
 the permission check: the folder moves (at the end of the turn), the tabs the last dip opened close and this layout's
-open with the one in front last, the terminal tabs start, the panes show (Files through the app's View menu). The
+open with the one in front last, the terminal tabs start, the panes show (Files through the app's View menu). Then
+`hooks/dip_arrange.py` builds the grid with the keyboard Move handle each tile has, taking one tile at a time to an
+edge, innermost first, and checks where they landed; it needs `python3` and macOS Accessibility permission for Claude,
+and takes the keyboard focus for a few seconds. A shape with no tile on an edge of the rest (a plain 2 × 2) can't be
+built, and the editor says so. `/dip save` reads the grid off the panes as they sit, so dragging them works too. The
 mod does all of it, with no turn of Claude's: it answers the permission check for its own calls to those tools, since
 auto mode has no request to judge, and puts a command typed into a terminal to you. What could not be done is said
 in the reply and the pane, and why in `~/.glyphh/dip-log.txt`. While a layout is active its name, folder, tabs and brief are a section of

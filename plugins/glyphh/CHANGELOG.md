@@ -2,6 +2,15 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.16.0 — 2026-11-03
+
+A dip builds the grid. No tool of the app places a pane, but each tile has a keyboard Move handle, and the new
+`hooks/dip_arrange.py` works those through macOS accessibility: Claude can sit on the right, a pane can span the top,
+and where every tile landed is checked against the grid. It needs `python3` and Accessibility permission, and takes
+the keyboard focus for a few seconds. A shape with no tile on an edge of the rest (a plain 2 × 2) can't be built; the
+editor says so. `/dip save` and From this workspace now read the grid off the panes as they sit, so a layout can be
+dragged into place and saved. The hook's User-Agent is `glyphh-hook/1.16.0`.
+
 ## 1.15.0 — 2026-11-03
 
 A dip arranges what the app lets it. The app places a pane by when it opens (the first beside Claude, the second under
