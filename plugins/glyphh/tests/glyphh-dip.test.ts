@@ -36,7 +36,7 @@ test('a dip moves the folder, opens the tabs with the one in front last, the ter
   expect(opened).toEqual(['https://github.com/acme/api/pulls', 'http://localhost:3000/'])
   expect(w.tools.calls.find(c => c.tool.endsWith('run_in_terminal'))?.input).toEqual({ command: 'npm run dev', title: 'dev', cwd: '/code/api' })
   const panes = w.tools.calls.filter(c => c.tool.endsWith('show_pane')).map(c => c.input.pane)
-  expect(panes).toEqual(['terminal', 'preview'])
+  expect(panes).toEqual(['preview', 'terminal'])
   expect(text.startsWith('Dipped into api')).toBe(true)
   expect((await w.gh.state.dip.get()).active).toBe('api')
   expect(w.asked.length).toBe(0)
@@ -56,9 +56,37 @@ test('what a refused tool could not do is said, and no prompt goes to Claude', a
   const w = await withLayouts([API], { refuse: ['mcp__ccd_directory__change_directory', 'mcp__ccd_view__show_pane'] })
   const text = await dip(w.gh, 'api')
   expect(w.asked.length).toBe(0)
-  expect(text.includes('Could not move the session to /code/api; show the terminal pane; show the preview pane.')).toBe(true)
+  expect(text.includes('Could not move the session to /code/api; show the preview pane; show the terminal pane.')).toBe(true)
   expect((await w.gh.state.dip.get()).note?.isError).toBe(true)
   expect(w.files.get('/home/t/.glyphh/dip-log.txt')?.includes('mcp__ccd_view__show_pane: refused')).toBe(true)
+})
+
+test('a dip closes every pane, then opens the layout\'s down each column, a pane\'s tabs at its turn', async () => {
+  // Terminal and Diff stacked in one column, the browser in the next.
+  const grid = { cols: 3, rows: 2, cells: [
+    { pane: 'claude' as const, col: 0, row: 0, colSpan: 1, rowSpan: 2 },
+    { pane: 'terminal' as const, col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+    { pane: 'preview' as const, col: 2, row: 0, colSpan: 1, rowSpan: 2 },
+    { pane: 'diff' as const, col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+  ] }
+  const w = await withLayouts([{ ...API, grid, panes: ['terminal', 'preview', 'diff'] }])
+  await dip(w.gh, 'api')
+  const seen = w.tools.calls.map(c => `${c.tool.split('__')[2]} ${String(c.input.pane ?? '')}`.trim())
+  const at = (s: string) => seen.indexOf(s)
+  expect(at('close_pane preview')).toBeLessThan(at('show_pane terminal'))
+  expect(at('close_pane terminal')).toBeLessThan(at('show_pane terminal'))
+  expect(at('show_pane terminal')).toBeLessThan(at('show_pane diff'))
+  expect(at('show_pane diff')).toBeLessThan(at('preview_start'))
+  expect(at('preview_start')).toBeLessThan(at('show_pane preview'))
+})
+
+test('a layout saved in another session is found, and survives a save here', async () => {
+  const w = await withLayouts([API])
+  w.store.set('dip.layouts', [API, { ...API, name: 'dev' }])
+  expect((await dip(w.gh, 'dev')).startsWith('Dipped into dev')).toBe(true)
+  w.store.set('dip.layouts', [API, { ...API, name: 'dev' }, { ...API, name: 'web' }])
+  await dipCommand(w.gh, 'save mine')
+  expect(asLayouts(w.store.get('dip.layouts')).map(l => l.name)).toEqual(['api', 'dev', 'web', 'mine'])
 })
 
 test('the Files pane comes from the View menu: show_pane would need a file', async () => {

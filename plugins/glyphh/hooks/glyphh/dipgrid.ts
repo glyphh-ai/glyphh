@@ -33,6 +33,11 @@ export function cellAt(g: DipGrid, col: number, row: number): number {
 export const panesOf = (g: DipGrid): DipPane[] =>
   order(g.cells).flatMap(c => (c.pane && c.pane !== 'claude' ? [c.pane] : []))
 
+/** The order a dip opens the side panes: down each column, left to right. The app places a pane by when it opens, and
+ *  fills a column before starting the next. */
+export const openOrder = (g: DipGrid): DipPane[] =>
+  [...g.cells].sort((a, b) => a.col - b.col || a.row - b.row).flatMap(c => (c.pane && c.pane !== 'claude' ? [c.pane] : []))
+
 /** Claude down the left and the panes beside it, in the order given: a layout from before grids, or a capture. */
 export function gridOfPanes(panes: readonly DipPane[]): DipGrid {
   if (!panes.length) return { cols: 1, rows: 1, cells: [{ pane: 'claude', col: 0, row: 0, colSpan: 1, rowSpan: 1 }] }

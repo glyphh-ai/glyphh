@@ -6,7 +6,7 @@
 // makes, and what could not be done is said in the reply. Layouts live in the
 // store across sessions; the Dip pane writes them.
 import type { DipCellPane, DipDraft, DipGrid, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
-import { asGrid, assign, emptyGrid, gridOfPanes, panesOf } from './dipgrid'
+import { asGrid, assign, emptyGrid, gridOfPanes, openOrder, panesOf } from './dipgrid'
 import type { Host } from './host'
 
 export const PANES: { id: DipPane; label: string }[] = [
@@ -43,9 +43,11 @@ const T = {
   shell: 'mcp__terminal__open_terminal_tab',
   run: 'mcp__terminal__run_in_terminal',
   shells: 'mcp__terminal__list_terminal_tabs',
+  closePane: 'mcp__ccd_view__close_pane',
 }
 
-/** Layouts from the store into the pane's state, at session start. */
+/** Layouts from the store into the pane's state: at session start, and before each use, since another session may
+ *  have saved since and writing an old list back would lose its layout. */
 export async function loadDip(gh: Host) {
   const layouts = asLayouts(await gh.store.get(LAYOUTS).catch(() => undefined))
   const active = await gh.store.get(ACTIVE).catch(() => undefined)
@@ -105,6 +107,7 @@ async function browserTabs(gh: Host): Promise<Tab[]> {
 
 /** /dip <name>: the layout, made the session's workspace. */
 export async function dip(gh: Host, typed: string): Promise<string> {
+  await loadDip(gh)
   const { layouts } = await gh.state.dip.get()
   const l = findLayout(layouts, typed)
   if (!l) {
@@ -126,32 +129,46 @@ export async function dip(gh: Host, typed: string): Promise<string> {
     await step(T.dir, { path: l.folder }, `move the session to ${l.folder}`)
   }
 
+  // The app places a pane by when it opens (the first beside Claude, the second under it, the third in a new
+  // column), so every pane closes and the layout's open in order. A tab or a terminal tab opens its pane, so each
+  // waits for that pane's turn.
+  const open = jsonIn((await gh.tool.call(T.layout, {})).text) as { open_panes?: unknown } | undefined
+  for (const pane of asStrings(open?.open_panes)) await gh.tool.call(T.closePane, { pane })
+
   // The tabs the last dip opened go; this layout's open, the one in front last.
   const stale = asStrings(await gh.store.get(OPENED).catch(() => undefined))
   for (const tabId of stale) await gh.tool.call(T.close, { tabId })
-  const before = new Set((await browserTabs(gh)).map(t => t.tabId))
-  const order = l.tabs.map((url, i) => ({ url, i })).sort((a, b) => Number(a.i === l.focus) - Number(b.i === l.focus))
-  for (const { url } of order) await step(T.open, { url }, `open ${url}`)
-  const opened = (await browserTabs(gh)).map(t => t.tabId).filter(id => !before.has(id))
-  await gh.store.set(OPENED, opened)
-
-  for (const t of l.terminals) {
-    const at = t.cwd ? { cwd: t.cwd } : {}
-    const title = t.title || 'shell'
-    if (t.command) await step(T.run, { command: t.command, title, ...at }, `run \`${t.command}\` in a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
-    else await step(T.shell, { title, ...at }, `open a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
+  const openTabs = async () => {
+    const before = new Set((await browserTabs(gh)).map(t => t.tabId))
+    const order = l.tabs.map((url, i) => ({ url, i })).sort((a, b) => Number(a.i === l.focus) - Number(b.i === l.focus))
+    for (const { url } of order) await step(T.open, { url }, `open ${url}`)
+    await gh.store.set(OPENED, (await browserTabs(gh)).map(t => t.tabId).filter(id => !before.has(id)))
+  }
+  const openTerminals = async () => {
+    for (const t of l.terminals) {
+      const at = t.cwd ? { cwd: t.cwd } : {}
+      const title = t.title || 'shell'
+      if (t.command) await step(T.run, { command: t.command, title, ...at }, `run \`${t.command}\` in a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
+      else await step(T.shell, { title, ...at }, `open a terminal tab titled "${title}"${t.cwd ? ` in ${t.cwd}` : ''}`)
+    }
   }
 
-  // The browser pane last, so the tab in front is what shows.
-  const panes = [...l.panes].sort((a, b) => Number(a === 'preview') - Number(b === 'preview'))
+  const panes = openOrder(l.grid)
   for (const pane of panes) {
-    if (pane === 'preview' && !l.tabs.length) continue
+    if (pane === 'preview') {
+      if (!l.tabs.length) continue
+      await openTabs()
+    } else if (pane === 'terminal') {
+      await openTerminals()
+    }
     if (pane === 'file') {
       if (!(await showFiles(gh))) left.push('show the Files pane')
       continue
     }
     await step(T.pane, { pane }, `show the ${pane} pane`)
   }
+  if (!panes.includes('preview')) await openTabs()
+  if (!panes.includes('terminal')) await openTerminals()
 
   await setActive(gh, l.name)
   const what = [l.folder && l.folder.split('/').pop(), l.tabs.length && `${l.tabs.length} tab${l.tabs.length > 1 ? 's' : ''}`, l.terminals.length && `${l.terminals.length} terminal${l.terminals.length > 1 ? 's' : ''}`, ...l.panes.map(p => PANES.find(x => x.id === p)?.label)].filter(Boolean)
@@ -188,7 +205,7 @@ async function showFiles(gh: Host): Promise<boolean> {
  *  request to read and refuses them all. Panes, tabs, the layout's folder and a bare shell go ahead; a command typed
  *  into a terminal is put to the person, line and all; anything else takes the check beneath. */
 export function dipCheck(tool: string, input: unknown): 'allow' | 'ask' | null {
-  if ([T.dir, T.pane, T.layout, T.open, T.tabs, T.close, T.shell, T.shells].includes(tool)) return 'allow'
+  if ([T.dir, T.pane, T.closePane, T.layout, T.open, T.tabs, T.close, T.shell, T.shells].includes(tool)) return 'allow'
   if (tool === T.js) return (input as { text?: unknown } | null)?.text === 'location.href' ? 'allow' : null
   return tool === T.run ? 'ask' : null
 }
@@ -234,6 +251,7 @@ export async function saveCurrent(gh: Host, name: string): Promise<string> {
 }
 
 export async function removeLayout(gh: Host, name: string): Promise<string> {
+  await loadDip(gh)
   const { layouts, active } = await gh.state.dip.get()
   const l = findLayout(layouts, name)
   if (!l) return `No layout "${name.trim()}".`
@@ -245,6 +263,7 @@ export async function removeLayout(gh: Host, name: string): Promise<string> {
 
 /** /dip [args]: the pane with no args, else dip, save, rm or off. */
 export async function dipCommand(gh: Host, args: string): Promise<{ text: string }> {
+  await loadDip(gh)
   const a = args.trim()
   if (!a) {
     const placed = await gh.openDip()
@@ -311,6 +330,7 @@ export function layoutOf(d: DipDraft): DipLayout {
 export const editDraft = (gh: Host, fn: (d: DipDraft) => DipDraft) => gh.state.dip.set(v => (v.draft ? { ...v, draft: fn(v.draft) } : v))
 
 export async function openDraft(gh: Host, name: string | null) {
+  await loadDip(gh)
   const { layouts } = await gh.state.dip.get()
   const l = name ? layouts.find(x => x.name === name) ?? null : null
   await gh.state.dip.set(v => ({ ...v, draft: draftOf(l), note: null }))
@@ -323,6 +343,7 @@ export async function draftFromNow(gh: Host) {
 }
 
 export async function saveDraft(gh: Host) {
+  await loadDip(gh)
   const { draft, layouts, active } = await gh.state.dip.get()
   if (!draft) return
   const l = layoutOf(draft)

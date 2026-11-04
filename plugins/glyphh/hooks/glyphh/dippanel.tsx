@@ -58,7 +58,7 @@ function GridEditor(ctx: DipCtx, d: DipDraft) {
 
   return (
     <Box key="grid" flexDirection="column" gap="xs">
-      <Text size="footnote" dimColor>Layout: press a cell, then choose what fills it</Text>
+      <Text size="footnote" dimColor>Layout: press a cell, then choose what fills it. The app places panes itself: Claude on the left, then two stacked, then a new column, opened down each column here.</Text>
       <Box gap={1} alignItems="center">
         <Select key="dip-cols" label="Columns" value={String(grid.cols)} options={SIZES} onSelect={v => size(Number(v), grid.rows)} />
         <Select key="dip-rows" label="Rows" value={String(grid.rows)} options={SIZES} onSelect={v => size(grid.cols, Number(v))} />
