@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.18.1 — 2026-11-04
+
+For Anthropic's directory: `.claude-plugin/icon.png`, and the README's *What it does on your computer* says what the
+plugin sends and where, what it reads, runs and writes, and how it touches tool calls. The hook's User-Agent is
+`glyphh-hook/1.18.1`.
+
 ## 1.18.0 — 2026-11-04
 
 The beam: the Ada skill names the connector's `ada_beam {start, hops, width?, values?, miss?}`, a chain of models
