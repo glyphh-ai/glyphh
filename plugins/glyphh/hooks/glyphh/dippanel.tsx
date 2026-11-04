@@ -1,18 +1,86 @@
 // The Dip pane: the layouts, each a press away (/dip <name> does the same),
-// and the editor a layout is written in (its folder, browser tabs, panes,
-// terminal tabs and the brief Claude reads while it is active).
+// and the editor a layout is written in (its folder, the grid of Claude and
+// its panes, browser tabs, terminal tabs and the brief Claude reads while it
+// is active), with one Save and one Cancel.
 import type { RenderSurface } from 'claude-code'
 
-import type { DipDraft, DipView } from '../../types'
-import { closeDraft, dip, draftFromNow, editDraft, openDraft, PANES, removeLayout, saveDraft } from './dip'
+import type { DipCellPane, DipDraft, DipView } from '../../types'
+import { closeDraft, dip, draftFromNow, editDraft, FILLS, openDraft, removeLayout, saveDraft } from './dip'
+import { assign, canMergeDown, canMergeRight, canSplit, type Cut, cuts, MAX_GRID, merge, resizeGrid, splitCell } from './dipgrid'
 import type { Host } from './host'
 import { kit, type Ui } from './ui'
 
 type DipCtx = { gh: Host; ui: Ui; surface: RenderSurface }
 
+/** How tall one grid row is drawn. */
+const ROW = 4
+const SIZES = Array.from({ length: MAX_GRID }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
+
+const fillLabel = (pane: DipCellPane) => FILLS.find(f => f.id === pane)?.label ?? 'Empty'
+
+/** The layout's grid: each cell a press that selects it, then what fills it and how it merges. */
+function GridEditor(ctx: DipCtx, d: DipDraft) {
+  const { gh } = ctx
+  const { Box, Text, Button, Select } = ctx.ui
+  const k = kit(ctx)
+  const { grid, cell } = d
+  const pick = (next: Pick<DipDraft, 'grid' | 'cell'>) => editDraft(gh, x => ({ ...x, ...next }))
+  const size = (cols: number, rows: number) => pick({ grid: resizeGrid(grid, cols, rows), cell: 0 })
+
+  const draw = (cut: Cut, key: string): ReturnType<Ui['Box']> => {
+    if ('cell' in cut) {
+      const at = cut.cell
+      const on = at === cell
+      return (
+        <Box key={key} height={cut.rows * ROW} flexGrow={1} borderStyle="round" borderColor={on ? 'claude' : undefined} borderDimColor={!on} alignItems="center" justifyContent="center">
+          <Button key={`cell-${at}`} label={fillLabel(grid.cells[at]?.pane ?? '')} variant={on ? 'primary' : 'secondary'} onPress={() => pick({ grid, cell: at })} />
+        </Box>
+      )
+    }
+    return (
+      <Box key={key} flexDirection={cut.across ? 'row' : 'column'} flexGrow={1}>
+        {cut.parts.map((p, i) => (
+          <Box key={`${key}-${i}`} flexDirection="column" width={cut.across ? `${p.share * 100}%` : undefined}>
+            {draw(p.cut, `${key}-${i}c`)}
+          </Box>
+        ))}
+      </Box>
+    )
+  }
+  const shape = cuts(grid)
+
+  const moves = [
+    canMergeRight(grid, cell) && { key: 'merge-right', label: 'Merge →', onPress: () => pick(merge(grid, cell, true)) },
+    canMergeDown(grid, cell) && { key: 'merge-down', label: 'Merge ↓', onPress: () => pick(merge(grid, cell, false)) },
+    canSplit(grid, cell) && { key: 'split', label: 'Split', onPress: () => pick({ grid: splitCell(grid, cell), cell }) },
+  ].filter(m => !!m)
+
+  return (
+    <Box key="grid" flexDirection="column" gap="xs">
+      <Text size="footnote" dimColor>Layout: press a cell, then choose what fills it</Text>
+      <Box gap={1} alignItems="center">
+        <Select key="dip-cols" label="Columns" value={String(grid.cols)} options={SIZES} onSelect={v => size(Number(v), grid.rows)} />
+        <Select key="dip-rows" label="Rows" value={String(grid.rows)} options={SIZES} onSelect={v => size(grid.cols, Number(v))} />
+        {moves.length ? k.Actions(moves) : null}
+      </Box>
+      {shape ? draw(shape, 'g') : null}
+      <Box gap={1} flexWrap="wrap">
+        {FILLS.map(f => (
+          <Button
+            key={`fill-${f.id || 'empty'}`}
+            label={f.label}
+            variant={grid.cells[cell]?.pane === f.id ? 'primary' : 'secondary'}
+            onPress={() => pick({ grid: assign(grid, cell, f.id), cell })}
+          />
+        ))}
+      </Box>
+    </Box>
+  )
+}
+
 function Editor(ctx: DipCtx, d: DipDraft) {
   const { gh } = ctx
-  const { Box, Text, Input, Button } = ctx.ui
+  const { Box, Text, Input } = ctx.ui
   const k = kit(ctx)
   const field = (key: keyof Pick<DipDraft, 'name' | 'folder' | 'tabs' | 'terminals' | 'brief'>, label: string, placeholder: string, rows = 1) => (
     <Box key={`f-${key}`} flexDirection="column">
@@ -22,9 +90,9 @@ function Editor(ctx: DipCtx, d: DipDraft) {
         value={d[key]}
         placeholder={placeholder}
         rows={rows > 1 ? rows : undefined}
-        submitLabel="save"
+        submitLabel=""
         onInput={v => void editDraft(gh, x => ({ ...x, [key]: v }))}
-        onSubmit={v => void editDraft(gh, x => ({ ...x, [key]: v })).then(() => saveDraft(gh))}
+        onSubmit={v => void editDraft(gh, x => ({ ...x, [key]: v }))}
       />
     </Box>
   )
@@ -34,20 +102,8 @@ function Editor(ctx: DipCtx, d: DipDraft) {
       <Text weight="semibold">{d.original ? `Edit ${d.original}` : 'New layout'}</Text>
       {field('name', 'Name', 'api')}
       {field('folder', "Claude's folder", '/Users/you/code/api')}
+      {GridEditor(ctx, d)}
       {field('tabs', 'Browser tabs, one a line; * before the one in front', '* localhost:3000\ngithub.com/you/api/pulls', 4)}
-      <Box flexDirection="column">
-        <Text size="footnote" dimColor>Panes</Text>
-        <Box gap={1} flexWrap="wrap">
-          {PANES.map(p => {
-            const on = d.panes.includes(p.id)
-            return (
-              <Button key={`pane-${p.id}`} plain label={p.label} onPress={() => editDraft(gh, x => ({ ...x, panes: on ? x.panes.filter(q => q !== p.id) : [...x.panes, p.id] }))}>
-                <Text weight={on ? 'semibold' : 'regular'} color={on ? 'claude' : undefined} dimColor={!on}>{on ? `● ${p.label}` : `○ ${p.label}`}</Text>
-              </Button>
-            )
-          })}
-        </Box>
-      </Box>
       {field('terminals', 'Terminal tabs, one a line: title | folder | command', 'dev | ~/code/api | npm run dev', 3)}
       {field('brief', 'Brief for Claude while this is active', 'The API service; tests with make test; deploys from main.', 3)}
       {k.Buttons([

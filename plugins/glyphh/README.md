@@ -86,9 +86,12 @@ else the default route's MAC; else a random id kept in `~/.glyphh/machine.json`.
 
 ## Dip (`/dip`)
 
-A layout is a workspace: Claude's folder, the browser pane's tabs (`*` marks the one in front), the side panes
-(Browser, Terminal, Files, Diff, PR, Tasks, Plan, Artifacts), the terminal tabs (`title | folder | command` each, a bare
-shell when the command is empty) and a brief. `/dip <name>` calls the desktop app's own tools for each part, through
+A layout is a workspace: Claude's folder, a grid of Claude and the side panes (Browser, Terminal, Files, Diff, PR,
+Tasks, Plan, Artifacts), the browser pane's tabs (`*` marks the one in front), the terminal tabs (`title | folder |
+command` each, a bare shell when the command is empty) and a brief. The Dip pane edits the grid as the desktop app's
+layout editor does: columns and rows up to 4, press a cell to choose what fills it, merge and split; one Save and one
+Cancel for the whole layout. The app's tools open panes but cannot place them, so a dip shows the grid's panes in
+reading order and the arrangement itself is kept with the layout. `/dip <name>` calls the desktop app's own tools for each part, through
 the permission check: the folder moves (at the end of the turn), the tabs the last dip opened close and this layout's
 open with the one in front last, the terminal tabs start, the panes show. A step a tool refused goes to Claude as
 one prompt listing exactly what is left. While a layout is active its name, folder, tabs and brief are a section of
@@ -177,7 +180,7 @@ through the engine on both surfaces. `mcp/test` checks install.json's mode and a
 | `hooks/glyphh/command.ts`, `open.ts`, `openreq.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the card's open requests; the panel's note |
 | `hooks/glyphh/apps.ts`, `rrotor.ts`, `sections/apps.tsx` | The catalogue's cards, search, type filter, paging and reviews; `/glyphh publish` (the type by extension, binary files as base64); the one call to the local rrotor (`POST /v1/apps`) |
 | `hooks/glyphh/link.ts` | This machine's rrotor linked to Glyphh: its health, the token from `POST /v1/runtime/local` handed to `PUT /v1/runtime/token`, the wait for it to connect; `/glyphh link` |
-| `hooks/glyphh/dip.ts`, `dippanel.tsx` | `/dip`: layouts kept, dipping through the app's tools, capturing the session as a layout, the brief; the Dip pane and its editor |
+| `hooks/glyphh/dip.ts`, `dipgrid.ts`, `dippanel.tsx` | `/dip`: layouts kept, dipping through the app's tools, capturing the session as a layout, the brief; a layout's grid; the Dip pane and its editor |
 | `mcp/src/` | The MCP server: `server.ts` (the tools and the card), `flow.ts` (the device flow), `install.ts` (install.json, the device id's probe) |
 | `mcp/card/` | `sign-in.html`, and `mcp-app.js`: `@modelcontextprotocol/ext-apps` 2.0.3's bridge, vendored |
 | `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md` |

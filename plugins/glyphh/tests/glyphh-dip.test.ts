@@ -6,6 +6,7 @@ import { expect, test } from 'claude-code/testing'
 
 import type { DipLayout } from '../types'
 import { asLayouts, brief, capture, dip, dipCommand, draftOf, layoutOf, loadDip, openDraft, saveDraft, editDraft } from '../hooks/glyphh/dip'
+import { asGrid, assign, canMergeDown, canMergeRight, cuts, emptyGrid, gridOfPanes, merge, panesOf, resizeGrid, splitCell } from '../hooks/glyphh/dipgrid'
 import { fakeHost } from './fake-host'
 
 const API: DipLayout = {
@@ -13,6 +14,7 @@ const API: DipLayout = {
   folder: '/code/api',
   tabs: ['http://localhost:3000/', 'https://github.com/acme/api/pulls'],
   focus: 0,
+  grid: gridOfPanes(['preview', 'terminal']),
   panes: ['preview', 'terminal'],
   terminals: [{ title: 'dev', cwd: '/code/api', command: 'npm run dev' }],
   brief: 'The API; tests with make test.',
@@ -71,7 +73,7 @@ test('/dip save keeps the session as it is; rm and off', async () => {
   const said = await dipCommand(w.gh, 'save web')
   expect(said.text).toBe('Kept web: /code/web, 1 tab, 1 terminal.')
   const [l] = asLayouts(w.store.get('dip.layouts'))
-  expect(l).toEqual({ name: 'web', folder: '/code/web', tabs: ['https://glyphh.ai/pricing'], focus: 0, panes: ['preview', 'terminal'], terminals: [{ title: 'dev', cwd: '/code/api', command: '' }], brief: '' })
+  expect(l).toEqual({ name: 'web', folder: '/code/web', tabs: ['https://glyphh.ai/pricing'], focus: 0, grid: gridOfPanes(['preview', 'terminal']), panes: ['preview', 'terminal'], terminals: [{ title: 'dev', cwd: '/code/api', command: '' }], brief: '' })
   await dip(w.gh, 'web')
   expect((await dipCommand(w.gh, 'off')).text).toBe('No layout active.')
   expect((await dipCommand(w.gh, 'rm web')).text).toBe('Removed web.')
@@ -101,6 +103,67 @@ test('the active layout is a brief for Claude', async () => {
   const b = brief(await w.gh.state.dip.get()) ?? ''
   expect(b.includes('"api"')).toBe(true)
   expect(b.includes('The API; tests with make test.')).toBe(true)
+})
+
+test('a layout from before grids gets one: Claude on the left, its panes beside it in order', () => {
+  const { grid: _, ...old } = API
+  const [l] = asLayouts([old])
+  expect(l?.grid).toEqual(API.grid)
+  expect(l?.panes).toEqual(['preview', 'terminal'])
+  const all = asLayouts([{ ...old, panes: ['file', 'diff', 'pr', 'tasks', 'preview', 'terminal'] }])[0]!
+  expect(all.panes).toEqual(['file', 'diff', 'pr', 'tasks', 'preview', 'terminal'])
+  expect(cuts(all.grid) === null).toBe(false)
+})
+
+test('a broken stored grid is rebuilt from its panes', () => {
+  const overlap = { cols: 2, rows: 1, cells: [{ pane: 'claude', col: 0, row: 0, colSpan: 2, rowSpan: 1 }, { pane: 'diff', col: 1, row: 0, colSpan: 1, rowSpan: 1 }] }
+  expect(asGrid(overlap, ['claude', 'diff', ''])).toBe(null)
+  expect(asLayouts([{ ...API, grid: overlap }])[0]?.grid).toEqual(API.grid)
+})
+
+test('cells merge, split, and a pane moves rather than doubles', () => {
+  let g = assign(emptyGrid(2, 2), 0, 'claude')
+  g = assign(g, 1, 'diff')
+  g = assign(g, 3, 'diff')
+  expect(panesOf(g)).toEqual(['diff'])
+  expect(g.cells[1]?.pane).toBe('')
+  expect(canMergeRight(g, 0)).toBe(true)
+  const down = merge(g, 0, false)
+  expect(down.grid.cells[down.cell]?.rowSpan).toBe(2)
+  expect(down.grid.cells.length).toBe(3)
+  // The tall cell has nothing the same height to its right.
+  expect(canMergeRight(down.grid, down.cell)).toBe(false)
+  const back = splitCell(down.grid, down.cell)
+  expect(back.cells.length).toBe(4)
+  expect(back.cells.find(c => c.col === 0 && c.row === 0)?.pane).toBe('claude')
+  expect(g.cells.length).toBe(4)
+})
+
+test('a merge that would make a pinwheel is refused, so every grid can be drawn', () => {
+  let g = emptyGrid(3, 3)
+  const at = (col: number, row: number) => g.cells.findIndex(c => c.col === col && c.row === row)
+  g = merge(g, at(0, 0), true).grid // top: columns 0-1
+  g = merge(g, at(2, 0), false).grid // right: rows 0-1
+  g = merge(g, at(1, 2), true).grid // bottom: columns 1-2
+  expect(cuts(g) === null).toBe(false)
+  expect(canMergeDown(g, at(0, 1))).toBe(false)
+})
+
+test('a resize keeps what fits and fills new room', () => {
+  const g = assign(assign(emptyGrid(2, 1), 0, 'claude'), 1, 'diff')
+  expect(resizeGrid(g, 1, 1).cells.map(c => c.pane)).toEqual(['claude'])
+  const big = resizeGrid(g, 3, 2)
+  expect(big.cells.length).toBe(6)
+  expect(panesOf(big)).toEqual(['diff'])
+})
+
+test('the editor saves the grid and the panes in reading order', async () => {
+  const w = await withLayouts([])
+  await openDraft(w.gh, null)
+  await editDraft(w.gh, d => ({ ...d, name: 'x', grid: assign(resizeGrid(d.grid, 2, 2), 2, 'diff') }))
+  await saveDraft(w.gh)
+  const [l] = (await w.gh.state.dip.get()).layouts
+  expect(l?.panes).toEqual(['preview', 'diff'])
 })
 
 test('capture reads full addresses, the tab in front and the open panes', async () => {

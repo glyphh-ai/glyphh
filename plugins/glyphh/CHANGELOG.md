@@ -2,6 +2,15 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.13.0 — 2026-11-03
+
+Dip layouts have a grid. The Dip pane's editor draws the layout as the desktop app's layout editor does: columns and
+rows up to 4, press a cell to choose what fills it (Claude, a pane, or nothing), merge and split, a pane moving rather
+than doubling. This replaces the pane toggles, whose state never showed on the desktop. The editor has one Save and
+one Cancel, with no save beside each field. Layouts saved before grids get one from their panes: Claude on the left,
+the panes beside it. The app's tools open panes but cannot place them, so a dip shows the grid's panes in reading
+order. The hook's User-Agent is `glyphh-hook/1.13.0`.
+
 ## 1.12.0 — 2026-11-03
 
 Dip: `/dip <layout>` bounces the session between workspaces. A layout holds Claude's folder, the browser pane's tabs

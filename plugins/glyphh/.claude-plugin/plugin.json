@@ -1,6 +1,6 @@
 {
   "name": "glyphh",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Glyphh for Claude: your Glyphh account and the sign-in card, the Ada skill that builds, loads, tunes and asks typed models in Ada Cloud through the Glyphh connector, the glyphh command, Glyphh bots (programs that run a Claude agent behind gates that learn), /dip workspaces, and the file ledger. Ada is in every plan.",
   "author": {
     "name": "Glyphh AI",

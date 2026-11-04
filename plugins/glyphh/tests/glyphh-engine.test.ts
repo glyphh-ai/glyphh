@@ -286,7 +286,12 @@ for (const surface of SURFACES) {
     await ui.press({ key: 'new' })
     await ui.input({ key: 'dip-name', text: 'api', kind: 'change' })
     await ui.input({ key: 'dip-tabs', text: '* localhost:3000', kind: 'change' })
-    await ui.press({ key: 'pane-terminal' })
+    // Claude | Browser, then a second row: Terminal under the browser, Claude merged down the left.
+    await ui.select({ key: 'dip-rows', value: '2' })
+    await ui.press({ key: 'cell-3' })
+    await ui.press({ key: 'fill-terminal' })
+    await ui.press({ key: 'cell-0' })
+    await ui.press({ key: 'merge-down' })
     await ui.press({ key: 'save' })
     expect(await ui.find({ type: 'Text', text: 'Saved api: /dip api' })).toBeDefined()
     await ui.press({ key: 'dip-api' })
