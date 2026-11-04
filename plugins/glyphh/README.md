@@ -1,6 +1,6 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.18.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
+The Glyphh plugin for Claude Code, 1.18.1 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
 Ada skill, your glyphh, the glyphh command, Glyphh bots and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing to install or
 host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said plainly in the panel
 and by the skill, with how to update the plugin.
@@ -121,6 +121,51 @@ request a seventh.
 | `ledger/ledger.sqlite` | The file ledger |
 
 Signing out removes `install.json` (and a `license.json` an older plugin left).
+
+## What it does on your computer
+
+**Where it sends things.** The mod, the MCP server and the glyphh hooks talk to one host, `https://api.glyphh.ai`
+(`GLYPHH_SERVER_URL` changes it, for development). The shelved rrotor parts, shown only with `GLYPHH_RROTOR=1`, talk
+to `http://127.0.0.1:7777` on your own computer. Nothing else leaves the machine.
+
+| When | What is sent to `api.glyphh.ai` |
+|---|---|
+| Signing in (`/v1/device/code`, `/v1/device/token`) | The computer's short host name, the surface (desktop or terminal), the plugin's version and `machine_id`, a sha256 hash of this machine's id; the id itself never leaves |
+| Using the panel | Your install's token, and the account, org, member, key and billing requests you make there |
+| A session's start, signed in (`glyphh_context.py session`) | Your install's token, to fetch your personality and rules |
+| Each prompt, signed in (`glyphh_context.py prompt`) | Your install's token and the first 2,000 characters of your prompt, to fetch what your glyphh holds that bears on it; signed out, nothing is sent |
+
+**What it reads to identify the machine.** `machine_id` keys installs by machine, so one computer counts once. It comes
+from the hardware id (`ioreg` on macOS, `/etc/machine-id` or `/var/lib/dbus/machine-id` on Linux, the `MachineGuid`
+registry value or `wmic csproduct` on Windows), else the primary network interface's MAC, else a random id kept in
+`~/.glyphh/machine.json`. Only the hash is sent.
+
+**What it runs.** The mod runs these programs, each with fixed commands, and no others:
+
+| Program | Why |
+|---|---|
+| `hostname -s` | The name your install shows in your account |
+| `/usr/sbin/ioreg`, `reg query`, `wmic csproduct get uuid`, `getmac`, and a fixed `/bin/sh` script calling `route`, `ip` and `ifconfig` | The machine id above |
+| `/bin/sh` with a fixed script of `umask`, `mkdir`, `cat`, `chmod` and `mv` | Writes `install.json` with mode 0600; the token goes on stdin, never on a command line |
+| `/bin/rm -f` | Removes `install.json` when you sign out |
+| `osascript` | On the desktop, clicks View > Show Browser in Claude so the sign-in page can be seen; without Accessibility permission nothing happens |
+| `sh shelved/skills/rrotor/scripts/rrotor.sh update` | Only with `GLYPHH_RROTOR=1`, when you press Update in the Account section |
+
+The command hooks run `python3` on `hooks/ledger.py` and `hooks/glyphh_context.py`. `.mcp.json` runs `node` on
+`mcp/dist/server.mjs`, the local stdio server behind the sign-in card, built from `mcp/src`.
+
+**What it writes.** Only under `~/.glyphh`: the files above and two small logs, `open-log.txt` (whether a page opened)
+and `ask-log.txt` (a prompt that could not be submitted). It edits no build, start-up, settings or instructions file.
+It reads its own `plugin.json` for its version and, with rrotor shown, a file you name to publish.
+
+**What it asks of Claude.** The mod calls one tool itself, `preview_start` on Claude's browser pane, to open the Glyphh
+sign-in page. If that is refused it submits one prompt asking Claude to open that page in the pane; the prompt holds
+that instruction and the page's address, nothing else.
+
+**How it touches tool calls.** The mod registers one tool, `glyphh_login`, and answers it itself: it starts the sign-in
+and returns its state. One `tool.call` hook sees every tool call and passes each through unchanged; it reads the
+result only of a tool named `*__glyphh_sign_in`, to open the approval link in it. The ledger's `PostToolUse` hooks read
+Edit, Write, MultiEdit and Read calls and keep what they record on your computer.
 
 ## Run it locally
 
