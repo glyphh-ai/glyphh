@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.18.2 — 2026-11-04
+
+`.mcp.json` names the Glyphh connector, `glyphh-cloud` at `https://api.glyphh.ai/mcp`, so the plugin brings the `ada_*`
+tools with it and its directory listing can pair with the connector's. A Glyphh connector already added is the same
+endpoint, which Claude Code counts as a duplicate. The hook's User-Agent is `glyphh-hook/1.18.2`.
+
 ## 1.18.1 — 2026-11-04
 
 For Anthropic's directory: `.claude-plugin/icon.png`, and the README's *What it does on your computer* says what the
