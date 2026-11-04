@@ -8,7 +8,7 @@ import type { EngineInterface, On, RenderSurface } from 'claude-code'
 import type { AppsView, AuthState, DipView, GlyphhNote, GlyphhSection, Json } from '../../types'
 import { FIRST_VIEW } from './apps'
 import { glyphhCommand, startGlyphh } from './command'
-import { brief, dipCommand, FIRST_DIP, loadDip, USAGE_DIP } from './dip'
+import { brief, dipCheck, dipCommand, FIRST_DIP, loadDip, USAGE_DIP } from './dip'
 import { DipPanel } from './dippanel'
 import { rrotorShown } from './shelved'
 import type { Host } from './host'
@@ -170,6 +170,13 @@ export function registerGlyphh(on: On) {
   on('command.run', { command: 'glyphh' }, ($, e) => glyphhCommand(host($), e.args))
   on('command.run', { command: 'dip' }, ($, e) => dipCommand(host($), e.args))
   on('command.run', { command: 'glyphh-dip' }, ($, e) => dipCommand(host($), e.args))
+
+  // A dip's own calls, and only those (Claude's calls have the engine as origin): ./dip's dipCheck.
+  on('tool.check', async ($, e, next) => {
+    const decision = next.origin.plugin === $.plugin.name ? dipCheck(e.tool, e.input) : null
+    if (!decision) return next(e)
+    return { decision, reason: decision === 'ask' ? 'Your /dip layout runs this command in a terminal tab.' : 'Your /dip layout.' }
+  })
 
   // The active layout's name, folder, tabs and brief, for Claude.
   on('prompt.compose', async ($, e, next) => {

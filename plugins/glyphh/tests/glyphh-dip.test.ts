@@ -1,11 +1,11 @@
 // /dip: layouts kept, a dip opening the layout's folder, tabs (the one in
 // front last), terminals and panes through the app's tools, the last dip's
-// tabs closed, what a refused tool could not do handed to Claude, and the
+// tabs closed, what a refused tool could not do said in the reply, and the
 // session captured as a layout.
 import { expect, test } from 'claude-code/testing'
 
 import type { DipLayout } from '../types'
-import { asLayouts, brief, capture, dip, dipCommand, draftOf, layoutOf, loadDip, openDraft, saveDraft, editDraft } from '../hooks/glyphh/dip'
+import { asLayouts, brief, capture, dip, dipCheck, dipCommand, draftOf, layoutOf, loadDip, openDraft, saveDraft, editDraft } from '../hooks/glyphh/dip'
 import { asGrid, assign, canMergeDown, canMergeRight, cuts, emptyGrid, gridOfPanes, merge, panesOf, resizeGrid, splitCell } from '../hooks/glyphh/dipgrid'
 import { fakeHost } from './fake-host'
 
@@ -52,14 +52,29 @@ test('the next dip closes the tabs the last one opened', async () => {
   expect(w.tools.calls.filter(c => c.tool.endsWith('change_directory')).length).toBe(1)
 })
 
-test('what a refused tool could not do goes to Claude as one prompt', async () => {
+test('what a refused tool could not do is said, and no prompt goes to Claude', async () => {
   const w = await withLayouts([API], { refuse: ['mcp__ccd_directory__change_directory', 'mcp__ccd_view__show_pane'] })
   const text = await dip(w.gh, 'api')
-  expect(w.asked.length).toBe(1)
-  expect(w.asked[0]!.includes('move the session to /code/api')).toBe(true)
-  expect(w.asked[0]!.includes('show the terminal pane')).toBe(true)
+  expect(w.asked.length).toBe(0)
+  expect(text.includes('Could not move the session to /code/api; show the terminal pane; show the preview pane.')).toBe(true)
+  expect((await w.gh.state.dip.get()).note?.isError).toBe(true)
   expect(w.files.get('/home/t/.glyphh/dip-log.txt')?.includes('mcp__ccd_view__show_pane: refused')).toBe(true)
-  expect(text.includes('Claude is finishing 3 steps')).toBe(true)
+})
+
+test('the Files pane comes from the View menu: show_pane would need a file', async () => {
+  const w = await withLayouts([{ ...API, panes: ['file'], grid: gridOfPanes(['file']), terminals: [], tabs: [], folder: '' }])
+  const text = await dip(w.gh, 'api')
+  expect(w.tools.calls.some(c => c.tool.endsWith('show_pane'))).toBe(false)
+  expect(w.argvs.some(a => a[0] === 'osascript')).toBe(true)
+  expect(text.includes('Could not')).toBe(false)
+})
+
+test('a dip answers the check for panes, tabs, the folder and a shell; a typed command is the person\'s', () => {
+  for (const t of ['mcp__ccd_view__show_pane', 'mcp__Claude_Browser__preview_start', 'mcp__ccd_directory__change_directory', 'mcp__terminal__open_terminal_tab']) expect(dipCheck(t, {})).toBe('allow')
+  expect(dipCheck('mcp__terminal__run_in_terminal', { command: 'make' })).toBe('ask')
+  expect(dipCheck('mcp__Claude_Browser__javascript_tool', { text: 'location.href' })).toBe('allow')
+  expect(dipCheck('mcp__Claude_Browser__javascript_tool', { text: 'document.cookie' })).toBe(null)
+  expect(dipCheck('Bash', { command: 'ls' })).toBe(null)
 })
 
 test('an unknown name lists the layouts; a prefix finds the one it starts', async () => {

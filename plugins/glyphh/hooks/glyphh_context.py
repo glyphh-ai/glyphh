@@ -21,7 +21,7 @@ TIMEOUT = 4.0  # seconds; the hook's own timeout in hooks.json is longer
 PROMPT_MAX = 2000
 EVENTS = {"session": "SessionStart", "prompt": "UserPromptSubmit"}
 # Cloudflare in front of api.glyphh.ai refuses urllib's own User-Agent (error 1010, a 403), so the hook names itself
-USER_AGENT = "glyphh-hook/1.13.1"
+USER_AGENT = "glyphh-hook/1.14.0"
 
 
 def token() -> str | None:

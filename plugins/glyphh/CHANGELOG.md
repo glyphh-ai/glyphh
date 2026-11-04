@@ -2,6 +2,14 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.14.0 — 2026-11-03
+
+A dip is the mod's alone: no prompt to Claude, ever. Auto mode refused the mod's tool calls because a slash command
+gives its classifier no request to read, so the mod now answers the permission check (`tool.check`) for its own calls
+to the app's panes, browser tabs, the layout's folder and a bare terminal tab; Claude's own calls are untouched, and a
+command typed into a terminal tab is put to the person. The Files pane opens from the View menu, since `show_pane`
+needs a file. What could not be done is said in the reply and the pane. The hook's User-Agent is `glyphh-hook/1.14.0`.
+
 ## 1.13.1 — 2026-11-03
 
 A dip whose steps were refused now reaches Claude. Its prompt opened with `/dip`, and the engine refuses a prompt

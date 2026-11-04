@@ -1,9 +1,10 @@
 // /dip <layout>: bounces the session between workspaces. A layout is the
 // session's folder, the browser pane's tabs (one in front), the side panes,
 // the terminal tabs and a brief Claude reads while it is active; dipping
-// calls the desktop app's own tools for each, and whatever a call could not do
-// goes to Claude as one prompt with the steps left. Layouts live in the store
-// across sessions; the Dip pane writes them.
+// calls the desktop app's own tools for each, the mod doing all of it with no
+// turn of Claude's: dipCheck answers the permission check for the calls a dip
+// makes, and what could not be done is said in the reply. Layouts live in the
+// store across sessions; the Dip pane writes them.
 import type { DipCellPane, DipDraft, DipGrid, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
 import { asGrid, assign, emptyGrid, gridOfPanes, panesOf } from './dipgrid'
 import type { Host } from './host'
@@ -122,7 +123,7 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   }
 
   if (l.folder && l.folder !== (await gh.cwd().catch(() => ''))) {
-    await step(T.dir, { path: l.folder }, `move the session to ${l.folder} (ccd_directory change_directory)`)
+    await step(T.dir, { path: l.folder }, `move the session to ${l.folder}`)
   }
 
   // The tabs the last dip opened go; this layout's open, the one in front last.
@@ -130,7 +131,7 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   for (const tabId of stale) await gh.tool.call(T.close, { tabId })
   const before = new Set((await browserTabs(gh)).map(t => t.tabId))
   const order = l.tabs.map((url, i) => ({ url, i })).sort((a, b) => Number(a.i === l.focus) - Number(b.i === l.focus))
-  for (const { url } of order) await step(T.open, { url }, `open ${url} in the browser pane (Claude_Browser preview_start)`)
+  for (const { url } of order) await step(T.open, { url }, `open ${url}`)
   const opened = (await browserTabs(gh)).map(t => t.tabId).filter(id => !before.has(id))
   await gh.store.set(OPENED, opened)
 
@@ -145,7 +146,11 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   const panes = [...l.panes].sort((a, b) => Number(a === 'preview') - Number(b === 'preview'))
   for (const pane of panes) {
     if (pane === 'preview' && !l.tabs.length) continue
-    await step(T.pane, { pane }, `show the ${pane} pane (ccd_view show_pane)`)
+    if (pane === 'file') {
+      if (!(await showFiles(gh))) left.push('show the Files pane')
+      continue
+    }
+    await step(T.pane, { pane }, `show the ${pane} pane`)
   }
 
   await setActive(gh, l.name)
@@ -158,13 +163,34 @@ export async function dip(gh: Host, typed: string): Promise<string> {
   // Why each step was refused, for the next look; the last dip's alone.
   const home = await gh.env.home().catch(() => undefined)
   if (home) await gh.fs.write(`${home}/.glyphh/dip-log.txt`, `${refused.join('\n')}\n`).catch(() => undefined)
-  // Never opening on a slash: the engine refuses a prompt that would read as a command.
-  await gh.ask(
-    `Finish my workspace "${l.name}" (I ran /dip ${l.name}, and it could not do these itself). With your own tools do exactly these and nothing else, then say "Dipped into ${l.name}." in one line:\n` +
-      left.map((s, i) => `${i + 1}. ${s}`).join('\n'),
-  )
-  await say(gh, `${done} Claude is finishing ${left.length} step${left.length > 1 ? 's' : ''}.`)
-  return `${done} Claude is finishing ${left.length} step${left.length > 1 ? 's' : ''} it could not do directly.`
+  const text = `${done} Could not ${left.join('; ')}.`
+  await say(gh, text, true)
+  return text
+}
+
+/** The Files pane: show_pane opens one file and needs its path, so the whole pane comes from the app's View menu
+ *  ("Show Files"), as open.ts does for the browser. The item reads Hide Files when the pane is open. */
+async function showFiles(gh: Host): Promise<boolean> {
+  const menu = (script: string) =>
+    gh.process.run(['osascript', '-e', `tell application "System Events" to tell process "Claude" to ${script} of menu 1 of menu bar item "View" of menu bar 1`])
+  try {
+    const items = await menu('get name of every menu item')
+    if (items.exitCode !== 0) return false
+    if (!items.stdout.includes('Show Files')) return true
+    return (await menu('click menu item "Show Files"')).exitCode === 0
+  } catch {
+    return false
+  }
+}
+
+/** The app's tools a dip calls and what they do, answered at the permission check for the mod's own calls (a
+ *  person's /dip or Dip press is the only way they start). A dip runs no turn, so auto mode's classifier has no
+ *  request to read and refuses them all. Panes, tabs, the layout's folder and a bare shell go ahead; a command typed
+ *  into a terminal is put to the person, line and all; anything else takes the check beneath. */
+export function dipCheck(tool: string, input: unknown): 'allow' | 'ask' | null {
+  if ([T.dir, T.pane, T.layout, T.open, T.tabs, T.close, T.shell, T.shells].includes(tool)) return 'allow'
+  if (tool === T.js) return (input as { text?: unknown } | null)?.text === 'location.href' ? 'allow' : null
+  return tool === T.run ? 'ask' : null
 }
 
 /** What the session looks like now, as a layout: the folder, the browser tabs (full addresses where the page

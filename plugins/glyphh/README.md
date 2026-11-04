@@ -93,8 +93,10 @@ layout editor does: columns and rows up to 4, press a cell to choose what fills 
 Cancel for the whole layout. The app's tools open panes but cannot place them, so a dip shows the grid's panes in
 reading order and the arrangement itself is kept with the layout. `/dip <name>` calls the desktop app's own tools for each part, through
 the permission check: the folder moves (at the end of the turn), the tabs the last dip opened close and this layout's
-open with the one in front last, the terminal tabs start, the panes show. A step a tool refused goes to Claude as
-one prompt listing exactly what is left. While a layout is active its name, folder, tabs and brief are a section of
+open with the one in front last, the terminal tabs start, the panes show (Files through the app's View menu). The
+mod does all of it, with no turn of Claude's: it answers the permission check for its own calls to those tools, since
+auto mode has no request to judge, and puts a command typed into a terminal to you. What could not be done is said
+in the reply and the pane, and why in `~/.glyphh/dip-log.txt`. While a layout is active its name, folder, tabs and brief are a section of
 Claude's system prompt; `/dip off` ends that. Layouts are kept in the plugin's store across sessions. In a terminal
 there are no panes or browser: the folder and the brief still apply.
 
