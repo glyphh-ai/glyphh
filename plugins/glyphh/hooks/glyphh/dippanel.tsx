@@ -40,7 +40,8 @@ function GridEditor(ctx: DipCtx, d: DipDraft) {
     return (
       <Box key={key} flexDirection={cut.across ? 'row' : 'column'} flexGrow={1}>
         {cut.parts.map((p, i) => (
-          <Box key={`${key}-${i}`} flexDirection="column" width={cut.across ? `${p.share * 100}%` : undefined}>
+          // A whole percentage (a Box refuses 33.33…%, and the pane with it); the growing takes up what it drops.
+          <Box key={`${key}-${i}`} flexDirection="column" width={cut.across ? `${Math.floor(p.share * 100)}%` : undefined} flexGrow={cut.across ? 1 : undefined}>
             {draw(p.cut, `${key}-${i}c`)}
           </Box>
         ))}

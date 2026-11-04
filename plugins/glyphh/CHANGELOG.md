@@ -2,6 +2,11 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.14.1 — 2026-11-03
+
+The Dip pane draws at three columns. A third of a row was a width of 33.33…%, which a Box refuses, and the whole pane
+went with it ("glyphh has not drawn in this pane"). The hook's User-Agent is `glyphh-hook/1.14.1`.
+
 ## 1.14.0 — 2026-11-03
 
 A dip is the mod's alone: no prompt to Claude, ever. Auto mode refused the mod's tool calls because a slash command
