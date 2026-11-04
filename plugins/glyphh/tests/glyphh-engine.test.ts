@@ -275,6 +275,28 @@ for (const surface of SURFACES) {
 const dipPane = (surface: (typeof SURFACES)[number]) => ({ ...pane(surface), requestId: 'glyphh-dip', props: { ...pane(surface).props, title: 'Dip' } })
 
 for (const surface of SURFACES) {
+  test(`${surface}: the Dip pane's grid draws at every size`, async ($, on) => {
+    world(on, surface)
+    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
+    const ui = await $.ui.mount(dipPane(surface))
+    await ui.press({ key: 'new' })
+    for (const cols of [1, 2, 3, 4]) {
+      for (const rows of [1, 2, 3, 4]) {
+        await ui.select({ key: 'dip-cols', value: String(cols) })
+        await ui.select({ key: 'dip-rows', value: String(rows) })
+        expect((await ui.findAll({ type: 'Button' })).filter(b => /^cell-/.test(String(b.key)))).toHaveLength(cols * rows)
+      }
+    }
+    // Merged cells leave odd shares of a row too.
+    await ui.select({ key: 'dip-cols', value: '3' })
+    await ui.select({ key: 'dip-rows', value: '3' })
+    await ui.press({ key: 'cell-0' })
+    await ui.press({ key: 'merge-right' })
+    expect((await ui.findAll({ type: 'Button' })).filter(b => /^cell-/.test(String(b.key)))).toHaveLength(8)
+  })
+}
+
+for (const surface of SURFACES) {
   test(`${surface}: the Dip pane writes a layout and dips into it`, async ($, on) => {
     world(on, surface)
     const called: string[] = []
