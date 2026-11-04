@@ -5,7 +5,7 @@
 // plain to test.)
 import type { FsEntry, HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
 
-import type { AppsView, AuthState, DipView, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 
 /** One state value: read it, or change it from what it is. */
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
@@ -32,13 +32,6 @@ export type Host = {
   openPanel(): Promise<boolean>
   /** Asks Claude, as a prompt in the chat (a turn). */
   ask(text: string): Promise<void>
-  /** Calls a tool the model could call (the desktop app's panes, browser, terminal, folder), through the
-   *  permission check: its result, or why it was refused or failed. */
-  tool: { call(tool: string, input: Record<string, unknown>): Promise<{ ok: boolean; text: string }> }
-  /** The session's directory, absolute. */
-  cwd(): Promise<string>
-  /** Opens the Dip pane; false where no surface could place it. */
-  openDip(): Promise<boolean>
   pluginRoot: string
   state: {
     auth: Value<AuthState>
@@ -48,6 +41,5 @@ export type Host = {
     note: Value<GlyphhNote | null>
     inviteLink: Value<string | null>
     apps: Value<AppsView>
-    dip: Value<DipView>
   }
 }
