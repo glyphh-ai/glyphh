@@ -1823,3 +1823,73 @@ class Model:
 
     def __len__(self) -> int:
         return len(self.space)
+
+
+@dataclass(frozen=True)
+class Hop:
+    """One step of a beam: the model that answers it, how to ask it about a value (the value in, the case's data
+    out), and which of its outputs (its default when None)."""
+
+    model: Model
+    ask: Callable[[str], Any]
+    output: str | None = None
+
+
+def beam(
+    start: str, hops: Sequence[Hop], width: int = 4, values: Sequence[str] = (), miss: float = 0.0, clearance: float = 1.0
+) -> dict[str, Any]:
+    """Carry the likeliest values through a chain of models, each model's outcome the next one's question.
+
+    Every value holds a mass. A hop asks its model about each value and passes the mass on by its probabilities,
+    summing where paths meet: the dot product of the chain's probabilities, kept to the `width` heaviest values
+    after every hop but the last, so every end the last hop reaches is answered. `values`, with `miss`, is what a
+    model may not know: `miss` of a hop's mass spreads evenly over them, and all of it when the model has nothing to
+    say. Without them a model with nothing to say ends that path and its mass goes to `lost`.
+
+    Answers {"outcome", "p", "ends", "paths", "lost"}: the likeliest end and its share of the mass that arrived
+    (None and 0.0 when none did), every end's share, each end's likeliest path ({"value", "p", "trail_p", "steps"},
+    best first; its steps start at `start`, and trail_p is that one path's mass, where p is every path's to that
+    end) and the mass that arrived nowhere."""
+    if width < 1:
+        raise ValueError("a beam is at least 1 wide")
+    if not 0.0 <= miss <= 1.0:
+        raise ValueError("miss is a share, from 0 to 1")
+    paths: dict[str, tuple[float, float, tuple[str, ...]]] = {start: (1.0, 1.0, (start,))}
+    lost = 0.0
+    for i, hop in enumerate(hops):
+        reached: dict[str, tuple[float, float, tuple[str, ...]]] = {}
+        for value, (mass, trail, steps) in paths.items():
+            passed = _passed(hop.model.probabilities(hop.ask(value), clearance, hop.output), values, miss)
+            lost += mass * (1.0 - sum(passed.values()))
+            for nxt, p in passed.items():
+                held = reached.get(nxt, (0.0, 0.0, ()))
+                best = (trail * p, (*steps, nxt)) if trail * p > held[1] else held[1:]
+                reached[nxt] = (held[0] + mass * p, *best)
+        last = i == len(hops) - 1
+        heaviest = sorted(reached.items(), key=lambda kv: (-kv[1][0], kv[0]))
+        kept = heaviest if last else heaviest[:width]
+        lost += sum(held[0] for _, held in heaviest[len(kept) :])
+        paths = dict(kept)
+    arrived = sum(mass for mass, _, _ in paths.values())
+    ends = {v: mass / arrived for v, (mass, _, _) in paths.items()} if arrived else {}
+    found = [{"value": v, "p": ends[v], "trail_p": t / arrived, "steps": list(s)} for v, (_, t, s) in paths.items() if arrived]
+    found.sort(key=lambda path: (-path["p"], path["value"]))
+    return {
+        "outcome": found[0]["value"] if found else None,
+        "p": found[0]["p"] if found else 0.0,
+        "ends": ends,
+        "paths": found,
+        "lost": lost,
+    }
+
+
+def _passed(probabilities: Mapping[str, float], values: Sequence[str], miss: float) -> dict[str, float]:
+    """What one hop passes on: the model's probabilities, with `miss` of them (all, when it has none) spread evenly
+    over `values`. Without values they pass as they are."""
+    if not values:
+        return dict(probabilities)
+    share = miss if probabilities else 1.0
+    passed = {v: p * (1.0 - share) for v, p in probabilities.items()}
+    for value in values:
+        passed[value] = passed.get(value, 0.0) + share / len(values)
+    return passed
