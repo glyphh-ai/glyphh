@@ -109,6 +109,19 @@ def test_decide_prints_the_apis_answer_on_the_kept_key(api, capsys, tmp_path):
     assert body == {"model": "tickets", "data": {"ticket": {"text": "charged twice"}}, "outputs": ["kind", "refund"], "include": ["facts"]}
 
 
+def test_beam_chains_models_from_a_hops_file(api, capsys, tmp_path):
+    save_key("glyphh_ak_kept")
+    answer = {"outcome": "billing", "p": 0.78, "ends": {"billing": 0.78, "fraud": 0.22}, "paths": [{"value": "billing", "p": 0.78, "trail_p": 0.62, "steps": ["card lost", "refund", "billing"]}], "lost": 0.04, "hops": [{"model": "tickets", "version": 1}, {"model": "routing", "version": 2}], "ada": "ada-1-0"}
+    fake = api((200, answer))
+    hops = tmp_path / "hops.json"
+    hops.write_text('[{"model": "tickets", "role": "t.s.text", "fixed": {"t.s.plan": "pro"}}, {"model": "routing", "role": "t.w.text"}]')
+    assert cli.main(["beam", "card lost", "--hops", f"@{hops}", "--width", "5", "--values", "billing,fraud", "--miss", "0.1"]) == 0
+    assert json.loads(capsys.readouterr().out) == answer
+    method, url, headers, body = fake.calls[0]
+    assert (method, url, headers["authorization"]) == ("POST", "https://ada.glyphh.ai/v1/beam", "Bearer glyphh_ak_kept")
+    assert body == {"start": "card lost", "hops": json.loads(hops.read_text()), "width": 5, "values": ["billing", "fraud"], "miss": 0.1}
+
+
 def test_record_and_record_many(api, capsys, tmp_path):
     save_key("glyphh_ak_kept")
     done = {"run_id": "", "model": "tickets", "version": 1, "function": "record", "status": "done", "data": {"id": "p1", "precedents": 4}, "step": None, "prompt": None, "seconds": 0}

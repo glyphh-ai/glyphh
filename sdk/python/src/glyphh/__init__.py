@@ -12,6 +12,7 @@ from .client import (
     AdaReleases,
     AdaVersion,
     AdaVersions,
+    Beam,
     Decision,
     Held,
     Job,
@@ -151,6 +152,7 @@ __all__ = [
     "AuthError",
     "BacktestError",
     "BusyError",
+    "Beam",
     "ClientTooOldError",
     "ConflictError",
     "Decision",
@@ -190,4 +192,4 @@ __all__ = [
     "VersionGoneError",
     "VersionMissingError",
 ]
-__version__ = "3.9.0"
+__version__ = "3.10.0"

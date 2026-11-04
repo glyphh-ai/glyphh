@@ -18,6 +18,7 @@ from glyphh import (
     AdaError,
     AdaTimeoutError,
     AuthError,
+    Beam,
     BusyError,
     Decision,
     FewRolesError,
@@ -123,7 +124,7 @@ def job(state, kind="learn", percent=None, **more):
 
 def test_the_contract_is_5_the_sdks_and_every_fixture_is_its_schemas():
     assert CONTRACT["contract"] == FIXTURES["contract"] == glyphh.SUPPORTED_CONTRACT == 5
-    assert {"decision", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"} <= set(CONTRACT)
+    assert {"decision", "beam", "usage", "job", "answer", "result", "error", "ada_versions", "model", "models", "versions", "upgrade", "backtest"} <= set(CONTRACT)
     assert {"Glyphh-Contract", "Glyphh-Ada", "Glyphh-Ada-Notice"} == set(CONTRACT["headers"])
     for c in FIXTURES["cases"]:
         if c["schema"]:
@@ -187,6 +188,30 @@ def test_a_decision_that_asks_and_one_of_several_outputs():
     assert both.outputs["team"].model == "routing" and not both.ask and both.outcome is None
     assert both.ada == both.outputs["team"].ada == "ada-1-0"
     assert fake.calls[1][3] == several["request"]["body"]
+
+
+def test_a_beam_chains_models_and_is_a_read():
+    c = case("a beam")
+    client, fake = ada(answered(c["name"]))
+    sent = c["request"]["body"]
+    b = client.beam(sent["start"], sent["hops"], width=5, values=["billing", "fraud", "support"], miss=0.1, clearance=0.5)
+    assert isinstance(b, Beam) and fake.calls[0][3] == sent and fake.calls[0][1] == f"{URL}/v1/beam"
+    body = c["response"]["body"]
+    assert (b.outcome, b.p, b.ends, b.lost, b.ada) == ("billing", 0.78, body["ends"], 0.04, "ada-1-0")
+    assert b.paths == body["paths"] and b.paths[0]["steps"][0] == sent["start"] and b.paths[0]["trail_p"] <= b.paths[0]["p"]
+    assert [h["model"] for h in b.hops] == ["tickets", "routing"] and b.data == body
+    # the options not given are not sent; a beam that arrives nowhere reads as None, 0.0
+    client, fake = ada((200, {"outcome": None, "p": 0.0, "ends": {}, "paths": [], "lost": 1.0, "hops": [{"model": "tickets", "version": 1}], "ada": "ada-1-0"}))
+    none = client.beam("card lost", [{"model": "tickets", "role": "t.s.text"}])
+    assert fake.calls[0][3] == {"start": "card lost", "hops": [{"model": "tickets", "role": "t.s.text"}]}
+    assert (none.outcome, none.p, none.ends, none.paths, none.lost) == (None, 0.0, {}, [], 1.0)
+    # a hop naming a model the key does not own is refused as a decide is
+    refused = case("a beam through a model the key does not own")
+    client, _ = ada(answered(refused["name"]))
+    with pytest.raises(ModelMissingError) as caught:
+        client.beam("card lost", refused["request"]["body"]["hops"])
+    assert (caught.value.code, caught.value.status) == ("E_MODEL_MISSING", 404)
+    assert "beam" in glyphh.client.READS
 
 
 def test_typed_outputs_read_in_their_own_terms():
@@ -585,7 +610,7 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (path.name, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.9.0"
+    assert glyphh.__version__ == "3.10.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

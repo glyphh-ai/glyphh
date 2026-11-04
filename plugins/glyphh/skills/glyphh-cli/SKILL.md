@@ -36,6 +36,7 @@ A JSON argument is the JSON itself, `@file` for a file's, or `-` for stdin's.
 | `glyphh learn NAME`, `glyphh calibrate NAME` | Weigh the roles and calibrate; calibrate alone |
 | `glyphh decide NAME DATA [--output O] [--outputs a,b] [--facts]` | The decision: outcome, probabilities, expected cost, `ask`, receipts |
 | `glyphh query`, `glyphh probabilities`, `glyphh facts NAME DATA` | The vote; P(outcome); the nearest fact trees (`--top N`) |
+| `glyphh beam START --hops JSON [--width N] [--values a,b] [--miss M] [--clearance C]` | A chain of models, one model's outcome the next model's question (SDK 3.10): the hops `[{model, role, fixed?, output?}]`; answers `outcome`, `p`, `ends`, `paths`, `lost`, `hops`; one read per hop. The ada skill says when and how to read it |
 | `glyphh backtest NAME [--candidates JSON] [--holdout JSON] [--ada V]` | Score the live version and candidates, the live model untouched |
 | `glyphh settings NAME [--changes JSON --note WHY --backtest JOB]` | Every lever; with changes, a new version |
 | `glyphh versions NAME`, `glyphh activate NAME N` | The versions; roll back |

@@ -34,7 +34,7 @@ export const POLL = 2;
 /** Cases one record_many request carries; recordMany sends more in chunks of this many. */
 export const RECORD_MANY_MAX = 1000;
 /** An Ada model's functions that only read: safe to send again when Ada could not be reached. */
-export const READS: readonly string[] = ["query", "facts", "probabilities", "decide"];
+export const READS: readonly string[] = ["query", "facts", "probabilities", "decide", "beam"];
 /** An import's format by its file's extension. */
 export const FORMATS: Record<string, string> = {
   ".jsonl": "jsonl",
@@ -122,6 +122,55 @@ export interface Decision extends Decided {
   ada: string;
   outputs?: Record<string, Decided>;
   status: "done";
+  data: Data;
+}
+
+/** One hop of a beam: the model asked, the role the beam's value is placed in, the roles fixed beside it. */
+export interface BeamHop {
+  model: string;
+  /** `layer.segment.role`: where the value the beam holds goes. */
+  role: string;
+  /** Roles given the same value on every question of this hop. */
+  fixed?: Record<string, unknown>;
+  /** Which of the model's named outputs passes the mass on. */
+  output?: string;
+}
+
+export interface BeamOptions {
+  /** How many heaviest values are kept after every hop but the last (default 10). */
+  width?: number;
+  /** What a model that does not know spreads `miss` of its mass over; without it such a path ends, its mass lost. */
+  values?: string[];
+  /** 0..1 (default 0): the share of a hop's mass a model that does not know passes on over `values`. */
+  miss?: number;
+  clearance?: number;
+}
+
+/** One end's likeliest single path through the beam. */
+export interface BeamPath {
+  value: string;
+  /** The end's share of the mass that arrived. */
+  p: number;
+  /** This path's own share. */
+  trail_p: number;
+  /** From the start to the end. */
+  steps: string[];
+}
+
+/**
+ * `POST /v1/beam` (SDK 3.10): a chain of models, one model's outcome the next model's question. `outcome` is the
+ * heaviest end and `p` its share of the mass that arrived (null and 0 when none); `ends` every end's share;
+ * `paths` each end's likeliest single path, best first; `lost` the mass that arrived nowhere; `hops` each model and
+ * the version that answered; `ada` the last hop's Ada version. `data` is the answer as sent.
+ */
+export interface Beam {
+  outcome: string | null;
+  p: number;
+  ends: Record<string, number>;
+  paths: BeamPath[];
+  lost: number;
+  hops: { model: string; version: number }[];
+  ada: string;
   data: Data;
 }
 
@@ -661,6 +710,20 @@ export function asDecision(body: Data): Decision {
   return decision;
 }
 
+/** A `POST /v1/beam` answer as a Beam. */
+export function asBeam(body: Data): Beam {
+  return {
+    outcome: (body.outcome as string | null | undefined) ?? null,
+    p: Number(body.p ?? 0),
+    ends: { ...((body.ends as Record<string, number> | undefined) ?? {}) },
+    paths: [...((body.paths as BeamPath[] | undefined) ?? [])],
+    lost: Number(body.lost ?? 0),
+    hops: [...((body.hops as { model: string; version: number }[] | undefined) ?? [])],
+    ada: String(body.ada ?? ""),
+    data: body,
+  };
+}
+
 function refusal(status: number, text: string, headers: Record<string, string>): AdaError {
   let parsed: unknown = {};
   try {
@@ -878,6 +941,18 @@ export class Ada {
   async decide(model: string, data: Data, options: DecideOptions = {}): Promise<Decision> {
     const body = drop({ model, data, output: options.output, outputs: options.outputs, include: options.include, clearance: options.clearance });
     return asDecision(await this.call<Data>("POST", "/v1/decide", body, true));
+  }
+
+  /**
+   * A chain of models, `POST /v1/beam`: one model's outcome is the next model's question. Each hop places the value
+   * the beam holds in its `role` (`fixed` roles beside it) and passes the value's mass on by the model's calibrated
+   * probabilities, summing where paths meet; `width` (default 10) keeps that many heaviest values between hops;
+   * `values` with `miss` lets the chain pass through a model that does not know. A read: one read per hop against
+   * the plan's month.
+   */
+  async beam(start: string, hops: BeamHop[], options: BeamOptions = {}): Promise<Beam> {
+    const body = drop({ start, hops, width: options.width, values: options.values, miss: options.miss, clearance: options.clearance });
+    return asBeam(await this.call<Data>("POST", "/v1/beam", body, true));
   }
 
   // jobs

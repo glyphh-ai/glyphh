@@ -2,6 +2,14 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.18.0 — 2026-11-04
+
+The beam: the Ada skill names the connector's `ada_beam {start, hops, width?, values?, miss?}`, a chain of models
+where one model's outcome is the next model's question, says when it suits (a state machine of gates, a pipeline
+where one answer is the next input) and how to read `outcome`, `p`, `ends`, `paths` and `lost`; it counts as one
+read per hop. The glyphh-cli skill names `glyphh beam START --hops JSON` (SDK 3.10). The hook's User-Agent is
+`glyphh-hook/1.18.0`.
+
 ## 1.17.0 — 2026-11-03
 
 `/dip` left the plugin: it is its own plugin now, `dip@dip` from `timmetim/dip`. The command, the Dip pane, the layout

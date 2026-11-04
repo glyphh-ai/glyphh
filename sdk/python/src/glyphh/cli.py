@@ -7,6 +7,7 @@ mistake exits 2. It runs on an API key: GLYPHH_API_KEY, or the one `glyphh login
     glyphh create tickets --spec spec.json
     glyphh import tickets history.csv --mapping '{"Plan": "ticket.what.plan", "Result": "outcome"}'
     glyphh decide tickets '{"ticket": {"what": {"plan": "pro", "text": "charged twice"}}}'
+    glyphh beam "card lost" --hops @hops.json --width 5       (a chain of models: one's outcome, the next's question)
     glyphh record tickets @case.json --outcome refund
     glyphh bot new "each morning, sum up the repo's new issues"      (bots: glyphh.bots)
 
@@ -25,7 +26,7 @@ from typing import Any, List, Optional, Sequence
 
 from . import __version__
 from .bots import cli as bots_cli
-from .client import Ada, AdaVersions, Decision, Job, Usage
+from .client import Ada, AdaVersions, Beam, Decision, Job, Usage
 from .credentials import KEY_PREFIX, credentials_path, forget_key, read_key, save_key
 from .errors import AdaError
 
@@ -48,7 +49,7 @@ def _lines(path: str) -> List[Any]:
 
 def _plain(v: Any) -> Any:
     """What to print: the API's own answer where the SDK kept it, else the SDK's object as JSON."""
-    if isinstance(v, (Decision, Job, Usage, AdaVersions)):
+    if isinstance(v, (Decision, Beam, Job, Usage, AdaVersions)):
         return v.data
     if dataclasses.is_dataclass(v) and not isinstance(v, type):
         return dataclasses.asdict(v)
@@ -169,6 +170,11 @@ def decide(a: argparse.Namespace) -> None:
     outputs = a.outputs.split(",") if a.outputs else None
     include = ["facts"] if a.facts else None
     _out(Ada().decide(a.name, a.data, output=a.output, outputs=outputs, include=include, clearance=a.clearance))
+
+
+def beam(a: argparse.Namespace) -> None:
+    values = a.values.split(",") if a.values else None
+    _out(Ada().beam(a.start, a.hops, width=a.width, values=values, miss=a.miss, clearance=a.clearance))
 
 
 def _ask(function: str):
@@ -303,6 +309,13 @@ def parser() -> argparse.ArgumentParser:
     p = ask(cmd("decide", decide, "Decide a case: outcome, probabilities, expected cost, ask, receipts"))
     p.add_argument("--outputs", help="several named outputs at once, comma separated")
     p.add_argument("--facts", action="store_true", help="add the nearest fact tree")
+    p = cmd("beam", beam, "A chain of models: one model's outcome is the next model's question (one read per hop)", model_arg=False)
+    p.add_argument("start", help="the value the beam starts with")
+    p.add_argument("--hops", type=_json, required=True, help='the hops, as JSON (or @file, -): [{"model": "tickets", "role": "t.s.text", "fixed": {...}, "output": "..."}, ...]')
+    p.add_argument("--width", type=int, help="how many heaviest values are kept between hops (default 10)")
+    p.add_argument("--values", help="comma separated: what a model that does not know spreads its mass over")
+    p.add_argument("--miss", type=float, help="0..1: the share of a hop's mass a model that does not know passes on over --values (default 0)")
+    p.add_argument("--clearance", type=float, help="read with less clearance than the key's")
     ask(cmd("query", _ask("query"), "The nearest precedents' vote"))
     ask(cmd("probabilities", _ask("probabilities"), "P(outcome | case), calibrated"))
     p = ask(cmd("facts", _ask("facts"), "The nearest fact trees, best first"))

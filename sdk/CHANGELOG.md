@@ -2,6 +2,30 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.10.0 — 2026-11-04
+
+The beam: a chain of models, one model's outcome the next model's question. Contract 5 still: the `beam` schema is
+additive.
+
+- `beam(start, hops, width=, values=, miss=, clearance=)` (Python) and `beam(start, hops, { width, values, miss,
+  clearance })` (TypeScript) on `Ada`, `POST /v1/beam`. The beam starts with `start` holding mass 1; each hop
+  `{model, role: "layer.segment.role", fixed?: {role: value}, output?}` asks its model about every value the beam
+  holds (the value placed in `role`, `fixed` beside it) and passes each value's mass on by the model's calibrated
+  probabilities, summing where paths meet; after every hop but the last only the `width` (default 10) heaviest
+  values are kept. `values` with `miss` (0..1) lets the chain pass through a model that does not know: `miss` of
+  the hop's mass spreads evenly over `values`, all of it when the model has nothing to say; without `values` such a
+  path ends and its mass is lost.
+- The answer, `Beam`: `outcome` (the heaviest end) and `p` (its share of the mass that arrived; `None`/`null` and
+  0.0 when none), `ends` (every end's share), `paths` (each end's likeliest single path, best first: `value`, `p`,
+  `trail_p`, `steps` from the start), `lost` (mass that arrived nowhere), `hops` (each model and the version that
+  answered), `ada` (the last hop's Ada version), `data`.
+- It is a read: one read per hop against the plan's month, retried as the other reads are (`READS` names it). The
+  Glyphh-Ada headers are on the answer.
+- The `glyphh` command: `glyphh beam START --hops JSON [--width N] [--values a,b] [--miss M] [--clearance C]`, the
+  hops as JSON, `@file` or `-`, the answer as JSON.
+- The contract names the `beam` schema; a hop naming a model the key does not own is refused as a decide is,
+  `E_MODEL_MISSING` (404).
+
 ## 3.9.0
 
 Bots' gates: a bot's program holds the hard gates (code and `limits`, never learned, never overridden) and calls

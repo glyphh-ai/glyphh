@@ -1,6 +1,6 @@
 {
   "contract": 5,
-  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code. Contract 5's Ada versions (ada-cloud.md 12): `ada` on decisions, models, versions and backtests, the version list, an upgrade, the headers (`headers`: Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) and the E_ADA_* refusals, checked against and taken from a local server built from glyphh-ai/server's ada-versions branch (its notes, messages, notices and job args as it answers them; models, ids and numbers kept to the story told); a deprecated, moved or retired Ada, a closed beta and a kernel the deploy lacks are never reached by a local run (the registry lists ada-1-0, stable, and ada-1-1-beta, open), so those stay written.",
+  "description": "Ada Cloud's requests and answers, recorded from a local server built from glyphh-ai/server's ada-cloud-connector (sdk/integration/run.sh with ADA_LIVE_DIR; each run checks every live answer against its fixture's schema and keys), the usage and the plan's refusals (429 E_RATE with its Retry-After, 403 E_LIMIT requests) included. Receipts, facts, ids and refusals cut to a few; signed links shortened. The two refusals a local run does not reach (past a plan's precedents, Free's 1,000; a model over 100,000) are written from the server's code. Contract 5's Ada versions (ada-cloud.md 12): `ada` on decisions, models, versions and backtests, the version list, an upgrade, the headers (`headers`: Glyphh-Contract, Glyphh-Ada, Glyphh-Ada-Notice) and the E_ADA_* refusals, checked against and taken from a local server built from glyphh-ai/server's ada-versions branch (its notes, messages, notices and job args as it answers them; models, ids and numbers kept to the story told); a deprecated, moved or retired Ada, a closed beta and a kernel the deploy lacks are never reached by a local run (the registry lists ada-1-0, stable, and ada-1-1-beta, open), so those stay written. The beam (POST /v1/beam, SDK 3.10) is written to the server's beam branch as it answers: two hops, tickets then routing, and a hop naming a model the key does not own.",
   "cases": [
     {
       "name": "a model made from its spec",
@@ -433,6 +433,91 @@
           },
           "model": "routing",
           "version": 1,
+          "ada": "ada-1-0"
+        }
+      }
+    },
+    {
+      "name": "a beam",
+      "schema": "beam",
+      "request": {
+        "method": "POST",
+        "path": "/v1/beam",
+        "body": {
+          "start": "card lost",
+          "hops": [
+            {
+              "model": "tickets",
+              "role": "t.s.text",
+              "fixed": {
+                "t.s.plan": "pro",
+                "t.s.channel": "chat"
+              }
+            },
+            {
+              "model": "routing",
+              "role": "t.w.text",
+              "fixed": {
+                "t.w.product": "cards"
+              }
+            }
+          ],
+          "width": 5,
+          "values": [
+            "billing",
+            "fraud",
+            "support"
+          ],
+          "miss": 0.1,
+          "clearance": 0.5
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "glyphh-contract": "5",
+          "glyphh-ada": "ada-1-0"
+        },
+        "body": {
+          "outcome": "billing",
+          "p": 0.78,
+          "ends": {
+            "billing": 0.78,
+            "fraud": 0.22
+          },
+          "paths": [
+            {
+              "value": "billing",
+              "p": 0.78,
+              "trail_p": 0.62,
+              "steps": [
+                "card lost",
+                "refund",
+                "billing"
+              ]
+            },
+            {
+              "value": "fraud",
+              "p": 0.22,
+              "trail_p": 0.16,
+              "steps": [
+                "card lost",
+                "keep",
+                "fraud"
+              ]
+            }
+          ],
+          "lost": 0.04,
+          "hops": [
+            {
+              "model": "tickets",
+              "version": 1
+            },
+            {
+              "model": "routing",
+              "version": 2
+            }
+          ],
           "ada": "ada-1-0"
         }
       }
@@ -1558,6 +1643,39 @@
             "message": "No model named nope in this org.",
             "trace_id": "a2ce37721cad49d4a680653c458ce0f2",
             "model": "nope"
+          }
+        }
+      }
+    },
+    {
+      "name": "a beam through a model the key does not own",
+      "schema": "error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/beam",
+        "body": {
+          "start": "card lost",
+          "hops": [
+            {
+              "model": "tickets",
+              "role": "t.s.text"
+            },
+            {
+              "model": "nope",
+              "role": "t.w.text"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "code": "E_MODEL_MISSING",
+            "message": "No model named nope in this org (hop 2).",
+            "trace_id": "5c1e0b6d2f8a4e0c9d3b7a1f6e2c4d80",
+            "model": "nope",
+            "hop": 2
           }
         }
       }
