@@ -1,6 +1,7 @@
 """The Ada API: its own FastAPI app, reached only at the Ada hosts (GLYPHH_ADA_HOSTS, `ada.glyphh.ai`) and only with
 GLYPHH_ADA_CLOUD on. It is a second host of glyphh-ai-server, not a second service: the same process, the same
-database and Redis, its own clean paths (`/v1/models`, `/v1/decide`, `/v1/runs`) beside the account API's."""
+database and Redis, its own clean paths (`/v1/models`, `/v1/decide`, `/v1/beam`, `/v1/runs`) beside the account
+API's."""
 
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -11,11 +12,25 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from glyphh_ada import registry
-from glyphh_ada.api import adaversions, cases, dashboard, files, imports, jobs, keys, models, reads, runs, tuning, usage
+from glyphh_ada.api import (
+    adaversions,
+    beam,
+    cases,
+    dashboard,
+    files,
+    imports,
+    jobs,
+    keys,
+    models,
+    reads,
+    runs,
+    tuning,
+    usage,
+)
 from glyphh_server.api import errors, health
 from glyphh_server.config import Settings
 
-ROUTERS = (health, keys, models, cases, reads, jobs, runs, imports, files, tuning, usage, dashboard, adaversions)
+ROUTERS = (health, keys, models, cases, reads, beam, jobs, runs, imports, files, tuning, usage, dashboard, adaversions)
 
 
 async def ada_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

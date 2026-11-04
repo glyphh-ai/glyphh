@@ -24,9 +24,10 @@ RROTOR_INSTRUCTIONS: str = (
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "
     "history (ada_record_many, or ada_import with an upload link), learn (ada_learn), ask (ada_decide, ada_query, "
-    "ada_probabilities, ada_facts), tune one lever at a time with a backtest first (ada_backtest, ada_settings, "
-    "ada_versions, ada_activate), follow jobs (ada_job), export (ada_export), and make API keys for your code "
-    "(create_api_key). Reads count against your plan's month (usage). The template library (templates, "
+    "ada_probabilities, ada_facts), chain models (ada_beam), tune one lever at a time with a backtest first "
+    "(ada_backtest, ada_settings, ada_versions, ada_activate), follow jobs (ada_job), export (ada_export), and make "
+    "API keys for your code (create_api_key). Reads count against your plan's month (usage). The template library ("
+    "templates, "
     "template_install): bundles you install for yourself, each adding tools of your own, such as Agentic memory, your "
     "glyphh."
 )

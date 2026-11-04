@@ -31,7 +31,7 @@ API: str = "http://api.test"
 def test_a_read_is_a_request_and_a_decide_one_per_output() -> None:
     assert requests.reads("decide", {"data": {}}) == 1
     assert requests.reads("decide", {"data": {}, "outputs": ["a", "b", "c"]}) == 3
-    assert requests.reads("query", {}) == requests.reads("facts", {}) == 1
+    assert requests.reads("query", {}) == requests.reads("facts", {}) == requests.reads(requests.BEAM, {}) == 1
     assert requests.reads("record_many", {"cases": [1, 2]}) == requests.reads("job", {}) == 0
     assert requests.turns("2026-12") == "2027-01-01" and requests.turns("2026-10") == "2026-11-01"
     assert requests.before("2027-01") == "2026-12" and requests.before("2026-10") == "2026-09"

@@ -303,7 +303,8 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   1,000,000 / 5,000,000 / 200, Enterprise none (by contract); never per seat, model or key. Before a call is
   enqueued (by the API or the connector alike, `glyphh_ada/api/meter.py`) the org's calls a second are held to the
   plan by a token bucket in Redis (`429 E_RATE`, `Retry-After`), and a read (`decide`, `query`, `probabilities`,
-  `facts`; a decide once per output) is counted in Redis (`ada:req:<org>:<month>`). Past the month a Free org's
+  `facts`; a decide once per output; a beam once per hop reached) is counted in Redis (`ada:req:<org>:<month>`).
+  Past the month a Free org's
   reads are refused (`403 E_LIMIT` `requests`, with `used`, `max`, `plan`, `upgrade` and `resets_at`); a Pro or Team
   org's go on, and the minute tick adds the month's count to `ada_usage` and reports the reads past it to Stripe's
   `ada_requests` meter ($1 per 10,000, `GLYPHH_STRIPE_PRICE_ADA`, each report written before it is sent;
@@ -317,8 +318,8 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   whoever makes it (a key, the platform's sign-in, `/v1/runs`, the connector's tools); a backtest's scoring of the
   model's own held-out precedents is not a read and counts nowhere.
 - **The connector.** Its `ada_*` tools (models, spec, settings, versions, activate, record, record_many, grade,
-  forget, decide, query, probabilities, facts, learn, calibrate, backtest, import with a one-hour upload link or rows
-  inline, export with a download link, job with a wait) and `create_api_key`, `api_keys`, `revoke_api_key` call the
+  forget, decide, query, probabilities, facts, beam, learn, calibrate, backtest, import with a one-hour upload link or
+  rows inline, export with a download link, job with a wait) and `create_api_key`, `api_keys`, `revoke_api_key` call the
   workers exactly as the API does (`glyphh_ada/api/call.py`), as the person signed in with full clearance. A tool that
   waits on a worker runs after the request's transaction has ended, on short transactions of its own: an open
   transaction would hold back the database's oldest snapshot, which an import's concurrent index build waits out.
@@ -334,6 +335,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
 | `POST /v1/models/{name}/record`, `/record_many` (1,000 cases, all or none), `/grade`; `DELETE …/precedents/{id}` | Writes, each taking an `Idempotency-Key` |
 | `POST /v1/models/{name}/query`, `/probabilities`, `/facts` (`top` 50), `/decide` (`outputs`, `include: ["facts"]`) | The kernel's answers; `clearance` lower than the key's |
 | `POST /v1/decide` `{model, data, …}` | `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
+| `POST /v1/beam` `{start, hops: [{model, role, fixed?, output?}], width?, values?, miss?, clearance?}` | Beam search across models, one model's outcome the next one's question, computed over each hop's probabilities (`glyphh_ada/beam.py`): `{outcome, p, ends, paths, lost, hops: [{model, version}], ada}`; 32 hops at most, each one read |
 | `POST /v1/models/{name}/learn`, `/calibrate`; `GET /v1/jobs/{id}`; `POST /v1/jobs/{id}/cancel` | Jobs |
 | `POST /v1/models/{name}/imports` `{format, mapping?, partial?, learn?, content?, content_base64?}`; `GET …/imports/{id}`; `PUT /v1/uploads/{link}` | An import: the job and its upload link, or the file in the body (5 MB) |
 | `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | An export: the job, then its download link |

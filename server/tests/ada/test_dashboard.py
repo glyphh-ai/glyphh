@@ -83,7 +83,7 @@ async def test_the_dashboard_counts_the_days_and_reads_the_store(
     assert empty.status_code == 200, empty.text
     got = empty.json()
     assert (got["precedents"], got["outcomes"], got["growth"], got["sure"]) == (0, [], [], [0] * 10)
-    none = {"decide": 0, "query": 0, "probabilities": 0, "facts": 0}
+    none = {"decide": 0, "query": 0, "probabilities": 0, "facts": 0, "beam": 0}
     assert len(got["days"]) == 30 and all(d["reads"] == none for d in got["days"]) and got["answers"] == []
     assert (got["others"], got["estimated"]) == ([], False)
     assert got["plan"] == {"plan": "Team", "precedents": {"used": 0, "max": 1_000_000}}
@@ -100,7 +100,7 @@ async def test_the_dashboard_counts_the_days_and_reads_the_store(
     got = (await ada.get("/v1/models/shapes/stats?days=7", headers=key)).json()
     assert unflushed["days"] == got["days"] and unflushed["answers"] == got["answers"] and len(got["days"]) == 7
     today = got["days"][-1]
-    assert today["reads"] == {"decide": 3, "query": 1, "probabilities": 0, "facts": 0}
+    assert today["reads"] == {"decide": 3, "query": 1, "probabilities": 0, "facts": 0, "beam": 0}
     assert today["decided"] == 3 and sum(got["sure"]) == 3 and today["asked"] <= 3
     [answer] = got["answers"]
     assert answer["output"] is None and answer["decided"] == 3 and answer["sure"] == got["sure"]

@@ -35,6 +35,8 @@ REFUSALS_SHOWN: int = 100  # an import's first refused rows, each named
 LINK_TTL: int = 3600  # seconds an upload or download link works
 CHUNK: int = 1 << 20  # bytes of a file in one row of the org's `files`
 CANDIDATES_MAX: int = 10  # a backtest's candidate settings or specs
+HOPS_MAX: int = 32  # a beam's hops (POST /v1/beam), each one read
+WIDTH_MAX: int = 50  # the values a beam carries from one hop to the next
 KEPT_DAYS: int = 7  # an old version's partition is kept this long after it stops being active, for a rollback
 
 

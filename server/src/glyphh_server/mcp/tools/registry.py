@@ -13,6 +13,7 @@ from glyphh_server.mcp import panel
 from glyphh_server.mcp.protocol import INVALID_PARAMS, RpcError
 from glyphh_server.mcp.tools import (
     account,
+    ada_beam,
     ada_cases,
     ada_jobs,
     ada_keys,
@@ -29,7 +30,7 @@ from glyphh_server.mcp.tools import (
 from glyphh_server.mcp.tools.base import Context, Tool
 from glyphh_server.ops.templates import installs
 
-_WORKERS = (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_jobs.TOOLS, *ada_releases.TOOLS)
+_WORKERS = (*ada_models.TOOLS, *ada_cases.TOOLS, *ada_beam.TOOLS, *ada_jobs.TOOLS, *ada_releases.TOOLS)
 ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templates.TOOLS)}
 # Tools that wait on an Ada worker (up to 30 s, a job up to 50): run after the request's transaction has ended, on
 # short transactions of their own. A transaction open across the wait holds back the database's oldest snapshot, and an
