@@ -4,7 +4,8 @@
 // calls the desktop app's own tools for each, and whatever a call could not do
 // goes to Claude as one prompt with the steps left. Layouts live in the store
 // across sessions; the Dip pane writes them.
-import type { DipDraft, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
+import type { DipCellPane, DipDraft, DipGrid, DipLayout, DipPane, DipTerminal, DipView } from '../../types'
+import { asGrid, assign, emptyGrid, gridOfPanes, panesOf } from './dipgrid'
 import type { Host } from './host'
 
 export const PANES: { id: DipPane; label: string }[] = [
@@ -17,6 +18,9 @@ export const PANES: { id: DipPane; label: string }[] = [
   { id: 'plan', label: 'Plan' },
   { id: 'artifact', label: 'Artifacts' },
 ]
+
+/** What a cell can hold, in the order the editor offers it. */
+export const FILLS: { id: DipCellPane; label: string }[] = [{ id: 'claude', label: 'Claude' }, ...PANES, { id: '', label: 'Empty' }]
 
 export const FIRST_DIP: DipView = { layouts: [], active: null, draft: null, note: null }
 
@@ -44,7 +48,8 @@ const T = {
 export async function loadDip(gh: Host) {
   const layouts = asLayouts(await gh.store.get(LAYOUTS).catch(() => undefined))
   const active = await gh.store.get(ACTIVE).catch(() => undefined)
-  await gh.state.dip.set(v => ({ ...v, layouts, active: typeof active === 'string' && layouts.some(l => l.name === active) ? active : null }))
+  // A draft from before grids is dropped: the editor draws a draft's grid.
+  await gh.state.dip.set(v => ({ ...v, layouts, draft: v.draft?.grid ? v.draft : null, active: typeof active === 'string' && layouts.some(l => l.name === active) ? active : null }))
 }
 
 const say = (gh: Host, text: string, isError = false) => gh.state.dip.set(v => ({ ...v, note: { text, isError } }))
@@ -178,7 +183,7 @@ export async function capture(gh: Host, name: string, brief = ''): Promise<DipLa
     const s = (t ?? {}) as Record<string, unknown>
     return { title: String(s.title ?? 'shell'), cwd: String(s.cwd ?? s.directory ?? ''), command: '' }
   })
-  return { name, folder, tabs: urls, focus, panes, terminals, brief }
+  return { name, folder, tabs: urls, focus, grid: gridOfPanes(panes), panes, terminals, brief }
 }
 
 /** /dip save <name>: the session as it is, kept as that layout (its brief kept when it existed). */
@@ -237,6 +242,9 @@ export function brief(view: DipView): string | null {
 
 // The pane's editor.
 
+/** A new layout starts as Claude beside the browser. */
+const NEW_GRID: DipGrid = assign(assign(emptyGrid(2, 1), 0, 'claude'), 1, 'preview')
+
 export const draftOf = (l: DipLayout | null): DipDraft =>
   l
     ? {
@@ -244,11 +252,12 @@ export const draftOf = (l: DipLayout | null): DipDraft =>
         name: l.name,
         folder: l.folder,
         tabs: l.tabs.map((u, i) => (i === l.focus ? `* ${u}` : u)).join('\n'),
-        panes: [...l.panes],
+        grid: l.grid,
+        cell: 0,
         terminals: l.terminals.map(t => [t.title, t.cwd, t.command].join(' | ')).join('\n'),
         brief: l.brief,
       }
-    : { original: null, name: '', folder: '', tabs: '', panes: ['preview'], terminals: '', brief: '' }
+    : { original: null, name: '', folder: '', tabs: '', grid: NEW_GRID, cell: 1, terminals: '', brief: '' }
 
 export function layoutOf(d: DipDraft): DipLayout {
   const lines = d.tabs.split('\n').map(s => s.trim()).filter(Boolean)
@@ -262,7 +271,7 @@ export function layoutOf(d: DipDraft): DipLayout {
       const [title = '', cwd = '', ...command] = s.split('|').map(x => x.trim())
       return { title: title || 'shell', cwd, command: command.join(' | ') }
     })
-  return { name: d.name.trim(), folder: d.folder.trim(), tabs, focus, panes: d.panes, terminals, brief: d.brief }
+  return { name: d.name.trim(), folder: d.folder.trim(), tabs, focus, grid: d.grid, panes: panesOf(d.grid), terminals, brief: d.brief }
 }
 
 export const editDraft = (gh: Host, fn: (d: DipDraft) => DipDraft) => gh.state.dip.set(v => (v.draft ? { ...v, draft: fn(v.draft) } : v))
@@ -306,13 +315,15 @@ export function asLayouts(v: unknown): DipLayout[] {
     const o = (x ?? {}) as Record<string, unknown>
     if (typeof o.name !== 'string' || !o.name) return []
     const terms = Array.isArray(o.terminals) ? o.terminals : []
+    const grid = asGrid(o.grid, FILLS.map(f => f.id)) ?? gridOfPanes(asStrings(o.panes).filter((p): p is DipPane => PANES.some(x => x.id === p)))
     return [
       {
         name: o.name,
         folder: typeof o.folder === 'string' ? o.folder : '',
         tabs: asStrings(o.tabs),
         focus: typeof o.focus === 'number' ? o.focus : -1,
-        panes: asStrings(o.panes).filter((p): p is DipPane => PANES.some(x => x.id === p)),
+        grid,
+        panes: panesOf(grid),
         terminals: terms.map(t => {
           const s = (t ?? {}) as Record<string, unknown>
           return { title: String(s.title ?? 'shell'), cwd: String(s.cwd ?? ''), command: String(s.command ?? '') }
