@@ -42,6 +42,23 @@ class AdaCloudSettings(BaseSettings):
         return self.ada_url.rstrip("/")
 
 
+class LlmSettings(BaseSettings):
+    """Glyphh-hosted models (docs/specs/tokens.md): off by default. On (with Ada Cloud on: it is served at the Ada
+    hosts, with the same API keys), POST /v1/chat/completions proxies to inference_url, an OpenAI-compatible server
+    (vLLM) serving each model under its registry id, and tokens are drawn from the plan's allowance, then charged to
+    the org's overage balance. inference_key, when set, is sent to it as a bearer token."""
+
+    llm: bool = False
+    inference_url: str = ""
+    inference_key: str = ""
+    # How long a request waits on the inference server, seconds (a stream, between its chunks).
+    inference_timeout: float = Field(300.0, gt=0, le=900)
+
+    @property
+    def inference_base(self) -> str:
+        return self.inference_url.rstrip("/")
+
+
 class StaffSettings(BaseSettings):
     """Glyphh's staff (glyphh_server/admin): the verified sign-in emails, comma-separated, that open the staff view on
     the platform. Only through the platform's own sign-in, and every staff request is audited."""
@@ -66,7 +83,7 @@ class TrafficSettings(BaseSettings):
     github_traffic_repos: str = "glyphh-ai/glyphh"
 
 
-class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
+class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
@@ -123,6 +140,11 @@ class Settings(AdaCloudSettings, StaffSettings, TrafficSettings):
             if url.startswith(plain):
                 url = "postgresql+asyncpg://" + url.removeprefix(plain)
         return url.replace("?sslmode=", "?ssl=").replace("&sslmode=", "&ssl=")
+
+    @property
+    def hosted(self) -> bool:
+        """Glyphh-hosted models are on: GLYPHH_LLM, served at the Ada hosts, so with Ada Cloud on too."""
+        return self.llm and self.ada_cloud
 
     @property
     def base_url(self) -> str:

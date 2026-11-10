@@ -59,7 +59,9 @@ async def test_the_plans_are_free_basic_pro_team_and_enterprise(
     built = FEATURES_OFF | {"offline": True, "sso": True}  # offline licences and single sign-on work today
     assert all(p["built"] == built for p in plans)
     keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built"}
-    assert keys | {"cloud"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud is off
+    assert keys | {"cloud", "llm_tokens"} == set(plans[0]) and all(p["cloud"] is None for p in plans)  # Ada Cloud off
+    # Glyphh-hosted models' tokens a month (docs/specs/tokens.md): a plan's fact, shown whether they are on or not
+    assert [p["llm_tokens"] for p in plans] == [250_000, 5_000_000, 25_000_000, 100_000_000, None]
 
 
 async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(

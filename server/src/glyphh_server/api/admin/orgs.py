@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
 from glyphh_server.admin import actions
-from glyphh_server.admin.actions import PlanChange, Suspension
+from glyphh_server.admin.actions import BalanceGrant, PlanChange, Suspension
 from glyphh_server.admin.org_detail import OrgDetail, detail
 from glyphh_server.admin.orgs import LIMIT_MAX, OrgPage, orgs
 from glyphh_server.api.admin.deps import Staff
@@ -67,6 +67,14 @@ async def change_plan(org_id: uuid.UUID, body: PlanChange, staff: Staff) -> Done
     changed = await actions.change_plan(staff.conn, org_id, body.plan_version_id)
     await staff.note(**changed)
     return Done(message=f"Moved from {changed['from']} to {changed['to']}.")
+
+
+@router.post("/orgs/{org_id}/llm-grant", operation_id="adminGrantBalance")
+async def grant_balance(org_id: uuid.UUID, body: BalanceGrant, staff: Staff) -> Done:
+    """Dollars added to the org's hosted-model overage balance, a grant on its ledger with the note."""
+    await actions.grant_balance(staff.conn, org_id, body)
+    await staff.note(amount_cents=body.amount_cents, note=body.note)
+    return Done(message=f"Granted ${body.amount_cents / 100:,.2f} to its overage balance.")
 
 
 @router.post("/orgs/{org_id}/suspend", operation_id="adminSuspendOrg", status_code=204)

@@ -1,4 +1,5 @@
-"""Stripe's events, keeping orgs true: a finished checkout, a paid invoice, and every change to a subscription. The
+"""Stripe's events, keeping orgs true: a finished checkout, a paid invoice, and every change to a subscription; a paid
+top-up of the hosted models' overage balance credits it (ops/billing/topup.py). The
 subscription is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. A payment
 (the checkout, each paid invoice) issues the org a licence key to the paid period's end; a subscription ended revokes
 them (ops/billing/sync.py)."""
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.models import Org
 from glyphh_server.obs.logs import fields
+from glyphh_server.ops.billing import topup
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import issue_paid, sync_subscription
 
@@ -47,6 +49,9 @@ async def handle_event(
     signing_key: Ed25519PrivateKey,
 ) -> None:
     kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
+    if kind in topup.PAID_EVENTS and obj.get("mode") == "payment":  # the overage balance's top-up
+        await topup.credited(conn, await _org(conn, obj.get("client_reference_id"), obj.get("customer")), obj)
+        return
     target = _target(kind, obj)
     if target is None:
         log.info("stripe event ignored", extra=fields(type=kind))

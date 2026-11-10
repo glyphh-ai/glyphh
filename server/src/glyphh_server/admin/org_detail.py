@@ -14,6 +14,7 @@ from glyphh_ada import requests
 from glyphh_server.admin import adascan, audit
 from glyphh_server.admin.users import PersonRow, people
 from glyphh_server.errors import NotFound
+from glyphh_server.llm import usage as llm_usage
 from glyphh_server.models import (
     AdaModelDay,
     AdaUsage,
@@ -68,6 +69,7 @@ class OrgDetail(BaseModel):
     jobs: list[adascan.AdaJob]
     api_keys: int
     licences: int
+    balance: llm_usage.Balance  # the hosted models' overage balance (docs/specs/tokens.md); staff may grant to it
     audit: list[audit.AuditEntry]
 
 
@@ -125,5 +127,6 @@ async def detail(conn: AsyncConnection, org_id: uuid.UUID) -> OrgDetail:
         jobs=ada.jobs,
         api_keys=await _count(conn, keys),
         licences=await _count(conn, licences),
+        balance=await llm_usage.balance(conn, org_id),
         audit=[audit.AuditEntry(**r._mapping) for r in await conn.execute(taken)],
     )

@@ -31,9 +31,11 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "features": {"sync": True, "ha": False, "offline": False, "sso": False},
         "built": {"sync": False, "ha": False, "offline": True, "sso": True},
         "cloud": None,  # Ada Cloud is off
+        "llm_tokens": 100_000_000,
     }
     assert me["precedents"] == {"used": 0, "limit": 500_000} and "hosting" not in me
     assert me["ada_cloud"] is False and me["cloud"] is None  # off by default: the platform shows today's pages
+    assert me["llm"] is False  # hosted models off by default too
 
 
 async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:

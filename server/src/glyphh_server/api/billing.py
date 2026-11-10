@@ -4,17 +4,21 @@ admin's."""
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from sqlalchemy import select
 
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.pages import to_platform
+from glyphh_server.errors import NotFound
+from glyphh_server.llm import usage as llm_usage
+from glyphh_server.llm.usage import Ledger
 from glyphh_server.models import Org
-from glyphh_server.ops.billing import changes, checkout, signature, webhook
+from glyphh_server.ops.billing import changes, checkout, signature, topup, webhook
 from glyphh_server.ops.billing.checkout import StripePage
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.billing.topup import TopupIn
 from glyphh_server.ops.org import OrgView
 from glyphh_server.ops.usage import Usage, usage
 
@@ -58,8 +62,26 @@ async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingVi
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
-    used = await usage(conn, caller.org_id, cloud_redis(request))
+    used = await usage(conn, caller.org_id, cloud_redis(request), request.app.state.settings.hosted)
     return BillingView(**used.model_dump(), **row._mapping)
+
+
+@router.post("/v1/billing/topup", operation_id="topUpBalance")
+async def top_up(body: TopupIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
+    """Stripe Checkout's address to add $10 to $1,000 to the overage balance the Glyphh-hosted models draw on past
+    the plan's tokens; credited once Stripe says it is paid. The admin's."""
+    settings = request.app.state.settings
+    if not settings.hosted:
+        raise NotFound("Glyphh-hosted models are not on this server.", reason="llm_off")
+    return await topup.topup(conn, caller, stripe, settings, body.amount_cents)
+
+
+@router.get("/v1/billing/ledger", operation_id="balanceLedger")
+async def get_ledger(
+    caller: Caller, conn: Conn, limit: Annotated[int, Query(ge=1, le=200, description="Newest first")] = 50
+) -> Ledger:
+    """The overage balance's entries, newest first: top-ups, grants, refunds, and each model's day of charges."""
+    return await llm_usage.entries(conn, caller.org_id, limit)
 
 
 @router.post("/v1/billing/checkout", operation_id="startCheckout")

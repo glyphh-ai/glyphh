@@ -26,6 +26,7 @@ from glyphh_server.mcp.tools import (
     runtime,
     self_hosted,
     templates,
+    tokens,
 )
 from glyphh_server.mcp.tools.base import Context, Tool
 from glyphh_server.ops.templates import installs
@@ -42,11 +43,14 @@ TOOLS: dict[str, Tool] = {t.name: t for t in (*account.TOOLS, *billing.TOOLS, *p
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps. Shelved (2026-11-02):
 # offered only while GLYPHH_RROTOR is on.
 RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
+HOSTED: dict[str, Tool] = {t.name: t for t in tokens.TOOLS}  # docs/specs/tokens.md, while GLYPHH_LLM is on
 
 
 def available(ctx: Context) -> dict[str, Tool]:
-    """The tools this server offers: Ada Cloud's too while it is on, and rrotor's while it is shown."""
+    """The tools this server offers: Ada Cloud's too while it is on, rrotor's while it is shown, and topping up the
+    hosted models' balance while they are on."""
     tools = TOOLS | RROTOR if ctx.settings.rrotor else TOOLS
+    tools = tools | HOSTED if ctx.settings.hosted else tools
     return tools | ADA if ctx.ada is not None else tools
 
 

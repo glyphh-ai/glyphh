@@ -18,6 +18,19 @@ is [Against what is built](#against-what-is-built).
 | Ada Cloud precedents, the org's | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract |
 | Ada Cloud reads a month | 5,000, then refused | 50,000, then $1 per 10,000 | 1,000,000, then $1 per 10,000 | 5,000,000, then $1 per 10,000 | By contract |
 | Ada Cloud calls a second | 5 | 10 | 50 | 200 | By contract |
+| Hosted-model tokens a month (TBD) | 250,000 | 5,000,000 | 25,000,000 | 100,000,000 | By contract |
+| Past the tokens | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | By contract |
+
+**Hosted-model rates** (TBD placeholders), in dollars per million tokens past the plan's month, charged to the org's
+prepaid overage balance (topped up $10 to $1,000 at a time); the price on the page is the charge on the bill:
+
+| Model | Id | Context | Input | Output |
+|---|---|---|---|---|
+| adaL 34B 1.0 | `adal-34b-1-0` | 32,768 tokens | $0.60 | $2.40 |
+
+- **Glyphh-hosted models** ([specs/tokens.md](specs/tokens.md)): a plan's tokens a month draw down first; past them,
+  input and output tokens are charged in dollars, never credits, against a balance the admin tops up. With no tokens
+  and no balance left a request is refused, 402 `E_BALANCE`. Free may buy a balance too.
 
 - **Basic is an Ada Cloud plan,** between Free and Pro: self-serve, its Stripe price `GLYPHH_STRIPE_PRICE_BASIC`. It
   has no licence key (rrotor's tiers are free, pro, team and enterprise), so a node on Basic runs as Free. Ada

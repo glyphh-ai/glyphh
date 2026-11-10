@@ -59,9 +59,11 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     cloud_requests INTEGER,
     cloud_rps INTEGER,
     cloud_overage BOOLEAN DEFAULT false NOT NULL,
+    llm_tokens BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT plan_versions_version UNIQUE (plan_id, version),
+    CONSTRAINT plan_versions_llm CHECK (coalesce(llm_tokens, 0) >= 0),
     CONSTRAINT plan_versions_price CHECK (coalesce(price_cents, 0) >= 0),
     CONSTRAINT plan_versions_interval CHECK (billing_interval IN ('month', 'year')),
     CONSTRAINT plan_versions_limits CHECK (coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0),
@@ -148,6 +150,48 @@ CREATE TABLE IF NOT EXISTS ada_meter_events (
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS ix_ada_meter_events_org_id ON ada_meter_events (org_id);
+
+-- llm_ledger, llm_balances, llm_usage_days: Glyphh-hosted models' tokens (docs/specs/tokens.md): the org's overage
+-- balance entry by entry in microdollars, the balance and the month's allowance used, and each model's day.
+CREATE TABLE IF NOT EXISTS llm_ledger (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    kind TEXT NOT NULL,
+    amount_micros BIGINT NOT NULL,
+    stripe_ref TEXT,
+    model TEXT,
+    period TEXT,
+    note TEXT,
+    PRIMARY KEY (id),
+    CONSTRAINT llm_ledger_kind CHECK (kind IN ('topup', 'charge', 'grant', 'refund')),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    UNIQUE (stripe_ref)
+);
+CREATE INDEX IF NOT EXISTS llm_ledger_newest ON llm_ledger (org_id, at);
+CREATE UNIQUE INDEX IF NOT EXISTS llm_ledger_charge_day ON llm_ledger (org_id, model, period) WHERE kind = 'charge';
+
+CREATE TABLE IF NOT EXISTS llm_balances (
+    org_id UUID NOT NULL,
+    micros BIGINT DEFAULT 0 NOT NULL,
+    period TEXT DEFAULT '' NOT NULL,
+    tokens BIGINT DEFAULT 0 NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (org_id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS llm_usage_days (
+    org_id UUID NOT NULL,
+    model TEXT NOT NULL,
+    day DATE NOT NULL,
+    input_tokens BIGINT DEFAULT 0 NOT NULL,
+    output_tokens BIGINT DEFAULT 0 NOT NULL,
+    requests BIGINT DEFAULT 0 NOT NULL,
+    charged_micros BIGINT DEFAULT 0 NOT NULL,
+    PRIMARY KEY (org_id, model, day),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
+);
 
 -- licenses
 CREATE TABLE IF NOT EXISTS licenses (
@@ -616,6 +660,18 @@ ALTER TABLE ada_meter_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ada_meter_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON ada_meter_events;
 CREATE POLICY tenant ON ada_meter_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE llm_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE llm_ledger FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON llm_ledger;
+CREATE POLICY tenant ON llm_ledger USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE llm_balances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE llm_balances FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON llm_balances;
+CREATE POLICY tenant ON llm_balances USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE llm_usage_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE llm_usage_days FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON llm_usage_days;
+CREATE POLICY tenant ON llm_usage_days USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE org_sso ENABLE ROW LEVEL SECURITY;
 ALTER TABLE org_sso FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON org_sso;

@@ -2,7 +2,8 @@
 and suspending it. A plan version is changed only where billing can't disagree: to another version of the plan it
 pays for, or, with no subscription, to any self-serve plan's; Enterprise is granted (with its contract's subscription)
 and revoked, never set here. Suspended, its people's tokens, its connector and its API keys are refused until it is
-lifted (api/auth.py, glyphh_ada/keys.py); nothing of its data changes. Each is audited by the request's row."""
+lifted (api/auth.py, glyphh_ada/keys.py); nothing of its data changes. A grant adds to its hosted models' overage
+balance. Each is audited by the request's row."""
 
 import uuid
 from typing import Any
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.db.seed import ENTERPRISE
 from glyphh_server.errors import Conflict, NotFound
+from glyphh_server.llm import ledger
 from glyphh_server.models import Org, Plan, PlanVersion
 
 
@@ -22,6 +24,17 @@ class PlanChange(BaseModel):
 
 class Suspension(BaseModel):
     reason: str = Field(min_length=3, max_length=500, description="Why, kept with it and in the audit log")
+
+
+class BalanceGrant(BaseModel):
+    amount_cents: int = Field(ge=1, le=100_000, description="US cents added to the hosted models' overage balance")
+    note: str = Field(min_length=3, max_length=500, description="Why, kept on the ledger's entry and in the audit log")
+
+
+async def grant_balance(conn: AsyncConnection, org_id: uuid.UUID, grant: BalanceGrant) -> None:
+    """Money added to the org's overage balance (docs/specs/tokens.md), as a grant entry on its ledger."""
+    await _org(conn, org_id)
+    await ledger.credit(conn, org_id, "grant", grant.amount_cents * ledger.MICROS_PER_CENT, note=grant.note.strip())
 
 
 async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
