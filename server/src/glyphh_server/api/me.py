@@ -38,15 +38,20 @@ async def get_me(caller: Caller, conn: Conn, request: Request) -> Me:
     """The user, their org and role, the plan version with its limits and features, the precedents its fullest runtime
     holds, and whether Ada Cloud is on (the platform shows Ada then); with it on, the plan's
     cloud limits and what the org uses of them; and whether they are Glyphh's staff (the platform opens its staff
-    view)."""
+    view), and whether Glyphh-hosted models are on (the platform shows their tokens and balance then)."""
     found = await me.me(conn, caller, cloud_redis(request))
-    return found.model_copy(update={"staff": is_staff(request.app.state.settings, caller)})
+    return _flags(found, request, caller)
+
+
+def _flags(found: Me, request: Request, caller: Caller) -> Me:
+    settings = request.app.state.settings
+    return found.model_copy(update={"staff": is_staff(settings, caller), "llm": settings.hosted})
 
 
 @router.patch("/me", operation_id="renameMe")
 async def rename_me(body: Rename, caller: Caller, conn: Conn, request: Request) -> Me:
     found = await me.rename_me(conn, caller, body.name, cloud_redis(request))
-    return found.model_copy(update={"staff": is_staff(request.app.state.settings, caller)})
+    return _flags(found, request, caller)
 
 
 @router.post("/me/identities", operation_id="linkIdentity")

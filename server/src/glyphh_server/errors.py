@@ -59,6 +59,14 @@ class LimitReached(GlyphhError):
     status = 403
 
 
+class NoBalance(GlyphhError):
+    """A Glyphh-hosted model's request past the plan's monthly tokens with no overage balance left
+    (docs/specs/tokens.md): the detail says what is used, the most, the balance and where to add funds."""
+
+    code = "E_BALANCE"
+    status = 402
+
+
 class NotInPlan(GlyphhError):
     """The org's plan has no such feature (the detail's `reason` names it): Enterprise does."""
 

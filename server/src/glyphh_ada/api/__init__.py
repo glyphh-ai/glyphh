@@ -27,7 +27,7 @@ from glyphh_ada.api import (
     tuning,
     usage,
 )
-from glyphh_server.api import errors, health
+from glyphh_server.api import errors, health, inference
 from glyphh_server.config import Settings
 
 ROUTERS = (health, keys, models, cases, reads, beam, jobs, runs, imports, files, tuning, usage, dashboard, adaversions)
@@ -60,6 +60,8 @@ def make_app(cfg: Settings, engine: AsyncEngine) -> FastAPI:
     ada.middleware("http")(ada_headers)
     for module in ROUTERS:
         ada.include_router(module.router)
+    if cfg.hosted:  # the Glyphh-hosted models (docs/specs/tokens.md), with the server's HTTP client (app.py)
+        ada.include_router(inference.router)
     return ada
 
 

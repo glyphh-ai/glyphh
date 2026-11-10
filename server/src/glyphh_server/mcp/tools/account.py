@@ -5,6 +5,7 @@ from typing import Any
 
 from glyphh_ada.usage import CloudUsage
 from glyphh_server.db.seed import SALES
+from glyphh_server.mcp.tools import tokens
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, amount, dump
 from glyphh_server.ops import license_keys, me, nodes, plans, usage
 from glyphh_server.ops.plans import CloudLimits, PlanView
@@ -76,22 +77,25 @@ async def plan(ctx: Context, _: NoArgs) -> Done:
     org, p = found.org, found.plan
     renews = f", renews {org.renews_at:%Y-%m-%d}" if org.renews_at else ""
     said, key = await key_line(ctx)
+    hosted, held = await tokens.of_plan(ctx, p.llm_tokens)
     lines = [
         f"{p.name} (version {p.version}), {price(p)}: billing {org.billing_status}{renews}.",
         f"It includes {includes(p)}. Members, installs and models are unlimited.",
+        *hosted,
         said,
     ]
-    return Done("\n".join(lines), {"plan": dump(p), "org": dump(org), "license_key": key})
+    return Done("\n".join(lines), {"plan": dump(p), "org": dump(org), "license_key": key} | held)
 
 
 async def show_usage(ctx: Context, _: NoArgs) -> Done:
-    found = await usage.usage(ctx.conn, ctx.who.org_id, cloud_redis(ctx))
+    found = await usage.usage(ctx.conn, ctx.who.org_id, cloud_redis(ctx), ctx.settings.hosted)
     held = found.precedents
     seen = await nodes.nodes(ctx.conn, ctx.who.org_id)
     over = " (over the plan: shown, never stopped)" if seen.over else ""
     said, key = await key_line(ctx)
     lines = [
         *cloud_used(found.cloud),
+        *tokens.lines(found.tokens, found.balance),
         f"Runtime nodes: {seen.count} of {amount(seen.max_nodes)}{over}.",
         f"Precedents: {held.used:,} on your fullest runtime, of {amount(held.limit)} per node.",
         said,
@@ -114,8 +118,10 @@ def cloud_used(c: CloudUsage | None) -> list[str]:
 
 async def list_plans(ctx: Context, _: NoArgs) -> Done:
     found = await plans.list_plans(ctx.conn, ctx.ada is not None)
-    lines = [f"{p.name}: {price(p)}; {includes(p)}" for p in found]
-    return Done("\n".join(lines), {"plans": [dump(p) for p in found]})
+    hosted = ctx.settings.hosted
+    lines = [f"{p.name}: {price(p)}; {includes(p)}{tokens.allowance(p) if hosted else ''}" for p in found]
+    said, models = tokens.rates(hosted)
+    return Done("\n".join([*lines, *said]), {"plans": [dump(p) for p in found]} | models)
 
 
 TOOLS: tuple[Tool, ...] = (

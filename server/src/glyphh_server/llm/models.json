@@ -1,0 +1,16 @@
+{
+  "comment": "Glyphh-hosted models (docs/specs/tokens.md), newest first. An id is adal-<size>-<major>-<minor>, lower case, with -beta for a beta. Rates are US cents per million tokens: the price on the page and the charge on the bill are the same number. allowance_weight is how much of a plan's monthly token allowance one token uses ((input + output) x weight). TBD (Chris): every rate and weight here is a placeholder until he sets it.",
+  "models": [
+    {
+      "id": "adal-34b-1-0",
+      "name": "adaL 34B 1.0",
+      "status": "stable",
+      "context_tokens": 32768,
+      "input_cents_per_mtok": 60,
+      "output_cents_per_mtok": 240,
+      "allowance_weight": 1.0,
+      "released": "2026-11-10",
+      "summary": "Glyphh's hosted 34B model."
+    }
+  ]
+}

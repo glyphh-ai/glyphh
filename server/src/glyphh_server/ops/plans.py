@@ -64,6 +64,11 @@ class PlanView(BaseModel):
         description="Which features work today, the same on every plan: never show one as included that is not built",
     )
     cloud: CloudLimits | None = Field(None, description="Ada Cloud's limits; null while Ada Cloud is off")
+    llm_tokens: int | None = Field(
+        None,
+        description="Glyphh-hosted models' tokens a calendar month, UTC, before tokens are charged to the overage "
+        "balance at each model's rates (GET /v1/llm/models); null = by contract",
+    )
 
 
 COLUMNS = (
@@ -84,6 +89,7 @@ COLUMNS = (
     PlanVersion.cloud_requests,
     PlanVersion.cloud_rps,
     PlanVersion.cloud_overage,
+    PlanVersion.llm_tokens,
 )
 
 
@@ -117,6 +123,7 @@ def view(row: Row, cloud: bool = False) -> PlanView:
         limits=Limits(machines=row.max_machines, precedents=row.precedents),
         features=features(row),
         cloud=cloud_limits(row) if cloud else None,
+        llm_tokens=row.llm_tokens,
     )
 
 

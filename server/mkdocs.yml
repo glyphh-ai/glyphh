@@ -4,6 +4,7 @@ nav:
   - Glyphh: architecture.md
   - Pricing: pricing.md
   - "Plan: Ada Cloud": specs/ada-cloud.md
+  - "Plan: hosted-model tokens": specs/tokens.md
 theme:
   name: material
   palette:

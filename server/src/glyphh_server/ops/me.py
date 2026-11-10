@@ -37,6 +37,9 @@ class Me(BaseModel):
     precedents: Precedents
     ada_cloud: bool = Field(False, description="Ada Cloud is on (GLYPHH_ADA_CLOUD): the platform shows Ada")
     cloud: CloudUsage | None = Field(None, description="Ada Cloud's precedents and reads; null while it is off")
+    llm: bool = Field(
+        False, description="Glyphh-hosted models are on (GLYPHH_LLM): the platform shows their tokens and balance"
+    )
     staff: bool = Field(
         False, description="Glyphh's staff (GLYPHH_STAFF_EMAILS): the platform opens the staff view (/v1/admin)"
     )

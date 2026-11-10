@@ -72,6 +72,14 @@ class StripeClient:
         )
         return str(session["url"])
 
+    async def pay(self, customer: str, line: dict[str, Any], org_id: str, success: str, cancel: str) -> str:
+        """Checkout for one payment of this line (the overage balance's top-up, priced in the session itself)."""
+        meta = {"org_id": org_id, "kind": "llm_topup"}
+        body = {"mode": "payment", "customer": customer, "client_reference_id": org_id, "line_items": [line]}
+        body |= {"metadata": meta, "payment_intent_data": {"metadata": meta}}
+        session = await self.call("POST", "/checkout/sessions", body | {"success_url": success, "cancel_url": cancel})
+        return str(session["url"])
+
     async def subscription(self, subscription_id: str) -> dict[str, Any]:
         return await self.call("GET", f"/subscriptions/{subscription_id}")
 

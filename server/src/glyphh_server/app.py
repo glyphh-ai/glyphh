@@ -22,6 +22,7 @@ from glyphh_server.api import (
     github_pages,
     health,
     license,
+    llm,
     mcp,
     me,
     mods,
@@ -58,6 +59,7 @@ ROUTERS = (
     mods,
     plans,
     billing,
+    llm,
     runtime,
     self_hosted,
     apps,
@@ -103,6 +105,13 @@ def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[N
     return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github))
 
 
+def _share_http(app: FastAPI, http: httpx.AsyncClient) -> None:
+    """The server's HTTP client, the Ada app's too while it is on: the hosted models' inference (api/inference.py)."""
+    app.state.http = http
+    if app.state.ada is not None:
+        app.state.ada.http = http
+
+
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
     cfg: Settings = settings or get_settings()
     configure(cfg.log_level)
@@ -114,7 +123,7 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.http = http or httpx.AsyncClient(timeout=10)
+        _share_http(app, http or httpx.AsyncClient(timeout=10))
         idle = _tending(app, cfg, engine)
         flushing = asyncio.create_task(metrics.flush_forever(app.state.metrics, redis))
         yield

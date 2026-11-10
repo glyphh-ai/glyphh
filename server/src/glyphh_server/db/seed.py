@@ -1,9 +1,9 @@
 """The mods and plans every Glyphh database starts with, each plan with its first version, in PLANS'
 order (a plan added between two takes its place at the next boot). A Stripe price set for a
 plan that its newest version doesn't sell on becomes a new version (Stripe prices never change, and neither do
-versions). A change of only a plan's Ada Cloud limits becomes a new version too, at the same price: it takes over the
-version before it's Stripe price and its orgs, so every org on the plan has the limits. A mod no longer seeded is
-retired, never deleted. Every plan includes every active mod: Ada is in all of them."""
+versions). A change of only a plan's Ada Cloud limits or token allowance becomes a new version too, at the same
+price: it takes over the version before it's Stripe price and its orgs, so every org on the plan has the limits. A
+mod no longer seeded is retired, never deleted. Every plan includes every active mod: Ada is in all of them."""
 
 from dataclasses import asdict, dataclass
 
@@ -64,6 +64,11 @@ class PlanSeed:
     precedents: int | None
     features: Features
     cloud: Cloud = Cloud()
+    llm_tokens: int | None = None  # Glyphh-hosted models' tokens a month (docs/specs/tokens.md); None: by contract
+
+    def carried(self) -> dict[str, int | bool | None]:
+        """What a version changing only these keeps the price and orgs of the one before for (_carry)."""
+        return {**asdict(self.cloud), "llm_tokens": self.llm_tokens}
 
 
 FREE: str = "Free"
@@ -87,12 +92,17 @@ SALES: str = "sales@glyphh.ai"
 # month, 10 calls a second, reads past the month metered like Pro's and Team's. No sync, HA, offline or SSO, and no
 # licence key (rrotor's tiers are free, pro, team and enterprise): a self-hosted node runs as on Free, one node and
 # 5,000 precedents.
+# Glyphh-hosted models (Chris, 2026-11-10, docs/specs/tokens.md): tokens a calendar month, then charged in dollars to a
+# prepaid balance (Free may buy one too): Free 250,000, Basic 5,000,000, Pro 25,000,000, Team 100,000,000, Enterprise
+# by contract. TBD (Chris): every allowance is a placeholder until set.
 PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), Cloud(1_000, 5_000, 5)),
-    PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), Cloud(10_000, 50_000, 10, True)),
-    PlanSeed("Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), Cloud(100_000, 1_000_000, 50, True)),
+    PlanSeed(FREE, 0, None, True, 1, 5_000, Features(), Cloud(1_000, 5_000, 5), 250_000),
+    PlanSeed(BASIC, 2_000, "month", True, 1, 5_000, Features(), Cloud(10_000, 50_000, 10, True), 5_000_000),
+    PlanSeed(
+        "Pro", 9_900, "month", True, 3, 50_000, Features(sync=True), Cloud(100_000, 1_000_000, 50, True), 25_000_000
+    ),
     PlanSeed(  # TBD: 500,000
-        "Team", 29_900, "month", True, 10, 500_000, Features(sync=True), Cloud(1_000_000, 5_000_000, 200, True)
+        "Team", 29_900, "month", True, 10, 500_000, Features(True), Cloud(1_000_000, 5_000_000, 200, True), 100_000_000
     ),
     PlanSeed(ENTERPRISE, None, "year", False, None, None, Features(True, True, True, True)),
 )
@@ -136,8 +146,8 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
         )
     ).first()
     if newest is not None and (price is None or newest.stripe_price_id == price):
-        if any(getattr(newest, k) != v for k, v in asdict(seed.cloud).items()):
-            await _carry(conn, newest, seed.cloud)
+        if any(getattr(newest, k) != v for k, v in seed.carried().items()):
+            await _carry(conn, newest, seed.carried())
         return
     sold = select(func.count()).where(PlanVersion.stripe_price_id == price)
     if price is not None and (await conn.execute(sold)).scalar_one():
@@ -153,7 +163,7 @@ async def _seed_version(conn: AsyncConnection, seed: PlanSeed, price: str | None
             max_machines=seed.max_machines,
             precedents=seed.precedents,
             **asdict(seed.features),
-            **asdict(seed.cloud),
+            **seed.carried(),
         )
     )
 
@@ -172,13 +182,13 @@ KEPT: tuple[str, ...] = (
 )
 
 
-async def _carry(conn: AsyncConnection, before: Row, cloud: Cloud) -> None:
-    """A new version that is the one before with these cloud limits: the same deal, so it takes over its Stripe price
-    (a price sells one version) and its orgs."""
+async def _carry(conn: AsyncConnection, before: Row, carried: dict[str, int | bool | None]) -> None:
+    """A new version that is the one before with these cloud limits and token allowance: the same deal, so it takes
+    over its Stripe price (a price sells one version) and its orgs."""
     await conn.execute(update(PlanVersion).where(PlanVersion.id == before.id).values(stripe_price_id=None))
     kept = {k: getattr(before, k) for k in KEPT}
     made = insert(PlanVersion).values(
-        **kept, version=before.version + 1, stripe_price_id=before.stripe_price_id, **asdict(cloud)
+        **kept, version=before.version + 1, stripe_price_id=before.stripe_price_id, **carried
     )
     new_id = (await conn.execute(made.returning(PlanVersion.id))).scalar_one()
     await conn.execute(update(Org).where(Org.plan_version_id == before.id).values(plan_version_id=new_id))

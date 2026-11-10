@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
@@ -32,7 +32,8 @@ class PlanVersion(Base):
     Ada Cloud's limits (docs/specs/ada-cloud.md, section 7), the org's whatever its people, models or keys:
     cloud_precedents across its models, cloud_requests (reads) a calendar month, cloud_rps calls a second; past
     cloud_requests, cloud_overage meters the rest (Basic, Pro, Team) or the reads are refused until the month turns
-    (Free).
+    (Free). llm_tokens: the Glyphh-hosted models' tokens a calendar month (docs/specs/tokens.md), past which they
+    are charged to the org's overage balance; null, by contract.
     A version that changes only these takes over the Stripe price and the orgs of the one before it (db/seed.py)."""
 
     __tablename__ = "plan_versions"
@@ -45,6 +46,7 @@ class PlanVersion(Base):
             "coalesce(cloud_precedents, 0) >= 0 AND coalesce(cloud_requests, 0) >= 0 AND coalesce(cloud_rps, 1) > 0",
             name="plan_versions_cloud",
         ),
+        CheckConstraint("coalesce(llm_tokens, 0) >= 0", name="plan_versions_llm"),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -64,4 +66,5 @@ class PlanVersion(Base):
     cloud_requests: Mapped[int | None]
     cloud_rps: Mapped[int | None]
     cloud_overage: Mapped[bool] = mapped_column(server_default="false")
+    llm_tokens: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = created_at()
