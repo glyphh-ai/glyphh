@@ -1,9 +1,42 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { me, plans } from '@/test/fixtures';
+import { llmModels, llmPlans, me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, llmHandlers, onFreeHandlers, server, v1 } from '@/test/server';
 
 const card = (name: string) => screen.getByRole('region', { name });
+
+describe('Plans with Glyphh’s hosted models', () => {
+  it('shows each plan’s tokens a month and the models’ rates in dollars per million tokens', async () => {
+    server.use(...llmHandlers());
+    renderApp('/settings/plans');
+    expect(await within(await screen.findByRole('region', { name: 'Free' })).findByText('250,000 tokens a month')).toBeInTheDocument();
+    expect(within(card('Pro')).getByText('25,000,000 tokens a month')).toBeInTheDocument();
+    expect(within(card('Team')).getByText('100,000,000 tokens a month')).toBeInTheDocument();
+    expect(within(card('Enterprise')).getByText('Tokens a month by contract')).toBeInTheDocument();
+
+    const rates = screen.getByRole('table', { name: 'Model rates' });
+    const row = within(rates).getByText('adaL 34B 1.0').closest('tr')!;
+    expect(within(row).getAllByRole('cell').slice(1).map((cell) => cell.textContent)).toEqual(['32,768 tokens', '$0.60', '$2.40']);
+    expect(within(row).getByText('Beta')).toBeInTheDocument();
+    expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
+  });
+
+  it('reads the rates from the registry when the plans do not carry them', async () => {
+    server.use(
+      http.get(v1('/plans'), () => HttpResponse.json(llmPlans.plans)),
+      http.get(v1('/llm/models'), () => HttpResponse.json({ models: llmModels })),
+    );
+    renderApp('/settings/plans');
+    expect(await screen.findByRole('table', { name: 'Model rates' })).toBeInTheDocument();
+  });
+
+  it('shows no tokens or rates while hosted models are off', async () => {
+    renderApp('/settings/plans');
+    expect(await screen.findByRole('region', { name: 'Pro' })).toBeInTheDocument();
+    expect(screen.queryByText(/tokens a month/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Hosted model rates' })).not.toBeInTheDocument();
+  });
+});
 
 describe('Choosing a plan', () => {
   it('covers the window with no sidebar: the person, the X, and every plan with what it includes', async () => {

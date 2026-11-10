@@ -31,6 +31,16 @@ export function precedentsText(precedents: number | null): string | null {
   return `${precedents.toLocaleString('en-GB')} precedents per node`;
 }
 
+/**
+ * A plan's tokens a month on Glyphh's hosted models: "25,000,000 tokens a month"; null is by contract. None while
+ * hosted models are off (the server leaves `llm_tokens` out).
+ */
+export function tokensText(tokens: number | null | undefined): string | null {
+  if (tokens === undefined) return null;
+  if (tokens === null) return 'Tokens a month by contract';
+  return `${tokens.toLocaleString('en-GB')} tokens a month`;
+}
+
 const featureText: Record<FeatureName, string> = {
   sync: 'Sync across runtimes',
   ha: 'High availability',
@@ -83,6 +93,8 @@ export function planFacts(plan: Plan, ada = false): PlanFact[] {
     const precedents = precedentsText(plan.limits.precedents);
     if (precedents) facts.push({ icon: 'model', text: precedents });
   }
+  const tokens = tokensText(plan.llm_tokens);
+  if (tokens) facts.push({ icon: 'layers', text: tokens });
   const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
   for (const name of names) {
     if (ada && runtimeFeatures.includes(name)) continue;

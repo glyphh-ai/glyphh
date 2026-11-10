@@ -7,6 +7,7 @@ import { ago } from '@/lib/format';
 import { Card, Chip, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
 import { NodeCount, NodeList } from './licence/Nodes';
 import { SettingsTitle } from './SettingsTitle';
+import { TokensSection } from './tokens/TokensSection';
 import styles from './UsagePage.module.css';
 
 /** What you use: precedents against the plan's per node, the runtime nodes against the plan's, each API key's calls. */
@@ -30,6 +31,8 @@ export function UsagePage() {
           </div>
         )}
       </SettingsSection>
+
+      <TokensSection />
 
       <SettingsSection
         title="Runtime nodes"

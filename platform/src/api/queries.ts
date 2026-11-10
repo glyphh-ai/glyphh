@@ -5,7 +5,13 @@ import type {
   AppPage,
   AppState,
   AppType,
+  Billing,
   Install,
+  LedgerEntry,
+  LlmModel,
+  LlmModelsAnswer,
+  PlansAnswer,
+  TokenDay,
   Invite,
   LicenceKeys,
   Me,
@@ -41,6 +47,10 @@ export const keys = {
   invites: ['org', 'invites'] as const,
   sso: ['org', 'sso'] as const,
   apps: ['apps'] as const,
+  billing: ['billing'] as const,
+  ledger: ['billing', 'ledger'] as const,
+  tokenDays: ['llm', 'usage'] as const,
+  llmModels: ['llm', 'models'] as const,
 };
 
 // Reads
@@ -49,7 +59,49 @@ export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<
 export const useInstalls = () => useQuery({ queryKey: keys.installs, queryFn: () => api.get<Install[]>('/installs') });
 export const useRuntimeKeys = () => useQuery({ queryKey: keys.runtimeKeys, queryFn: () => api.get<RuntimeKey[]>('/runtime/keys') });
 export const useSelfRuntimes = () => useQuery({ queryKey: keys.selfRuntimes, queryFn: () => api.get<SelfRuntime[]>('/runtimes/self') });
-export const usePlans = () => useQuery({ queryKey: keys.plans, queryFn: () => api.get<Plan[]>('/plans') });
+/** `GET /v1/plans` read alike as a list of plans or `{plans, models}`: the plans, and the hosted models' rates if any. */
+export const readPlans = (answer: PlansAnswer): { plans: Plan[]; models: LlmModel[] | null } =>
+  Array.isArray(answer) ? { plans: answer, models: null } : { plans: answer.plans, models: answer.models ?? null };
+const plansQuery = { queryKey: keys.plans, queryFn: async () => readPlans(await api.get<PlansAnswer>('/plans')) };
+export const usePlans = () => useQuery({ ...plansQuery, select: (answer) => answer.plans });
+
+/**
+ * The hosted models and their rates: from `GET /v1/plans` when it carries them, else `GET /v1/llm/models`. None (an
+ * empty list) while hosted models are off: the registry refused or missing is no error to show.
+ */
+export function useLlmModels() {
+  const plans = useQuery({ ...plansQuery, select: (answer) => answer.models });
+  const registry = useQuery({
+    queryKey: keys.llmModels,
+    enabled: plans.isSuccess && plans.data === null,
+    queryFn: async () => {
+      try {
+        const answer = await api.get<LlmModelsAnswer>('/llm/models');
+        return Array.isArray(answer) ? answer : answer.models;
+      } catch {
+        return [];
+      }
+    },
+  });
+  return plans.data ?? registry.data ?? [];
+}
+
+/** The org's billing and use; with hosted models on, its tokens this month and its overage balance. */
+export const useBilling = () => useQuery({ queryKey: keys.billing, queryFn: () => api.get<Billing>('/billing') });
+/** Each model's tokens by day, the last `days` days, UTC; only asked for while hosted models are on. */
+export const useTokenDays = (days: number, enabled: boolean) =>
+  useQuery({
+    queryKey: [...keys.tokenDays, days],
+    enabled,
+    queryFn: async () => (await api.get<{ days: TokenDay[] }>(`/llm/usage?days=${days}`)).days,
+  });
+/** The balance's movements, newest first: top-ups, charges, grants and refunds. */
+export const useLedger = (enabled: boolean, limit = 50) =>
+  useQuery({
+    queryKey: [...keys.ledger, limit],
+    enabled,
+    queryFn: async () => (await api.get<{ entries: LedgerEntry[] }>(`/billing/ledger?limit=${limit}`)).entries,
+  });
 /** The org's licence keys, newest first, and the newest live one: none on Free. */
 export const useLicenceKeys = () => useQuery({ queryKey: keys.licenceKeys, queryFn: () => api.get<LicenceKeys>('/license/keys') });
 /** The org's runtime nodes against the plan's. */
@@ -127,6 +179,8 @@ export const useRejectApp = () => useWrite(({ id, reason }: { id: string; reason
 export const useRetireApp = () => useWrite((id: string) => api.post<App>(`/apps/${id}/retire`), [keys.apps]);
 
 export const useCheckout = () => useWrite((plan: string) => api.post<{ url: string }>('/billing/checkout', { plan }), []);
+/** Stripe Checkout's page to add `amount_cents` ($10 to $1,000) to the overage balance; it is credited once Stripe says paid. */
+export const useTopUp = () => useWrite((amount_cents: number) => api.post<{ url: string }>('/billing/topup', { amount_cents }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);
 // A new plan is a new licence key and a new count of runtime nodes.
 export const useChangePlan = () =>

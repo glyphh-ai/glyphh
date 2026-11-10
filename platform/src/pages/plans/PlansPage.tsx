@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAdaCloud } from '@/api/ada';
-import { useChangePlan, useCheckout, useMe, usePlans } from '@/api/queries';
+import { useChangePlan, useCheckout, useLlmModels, useMe, usePlans } from '@/api/queries';
 import type { Plan } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { cx } from '@/lib/cx';
 import { salesUrl } from '@/lib/links';
 import { isSubscribed } from '@/pages/settings/billing/billingStatus';
 import { planFacts, priceParts } from '@/pages/settings/billing/plans';
+import { ModelRates } from '@/pages/settings/tokens/Ledger';
 import { Avatar, Button, ButtonLink, Chip, Dialog, Icon, LoadingCard } from '@/ui';
 import styles from './PlansPage.module.css';
 
@@ -23,6 +24,7 @@ export function PlansPage() {
   const navigate = useNavigate();
   const me = useMe();
   const plans = usePlans();
+  const models = useLlmModels();
   const ada = useAdaCloud() === true;
   const [switching, setSwitching] = useState<Plan | null>(null);
   const change = useChangePlan();
@@ -99,6 +101,18 @@ export function PlansPage() {
               />
             ))}
           </div>
+        )}
+        {models.length > 0 && (
+          <section className={styles.rates} aria-labelledby="model-rates">
+            <h2 id="model-rates" className={styles.ratesTitle}>
+              Hosted model rates
+            </h2>
+            <p className={styles.ratesNote}>
+              Each plan’s tokens a month count input and output together. Past them, requests are charged to your overage
+              balance at these rates, in dollars per million tokens.
+            </p>
+            <ModelRates models={models} />
+          </section>
         )}
         {me.data && !isAdmin && <p className={styles.note}>Only your org’s admin can change the plan.</p>}
         {me.data && isAdmin && contract && (

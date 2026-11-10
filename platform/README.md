@@ -208,7 +208,8 @@ Node 22 or later.
 npm ci
 cp .env.example .env        # then set PLATFORM_CLIENT_ID, PLATFORM_CLIENT_SECRET and SESSION_SECRET
 npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080): licences only,
-                            # as the server is, the org on Free; FAKE_ADA=on for Ada Cloud (its API at /ada/v1)
+                            # as the server is, the org on Free; FAKE_ADA=on for Ada Cloud (its API at /ada/v1);
+                            # FAKE_LLM=on for hosted models' tokens, the overage balance and top-ups
 npm run dev                 # the platform on PLATFORM_URL (default http://localhost:3000), hot reload
 npm test                    # route handlers, API calls and every page, against fake servers
 npm run typecheck

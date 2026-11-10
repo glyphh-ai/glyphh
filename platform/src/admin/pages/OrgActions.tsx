@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   useAdminPlans,
   useChangePlan,
+  useGrantBalance,
   useGrantEnterprise,
   useRevokeEnterprise,
   useSuspend,
@@ -10,10 +11,12 @@ import {
 } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { money } from '@/lib/format';
+import { dollarsToCents } from '@/pages/settings/tokens/AddFundsDialog';
 import { Button, Card, Dialog, Select, TextField, useToast } from '@/ui';
 import styles from '../admin.module.css';
 
-type Open = 'plan' | 'grant' | 'revoke' | 'suspend' | 'lift' | null;
+type Open = 'plan' | 'grant' | 'revoke' | 'suspend' | 'lift' | 'balance' | null;
 
 /** The staff actions on one org, each audited by the server with what it changed. */
 export function OrgActions({ org }: { org: OrgDetail['account'] }) {
@@ -26,6 +29,7 @@ export function OrgActions({ org }: { org: OrgDetail['account'] }) {
       <div className={styles.actions}>
         <Button onClick={() => setOpen('plan')}>Change plan version</Button>
         {enterprise ? <Button onClick={() => setOpen('revoke')}>Revoke Enterprise</Button> : <Button onClick={() => setOpen('grant')}>Grant Enterprise</Button>}
+        <Button onClick={() => setOpen('balance')}>Grant balance</Button>
         {org.suspended_at ? (
           <Button onClick={() => setOpen('lift')}>Lift suspension</Button>
         ) : (
@@ -39,6 +43,7 @@ export function OrgActions({ org }: { org: OrgDetail['account'] }) {
       {open === 'suspend' && <SuspendDialog org={org} onClose={close} />}
       {open === 'revoke' && <RevokeDialog org={org} onClose={close} />}
       {open === 'lift' && <LiftDialog org={org} onClose={close} />}
+      {open === 'balance' && <BalanceDialog org={org} onClose={close} />}
     </Card>
   );
 }
@@ -105,6 +110,46 @@ function GrantDialog({ org, onClose }: DialogProps) {
       <div className={styles.form}>
         <TextField label="Last day" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
         <TextField label="Stripe subscription" mono placeholder="sub_…" value={subscription} onChange={(e) => setSubscription(e.target.value)} />        <ApiErrorNotice error={grant.error} />
+      </div>
+    </Dialog>
+  );
+}
+
+/** The most one grant may add, in cents: $10,000. */
+const maxGrantCents = 1_000_000;
+
+/** Adds dollars to the org's overage balance for its hosted models, as a grant, with why. */
+function BalanceDialog({ org, onClose }: DialogProps) {
+  const toast = useToast();
+  const grant = useGrantBalance(org.id);
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const cents = dollarsToCents(amount);
+  const ready = cents !== null && cents > 0 && cents <= maxGrantCents && note.trim().length >= 3;
+  const save = () => {
+    if (cents !== null) grant.mutate({ amount_cents: cents, note: note.trim() }, { onSuccess: (done) => (toast.show(done.message), onClose()) });
+  };
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title="Grant balance"
+      description={`Adds dollars to ${org.name}’s overage balance for hosted models, kept in its balance history as a grant.`}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={grant.isPending} disabled={!ready} onClick={save}>
+            {ready ? `Grant ${money(cents)}` : 'Grant'}
+          </Button>
+        </>
+      }
+    >
+      <div className={styles.form}>
+        <TextField label="Amount in dollars" inputMode="decimal" hint={`Up to ${money(maxGrantCents)}`} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <TextField label="Note" hint="Shown in the org’s balance history and the audit log" value={note} onChange={(e) => setNote(e.target.value)} />
+        <ApiErrorNotice error={grant.error} />
       </div>
     </Dialog>
   );

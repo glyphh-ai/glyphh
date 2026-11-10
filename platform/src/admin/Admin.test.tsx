@@ -223,6 +223,22 @@ describe('One organisation', () => {
     expect(await screen.findByText('Acme is on Enterprise through 2027-10-31.')).toBeInTheDocument();
   });
 
+  it('grants dollars to its overage balance, with a note, and shows the balance', async () => {
+    staff();
+    server.use(http.get(v1('/admin/orgs/:id'), () => HttpResponse.json({ ...fake.org, balance: { cents: 1250, micros: 12_500_000, low: false } })));
+    const sent = recording('post', '/admin/orgs/o-acme/llm-grant', { message: 'Added $20 to Acme’s balance.' });
+    const { user } = renderApp('/admin/orgs/o-acme');
+    expect(await screen.findByText('$12.50')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Grant balance' }));
+    const dialog = screen.getByRole('dialog', { name: 'Grant balance' });
+    await user.type(within(dialog).getByLabelText('Amount in dollars'), '20');
+    expect(within(dialog).getByRole('button', { name: 'Grant' })).toBeDisabled();
+    await user.type(within(dialog).getByLabelText('Note'), 'Launch trial');
+    await user.click(within(dialog).getByRole('button', { name: 'Grant $20' }));
+    await waitFor(() => expect(sent).toEqual([{ amount_cents: 2_000, note: 'Launch trial' }]));
+    expect(await screen.findByText('Added $20 to Acme’s balance.')).toBeInTheDocument();
+  });
+
   it('revokes Enterprise and lifts a suspension', async () => {
     staff();
     const ent = fake.org;

@@ -1,7 +1,8 @@
 import { screen, within } from '@testing-library/react';
-import { me, nodes, plans } from '@/test/fixtures';
+import { adaFake, tickets } from '@/test/ada';
+import { llmBilling, me, nodes, plans, tokenUsage } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
-import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, llmHandlers, onFreeHandlers, server, v1 } from '@/test/server';
 
 const meter = (name: string) => screen.getByText(name, { selector: 'div' }).parentElement!;
 const free = { ...me, plan: plans[0]!, precedents: { used: 3_200, limit: 5_000 } };
@@ -141,5 +142,80 @@ describe('Usage from Billing and the settings rail', () => {
     expect(router.state.location.pathname).toBe('/usage');
     const rail = screen.getByRole('complementary', { name: 'Main' });
     expect(within(rail).getByRole('link', { name: 'Usage' })).toHaveAttribute('href', '/usage');
+  });
+});
+
+describe('Tokens on Glyphh’s hosted models', () => {
+  it('shows nothing of tokens while hosted models are off', async () => {
+    renderApp('/usage');
+    expect(await screen.findByText('On Pro.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Tokens' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Overage balance' })).not.toBeInTheDocument();
+  });
+
+  it('shows the month against the allowance, the balance in dollars, tokens by day and by model', async () => {
+    server.use(...llmHandlers());
+    renderApp('/usage');
+    expect(await screen.findByRole('heading', { name: 'Tokens' })).toBeInTheDocument();
+    expect(screen.getByText(/the allowance starts again on 1 Dec 2026/)).toBeInTheDocument();
+
+    const month = screen.getByRole('region', { name: 'Tokens this month' });
+    expect(within(month).getByText('26,200,000')).toBeInTheDocument();
+    expect(within(month).getByText('of 25,000,000 tokens')).toBeInTheDocument();
+    expect(within(month).getByRole('progressbar', { name: 'Tokens this month' })).toHaveAttribute('aria-valuenow', '25000000');
+    expect(within(month).getByText('1,200,000 past the allowance, charged to the balance.')).toBeInTheDocument();
+
+    const balance = screen.getByRole('region', { name: 'Overage balance' });
+    expect(within(balance).getByText('$18.70')).toBeInTheDocument();
+    expect(within(balance).getByRole('button', { name: 'Add funds' })).toBeInTheDocument();
+
+    // The chart's table: input and output each day, a day with none filled in between.
+    const byDay = await screen.findByRole('table', { name: 'Input and output tokens by day, last 30 days' });
+    const rows = within(byDay).getAllByRole('row').slice(1).map((row) => row.textContent);
+    expect(rows).toEqual(['7 Nov1,200,000400,000', '8 Nov00', '9 Nov2,000,000900,000']);
+
+    const byModel = screen.getByRole('table', { name: 'Tokens by model' });
+    const row = within(byModel).getByText('adaL 34B 1.0').closest('tr')!;
+    expect(within(row).getByText('20,000,000')).toBeInTheDocument();
+    expect(within(row).getByText('6,200,000')).toBeInTheDocument();
+    expect(within(row).getByText('4,210')).toBeInTheDocument();
+    expect(within(row).getByText('$11.30')).toBeInTheDocument();
+    expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
+  });
+
+  it('within the allowance, says what happens past it; with none used, says so', async () => {
+    // The first handler that matches answers.
+    server.use(
+      http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, tokens: { ...tokenUsage, used: 1_000, over_used: 0, models: [] } })),
+      http.get(v1('/llm/usage'), () => HttpResponse.json({ days: [] })),
+      ...llmHandlers(),
+    );
+    renderApp('/usage');
+    expect(await screen.findByText('Past 25,000,000, tokens are charged to the balance.')).toBeInTheDocument();
+    expect(await screen.findByText('No tokens in the last 30 days.')).toBeInTheDocument();
+    expect(screen.getByText('No hosted model used this month.')).toBeInTheDocument();
+  });
+
+  it('an empty balance says requests stop; a member cannot add funds', async () => {
+    server.use(
+      http.get(v1('/me'), () => HttpResponse.json({ ...me, role: 'member' })),
+      http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, balance: { cents: -0.42, micros: -4_200, low: true } })),
+      ...llmHandlers(),
+    );
+    renderApp('/usage');
+    const balance = await screen.findByRole('region', { name: 'Overage balance' });
+    expect(within(balance).getByText('-$0.0042')).toBeInTheDocument();
+    expect(within(balance).getByText('Empty')).toBeInTheDocument();
+    expect(within(balance).getByText(/hosted models stop until you add funds/)).toBeInTheDocument();
+    expect(within(balance).queryByRole('button', { name: 'Add funds' })).not.toBeInTheDocument();
+    expect(within(balance).getByText('Only your org’s admin can add funds.')).toBeInTheDocument();
+  });
+
+  it('shows the tokens on Ada Cloud’s Usage too', async () => {
+    server.use(...adaFake({ models: [tickets()], requests: 10 }).handlers, ...llmHandlers());
+    renderApp('/usage');
+    expect(await screen.findByText('of 1,000,000 requests')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Tokens this month' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Tokens by model' })).toBeInTheDocument();
   });
 });

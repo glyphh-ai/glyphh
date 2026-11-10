@@ -7,6 +7,7 @@ import { date, money, plural } from '@/lib/format';
 import { SettingsTitle } from '@/pages/settings/SettingsTitle';
 import { Card, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
 import usageStyles from '@/pages/settings/UsagePage.module.css';
+import { TokensSection } from '@/pages/settings/tokens/TokensSection';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import styles from './ada.module.css';
 
@@ -113,6 +114,8 @@ export function AdaUsagePage() {
           </div>
         )}
       </SettingsSection>
+
+      <TokensSection />
 
       <SettingsSection title="Models" description="The precedents each model holds. Every model counts towards the plan’s precedents.">
         {models.isPending && <LoadingCard />}

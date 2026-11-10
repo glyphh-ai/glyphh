@@ -1,4 +1,26 @@
-import { ago, date, duration, listText, money, plural, stamp } from './format';
+import { ago, date, dollars, duration, listText, micros, money, plural, rate, stamp } from './format';
+
+describe('money for hosted models', () => {
+  it.each([
+    [18_704_000, '$18.70'],
+    [0, '$0.00'],
+    [-11_296_000, '-$11.30'],
+    [4_200, '$0.0042'],
+    [-1, '-$0.000001'],
+  ])('dollars(%i) is %s', (amount, text) => expect(dollars(amount)).toBe(text));
+
+  it('prefers exact micros to cents', () => {
+    expect(micros(1870.4)).toBe(18_704_000);
+    expect(micros(1870.4, 18_704_001)).toBe(18_704_001);
+  });
+
+  it.each([
+    [60, '$0.60'],
+    [240, '$2.40'],
+    [0.5, '$0.005'],
+    [1500, '$15.00'],
+  ])('rate(%d) is %s', (cents, text) => expect(rate(cents)).toBe(text));
+});
 
 describe('format', () => {
   it.each([
