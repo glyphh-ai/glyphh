@@ -11,6 +11,36 @@ export function money(cents: number, currency = 'usd'): string {
   }).format(value);
 }
 
+/**
+ * An exact amount of money in microdollars (1 = $0.000001), always to the cent: $12.40, -$3.05. An amount under a cent
+ * that is not nothing shows its own digits, so a small charge never reads as $0.00: $0.0042.
+ */
+export function dollars(micros: number): string {
+  const value = micros / 1_000_000;
+  const small = value !== 0 && Math.abs(value) < 0.01;
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: small ? 6 : 2,
+  }).format(value);
+}
+
+/** An amount the server sends as cents (maybe fractional) and, more exactly, as micros: the micros when there. */
+export const micros = (cents: number, exact?: number | null) => exact ?? Math.round(cents * 10_000);
+
+/** A rate in cents per million tokens, to the cent or finer: 60 is $0.60, 0.5 is $0.005. */
+export function rate(centsPerMillion: number): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(centsPerMillion / 100);
+}
+
 /** Names as a sentence: "Pro", "Pro and Team", "Pro, Team and Enterprise". */
 export function listText(names: string[]): string {
   return names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;

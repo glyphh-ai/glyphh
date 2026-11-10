@@ -36,6 +36,11 @@ export type Plan = {
   built?: { [feature: string]: boolean | undefined };
   /** Ada Cloud's limits, the org's whatever its people, models or keys; null (or missing) while Ada Cloud is off. */
   cloud?: CloudLimits | null;
+  /**
+   * Tokens a month on Glyphh's hosted models (Free 250,000, Basic 5,000,000, Pro 25,000,000, Team 100,000,000); null is
+   * by contract (Enterprise). Missing while hosted models are off (`GLYPHH_LLM`).
+   */
+  llm_tokens?: number | null;
 };
 
 /**
@@ -266,4 +271,89 @@ export type Consent = DeviceConsent | OAuthConsent;
 
 export type ApiErrorBody = {
   error: { code: string; message: string; trace_id?: string; reason?: string; [detail: string]: unknown };
+};
+
+// Glyphh's hosted models: a monthly token allowance on the plan, then dollars per million tokens from a prepaid balance.
+
+export type LlmModelStatus = 'beta' | 'stable' | 'deprecated';
+
+/** A hosted model and its rates, as `GET /v1/plans` (`models`) and `GET /v1/llm/models` list it. */
+export type LlmModel = {
+  /** Such as `adal-34b-1-0`. */
+  id: string;
+  /** Such as "adaL 34B 1.0". */
+  name: string;
+  status: LlmModelStatus;
+  /** What a million input tokens cost past the allowance, in cents: 60 is $0.60. */
+  input_cents_per_mtok: number;
+  output_cents_per_mtok: number;
+  context_tokens: number;
+};
+
+/** `GET /v1/plans`: the plans alone (an older server, or hosted models off), or with the hosted models' rates. */
+export type PlansAnswer = Plan[] | { plans: Plan[]; models?: LlmModel[] };
+
+/** `GET /v1/llm/models`: the registry, as a list or under `models`. */
+export type LlmModelsAnswer = LlmModel[] | { models: LlmModel[] };
+
+/** One model's use this month. `charged_cents` is what went on the balance past the allowance; it may be fractional. */
+export type TokenModelUse = {
+  id: string;
+  name: string;
+  input_tokens: number;
+  output_tokens: number;
+  requests: number;
+  charged_cents: number;
+};
+
+/** The month's tokens against the plan's allowance (input and output together, by calendar month, UTC). */
+export type TokenUsage = {
+  /** YYYY-MM, UTC. */
+  month: string;
+  /** When the allowance starts again, YYYY-MM-DD. */
+  resets_at: string;
+  used: number;
+  /** Null is by contract. */
+  max: number | null;
+  /** Tokens past the allowance, charged to the balance. */
+  over_used: number;
+  models: TokenModelUse[];
+};
+
+/** The prepaid overage balance, in dollars: `cents` may be fractional, `micros` (1 = $0.000001) is exact. */
+export type Balance = { cents: number; micros?: number; low: boolean };
+
+/** `GET /v1/billing`: the plan and its use; `tokens` and `balance` are missing (or null) while hosted models are off. */
+export type Billing = {
+  plan: Plan;
+  billing_status: string;
+  renews_at: IsoDate | null;
+  plan_until: IsoDate | null;
+  precedents: { used: number; limit: number | null };
+  cloud?: CloudUsage | null;
+  tokens?: TokenUsage | null;
+  balance?: Balance | null;
+};
+
+/** One model's use on one day, UTC, as `GET /v1/llm/usage?days=30` lists it under `days`. */
+export type TokenDay = {
+  /** YYYY-MM-DD. */
+  day: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  requests: number;
+  charged_cents: number;
+};
+
+export type LedgerKind = 'topup' | 'charge' | 'grant' | 'refund';
+
+/** One movement of the balance, as `GET /v1/billing/ledger?limit=50` lists it under `entries`, newest first. Charges are negative. */
+export type LedgerEntry = {
+  at: IsoDate;
+  kind: LedgerKind;
+  amount_cents: number;
+  amount_micros?: number;
+  model: string | null;
+  note: string | null;
 };

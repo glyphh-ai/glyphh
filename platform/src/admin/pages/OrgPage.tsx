@@ -4,7 +4,7 @@ import { useAdminOrg, type OrgDetail } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { Chart } from '@/components/Chart';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
-import { ago, date, stamp } from '@/lib/format';
+import { ago, date, dollars, micros, stamp } from '@/lib/format';
 import { Card, Chip, LoadingCard } from '@/ui';
 import { PrivacyNote } from '../AdminLayout';
 import { BillingChip, n } from '../parts';
@@ -57,6 +57,7 @@ function Account({ org }: { org: OrgDetail }) {
         <Fact label="First paid" value={a.first_paid_at ? date(a.first_paid_at) : 'Never'} />
         <Fact label="Sign-up source" value={tags ?? 'Untagged'} />
         <Fact label="API keys and licence keys" value={`${n(org.api_keys)} API keys, ${n(org.licences)} licence keys`} />
+        {org.balance && <Fact label="Overage balance" value={dollars(micros(org.balance.cents, org.balance.micros))} />}
         {a.suspended_reason && <Fact label="Suspended because" value={a.suspended_reason} />}
       </dl>
     </Card>

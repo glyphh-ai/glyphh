@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { IsoDate, Uuid } from './types';
+import type { Balance, IsoDate, Uuid } from './types';
 
 /**
  * Glyphh's staff view (the server's /v1/admin, staff only, every call audited there): account and usage metadata
@@ -138,6 +138,8 @@ export type OrgDetail = {
   api_keys: number;
   licences: number;
   audit: AuditEntry[];
+  /** The hosted models' overage balance, in dollars; missing while hosted models are off or on an older server. */
+  balance?: Balance | null;
 };
 
 export type PlanVersionRow = {
@@ -299,4 +301,7 @@ export const useSuspend = (org: string) => useAdminMutation((reason: string) => 
 export const useUnsuspend = (org: string) => useAdminMutation(() => api.delete(`/admin/orgs/${org}/suspend`));
 export const useGrantEnterprise = (org: string) =>
   useAdminMutation((body: { until: string; subscription: string }) => api.post<{ message: string }>(`/admin/orgs/${org}/enterprise`, body));
+/** Adds `amount_cents` to the org's overage balance as a grant (kind `grant` in its ledger), with why. */
+export const useGrantBalance = (org: string) =>
+  useAdminMutation((body: { amount_cents: number; note: string }) => api.post<{ message: string }>(`/admin/orgs/${org}/llm-grant`, body));
 export const useRevokeEnterprise = (org: string) => useAdminMutation(() => api.delete<{ message: string }>(`/admin/orgs/${org}/enterprise`));

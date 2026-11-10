@@ -1,4 +1,26 @@
-import type { App, AppType, CloudLimits, Install, Invite, LicenceKey, LicenceKeys, Me, Member, Org, Plan, RuntimeKey, RuntimeNodes, SelfRuntime, Sso } from '@/api/types';
+import type {
+  App,
+  AppType,
+  Balance,
+  Billing,
+  CloudLimits,
+  Install,
+  Invite,
+  LedgerEntry,
+  LicenceKey,
+  LicenceKeys,
+  LlmModel,
+  Me,
+  Member,
+  Org,
+  Plan,
+  RuntimeKey,
+  RuntimeNodes,
+  SelfRuntime,
+  Sso,
+  TokenDay,
+  TokenUsage,
+} from '@/api/types';
 
 /**
  * One org's data in the server's shapes, shared by the page tests and the local fake server: on Pro, as if every
@@ -245,3 +267,55 @@ export const onFree = {
     nodes: [{ runtime_id: 'rt-self-1', runtime: 'Acme production', mode: 'self', node_id: null, cluster_id: null, role: null, precedents: 3_200, version: '1.4.2', seen_at: '2026-10-16T13:50:00Z' }],
   } as RuntimeNodes,
 };
+
+// Glyphh's hosted models (the server's GLYPHH_LLM): a plan's tokens a month, then dollars per million tokens from the
+// org's prepaid overage balance. Every number is a placeholder of the server's seed.
+
+/** The hosted models, as `GET /v1/plans` (`models`) and `GET /v1/llm/models` list them. */
+export const llmModels: LlmModel[] = [
+  { id: 'adal-34b-1-0', name: 'adaL 34B 1.0', status: 'beta', input_cents_per_mtok: 60, output_cents_per_mtok: 240, context_tokens: 32_768 },
+];
+
+/** Each plan's tokens a month; Enterprise is by contract. */
+export const llmTokens: Record<string, number | null> = { Free: 250_000, Basic: 5_000_000, Pro: 25_000_000, Team: 100_000_000, Enterprise: null };
+
+/** `GET /v1/plans` with hosted models on: the plans, each with its tokens a month, and the models' rates. */
+export const llmPlans = { plans: plans.map((plan) => ({ ...plan, llm_tokens: llmTokens[plan.name] ?? null })), models: llmModels };
+
+/** Pro's month on the hosted models: 26.2 million tokens of 25 million, 1.2 million past it, charged to the balance. */
+export const tokenUsage: TokenUsage = {
+  month: '2026-11',
+  resets_at: '2026-12-01',
+  used: 26_200_000,
+  max: 25_000_000,
+  over_used: 1_200_000,
+  models: [{ id: 'adal-34b-1-0', name: 'adaL 34B 1.0', input_tokens: 20_000_000, output_tokens: 6_200_000, requests: 4_210, charged_cents: 1129.6 }],
+};
+
+/** $18.704 left: $25 added and $5 granted, less $11.296 of charges. */
+export const balance: Balance = { cents: 1870.4, micros: 18_704_000, low: false };
+
+/** `GET /v1/billing` with hosted models off, as the server answers without GLYPHH_LLM. */
+export const billing: Billing = {
+  plan: pro,
+  billing_status: 'active',
+  renews_at: '2026-11-16T00:00:00Z',
+  plan_until: null,
+  precedents: { used: 18_240, limit: 50_000 },
+};
+
+/** `GET /v1/billing` with hosted models on: the month's tokens and the balance. */
+export const llmBilling: Billing = { ...billing, plan: llmPlans.plans[2]!, tokens: tokenUsage, balance };
+
+/** `GET /v1/llm/usage?days=30`: two days of use with a day of none between. */
+export const tokenDays: TokenDay[] = [
+  { day: '2026-11-07', model: 'adal-34b-1-0', input_tokens: 1_200_000, output_tokens: 400_000, requests: 300, charged_cents: 0 },
+  { day: '2026-11-09', model: 'adal-34b-1-0', input_tokens: 2_000_000, output_tokens: 900_000, requests: 610, charged_cents: 1129.6 },
+];
+
+/** `GET /v1/billing/ledger?limit=50`, newest first. */
+export const ledger: LedgerEntry[] = [
+  { at: '2026-11-09T14:00:00Z', kind: 'charge', amount_cents: -1129.6, amount_micros: -11_296_000, model: 'adal-34b-1-0', note: null },
+  { at: '2026-11-05T10:00:00Z', kind: 'grant', amount_cents: 500, amount_micros: 5_000_000, model: null, note: 'Launch credit for testing' },
+  { at: '2026-11-02T09:00:00Z', kind: 'topup', amount_cents: 2500, amount_micros: 25_000_000, model: null, note: null },
+];

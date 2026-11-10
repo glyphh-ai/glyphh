@@ -1,7 +1,107 @@
 import { screen, within } from '@testing-library/react';
 import { me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
-import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
+import { apiError, http, HttpResponse, llmHandlers, onFreeHandlers, server, v1 } from '@/test/server';
+import { dollarsToCents } from '../tokens/AddFundsDialog';
+
+/** Records each top-up asked for, answering with Stripe's checkout page. */
+function topUps() {
+  const sent: unknown[] = [];
+  server.use(
+    http.post(v1('/billing/topup'), async ({ request }) => {
+      sent.push(await request.json());
+      return HttpResponse.json({ url: 'https://checkout.stripe.test/c/topup' });
+    }),
+  );
+  return sent;
+}
+
+describe('The overage balance on Billing', () => {
+  it('is not there while hosted models are off', async () => {
+    renderApp('/settings/billing');
+    expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Overage balance' })).not.toBeInTheDocument();
+  });
+
+  it('shows the balance in dollars, its history, and the plan’s tokens a month', async () => {
+    server.use(...llmHandlers(), http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...me.plan, llm_tokens: 25_000_000 } })));
+    renderApp('/settings/billing');
+    const balance = await screen.findByRole('region', { name: 'Overage balance' });
+    expect(within(balance).getByText('$18.70')).toBeInTheDocument();
+    expect(screen.getByText('25,000,000 tokens a month')).toBeInTheDocument();
+
+    const history = await screen.findByRole('table', { name: 'Balance history' });
+    const rows = within(history).getAllByRole('row').slice(1);
+    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+      ['9 Nov 2026', 'Charge', '-$11.30', 'adaL 34B 1.0'],
+      ['5 Nov 2026', 'Grant', '+$5.00', 'Launch credit for testing'],
+      ['2 Nov 2026', 'Top-up', '+$25.00', '–'],
+    ]);
+  });
+
+  it('adds funds: a preset or another amount from $10 to $1,000, paid in Stripe’s checkout', async () => {
+    server.use(...llmHandlers());
+    const sent = topUps();
+    const location = stubLocation();
+    try {
+      const { user } = renderApp('/settings/billing');
+      await user.click(within(await screen.findByRole('region', { name: 'Overage balance' })).getByRole('button', { name: 'Add funds' }));
+      const dialog = screen.getByRole('dialog', { name: 'Add funds' });
+      const amounts = within(dialog).getByRole('group', { name: 'Amount' });
+      expect(within(amounts).getAllByRole('button').map((b) => b.textContent)).toEqual(['$10', '$25', '$50', '$100']);
+      expect(within(amounts).getByRole('button', { name: '$25' })).toHaveAttribute('aria-pressed', 'true');
+
+      const other = within(dialog).getByLabelText('Another amount');
+      await user.type(other, '5');
+      expect(within(dialog).getByText('Between $10 and $1,000, in dollars and cents.')).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Add funds' })).toBeDisabled();
+      await user.clear(other);
+      await user.type(other, '1001');
+      expect(within(dialog).getByRole('button', { name: 'Add funds' })).toBeDisabled();
+      await user.clear(other);
+      await user.type(other, '120.50');
+      await user.click(within(dialog).getByRole('button', { name: 'Add $120.50' }));
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/c/topup'));
+
+      await user.click(within(amounts).getByRole('button', { name: '$50' }));
+      expect(other).toHaveValue('');
+      await user.click(within(dialog).getByRole('button', { name: 'Add $50' }));
+      await vi.waitFor(() => expect(sent).toEqual([{ amount_cents: 12_050 }, { amount_cents: 5_000 }]));
+    } finally {
+      location.restore();
+    }
+  });
+
+  it('shows a refusal in the dialog', async () => {
+    server.use(http.post(v1('/billing/topup'), () => apiError(503, 'E_UNAVAILABLE', 'Payments are paused.')), ...llmHandlers());
+    const { user } = renderApp('/settings/billing');
+    await user.click(within(await screen.findByRole('region', { name: 'Overage balance' })).getByRole('button', { name: 'Add funds' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add funds' });
+    await user.click(within(dialog).getByRole('button', { name: 'Add $25' }));
+    expect(await within(dialog).findByText('Payments are paused.')).toBeInTheDocument();
+  });
+
+  it('says so when Stripe sends the person back from a top-up', async () => {
+    server.use(...llmHandlers());
+    const { router } = renderApp('/settings/billing?topup=1');
+    expect(await screen.findByText(/Your funds are added once the payment clears/)).toBeInTheDocument();
+    await vi.waitFor(() => expect(router.state.location.search).toBe(''));
+  });
+
+  it('opens Add funds from a link with ?add=1', async () => {
+    server.use(...llmHandlers());
+    renderApp('/settings/billing?add=1');
+    expect(await screen.findByRole('dialog', { name: 'Add funds' })).toBeInTheDocument();
+  });
+
+  it('reads amounts in dollars', () => {
+    expect(dollarsToCents('25')).toBe(2_500);
+    expect(dollarsToCents('$1,000')).toBe(100_000);
+    expect(dollarsToCents('12.5')).toBe(1_250);
+    expect(dollarsToCents('12.555')).toBeNull();
+    expect(dollarsToCents('ten')).toBeNull();
+  });
+});
 
 const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 } };
 

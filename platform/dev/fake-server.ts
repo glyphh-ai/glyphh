@@ -29,6 +29,37 @@ const state = structuredClone(data);
 state.me.ada_cloud = adaCloud;
 if (adaCloud) state.me.plan = data.plans.find((plan) => plan.name === state.me.plan.name) ?? state.me.plan;
 const cloudUsage = adaCloud ? mountAda(app, port, () => state.me.plan.name) : () => null;
+// FAKE_LLM=on turns Glyphh's hosted models on, as GLYPHH_LLM=on does: each plan's tokens a month and the models' rates
+// on /v1/plans, the month's tokens and the overage balance on /v1/billing, use by day, the balance's history, and a
+// top-up that comes straight back as paid.
+const llm = process.env.FAKE_LLM === 'on';
+if (llm) {
+  data.plans = data.plans.map((plan) => ({ ...plan, llm_tokens: fixtures.llmTokens[plan.name] ?? null }));
+  state.me.plan = data.plans.find((plan) => plan.name === state.me.plan.name) ?? state.me.plan;
+}
+const tokens = structuredClone(fixtures.tokenUsage);
+const ledger = structuredClone(fixtures.ledger);
+const balanceMicros = () => ledger.reduce((sum, entry) => sum + (entry.amount_micros ?? Math.round(entry.amount_cents * 10_000)), 0);
+const balance = () => {
+  const micros = balanceMicros();
+  return { cents: micros / 10_000, micros, low: micros < 5_000_000 };
+};
+if (llm) {
+  app.get('/v1/llm/models', (c) => c.json({ models: fixtures.llmModels }));
+  app.get('/v1/llm/usage', (c) => c.json({ days: fixtures.tokenDays }));
+  app.get('/v1/billing/ledger', (c) => c.json({ entries: ledger.slice(0, Number(c.req.query('limit') ?? '50')) }));
+  app.post('/v1/billing/topup', async (c) => {
+    const { amount_cents: cents } = await c.req.json();
+    if (!Number.isInteger(cents) || cents < 1_000 || cents > 100_000) return refuse(422, 'E_INVALID', 'Add between $10 and $1,000.', 'amount');
+    ledger.unshift({ at: new Date().toISOString(), kind: 'topup', amount_cents: cents, amount_micros: cents * 10_000, model: null, note: null });
+    return c.json({ url: `${platform}/settings/billing?topup=1` });
+  });
+  app.post('/v1/admin/orgs/:id/llm-grant', async (c) => {
+    const { amount_cents: cents, note } = await c.req.json();
+    ledger.unshift({ at: new Date().toISOString(), kind: 'grant', amount_cents: cents, amount_micros: cents * 10_000, model: null, note });
+    return c.json({ message: `Granted $${(cents / 100).toFixed(2)} (fake server).` });
+  });
+}
 // FAKE_STAFF=on signs in as Glyphh's staff (GLYPHH_STAFF_EMAILS): the staff view opens, its pages answered from the
 // fixtures, its actions accepted and changing nothing.
 if (process.env.FAKE_STAFF === 'on') {
@@ -145,7 +176,7 @@ app.post('/v1/runtimes/:id/offline-licence', async (c) => {
 // The licence key: one for the paid month, none on Free (rrotor runs as Community). The runtime nodes, counted softly.
 app.get('/v1/license/keys', (c) => c.json(state.licenceKeys));
 app.get('/v1/license/nodes', (c) => c.json(state.nodes));
-app.get('/v1/plans', (c) => c.json(data.plans));
+app.get('/v1/plans', (c) => c.json(llm ? { plans: data.plans, models: fixtures.llmModels } : data.plans));
 app.get('/v1/org', (c) => c.json(state.org));
 app.patch('/v1/org', async (c) => {
   const name = (await c.req.json()).name;
@@ -215,7 +246,8 @@ app.delete('/v1/org/invites/:id', (c) => {
 });
 app.get('/v1/billing', (c) => {
   const { plan, org, precedents } = state.me;
-  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, cloud: cloudUsage() });
+  const hosted = llm ? { tokens: { ...tokens, max: plan.llm_tokens ?? null }, balance: balance() } : {};
+  return c.json({ plan, billing_status: org.billing_status, renews_at: org.renews_at, plan_until: org.plan_until, precedents, cloud: cloudUsage(), ...hosted });
 });
 app.post('/v1/billing/portal', (c) => c.json({ url: `${platform}/billing?done=1` }));
 // A paid plan's key expires at the end of the paid month; a new plan revokes the old keys and issues one. Free and

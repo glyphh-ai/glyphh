@@ -30,6 +30,20 @@ export const defaultHandlers: HttpHandler[] = [
   http.get(v1('/installs'), () => HttpResponse.json(fixtures.installs)),
   http.get(v1('/license/keys'), () => HttpResponse.json(fixtures.licenceKeys)),
   http.get(v1('/license/nodes'), () => HttpResponse.json(fixtures.nodes)),
+  // Hosted models off (no GLYPHH_LLM): billing without tokens or a balance, and no registry.
+  http.get(v1('/billing'), () => HttpResponse.json(fixtures.billing)),
+  http.get(v1('/llm/models'), () => apiError(404, 'E_NOT_FOUND', 'Not found.')),
+];
+
+/**
+ * The server with hosted models on (GLYPHH_LLM): plans with their tokens a month and the models' rates, billing with
+ * the month's tokens and the overage balance, use by day and the balance's history. `server.use(...llmHandlers())`.
+ */
+export const llmHandlers = (): HttpHandler[] => [
+  http.get(v1('/plans'), () => HttpResponse.json(fixtures.llmPlans)),
+  http.get(v1('/billing'), () => HttpResponse.json(fixtures.llmBilling)),
+  http.get(v1('/llm/usage'), () => HttpResponse.json({ days: fixtures.tokenDays })),
+  http.get(v1('/billing/ledger'), () => HttpResponse.json({ entries: fixtures.ledger })),
 ];
 
 /** The server as it answers a Free org with features not yet built: a test calls `server.use(...onFreeHandlers())`. */
