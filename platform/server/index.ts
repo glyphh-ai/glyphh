@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
+import { createBot, isBotPath, serveBotRedirect } from './bot.js';
 import { createDemo, hostOf, readDemoConfig, serveDemoPage, type HistoryRow } from './demo.js';
 import { createVoice, isVoicePath, serveVoiceRedirect } from './voice.js';
 
@@ -25,7 +26,15 @@ const voiceCalls = Number(process.env.DEMO_VOICE_DAILY_CALLS);
 const voice = serveVoiceRedirect(
   createVoice({ config: { ...demoConfig, voiceDailyCalls: Number.isInteger(voiceCalls) && voiceCalls > 0 ? voiceCalls : 300 }, secureCookies: config.secureCookies }),
 );
-const onDemo = (req: Request) => (isVoicePath(new URL(req.url).pathname) ? voice.fetch(req) : demo.fetch(req));
+// demo.glyphh.ai/bot: a bot taught a made-up rule, its /api/bot and a model per take; its page is served with the others'.
+const botCalls = Number(process.env.DEMO_BOT_DAILY_CALLS);
+const bot = serveBotRedirect(
+  createBot({ config: { ...demoConfig, botDailyCalls: Number.isInteger(botCalls) && botCalls > 0 ? botCalls : 6000 }, secureCookies: config.secureCookies }),
+);
+const onDemo = (req: Request) => {
+  const path = new URL(req.url).pathname;
+  return isVoicePath(path) ? voice.fetch(req) : isBotPath(path) ? bot.fetch(req) : demo.fetch(req);
+};
 
 const port = Number(process.env.PORT ?? 3000);
 serve({ fetch: (req) => (hostOf(req) === demoConfig.host ? onDemo(req) : app.fetch(req)), port }, () =>
