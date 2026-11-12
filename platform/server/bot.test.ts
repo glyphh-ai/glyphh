@@ -11,7 +11,7 @@ type Seen = { method: string; path: string; body: any };
  * A fake Ada Cloud: models by name, each with its cases; decide answers what `decide` says (sure of approve by
  * default); learn is a job, done when read, that found the receipt is what counts.
  */
-function fakeAda({ left = [] as string[], decide = (): object => ({ outcome: 'approve', probabilities: { approve: 0.9, reject: 0.1 }, ask: false, receipts: [{ id: 'p1', sim: 0.8, outcome: 'approve' }] }) } = {}) {
+function fakeAda({ left = [] as string[], decide = (): object => ({ outcome: 'approve', probabilities: { approve: 0.9, reject: 0.1 }, ask: false, receipts: [{ id: 'p1', sim: 0.8, outcome: 'approve' }, { id: 'p2', sim: 0.7, outcome: 'approve' }] }) } = {}) {
   const seen: Seen[] = [];
   const models = new Map<string, { data: any; outcome: string }[]>(left.map((name) => [name, []]));
   let id = 0;
@@ -135,7 +135,8 @@ describe('the bot API', () => {
     // The sixth is Ada's to call: she is sure, so the bot decides alone and names the answer it stands on.
     expect(ada.seen.filter((s) => s.path === '/v1/decide')).toHaveLength(1);
     expect(t.take().bot).toMatchObject({ ask: false, outcome: 'approve', sure: 0.9 });
-    expect(t.take().bot.basis).toEqual([{ n: 0, sim: 0.8, outcome: 'approve', item: first }]);
+    expect(t.take().bot.basis).toHaveLength(2);
+    expect(t.take().bot.basis[0]).toEqual({ n: 0, sim: 0.8, outcome: 'approve', item: first });
     expect(t.take().counts).toEqual({ asked: 5, alone: 0, wrong: 0 });
   });
 
@@ -157,6 +158,18 @@ describe('the bot API', () => {
     expect(t.take().bot).toMatchObject({ ask: true, why: 'unsure', lean: 'reject', sure: 0.6 });
     await t.answer('approve');
     expect(t.take().log.at(-1)).toEqual({ asked: true, wrong: false });
+  });
+
+  it.each([
+    ['one close answer only', [{ id: 'p1', sim: 0.9, outcome: 'approve' }]],
+    ['the second closest not alike enough', [{ id: 'p1', sim: 0.9, outcome: 'approve' }, { id: 'p2', sim: BOT_LIMITS.alike - 0.01, outcome: 'approve' }]],
+    ['the second closest saying otherwise', [{ id: 'p1', sim: 0.9, outcome: 'approve' }, { id: 'p2', sim: 0.8, outcome: 'reject' }]],
+  ])('asks where Ada is sure but has little to stand on: %s', async (_what, receipts) => {
+    const { start } = setup(config, { decide: () => ({ outcome: 'approve', probabilities: { approve: 0.99, reject: 0.01 }, ask: false, receipts }) });
+    const t = await start();
+    for (let i = 0; i < 5; i++) await t.answer('approve');
+    expect(t.take().bot).toMatchObject({ ask: true, why: 'thin', lean: 'approve', sure: 0.99 });
+    expect(t.take().alike).toBe(BOT_LIMITS.alike);
   });
 
   it('has Ada learn from the tenth answer on, every five, once both outcomes are there, and shows what she found', async () => {
@@ -270,7 +283,7 @@ describe('the bot API', () => {
     const { ada, start, get } = setup(config, {
       decide: () => {
         if (fail) throw new Error('down');
-        return { outcome: 'approve', probabilities: { approve: 0.9 }, ask: false, receipts: [] };
+        return { outcome: 'approve', probabilities: { approve: 0.9 }, ask: false, receipts: [{ id: 'p1', sim: 0.8, outcome: 'approve' }, { id: 'p2', sim: 0.7, outcome: 'approve' }] };
       },
     });
     const t = await start();

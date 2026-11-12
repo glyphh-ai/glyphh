@@ -199,7 +199,8 @@ bright, again after each take Ada keeps. It is built for the plain page on its o
 
 Teach a bot: the visitor makes up a rule for approving expenses and keeps it to themselves. A bot that knows nothing
 works through 40 expenses: it asks the visitor where Ada is under 75% sure (and about the first five whatever she
-thinks) and decides alone where she is sure; the visitor answers, and says whether each decision made alone was
+thinks), and where she is sure but has little to stand on (the bot's own gate: the two closest answers must each be
+50% alike or more and both say what she says); otherwise it decides alone. The visitor answers, and says whether each decision made alone was
 right. Every answer is recorded, Ada learns the roles' weights again every five answers from the tenth (once both
 outcomes are there), and the page shows the questions falling away: a cell an expense (asked, alone and right, alone
 and wrong), what the visitor's decisions turn on as Ada learned it, and at the end how many of the 40 the bot asked
@@ -222,11 +223,23 @@ Ada is shown five things about each (department, category, amount, receipt, poli
 visitor (their address) starts 4 in ten minutes and gives 60 answers a minute, 600 a day; the bot demo has
 `DEMO_BOT_DAILY_CALLS` Ada calls a day of its own (default 6000; a take is about 110).
 
-Measured against Ada Cloud on 2026-11-12 with a script answering by a known rule (40 expenses, this loop): for five
-simple rules (no receipt no money, nothing over $500, the company's policy, only travel, engineering or under $300)
-the bot asked 8 to 13 times, nearly all in the first 20, and decided all of the last 10 alone with 0 or 1 wrong; a
-rule with a rare exception (sales never gets meals or gifts) still got 3 of the last 10 wrong; with no rule (a coin
-toss) it went back to asking 8 of the last 10.
+Measured against Ada Cloud on 2026-11-12 with a script answering by a known rule (this loop, six rules, three takes
+of 40 expenses each). On Ada's own ask alone the bot asked 9.2 times a take and got 2.3 of its 30.8 decisions wrong
+(92% right); the wrong ones were calls she was about 100% sure of with nothing close to stand on (`decide` does not
+read `min_sim`; the closest answer was 63% alike at the median, against 78% for the right ones). With the bot's gate
+it asks 16.4 times a take and gets 0.7 of 23.6 wrong (97% right), 3.5 questions and 0.3 wrong in the last 20:
+
+| Rule | Asked of 40 | Wrong |
+|---|---|---|
+| No receipt, no money | 12 | 0.0 |
+| Nothing over $500 | 15 | 0.3 |
+| Only travel is paid | 21 | 0.3 |
+| Sales never gets meals or gifts | 15 | 0.7 |
+| Engineering gets anything, others under $300 | 22 | 0.7 |
+| The company policy (a receipt, and within limit or pre-approved) | 13 | 2.0 |
+
+A rule on one field is learned nearly without error; one that joins two fields still errs. Without the gate and with
+no rule at all (a coin toss) the bot went back to asking 8 of the last 10.
 
 Every demo page wears the platform's look: `demo/public/platform.css` (dark-hc's tokens, white buttons, 8px corners,
 the wordmark), loaded after each page's own stylesheet.

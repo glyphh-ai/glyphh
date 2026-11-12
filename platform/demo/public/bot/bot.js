@@ -55,7 +55,7 @@ const basisRows = (basis) =>
     : '';
 
 function renderBot() {
-  const { bot, counts, askFirst, bar } = take;
+  const { bot, counts, askFirst, bar, alike } = take;
   const answered = counts.asked + counts.alone;
   if (bot.ask) {
     $('bot-title').textContent = 'The bot asks you';
@@ -63,9 +63,11 @@ function renderBot() {
     const why =
       bot.why === 'new'
         ? `It has ${answered === 0 ? 'no answers' : answered === 1 ? 'one answer' : `${answered} answers`} from you. It asks about the first ${askFirst}, whatever Ada thinks.`
-        : bot.lean
-          ? `Ada leans ${bot.lean} at ${pct(bot.sure)}, under the ${pct(bar)} she needs before the bot decides alone.`
-          : 'Ada has nothing close enough to go on.';
+        : bot.why === 'thin'
+          ? `Ada says ${bot.lean} at ${pct(bot.sure)}, but she has little to stand on: the bot decides alone only when your two closest answers are each ${pct(alike)} alike or more and both agree with her.`
+          : bot.lean
+            ? `Ada leans ${bot.lean} at ${pct(bot.sure)}, under the ${pct(bar)} she needs before the bot decides alone.`
+            : 'Ada has nothing close enough to go on.';
     $('bot').innerHTML = `
       <p class="verdict ask rise">Approve or reject?</p>
       <p class="why">${why}</p>
