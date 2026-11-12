@@ -5,8 +5,8 @@ import { LIMITS as DEMO_LIMITS, Refusal, Window, type DemoConfig } from './demo.
 
 /**
  * demo.glyphh.ai/bot: a bot that approves expenses and starts knowing nothing. The visitor makes up a rule and keeps
- * it to themselves; the bot works through 40 expenses, asking them where Ada is not sure and deciding alone where she
- * is; the visitor answers, and says when a decision made alone was wrong. Every answer is a precedent, so the bot
+ * it to themselves; the bot works through 40 expenses, asking them where Ada is not sure or has little to stand on
+ * and deciding alone otherwise; the visitor answers, and says when a decision made alone was wrong. Every answer is a precedent, so the bot
  * asks less as it goes, and the page shows it happening.
  *
  * Each visitor's take has a model of its own (`launch-demo-bot-<id>`, made at Start, deleted when the 40 are done,
@@ -22,6 +22,12 @@ export const BOT_LIMITS = {
   items: 40,
   /** The bot asks about the first so many whatever Ada says: she has too little to go on. */
   askFirst: 5,
+  /**
+   * The bot's own gate on a decision Ada is sure of: it stands only when the two closest answers are each this alike
+   * and both say what Ada says. Ada's `decide` can be sure with nothing close (it does not read `min_sim`), and most
+   * of the bot's wrong decisions were those: measured 2026-11-12, this took right-when-alone from 92% to 97%.
+   */
+  alike: 0.5,
   /** Ada weighs the roles again (learn) from this many answers on, once both outcomes are there, every so many. */
   learnFrom: 10,
   learnEvery: 5,
@@ -121,7 +127,7 @@ export function makeItems(random: () => number = Math.random, n = BOT_LIMITS.ite
 }
 
 type Pending =
-  | { ask: true; why: 'new' | 'unsure'; lean: Outcome | null; sure: number | null; basis: Basis[]; ms: number | null }
+  | { ask: true; why: 'new' | 'unsure' | 'thin'; lean: Outcome | null; sure: number | null; basis: Basis[]; ms: number | null }
   | { ask: false; outcome: Outcome; sure: number; basis: Basis[]; ms: number };
 type Basis = { n: number; sim: number; outcome: Outcome };
 type Entry = { asked: boolean; wrong: boolean; outcome: Outcome };
@@ -258,7 +264,14 @@ export function createBot({ config, fetch: fetcher = fetch, now = Date.now, rand
       .filter((r) => s.ids.has(r.id) && isOutcome(r.outcome))
       .slice(0, 3)
       .map((r) => ({ n: s.ids.get(r.id)!, sim: r.sim, outcome: r.outcome as Outcome }));
-    s.pending = d.ask || !outcome || sure === null ? { ask: true, why: 'unsure', lean: outcome, sure, basis, ms } : { ask: false, outcome, sure, basis, ms };
+    const closest = (d.receipts ?? []).slice(0, 2);
+    const stands = closest.length === 2 && closest.every((r) => r.sim >= BOT_LIMITS.alike && r.outcome === outcome);
+    s.pending =
+      d.ask || !outcome || sure === null
+        ? { ask: true, why: 'unsure', lean: outcome, sure, basis, ms }
+        : stands
+          ? { ask: false, outcome, sure, basis, ms }
+          : { ask: true, why: 'thin', lean: outcome, sure, basis, ms };
   }
 
   /** The take as the page shows it. */
@@ -272,6 +285,7 @@ export function createBot({ config, fetch: fetcher = fetch, now = Date.now, rand
       done,
       bar: BOT_BAR,
       askFirst: BOT_LIMITS.askFirst,
+      alike: BOT_LIMITS.alike,
       item: done ? null : s.items[s.i],
       bot: done || !s.pending ? null : { ...s.pending, basis: s.pending.basis.map((b) => ({ ...b, item: s.items[b.n] })) },
       log: s.log.map((e) => ({ asked: e.asked, wrong: e.wrong })),
