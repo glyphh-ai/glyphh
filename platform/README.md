@@ -138,6 +138,7 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | `DEMO_HOST` | The host the demo answers on (default `demo.glyphh.ai`) |
 | `DEMO_DAILY_CALLS` | The demo's Ada calls a day, all visitors together (default 150) |
 | `DEMO_VOICE_DAILY_CALLS` | The voice demo's (demo.glyphh.ai/voice) Ada calls a day, all visitors together (default 300) |
+| `DEMO_BOT_DAILY_CALLS` | The bot demo's (demo.glyphh.ai/bot) Ada calls a day, all visitors together (default 6000, about 55 takes) |
 
 ## demo.glyphh.ai
 
@@ -193,6 +194,39 @@ followed to the end, then the research takes.
 Under the game, the platform's own 3D view (`src/pages/ada/model/view/scene.ts`) draws every take, the visitor's
 bright, again after each take Ada keeps. It is built for the plain page on its own (`src/demo/glyph-view.ts`,
 `vite.demo.config.ts`, into `dist/demo`) and served at `/voice/3d/glyph-view.js`.
+
+### demo.glyphh.ai/bot
+
+Teach a bot: the visitor makes up a rule for approving expenses and keeps it to themselves. A bot that knows nothing
+works through 40 expenses: it asks the visitor where Ada is under 75% sure (and about the first five whatever she
+thinks) and decides alone where she is sure; the visitor answers, and says whether each decision made alone was
+right. Every answer is recorded, Ada learns the roles' weights again every five answers from the tenth (once both
+outcomes are there), and the page shows the questions falling away: a cell an expense (asked, alone and right, alone
+and wrong), what the visitor's decisions turn on as Ada learned it, and at the end how many of the 40 the bot asked
+about. No language model runs: the bot is its learned gate alone, and the page says so.
+
+The page is `demo/public/bot`, a card on the front page, the handlers `server/bot.ts`, on the same key. Each take has
+a model of its own, `launch-demo-bot-<12 hex>`, made at Start and deleted when the 40 are done, when the visitor
+starts again, or after 20 idle minutes, so one visitor's rule never reaches another's bot; models an earlier process
+left behind are deleted at the first Start. The take (its expenses, the log, the visitor's place) is held in memory
+under the visitor's id (a day-long HttpOnly cookie, `glyphh_bot`).
+
+| Call | What it does |
+|---|---|
+| `GET /api/bot/state` | The visitor's take, or none: a page loaded again goes on where it was |
+| `POST /api/bot/start` | A new take: its model made, 40 expenses made here, the first one back. An earlier take of the visitor's ends |
+| `POST /api/bot/answer {n, outcome}` | The visitor's word on expense `n`, `approve` or `reject` (their answer, or the right decision where the bot decided alone): recorded, then the next expense and what the bot does with it (`POST /v1/decide`). An `n` already answered changes nothing |
+
+The expenses are made by the server (`makeItems`), never sent by the page, which sends an outcome and nothing else.
+Ada is shown five things about each (department, category, amount, receipt, policy check). 30 takes go on at once; a
+visitor (their address) starts 4 in ten minutes and gives 60 answers a minute, 600 a day; the bot demo has
+`DEMO_BOT_DAILY_CALLS` Ada calls a day of its own (default 6000; a take is about 110).
+
+Measured against Ada Cloud on 2026-11-12 with a script answering by a known rule (40 expenses, this loop): for five
+simple rules (no receipt no money, nothing over $500, the company's policy, only travel, engineering or under $300)
+the bot asked 8 to 13 times, nearly all in the first 20, and decided all of the last 10 alone with 0 or 1 wrong; a
+rule with a rare exception (sales never gets meals or gifts) still got 3 of the last 10 wrong; with no rule (a coin
+toss) it went back to asking 8 of the last 10.
 
 Every demo page wears the platform's look: `demo/public/platform.css` (dark-hc's tokens, white buttons, 8px corners,
 the wordmark), loaded after each page's own stylesheet.
