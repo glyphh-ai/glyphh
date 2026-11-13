@@ -321,6 +321,7 @@ describe('the page', () => {
     ['/bot/', 'text/html'],
     ['/bot/bot.js', 'text/javascript'],
     ['/bot/bot.css', 'text/css'],
+    ['/bot/mascot.svg', 'image/svg+xml'],
   ])('serves %s', async (path, type) => {
     const res = await page().request(`https://demo.test${path}`);
     expect(res.status).toBe(200);
@@ -331,6 +332,15 @@ describe('the page', () => {
     const html = await (await page().request('https://demo.test/bot/')).text();
     expect(html).toContain('The bot never sees your rule, only your answers.');
     expect(html).toContain('No language model runs on this page');
+  });
+
+  it('meets the visitor with the bot itself, the mascot, and three lines; Ada is the model it runs on, never the bot', async () => {
+    const html = await (await page().request('https://demo.test/bot/')).text();
+    const start = html.slice(html.indexOf('id="start"'), html.indexOf('id="game"'));
+    expect(start).toContain('src="/bot/mascot.svg"');
+    expect(start.match(/<li>/g)).toHaveLength(3);
+    expect(start).not.toContain('Ada');
+    expect(html).toContain('the bot runs on Ada alone');
   });
 
   it('wears the platform’s look: its stylesheet last, the wordmark', async () => {

@@ -25,13 +25,19 @@
   </header>
 
   <main>
-    <p class="promise"><b>Make up a rule and keep it to yourself.</b> Nothing over $500. No receipt, no money. Only travel gets paid. Anything you like. The bot never sees your rule, only your answers.</p>
+    <p class="promise" id="promise" hidden><b>Your rule stays with you.</b> The bot never sees your rule, only your answers.</p>
 
-    <section class="panel" id="start" hidden>
-      <h2 class="kicker">A bot that approves expenses, and knows nothing yet</h2>
-      <p class="lede">It works through 40 expenses. At first it asks you about each one. Every answer goes to Ada, and as she learns your rule the bot starts deciding alone. You check its work and say when it gets one wrong.</p>
-      <p class="hint">Ada sees five things about an expense: the department, the category, the amount, whether there is a receipt, and the policy check. Make your rule about those.</p>
-      <div><button type="button" class="primary" id="go">Start</button></div>
+    <section class="panel meet" id="start" hidden>
+      <img class="mascot" src="/bot/mascot.svg" alt="The bot: a Glyphh cat with a mohawk">
+      <h2 class="kicker">Meet the bot</h2>
+      <p class="say">It approves expenses. It knows nothing yet.</p>
+      <ol class="steps">
+        <li>Make up a rule. Keep it secret.</li>
+        <li>Answer its questions.</li>
+        <li>Watch it start deciding alone.</li>
+      </ol>
+      <button type="button" class="primary" id="go">Start</button>
+      <p class="sub">A rule like “nothing over $500” or “no receipt, no money”. The bot sees the department, category, amount, receipt and policy check.</p>
     </section>
 
     <section class="game" id="game" hidden>
@@ -42,7 +48,7 @@
       </div>
 
       <div class="panel" aria-live="polite">
-        <div class="panel-head"><h2 class="kicker" id="bot-title"></h2></div>
+        <div class="panel-head who"><img class="mascot" src="/bot/mascot.svg" alt=""><h2 class="kicker" id="bot-title"></h2></div>
         <div id="bot"></div>
       </div>
     </section>
@@ -74,7 +80,7 @@
     </section>
 
     <p class="error" id="error" role="alert" hidden></p>
-    <p class="small">No language model runs on this page: this is a bot's learned gate alone, a model of its own for each visitor, deleted when the 40 are done. In a Glyphh bot, Claude does the work and gates like this one decide when to ask you. A rule with rare exceptions takes more than 40 answers to learn.</p>
+    <p class="small" id="about" hidden>No language model runs on this page: the bot runs on Ada alone, a model of its own for each visitor, deleted when the 40 are done. In a Glyphh bot, Claude does the work and Ada models like this one decide when to ask you. A rule with rare exceptions takes more than 40 answers to learn.</p>
   </main>
 
   <script src="/bot/bot.js" type="module"></script>
