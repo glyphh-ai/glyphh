@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from glyphh_server.errors import Conflict
+from glyphh_server.mcp.panel import DECISION_URI
 from glyphh_server.mcp.tools.base import Context, Done, Tool
 from glyphh_server.ops.templates import installs, run
 from glyphh_server.ops.templates.installs import TemplateView
@@ -108,13 +109,26 @@ def _over(body: Body, part: Any) -> str:
     return f" Kinds: {kinds}."
 
 
+def _teach(body: Body, part: Any) -> str | None:
+    """The template's record tool, by which the decision card records the person's verdict on a decide's answer."""
+    if part.op != "decide":
+        return None
+    return next((t.name for t in body.tools if t.op == "record"), None)
+
+
 def _tool(body: Body, part: Any) -> Tool:
     description = f"{part.description}{_over(body, part)} From your {body.name} template."
+    teach = _teach(body, part)
 
     async def handler(ctx: Context, args: Any) -> Done:
-        return Done(*await run.run(ctx.ada, ctx.who, body, part, args))
+        text, data = await run.run(ctx.ada, ctx.who, body, part, args)
+        if teach:
+            data = {**data, "teach": {"tool": teach, "args": {"model": data["model"]}}}
+        return Done(text, data)
 
-    return Tool(part.name, part.title, description, run.ARGS[part.op], handler, part.op in READS)
+    card = part.op == "decide"
+    resource = DECISION_URI if card else None
+    return Tool(part.name, part.title, description, run.ARGS[part.op], handler, part.op in READS, card, resource)
 
 
 def mine(bodies: list[Body]) -> dict[str, Tool]:

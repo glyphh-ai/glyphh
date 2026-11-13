@@ -1,7 +1,10 @@
 """The panels: MCP App resources (MCP Apps 2026-01-26), each an HTML page that renders what its tools answer and acts
 by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/4`) and the apps
 panel (`ui://glyphh/apps/1`, docs/specs/apps.md, 3.5: the org's apps as cards, searchable, paged and filtered by
-type, with Open; a reviewer's Awaiting review with Approve and Reject). Each inlines the MCP Apps client
+type, with Open; a reviewer's Awaiting review with Approve and Reject) and the decision card (`ui://glyphh/decision/1`:
+one Ada decision, from ada_decide or a template's decide tool, with its probabilities, whether Ada asks first and
+the precedents it stands on; Approve or a correction records the case through the tool its answer's `teach` names).
+Each inlines the MCP Apps client
 (@modelcontextprotocol/ext-apps 2.0.3, the bundle the glyphh mod's sign-in card ships). An address carries its
 version: a new panel, a new address."""
 
@@ -13,6 +16,7 @@ from glyphh_server.mcp.protocol import Call
 
 URI: str = "ui://glyphh/account/4"
 APPS_URI: str = "ui://glyphh/apps/1"
+DECISION_URI: str = "ui://glyphh/decision/1"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {
@@ -30,8 +34,16 @@ APPS_RESOURCE: dict[str, str] = {
     "with Open; a reviewer approves or rejects the ones awaiting review.",
     "mimeType": MIME,
 }
-RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, APPS_RESOURCE)
-PAGES: dict[str, str] = {URI: "account.html", APPS_URI: "apps.html"}
+DECISION_RESOURCE: dict[str, str] = {
+    "uri": DECISION_URI,
+    "name": "decision",
+    "title": "Ada decision",
+    "description": "One Ada decision: the outcome, its probabilities, whether Ada asks you first and the precedents it "
+    "stands on; approve it or correct it, and the case is recorded as a precedent the model learns from.",
+    "mimeType": MIME,
+}
+RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, APPS_RESOURCE, DECISION_RESOURCE)
+PAGES: dict[str, str] = {URI: "account.html", APPS_URI: "apps.html", DECISION_URI: "decision.html"}
 
 
 @lru_cache
