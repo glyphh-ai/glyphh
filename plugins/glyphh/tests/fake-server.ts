@@ -304,8 +304,10 @@ export function fakeServer() {
   async function fetch(url: string, init: HttpInit = {}): Promise<HttpResponse> {
     const u = new URL(url)
     const bearer = init.headers?.Authorization?.replace(/^Bearer /, '')
-    const query = Object.fromEntries(u.searchParams.entries())
-    const call: Call = { method: init.method ?? 'GET', path: u.pathname, body: init.body ? (JSON.parse(init.body) as Json) : {}, bearer, query }
+    const query: Record<string, string> = {}
+    u.searchParams.forEach((v, k) => { query[k] = v })
+    const raw = typeof init.body === 'string' ? init.body : init.body ? atob(init.body.base64) : ''
+    const call: Call = { method: init.method ?? 'GET', path: u.pathname, body: raw ? (JSON.parse(raw) as Json) : {}, bearer, query }
     s.calls.push(call)
     if (u.host === '127.0.0.1:7777') {
       if (s.rrotorDown) throw new Error('ECONNREFUSED')

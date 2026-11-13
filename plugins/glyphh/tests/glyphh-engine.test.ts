@@ -13,7 +13,7 @@ function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
   const server = fakeServer()
   const files = new Map<string, string>()
   const opened: string[] = []
-  const shown = rrotor ? { GLYPHH_RROTOR: '1' } : {}
+  const shown: Record<string, string> = rrotor ? { GLYPHH_RROTOR: '1' } : {}
   mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty', ...shown } : { HOME, ...shown })
   mock.store(on)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
