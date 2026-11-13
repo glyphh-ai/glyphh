@@ -10,6 +10,9 @@ import type { Host } from './host'
 /** The elements every panel uses: the terminal's and the desktop's alike. */
 export type Ui = Pick<Elements['desktop'], 'Box' | 'Text' | 'Button' | 'Input' | 'Select' | 'Link'>
 
+/** What a Box holds: rows, text, nothing. */
+type Kids = Parameters<Ui['Box']>[0]['children']
+
 /** What a section draws from. */
 export type Ctx = {
   gh: Host
@@ -85,7 +88,7 @@ export function kit(ctx: Pick<Ctx, 'ui' | 'surface'>) {
     ),
 
     /** Rows under a small label. */
-    Group: (key: string, label: string, children: unknown, note?: string) => (
+    Group: (key: string, label: string, children: Kids, note?: string) => (
       <Box key={key} flexDirection="column" gap="xs">
         <Text size="caption" weight="semibold" color="subtle">{label.toUpperCase()}</Text>
         {children}
@@ -145,7 +148,7 @@ export function kit(ctx: Pick<Ctx, 'ui' | 'surface'>) {
     ),
 
     /** A card: a bordered block with its own rows. */
-    Card: (key: string, children: unknown) => (
+    Card: (key: string, children: Kids) => (
       <Box key={key} flexDirection="column" borderStyle="round" borderDimColor paddingX={1} gap="xs">
         {children}
       </Box>

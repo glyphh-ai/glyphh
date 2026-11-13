@@ -2,6 +2,12 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.19.1 — 2026-11-13
+
+Type fixes the newest Claude Code (2.1.323) asks for under `plugin validate --strict`: the panel kit's `Group` and
+`Card` take a Box's children, and the tests' fake server reads a base64 body and its query without `entries()`.
+Nothing changes in what the plugin does. The hook's User-Agent is `glyphh-hook/1.19.1`.
+
 ## 1.19.0 — 2026-11-13
 
 The local MCP server and its sign-in card are gone (`mcp/`, with its bundled `dist/server.mjs` and vendored
