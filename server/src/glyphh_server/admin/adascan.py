@@ -2,14 +2,17 @@
 precedents its active store holds) and its jobs of the last JOB_DAYS (kind, state, how long). Each org's schema lets
 only a session set to that org read it (glyphh_ada/orgschema.py), so the scan sets each org in turn on the staff
 transaction and leaves it again after; it reads counts, names and times only, never a spec, a case, a job's arguments
-or its result. The whole scan is kept SCAN_TTL seconds in Redis, so pages shown again do not scan again."""
+or its result. The whole scan is kept SCAN_TTL seconds in Redis, so pages shown again do not scan again; a Redis
+that does not answer costs a scan, never the page."""
 
+import contextlib
 import json
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -88,12 +91,16 @@ async def one(conn: AsyncConnection, org_id: uuid.UUID) -> OrgAda:
 
 async def scan(conn: AsyncConnection, redis: Redis) -> list[OrgAda]:
     """Every org with a schema, from Redis when scanned within SCAN_TTL seconds."""
-    kept = await redis.get(SCAN_KEY)
+    try:
+        kept = await redis.get(SCAN_KEY)
+    except RedisError:  # the scan is only kept there: without it, scan again
+        kept = None
     if kept is not None:
         return [OrgAda.model_validate(o) for o in json.loads(kept)]
     orgs = [uuid.UUID(org_of(name)) for name in (await conn.execute(text(SCHEMAS))).scalars()]
     found = [await one(conn, org) for org in orgs]
-    await redis.set(SCAN_KEY, json.dumps([o.model_dump(mode="json") for o in found]), ex=SCAN_TTL)
+    with contextlib.suppress(RedisError):
+        await redis.set(SCAN_KEY, json.dumps([o.model_dump(mode="json") for o in found]), ex=SCAN_TTL)
     return found
 
 
