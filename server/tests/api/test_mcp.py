@@ -19,6 +19,7 @@ from tests.db.helpers import person
 
 PANEL: str = "ui://glyphh/account/4"
 APPS: str = "ui://glyphh/apps/1"
+CARD: str = "ui://glyphh/decision/1"  # the decision card: listed only while Ada Cloud is on, read always
 
 
 async def _auth(engine: AsyncEngine) -> dict[str, str]:
@@ -181,7 +182,7 @@ async def test_the_panel_is_listed_and_read_as_an_mcp_app(client: httpx.AsyncCli
     listed = (await rpc(client, auth, "resources/list"))["result"]["resources"]
     assert listed == [panel.RESOURCE, panel.APPS_RESOURCE] and listed[1]["uri"] == APPS
     assert (await rpc(client, auth, "resources/templates/list"))["result"]["resourceTemplates"] == []
-    for uri in (PANEL, APPS):
+    for uri in (PANEL, APPS, CARD):
         (read,) = (await rpc(client, auth, "resources/read", uri=uri))["result"]["contents"]
         assert (read["uri"], read["mimeType"], read["_meta"]) == (
             uri,

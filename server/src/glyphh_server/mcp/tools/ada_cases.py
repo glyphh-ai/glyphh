@@ -8,6 +8,7 @@ from pydantic import Field
 
 from glyphh_ada.api.cases import Case, Cases, Grade
 from glyphh_ada.api.reads import Ask, DecideAsk, FactsAsk
+from glyphh_server.mcp.panel import DECISION_URI
 from glyphh_server.mcp.tools.ada_base import IDEMPOTENCY, NAME, Named, ada, args_of, pct
 from glyphh_server.mcp.tools.base import Context, Done, Tool
 
@@ -75,7 +76,9 @@ async def decide(ctx: Context, args: DecideArgs) -> Done:
     answer, version = await ada(ctx, args.name, "decide", args_of(args), args.clearance)
     outputs = answer.get("outputs")
     lines = [_decided(n, d) for n, d in outputs.items()] if outputs else [_decided(args.name, answer)]
-    return Done("\n".join([*lines, f"Version {version}."]), {**answer, "model": args.name, "version": version})
+    teach = {"tool": "ada_record", "args": {"name": args.name}}  # how the decision card records the person's verdict
+    data = {**answer, "model": args.name, "version": version, "teach": teach}
+    return Done("\n".join([*lines, f"Version {version}."]), data)
 
 
 async def query(ctx: Context, args: AskArgs) -> Done:
@@ -128,6 +131,8 @@ TOOLS: tuple[Tool, ...] = (
         DecideArgs,
         decide,
         True,
+        True,
+        DECISION_URI,
     ),
     Tool("ada_query", "Ada query", f"The nearest precedents' vote. {ASKS}", AskArgs, query, True),
     Tool(

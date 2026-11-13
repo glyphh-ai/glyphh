@@ -82,8 +82,10 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":
-            # The apps panel only while rrotor is shown (shelved, 2026-11-02).
-            return {"resources": [r for r in panel.RESOURCES if ctx.settings.rrotor or r["uri"] != panel.APPS_URI]}
+            # The apps panel only while rrotor is shown (shelved, 2026-11-02), the decision card while Ada Cloud is on.
+            hidden = set() if ctx.settings.rrotor else {panel.APPS_URI}
+            hidden |= {panel.DECISION_URI} if ctx.ada is None else set()
+            return {"resources": [r for r in panel.RESOURCES if r["uri"] not in hidden]}
         case "resources/templates/list":
             return {"resourceTemplates": []}
         case "resources/read":
