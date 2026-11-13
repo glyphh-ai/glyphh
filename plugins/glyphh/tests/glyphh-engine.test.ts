@@ -87,7 +87,7 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   // Signed out, plain /glyphh goes straight to sign-in: the code and link in the panel and the reply.
   expect((await run('')).text).toBe(
     'Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…\n' +
-      'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.',
+      'Or ask Claude: "sign in to Glyphh".',
   )
   expect((await run('signin')).text).toBe('Enter code ABCD-EFGH at https://glyphh.test/v1/device?code=ABCD-EFGH. Waiting for approval…')
 
@@ -133,7 +133,7 @@ for (const surface of SURFACES) {
   })
 }
 
-test('/glyphh after the sign-in card signed in (install.json written mid-session) says who is signed in', async ($, on) => {
+test('/glyphh after another session signed in (install.json written mid-session) says who is signed in', async ($, on) => {
   const w = world(on, 'desktop')
   await $.session.start({ cwd: '/proj', surface: 'desktop', isInteractive: true })
   w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))

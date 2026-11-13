@@ -57,14 +57,6 @@ jobs:
               if (p.name !== e.name || p.version !== e.version) { console.log(`${e.name}: marketplace ${e.version}, plugin.json ${p.name} ${p.version}`); bad = 1 }
             }
             process.exit(bad)'
-      - name: "glyphh: the MCP server type-checks and its committed build is up to date"
-        working-directory: plugins/glyphh
-        run: |
-          GLYPHH_MCP_BUILD="$RUNNER_TEMP/glyphh-mcp" sh mcp/build.sh
-          git diff --exit-code -- mcp/dist || { echo "::error::mcp/dist/server.mjs is not the build of mcp/src: run mcp/build.sh and commit it"; exit 1; }
-      - name: "glyphh: the MCP server's own tests"
-        working-directory: plugins/glyphh
-        run: node --test mcp/test/*.test.*
       - name: "glyphh: the ledger's command hooks"
         working-directory: plugins/glyphh
         run: |

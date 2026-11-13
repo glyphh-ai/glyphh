@@ -6,7 +6,6 @@ import { openSection } from './actions'
 import { publishFromCommand } from './apps'
 import { linkFromCommand } from './link'
 import { openUrl } from './open'
-import { watchOpenRequests } from './openreq'
 import { resumePolling } from './device'
 import type { Host } from './host'
 import { beginSignIn } from './sections/signin'
@@ -14,7 +13,7 @@ import { planName, str, userOf } from './shape'
 import { rrotorShown } from './shelved'
 import { shownSections } from './state'
 
-export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh" for a sign-in card in the chat.'
+export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh".'
 
 export const USAGE_RROTOR = '/glyphh [login | logout | account | org | plan | billing | apps | publish <file> | link]'
 /** rrotor shelved (2026-11-02, ./shelved): no apps, publish or link. */
@@ -25,7 +24,6 @@ export const usage = (rrotor: boolean) => (rrotor ? USAGE_RROTOR : USAGE_SHELVED
 export async function startGlyphh(gh: Host) {
   await initAccount(gh).catch(() => undefined)
   await resumePolling(gh)
-  watchOpenRequests(gh)
 }
 
 export async function status(gh: Host): Promise<string> {
@@ -41,14 +39,7 @@ export async function status(gh: Host): Promise<string> {
 
 export async function glyphhCommand(gh: Host, args: string): Promise<{ text: string }> {
   const arg = args.trim().toLowerCase()
-  watchOpenRequests(gh)
-  const open = args.trim().match(/^open\s+(https?:\/\/\S+\/v1\/device\?code=[A-Z0-9-]+)$/i)
-  if (open) {
-    // The sign-in card's button: the sign-in page, in the browser pane.
-    const url = open[1]!
-    return { text: (await openUrl(gh, url)) ? `Opened ${url} in the browser pane. Approve it there.` : `Open ${url} to approve.` }
-  }
-  // Signed in elsewhere meanwhile (the sign-in card's MCP server writes install.json too)?
+  // Signed in elsewhere meanwhile (another session writes install.json too)?
   if ((await gh.state.auth.get()).status === 'out') await initAccount(gh, true).catch(() => undefined)
   const rrotor = await rrotorShown(gh)
   // /glyphh publish <file>: the file goes to the local rrotor, as an app awaiting review.

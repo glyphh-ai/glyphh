@@ -2,6 +2,14 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.19.0 — 2026-11-13
+
+The local MCP server and its sign-in card are gone (`mcp/`, with its bundled `dist/server.mjs` and vendored
+`mcp-app.js`), so the plugin ships only readable source for the directory's security scan. *"Sign in to Glyphh"* now
+calls the account mod's own `glyphh_login`; `/glyphh signin` is unchanged. `.mcp.json` names only `glyphh-cloud`. The
+mod no longer watches every tool call for `*__glyphh_sign_in` or `~/.glyphh/open-request.json`. The hook's User-Agent
+is `glyphh-hook/1.19.0`.
+
 ## 1.18.3 — 2026-11-04
 
 `plugin.json` gives the directory listing its links: repository, documentation, support, privacy policy and terms.

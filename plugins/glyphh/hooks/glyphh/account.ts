@@ -40,7 +40,7 @@ export async function signOut(gh: Host) {
 }
 
 /** At session start: signed in when install.json holds a token. `wait`
- *  awaits the account too (/glyphh, after a sign-in from the card). */
+ *  awaits the account too (/glyphh, after a sign-in from another session). */
 export async function initAccount(gh: Host, wait = false) {
   const install = await readInstall(gh)
   if (!install) return
