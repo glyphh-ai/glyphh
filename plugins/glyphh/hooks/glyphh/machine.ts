@@ -3,7 +3,7 @@
 // machine-id, Windows MachineGuid / csproduct UUID), else the primary network
 // interface's MAC, else a random id kept once in ~/.glyphh/machine.json.
 // Only sha256("glyphh:" + value) leaves the machine, never the value itself.
-// Shared: the mod hands it a probe over its Host, the MCP server one over Node.
+// The mod hands it a probe over its Host.
 
 export type MachineProbe = {
   /** `darwin`, `linux`, `win32`; unknown: every source is tried in turn. */

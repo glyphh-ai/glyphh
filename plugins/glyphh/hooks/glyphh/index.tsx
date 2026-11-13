@@ -10,7 +10,6 @@ import { FIRST_VIEW } from './apps'
 import { glyphhCommand, startGlyphh } from './command'
 import { rrotorShown } from './shelved'
 import type { Host } from './host'
-import { openUrl } from './open'
 import { InlineSignIn } from './inline'
 import { Panel } from './panel'
 import { beginSignIn } from './sections/signin'
@@ -107,18 +106,6 @@ export function registerGlyphh(on: On) {
     return started
   })
 
-  // Asking Claude to sign in (the card's tool, from this mod's server or a
-  // Glyphh connector) opens the approval page in the browser pane right then:
-  // inside the person's own request, which auto mode accepts, unlike an open
-  // from a timer later.
-  on('tool.call', async ($, e, next) => {
-    const r = await next(e)
-    if (typeof e.tool === 'string' && e.tool.endsWith('__glyphh_sign_in')) {
-      const url = JSON.stringify(r).match(/https?:\/\/[^"\s\\]+\/v1\/device\?code=[A-Z0-9-]+/)?.[0]
-      if (url) await openUrl(host($), url).catch(() => false)
-    }
-    return r
-  })
   // glyphh_login: start the sign-in (the login page opens in the browser pane,
   // inside the person's request, which auto mode accepts) and answer its state.
   on('tool.call', { tool: 'mcp__glyphh__glyphh_login' }, async $ => {

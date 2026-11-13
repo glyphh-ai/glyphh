@@ -2,7 +2,6 @@
 node_modules/
 .claude-plugin/types/
 dist/
-!plugins/glyphh/mcp/dist/
 __pycache__/
 *.egg-info/
 .venv/
