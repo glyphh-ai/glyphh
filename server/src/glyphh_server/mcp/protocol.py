@@ -16,6 +16,12 @@ SUPPORTED: tuple[str, ...] = (MODERN, *LEGACY)
 VERSION: str = "io.modelcontextprotocol/protocolVersion"
 CAPABILITIES: str = "io.modelcontextprotocol/clientCapabilities"
 NAMED: dict[str, str] = {"tools/call": "name", "resources/read": "uri"}
+# MCP 2026-07-28 caching: these results must carry ttlMs and cacheScope (a client's SDK refuses one without them, as
+# claude.ai's did the decision card's resources/read). Never reused: what they hold depends on who asks and changes.
+CACHEABLE: frozenset[str] = frozenset(
+    {"tools/list", "resources/list", "resources/templates/list", "prompts/list", "resources/read"}
+)
+NO_CACHE: dict[str, Any] = {"ttlMs": 0, "cacheScope": "private"}
 
 PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS = -32700, -32600, -32601, -32602
 HEADER_MISMATCH, UNSUPPORTED_VERSION = -32020, -32022
@@ -115,6 +121,8 @@ def unsupported(version: object) -> RpcError:
 def answer(call: Call, result: dict[str, Any], server_info: dict[str, str]) -> dict[str, Any]:
     if call.modern:
         result = {**result, "resultType": "complete", "_meta": {"io.modelcontextprotocol/serverInfo": server_info}}
+        if call.method in CACHEABLE:
+            result = {**NO_CACHE, **result}
     return {"jsonrpc": "2.0", "id": call.id, "result": result}
 
 
