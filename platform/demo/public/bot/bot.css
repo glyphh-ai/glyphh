@@ -57,6 +57,19 @@ main { max-width: 1180px; margin: 0 auto; padding: 24px 28px 40px; display: flex
 .game { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 
+/* The bot itself: the Glyphh cat with the mohawk (os/src/renderer/character.js, the "spiky" head). Big where the
+   visitor meets it, small beside everything it says. */
+.meet { align-items: center; text-align: center; gap: 18px; padding-top: 34px; padding-bottom: 34px; }
+.meet .mascot { height: 148px; width: auto; }
+.meet .say { max-width: 22rem; }
+.meet .sub { max-width: 26rem; }
+.meet .primary { min-width: 180px; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 17px; color: var(--text-2); }
+.steps li { counter-increment: step; display: flex; align-items: baseline; gap: 12px; }
+.steps li::before { content: counter(step); font-family: var(--mono); font-size: 13px; color: var(--text-4); }
+.panel-head.who { justify-content: flex-start; align-items: center; gap: 12px; }
+.panel-head.who .mascot { height: 40px; width: auto; }
+
 .say { margin: 0; font-size: 30px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); }
 .facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 20px; font-size: 16px; }
 .facts dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-4); align-self: center; }

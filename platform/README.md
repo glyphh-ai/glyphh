@@ -204,7 +204,11 @@ thinks), and where she is sure but has little to stand on (the bot's own gate: t
 right. Every answer is recorded, Ada learns the roles' weights again every five answers from the tenth (once both
 outcomes are there), and the page shows the questions falling away: a cell an expense (asked, alone and right, alone
 and wrong), what the visitor's decisions turn on as Ada learned it, and at the end how many of the 40 the bot asked
-about. No language model runs: the bot is its learned gate alone, and the page says so.
+about. No language model runs: the bot runs on Ada alone, and the page says so. Ada is the model, never the bot.
+
+The start is the bot itself: its mascot (`demo/public/bot/mascot.svg`, the Glyphh cat with the mohawk, the "spiky"
+head of `os/src/renderer/character.js`), "Meet the bot", three steps and Start; the mascot sits beside everything
+the bot says during a take, and the reminder and the small print come only once a take is going.
 
 The page is `demo/public/bot`, a card on the front page, the handlers `server/bot.ts`, on the same key. Each take has
 a model of its own, `launch-demo-bot-<12 hex>`, made at Start and deleted when the 40 are done, when the visitor

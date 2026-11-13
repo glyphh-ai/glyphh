@@ -131,6 +131,9 @@ function renderSummary() {
 function render() {
   showError('');
   $('start').hidden = Boolean(take);
+  // The start is the bot and three lines; the reminder and the small print come with the take.
+  $('promise').hidden = !take;
+  $('about').hidden = !take;
   $('game').hidden = !take || take.done;
   $('done').hidden = !take?.done;
   $('progress').hidden = !take;
