@@ -25,7 +25,13 @@ async def test_ada_decide_shows_the_card_and_its_answer_teaches_ada_record(
     assert "_meta" not in tools["ada_record"] and "_meta" not in tools["ada_query"]
     listed = (await rpc(ada, auth, "resources/list"))["result"]["resources"]
     assert panel.DECISION_RESOURCE in listed
-    (read,) = (await rpc(ada, auth, "resources/read", uri=CARD))["result"]["contents"]
+    answered = (await rpc(ada, auth, "resources/read", uri=CARD))["result"]
+    # MCP 2026-07-28 makes the cache hints required on a read: claude.ai refused the card without them.
+    assert (answered["ttlMs"], answered["cacheScope"], answered["resultType"]) == (0, "private", "complete")
+    assert (await rpc(ada, auth, "tools/list"))["result"]["cacheScope"] == "private"
+    called = (await rpc(ada, auth, "tools/call", name="ada_models", arguments={}))["result"]
+    assert "ttlMs" not in called and "cacheScope" not in called
+    (read,) = answered["contents"]
     assert read["mimeType"] == "text/html;profile=mcp-app" and "window.McpApp=" in read["text"]
     assert "__APP_JS__" not in read["text"] and "callServerTool" in read["text"] and "ontoolinput" in read["text"]
 
