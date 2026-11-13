@@ -7,6 +7,7 @@ from typing import Any
 
 import psycopg
 from redis.asyncio import Redis
+from redis.exceptions import TimeoutError as RedisTimeout
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -99,6 +100,24 @@ async def test_the_scan_is_kept_a_minute(engine: AsyncEngine, redis: Redis) -> N
     assert [(j.kind, j.state, round(j.seconds or 0)) for j in again.jobs] == [("learn", "done", 3)]
     assert [m.name for m in fresh.models] == ["first", "second"] and fresh.precedents == 2
     assert none.models == [] and none.jobs == []
+
+
+class _Silent:
+    """A Redis that does not answer in time, as production's did on 2026-11-13 (a read timeout crashed Staff > Orgs)."""
+
+    async def get(self, _key: str) -> None:
+        raise RedisTimeout("Timeout reading from redis")
+
+    async def set(self, *_a: object, **_k: object) -> None:
+        raise RedisTimeout("Timeout reading from redis")
+
+
+async def test_a_redis_that_does_not_answer_costs_a_scan_not_the_page(engine: AsyncEngine) -> None:
+    org = await person(engine)
+    ada_org(org.org_id, [{"name": "first", "precedents": 1}])
+    async with engine.begin() as conn:
+        found = adascan.by_org(await adascan.scan(conn, _Silent()))[org.org_id]  # type: ignore[arg-type]
+    assert [m.name for m in found.models] == ["first"]
 
 
 async def test_a_schema_before_the_kernels_counts_holds_none(engine: AsyncEngine) -> None:
