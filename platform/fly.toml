@@ -2,7 +2,8 @@
 # Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own:
 # PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET (its OAuth client at the server) and SESSION_SECRET.
 # It also answers https://demo.glyphh.ai (server/demo.ts), with DEMO_GLYPHH_API_KEY. The demo keeps its ledger and
-# limits in memory, so it assumes one machine (min_machines_running = 1).
+# limits in memory, so it assumes one machine (min_machines_running = 1). And https://games.glyphh.ai
+# (server/games.ts): plain pages, no secrets.
 app = "glyphh-ai-app"
 primary_region = "iad"
 
