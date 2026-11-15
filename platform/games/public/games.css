@@ -1,0 +1,71 @@
+/* games.glyphh.ai in the platform's look (src/styles/tokens.css, dark-hc, as demo/public/platform.css has it): black,
+   white text, hairlines, white primary buttons, Geist and JetBrains Mono, the wordmark logo. Purple is the focus ring
+   and links only. Labels never darker than #999 on black. */
+
+:root {
+  --bg: #000000;
+  --surface: #0d0d0d;
+  --surface-2: #141414;
+  --rail: #5a5a5a;
+  --hair: #242424;
+  --text: #ffffff;
+  --text-2: #eaeaea;
+  --text-3: #c8c8c8;
+  --text-4: #a6a6a6;
+  --focus: #c68cff;
+  --link: #c68cff;
+  --radius: 8px;
+  --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+img, video { max-width: 100%; display: block; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; padding: 0 28px; border-bottom: 1px solid var(--hair); }
+.head-left { display: flex; align-items: center; gap: 14px; }
+.logo { height: 26px; width: auto; }
+.crumb { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); padding-left: 14px; border-left: 1px solid var(--rail); }
+.crumb:hover { color: var(--text); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: var(--radius); border: 1px solid var(--rail); background: transparent; color: var(--text); font: 500 15px var(--sans); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); border-color: var(--text-3); }
+.btn.primary { background: #fff; color: #000; border-color: #fff; }
+.btn.primary:hover { opacity: 0.88; }
+.btn.small { padding: 8px 14px; font-size: 14px; }
+
+.frame { max-width: 1200px; margin: 0 auto; padding: 72px 28px 96px; }
+.kicker { margin: 0 0 14px; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); }
+h1 { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; }
+.lede { margin: 16px 0 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: var(--text-3); }
+
+/* The front page: a card per game. */
+.cards { margin-top: 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.card { display: flex; flex-direction: column; border-radius: 16px; border: 1px solid var(--hair); background: var(--surface); overflow: hidden; transition: border-color 0.15s, transform 0.15s; }
+a.card:hover { border-color: var(--text-3); transform: translateY(-2px); }
+.card-art { aspect-ratio: 16 / 9; width: 100%; object-fit: cover; border-bottom: 1px solid var(--hair); background: var(--surface-2); }
+.card-art.empty { display: grid; place-items: center; font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-4); }
+.card-body { display: flex; flex-direction: column; gap: 14px; padding: 24px 26px 26px; flex: 1; }
+.card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.card h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.card p { margin: 0; flex: 1; font-size: 15px; line-height: 1.55; color: var(--text-3); }
+.go { font-size: 20px; color: var(--text); }
+.soon { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); white-space: nowrap; }
+.card.is-soon { opacity: 0.75; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--hair); font-family: var(--mono); font-size: 12px; color: var(--text-4); }
+
+.foot { border-top: 1px solid var(--hair); padding: 28px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; font-size: 14px; color: var(--text-4); }
+.foot a { color: var(--text-3); }
+.foot a:hover { color: var(--text); }
+
+@media (max-width: 640px) {
+  .head { padding: 0 18px; }
+  .frame { padding: 48px 18px 72px; }
+  .cards { grid-template-columns: 1fr; }
+}

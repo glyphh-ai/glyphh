@@ -14,6 +14,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY demo ./demo
+COPY games ./games
 USER node
 EXPOSE 3000
 CMD ["node", "dist/server/server/index.js"]

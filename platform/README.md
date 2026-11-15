@@ -139,6 +139,7 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | `DEMO_DAILY_CALLS` | The demo's Ada calls a day, all visitors together (default 150) |
 | `DEMO_VOICE_DAILY_CALLS` | The voice demo's (demo.glyphh.ai/voice) Ada calls a day, all visitors together (default 300) |
 | `DEMO_BOT_DAILY_CALLS` | The bot demo's (demo.glyphh.ai/bot) Ada calls a day, all visitors together (default 6000, about 55 takes) |
+| `GAMES_HOST` | The host the games answer on (default `games.glyphh.ai`) |
 
 ## demo.glyphh.ai
 
@@ -247,6 +248,19 @@ no rule at all (a coin toss) the bot went back to asking 8 of the last 10.
 
 Every demo page wears the platform's look: `demo/public/platform.css` (dark-hc's tokens, white buttons, 8px corners,
 the wordmark), loaded after each page's own stylesheet.
+
+## games.glyphh.ai
+
+The same process answers `games.glyphh.ai` with the games Glyphh makes (`server/games.ts`, `games/public`): plain
+pages in the platform's look (`games/public/games.css`), no sign-in, no session, no `/api`. `/` is the front page, a
+card per game; each game is one entry in `games/public/games.js` (`soon: true` shows its card without a link) and a
+folder of its own. The games run on their own sites; these pages show them and link there.
+
+`/free-fall-frank/` is Free Fall Frank (freefallfrank.com): what it is, its videos (played from freefallfrank.com,
+`/ad.mp4`, `/ad2.mp4`, `/ad3.mp4`), screenshots (`free-fall-frank/shots`, taken from the game with its own bot
+playing), how to play, how it connects to Claude (the connector at `https://freefallfrank.com/mcp`), building a level
+and a Frank, and Advertise, which writes to support@glyphh.ai. Links to the game carry `?src=games` so the game's
+admin counts what the page sends.
 
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.
