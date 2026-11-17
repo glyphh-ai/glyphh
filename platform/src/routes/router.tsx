@@ -48,8 +48,8 @@ function Moved({ to }: { to: string }) {
 const runtimeCrumbs = (label: string): RouteHandle => ({ crumbs: [{ label: 'Runtimes & licences' }, { label }] });
 
 /**
- * A page of rrotor's. Shelved (2026-11-02, lib/shelved): with Ada Cloud on it lands on Home; with it off the runtimes'
- * pages are all there is, so they stay.
+ * A page of rrotor's. With rrotor switched off (lib/shelved) and Ada Cloud on it lands on Home; with Ada Cloud off
+ * the runtimes' pages are all there is, so they stay.
  */
 function Shelved({ page }: { page: ReactNode }) {
   return RROTOR_SHOWN ? <>{page}</> : <AdaOr ada={<Navigate to="/" replace />} off={page} />;
