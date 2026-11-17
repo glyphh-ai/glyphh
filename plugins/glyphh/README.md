@@ -1,14 +1,15 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.19.1 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
-Ada skill, your glyphh, the glyphh command, Glyphh bots and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing to install or
-host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said plainly in the panel
-and by the skill, with how to update the plugin.
+The Glyphh plugin for Claude Code, 1.20.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
+Ada skill, your glyphh, the glyphh command, Glyphh bots, rrotor (your local runtime for programs and CLIs), what
+Claude made published to your organisation's rrotor as apps, and the file ledger. Ada Cloud is Ada as an API that
+Glyphh runs: nothing to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a
+newer one is said plainly in the panel and by the skill, with how to update the plugin. rrotor is the other way
+round: a container you run on your own machine, which hosts your programs, CLIs and apps in a sandbox; Glyphh only
+grants it a licence.
 
-**rrotor is shelved** (2026-11-02): its skills (rrotor, rrotor-programs, publish) sit in `shelved/skills/`, where
-Claude Code does not load them, and the panel's Apps section, `/glyphh publish`, `/glyphh link` and the Account
-section's rrotor row show only with `GLYPHH_RROTOR=1` in Claude Code's environment. Nothing was deleted; what this
-README says of them below describes them as they work when shown.
+`GLYPHH_RROTOR=0` in Claude Code's environment hides rrotor's parts of the panel (the Apps section,
+`/glyphh publish`, `/glyphh link` and the Account section's rrotor row).
 
 ```
 /plugin marketplace add glyphh-ai/glyphh
@@ -22,9 +23,9 @@ README says of them below describes them as they work when shown.
 | Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, which the plugin adds as `glyphh-cloud` in `.mcp.json`; you sign in to it once by OAuth, and a Glyphh connector you already added stands in for it). It says which Ada version a model runs, offers a newer stable with a backtest first (`ada_backtest` with `ada`, then `ada_upgrade` only when you agree, and how to roll back), explains betas, and warns of deprecations |
 | The glyphh command (a skill, [`skills/glyphh-cli/SKILL.md`](skills/glyphh-cli/SKILL.md)) | The same Ada work through the shell: `glyphh` from `pip install glyphh`, JSON out, on an API key (`glyphh login` keeps one for the machine, or `GLYPHH_API_KEY`) |
 | Glyphh bots (a skill, [`skills/glyphh-bots/SKILL.md`](skills/glyphh-bots/SKILL.md)) | Ask Claude *"make me a bot that ..."*: through `glyphh bot` (SDK 3.9) the orchestrator decides whether the job becomes a bot (its make_bot gate, in Ada), its builder writes the package (`bot.json`, `agent.md`, `program.py`, skills) into `~/.glyphh/bots/<slug>/` with the right gate for the job (per-item gates for lists, ladders for cost, learned approvals for outward actions, world-answered gates for outcomes that arrive later, hard limits always), and it is checked and installed. Claude runs a bot, asks you each gate's or approval's question (a list's unsure items as one batch) and carries the run on with your answers, records a run or item a gate got wrong and what really happened, shows what its gates learned (`gates`, and `report`: an HTML page with the ask rate falling run by run), pauses and resumes it, reviews each bot's trust and keep from its record, and installs a routine. Hard gates are the bot's code and limits (spend, runs a day, quiet hours, items), learned gates are Ada models that learn from your answers; no bot acts outward without your yes until it is trusted |
-| rrotor (shelved: a skill, [`shelved/skills/rrotor/SKILL.md`](shelved/skills/rrotor/SKILL.md), with `scripts/rrotor.sh`) | Ask Claude *"install rrotor"* (or *"update rrotor"*: `rrotor.sh update` pulls the release this plugin pins, 0.3.0, and makes the container again on its volume; CI holds that pin, the compose default and the Helm chart to one value): it finds Apple's `container`, OrbStack or Docker, pulls `ghcr.io/glyphh-ai/rrotor` at the version this release pins, runs it as `glyphh-rrotor` on `127.0.0.1:7777` only with the volume `glyphh-rrotor-data` at `/data`, keeps a local token in `~/.glyphh/rrotor/token` (0600; the container holds only its SHA-256), and adds rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Then Claude deploys, calls and schedules programs, asks you at each approval, keeps secrets on the runtime, and runs CLIs through rrotor's tools |
-| Programs and CLIs (shelved: a skill, [`shelved/skills/rrotor-programs/SKILL.md`](shelved/skills/rrotor-programs/SKILL.md)) | How Claude writes a program (`glyphh.json` and `program.py`: inputs, approvals, secrets, schedules, `ctx.db`, declared hosts) and a CLI's manifest (`"kind": "cli"`, a pinned install, allow and approval patterns) |
-| Publish (shelved: a skill, [`shelved/skills/publish/SKILL.md`](shelved/skills/publish/SKILL.md)) | *"Publish this to my org"*: what Claude made (a Claude Code artifact, a React page, a Markdown document or a Claude Doc, a Mermaid or SVG diagram, a deck or a design exported to PDF or an image, a dashboard) goes to your organisation's rrotor as an app (`"kind": "app"` with a `type`, the rrotor's `app_publish`), any claude.ai connector call or Claude Dashboard chart rewritten into a function the page calls as the viewer, and waits for a reviewer (your admin, or the reviewer groups set in Settings → Auth) in the organisation's catalogue: the platform's Apps page, the connector's `apps` cards in Claude, or the mod's own Apps section (`/glyphh apps`); `/glyphh publish <file>` does the publish from the mod directly |
+| rrotor (a skill, [`skills/rrotor/SKILL.md`](skills/rrotor/SKILL.md), with `scripts/rrotor.sh`) | Ask Claude *"install rrotor"* (or *"update rrotor"*: `rrotor.sh update` pulls the release this plugin pins, 0.3.0, and makes the container again on its volume; CI holds that pin, the compose default and the Helm chart to one value): it finds Apple's `container`, OrbStack or Docker, pulls `ghcr.io/glyphh-ai/rrotor` at the version this release pins, runs it as `glyphh-rrotor` on `127.0.0.1:7777` only with the volume `glyphh-rrotor-data` at `/data`, keeps a local token in `~/.glyphh/rrotor/token` (0600; the container holds only its SHA-256), and adds rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Then Claude deploys, calls and schedules programs, asks you at each approval, keeps secrets on the runtime, and runs CLIs through rrotor's tools |
+| Programs and CLIs (a skill, [`skills/rrotor-programs/SKILL.md`](skills/rrotor-programs/SKILL.md)) | How Claude writes a program (`glyphh.json` and `program.py`: inputs, approvals, secrets, schedules, `ctx.db`, declared hosts) and a CLI's manifest (`"kind": "cli"`, a pinned install, allow and approval patterns) |
+| Publish (a skill, [`skills/publish/SKILL.md`](skills/publish/SKILL.md)) | *"Publish this to my org"*: what Claude made (a Claude Code artifact, a React page, a Markdown document or a Claude Doc, a Mermaid or SVG diagram, a deck or a design exported to PDF or an image, a dashboard) goes to your organisation's rrotor as an app (`"kind": "app"` with a `type`, the rrotor's `app_publish`), any claude.ai connector call or Claude Dashboard chart rewritten into a function the page calls as the viewer, and waits for a reviewer (your admin, or the reviewer groups set in Settings → Auth) in the organisation's catalogue: the platform's Apps page, the connector's `apps` cards in Claude, or the mod's own Apps section (`/glyphh apps`); `/glyphh publish <file>` does the publish from the mod directly |
 | Your glyphh (a skill, [`skills/glyphh-memory/SKILL.md`](skills/glyphh-memory/SKILL.md)) | Ask Claude *"build my glyphh"*: it installs the Agentic memory template from Glyphh's template library through the connector (`template_install`), which adds `glyphh_remember`, `glyphh_recall`, `glyphh_personality`, `glyphh_instructions` and `glyphh_forget` to your own connector over Ada models of your own, then keeps what you tell it, your rules and corrections, and the personality it grows with you. Any AI on the Glyphh connector reads the same glyphh |
 | The glyphh hooks (command hooks, `hooks/glyphh_context.py`) | Your glyphh in Claude's context: at a session's start your personality and rules, with each prompt what bears on it (`POST /v1/me/glyphh/context` with this install's token). Signed out, with nothing installed or offline, they add nothing |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
@@ -119,7 +120,7 @@ Signing out removes `install.json` (and a `license.json` an older plugin left).
 ## What it does on your computer
 
 **Where it sends things.** The mod and the glyphh hooks talk to one host, `https://api.glyphh.ai`
-(`GLYPHH_SERVER_URL` changes it, for development). The shelved rrotor parts, shown only with `GLYPHH_RROTOR=1`, talk
+(`GLYPHH_SERVER_URL` changes it, for development). The rrotor parts (hidden with `GLYPHH_RROTOR=0`) talk
 to `http://127.0.0.1:7777` on your own computer. Nothing else leaves the machine.
 
 | When | What is sent to `api.glyphh.ai` |
@@ -143,7 +144,7 @@ registry value or `wmic csproduct` on Windows), else the primary network interfa
 | `/bin/sh` with a fixed script of `umask`, `mkdir`, `cat`, `chmod` and `mv` | Writes `install.json` with mode 0600; the token goes on stdin, never on a command line |
 | `/bin/rm -f` | Removes `install.json` when you sign out |
 | `osascript` | On the desktop, clicks View > Show Browser in Claude so the sign-in page can be seen; without Accessibility permission nothing happens |
-| `sh shelved/skills/rrotor/scripts/rrotor.sh update` | Only with `GLYPHH_RROTOR=1`, when you press Update in the Account section |
+| `sh skills/rrotor/scripts/rrotor.sh update` | When you press Update on the rrotor row in the Account section |
 
 The command hooks run `python3` on `hooks/ledger.py` and `hooks/glyphh_context.py`. The plugin ships no local MCP server
 and no built or bundled code: every file is the readable source that runs. `.mcp.json` names one server,
@@ -204,8 +205,8 @@ through the engine on both surfaces.
 | `hooks/glyphh/command.ts`, `open.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the panel's note |
 | `hooks/glyphh/apps.ts`, `rrotor.ts`, `sections/apps.tsx` | The catalogue's cards, search, type filter, paging and reviews; `/glyphh publish` (the type by extension, binary files as base64); the one call to the local rrotor (`POST /v1/apps`) |
 | `hooks/glyphh/link.ts` | This machine's rrotor linked to Glyphh: its health, the token from `POST /v1/runtime/local` handed to `PUT /v1/runtime/token`, the wait for it to connect; `/glyphh link` |
-| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md` |
-| `shelved/skills/`, `hooks/glyphh/shelved.ts` | rrotor's skills, not loaded: `rrotor/SKILL.md` (with `scripts/rrotor.sh`), `rrotor-programs/SKILL.md`, `publish/SKILL.md`; the switch (`GLYPHH_RROTOR`) for the panel's rrotor parts |
+| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md`, `glyphh-bots/SKILL.md`, `glyphh-memory/SKILL.md`, `rrotor/SKILL.md` (with `scripts/rrotor.sh`), `rrotor-programs/SKILL.md`, `publish/SKILL.md` |
+| `hooks/glyphh/shelved.ts` | The switch (`GLYPHH_RROTOR=0`) that hides the panel's rrotor parts |
 | `types/index.d.ts` | The account's types and the `$.state` contract |
 
 **`$` stays in its file.** The engine reads a module's source before running it and follows `$` only into functions

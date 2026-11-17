@@ -109,8 +109,8 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string; rroto
     return { content: [{ type: 'text', text: '{"tabId":"t1"}' }], isError: false } as McpToolResult
   }
   const gh: Host = {
-    // rrotor's parts shown unless a test says shelved (GLYPHH_RROTOR, hooks/glyphh/shelved.ts).
-    env: { home: async () => HOME, server: async () => opts.server, rrotor: async () => (opts.rrotor === false ? undefined : '1') },
+    // rrotor's parts shown unless a test switches them off (GLYPHH_RROTOR=0, hooks/glyphh/shelved.ts).
+    env: { home: async () => HOME, server: async () => opts.server, rrotor: async () => (opts.rrotor === false ? '0' : undefined) },
     http: { fetch: (url, init) => server.fetch(url, init) },
     fs: disk.fs,
     process: { run: disk.run },

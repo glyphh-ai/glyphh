@@ -8,12 +8,12 @@ import { fakeServer } from './fake-server'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
-// rrotor's parts of the panel shown (GLYPHH_RROTOR=1) unless a test says shelved, as the plugin ships.
+// rrotor's parts of the panel shown, as the plugin ships, unless a test switches them off (GLYPHH_RROTOR=0).
 function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
   const server = fakeServer()
   const files = new Map<string, string>()
   const opened: string[] = []
-  const shown: Record<string, string> = rrotor ? { GLYPHH_RROTOR: '1' } : {}
+  const shown: Record<string, string> = rrotor ? {} : { GLYPHH_RROTOR: '0' }
   mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty', ...shown } : { HOME, ...shown })
   mock.store(on)
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -108,10 +108,10 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   expect(w.server.s.name).toBe('Christopher')
 })
 
-// rrotor shelved (his ruling, 2026-11-02; hooks/glyphh/shelved.ts): without GLYPHH_RROTOR=1 the panel is the account's
-// and Ada's alone, and /glyphh publish, link and apps are not commands.
+// rrotor switched off (hooks/glyphh/shelved.ts): with GLYPHH_RROTOR=0 the panel is the account's and Ada's alone, and
+// /glyphh publish, link and apps are not commands.
 for (const surface of SURFACES) {
-  test(`${surface}: rrotor shelved: no Apps tab, no rrotor row, and publish, link and apps answer the usage`, async ($, on) => {
+  test(`${surface}: rrotor switched off: no Apps tab, no rrotor row, and publish, link and apps answer the usage`, async ($, on) => {
     const w = world(on, surface, false)
     w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
     w.files.set(`${HOME}/.glyphh/rrotor/token`, 'rt-local-1\n')

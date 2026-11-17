@@ -2,6 +2,20 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.20.0 — 2026-11-17
+
+rrotor is back: the plugin installs and drives your local runtime again, and publishes what Claude made to your
+organisation's rrotor.
+
+- The rrotor, rrotor-programs and publish skills are in `skills/` again, so *"install rrotor"* and *"publish this to
+  my org"* reach a skill.
+- The panel has its Apps section and the Account section its rrotor row; `/glyphh publish <file>`, `/glyphh link` and
+  `/glyphh apps` work. `GLYPHH_RROTOR=0` in Claude Code's environment hides them (it was `GLYPHH_RROTOR=1` to show
+  them).
+- The Account section's Update runs `skills/rrotor/scripts/rrotor.sh update`.
+
+The hook's User-Agent is `glyphh-hook/1.20.0`.
+
 ## 1.19.1 — 2026-11-13
 
 Type fixes the newest Claude Code (2.1.323) asks for under `plugin validate --strict`: the panel kit's `Group` and

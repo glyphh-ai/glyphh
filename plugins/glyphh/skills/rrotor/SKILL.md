@@ -61,7 +61,7 @@ If `claude` is not on the PATH, give the person that line to run themselves (`mc
 the token or put it in the chat. Then ask them to restart Claude Code (or open `/mcp`) so rrotor's tools load.
 
 **The link to Glyphh.** `connect` (and `start`) also link the rrotor to Glyphh when this machine is signed in
-(`~/.glyphh/install.json`, from `/glyphh signin` or the sign-in card): the server issues the local runtime's token to
+(`~/.glyphh/install.json`, from `/glyphh signin` or asking Claude to sign in): the server issues the local runtime's token to
 this sign-in (`POST /v1/runtime/local`), the script hands it to rrotor (`PUT /v1/runtime/token`, on loopback, never
 printed) and waits up to twenty seconds for the link to come online; the answer's `link` is `linked`, `connecting`
 (it will show once online), `skipped` (not signed in: say to run `/glyphh signin`, then `link`), or a stop state to
