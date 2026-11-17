@@ -79,7 +79,7 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
-  // rrotor shelved (2026-11-02, ./shelved): apps and publish only while it is shown.
+  // Apps and publish only while rrotor is shown (./shelved; it is unless GLYPHH_RROTOR=0).
   const shown = await rrotorShown(host($))
   const description = shown ? 'Glyphh: sign in, account, org, plan, billing, apps, publish' : 'Glyphh: sign in, account, org, plan, billing'
   const argumentHint = shown ? '[section | signin | signout | publish <file>]' : '[section | signin | signout]'

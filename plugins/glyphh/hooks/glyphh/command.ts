@@ -16,7 +16,7 @@ import { shownSections } from './state'
 export const ASK_CLAUDE = 'Or ask Claude: "sign in to Glyphh".'
 
 export const USAGE_RROTOR = '/glyphh [login | logout | account | org | plan | billing | apps | publish <file> | link]'
-/** rrotor shelved (2026-11-02, ./shelved): no apps, publish or link. */
+/** rrotor switched off (GLYPHH_RROTOR=0, ./shelved): no apps, publish or link. */
 export const USAGE_SHELVED = '/glyphh [login | logout | account | org | plan | billing]'
 export const usage = (rrotor: boolean) => (rrotor ? USAGE_RROTOR : USAGE_SHELVED)
 

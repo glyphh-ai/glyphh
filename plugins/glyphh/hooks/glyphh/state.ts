@@ -9,7 +9,7 @@ export const SECTIONS: { id: GlyphhSection; label: string }[] = [
   { id: 'apps', label: 'Apps' },
 ]
 
-/** The sections the panel offers: Apps only while rrotor is shown (shelved, 2026-11-02). */
+/** The sections the panel offers: Apps only while rrotor is shown (./shelved). */
 export const shownSections = (rrotor: boolean) => SECTIONS.filter(s => s.id !== 'apps' || rrotor)
 
 /** The panel's last word. */

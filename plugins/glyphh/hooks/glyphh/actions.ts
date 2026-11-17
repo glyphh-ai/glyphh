@@ -20,7 +20,7 @@ const loadRrotor = async (gh: Host) => setList(gh, 'rrotor', [await rrotorHealth
 const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
   account: async gh => {
     await api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs')))
-    // Shelved (./shelved): the local rrotor is not asked after unless it is shown.
+    // The local rrotor is not asked after while it is switched off (./shelved).
     if (await rrotorShown(gh)) await loadRrotor(gh)
   },
   org: async gh => {
@@ -76,7 +76,7 @@ const UPDATE_WAIT_MS = 10 * 60 * 1000 // a pull of the image over a slow line
 export const updateRrotor = (gh: Host) =>
   act(gh, undefined, async () => {
     try {
-      const script = `${gh.pluginRoot}/shelved/skills/rrotor/scripts/rrotor.sh`
+      const script = `${gh.pluginRoot}/skills/rrotor/scripts/rrotor.sh`
       const r = await gh.process.run(['sh', script, 'update'], { timeoutMs: UPDATE_WAIT_MS })
       let out: Json = {}
       try {
