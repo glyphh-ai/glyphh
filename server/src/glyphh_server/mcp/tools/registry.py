@@ -40,8 +40,8 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 MINE: str = "glyphh_"
 TOOLS: dict[str, Tool] = {t.name: t for t in (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS)}
-# rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps. Shelved (2026-11-02):
-# offered only while GLYPHH_RROTOR is on.
+# rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only
+# while GLYPHH_RROTOR is on, the default.
 RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
 HOSTED: dict[str, Tool] = {t.name: t for t in tokens.TOOLS}  # docs/specs/tokens.md, while GLYPHH_LLM is on
 

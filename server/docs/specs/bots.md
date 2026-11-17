@@ -32,8 +32,7 @@ orchestrator's builder, writing the loop, its gates, the agent and the skills fr
 
 A bot is the person's alone: nobody else calls it, sees it or shares its memory. It runs on **the person's own
 Claude**, so there is no runtime to host: Claude Code on their computer, a Claude Code cloud session, or Cowork. Its
-**routine** (a scheduled task, a webhook or a PR event) starts the program. rrotor stays shelved: none of this needs
-it.
+**routine** (a scheduled task, a webhook or a PR event) starts the program. None of this needs rrotor.
 
 ## 1. The package
 
