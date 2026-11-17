@@ -1,4 +1,4 @@
-"""rrotor shelved (his ruling, 2026-11-02): with GLYPHH_RROTOR off, as the server ships, the connector neither lists nor
+"""GLYPHH_RROTOR (shelved 2026-11-02, on by default again 2026-11-17): with it off, the connector neither lists nor
 calls rrotor's tools (runtime keys, self-hosted runtimes, offline licences, apps), its instructions name the account
 and Ada only, and the apps panel is not among its resources."""
 
@@ -16,8 +16,8 @@ from tests.fakes import fake_http
 SHELVED = SETTINGS.model_copy(update={"rrotor": False})
 
 
-def test_rrotor_is_off_by_default() -> None:
-    assert Settings(_env_file=None).rrotor is False  # type: ignore[call-arg]
+def test_rrotor_is_on_by_default() -> None:
+    assert Settings(_env_file=None).rrotor is True  # type: ignore[call-arg]
 
 
 async def test_the_shelved_connector_offers_the_account_alone(engine: AsyncEngine) -> None:

@@ -15,7 +15,7 @@ INSTRUCTIONS: str = (
     "plan costs and includes (plans), upgrading (upgrade) and billing (billing_portal), your installs, your org's "
     "members and invites, and the apps allowed to use this connector (connector_grants)."
 )
-# rrotor shelved (2026-11-02): said only while GLYPHH_RROTOR is on (its tools are offered only then too).
+# rrotor's: said only while GLYPHH_RROTOR is on, the default (its tools are offered only then too).
 RROTOR_INSTRUCTIONS: str = (
     " Your self-hosted runtimes, their keys and offline licences. Your org's apps, what Claude made and published to "
     "its rrotors (apps, shown as cards with Open; a reviewer approves, rejects or retires one: app_approve, "
@@ -82,7 +82,7 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":
-            # The apps panel only while rrotor is shown (shelved, 2026-11-02), the decision card while Ada Cloud is on.
+            # The apps panel only while rrotor is shown (GLYPHH_RROTOR), the decision card while Ada Cloud is on.
             hidden = set() if ctx.settings.rrotor else {panel.APPS_URI}
             hidden |= {panel.DECISION_URI} if ctx.ada is None else set()
             return {"resources": [r for r in panel.RESOURCES if r["uri"] not in hidden]}

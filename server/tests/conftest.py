@@ -38,7 +38,7 @@ GITHUB_APP_PEM: str = GITHUB_APP_KEY.private_bytes(
 ).decode()
 SETTINGS: Settings = Settings(
     env="test",
-    # rrotor's connector tools as they are when shown; tests/api/test_mcp_shelved.py covers them shelved (the default).
+    # rrotor's connector tools as they are when shown (the default); tests/api/test_mcp_shelved.py covers them off.
     rrotor=True,
     database_url=DATABASE_URL,
     redis_url=REDIS_URL,
