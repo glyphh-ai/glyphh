@@ -4,7 +4,8 @@ import { me, plans } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { http, HttpResponse, server, v1 } from '@/test/server';
 
-// rrotor shelved (his ruling, 2026-11-02; lib/shelved as it ships): with Ada Cloud on the platform is Ada's alone.
+// rrotor switched off (lib/shelved; it ships on): with Ada Cloud on the platform is Ada's alone.
+vi.mock('@/lib/shelved', () => ({ RROTOR_SHOWN: false }));
 
 describe('rrotor shelved, with Ada Cloud on', () => {
   beforeEach(() => server.use(...adaFake({ models: [tickets()] }).handlers));

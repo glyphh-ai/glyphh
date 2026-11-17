@@ -71,8 +71,8 @@ function AdaNav() {
           Usage
         </NavItem>
       </NavGroup>
-      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31); shelved
-          (2026-11-02), see lib/shelved. */}
+      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31); hidden
+          while rrotor is switched off, see lib/shelved. */}
       {RROTOR_SHOWN ? (
         <NavGroup label="Runtimes & licences">
           <NavItem to="/runtimes" icon="chip">
