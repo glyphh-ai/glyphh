@@ -9,6 +9,20 @@ export const GAMES = [
     tags: ['free', 'phone and desktop', 'build levels with Claude'],
   },
   {
+    href: '/bams-and-brags/',
+    title: 'Bams & Brags',
+    blurb: 'American mah jongg with beautiful tables, good company and bragging rights. Play with your friends, against the computer or in a tournament, and start a league with a site of its own.',
+    art: '/bams-and-brags/card.jpg',
+    tags: ['free to play', 'phone, tablet and computer', 'leagues', 'make your own looks with Claude'],
+  },
+  {
+    href: '/crabby-knife-fight/',
+    title: 'Crabby Knife Fight',
+    blurb: 'They took his family in a crab pot. He found a knife. A punk platformer: seven places, and a knife fight with a traitor crab at the end of each.',
+    art: '/crabby-knife-fight/card.jpg',
+    tags: ['free', 'phone and desktop', 'make places with Claude'],
+  },
+  {
     title: 'More games',
     blurb: 'We are making the next one.',
     tags: [],

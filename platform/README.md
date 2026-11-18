@@ -254,13 +254,24 @@ the wordmark), loaded after each page's own stylesheet.
 The same process answers `games.glyphh.ai` with the games Glyphh makes (`server/games.ts`, `games/public`): plain
 pages in the platform's look (`games/public/games.css`), no sign-in, no session, no `/api`. `/` is the front page, a
 card per game; each game is one entry in `games/public/games.js` (`soon: true` shows its card without a link) and a
-folder of its own. The games run on their own sites; these pages show them and link there.
+folder of its own. The games run on their own sites; these pages show them and link there. Every game's page is laid
+out by `games/public/game.css` and `game.js` (the copy buttons, one video at a time), and has the same parts: a hero,
+its videos (played from the game's own site, with a poster kept here), screenshots (its `shots` folder), how to play,
+what is in it, how it connects to Claude (its connector's address and tools), its price, and Advertise, which writes
+to support@glyphh.ai. Links to a game carry `?src=games` so the game's admin counts what the page sends.
 
-`/free-fall-frank/` is Free Fall Frank (freefallfrank.com): what it is, its videos (played from freefallfrank.com,
-`/ad.mp4`, `/ad2.mp4`, `/ad3.mp4`), screenshots (`free-fall-frank/shots`, taken from the game with its own bot
-playing), how to play, how it connects to Claude (the connector at `https://freefallfrank.com/mcp`), building a level
-and a Frank, and Advertise, which writes to support@glyphh.ai. Links to the game carry `?src=games` so the game's
-admin counts what the page sends.
+- `/free-fall-frank/` is Free Fall Frank (freefallfrank.com): its videos are `/ad.mp4`, `/ad2.mp4` and `/ad3.mp4`,
+  its screenshots were taken from the game with its own bot playing, its connector is `https://freefallfrank.com/mcp`,
+  and it has the second level, ROCK BOTTOM ($0.99 once, with a free taste), building a level and making a Frank.
+- `/bams-and-brags/` is Bams & Brags (bamsandbrags.com), American mah jongg: its reel is `/landing/reel-720.mp4`, its
+  screenshots are its landing page's own, its connector is `https://bamsandbrags.com/mcp`, and it has leagues
+  ($29.99 once to start one) and the pass ($2.99 once).
+- `/crabby-knife-fight/` is Crabby Knife Fight (crabbyknifefight.com), a platformer: its videos are
+  `/landing/play-wide.mp4` and `/landing/play-tall.mp4`, its screenshots are its landing page's own, its connector is
+  `https://crabbyknifefight.com/mcp`, and it is free.
+
+What a page says of a game (features, prices, the connector's tools) is taken from that game's own landing page and
+code; when the game changes, its page here is changed with it.
 
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.

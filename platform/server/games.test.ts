@@ -21,9 +21,11 @@ describe('the pages', () => {
     ['/games.js', 'text/javascript'],
     ['/home.js', 'text/javascript'],
     ['/glyphh-logo-text-white.png', 'image/png'],
+    ['/game.css', 'text/css'],
+    ['/game.js', 'text/javascript'],
     ['/free-fall-frank/', 'text/html'],
-    ['/free-fall-frank/frank.css', 'text/css'],
-    ['/free-fall-frank/frank.js', 'text/javascript'],
+    ['/bams-and-brags/', 'text/html'],
+    ['/crabby-knife-fight/', 'text/html'],
   ])('serves %s', async (path, type) => {
     const res = await get(path);
     expect(res.status).toBe(200);
@@ -47,7 +49,7 @@ describe('the pages', () => {
   });
 
   it('serves every picture and script a page of its own names', async () => {
-    for (const page of ['index.html', 'free-fall-frank/index.html']) {
+    for (const page of ['index.html', 'free-fall-frank/index.html', 'bams-and-brags/index.html', 'crabby-knife-fight/index.html']) {
       const html = await readFile(`games/public/${page}`, 'utf8');
       const own = [...html.matchAll(/(?:src|href|poster)="(\/[^"#]+)"/g)].map((m) => m[1]!);
       expect(own.length).toBeGreaterThan(3);
@@ -78,5 +80,44 @@ describe('Free Fall Frank’s page', () => {
   it('plays the game’s own videos', async () => {
     const page = await html();
     for (const video of ['ad.mp4', 'ad2.mp4', 'ad3.mp4']) expect(page).toContain(`src="https://freefallfrank.com/${video}"`);
+  });
+
+  it('shows the second level, ROCK BOTTOM, with its price and the way to try it', async () => {
+    const page = await html();
+    expect(page).toContain('id="rock"');
+    expect(page).toContain('THE LANDLORD');
+    expect(page).toContain('$0.99');
+    expect(page).toContain('href="https://freefallfrank.com/play?level=rock&amp;src=games"');
+  });
+});
+
+describe.each([
+  { name: 'Bams & Brags', folder: 'bams-and-brags', site: 'https://bamsandbrags.com', subject: 'Advertise%20in%20Bams%20%26%20Brags', videos: ['landing/reel-720.mp4'] },
+  { name: 'Crabby Knife Fight', folder: 'crabby-knife-fight', site: 'https://crabbyknifefight.com', subject: 'Advertise%20in%20Crabby%20Knife%20Fight', videos: ['landing/play-wide.mp4', 'landing/play-tall.mp4'] },
+])('$name’s page', ({ folder, site, subject, videos }) => {
+  const html = () => readFile(`games/public/${folder}/index.html`, 'utf8');
+
+  it('sends Advertise to support@glyphh.ai', async () => {
+    expect(await html()).toContain(`href="mailto:support@glyphh.ai?subject=${subject}"`);
+  });
+
+  it('gives the connector’s address and links to the game with its source', async () => {
+    const page = await html();
+    expect(page).toContain(`${site}/mcp`);
+    expect(page).toContain(`href="${site}/?src=games"`);
+  });
+
+  it('plays the game’s own videos, each with a poster of its own', async () => {
+    const page = await html();
+    for (const video of videos) expect(page).toMatch(new RegExp(`poster="/${folder}/[^"]+" src="${site}/${video}"`));
+  });
+});
+
+describe('Bams & Brags’ page', () => {
+  it('gives the game’s own prices and never speaks of prize money', async () => {
+    const page = await readFile('games/public/bams-and-brags/index.html', 'utf8');
+    expect(page).toContain('$2.99');
+    expect(page).toContain('$29.99');
+    expect(page.toLowerCase()).not.toContain('prize');
   });
 });
