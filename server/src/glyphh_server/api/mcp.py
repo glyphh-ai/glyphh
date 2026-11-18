@@ -13,7 +13,7 @@ from starlette.responses import Response
 from glyphh_server.api.errors import error_body
 from glyphh_server.api.oauth_meta import resource_metadata_url
 from glyphh_server.db import tenancy
-from glyphh_server.mcp import protocol, server
+from glyphh_server.mcp import protocol, retired, server
 from glyphh_server.mcp.protocol import INVALID_REQUEST, RpcError
 from glyphh_server.mcp.tools import registry
 from glyphh_server.mcp.tools.base import Context
@@ -75,6 +75,8 @@ async def mcp(request: Request) -> Response:
     if not origin_allowed(request):
         return rpc_refusal(RpcError(INVALID_REQUEST, "This origin may not call the Glyphh connector.", 403))
     state = request.app.state
+    if not state.settings.products:  # wound down: the truth, with no tools and no sign-in (mcp/retired.py)
+        return retired.respond(await request.body(), request.headers, state.settings.version)
     async with state.engine.begin() as conn:
         who = await caller(request, conn)
         if who is None:

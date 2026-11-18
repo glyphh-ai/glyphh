@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -87,6 +87,10 @@ class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
+    # Glyphh's products (retired 2026-11-18; docs/architecture.md, Wound down). Off, the default: every product route
+    # answers 410 E_WOUND_DOWN, Ada Cloud, the hosted models and rrotor's tools are off whatever their own switches
+    # say, and only the health check, Stripe's webhook and the staff's sign-in go on. On: all as before.
+    products: bool = False
     # rrotor in the connector (shelved 2026-11-02, back on 2026-11-17): off, the connector neither lists nor calls its
     # runtime, licence and apps tools, and its instructions name Glyphh's account and Ada only. The API's routes stay
     # as they are either way.
@@ -141,6 +145,12 @@ class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings):
             if url.startswith(plain):
                 url = "postgresql+asyncpg://" + url.removeprefix(plain)
         return url.replace("?sslmode=", "?ssl=").replace("&sslmode=", "&ssl=")
+
+    @model_validator(mode="after")
+    def _wound_down(self) -> "Settings":
+        if not self.products:
+            self.ada_cloud = self.llm = self.rrotor = False
+        return self
 
     @property
     def hosted(self) -> bool:

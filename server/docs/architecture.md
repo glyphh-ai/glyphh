@@ -2,6 +2,8 @@
 
 Glyphh as it is built: the [product](#product), the [architecture](#architecture) and the [data model](#data-model), checked against the code. What is not built is in [Not built yet](#not-built-yet) and nowhere else. Plans and prices are in [pricing.md](pricing.md). How rrotor and the server talk, step by step, is in rrotor's `docs/architecture.md`; the platform's pages are in `glyphh-ai/platform`'s README.
 
+> **Retired 2026-11-18.** Glyphh's products are wound down and Glyphh makes games now: with `GLYPHH_PRODUCTS` off, the default, the server answers `410 E_WOUND_DOWN` for everything below but what [Wound down](#wound-down-glyphh_products) lists. The rest of this page describes the products as built, which is what `GLYPHH_PRODUCTS=on` serves.
+
 ## Product
 
 **Glyphh is a platform, a server, Ada Cloud and a local runtime.** A person signs in once on the platform (https://platform.glyphh.ai), installs rrotor on their own machine and drives it from Claude; the server grants the licence that runtime runs on.
@@ -354,6 +356,19 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
 full clearance), as it calls the account API; it shows Ada when the account API's `GET /v1/me` answers `ada_cloud:
 true`.
 
+### Wound down (`GLYPHH_PRODUCTS`)
+
+**Glyphh's products were retired on 2026-11-18; Glyphh makes games now.** One setting, `GLYPHH_PRODUCTS`, off by default, so a fresh deploy is wound down; `on` brings everything on this page back as it is described. Nothing is deleted by the switch. Off (`api/wound_down.py`, `config.py`):
+
+- **Every product route answers `410`** `{"error": {"code": "E_WOUND_DOWN", "message": "Glyphh's products were retired on 2026-11-18. Questions: support@glyphh.ai", "trace_id"}}`, on every host (the Ada host included): Ada Cloud, API keys, the device flow, licences and the heartbeat, runtimes and their keys, apps, templates and the memory hook, plans, checkout, the portal, the org and its invites, the connector's discovery and registration, the docs and `/openapi.json`. The answer is the same for every method and whether or not a token was sent.
+- **Its own switches go with it:** `GLYPHH_ADA_CLOUD`, `GLYPHH_LLM` and `GLYPHH_RROTOR` read as off whatever they are set to, so the Ada app is not made, its two worker groups idle, and nothing meters or reports a read.
+- **`/mcp` tells the truth** (`mcp/retired.py`): no token is asked for, `initialize` and `server/discover` answer with the retirement as their instructions, `tools/list` and `resources/list` are empty, and `tools/call` or `resources/read` is a JSON-RPC error `-32010` whose `data.code` is `E_WOUND_DOWN`. A client connects and sees nothing to call, rather than hanging or looping through a sign-in.
+- **A runtime's link** (`/v1/runtime/link`) is accepted and closed `4401`, the code rrotor stops reconnecting on; rrotor then runs on the licence it holds, to its expiry and grace, then as Community.
+- **What goes on:** `GET /v1/health`; `POST /v1/stripe/webhook`, so each cancellation and final invoice is still recorded on its org; and the staff's own way in, below.
+- **Only Glyphh's staff sign in, and nobody signs up.** The platform's sign-in (`/oauth/authorize`, the Google and GitHub steps, `/auth/consent`, `/auth/oauth/allow`, `/oauth/token`, `/oauth/revoke`) stays for an email in `GLYPHH_STAFF_EMAILS`; anyone else is refused at the provider's callback with `E_WOUND_DOWN`, before an account is found or made. `/oauth/token` issues only to the platform's own client. Behind it: `GET /v1/me` and `/v1/admin/*`. A token from before that is not staff's is answered `410`; single sign-on, the device flow and linking a provider are closed.
+- **The minute tick** keeps its heartbeat, the ops events and Glyphh's own sites' traffic; it no longer takes expired runtime keys off runtimes, ends Enterprise grants, flushes or meters Ada Cloud's reads, or pulls the repository's traffic. The server sends no email and never did.
+- **The data** is removed by hand, apart from the switch: `scripts/wind-down/` (its README lists every table, kept or dropped), and the subscriptions by `scripts/wind-down/cancel-subscriptions.md`.
+
 ### Starting up, and migrations
 
 The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it brings the database to `db/schema.sql`'s shape (migrations, below), runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (the fix: the migration that was missed; a dev database can instead be made again with `docker compose down -v`), then seeds the mods (`ada`; a mod no longer seeded is retired, never deleted), the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version) and the platform's OAuth client (`db/seed_clients.py`, [The connector](#the-connector)). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more, or in `prod` without `GLYPHH_LICENSE_SIGNING_KEY`.
@@ -367,6 +382,7 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | Setting | Default | What |
 |---|---|---|
 | `GLYPHH_ENV` | `dev` | `dev`, `test` or `prod` |
+| `GLYPHH_PRODUCTS` | off | Glyphh's products, retired 2026-11-18 ([Wound down](#wound-down-glyphh_products)): off, every product route answers `410 E_WOUND_DOWN`, Ada Cloud, the hosted models and rrotor's tools are off whatever their own settings say, and only the health check, Stripe's webhook, a truthful `/mcp` and the staff's sign-in go on. `on`: everything as this page describes it |
 | `GLYPHH_DATABASE_URL` | `postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh` | Postgres; a plain `postgres://…?sslmode=` URL is made asyncpg's |
 | `GLYPHH_RESET_DATABASE` | off | Lets `db/reset.py`, run by hand, drop every table and make the schema again (above); never set on deploy |
 | `GLYPHH_REDIS_URL` | `redis://localhost:6379/0` | Redis, for live signals and, with Ada Cloud on, its work in flight (never anything kept) |

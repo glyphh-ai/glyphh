@@ -29,7 +29,8 @@ from glyphh_server.api.browser_session import (
     new_browser,
 )
 from glyphh_server.api.pages import to_platform
-from glyphh_server.errors import Forbidden, Invalid
+from glyphh_server.api.wound_down import RETIRED
+from glyphh_server.errors import Forbidden, Invalid, WoundDown
 from glyphh_server.ops import device_approval, sso
 from glyphh_server.ops.auth import signed
 from glyphh_server.ops.auth.providers import Provider, available, provider
@@ -109,10 +110,12 @@ async def callback(name: str, request: Request, conn: Conn, state: str, code: st
     chosen, _ = await chosen_provider(name, request, conn, state=st)
     if not code:
         raise Forbidden("Signing in was cancelled. Start again in Claude when you're ready.", reason="cancelled")
-    if link_pages.is_link(st):
-        return await link_pages.finish(request, conn, chosen, st, code)
     if oauth_pages.is_oauth(st):
         return await oauth_pages.allow_page(request, conn, chosen, st, code)
+    if not settings.products:  # wound down: no install is signed in and no provider linked, only the staff's OAuth
+        raise WoundDown(RETIRED)
+    if link_pages.is_link(st):
+        return await link_pages.finish(request, conn, chosen, st, code)
     found = await device_approval.waiting(conn, st["c"])
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, name))
     user_id = await sign_in(conn, profile)

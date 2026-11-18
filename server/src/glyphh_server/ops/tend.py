@@ -84,11 +84,13 @@ async def _tick(
 ) -> None:
     """The keys that expired since the last tick (with a tick to spare) taken off their runtimes, the Enterprise grants
     past their date ended. With Ada Cloud on, its reads flushed to the database, and with Stripe those past a metered
-    plan's month reported."""
+    plan's month reported. Wound down (GLYPHH_PRODUCTS off), only the heartbeat, the ops events and Glyphh's own
+    sites' traffic go on: nothing of a product's is tended."""
     parts: list[tuple[str, Callable[[], Awaitable[Any]]]] = [("heartbeat", lambda: tick.beat(hub.redis))]
     parts.append(("ops events", lambda: events_store.drain(engine, hub.redis)))
-    parts.append(("expired keys", lambda: push_expired(engine, hub, timedelta(seconds=2 * step))))
-    parts.append(("enterprise grants", lambda: expire(engine)))
+    if settings.products:
+        parts.append(("expired keys", lambda: push_expired(engine, hub, timedelta(seconds=2 * step))))
+        parts.append(("enterprise grants", lambda: expire(engine)))
     if settings.ada_cloud:
         parts.append(("ada reads", lambda: flush(engine, hub.redis)))
         parts.append(("ada days", lambda: days.flush(engine, hub.redis)))
@@ -96,7 +98,7 @@ async def _tick(
             parts.append(("ada meter", lambda: ada_meter.report(engine, stripe, settings.stripe_price_ada)))
     if cloudflare is not None:
         parts.append(("traffic", lambda: traffic.hourly(engine, hub.redis, cloudflare)))
-    if github is not None:
+    if github is not None and settings.products:
         listed = github_traffic.repos(settings.github_traffic_repos)
         parts.append(("github traffic", lambda: github_traffic.hourly(engine, hub.redis, github, listed)))
     await _each(parts)

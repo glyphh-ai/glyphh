@@ -79,6 +79,13 @@ class Unavailable(GlyphhError):
     status = 503
 
 
+class WoundDown(GlyphhError):
+    """Glyphh's products are retired (GLYPHH_PRODUCTS off, api/wound_down.py): gone, and not coming back by retrying."""
+
+    code = "E_WOUND_DOWN"
+    status = 410
+
+
 class DeviceFlowError(GlyphhError):
     """A device-token poll's answer before there is a token (RFC 8628, section 3.5): its code is the RFC's own."""
 

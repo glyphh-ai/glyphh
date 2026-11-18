@@ -37,6 +37,7 @@ from glyphh_server.api import (
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
+from glyphh_server.api.wound_down import WoundDownMiddleware
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
@@ -154,13 +155,15 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
 
 
 def _wrap(app: FastAPI, cfg: Settings, ada: FastAPI | None) -> None:
-    """The outer layers, innermost first: Ada Cloud's host (when on), CORS for the platform's read of a consent, the
-    request metrics (every host's), then the trace. Warnings and errors are kept for staff as ops events
-    (obs/events.py)."""
+    """The outer layers, innermost first: Ada Cloud's host (when on), the wind-down's refusals (GLYPHH_PRODUCTS off),
+    CORS for the platform's read of a consent, the request metrics (every host's), then the trace. Warnings and
+    errors are kept for staff as ops events (obs/events.py)."""
     app.state.metrics = metrics.Recorder()  # every request's route, status and time (obs/metrics.py)
     events.install(cfg.redis_url)
     if ada is not None:
         app.add_middleware(HostRouter, ada=ada, hosts=cfg.ada_host_set)
+    if not cfg.products:  # wound down: every product route answers 410, on every host (api/wound_down.py)
+        app.add_middleware(WoundDownMiddleware)
     app.add_middleware(ConsentCorsMiddleware, platform_origin=cfg.platform_base)
     app.add_middleware(metrics.MetricsMiddleware, recorder=app.state.metrics)
     app.add_middleware(TraceMiddleware)

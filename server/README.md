@@ -1,5 +1,11 @@
 # server
 
+> **Glyphh's products were retired on 2026-11-18.** `GLYPHH_PRODUCTS` is off by default: every product route
+> answers `410 E_WOUND_DOWN`, and only the health check, Stripe's webhook, a truthful `/mcp` and the staff's
+> sign-in go on ([Wound down](docs/architecture.md#wound-down-glyphh_products)). `GLYPHH_PRODUCTS=on` serves
+> everything below as it was; the tests run with it on, and `tests/api/test_wound_down.py` covers it off. Cancelling
+> the subscriptions and cleaning the database are procedures run by hand: [`scripts/wind-down/`](scripts/wind-down/).
+
 The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, flat plans on
 Stripe, the licences for rrotor (the signed licence and the licence key, one per paid period), the runtime link every
 local or self-hosted rrotor holds for its licence, the Glyphh connector (`/mcp`, OAuth 2.1) and Ada Cloud (built, off

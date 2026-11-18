@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
 from glyphh_server.api.auth import Conn
+from glyphh_server.api.wound_down import platform_only
 from glyphh_server.ops.connector import clients, exchange, tokens
 from glyphh_server.ops.connector.errors import OAuthError, invalid_client
 
@@ -68,6 +69,7 @@ async def token(request: Request, conn: Conn) -> Response:
     form = await read_form(request)
     try:
         client = await clients.authenticate(conn, *credentials(request, form))
+        platform_only(request.app.state.settings, client.id)  # wound down: a connector's client gets 410
         answer = await exchange.exchange(conn, request.app.state.settings, client, form)
     except OAuthError as err:
         return refusal(err, is_basic(request))
