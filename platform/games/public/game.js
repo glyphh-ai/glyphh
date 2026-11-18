@@ -1,4 +1,4 @@
-// Free Fall Frank's page: the copy buttons beside the connector's address, and one video playing at a time.
+// A game's page: the copy buttons beside the connector's address, and one video playing at a time.
 for (const button of document.querySelectorAll('[data-copy]')) {
   button.addEventListener('click', async () => {
     const text = document.getElementById(button.dataset.copy).textContent;
