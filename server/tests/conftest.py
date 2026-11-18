@@ -19,6 +19,10 @@ from glyphh_server.db.schema import apply_schema
 from glyphh_server.db.signals import make_redis
 from tests.fakes import FakeGitHubApp, FakeStripe, fake_http
 
+# The suite tests the products as built, so their switch is on here, for every Settings a test makes and every worker
+# process it starts; wound down, the default (GLYPHH_PRODUCTS off), is tests/api/test_wound_down.py's.
+os.environ["GLYPHH_PRODUCTS"] = "on"
+
 # The suite's database is made by the superuser in GLYPHH_DATABASE_URL and owned by an ordinary role the server
 # connects as: a superuser bypasses row-level security, so only an ordinary role proves the tenant policies hold.
 ADMIN_URL: str = os.environ.get("GLYPHH_DATABASE_URL", "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh_test")

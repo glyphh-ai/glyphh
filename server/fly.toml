@@ -5,6 +5,9 @@
 # set as GLYPHH_LICENSE_KEY, its old name, is still read, but to rrotor that name is the customer's key string),
 # GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in providers, the Stripe prices and meter
 # (scripts/stripe-setup.py prints them) as they are added.
+# Glyphh's products were retired on 2026-11-18: GLYPHH_PRODUCTS is not set here, so this deploy is wound down
+# (docs/architecture.md, Wound down); `fly secrets set GLYPHH_PRODUCTS=on` brings them back. Wound down, the `ada`
+# and `adajobs` groups idle: scale them away (`fly scale count ada=0 adajobs=0`), they are the dedicated-CPU machines.
 app = "glyphh-ai-server"
 primary_region = "iad"
 

@@ -10,6 +10,7 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from glyphh_server.api.wound_down import staff_only
 from glyphh_server.config import Settings
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Forbidden, Unauthorized
@@ -65,7 +66,10 @@ async def authenticate(conn: AsyncConnection, creds: HTTPAuthorizationCredential
 
 
 async def principal(request: Request, conn: Conn, creds: Bearer) -> Principal:
-    return await authenticate(conn, creds, request.app.state.settings.mcp_resource)
+    settings: Settings = request.app.state.settings
+    who = await authenticate(conn, creds, settings.mcp_resource)
+    staff_only(settings, who.email)  # wound down, a token that is not staff's is no good any more
+    return who
 
 
 Caller = Annotated[Principal, Depends(principal)]

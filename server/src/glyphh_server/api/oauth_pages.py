@@ -14,6 +14,7 @@ from starlette.responses import RedirectResponse, Response
 from glyphh_server.api.auth import Conn
 from glyphh_server.api.browser_session import START_AGAIN, TTL, browser, callback_url, cfg, forget_browser
 from glyphh_server.api.pages import to_platform
+from glyphh_server.api.wound_down import staff_only
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
 from glyphh_server.ops.auth import signed
@@ -68,6 +69,7 @@ async def allow_page(request: Request, conn: Conn, chosen: Provider, state: dict
     and tied to this browser."""
     settings = cfg(request)
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, state["p"]))
+    staff_only(settings, profile.email)  # wound down: nobody else signs in, and nobody signs up
     user_id = await sign_in(conn, profile)
     consent = {"k": ALLOW, "q": state["q"], "u": str(user_id), "n": state["n"], "e": profile.email.lower()}
     return to_platform(settings, "/allow", consent=signed.sign(settings.secret_key, consent, TTL))
