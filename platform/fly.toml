@@ -1,9 +1,8 @@
 # The platform on Fly: the app glyphh-ai-app, at https://platform.glyphh.ai (the server's GLYPHH_PLATFORM_URL).
 # Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own:
 # PLATFORM_CLIENT_ID and PLATFORM_CLIENT_SECRET (its OAuth client at the server) and SESSION_SECRET.
-# It also answers https://demo.glyphh.ai (server/demo.ts), with DEMO_GLYPHH_API_KEY. The demo keeps its ledger and
-# limits in memory, so it assumes one machine (min_machines_running = 1). And https://games.glyphh.ai
-# (server/games.ts): plain pages, no secrets.
+# One host only since Glyphh's products were retired (2026-11-18): demo.glyphh.ai and games.glyphh.ai are no longer
+# served here (their certificates on this app, and the secrets DEMO_GLYPHH_API_KEY and DEMO_DAILY_CALLS, can go).
 app = "glyphh-ai-app"
 primary_region = "iad"
 

@@ -39,8 +39,9 @@ describe('Who sees the staff view', () => {
     staff();
     const { user, router } = renderApp('/admin');
     await user.click(await screen.findByRole('button', { name: 'Your org’s view' }));
-    // Home, which with Ada Cloud off is Runtimes.
-    await waitFor(() => expect(router.state.location.pathname).toBe('/runtimes'));
+    // Home, empty since the products were retired.
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
     expect(sessionStorage.getItem('glyphh.view')).toBe('org');
     await user.click(await screen.findByRole('link', { name: 'Staff view' }));
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();

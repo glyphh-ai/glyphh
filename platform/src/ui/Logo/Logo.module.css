@@ -1,7 +1,8 @@
+/* The file is 650 by 215. */
 .logo {
   display: block;
   flex: none;
-  height: calc(var(--logo-h, 40px) * var(--logo-scale, 1));
-  aspect-ratio: var(--logo-ratio, 3.21);
-  background: var(--logo) left center / contain no-repeat;
+  height: var(--logo-h, 38px);
+  aspect-ratio: 650 / 215;
+  background: url('/glyphh-logo-black.png') left center / contain no-repeat;
 }

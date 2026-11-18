@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderApp, stubLocation } from '@/test/render';
 import { http, HttpResponse, server, serverUrl, sessionHandler } from '@/test/server';
 import { forgetLogin, pendingLogin, rememberLogin } from './pendingLogin';
@@ -36,8 +36,8 @@ describe('Log in', () => {
     const location = stubLocation();
     server.use(sessionHandler(false));
     try {
-      renderApp('/keys');
-      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('/login?returnTo=%2Fkeys'));
+      renderApp('/admin/orgs');
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('/login?returnTo=%2Fadmin%2Forgs'));
     } finally {
       location.restore();
     }
@@ -233,81 +233,27 @@ describe('/allow, more', () => {
   });
 });
 
-describe('/device', () => {
-  it('shows the code to match and the providers', async () => {
-    renderApp('/device?code=ABCD-EFGH');
-    expect(await screen.findByLabelText('Code')).toHaveTextContent('ABCD-EFGH');
-    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', `${serverUrl}/auth/google/start?code=ABCD-EFGH`);
-    expect(screen.queryByRole('button', { name: 'Continue with single sign-on' })).not.toBeInTheDocument();
-  });
-
-  it('signs in by work email when single sign-on is offered', async () => {
-    const location = stubLocation();
-    server.use(http.get('*/auth/providers', () => HttpResponse.json({ providers: ['google'], sso: true })));
-    try {
-      const { user } = renderApp('/device?code=ABCD-EFGH');
-      await user.click(await screen.findByRole('button', { name: 'Continue with single sign-on' }));
-      const field = screen.getByLabelText('Work email');
-      expect(screen.getByRole('button', { name: 'Continue with single sign-on' })).toBeDisabled();
-      await user.type(field, ' Pat@Acme.com ');
-      await user.click(screen.getByRole('button', { name: 'Continue with single sign-on' }));
-      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith(`${serverUrl}/auth/sso/start?code=ABCD-EFGH&email=Pat%40Acme.com`));
-    } finally {
-      location.restore();
-    }
-  });
-
-  it('asks for the code when the link has none', async () => {
-    const { user } = renderApp('/device');
-    await user.type(await screen.findByLabelText('Code'), 'wxyz-1234');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByText('WXYZ-1234')).toBeInTheDocument();
-  });
-
-  it('asks to approve the install that showed the code', async () => {
-    server.use(consent({ kind: 'device', code: 'ABCD-EFGH', name: 'studio-mac', surface: 'Claude Code', email: 'chris@example.com' }));
-    renderApp('/device/approve?consent=c1');
-    expect(await screen.findByText('studio-mac (Claude Code)')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Approve' })).toHaveAttribute('href', `${serverUrl}/auth/approve?consent=c1&decision=approve`);
-    expect(screen.getByRole('link', { name: 'Deny' })).toHaveAttribute('href', `${serverUrl}/auth/approve?consent=c1&decision=deny`);
-  });
-
-  it('says how it ended', async () => {
-    renderApp('/device/done?result=approved');
-    expect(await screen.findByRole('heading', { name: 'Signed in' })).toBeInTheDocument();
-  });
-
-  it('says when it was denied', async () => {
-    renderApp('/device/done?result=denied');
-    expect(await screen.findByRole('heading', { name: 'Nothing was signed in' })).toBeInTheDocument();
-    expect(screen.getByText('You denied the sign-in. You can close this tab.')).toBeInTheDocument();
-  });
-
-  it('never sends a blank code on', async () => {
-    const { user, router } = renderApp('/device');
-    await user.type(await screen.findByLabelText('Code'), '   ');
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
-    fireEvent.submit(screen.getByLabelText('Code').closest('form')!);
-    expect(router.state.location.search).toBe('');
-    expect(screen.getByRole('heading', { name: 'Enter the code from Claude' })).toBeInTheDocument();
-  });
-
-  it('cannot approve without a consent', async () => {
-    renderApp('/device/approve');
-    expect(await screen.findByRole('heading', { name: 'This sign-in can’t continue' })).toBeInTheDocument();
-  });
-
-  it('cannot approve a consent for an app', async () => {
-    server.use(consent({ kind: 'oauth', client: 'Claude', returns_to: null, resource: 'x', email: 'chris@example.com' }));
-    renderApp('/device/approve?consent=c1');
-    expect(await screen.findByRole('heading', { name: 'This sign-in can’t continue' })).toBeInTheDocument();
-  });
-
-  it('shows the server’s words when the install’s consent has expired', async () => {
-    server.use(consent({ error: { code: 'E_INVALID', message: 'This code has expired. Start again in Claude.', trace_id: 't8' } }, 422));
-    renderApp('/device/approve?consent=c1');
-    expect(await screen.findByText('This code has expired. Start again in Claude.')).toBeInTheDocument();
-    expect(screen.getByText('Trace t8')).toBeInTheDocument();
+describe('what went with Glyphh’s products (2026-11-18)', () => {
+  it.each([
+    '/device?code=ABCD-EFGH',
+    '/device/approve?consent=c1',
+    '/device/done?result=approved',
+    '/github?installed=chris-t',
+    '/models',
+    '/runtimes',
+    '/licence',
+    '/apps',
+    '/templates',
+    '/keys',
+    '/usage',
+    '/settings/billing',
+    '/settings/plans',
+    '/settings/profile',
+    '/billing',
+    '/account',
+  ])('%s is no page any more', async (path) => {
+    renderApp(path);
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
   });
 });
 
@@ -316,17 +262,6 @@ describe('Server pages', () => {
     renderApp('/error?code=E_LIMIT&message=Your%20plan%20allows%201%20install.&trace=tr-77');
     expect(await screen.findByText('Your plan allows 1 install.')).toBeInTheDocument();
     expect(screen.getByText('tr-77')).toBeInTheDocument();
-  });
-
-  it('/github says where the app is installed', async () => {
-    renderApp('/github?installed=chris-t');
-    const card = await screen.findByRole('heading', { name: 'GitHub App installed' });
-    expect(within(card.parentElement!).getByText('chris-t')).toBeInTheDocument();
-  });
-
-  it('/github without a name says it is on the person’s account', async () => {
-    renderApp('/github');
-    expect(await screen.findByText('your account')).toBeInTheDocument();
   });
 
   it('/error without a message says something went wrong', async () => {

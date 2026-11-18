@@ -63,7 +63,7 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
   };
 
   app.get('/auth/session', (c) =>
-    c.json({ signedIn: readSession(c) !== null, serverUrl: config.serverUrl, adaUrl: config.adaUrl, clientName: config.clientName }),
+    c.json({ signedIn: readSession(c) !== null, serverUrl: config.serverUrl, clientName: config.clientName }),
   );
 
   app.get('/auth/providers', async () => {
@@ -147,7 +147,7 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
 
   /**
    * The answer passed back as the server gave it, keeping any cookie set on the way (a renewed session), and a 429's
-   * Retry-After (Ada's E_RATE), so the page knows when to ask again.
+   * Retry-After, so the page knows when to ask again.
    */
   const passBack = (c: Context, upstream: Response) => {
     const headers: Record<string, string> = { 'cache-control': 'no-store' };
@@ -158,23 +158,8 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
     return c.newResponse(upstream.status === 204 ? null : upstream.body, upstream.status as ContentfulStatusCode, headers);
   };
 
-  // An import's file, to Ada Cloud's upload link: the link is its own credential, so no token goes with it, and the
-  // file streams through rather than being held here. Signed-in pages of this site only.
-  app.put('/api/ada/v1/uploads/:link', async (c) => {
-    if (!sameOrigin(c)) return forbidden(c);
-    if (!readSession(c)) return noSession(c);
-    const headers: Record<string, string> = { accept: 'application/json' };
-    for (const name of ['content-type', 'content-length']) {
-      const value = c.req.header(name);
-      if (value) headers[name] = value;
-    }
-    const init = { method: 'PUT', headers, body: c.req.raw.body, duplex: 'half' } as RequestInit;
-    return passBack(c, await fetcher(`${config.adaUrl}/v1/uploads/${encodeURIComponent(c.req.param('link'))}`, init));
-  });
-
-  // The account API (/api/v1/* → {server}/v1/*) and Ada Cloud's (/api/ada/v1/* → {ada}/v1/*), with the session's token.
+  // The account API (/api/v1/* → {server}/v1/*), with the session's token.
   app.all('/api/v1/*', (c) => forward(c, config.serverUrl, /^\/api/));
-  app.all('/api/ada/v1/*', (c) => forward(c, config.adaUrl, /^\/api\/ada/));
 
   async function forward(c: Context, base: string, prefix: RegExp) {
     if (unsafeMethods.has(c.req.method) && !sameOrigin(c)) return forbidden(c);
