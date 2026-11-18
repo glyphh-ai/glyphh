@@ -11,8 +11,7 @@ import {
 } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { money } from '@/lib/format';
-import { dollarsToCents } from '@/pages/settings/tokens/AddFundsDialog';
+import { dollarsToCents, money } from '@/lib/format';
 import { Button, Card, Dialog, Select, TextField, useToast } from '@/ui';
 import styles from '../admin.module.css';
 

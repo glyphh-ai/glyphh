@@ -6,8 +6,6 @@ export type Session = {
   signedIn: boolean;
   /** The server's public address, for the sign-in links a browser follows there. */
   serverUrl: string;
-  /** Ada Cloud's address, which apps call with an API key. */
-  adaUrl?: string;
   /** The name the platform signs in under, so its own consent screens can be recognised. */
   clientName: string;
 };

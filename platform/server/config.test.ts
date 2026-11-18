@@ -12,15 +12,11 @@ describe('readConfig', () => {
   it('reads the settings, trimming trailing slashes', () => {
     const config = readConfig(env);
     expect(config.serverUrl).toBe('https://api.glyphh.ai');
-    expect(config.adaUrl).toBe('https://ada.glyphh.ai');
+    expect(config).not.toHaveProperty('adaUrl');
     expect(config.platformUrl).toBe('https://platform.glyphh.ai');
     expect(config.secureCookies).toBe(true);
     expect(config.clientName).toBe('Glyphh');
     expect(config.sessionKey).toHaveLength(32);
-  });
-
-  it('takes Ada Cloud’s address when one is set', () => {
-    expect(readConfig({ ...env, GLYPHH_ADA_URL: 'http://localhost:8080/ada/' }).adaUrl).toBe('http://localhost:8080/ada');
   });
 
   it('uses plain cookies on http, for local development', () => {

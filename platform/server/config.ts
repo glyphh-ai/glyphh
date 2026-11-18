@@ -1,8 +1,6 @@
 export type Config = {
   /** The Glyphh server: the API and the authorization server. */
   serverUrl: string;
-  /** Ada Cloud's API, a second host of the server (`GLYPHH_ADA_URL`, https://ada.glyphh.ai): called with the same sign-in. */
-  adaUrl: string;
   /** This app's own address; OAuth returns to {platformUrl}/auth/callback. */
   platformUrl: string;
   clientId: string;
@@ -29,7 +27,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const platformUrl = required(env, 'PLATFORM_URL').replace(/\/$/, '');
   return {
     serverUrl: required(env, 'GLYPHH_SERVER_URL').replace(/\/$/, ''),
-    adaUrl: (env.GLYPHH_ADA_URL?.trim() || 'https://ada.glyphh.ai').replace(/\/$/, ''),
     platformUrl,
     clientId: required(env, 'PLATFORM_CLIENT_ID'),
     clientSecret: required(env, 'PLATFORM_CLIENT_SECRET'),

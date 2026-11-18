@@ -2,14 +2,12 @@ import { screen, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
 
 describe('the account menu', () => {
-  it('shows the person, and goes to their account and billing', async () => {
-    const { user, router } = renderApp('/');
+  it('shows the person, the theme and log out, and nothing of the retired products', async () => {
+    const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
     const menu = screen.getByRole('menu', { name: 'Account' });
     expect(within(menu).getByText('chris@example.com')).toBeInTheDocument();
-    await user.click(within(menu).getByRole('menuitem', { name: 'Billing' }));
-    expect(router.state.location.pathname).toBe('/settings/billing');
-    expect(screen.queryByRole('menu', { name: 'Account' })).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Theme', 'Log out']);
   });
 
   it('switches theme, keeps it in this browser, and ticks the current one', async () => {
@@ -43,9 +41,9 @@ describe('the account menu', () => {
   it('moves between items with the arrows, and closes on Escape', async () => {
     const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
-    expect(screen.getByRole('menuitem', { name: 'Account' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Theme' })).toHaveFocus();
     await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('menuitem', { name: 'Billing' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Log out' })).toHaveFocus();
     await user.keyboard('{ArrowUp}{ArrowUp}');
     expect(screen.getByRole('menuitem', { name: 'Log out' })).toHaveFocus();
     await user.keyboard('{Escape}');
@@ -61,20 +59,6 @@ describe('the account menu', () => {
     expect(form.method).toBe('post');
     expect(form.getAttribute('action')).toBe('/auth/logout');
     submit.mockRestore();
-  });
-
-  it('opens settings', async () => {
-    const { user, router } = renderApp('/');
-    await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Settings' }));
-    expect(router.state.location.pathname).toBe('/settings/general');
-  });
-
-  it('goes to the person’s account', async () => {
-    const { user, router } = renderApp('/');
-    await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Account' }));
-    expect(router.state.location.pathname).toBe('/settings/profile');
   });
 
   it('closes on a click outside it, not inside, and on its button pressed again', async () => {
