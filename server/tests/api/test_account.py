@@ -1,102 +1,96 @@
-"""The signed-in person: who they are, their installs, signing out, and tokens that no longer work."""
+"""The signed-in person: who they are, and tokens that do not work (or no longer do)."""
 
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import Install, Token
-from tests.db.helpers import another_install, person
+from glyphh_server.api.gone import RETIRED
+from glyphh_server.models import ConnectorGrant, ConnectorToken, Org
+from glyphh_server.ops.auth.signin import ProviderProfile, sign_in
+from glyphh_server.ops.connector import grants, tokens
+from tests.api.browser import Staff
+from tests.db.helpers import member, person
 
 
-async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine, "Team")
-    me = (await client.get("/v1/me", headers=ada.headers)).json()
-    assert (me["email"], me["name"], me["role"], me["providers"]) == (ada.email, "Ada Lovelace", "admin", [])
-    assert me["org"] == {
-        "id": str(ada.org_id),
-        "name": "Ada Lovelace's org",
-        "billing_status": "none",
-        "renews_at": None,
-        "plan_until": None,
-    }
-    assert me["plan"] == {
-        "name": "Team",
-        "version": 1,
-        "price_cents": 29_900,
-        "interval": "month",
-        "self_serve": True,
-        "limits": {"machines": 10, "precedents": 500_000},
-        "features": {"sync": True, "ha": False, "offline": False, "sso": False},
-        "built": {"sync": False, "ha": False, "offline": True, "sso": True},
-        "cloud": None,  # Ada Cloud is off
-        "llm_tokens": 100_000_000,
-    }
-    assert me["precedents"] == {"used": 0, "limit": 500_000} and "hosting" not in me
-    assert me["ada_cloud"] is False and me["cloud"] is None  # off by default: the platform shows today's pages
-    assert me["llm"] is False  # hosted models off by default too
-
-
-async def test_a_person_renames_themselves(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine)
-    res = await client.patch("/v1/me", json={"name": "  Countess  "}, headers=ada.headers)
-    assert res.json()["name"] == "Countess" and res.json()["ada_cloud"] is False
-    assert (await client.patch("/v1/me", json={"name": ""}, headers=ada.headers)).status_code == 422
-
-
-async def test_installs_are_listed_and_one_revoked_signs_that_machine_out(
-    client: httpx.AsyncClient, engine: AsyncEngine
-) -> None:
-    ada = await person(engine, "Pro")
-    other_id, other = await another_install(engine, ada.user_id)
-    listed = (await client.get("/v1/installs", headers=ada.headers)).json()
-    assert [(i["name"], i["surface"], i["current"]) for i in listed] == [
-        ("Mac", "desktop", True),
-        ("Linux box", "desktop", False),
-    ]
-    assert listed[0]["last_seen_at"] is not None and listed[1]["last_seen_at"] is None
-    assert len(listed[0]["machine_id"]) == 32 and listed[0]["machine_id"] != listed[1]["machine_id"]
-    assert (await client.delete(f"/v1/installs/{other_id}", headers=ada.headers)).status_code == 204
-    assert (await client.get("/v1/me", headers=other)).status_code == 401
-    again = await client.delete(f"/v1/installs/{other_id}", headers=ada.headers)
-    assert again.status_code == 404 and again.json()["error"]["code"] == "E_NOT_FOUND"
-    assert [i["name"] for i in (await client.get("/v1/installs", headers=ada.headers)).json()] == ["Mac"]
-
-
-async def test_someone_elses_install_cannot_be_revoked(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada, bob = await person(engine), await person(engine)
-    assert (await client.delete(f"/v1/installs/{bob.install_id}", headers=ada.headers)).status_code == 404
-    assert (await client.get("/v1/me", headers=bob.headers)).status_code == 200
-
-
-async def test_signing_out_revokes_this_install_and_its_tokens(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine)
-    assert (await client.post("/v1/sign-out", headers=ada.headers)).status_code == 204
-    res = await client.get("/v1/me", headers=ada.headers)
-    assert res.status_code == 401 and res.json()["error"]["code"] == "E_UNAUTHORIZED"
-    async with engine.connect() as conn:
-        revoked = select(Token.revoked_at, Install.revoked_at).join(Install).where(Install.id == ada.install_id)
-        assert all((await conn.execute(revoked)).one())
-
-
-async def test_a_missing_wrong_or_expired_token_is_one_answer(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    ada = await person(engine)
+async def test_me_has_the_person_their_providers_org_and_role(staff: Staff, engine: AsyncEngine) -> None:
+    ada = staff.who
     async with engine.begin() as conn:
-        await conn.execute(
-            update(Token).where(Token.install_id == ada.install_id).values(expires_at=datetime.now(UTC) - timedelta(1))
-        )
-    for headers in ({}, {"authorization": "Basic x"}, {"authorization": "Bearer nope"}, ada.headers):
-        res = await client.get("/v1/me", headers=headers)
-        assert res.status_code == 401 and res.json()["error"]["code"] == "E_UNAUTHORIZED", headers
+        for provider in ("google", "github"):
+            profile = {"provider": provider, "subject": f"{provider}-{ada.email}", "email": ada.email}
+            assert await sign_in(conn, ProviderProfile(**profile, email_verified=True)) == ada.user_id
+    res = await staff.http.get("/v1/me", headers=ada.headers)
+    assert res.status_code == 200, res.text
+    assert res.json() == {
+        "id": str(ada.user_id),
+        "email": ada.email,
+        "name": "Ada Lovelace",
+        "role": "admin",
+        "providers": ["github", "google"],
+        "org": {
+            "id": str(ada.org_id),
+            "name": "Ada Lovelace's org",
+            "billing_status": "none",
+            "renews_at": None,
+            "plan_until": None,
+        },
+        "staff": True,
+    }
 
 
-async def test_an_install_is_marked_seen_at_most_once_a_minute(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
+async def test_a_token_that_is_not_staffs_is_no_good_any_more(
+    client: httpx.AsyncClient, staff: Staff, engine: AsyncEngine
+) -> None:
     ada = await person(engine)
-    seen = select(Install.last_seen_at).where(Install.id == ada.install_id)
-    await client.get("/v1/me", headers=ada.headers)
+    grace = await member(engine, staff.who.org_id)  # in staff's org, but not staff
+    for http, who in ((client, ada), (staff.http, ada), (staff.http, grace), (client, staff.who)):
+        res = await http.get("/v1/me", headers=who.headers)
+        assert res.status_code == 410, res.text
+        assert res.json() == {
+            "error": {"code": "E_WOUND_DOWN", "message": RETIRED, "trace_id": res.headers["x-request-id"]}
+        }
+
+
+async def test_a_missing_wrong_or_expired_token_is_one_answer(staff: Staff, engine: AsyncEngine) -> None:
+    ada = staff.who
+    assert (await staff.http.get("/v1/me", headers=ada.headers)).status_code == 200
+    async with engine.begin() as conn:
+        mine = ConnectorToken.grant_id == ada.grant_id
+        await conn.execute(update(ConnectorToken).where(mine).values(expires_at=datetime.now(UTC) - timedelta(1)))
+    for headers in ({}, {"authorization": "Basic x"}, {"authorization": "Bearer nope"}, ada.headers):
+        res = await staff.http.get("/v1/me", headers=headers)
+        assert res.status_code == 401 and res.json()["error"]["code"] == "E_UNAUTHORIZED", headers
+        assert res.json()["error"]["message"] == "Sign in to Glyphh again: this token is not valid."
+
+
+async def test_a_refresh_token_or_one_whose_grant_ended_opens_nothing(staff: Staff, engine: AsyncEngine) -> None:
+    ada = staff.who
+    async with engine.begin() as conn:
+        fresh = await tokens.issue(conn, ada.grant_id, "account")
+    refresh = await staff.http.get("/v1/me", headers={"authorization": f"Bearer {fresh.refresh_token}"})
+    assert refresh.status_code == 401
+    async with engine.begin() as conn:
+        await grants.end(conn, ada.grant_id)
+    assert (await staff.http.get("/v1/me", headers=ada.headers)).status_code == 401
+
+
+async def test_a_suspended_orgs_people_are_refused(staff: Staff, engine: AsyncEngine) -> None:
+    async with engine.begin() as conn:
+        await conn.execute(update(Org).where(Org.id == staff.who.org_id).values(suspended_at=func.now()))
+    res = await staff.http.get("/v1/me", headers=staff.who.headers)
+    assert res.status_code == 403
+    err = res.json()["error"]
+    assert (err["code"], err["reason"]) == ("E_FORBIDDEN", "suspended") and "support@glyphh.ai" in err["message"]
+
+
+async def test_a_grant_is_marked_used_at_most_once_a_minute(staff: Staff, engine: AsyncEngine) -> None:
+    seen = select(ConnectorGrant.last_used_at).where(ConnectorGrant.id == staff.who.grant_id)
+    async with engine.connect() as conn:
+        assert (await conn.execute(seen)).scalar_one() is None
+    await staff.http.get("/v1/me", headers=staff.who.headers)
     async with engine.connect() as conn:
         first = (await conn.execute(seen)).scalar_one()
-    await client.get("/v1/me", headers=ada.headers)
+    await staff.http.get("/v1/me", headers=staff.who.headers)
     async with engine.connect() as conn:
-        assert (await conn.execute(seen)).scalar_one() == first
+        assert first is not None and (await conn.execute(seen)).scalar_one() == first

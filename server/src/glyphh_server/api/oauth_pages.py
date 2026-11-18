@@ -1,8 +1,8 @@
-"""The connector's authorization, for a browser. Nothing is rendered: a good request sends the browser to the
-platform's `/authorize` page (sign in with a provider, through the same provider steps as the device sign-in, tied
-to the browser by the same cookie), and the provider's callback sends it to the platform's `/allow` page, which reads
-`GET /auth/consent` and answers with `GET /auth/oauth/allow`. Allow or Deny goes back to the client's redirect URI
-with the state and the issuer (RFC 9207)."""
+"""The platform's sign-in, for a browser. Nothing is rendered: a good authorization request sends the browser to the
+platform's `/authorize` page (sign in with a provider, api/signin_pages.py, tied to the browser by a cookie), and the
+provider's callback sends it to the platform's `/allow` page, which reads `GET /auth/consent` and answers with
+`GET /auth/oauth/allow`. Allow or Deny goes back to the client's redirect URI with the state and the issuer
+(RFC 9207)."""
 
 import uuid
 from typing import Any
@@ -13,8 +13,8 @@ from starlette.responses import RedirectResponse, Response
 
 from glyphh_server.api.auth import Conn
 from glyphh_server.api.browser_session import START_AGAIN, TTL, browser, callback_url, cfg, forget_browser
+from glyphh_server.api.gone import staff_only
 from glyphh_server.api.pages import to_platform
-from glyphh_server.api.wound_down import staff_only
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
 from glyphh_server.ops.auth import signed
@@ -37,7 +37,7 @@ def back_to(uri: str, settings: Settings, **params: str | None) -> RedirectRespo
     return RedirectResponse(urlunsplit(parts._replace(query=query)), status_code=302)
 
 
-@router.get("/oauth/authorize", operation_id="oauthAuthorize", tags=["connector"], response_class=RedirectResponse)
+@router.get("/oauth/authorize", operation_id="oauthAuthorize", tags=["sign-in"], response_class=RedirectResponse)
 async def authorize_page(request: Request, conn: Conn) -> Response:
     """The authorization request (OAuth 2.1, PKCE S256). An unknown client or redirect URI is E_INVALID here, never
     a redirect; any other refusal goes back to the client; a good request goes on to the platform's `/authorize`
@@ -69,7 +69,7 @@ async def allow_page(request: Request, conn: Conn, chosen: Provider, state: dict
     and tied to this browser."""
     settings = cfg(request)
     profile = await chosen.profile(request.app.state.http, settings, code, callback_url(settings, state["p"]))
-    staff_only(settings, profile.email)  # wound down: nobody else signs in, and nobody signs up
+    staff_only(settings, profile.email)  # nobody else signs in, and nobody signs up
     user_id = await sign_in(conn, profile)
     consent = {"k": ALLOW, "q": state["q"], "u": str(user_id), "n": state["n"], "e": profile.email.lower()}
     return to_platform(settings, "/allow", consent=signed.sign(settings.secret_key, consent, TTL))

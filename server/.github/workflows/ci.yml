@@ -19,20 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - &kernel
-        # Ada Cloud's kernel is the private ada-private repo, read with its read-only deploy key (the ADA_DEPLOY_KEY
-        # secret): by uv here, and by the Docker builds as the build secret ada_deploy_key. The key is written inside
-        # the checkout (compose's builder reads files there only), in .secrets/, which Docker and git both ignore.
-        name: The kernel's deploy key
-        env:
-          ADA_DEPLOY_KEY: ${{ secrets.ADA_DEPLOY_KEY }}
-        run: |
-          mkdir -p .secrets
-          printf '%s\n' "$ADA_DEPLOY_KEY" > .secrets/ada_deploy_key
-          chmod 600 .secrets/ada_deploy_key
-          git config --global url."ssh://git@github.com/glyphh-ai/ada-private".insteadOf "https://github.com/glyphh-ai/ada-private"
-          echo "GIT_SSH_COMMAND=ssh -i $PWD/.secrets/ada_deploy_key -o StrictHostKeyChecking=accept-new" >> "$GITHUB_ENV"
-          echo "ADA_DEPLOY_KEY_FILE=$PWD/.secrets/ada_deploy_key" >> "$GITHUB_ENV"
       - run: uv sync --frozen
       - run: uv run ruff check . && uv run ruff format --check .
       - run: docker compose --profile test run --rm --build test
@@ -43,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - *kernel
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -55,7 +40,6 @@ jobs:
           target: runtime
           push: true
           build-args: GLYPHH_VERSION=${{ github.sha }}
-          secret-files: ada_deploy_key=${{ env.ADA_DEPLOY_KEY_FILE }}
           tags: |
             ghcr.io/glyphh-ai/server:${{ github.sha }}
             ghcr.io/glyphh-ai/server:main
@@ -75,10 +59,7 @@ jobs:
       - name: Deploy to glyphh-ai-server
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          ADA_DEPLOY_KEY: ${{ secrets.ADA_DEPLOY_KEY }}
-        run: >-
-          flyctl deploy --remote-only --build-arg GLYPHH_VERSION=${{ github.sha }}
-          --build-secret "ada_deploy_key=$ADA_DEPLOY_KEY" --wait-timeout 300
+        run: flyctl deploy --remote-only --build-arg GLYPHH_VERSION=${{ github.sha }} --wait-timeout 300
       - name: The server answers, at this commit
         run: |
           curl -sf https://api.glyphh.ai/v1/health | tee health.json

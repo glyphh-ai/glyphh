@@ -17,20 +17,18 @@ Days = Annotated[int, Query(ge=1, le=366, description="How many days back, today
 
 @router.get("/dashboard", operation_id="adminDashboard")
 async def get_dashboard(staff: Staff, days: Days = 30) -> Dashboard:
-    """Totals and each day's sign-ups, active orgs, Ada reads, models made and paid conversions; revenue and the
-    plan mix from the database (never Stripe)."""
-    return await dashboard(staff.conn, staff.request.app.state.redis, days)
+    """Totals and each day's sign-ups and paid conversions; revenue and the plan mix from the database (never
+    Stripe)."""
+    return await dashboard(staff.conn, days)
 
 
 @router.get("/infra", operation_id="adminInfra")
 async def get_infra(staff: Staff) -> Infra:
-    """Queues and workers, latency, requests and errors by route, jobs, Postgres, Redis, the tick, and the alerts."""
-    state = staff.request.app.state
-    return await health.health(staff.conn, state.redis, state.settings.ada_cloud)
+    """Latency, requests and errors by route, Postgres, Redis, the tick, and the alerts."""
+    return await health.health(staff.conn, staff.request.app.state.redis)
 
 
 @router.get("/alerts", operation_id="adminAlerts")
 async def get_alerts(staff: Staff) -> list[Alert]:
     """What needs a person now: the thresholds against the server's own measures and its open errors."""
-    state = staff.request.app.state
-    return await health.current_alerts(staff.conn, state.redis, state.settings.ada_cloud)
+    return await health.current_alerts(staff.conn, staff.request.app.state.redis)

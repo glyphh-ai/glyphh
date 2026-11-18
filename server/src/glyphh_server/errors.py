@@ -41,71 +41,16 @@ class Conflict(GlyphhError):
     status = 409
 
 
-class TooLarge(GlyphhError):
-    code = "E_TOO_LARGE"
-    status = 413
-
-
-class UnsupportedMedia(GlyphhError):
-    code = "E_UNSUPPORTED_MEDIA"
-    status = 415
-
-
-class LimitReached(GlyphhError):
-    """A plan's limit is reached (Ada Cloud's precedents or reads). The detail names the limit, what is used and the
-    most allowed."""
-
-    code = "E_LIMIT"
-    status = 403
-
-
-class NoBalance(GlyphhError):
-    """A Glyphh-hosted model's request past the plan's monthly tokens with no overage balance left
-    (docs/specs/tokens.md): the detail says what is used, the most, the balance and where to add funds."""
-
-    code = "E_BALANCE"
-    status = 402
-
-
-class NotInPlan(GlyphhError):
-    """The org's plan has no such feature (the detail's `reason` names it): Enterprise does."""
-
-    code = "E_NOT_IN_PLAN"
-    status = 403
-
-
 class Unavailable(GlyphhError):
     code = "E_UNAVAILABLE"
     status = 503
 
 
 class WoundDown(GlyphhError):
-    """Glyphh's products are retired (GLYPHH_PRODUCTS off, api/wound_down.py): gone, and not coming back by retrying."""
+    """Glyphh's products are retired (2026-11-18, api/gone.py): gone, and not coming back by retrying."""
 
     code = "E_WOUND_DOWN"
     status = 410
-
-
-class DeviceFlowError(GlyphhError):
-    """A device-token poll's answer before there is a token (RFC 8628, section 3.5): its code is the RFC's own."""
-
-    status = 400
-
-
-class AuthorizationPending(DeviceFlowError):
-    code = "authorization_pending"
-
-
-class SlowDown(DeviceFlowError):
-    code = "slow_down"
-
-
-class ExpiredToken(DeviceFlowError):
-    code = "expired_token"
-
-
-class AccessDenied(DeviceFlowError):
-    code = "access_denied"
 
 
 INTERNAL_MESSAGE: str = "Something went wrong on our side. Quote the trace id to support."

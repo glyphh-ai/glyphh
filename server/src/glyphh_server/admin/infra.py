@@ -1,38 +1,19 @@
-"""What the server can measure of itself, for staff: Ada's queues (each stream's length, what its group has taken and
-not answered, what it has not taken yet) and its workers (one that said so within ALIVE_MS is alive: each worker
-process says so for each stream it reads every ten seconds, busy or not, glyphh_ada.loop.Alive; Redis's own consumer
-list is shown too, but Upstash, production's Redis, answers it empty), the minute tick's last beat, Postgres's size
-and connections (its own statistics) and Redis's memory."""
+"""What the server can measure of itself, for staff: the minute tick's last beat, Postgres's size and connections
+(its own statistics) and Redis's memory."""
 
 import time
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
-from redis.exceptions import ResponseError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_ada.protocol import GROUP, STREAMS, alive_key
 from glyphh_server.obs import tick
 
-ALIVE_MS: int = 30_000
-SCAN_COUNT: int = 1000  # keys a SCAN step looks at: the metrics keep some 30,000 keys
 SIZES: str = """
     SELECT c.relname, pg_total_relation_size(c.oid) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') ORDER BY 2 DESC, 1 LIMIT 10"""
-ADA_BYTES: str = """
-    SELECT coalesce(sum(pg_total_relation_size(c.oid)), 0) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname ~ '^ada_[0-9a-f]{32}$' AND c.relkind = 'r'"""
-
-
-class Queue(BaseModel):
-    stream: str
-    length: int
-    pending: int = Field(description="Taken by a worker, not answered yet")
-    lag: int = Field(description="Not taken by any worker yet")
-    consumers: int = Field(description="The group's consumers as Redis lists them (XINFO CONSUMERS; Upstash: none)")
-    alive: int = Field(description="Worker processes reading this stream that said so within the last 30 seconds")
 
 
 class Table(BaseModel):
@@ -42,10 +23,10 @@ class Table(BaseModel):
 
 class Database(BaseModel):
     size_bytes: int
-    ada_bytes: int = Field(description="Every org's Ada schema together")
     connections: dict[str, int] = Field(description="This database's connections by state")
     max_connections: int
     tables: list[Table]
+    ada_bytes: int = Field(0, description="Retired with the products: always 0")
 
 
 class RedisMemory(BaseModel):
@@ -60,41 +41,6 @@ class Tick(BaseModel):
     age_seconds: float | None
 
 
-async def alive(redis: Redis, stream: str, now: float | None = None) -> int:
-    """The worker processes that said, within ALIVE_MS, they read this stream (glyphh_ada.loop.Alive)."""
-    since = (time.time() if now is None else now) - ALIVE_MS / 1000
-    return int(await redis.zcount(alive_key(stream), since, "+inf"))
-
-
-async def queue(redis: Redis, name: str, stream: str) -> Queue:
-    workers = await alive(redis, stream)
-    try:
-        groups = [g for g in await redis.xinfo_groups(stream) if g["name"] == GROUP]
-        consumers = await redis.xinfo_consumers(stream, GROUP) if groups else []
-        length = await redis.xlen(stream)
-    except ResponseError:  # no stream yet: no worker has started
-        return Queue(stream=name, length=0, pending=0, lag=0, consumers=0, alive=workers)
-    group = groups[0] if groups else {}
-    return Queue(
-        stream=name,
-        length=length,
-        pending=int(group.get("pending") or 0),
-        lag=int(group.get("lag") or 0),
-        consumers=len(consumers),
-        alive=workers,
-    )
-
-
-async def queues(redis: Redis) -> list[Queue]:
-    """The two front doors (sync, jobs), always; and each kernel's own stream once one exists (`sync:3.13.0`)."""
-    found = [await queue(redis, name, stream) for name, stream in STREAMS.items()]
-    for name, stream in STREAMS.items():
-        found_streams = redis.scan_iter(match=f"{stream}:*", _type="stream", count=SCAN_COUNT)
-        kernels = sorted([s async for s in found_streams])
-        found += [await queue(redis, f"{name}{s.removeprefix(stream)}", s) for s in kernels]
-    return found
-
-
 async def database(conn: AsyncConnection) -> Database:
     one = lambda sql: conn.execute(text(sql))  # noqa: E731
     size = (await one("SELECT pg_database_size(current_database())")).scalar_one()
@@ -103,7 +49,6 @@ async def database(conn: AsyncConnection) -> Database:
     )
     return Database(
         size_bytes=size,
-        ada_bytes=(await one(ADA_BYTES)).scalar_one(),
         connections={s: int(n) for s, n in states},
         max_connections=int((await one("SELECT current_setting('max_connections')")).scalar_one()),
         tables=[Table(name=n, bytes=b) for n, b in await one(SIZES)],

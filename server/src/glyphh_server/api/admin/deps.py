@@ -57,7 +57,7 @@ def _what(request: Request) -> tuple[str, uuid.UUID | None, dict[str, Any]]:
 
 async def staff(request: Request, conn: Conn, creds: Bearer) -> AsyncIterator[StaffCall]:
     settings = request.app.state.settings
-    who = await authenticate(conn, creds, settings.mcp_resource)
+    who = await authenticate(conn, creds, settings.token_resource)
     if not (is_staff(settings, who) and via_platform(settings, who)):
         log.warning("staff view refused", extra=fields(user=str(who.user_id), path=request.url.path))
         raise Forbidden(NOT_STAFF, reason="not_staff")

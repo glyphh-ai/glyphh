@@ -1,9 +1,12 @@
 """Create the schema, migrate it and seed it: run before the server starts, safe to run every time. schema.sql is the
 schema's latest shape, run as it is; db/migrations/NNNN_name.sql bring a database that has data forward to it, each
 once, in order, recorded in schema_migrations. A database with no tables yet is made from schema.sql, every migration
-recorded without running; one with tables but no record has production's shape when it began keeping its data
-(tests/db/baseline.sql), so every migration runs on it. The seeds follow, since they read the Stripe prices from the
-environment."""
+recorded without running.
+
+Migrations 0001 to 0014 were the retired products' (2026-11-18) and are gone with them: production had run all of
+them, and schema.sql holds what they made of the tables that are kept. So there is no migration today (the folder
+is made by the first), and the next one is 0015. Nothing here ever drops a table: a database that still has the
+products' tables keeps them until `python -m glyphh_server.winddown drop` is run by hand."""
 
 import asyncio
 import logging
@@ -16,14 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from glyphh_server.config import Settings, get_settings
 from glyphh_server.db.drift import refuse_drift
 from glyphh_server.db.engine import make_engine
-from glyphh_server.db.seed import seed_mods, seed_plans
+from glyphh_server.db.seed import seed_plans
 from glyphh_server.db.seed_clients import seed_platform_client
-from glyphh_server.ops.templates.library import seed_templates
 
 log = logging.getLogger("glyphh.schema")
 
 SCHEMA: Path = Path(__file__).with_name("schema.sql")
 MIGRATIONS: Path = Path(__file__).with_name("migrations")
+FOLDED: int = 14  # the last of the migrations folded into schema.sql: the first one here is the next number
 _LOCK: int = 0x67_6C_79_70  # one schema run at a time across processes booting together
 _NAME = re.compile(r"(\d{4})_[a-z0-9_]+\.sql")
 
@@ -47,16 +50,16 @@ async def run_sql(conn: AsyncConnection, sql: str) -> None:
 
 
 def migrations(folder: Path) -> list[tuple[int, Path]]:
-    """The migrations in order, numbered from 0001 with no gap or repeat; anything else stops the start."""
+    """The migrations in order, numbered on from FOLDED with no gap or repeat; anything else stops the start."""
     found = []
     for path in sorted(folder.glob("*.sql")):
         match = _NAME.fullmatch(path.name)
         if not match:
             raise RuntimeError(f"A migration is named NNNN_name.sql, in lower case: {path.name}")
         found.append((int(match[1]), path))
-    if [n for n, _ in found] != list(range(1, len(found) + 1)):
+    if [n for n, _ in found] != list(range(FOLDED + 1, FOLDED + 1 + len(found))):
         names = [p.name for _, p in found]
-        raise RuntimeError(f"Migrations are numbered 0001, 0002, ... with no gap or repeat: {names}")
+        raise RuntimeError(f"Migrations are numbered {FOLDED + 1:04d}, {FOLDED + 2:04d}, ... with no gap: {names}")
     return found
 
 
@@ -90,10 +93,8 @@ async def apply_schema(engine: AsyncEngine, settings: Settings) -> None:
         await conn.execute(text("SELECT pg_advisory_xact_lock(:lock)"), {"lock": _LOCK})
         await migrate(conn)
         await conn.run_sync(refuse_drift)
-        await seed_mods(conn)
-        await seed_plans(conn, settings)
+        await seed_plans(conn)
         await seed_platform_client(conn, settings)
-        await seed_templates(conn)
 
 
 async def main() -> None:

@@ -6,18 +6,16 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.errors import Invalid
-from glyphh_server.models import Rrotor
 from glyphh_server.ops.connector import clients
 from glyphh_server.ops.connector.errors import AuthorizeRefused
 
 SCOPE: str = "account"
 PKCE: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._~-]{43,128}$")
-NOT_OURS: str = "Glyphh issues tokens for its own connector and for a self-hosted runtime that is registered."
+NOT_OURS: str = "Glyphh issues tokens for its own server only."
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,35 +39,15 @@ def canonical(uri: str) -> str:
     return f"{parts.scheme.lower()}://{parts.netloc.lower()}{path}" + (f"?{parts.query}" if parts.query else "")
 
 
-def runtime_host(asked: str) -> str | None:
-    """The host of an address asked for as a runtime: `https://<host>`, with or without `/mcp`, and nothing else."""
-    parts = urlsplit(asked.strip())
-    if parts.scheme.lower() != "https" or parts.path.rstrip("/") not in ("", "/mcp") or parts.query or parts.fragment:
-        return None
-    return parts.netloc.lower() or None
+def ours(settings: Settings, asked: str) -> bool:
+    """Whether a resource asked for is the server, named as itself or by its tokens' resource."""
+    return canonical(asked) in (canonical(settings.token_resource), canonical(settings.base_url))
 
 
-async def runtime_resource(conn: AsyncConnection, asked: str) -> str | None:
-    """A registered self-hosted runtime's address as a resource: the token is bound to its `/mcp`. Looked up before
-    anyone is known, so across every org."""
-    host = runtime_host(asked)
-    if host is None:
-        return None
-    address = f"https://{host}"
-    registered = select(Rrotor.id).where(Rrotor.mode == "self", Rrotor.public_url == address).limit(1)
-    if (await conn.execute(registered)).first() is None:
-        return None
-    return f"{address}/mcp"
-
-
-async def resource_for(conn: AsyncConnection, settings: Settings, asked: str | None) -> str:
-    """The resource a token will be bound to: the connector, named as itself or as the server, or a runtime's
-    address."""
-    if asked is None or canonical(asked) in (canonical(settings.mcp_resource), canonical(settings.base_url)):
-        return settings.mcp_resource
-    runtime = await runtime_resource(conn, asked)
-    if runtime is not None:
-        return runtime
+def resource_for(settings: Settings, asked: str | None) -> str:
+    """The resource a token will be bound to: the server's one (config.py, token_resource)."""
+    if asked is None or ours(settings, asked):
+        return settings.token_resource
     raise AuthorizeRefused("invalid_target", NOT_OURS)
 
 
@@ -110,5 +88,5 @@ async def check(conn: AsyncConnection, settings: Settings, q: dict[str, str]) ->
         state=q["state"],
         challenge=q["code_challenge"],
         scope=scope_for(q.get("scope")),
-        resource=await resource_for(conn, settings, q.get("resource")),
+        resource=resource_for(settings, q.get("resource")),
     )

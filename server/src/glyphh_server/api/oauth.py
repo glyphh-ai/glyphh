@@ -1,10 +1,9 @@
-"""The connector's authorization server endpoints a model calls: registering a client (RFC 7591), the token
-endpoint (authorization code with PKCE, refresh with rotation) and revocation (RFC 7009). Their refusals are OAuth's
-own shape, answered (not raised) so what a refusal revokes is kept."""
+"""The authorization server's endpoints the platform's own server calls: the token endpoint (authorization code with
+PKCE, refresh with rotation) and revocation (RFC 7009). Their refusals are OAuth's own shape, answered (not raised)
+so what a refusal revokes is kept. Only the platform's client is issued tokens (api/gone.py)."""
 
 import base64
 import binascii
-from typing import Any
 from urllib.parse import unquote
 
 from fastapi import APIRouter, Request
@@ -12,11 +11,11 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
 from glyphh_server.api.auth import Conn
-from glyphh_server.api.wound_down import platform_only
+from glyphh_server.api.gone import platform_only
 from glyphh_server.ops.connector import clients, exchange, tokens
 from glyphh_server.ops.connector.errors import OAuthError, invalid_client
 
-router = APIRouter(prefix="/oauth", tags=["connector"])
+router = APIRouter(prefix="/oauth", tags=["sign-in"])
 
 NO_STORE: dict[str, str] = {"cache-control": "no-store", "pragma": "no-cache"}
 
@@ -48,20 +47,6 @@ def credentials(request: Request, form: dict[str, str]) -> tuple[str | None, str
     return unquote(client_id), unquote(secret)
 
 
-@router.post("/register", operation_id="registerOAuthClient", status_code=201, response_model=None)
-async def register(request: Request, conn: Conn) -> Response:
-    """Register an MCP client: its redirect URIs (https, or http on localhost), name and how it authenticates."""
-    try:
-        body: Any = await request.json()
-    except ValueError:
-        return refusal(OAuthError("invalid_client_metadata", "The body must be JSON client metadata."))
-    try:
-        made = await clients.register(conn, body)
-    except OAuthError as err:
-        return refusal(err)
-    return JSONResponse(made.model_dump(exclude_none=True), 201, headers=NO_STORE)
-
-
 @router.post("/token", operation_id="oauthToken", response_model=None)
 async def token(request: Request, conn: Conn) -> Response:
     """Exchange an authorization code (with its PKCE verifier) or a refresh token for an access token (1 hour) and a
@@ -69,7 +54,7 @@ async def token(request: Request, conn: Conn) -> Response:
     form = await read_form(request)
     try:
         client = await clients.authenticate(conn, *credentials(request, form))
-        platform_only(request.app.state.settings, client.id)  # wound down: a connector's client gets 410
+        platform_only(request.app.state.settings, client.id)  # any other client left in the database gets 410
         answer = await exchange.exchange(conn, request.app.state.settings, client, form)
     except OAuthError as err:
         return refusal(err, is_basic(request))
