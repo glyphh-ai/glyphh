@@ -19,7 +19,11 @@ INSTRUCTIONS: str = (
 RROTOR_INSTRUCTIONS: str = (
     " Your self-hosted runtimes, their keys and offline licences. Your org's apps, what Claude made and published to "
     "its rrotors (apps, shown as cards with Open; a reviewer approves, rejects or retires one: app_approve, "
-    "app_reject, app_retire)."
+    "app_reject, app_retire). A rrotor is its own connector, at the mcp_url self_runtimes gives for it: its "
+    "programs, CLIs, pipelines, its graph (the org's data as a knowledge graph with search: graph_schema, "
+    "graph_search) and the form a person sets a pipeline's secrets in (secrets_form) are that connector's tools, "
+    "never this one's. When the person asks for those and the rrotor's tools are not in the conversation, call "
+    "self_runtimes and have them add its mcp_url to Claude as a connector."
 )
 ADA_INSTRUCTIONS: str = (
     " Ada Cloud, decisions from your own precedents: make a model from a JSON spec (ada_model_create), load its "

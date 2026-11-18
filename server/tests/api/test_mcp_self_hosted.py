@@ -32,12 +32,26 @@ async def test_a_self_hosted_runtime_is_registered_listed_keyed_and_licensed_fro
     assert text.startswith("Self-hosted runtime Acme registered at https://rrotor.acme.test.")
     assert f"RROTOR_RUNTIME_TOKEN={data['token']}" in text and "RROTOR_PUBLIC_HOST=rrotor.acme.test" in text
     assert text.endswith("connector at https://rrotor.acme.test/mcp.")
+    assert data["mcp_url"] == "https://rrotor.acme.test/mcp"
     _refused(await named(client, auth, "register_self_runtime", name="A", public_url="http://x.test"), "E_INVALID")
+    # Listed with where Claude connects to it: a rrotor is its own connector, and Glyphh is never on that path.
     listed = await tool(client, auth, "self_runtimes")
-    assert listed["content"][0]["text"] == f"Acme at https://rrotor.acme.test: stopped, id {data['id']}"
-    await send(client, data["token"], beat())
-    listed = (await tool(client, auth, "self_runtimes"))["content"][0]["text"]
-    assert listed.startswith("Acme at https://rrotor.acme.test: stopped, rrotor 2.1.0, last heartbeat ")
+    first, connect = listed["content"][0]["text"].split("\n")
+    where = "Claude connects to it at https://rrotor.acme.test/mcp"
+    assert first == f"Acme at https://rrotor.acme.test: stopped, id {data['id']}; {where}"
+    assert connect == listed["structuredContent"]["connect"] and "secrets_form" in connect and "graph_search" in connect
+    kept = listed["structuredContent"]["runtimes"][0]
+    assert (kept["mcp_url"], kept["graph"], kept["version"]) == ("https://rrotor.acme.test/mcp", None, None)
+    # Its release says whether it keeps the graph: 0.4.0 on does, an older one is said to need an update.
+    await send(client, data["token"], beat(version="0.3.0"))
+    listed = await tool(client, auth, "self_runtimes")
+    old = "stopped, rrotor 0.3.0: before 0.4.0, no graph or secrets form until it is updated, last heartbeat "
+    assert listed["content"][0]["text"].startswith(f"Acme at https://rrotor.acme.test: {old}")
+    assert listed["structuredContent"]["runtimes"][0]["graph"] is False
+    await send(client, data["token"], beat(version="0.4.0"))
+    listed = await tool(client, auth, "self_runtimes")
+    assert listed["content"][0]["text"].startswith("Acme at https://rrotor.acme.test: stopped, rrotor 0.4.0, last ")
+    assert listed["structuredContent"]["runtimes"][0]["graph"] is True
     keyed = await named(client, auth, "create_runtime_key", name="CRM", runtime_id=data["id"])
     assert keyed["structuredContent"]["runtime_id"] == data["id"]
     issued = await tool(client, auth, "offline_licence", runtime_id=data["id"], days=90)
