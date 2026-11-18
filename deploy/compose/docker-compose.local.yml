@@ -15,7 +15,7 @@ name: glyphh-rrotor
 
 services:
   rrotor:
-    image: ghcr.io/glyphh-ai/rrotor:${RROTOR_VERSION:-0.3.0}
+    image: ghcr.io/glyphh-ai/rrotor:${RROTOR_VERSION:-0.4.0}
     container_name: glyphh-rrotor
     restart: unless-stopped
     environment:

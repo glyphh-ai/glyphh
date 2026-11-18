@@ -9,7 +9,7 @@ export const RROTOR_URL = 'http://127.0.0.1:7777'
 
 /** The rrotor release this plugin was made against: what the rrotor skill's script installs (its PINNED_VERSION,
  *  which CI holds equal to this), and what the Account section offers to update to. */
-export const RROTOR_PINNED = '0.3.0'
+export const RROTOR_PINNED = '0.4.0'
 
 /** Whether a running rrotor is older than the pinned release (a dev build's odd version counts as current). */
 export function isBehind(version: string): boolean {
@@ -71,7 +71,7 @@ export async function publishApp(gh: Host, body: AppPublish): Promise<AppPublish
     const code = String(err?.code ?? `E_HTTP_${r.status}`)
     if (r.status === 404) {
       // A rrotor before 0.2.0 has no /v1/apps: the one answer it gives is Not Found.
-      throw new ApiError('E_RROTOR_OLD', `This rrotor is older than ${RROTOR_PINNED} and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").`, 404)
+      throw new ApiError('E_RROTOR_OLD', `This rrotor is older than 0.2.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").`, 404)
     }
     throw new ApiError(code, String(err?.message ?? `rrotor refused the publish (HTTP ${r.status}).`), r.status)
   }

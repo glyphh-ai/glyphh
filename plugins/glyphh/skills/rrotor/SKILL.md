@@ -15,6 +15,10 @@ rrotor is a runtime the person installs on their own machine: one container (`gh
 - **CLIs**: a kind of program (`"kind": "cli"`): a pinned command-line tool (gh, the glyphh command, a team's own)
   installed into the runtime and run one command at a time in the same sandbox.
 
+It also keeps **the graph**, its semantic layer: one knowledge graph of the organisation's data (nodes, edges and
+search), written by pipelines (programs on a schedule) and read by apps, programs and Claude. Pipelines and the
+graph are the `rrotor-graph` skill.
+
 How to write either is the `rrotor-programs` skill. Programs are not Ada models and rrotor runs no Ada: Ada is Ada
 Cloud's (the `ada` skill). Glyphh's server only grants rrotor a licence; with none it runs as Community (one node),
 and nothing a licence does refuses a run. Nothing of a run goes through Glyphh.
@@ -78,7 +82,7 @@ token: only when the person asks for exactly that.
 
 **Updating.** Each plugin release pins the rrotor release it was made against; a rrotor behind it lacks what the
 newer plugin and skills expect (a rrotor before 0.2.0 has no `app_publish`, before 0.3.0 no React pages, documents,
-diagrams or images). When the person asks to update rrotor, when `status` says `update_available`, or when a tool
+diagrams or images, before 0.4.0 no graph and no secrets form). When the person asks to update rrotor, when `status` says `update_available`, or when a tool
 this skill names is missing from `mcp__rrotor__*` while others are there:
 
 ```sh
@@ -103,7 +107,9 @@ Once connected, rrotor's tools are `mcp__rrotor__*`:
 | `program_continue {run_id, answer}` | Answers a waiting run: `{"approved": true}` or `false` for an approval, the value for an input |
 | `program_cancel`, `run_status`, `run_log` `{run_id}` | Stop a run; its state; its log |
 | `approvals` | Runs waiting for the person |
+| `secrets_form {program}` | Shows the person a form to set the program's secrets themselves: what they type goes to rrotor's vault, never into the chat |
 | `secrets_list {program}`, `secret_set {program, name, value}`, `secret_delete` | A program's secrets: names back, never a value |
+| `graph_schema`, `graph_search`, `graph_node`, `graph_nodes`, `graph_neighbours`, `graph_upsert`, `graph_delete` | The graph, rrotor's semantic layer: the organisation's data as nodes and edges, with search (the `rrotor-graph` skill: pipelines into it, apps on it) |
 | `schedules_list`, `schedule_pause`, `schedule_resume` `{program, name}` | The schedules rrotor fires itself |
 | `clis_list`, `cli_run {cli, args, stdin?, files?}` | The CLIs; one command: exit code, stdout, stderr, or `needs_approval` |
 | `cli_login {cli}` | Signs a CLI in from the person's phone, into their own HOME on the rrotor (each signed-in person signs in as themselves; `clis_list` says `signed_in` for the caller) |
@@ -121,8 +127,11 @@ a reviewer (`reviewer`) and their groups.
   the folder). It sends a git bundle of that commit; nothing else of the machine goes to rrotor.
 - **Approvals are the person's.** On `needs_approval`, show them the `prompt` word for word and continue only with
   what they said. Never approve on your own, and never to get past a step. A waiting run expires after 15 minutes.
-- **Secrets come from the person.** Ask them for a value only when a run fails `E_SECRET_MISSING` (it names the
-  missing ones) or they offer it; set it with `secret_set` and never repeat it back, write it to a file or put it in
+- **Secrets come from the person, through the form.** When a run fails `E_SECRET_MISSING` (it names the missing
+  ones) or a program that declares secrets was just deployed, call `secrets_form`: the person types each value into
+  the form and it never passes through the chat. Never ask them to paste a key or a password into the chat. Where no
+  form shows (a terminal), the tool's answer says how they set it themselves. A value they put in the chat anyway and
+  ask you to set goes to `secret_set`: never repeat it back, write it to a file or put it in
   a repo.
 - **A CLI command** runs only if its arguments match the CLI's `allow` patterns (else `E_CLI_DENIED`: say which
   patterns it takes); one matching `approvals` waits for the person like a program's approval.

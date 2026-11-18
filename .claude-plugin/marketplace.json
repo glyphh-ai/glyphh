@@ -9,8 +9,8 @@
     {
       "name": "glyphh",
       "source": "./plugins/glyphh",
-      "description": "Glyphh for Claude: your Glyphh account and sign-in, the Ada skill that builds, loads, tunes and asks typed models in Ada Cloud through the Glyphh connector, the glyphh command, Glyphh bots (programs that run a Claude agent behind gates that learn), rrotor (your local runtime for programs and CLIs) installed and connected from Claude, what Claude made (a page, a dashboard, a doc, a diagram, a deck, a design) published to your organisation's rrotor as an app for review, and the file ledger. Ada is in every plan.",
-      "version": "1.20.0"
+      "description": "Glyphh for Claude: your Glyphh account and sign-in, the Ada skill that builds, loads, tunes and asks typed models in Ada Cloud through the Glyphh connector, the glyphh command, Glyphh bots (programs that run a Claude agent behind gates that learn), rrotor (your local runtime for programs and CLIs) installed and connected from Claude, pipelines into rrotor's graph (its semantic layer: your organisation's data as a knowledge graph with search) and apps on it, what Claude made (a page, a dashboard, a doc, a diagram, a deck, a design) published to your organisation's rrotor as an app for review, and the file ledger. Ada is in every plan.",
+      "version": "1.21.0"
     }
   ]
 }

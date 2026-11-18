@@ -79,7 +79,10 @@ warehouse links. On rrotor there is no claude.ai in the path: the page may `fetc
 chart or table becomes a function of the app, called **as the viewer**:
 
 - **One function per chart** in `program.py` (the rrotor-programs skill: `def failures(ctx, inputs) -> Result`).
-  The data comes through `ctx.cli` with a CLI on the rrotor (`bq`, `snowsql`, `databricks`, `psql`,
+  **First choice: the rrotor's graph**, when a pipeline already keeps the data there (`graph_schema` says what it
+  holds; the `rrotor-graph` skill): publish with `graph: "read"` and read it with `ctx.graph.nodes(type, where=…)`,
+  `ctx.graph.search(query)` and `ctx.graph.neighbours(type, key)`. Everyone who may open the app sees the same
+  data, with no sign-in of their own and no call to the source. Otherwise the data comes through `ctx.cli` with a CLI on the rrotor (`bq`, `snowsql`, `databricks`, `psql`,
   `clickhouse-client`, `gh`, any CLI the manifest's `clis` names), which each person signs in to once with
   `cli_login`, so two people opening the same dashboard see what their own accounts allow; or through `ctx.http` to
   the hosts the manifest declares. Name each function in the manifest's `functions` and in `app.functions`.
@@ -103,7 +106,7 @@ d] [--type t] [--roles a,b]` sends one file to the local rrotor, and `/glyphh ap
 (a type filter; a reviewer's Approve, Reject and Retire) in the panel.
 
 **No `app_publish` among `mcp__rrotor__*`** while `programs_list` is there: the rrotor is older than this plugin
-(before 0.2.0 it had no apps; before 0.3.0 only HTML and Markdown). Never write the page to a file and hand it to the
+(before 0.2.0 it had no apps; before 0.3.0 only HTML and Markdown; before 0.4.0 no graph). Never write the page to a file and hand it to the
 person instead: run the rrotor skill's `rrotor.sh update` (it keeps everything on the volume), tell them Claude Code
 loads the tools again at `/mcp` or its next start, and publish from there; or publish now with `/glyphh publish
 <file>`, which the mod sends to the updated rrotor without the tools.
