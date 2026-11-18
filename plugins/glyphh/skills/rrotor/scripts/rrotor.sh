@@ -16,7 +16,7 @@
 # {"ok": false, "error": ...}.
 set -eu
 
-PINNED_VERSION="0.3.0"                      # the rrotor release this plugin release was made against (tests/rrotor-pin.test.ts holds it to deploy/)
+PINNED_VERSION="0.4.0"                      # the rrotor release this plugin release was made against (tests/rrotor-pin.test.ts holds it to deploy/)
 IMAGE_REPO="ghcr.io/glyphh-ai/rrotor"
 NAME="glyphh-rrotor"
 VOLUME="glyphh-rrotor-data"

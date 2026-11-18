@@ -86,6 +86,13 @@ its manifest names):
   installed into the runtime and run one command at a time, its arguments checked against allow and approval
   patterns.
 
+It also keeps **the graph**, its semantic layer (rrotor 0.4.0): one knowledge graph of your organisation's data,
+nodes and the edges between them, with ranked search over their words. A **pipeline** is a program on a schedule
+whose manifest says `"graph": "write"`: plain Python that reads a source with a key from the vault and writes records
+with `ctx.graph`. The apps Claude publishes read the graph through their own functions (`"graph": "read"`), and
+Claude searches it (`graph_search`). A key is typed by you into a form Claude shows (`secrets_form`), never into the
+chat. The plugin's `rrotor-graph` skill is how Claude builds both.
+
 Programs are not Ada models, and rrotor runs no Ada. Glyphh's server only grants rrotor its licence; with none it runs
 as Community (one node), and nothing a licence does refuses a run. Nothing of a run goes through Glyphh.
 

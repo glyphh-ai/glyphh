@@ -222,7 +222,7 @@ test('publish: no file, not an entry, a type outside the six, unreadable, no rro
   w.s.rrotorDown = false
   w.s.rrotorOld = true
   expect((await glyphhCommand(w.gh, 'publish /tmp/board.html')).text).toBe(
-    'This rrotor is older than 0.3.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").',
+    'This rrotor is older than 0.2.0 and cannot publish apps: update it (Account → update, or ask Claude to "update rrotor").',
   )
   w.s.rrotorOld = false
   const refused = await glyphhCommand(w.gh, 'publish /tmp/board.html --name "Not A Name"')

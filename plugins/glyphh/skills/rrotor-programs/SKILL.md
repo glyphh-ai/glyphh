@@ -46,8 +46,11 @@ commit). A deploy is refused `E_MANIFEST` with where and why: fix that and deplo
 - `functions`: at least one, each with `inputs` (a JSON Schema the call is checked against), `approvals` (every step
   that may ask the person; a step not listed fails the run) and `writes`.
 - `hosts`: the only hosts a run may reach, HTTPS on 443 (`*.example.com` allowed). Everything else is blocked.
-- `secrets`: names (`^[A-Z][A-Z0-9_]{0,63}$`) it reads; the person sets the values on the runtime (`secret_set`),
-  never in the repo. A run with one unset fails `E_SECRET_MISSING`, naming it.
+- `secrets`: names (`^[A-Z][A-Z0-9_]{0,63}$`) it reads; the person sets the values on the runtime, in the form
+  `secrets_form` shows them (never in the repo, never in the chat). A run with one unset fails `E_SECRET_MISSING`,
+  naming it.
+- `graph`: `"read"` or `"write"`: rrotor's graph as `ctx.graph` (a pipeline writes it; an app's functions read it).
+  The `rrotor-graph` skill.
 - `databases: ["sqlite"]`: a SQLite file in its data folder, `ctx.db`. `"data": true`: a persistent folder,
   `ctx.data`. Either way every call runs on a cluster's head.
 - `schedules`: `{function, cron, tz?, input?, name?}`; five-field cron or `@daily` and the like; `input` must fit the
@@ -84,9 +87,13 @@ def start(ctx: Ctx, inputs: dict) -> Result:
   answered and waits until then; `ctx.needs_input(...)` likewise.
 - `ctx.http` (HTTPS to the declared hosts), `ctx.files` (its folder), `ctx.data`, `ctx.db`, `ctx.secrets["NAME"]`,
   `ctx.log(message, **detail)`, `ctx.today()`, `ctx.yesterday()`, `ctx.caller` (`claude` or `schedule`),
-  `ctx.clearance`. `rrotor` is in the sandbox already: never install it or list it in `requirements.lock`.
+  `ctx.clearance`, `ctx.graph` (`"graph"` in the manifest). `rrotor` is in the sandbox already: never install it or
+  list it in `requirements.lock`.
+- `load(ctx)` and `end(ctx)` are rrotor's hooks, called before and after every run: never give a helper of another
+  shape those names.
 - Its tests use `rrotor.testing.Harness` (inputs, answers, a folder, an `http` that answers what the test says,
-  `secrets={...}`, `database=<a file>`). rrotor's `examples/daily_sales` is the model to follow.
+  `secrets={...}`, `database=<a file>`, `graph=FakeGraph("write")`). rrotor's `examples/daily_sales` is the model to
+  follow, and `examples/hubspot_pipeline` for a pipeline.
 
 ## A CLI
 

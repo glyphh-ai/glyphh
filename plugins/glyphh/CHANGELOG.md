@@ -2,6 +2,24 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.21.0 — 2026-11-18
+
+Pipelines and the graph: rrotor 0.4.0 keeps one graph, its semantic layer, and the plugin teaches Claude to fill it
+and build on it.
+
+- A new skill, `rrotor-graph`: *"connect our HubSpot to rrotor"*, *"build a pipeline"*, *"make a knowledge graph of
+  ..."*. Claude reads what the graph holds (`graph_schema`), writes a pipeline (a program on a schedule whose manifest
+  says `"graph": "write"`, plain Python that writes records as nodes and edges with `ctx.graph.rows`), and builds
+  apps and answers on the graph (`graph: "read"`, `graph_search`).
+- Secrets are set in a form: Claude calls `secrets_form` and you type each value into rrotor's vault yourself. The
+  skills no longer ask for a secret's value in the chat.
+- The rrotor, rrotor-programs and publish skills name the graph and the form; a dashboard's functions read the graph
+  first when a pipeline keeps its data there.
+- The pinned rrotor is 0.4.0 (`rrotor.sh update` brings a running one up to it; the Account section offers it).
+- A rrotor too old to publish apps is said to be older than 0.2.0, which is the release that brought them.
+
+The hook's User-Agent is `glyphh-hook/1.21.0`.
+
 ## 1.20.0 — 2026-11-17
 
 rrotor is back: the plugin installs and drives your local runtime again, and publishes what Claude made to your
