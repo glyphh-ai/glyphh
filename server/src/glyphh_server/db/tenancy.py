@@ -1,13 +1,11 @@
 """Tenant isolation: row-level security keyed on the org.
 
-A request made with an install's token, or with a connector access token on /mcp, has its org in `glyphh.org_id` for its
-transaction, and the policies in schema.sql show it only that org's rows: the org, its users, invites and licence
-keys, and their identities, installs, tokens, runtimes and their keys and nodes, GitHub installations, connector
-grants, their tokens and OAuth codes, and Ada Cloud's records of the org. The
-policies bind the connecting role itself, so no role of its own is needed (a managed Postgres lets none be made).
-Sign-in, the connector's OAuth endpoints (a code or token is found by its hash before anyone is known), Stripe's
-webhook and the few operations that cross orgs on purpose (joining another org, being removed from one) run with no
-org set, and see every row."""
+A request made with an access token has its org in `glyphh.org_id` for its transaction, and the policies in
+schema.sql show it only that org's rows: the org, its users, invites and money records, and their identities,
+grants, tokens and OAuth codes. The policies bind the connecting role itself, so no role of its own is needed (a
+managed Postgres lets none be made). Sign-in, the OAuth endpoints (a code or token is found by its hash before
+anyone is known), Stripe's webhook and the staff view, which crosses orgs on purpose (api/admin/deps.py), run with
+no org set, and see every row."""
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection

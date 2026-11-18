@@ -1,19 +1,18 @@
 """Every org, for staff, a page at a time: searched by its name, its id or a member's email, filtered by plan; with
-its plan, members, Ada models and precedents (admin/adascan.py), reads this month (Redis's live count, else the
-tick's), where its sign-up came from and when it was made."""
+its plan, members, where its sign-up came from and when it was made.
+
+The platform's list still shows the retired products' numbers (Ada models, precedents, reads this month): those keys
+are answered 0 until its screen drops them."""
 
 import uuid
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
-from redis.asyncio import Redis
-from sqlalchemy import Row, Select, Text, cast, func, or_, select
+from sqlalchemy import Select, Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_ada import requests
-from glyphh_server.admin import adascan
-from glyphh_server.models import AdaUsage, Org, Plan, PlanVersion, User
+from glyphh_server.models import Org, Plan, PlanVersion, User
 
 LIMIT_MAX: int = 200
 COLUMNS = (Org.id, Org.name, Org.billing_status, Org.source, Org.created_at, Org.first_paid_at, Org.suspended_at)
@@ -26,13 +25,13 @@ class OrgRow(BaseModel):
     plan_version: int
     billing_status: str
     members: int
-    models: int
-    precedents: int
-    reads_month: int
     source: str | None = Field(description="utm_source / utm_medium of its sign-up; null when untagged")
     created_at: datetime
     first_paid_at: datetime | None
     suspended: bool
+    models: int = Field(0, description="Retired with the products: always 0")
+    precedents: int = Field(0, description="Retired with the products: always 0")
+    reads_month: int = Field(0, description="Retired with the products: always 0")
 
 
 class OrgPage(BaseModel):
@@ -63,17 +62,7 @@ def _matching(found: Select[Any], q: str | None, plan: str | None) -> Select[Any
     return found
 
 
-async def _reads(conn: AsyncConnection, redis: Redis, orgs: list[uuid.UUID]) -> dict[uuid.UUID, int]:
-    month = requests.period()
-    live = await redis.mget([requests.total_key(o, month) for o in orgs]) if orgs else []
-    kept = select(AdaUsage.org_id, AdaUsage.requests).where(AdaUsage.org_id.in_(orgs), AdaUsage.period == month)
-    told = {o: int(n) for o, n in await conn.execute(kept)}
-    return {o: int(n) if n is not None else told.get(o, 0) for o, n in zip(orgs, live, strict=True)}
-
-
-async def orgs(
-    conn: AsyncConnection, redis: Redis, q: str | None, plan: str | None, offset: int = 0, limit: int = 50
-) -> OrgPage:
+async def orgs(conn: AsyncConnection, q: str | None, plan: str | None, offset: int = 0, limit: int = 50) -> OrgPage:
     members = select(func.count()).where(User.org_id == Org.id).scalar_subquery()
     base = (
         select(*COLUMNS, Plan.name.label("plan"), PlanVersion.version, members.label("members"))
@@ -82,26 +71,20 @@ async def orgs(
     )
     found = _matching(base, q, plan)
     total = (await conn.execute(select(func.count()).select_from(found.subquery()))).scalar_one()
-    rows = list(await conn.execute(found.order_by(Org.created_at.desc(), Org.id).offset(offset).limit(limit)))
-    ada = adascan.by_org(await adascan.scan(conn, redis))
-    reads = await _reads(conn, redis, [r.id for r in rows])
-    page = [_row(r, ada.get(r.id), reads[r.id]) for r in rows]
+    rows = await conn.execute(found.order_by(Org.created_at.desc(), Org.id).offset(offset).limit(limit))
+    page = [
+        OrgRow(
+            id=r.id,
+            name=r.name,
+            plan=r.plan,
+            plan_version=r.version,
+            billing_status=r.billing_status,
+            members=r.members,
+            source=label(r.source),
+            created_at=r.created_at,
+            first_paid_at=r.first_paid_at,
+            suspended=r.suspended_at is not None,
+        )
+        for r in rows
+    ]
     return OrgPage(orgs=page, total=total, offset=offset, limit=limit)
-
-
-def _row(org: Row[Any], held: adascan.OrgAda | None, reads: int) -> OrgRow:
-    return OrgRow(
-        id=org.id,
-        name=org.name,
-        plan=org.plan,
-        plan_version=org.version,
-        billing_status=org.billing_status,
-        members=org.members,
-        models=0 if held is None else len(held.live),
-        precedents=0 if held is None else held.precedents,
-        reads_month=reads,
-        source=label(org.source),
-        created_at=org.created_at,
-        first_paid_at=org.first_paid_at,
-        suspended=org.suspended_at is not None,
-    )

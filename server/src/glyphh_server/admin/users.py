@@ -1,6 +1,6 @@
 """Every person, for staff, a page at a time: searched by email or name, filtered by how they sign in or by org; with
-their org, role, sign-in providers, when they joined and when last seen (their newest use of an install or of a
-sign-in grant, the platform's included: each is marked at most once a minute)."""
+their org, role, sign-in providers, when they joined and when last seen (their newest use of a sign-in grant, marked
+at most once a minute)."""
 
 import uuid
 from datetime import datetime
@@ -11,7 +11,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by, array_agg
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from glyphh_server.models import ConnectorGrant, Identity, Install, Org, User
+from glyphh_server.models import ConnectorGrant, Identity, Org, User
 
 
 class PersonRow(BaseModel):
@@ -35,9 +35,7 @@ class PeoplePage(BaseModel):
 
 
 def _seen() -> Any:
-    installs = select(func.max(Install.last_seen_at)).where(Install.user_id == User.id).scalar_subquery()
-    grants = select(func.max(ConnectorGrant.last_used_at)).where(ConnectorGrant.user_id == User.id).scalar_subquery()
-    return func.greatest(installs, grants)
+    return select(func.max(ConnectorGrant.last_used_at)).where(ConnectorGrant.user_id == User.id).scalar_subquery()
 
 
 def _providers() -> Any:

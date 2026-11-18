@@ -42,7 +42,8 @@ async def test_the_platform_client_is_made_from_the_settings_and_its_secret_work
 
 
 async def test_without_the_settings_no_client_is_made(engine: AsyncEngine) -> None:
-    await apply_schema(engine, SETTINGS.model_copy(update={"platform_client_id": CLIENT_ID}))
+    unset = {"platform_client_id": CLIENT_ID, "platform_client_secret": ""}
+    await apply_schema(engine, SETTINGS.model_copy(update=unset))
     assert await _client(engine) is None
 
 

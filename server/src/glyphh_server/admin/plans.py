@@ -1,5 +1,5 @@
-"""Every plan and every version of it, for staff: prices, Stripe's price ids, limits, Ada Cloud's caps and how many
-orgs are on each version."""
+"""Every plan and every version of it as it was sold, for staff: prices, Stripe's price ids, the limits it carried
+and how many orgs are on each version."""
 
 import uuid
 from datetime import datetime

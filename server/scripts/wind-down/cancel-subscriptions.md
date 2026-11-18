@@ -7,7 +7,7 @@ decide and are not part of this.
 
 ## What exists in Stripe
 
-Made by `scripts/stripe-setup.py` and by the server (`ops/billing/`):
+Made by the set-up script the server had (deleted with the products) and by the server while it sold plans:
 
 | Object | What | How to recognise it |
 |---|---|---|
@@ -35,15 +35,16 @@ accounts or transfers, or delete the products' payment history.
 - **The staff view** (platform → `/admin` → Organisations, filter by plan; Dashboard → paying orgs and the plan mix),
   from the server's database alone: `orgs.billing_status`, `stripe_subscription_id`. It shows what the webhook last
   recorded, so compare it with the Dashboard.
-- `scripts/wind-down/row-counts.sql` prints orgs by billing status.
+- `python -m glyphh_server.winddown counts`, run in the app's machine ([README.md](README.md)), prints how many orgs
+  are still `active` or `past_due` and how many hold a subscription id.
 
 There is no route that lists subscriptions from Stripe, and none should be added for this.
 
 ## The server must be listening
 
-`POST /v1/stripe/webhook` stays open while wound down (it is one of the few routes that does), and each
-`customer.subscription.deleted` it hears puts the org on Free, clears its subscription id, sets `billing_status`
-`canceled` and revokes its licence keys. So cancel while `glyphh-ai-server` is up, and do not delete the webhook
+`POST /v1/stripe/webhook` is one of the few routes the server still has, and each
+`customer.subscription.deleted` it hears puts the org on Free, clears its subscription id and sets `billing_status`
+`canceled`. So cancel while `glyphh-ai-server` is up, and do not delete the webhook
 endpoint in Stripe or the `GLYPHH_STRIPE_*` secrets until the last final invoice is paid or written off. Keep the
 endpoint subscribed to `customer.subscription.*`, `invoice.payment_succeeded` and `checkout.session.completed`.
 
@@ -95,5 +96,6 @@ sends it.
 2. The staff view → Organisations: no org with a paid plan and `active`.
 3. Archive the four prices and the products (Product catalogue → Archive), so nothing can be bought; archived, their
    history stays. Deactivate the meter. Leave the customers.
-4. Only when the last invoice is settled: delete the webhook endpoint in Stripe and the server's `GLYPHH_STRIPE_*`
-   secrets. **Not the account's key itself**: the games use the same account.
+4. Only when the last invoice is settled: delete the webhook endpoint in Stripe and the server's
+   `GLYPHH_STRIPE_SECRET_KEY` and `GLYPHH_STRIPE_WEBHOOK_SECRET` secrets (the price and meter secrets are unused
+   already: [README.md](README.md)). **Not the account's key itself**: the games use the same account.

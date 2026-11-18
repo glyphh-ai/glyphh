@@ -1,5 +1,4 @@
-"""Glyphh's own sites' traffic, from Cloudflare's analytics as the hourly pull kept it, and its public repositories'
-from GitHub's."""
+"""Glyphh's own sites' traffic, from Cloudflare's analytics as the hourly pull kept it."""
 
 from typing import Annotated
 
@@ -17,9 +16,6 @@ async def get_traffic(
 ) -> Traffic:
     """Each zone's and hostname's days, countries, pages and referrers, what its plan allowed and when it was pulled;
     the last 7 and 30 days' visitors and page views against the period before, with sign-ups. Not connected without
-    GLYPHH_CLOUDFLARE_API_TOKEN. `github`: each public repository's views and clones (unique visitors and cloners),
-    the last 14 days and since tracking began, by day, and its popular referrers and paths; not connected without
-    GLYPHH_GITHUB_TRAFFIC_TOKEN."""
-    settings = staff.request.app.state.settings
-    connected = bool(settings.cloudflare_api_token)
-    return await traffic(staff.conn, connected, days, github_connected=bool(settings.github_traffic_token))
+    GLYPHH_CLOUDFLARE_API_TOKEN."""
+    connected = bool(staff.request.app.state.settings.cloudflare_api_token)
+    return await traffic(staff.conn, connected, days)
