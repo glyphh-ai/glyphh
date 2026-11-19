@@ -6,7 +6,7 @@ look and its sign-in, to become the games' admin: what is left is listed below, 
 
 | Part | Repo | What |
 |---|---|---|
-| Platform | `glyphh-ai/platform` (this) | The sign-in, Home (empty) and Glyphh's staff view: the games' admin |
+| Platform | `glyphh-ai/platform` (this) | Glyphh's staff console: the sign-in and the games' admin, at the root |
 | Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai. With its `GLYPHH_PRODUCTS` off (the default) every product route answers `410 E_WOUND_DOWN`, and only Glyphh's staff sign in |
 
 ## What is left
@@ -16,11 +16,15 @@ look and its sign-in, to become the games' admin: what is left is listed below, 
 | `/login` | Log in with Google or GitHub (single sign-on when the server offers it) | `GET /auth/providers`, then `/auth/login` |
 | `/authorize?oauth=&client=`, `/allow?consent=` | The two steps the server sends a browser to in a sign-in | `GET {server}/auth/consent`, links to `{server}/auth/...` |
 | `/error?code=&message=&trace=` | Any refusal in a browser step, with the trace id to quote | none |
-| `/` | Home, in the console's shell (the logo, the sidebar, the account menu with the theme and Log out): empty, "Nothing here yet." Glyphh's staff land on the staff view instead | `GET /v1/me` |
-| `/admin` | The games' admin, staff only: every game's health, build, players, revenue and what waits for someone | `GET /api/games/overview` |
-| `/admin/games/:id?tab=` | One game's admin: a tab for each of its lists, with that game's own actions (confirmed in a dialog where they can't quietly be taken back) | `POST /api/games/:id/tools/:tool` |
-| `/admin/traffic`, `/admin/events`, `/admin/audit` | Glyphh's own sites' traffic, the server's errors, the staff audit log | `/v1/admin/*` |
+| `/` | The games' admin, in the console's shell (the logo, the sidebar, the account menu with the theme and Log out): every game's health, build, players, revenue and what waits for someone | `GET /v1/me`, `GET /api/games/overview` |
+| `/games/:id?tab=` | One game's admin: a tab for each of its lists, with that game's own actions (confirmed in a dialog where they can't quietly be taken back) | `POST /api/games/:id/tools/:tool` |
+| `/traffic`, `/events`, `/audit` | Glyphh's own sites' traffic, the server's errors, the staff audit log | `/v1/admin/*` |
+| `/admin`, `/admin/*` | The old staff view's addresses: a 301 (and in the page, a redirect) to the same page at the root | none |
 | anything else | "Page not found" | none |
+
+The whole console is staff only (his yes, 2026-11-19: "platform.glyphh.ai opens straight to the games admin"). Game
+players never come here: their accounts live on each game's site. A signed-in person who is not staff sees one line,
+"This is Glyphh's staff console.", and Sign out.
 
 The retired products' staff screens (Dashboard, Infrastructure, Organisations, People, Plans, Marketing links, Ada
 versions) were removed with the games' admin (2026-11-19).

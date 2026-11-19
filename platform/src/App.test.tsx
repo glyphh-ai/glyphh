@@ -21,7 +21,7 @@ describe('when the platform’s sign-in ends mid-visit', () => {
     server.use(http.get(v1('/me'), () => apiError(403, 'E_FORBIDDEN', 'Not yours.')));
     try {
       renderApp('/');
-      expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'This is Glyphh’s staff console.' })).toBeInTheDocument();
       expect(location.assign).not.toHaveBeenCalled();
     } finally {
       location.restore();

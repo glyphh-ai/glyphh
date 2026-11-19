@@ -20,12 +20,12 @@ function recording(method: 'post' | 'delete', path: string, reply: unknown = { m
   return sent;
 }
 
-describe('Who sees the staff view', () => {
-  it('opens it on the games for staff when they sign in, with its own sidebar', async () => {
+describe('Who sees the console', () => {
+  it('opens straight on the games for staff, at the root, with its sidebar', async () => {
     staff();
     const { router } = renderApp('/');
     expect(await screen.findByRole('heading', { name: 'Games' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/admin');
+    expect(router.state.location.pathname).toBe('/');
     const nav = screen.getByRole('complementary', { name: 'Main' });
     for (const name of ['All games', 'Free Fall Frank', 'Crabby Knife Fight', 'Bams & Brags', 'Send a Carol', 'Traffic', 'Log alerts', 'Audit log']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
@@ -36,10 +36,34 @@ describe('Who sees the staff view', () => {
     expect(screen.queryByText(/precedents/)).not.toBeInTheDocument();
   });
 
-  it('sends anyone else home', async () => {
-    const { router } = renderApp('/admin/games/frank');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-    expect(screen.queryByRole('link', { name: 'Staff view' })).not.toBeInTheDocument();
+  it('shows anyone else one line and Sign out, and nothing of the games', async () => {
+    const sent: unknown[] = [];
+    server.use(
+      http.get('*/api/games/overview', () => {
+        sent.push(1);
+        return HttpResponse.json({ games: [], at: 0 });
+      }),
+    );
+    renderApp('/games/frank');
+    expect(await screen.findByRole('heading', { name: 'This is Glyphh’s staff console.' })).toBeInTheDocument();
+    const signOut = screen.getByRole('button', { name: 'Sign out' });
+    expect(signOut.closest('form')).toHaveAttribute('action', '/auth/logout');
+    expect(signOut.closest('form')).toHaveAttribute('method', 'post');
+    expect(screen.queryByRole('complementary', { name: 'Main' })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(sent).toHaveLength(0);
+  });
+
+  it.each([
+    ['/admin', '/'],
+    ['/admin/games/frank?tab=review', '/games/frank?tab=review'],
+    ['/admin/traffic', '/traffic'],
+    ['/admin/events', '/events'],
+    ['/admin/audit', '/audit'],
+  ])('sends the old address %s to %s', async (from, to) => {
+    staff();
+    const { router } = renderApp(from);
+    await waitFor(() => expect(router.state.location.pathname + router.state.location.search).toBe(to));
   });
 
   it('answers the retired screens’ addresses with Page not found', async () => {
@@ -54,7 +78,7 @@ describe('Log alerts', () => {
     staff();
     const one = recording('post', '/admin/events/e1/ack', { acknowledged: 1 });
     const all = recording('post', '/admin/events/ack', { acknowledged: 4 });
-    const { user } = renderApp('/admin/events');
+    const { user } = renderApp('/events');
     const table = await screen.findByRole('table', { name: 'Events' });
     expect(within(table).getByText('stripe call failed')).toBeInTheDocument();
     expect(within(table).getByText('Seen by support@glyphh.ai')).toBeInTheDocument();
@@ -75,7 +99,7 @@ describe('Log alerts', () => {
         return HttpResponse.json({ events: [], next_before: null });
       }),
     );
-    const { user } = renderApp('/admin/events');
+    const { user } = renderApp('/events');
     expect(await screen.findByText('Nothing here')).toBeInTheDocument();
     await user.click(screen.getByRole('switch', { name: 'Open only' }));
     await user.type(screen.getByLabelText('Kind'), 'job');
@@ -95,7 +119,7 @@ describe('Audit log', () => {
         return HttpResponse.json(fake.audit);
       }),
     );
-    const { user } = renderApp('/admin/audit');
+    const { user } = renderApp('/audit');
     expect(await screen.findByRole('table', { name: 'Audit log' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Staff member'), 'support@glyphh.ai');
     await user.click(screen.getByRole('button', { name: 'Filter' }));

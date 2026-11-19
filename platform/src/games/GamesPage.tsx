@@ -73,7 +73,7 @@ function GameCard({ game }: { game: GameRow }) {
         <img src={game.icon} alt="" width={40} height={40} className={styles.icon} />
         <div className={styles.gameName}>
           <h2 className={styles.cardTitle}>
-            <Link to={`/admin/games/${game.id}`}>{game.name}</Link>
+            <Link to={`/games/${game.id}`}>{game.name}</Link>
           </h2>
           <a href={game.site} target="_blank" rel="noreferrer" className={styles.site}>
             {game.site.replace(/^https:\/\//, '')}
@@ -104,7 +104,7 @@ function GameCard({ game }: { game: GameRow }) {
           <ul className={styles.pending} aria-label="Waiting">
             {s.pending.map((p) => (
               <li key={p.label}>
-                <Link to={`/admin/games/${game.id}?tab=${p.tab}`}>{p.label}</Link>
+                <Link to={`/games/${game.id}?tab=${p.tab}`}>{p.label}</Link>
                 <Chip tone={p.count > 0 ? 'amber' : 'neutral'}>{p.count.toLocaleString('en-GB')}</Chip>
               </li>
             ))}
@@ -112,8 +112,8 @@ function GameCard({ game }: { game: GameRow }) {
         </>
       )}
       <div className={styles.actions}>
-        <Link to={`/admin/games/${game.id}`} className={styles.open}>
-          Open admin
+        <Link to={`/games/${game.id}`} className={styles.open}>
+          Open
         </Link>
       </div>
     </Card>

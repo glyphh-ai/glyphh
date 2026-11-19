@@ -13,10 +13,13 @@ const menuCss = stylesheet('ui/Menu/Menu.module.css');
 
 const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentElement!;
 
+// The console is staff only: every test here signs in as staff.
+beforeEach(() => server.use(...staffHandlers()));
+
 describe('the sidebar on a phone', () => {
   it('opens from the Menu button and closes from the scrim', async () => {
     const { user } = renderApp('/');
-    await screen.findByRole('heading', { name: 'Home', level: 1 });
+    await screen.findByRole('heading', { name: 'Games', level: 1 });
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     expect(shell()).toHaveAttribute('data-sidebar', 'open');
     await user.click(screen.getByRole('button', { name: 'Close menu' }));
@@ -26,7 +29,7 @@ describe('the sidebar on a phone', () => {
 
   it('closes when the Menu button is pressed again', async () => {
     const { user } = renderApp('/');
-    await screen.findByRole('heading', { name: 'Home', level: 1 });
+    await screen.findByRole('heading', { name: 'Games', level: 1 });
     const menu = await screen.findByRole('button', { name: 'Menu' });
     await user.click(menu);
     await user.click(menu);
@@ -34,8 +37,7 @@ describe('the sidebar on a phone', () => {
   });
 
   it('closes on moving to another page', async () => {
-    server.use(...staffHandlers());
-    const { user } = renderApp('/admin');
+    const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('link', { name: 'Audit log' }));
     expect(await screen.findByRole('heading', { name: 'Audit log' })).toBeInTheDocument();
@@ -76,24 +78,19 @@ describe('the account menu on a phone', () => {
 });
 
 describe('the main sidebar', () => {
-  it('has the logo and Home, and nothing of the retired products', async () => {
+  it('has the logo, the games and Glyphh’s own pages, all at the root', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
-    await screen.findByRole('heading', { name: 'Home', level: 1 });
+    await screen.findByRole('heading', { name: 'Games', level: 1 });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home']);
+    const links = within(main).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['All games', 'Free Fall Frank', 'Crabby Knife Fight', 'Bams & Brags', 'Send a Carol', 'Traffic', 'Log alerts', 'Audit log']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/games/frank', '/games/crabby', '/games/mahj', '/games/carol', '/traffic', '/events', '/audit']);
   });
 
-  it('adds the staff view’s way in for Glyphh’s staff', async () => {
-    sessionStorage.setItem('glyphh.view', 'org');
-    server.use(...staffHandlers());
-    try {
-      renderApp('/');
-      const main = await screen.findByRole('complementary', { name: 'Main' });
-      expect(await within(main).findByRole('link', { name: 'Staff view' })).toHaveAttribute('href', '/admin');
-    } finally {
-      sessionStorage.removeItem('glyphh.view');
-    }
+  it('crumbs a game’s page back to the games', async () => {
+    renderApp('/games/frank');
+    expect(await screen.findByRole('link', { name: 'Games' })).toHaveAttribute('href', '/');
   });
 
   // The file glyphh.ai's header shows, at its 38px: the cat and the name in black with a white outline.

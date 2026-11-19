@@ -17,7 +17,7 @@ const withApp = (over: Partial<TrafficZone>): Traffic => ({ ...fake.traffic, zon
 describe('The Traffic page', () => {
   it('shows a domain by day, its countries, pages and referrers, and when it was pulled', async () => {
     staff();
-    renderApp('/admin/traffic');
+    renderApp('/traffic');
     expect(await screen.findByRole('img', { name: 'Visitors and page views on glyphh.ai by day' })).toBeInTheDocument();
     expect(screen.getByText(/Last pulled 23 Oct 11:05:00 UTC/)).toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Top countries' })).getByText('3,000')).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('The Traffic page', () => {
 
   it('narrows to one hostname, and shows Web Analytics where the plan has no pages', async () => {
     staff();
-    const { user } = renderApp('/admin/traffic');
+    const { user } = renderApp('/traffic');
     const domain = await screen.findByLabelText('Domain');
     expect(within(domain).getAllByRole('option').map((o) => o.textContent)).toEqual(['glyphh.ai (whole domain)', 'docs.glyphh.ai', 'glyphh.ai', 'glyphh.app (whole domain)']);
     await user.selectOptions(domain, 'glyphh.ai|docs.glyphh.ai');
@@ -48,7 +48,7 @@ describe('The Traffic page', () => {
 
   it('says what the plan does not provide', async () => {
     staff(withApp({ available: { ...app.available, rum: { ok: false } } }));
-    const { user } = renderApp('/admin/traffic');
+    const { user } = renderApp('/traffic');
     await user.selectOptions(await screen.findByLabelText('Domain'), 'glyphh.app');
     expect(await screen.findByText('Not provided by this zone’s Cloudflare plan.')).toBeInTheDocument();
     expect(screen.getByText('Not provided by this zone’s Cloudflare plan: unknown field.')).toBeInTheDocument();
@@ -63,21 +63,21 @@ describe('The Traffic page', () => {
         return HttpResponse.json(fake.traffic);
       }),
     );
-    const { user } = renderApp('/admin/traffic');
+    const { user } = renderApp('/traffic');
     await user.selectOptions(await screen.findByLabelText('Period'), '7');
     await waitFor(() => expect(asked).toEqual(['30', '7']));
   });
 
   it('says when Cloudflare is not connected, or nothing is pulled yet', async () => {
     staff({ ...fake.traffic, connected: false, zones: [], pulled_at: null });
-    renderApp('/admin/traffic');
+    renderApp('/traffic');
     expect(await screen.findByText('Cloudflare is not connected')).toBeInTheDocument();
     expect(screen.getByText(/Not pulled yet/)).toBeInTheDocument();
   });
 
   it('says when nothing is pulled yet', async () => {
     staff({ ...fake.traffic, zones: [], pulled_at: null });
-    renderApp('/admin/traffic');
+    renderApp('/traffic');
     expect(await screen.findByText('Nothing pulled yet')).toBeInTheDocument();
   });
 });

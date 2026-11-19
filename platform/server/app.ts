@@ -67,6 +67,14 @@ export function createApp({ config, games = [], log = (line) => console.log(line
     return origin === config.platformUrl;
   };
 
+  /** The old staff view's addresses (/admin, /admin/...): the same page at the root, where the console now lives. */
+  const fromOldAdmin = (c: Context) => {
+    const url = new URL(c.req.url);
+    return c.redirect(`${url.pathname.replace(/^\/admin/, '') || '/'}${url.search}`, 301);
+  };
+  app.get('/admin', fromOldAdmin);
+  app.get('/admin/*', fromOldAdmin);
+
   app.get('/auth/session', (c) =>
     c.json({ signedIn: readSession(c) !== null, serverUrl: config.serverUrl, clientName: config.clientName }),
   );

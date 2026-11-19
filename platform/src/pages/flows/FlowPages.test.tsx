@@ -36,8 +36,8 @@ describe('Log in', () => {
     const location = stubLocation();
     server.use(sessionHandler(false));
     try {
-      renderApp('/admin/games/frank');
-      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('/login?returnTo=%2Fadmin%2Fgames%2Ffrank'));
+      renderApp('/games/frank');
+      await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith('/login?returnTo=%2Fgames%2Ffrank'));
     } finally {
       location.restore();
     }

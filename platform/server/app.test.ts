@@ -391,3 +391,22 @@ describe('what is gone with Glyphh’s products (2026-11-18)', () => {
     expect(ctx.server.state.seen).toHaveLength(0);
   });
 });
+
+describe('the old staff view’s addresses (the console moved to the root, 2026-11-19)', () => {
+  it.each([
+    ['/admin', '/'],
+    ['/admin/', '/'],
+    ['/admin/games/frank?tab=review', '/games/frank?tab=review'],
+    ['/admin/traffic', '/traffic'],
+    ['/admin/events', '/events'],
+    ['/admin/audit', '/audit'],
+  ])('sends %s to %s for good', async (from, to) => {
+    const res = await setup().request(from);
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe(to);
+  });
+
+  it('leaves other addresses alone', async () => {
+    expect((await setup().request('/administrator')).status).toBe(404);
+  });
+});

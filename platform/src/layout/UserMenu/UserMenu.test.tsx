@@ -1,12 +1,17 @@
 import { screen, within } from '@testing-library/react';
+import { staffHandlers } from '@/test/admin';
 import { renderApp } from '@/test/render';
+import { server } from '@/test/server';
+
+// The console is staff only: the menu is seen signed in as staff.
+beforeEach(() => server.use(...staffHandlers()));
 
 describe('the account menu', () => {
   it('shows the person, the theme and log out, and nothing of the retired products', async () => {
     const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Chris Timmerman' }));
     const menu = screen.getByRole('menu', { name: 'Account' });
-    expect(within(menu).getByText('chris@example.com')).toBeInTheDocument();
+    expect(within(menu).getByText('support@glyphh.ai')).toBeInTheDocument();
     expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Theme', 'Log out']);
   });
 
@@ -69,7 +74,7 @@ describe('the account menu', () => {
     await user.click(screen.getByRole('main'));
     expect(screen.queryByRole('menu', { name: 'Account' })).not.toBeInTheDocument();
     await user.click(trigger);
-    await user.click(screen.getByText('chris@example.com'));
+    await user.click(screen.getByText('support@glyphh.ai'));
     expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument();
     await user.click(trigger);
     expect(screen.queryByRole('menu', { name: 'Account' })).not.toBeInTheDocument();
