@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Config } from './config.js';
+import { gameDefs, readGames } from './games.js';
 
 export const testConfig: Config = {
   serverUrl: 'https://api.test',
@@ -25,6 +26,8 @@ export function fakeServer() {
     accessTokens: new Set(['access-1']),
     refreshFails: false,
     codeFails: false,
+    /** /v1/me says staff: true. */
+    staff: false,
   };
 
   const server = new Hono();
@@ -65,7 +68,7 @@ export function fakeServer() {
     }
     await next();
   });
-  server.get('/v1/me', (c) => c.json({ id: 'u1', email: 'chris@example.com' }, 200, { 'x-request-id': 'req-1' }));
+  server.get('/v1/me', (c) => c.json({ id: 'u1', email: 'chris@example.com', ...(state.staff ? { staff: true } : {}) }, 200, { 'x-request-id': 'req-1' }));
   server.patch('/v1/me', async (c) => c.json({ id: 'u1', name: (await c.req.json()).name }));
   server.delete('/v1/installs/:id', (c) => c.body(null, 204));
   server.get('/v1/org/members', (c) => c.json([], 200));
@@ -84,4 +87,81 @@ export function cookiesFrom(response: Response): string {
     .map((line) => line.split(';')[0])
     .filter((pair) => pair && !pair.endsWith('='))
     .join('; ');
+}
+
+export type GameCall = { game: string; key: string | null; tool: string; args: Record<string, unknown> };
+
+/** What each fake game's admin tools answer: a value, or a function of the arguments; an `Error` answers isError. */
+type Answers = Record<string, unknown>;
+
+export const gameAnswers: Record<string, Answers> = {
+  frank: {
+    admin_stats: {
+      overview: { players: 1200, players24: 30, players7: 210, active24: 80, accounts: 90, buyers: 12, revenue: 4500 },
+      days: [
+        { d: '1970-01-12', players: 30, revenue: 99 },
+        { d: '1970-01-10', players: 20, revenue: 198 },
+        { d: '1970-01-01', players: 5, revenue: 1000 },
+      ],
+    },
+    admin_queue: { waiting: 2, levels: [{ id: 'lv1', name: 'Rooftops', author: 'Sam', status: 'pending' }] },
+    admin_review: (args: Record<string, unknown>) => ({ id: args.id, status: args.decision === 'approve' ? 'public' : 'declined' }),
+  },
+  crabby: {
+    admin_overview: { overview: { players: 300, players24: 4, active24: 9, reportsOpen: 3 } },
+    admin_ban: () => new Error('There is no such player.'),
+  },
+  mahj: {
+    admin_overview: { overview: { players: 800, players24: 12, active24: 40, revenue: 2997, queue: 5, reportsOpen: 1 }, days: [{ d: '1970-01-12', revenue: 999 }] },
+  },
+  carol: {
+    admin_overview: (args: Record<string, unknown>) => ({
+      days: args.days,
+      recent: { revenue_usd: args.days === 1 ? 4.99 : args.days === 7 ? 19.96 : 49.9, made: 3 },
+      all_time: { revenue_usd: 120.5 },
+      accounts: 64,
+      open_reports: 2,
+      failed_jobs: 1,
+    }),
+  },
+};
+
+/**
+ * Fake games behind one fetch: each answers /healthz and its admin MCP endpoint (`/mcp?admin=key-<game>`) from
+ * `gameAnswers`, recording every tool call. A game in `down` answers nothing at all.
+ */
+export function fakeGames(answers: Record<string, Answers> = gameAnswers) {
+  const calls: GameCall[] = [];
+  const down = new Set<string>();
+  const fetcher = (async (input: Request | string | URL, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const game = url.hostname.replace(/\.test$/, '');
+    if (down.has(game)) throw new TypeError('fetch failed');
+    if (url.pathname === '/healthz') return Response.json({ ok: true, build: `build-${game}` });
+    if (url.pathname !== '/mcp') return new Response('not found', { status: 404 });
+    const key = url.searchParams.get('admin');
+    if (key !== `key-${game}`) {
+      return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'that admin address is not right' } }, { status: 401 });
+    }
+    const message = JSON.parse(String(init?.body));
+    const { name, arguments: args = {} } = message.params;
+    calls.push({ game, key, tool: name, args });
+    const answer = answers[game]?.[name];
+    const value = typeof answer === 'function' ? answer(args) : (answer ?? { ok: true });
+    if (value instanceof Error) {
+      return Response.json({ jsonrpc: '2.0', id: message.id, result: { content: [{ type: 'text', text: `Could not do that: ${value.message}` }], isError: true } });
+    }
+    return Response.json({ jsonrpc: '2.0', id: message.id, result: { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value } });
+  }) as typeof fetch;
+  return { calls, down, fetch: fetcher };
+}
+
+/** The four games, reached at https://<game>.test with the key key-<game>; the games in `unset` have no key. */
+export function testGames(unset: string[] = []) {
+  const env: Record<string, string> = {};
+  for (const g of gameDefs) {
+    env[`GAME_URL_${g.id.toUpperCase()}`] = `https://${g.id}.test`;
+    if (!unset.includes(g.id)) env[`GAME_ADMIN_KEY_${g.id.toUpperCase()}`] = `key-${g.id}`;
+  }
+  return readGames(env);
 }

@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
+import { readGames } from './games.js';
 
 /**
  * Production: the route handlers, the built pages, and index.html for every other path. One site on one host: the
@@ -10,7 +11,7 @@ import { readConfig } from './config.js';
  * glyphh.ai serves the games pages itself.
  */
 const config = readConfig();
-const app = createApp({ config });
+const app = createApp({ config, games: readGames() });
 const clientDir = 'dist/client';
 const indexHtml = await readFile(`${clientDir}/index.html`, 'utf8');
 

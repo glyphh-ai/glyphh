@@ -6,7 +6,7 @@ look and its sign-in, to become the games' admin: what is left is listed below, 
 
 | Part | Repo | What |
 |---|---|---|
-| Platform | `glyphh-ai/platform` (this) | The sign-in, Home (empty) and Glyphh's staff view |
+| Platform | `glyphh-ai/platform` (this) | The sign-in, Home (empty) and Glyphh's staff view: the games' admin |
 | Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai. With its `GLYPHH_PRODUCTS` off (the default) every product route answers `410 E_WOUND_DOWN`, and only Glyphh's staff sign in |
 
 ## What is left
@@ -17,11 +17,32 @@ look and its sign-in, to become the games' admin: what is left is listed below, 
 | `/authorize?oauth=&client=`, `/allow?consent=` | The two steps the server sends a browser to in a sign-in | `GET {server}/auth/consent`, links to `{server}/auth/...` |
 | `/error?code=&message=&trace=` | Any refusal in a browser step, with the trace id to quote | none |
 | `/` | Home, in the console's shell (the logo, the sidebar, the account menu with the theme and Log out): empty, "Nothing here yet." Glyphh's staff land on the staff view instead | `GET /v1/me` |
-| `/admin`, `/admin/*` | Glyphh's staff view, staff only (the server refuses anyone else): Dashboard, Infrastructure, Log alerts, Organisations, People, Plans, Traffic, Marketing links, Ada versions, Audit log | `/v1/admin/*` |
+| `/admin` | The games' admin, staff only: every game's health, build, players, revenue and what waits for someone | `GET /api/games/overview` |
+| `/admin/games/:id?tab=` | One game's admin: a tab for each of its lists, with that game's own actions (confirmed in a dialog where they can't quietly be taken back) | `POST /api/games/:id/tools/:tool` |
+| `/admin/traffic`, `/admin/events`, `/admin/audit` | Glyphh's own sites' traffic, the server's errors, the staff audit log | `/v1/admin/*` |
 | anything else | "Page not found" | none |
 
-The staff view is as it was: it still shows the retired products' numbers (plans, Ada versions, the queues), which
-the server still answers for staff. Trimming it belongs with the games' admin.
+The retired products' staff screens (Dashboard, Infrastructure, Organisations, People, Plans, Marketing links, Ada
+versions) were removed with the games' admin (2026-11-19).
+
+## The games' admin
+
+His ruling, 2026-11-19: "one admin, games keep their own DBs". Each game keeps its own server and database; the
+platform calls each game's existing admin MCP endpoint, `POST {site}/mcp?admin=<key>` (JSON-RPC `tools/call`),
+server-side only (`server/games.ts`), with that game's own `ADMIN_MCP_KEY`. Keys never reach the browser. Every
+`/api/games` call checks the session is staff (`GET {server}/v1/me`, `staff: true`) and every action is written to
+the platform's log with the staff member's email; each game also keeps its own record ("admin key").
+
+| Game | Site | Platform secret (copy of the game's Fly secret) |
+|---|---|---|
+| Free Fall Frank | https://freefallfrank.com | `GAME_ADMIN_KEY_FRANK` = `ADMIN_MCP_KEY` of `free-fall-frank` |
+| Crabby Knife Fight | https://crabbyknifefight.com | `GAME_ADMIN_KEY_CRABBY` = `ADMIN_MCP_KEY` of `crabby-knife-fight` |
+| Bams & Brags | https://bamsandbrags.com | `GAME_ADMIN_KEY_MAHJ` = `ADMIN_MCP_KEY` of `glyphh-mahj` |
+| Send a Carol | https://sendacarol.com | `GAME_ADMIN_KEY_CAROL` = `ADMIN_MCP_KEY` of `send-a-carol` |
+
+A game without its key shows as "Not connected". `GAME_URL_<GAME>` points the platform at another address of a game.
+Only the tools listed per game in `server/games.ts` can be called; `src/games/catalog.ts` is what each game's page
+shows and offers.
 
 ## What was removed (2026-11-18)
 

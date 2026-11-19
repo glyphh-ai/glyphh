@@ -3,10 +3,15 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { Config } from './config.js';
 import { authorizeUrl, exchangeCode, OAuthError, refresh, revoke, type Tokens } from './oauth.js';
+import { callTool, GameError, health, isAction, summary, type Game } from './games.js';
 import { pkce, randomToken, seal, unseal } from './seal.js';
 
 type Deps = {
   config: Config;
+  /** The games the admin reaches (readGames()); none, and the games' admin lists nothing. */
+  games?: Game[];
+  /** Where each staff action on a game is written; the platform's log by default. */
+  log?: (line: string) => void;
   /** The server is reached through this, so tests can put a fake server behind it. */
   fetch?: typeof fetch;
   now?: () => number;
@@ -35,7 +40,7 @@ function errorBody(code: string, message: string) {
   return { error: { code, message } };
 }
 
-export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: Deps) {
+export function createApp({ config, games = [], log = (line) => console.log(line), fetch: fetcher = fetch, now = Date.now }: Deps) {
   const app = new Hono();
   const secure = config.secureCookies;
   const sessionCookie = secure ? '__Host-glyphh_session' : 'glyphh_session';
@@ -161,16 +166,13 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
   // The account API (/api/v1/* → {server}/v1/*), with the session's token.
   app.all('/api/v1/*', (c) => forward(c, config.serverUrl, /^\/api/));
 
-  async function forward(c: Context, base: string, prefix: RegExp) {
-    if (unsafeMethods.has(c.req.method) && !sameOrigin(c)) return forbidden(c);
-
+  /**
+   * Calls the server with the session's token, renewing it once when it has expired or the server says 401. Null
+   * when the sign-in has ended (the cookie is cleared).
+   */
+  async function withToken(c: Context, send: (token: string) => Promise<Response>): Promise<Response | null> {
     let session = readSession(c);
-    if (!session) return noSession(c);
-
-    const signedOut = () => {
-      clearSession(c);
-      return noSession(c);
-    };
+    if (!session) return null;
 
     const renew = async (): Promise<boolean> => {
       try {
@@ -181,31 +183,107 @@ export function createApp({ config, fetch: fetcher = fetch, now = Date.now }: De
         return false;
       }
     };
+    const signedOut = () => {
+      clearSession(c);
+      return null;
+    };
 
     if (now() >= session.expiresAt && !(await renew())) return signedOut();
+    let upstream = await send(session.accessToken);
+    if (upstream.status === 401) {
+      if (!(await renew())) return signedOut();
+      upstream = await send(session.accessToken);
+      if (upstream.status === 401) return signedOut();
+    }
+    return upstream;
+  }
+
+  async function forward(c: Context, base: string, prefix: RegExp) {
+    if (unsafeMethods.has(c.req.method) && !sameOrigin(c)) return forbidden(c);
 
     const url = new URL(c.req.url);
     const target = `${base}${url.pathname.replace(prefix, '')}${url.search}`;
     const body = c.req.method === 'GET' || c.req.method === 'HEAD' ? undefined : await c.req.arrayBuffer();
 
-    const send = () => {
-      const headers: Record<string, string> = { authorization: `Bearer ${session!.accessToken}`, accept: 'application/json' };
+    const upstream = await withToken(c, (token) => {
+      const headers: Record<string, string> = { authorization: `Bearer ${token}`, accept: 'application/json' };
       const contentType = c.req.header('content-type');
       if (contentType) headers['content-type'] = contentType;
       const requestId = c.req.header('x-request-id');
       if (requestId) headers['x-request-id'] = requestId;
       return fetcher(target, { method: c.req.method, headers, body });
-    };
-
-    let upstream = await send();
-    if (upstream.status === 401) {
-      if (!(await renew())) return signedOut();
-      upstream = await send();
-      if (upstream.status === 401) return signedOut();
-    }
-
-    return passBack(c, upstream);
+    });
+    return upstream ? passBack(c, upstream) : noSession(c);
   }
+
+  // ---- The games' admin: staff only, every call made here, server-side, with the game's own key. ----
+
+  /**
+   * Who is asking, as the server says (`GET /v1/me`): staff, or a refusal to answer with. The server only lets staff
+   * sign in at all since the wind-down; this is checked again for every call regardless.
+   */
+  async function staffOnly(c: Context): Promise<{ email: string } | Response> {
+    const me = await withToken(c, (token) =>
+      fetcher(`${config.serverUrl}/v1/me`, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' } }),
+    );
+    if (!me) return noSession(c);
+    const who = (await me.json().catch(() => null)) as { email?: string; staff?: boolean } | null;
+    if (!me.ok || who?.staff !== true) return c.json(errorBody('E_STAFF_ONLY', 'The games’ admin is for Glyphh’s staff.'), 403);
+    return { email: who.email ?? 'staff' };
+  }
+
+  const gameById = (id: string) => games.find((g) => g.id === id);
+  const listed = (g: Game) => ({ id: g.id, name: g.name, site: g.site, icon: `${g.site}${g.icon}`, connected: Boolean(g.key) });
+  const gameRefusal = (c: Context, error: unknown) => {
+    if (error instanceof GameError) return c.json(errorBody(error.code, error.message), error.status);
+    throw error;
+  };
+
+  app.get('/api/games', async (c) => {
+    const who = await staffOnly(c);
+    if (who instanceof Response) return who;
+    return c.json({ games: games.map(listed) }, 200, { 'cache-control': 'no-store' });
+  });
+
+  /** Every game at once: up or not, its build, its numbers. A game that fails says why; the rest still answer. */
+  app.get('/api/games/overview', async (c) => {
+    const who = await staffOnly(c);
+    if (who instanceof Response) return who;
+    const rows = await Promise.all(
+      games.map(async (g) => {
+        const [up, numbers] = await Promise.all([
+          health(g, fetcher, now),
+          summary(g, fetcher, now).then(
+            (s) => ({ summary: s, error: null }),
+            (e: unknown) => ({ summary: null, error: e instanceof GameError ? e.message : `${g.name} could not be read.` }),
+          ),
+        ]);
+        return { ...listed(g), health: up, ...numbers };
+      }),
+    );
+    return c.json({ games: rows, at: now() }, 200, { 'cache-control': 'no-store' });
+  });
+
+  /** One admin tool of one game. Reads and actions alike are POSTs, from this site's own pages only. */
+  app.post('/api/games/:game/tools/:tool', async (c) => {
+    if (!sameOrigin(c)) return forbidden(c);
+    const who = await staffOnly(c);
+    if (who instanceof Response) return who;
+    const game = gameById(c.req.param('game'));
+    if (!game) return c.json(errorBody('E_NOT_FOUND', 'There is no such game.'), 404);
+    const tool = c.req.param('tool');
+    const sent = (await c.req.json().catch(() => ({}))) as { arguments?: unknown };
+    const args = sent.arguments && typeof sent.arguments === 'object' && !Array.isArray(sent.arguments) ? (sent.arguments as Record<string, unknown>) : {};
+    try {
+      const result = await callTool(game, fetcher, tool, args);
+      if (isAction(game, tool)) {
+        log(JSON.stringify({ games_admin: 'action', at: new Date(now()).toISOString(), staff: who.email, game: game.id, tool, args }));
+      }
+      return c.json({ result }, 200, { 'cache-control': 'no-store' });
+    } catch (error) {
+      return gameRefusal(c, error);
+    }
+  });
 
   return app;
 }

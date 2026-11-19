@@ -37,8 +37,8 @@ describe('the sidebar on a phone', () => {
     server.use(...staffHandlers());
     const { user } = renderApp('/admin');
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Organisations' }));
-    expect(await screen.findByRole('heading', { name: 'Organisations' })).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Audit log' }));
+    expect(await screen.findByRole('heading', { name: 'Audit log' })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-sidebar', 'closed');
   });
 });
