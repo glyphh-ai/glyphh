@@ -14,8 +14,10 @@ from glyphh_server.api.pages import to_platform
 from glyphh_server.llm import usage as llm_usage
 from glyphh_server.llm.usage import Ledger
 from glyphh_server.models import Org
-from glyphh_server.ops.billing import changes, checkout, signature, topup, webhook
+from glyphh_server.ops.billing import changes, checkout, payment, series, signature, topup, webhook
 from glyphh_server.ops.billing.checkout import StripePage
+from glyphh_server.ops.billing.payment import Payment
+from glyphh_server.ops.billing.series import Series
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.topup import TopupIn
 from glyphh_server.ops.org import OrgView
@@ -102,6 +104,28 @@ async def change_plan(body: PlanIn, caller: Caller, conn: Conn, stripe: Stripe, 
 async def open_portal(caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
     """Stripe's portal address: card, invoices, cancel."""
     return await checkout.portal(conn, caller, stripe, request.app.state.settings)
+
+
+@router.get("/v1/billing/series", operation_id="usageSeries")
+async def get_series(
+    caller: Caller, conn: Conn, days: Annotated[int, Query(ge=1, le=90, description="Days back, today's included")] = 30
+) -> Series:
+    """The org's use by UTC day, oldest first, for the Usage charts: Ada Cloud reads and decides, bot runs, what the
+    balance was charged, and the connections held. Tokens by day and model are GET /v1/llm/usage."""
+    return await series.series(conn, caller.org_id, days)
+
+
+@router.get("/v1/billing/payment", operation_id="paymentOnFile")
+async def get_payment(caller: Caller, conn: Conn, request: Request) -> Payment:
+    """The card on file (brand, last four, expiry) and the last twelve invoices, read from Stripe. The admin's."""
+    return await payment.payment(conn, caller, lambda: stripe_client(request))
+
+
+@router.post("/v1/billing/card", operation_id="changeCard")
+async def change_card(caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
+    """Stripe's portal at its page to add or replace the card; the org's Stripe customer made first if it has none.
+    The admin's."""
+    return await payment.card(conn, caller, stripe, request.app.state.settings)
 
 
 @router.post("/v1/stripe/webhook", operation_id="stripeWebhook", status_code=204)

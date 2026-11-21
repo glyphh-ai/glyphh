@@ -60,6 +60,7 @@ class FakeStripe:
         self.subs: dict[str, dict[str, Any]] = {}
         self.fail: bool = False
         self.meter_down: bool = False  # only the meter refuses
+        self.reads: dict[str, Any] = {}  # what a read of this path answers (a customer, its cards, its invoices)
 
     def sub(self, sub_id: str, customer: str, price: str, quantity: int, status: str = "active") -> dict[str, Any]:
         self.subs[sub_id] = {
@@ -100,6 +101,8 @@ class FakeStripe:
         body = dict(parse_qsl(request.content.decode() or request.url.query.decode()))
         path = request.url.path.removeprefix("/v1")
         self.calls.append((request.method, path, body))
+        if request.method == "GET" and path in self.reads:
+            return answer(self.reads[path])
         if path == "/customers":
             return answer({"id": f"cus_{uuid.uuid4().hex}"})
         if path == "/checkout/sessions":
