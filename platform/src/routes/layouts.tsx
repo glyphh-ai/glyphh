@@ -36,6 +36,7 @@ export function MainLayout() {
       sidebar={
         <Sidebar footer={<UserMenu />}>
           {ada === undefined ? null : ada ? <AdaNav /> : <RuntimeNav />}
+          {ada === undefined ? null : <BotsNav />}
           <StaffNav />
         </Sidebar>
       }
@@ -90,6 +91,20 @@ function AdaNav() {
         </NavGroup>
       ) : null}
     </>
+  );
+}
+
+/** Bots and the connections they use, Ada Cloud on or off. */
+function BotsNav() {
+  return (
+    <NavGroup label="Bots">
+      <NavItem to="/bots" icon="user">
+        Bots
+      </NavItem>
+      <NavItem to="/connections" icon="external">
+        Connections
+      </NavItem>
+    </NavGroup>
   );
 }
 

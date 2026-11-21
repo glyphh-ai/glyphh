@@ -9,6 +9,9 @@ import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
 import { AppsPage } from '@/pages/apps/AppsPage';
+import { BotPage } from '@/pages/bots/BotPage';
+import { BotsPage } from '@/pages/bots/BotsPage';
+import { ConnectionsPage } from '@/pages/connections/ConnectionsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
@@ -149,6 +152,10 @@ export const routes: RouteObject[] = [
         ),
         handle: { crumbs: [{ label: 'Ada' }, { label: 'Templates', to: '/templates' }, { label: ':name' }] },
       },
+      // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
+      { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
+      { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
+      { path: 'connections', element: <ConnectionsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections' }] } },
       {
         path: 'usage',
         element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
