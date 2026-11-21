@@ -8,6 +8,7 @@ import { SettingsTitle } from '@/pages/settings/SettingsTitle';
 import { Card, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
 import usageStyles from '@/pages/settings/UsagePage.module.css';
 import { TokensSection } from '@/pages/settings/tokens/TokensSection';
+import { ConnectionsMeter } from '@/pages/settings/usage/ConnectionsCard';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import styles from './ada.module.css';
 
@@ -111,6 +112,7 @@ export function AdaUsagePage() {
               <RequestsNote usage={data} centsPer10k={centsPer10k} />
               {data.requests_per_second !== null && <p className={styles.meta}>{`Up to ${plural(data.requests_per_second, 'call')} a second.`}</p>}
             </Card>
+            <ConnectionsMeter />
           </div>
         )}
       </SettingsSection>

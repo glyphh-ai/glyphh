@@ -8,9 +8,13 @@ import { Card, Chip, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
 import { NodeCount, NodeList } from './licence/Nodes';
 import { SettingsTitle } from './SettingsTitle';
 import { TokensSection } from './tokens/TokensSection';
+import { ConnectionsMeter } from './usage/ConnectionsCard';
 import styles from './UsagePage.module.css';
 
-/** What you use: precedents against the plan's per node, the runtime nodes against the plan's, each API key's calls. */
+/**
+ * What you use: precedents against the plan's per node, the runtime nodes and connections against the plan's, the
+ * month's tokens (bots and hosted models) and each bot's, each API key's calls.
+ */
 export function UsagePage() {
   const me = useMe();
   const keys = useRuntimeKeys();
@@ -28,6 +32,7 @@ export function UsagePage() {
           <div className={styles.meters}>
             <Precedents me={me.data} />
             {nodes.data && <NodeCount nodes={nodes.data} />}
+            <ConnectionsMeter />
           </div>
         )}
       </SettingsSection>

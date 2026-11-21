@@ -5,8 +5,9 @@ import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { Chart, type Series } from '@/components/Chart';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { date, dollars, micros } from '@/lib/format';
-import { Card, Icon, LoadingCard, ProgressBar } from '@/ui';
+import { Card, Chip, Icon, LoadingCard, ProgressBar } from '@/ui';
 import usageStyles from '../UsagePage.module.css';
+import { BotsSection } from '../usage/BotsSection';
 import { BalanceCard } from './BalanceCard';
 import styles from './tokens.module.css';
 
@@ -49,8 +50,9 @@ export function tokensByDay(days: TokenDay[]): { labels: string[]; input: number
 }
 
 /**
- * Glyphh's hosted models on Usage: the month's tokens against the plan's allowance, the overage balance, the last 30
- * days' input and output tokens by day, and each model's month. Nothing while hosted models are off (no `tokens`). */
+ * Tokens on Usage, the bots' and Glyphh's hosted models' (one meter): the month's against the plan's allowance, the
+ * overage balance, each bot's month, the last 30 days by day, and each model's month. Nothing from a server that
+ * leaves `tokens` out. */
 export function TokensSection() {
   const billing = useBilling();
   const me = useMe();
@@ -73,7 +75,7 @@ export function TokensSection() {
     <>
       <SettingsSection
         title="Tokens"
-        description={`Glyphh’s hosted models, input and output together. Counted by calendar month in UTC: the allowance starts again on ${date(tokens.resets_at)}.`}
+        description={`Your bots’ and Glyphh’s hosted models’, input and output together. Counted by calendar month in UTC: the allowance starts again on ${date(tokens.resets_at)}.`}
       >
         <div className={usageStyles.meters}>
           <Allowance tokens={tokens} />
@@ -81,7 +83,9 @@ export function TokensSection() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Tokens by day" description="The last 30 days, input and output, across every hosted model.">
+      {billing.data?.bots && <BotsSection bots={billing.data.bots} />}
+
+      <SettingsSection title="Tokens by day" description="The last 30 days, input and output, across every model.">
         {days.isPending && <LoadingCard lines={4} />}
         <ApiErrorNotice error={days.error} />
         {days.data && chart.labels.length === 0 && <p className={styles.meta}>No tokens in the last 30 days.</p>}
@@ -123,7 +127,7 @@ function Allowance({ tokens }: { tokens: TokenUsage }) {
 }
 
 function ModelTable({ tokens }: { tokens: TokenUsage }) {
-  if (tokens.models.length === 0) return <p className={styles.meta}>No hosted model used this month.</p>;
+  if (tokens.models.length === 0) return <p className={styles.meta}>No model used this month.</p>;
   return (
     <Card>
       <div className={styles.tableBox}>
@@ -140,7 +144,9 @@ function ModelTable({ tokens }: { tokens: TokenUsage }) {
           <tbody>
             {tokens.models.map((model) => (
               <tr key={model.id}>
-                <td>{model.name}</td>
+                <td>
+                  {model.name} {model.kind === 'bot' && <Chip>Bots</Chip>}
+                </td>
                 <td className={styles.num}>{n(model.input_tokens)}</td>
                 <td className={styles.num}>{n(model.output_tokens)}</td>
                 <td className={styles.num}>{n(model.requests)}</td>

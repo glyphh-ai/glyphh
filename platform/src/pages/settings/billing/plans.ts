@@ -1,5 +1,5 @@
 import { feature, featureNames } from '@/api/plans';
-import type { CloudLimits, FeatureName, Plan } from '@/api/types';
+import type { CloudLimits, ConnectionPrice, FeatureName, Plan } from '@/api/types';
 import { money } from '@/lib/format';
 import type { IconName } from '@/ui';
 
@@ -32,13 +32,25 @@ export function precedentsText(precedents: number | null): string | null {
 }
 
 /**
- * A plan's tokens a month on Glyphh's hosted models: "25,000,000 tokens a month"; null is by contract. None while
- * hosted models are off (the server leaves `llm_tokens` out).
+ * A plan's tokens a month, the bots' and Glyphh's hosted models': "25,000,000 tokens a month"; null is by contract.
+ * None from a server that leaves `llm_tokens` out.
  */
 export function tokensText(tokens: number | null | undefined): string | null {
   if (tokens === undefined) return null;
   if (tokens === null) return 'Tokens a month by contract';
   return `${tokens.toLocaleString('en-GB')} tokens a month`;
+}
+
+/**
+ * A plan's connections to other services as lines: "Unlimited connections", or "3 connections" and, once priced,
+ * "Then $5 a connection a month". None from a server that leaves `connections` out.
+ */
+export function connectionFacts(price: ConnectionPrice | undefined): PlanFact[] {
+  if (!price) return [];
+  if (price.included === null) return [{ icon: 'external', text: 'Unlimited connections' }];
+  const facts: PlanFact[] = [{ icon: 'external', text: price.included === 1 ? '1 connection' : `${count(price.included)} connections` }];
+  if (price.cents_a_month !== null) facts.push({ icon: 'card', text: `Then ${money(price.cents_a_month)} a connection a month` });
+  return facts;
 }
 
 const featureText: Record<FeatureName, string> = {
@@ -95,6 +107,7 @@ export function planFacts(plan: Plan, ada = false): PlanFact[] {
   }
   const tokens = tokensText(plan.llm_tokens);
   if (tokens) facts.push({ icon: 'layers', text: tokens });
+  facts.push(...connectionFacts(plan.connections));
   const names = [...Object.keys(featureText), ...featureNames(plan).filter((name) => !(name in featureText))];
   for (const name of names) {
     if (ada && runtimeFeatures.includes(name)) continue;
