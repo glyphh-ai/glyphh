@@ -10,7 +10,33 @@ function on(given?: Parameters<typeof botsFake>[0]) {
   return fake;
 }
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('the Connections page', () => {
+  it('connects a catalog app from its card’s + straight away, then lands on its tools; the card itself opens its page', async () => {
+    const fake = on();
+    const popup = { closed: false, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const { user, router } = renderApp('/connections?tab=catalog');
+    const catalog = await screen.findByRole('list', { name: 'Catalog' });
+    const notion = await within(catalog).findByRole('button', { name: 'Connect Notion' });
+    expect(within(catalog).getByRole('button', { name: 'Add another Gmail account' })).toBeInTheDocument();
+    // The + sits beside the card's link, never inside it.
+    expect(notion.closest('a')).toBeNull();
+    await user.click(notion);
+    await waitFor(() => expect(open).toHaveBeenCalledWith('https://pipedream.test/connect/notion', 'glyphh-connect', expect.any(String)));
+    expect(within(await screen.findByRole('dialog')).getByRole('status')).toHaveTextContent('Connecting Notion…');
+    window.dispatchEvent(new Event('focus'));
+    expect(await screen.findByText('Notion is connected.')).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/connections/notion'));
+    expect(router.state.location.search).toBe('?tab=tools');
+    expect(fake.state.seen).toEqual(['link notion', 'sync']);
+
+    const again = renderApp('/connections?tab=catalog');
+    await user.click(await within(await screen.findAllByRole('list', { name: 'Catalog' }).then((l) => l.at(-1)!)).findByRole('link', { name: /Slack/ }));
+    expect(again.router.state.location.pathname).toBe('/connections/slack');
+  });
+
   it('shows your connections first, one row an app, searchable', async () => {
     on();
     const { user } = renderApp('/connections');
@@ -30,9 +56,9 @@ describe('the Connections page', () => {
     const at = (day: number) => `2026-11-${String(day).padStart(2, '0')}T00:00:00Z`;
     on({
       connections: [
-        { id: 'c-a', app: 'airtable', app_name: 'Airtable', app_icon: null, account_id: 'a', label: null, created_at: at(1) },
-        { id: 'c-z', app: 'zoom', app_name: 'Zoom', app_icon: 'https://icons.test/zoom.png', account_id: 'z', label: null, created_at: at(20) },
-        { id: 'c-z2', app: 'zoom', app_name: 'Zoom', app_icon: null, account_id: 'z2', label: null, created_at: at(19) },
+        { id: 'c-a', app: 'airtable', app_name: 'Airtable', app_icon: null, account_id: 'a', label: null, permissions: {}, created_at: at(1) },
+        { id: 'c-z', app: 'zoom', app_name: 'Zoom', app_icon: 'https://icons.test/zoom.png', account_id: 'z', label: null, permissions: {}, created_at: at(20) },
+        { id: 'c-z2', app: 'zoom', app_name: 'Zoom', app_icon: null, account_id: 'z2', label: null, permissions: {}, created_at: at(19) },
       ],
     });
     const { user } = renderApp('/connections');

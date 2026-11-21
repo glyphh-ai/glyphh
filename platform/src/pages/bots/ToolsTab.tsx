@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { connectionsOff, useConnections, useConnectionTools, useScopeBot, type Bot, type Connection } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
+import { PERMISSIONS } from '@/api/connections';
 import { plural } from '@/lib/format';
-import { Button, Card, EmptyState, LoadingCard, Select, TextField, useToast } from '@/ui';
+import { Button, Card, Chip, EmptyState, LoadingCard, Select, TextField, useToast } from '@/ui';
 import styles from './bots.module.css';
 
 type Scope = { connection_id: string; tools: string[] };
@@ -79,7 +80,8 @@ function ConnectionScope({
                     <label className={styles.tool}>
                       <input type="checkbox" checked={chosen.has(t.key)} onChange={() => toggle(t.key)} />
                       <span>
-                        <span className={styles.toolName}>{t.name}</span>
+                        <span className={styles.toolName}>{t.name}</span>{' '}
+                        {t.permission !== 'allow' && <Chip tone={t.permission === 'deny' ? 'red' : 'amber'}>{PERMISSIONS[t.permission]}</Chip>}
                         {t.description && <span className={`${styles.muted} ${styles.block}`}>{t.description}</span>}
                       </span>
                     </label>
@@ -90,6 +92,12 @@ function ConnectionScope({
           </>
         )}
         {tools.data?.length === 0 && <p className={styles.muted}>This app has no tools.</p>}
+        {connection && (
+          <p className={styles.muted}>
+            A tool that needs approval makes the bot wait for you in Approvals; a blocked one it never uses.{' '}
+            <Link to={`/connections/${encodeURIComponent(connection.app)}?tab=tools`}>Change {appName}’s permissions</Link>
+          </p>
+        )}
       </section>
     </Card>
   );
@@ -97,7 +105,8 @@ function ConnectionScope({
 
 /**
  * The tools the bot may use, per connection: add one of the org's connections, then tick the tools it may call.
- * A tool not ticked is one the bot never sees.
+ * A tool not ticked is one the bot never sees; one ticked still keeps the org's permission for it (needs approval or
+ * blocked), shown beside it.
  */
 export function ToolsTab({ bot }: { bot: Bot }) {
   const toast = useToast();

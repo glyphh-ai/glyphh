@@ -32,11 +32,17 @@ export function NavGroup({ label, children }: { label: string; children: ReactNo
   );
 }
 
-export function NavItem({ to, icon, end = false, children }: { to: string; icon: IconName; end?: boolean; children: ReactNode }) {
+/** A page in the sidebar; `badge` is a count waiting there (none shown at 0). */
+export function NavItem({ to, icon, end = false, badge, children }: { to: string; icon: IconName; end?: boolean; badge?: number; children: ReactNode }) {
   return (
     <NavLink to={to} end={end} className={({ isActive }) => cx(styles.item, isActive && styles.active)}>
       <Icon name={icon} />
       {children}
+      {badge ? (
+        <span className={styles.badge} aria-label={`${badge} waiting`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
     </NavLink>
   );
 }

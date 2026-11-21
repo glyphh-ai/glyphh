@@ -14,7 +14,7 @@ type Waiting = { app: ConnectorApp; url: string; blocked: boolean; before: numbe
  * asked every two seconds, on the popup closing and on coming back to this window, what is connected. When a new
  * account of the app shows, the dialog closes and the app's page opens on its tools.
  */
-export function useConnect() {
+export function useConnect({ onConnected }: { onConnected?: (app: ConnectorApp) => void } = {}) {
   const navigate = useNavigate();
   const toast = useToast();
   const connections = useConnections();
@@ -35,7 +35,8 @@ export function useConnect() {
           if (count(waiting.app.slug, now) > waiting.before) {
             setWaiting(null);
             toast.show(`${waiting.app.name} is connected.`);
-            navigate(`/connections/${encodeURIComponent(waiting.app.slug)}?tab=tools`);
+            if (onConnected) onConnected(waiting.app);
+            else navigate(`/connections/${encodeURIComponent(waiting.app.slug)}?tab=tools`);
           } else if (closedAt.current && Date.now() - closedAt.current >= EVERY_MS) {
             setWaiting((w) => w && { ...w, gaveUp: true });
           }

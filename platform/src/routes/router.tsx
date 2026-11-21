@@ -9,6 +9,7 @@ import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
 import { AppsPage } from '@/pages/apps/AppsPage';
+import { ApprovalsPage } from '@/pages/bots/ApprovalsPage';
 import { BotPage } from '@/pages/bots/BotPage';
 import { BotsPage } from '@/pages/bots/BotsPage';
 import { ConnectionPage } from '@/pages/connections/ConnectionPage';
@@ -30,6 +31,7 @@ import { DevicePage } from '@/pages/flows/DevicePage';
 import { LoginPage } from '@/pages/flows/LoginPage';
 import { DeviceDonePage, ErrorPage, GitHubInstalledPage, NotFoundPage } from '@/pages/flows/ResultPages';
 import { AuthPage } from '@/pages/settings/AuthPage';
+import { ClaudeKeyPage } from '@/pages/settings/ClaudeKeyPage';
 import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
@@ -172,6 +174,7 @@ export const routes: RouteObject[] = [
       // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
       { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
       { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
+      { path: 'approvals', element: <ApprovalsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Approvals' }] } },
       { path: 'connections', element: <ConnectionsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections' }] } },
       {
         path: 'connections/:name',
@@ -202,6 +205,7 @@ export const routes: RouteObject[] = [
       { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
+      { path: 'claude-key', element: <ClaudeKeyPage />, handle: crumbs('Settings', 'Claude key') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
       // Ada's versions (2026-11-21, was the Ada page in the main sidebar).

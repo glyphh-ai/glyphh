@@ -1,6 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { adaFake, tickets } from '@/test/ada';
-import { botsFake, inbox } from '@/test/bots';
+import { botsFake, inbox, waiting } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -22,12 +21,42 @@ describe('a bot’s page', () => {
     await user.type(name, 'Mail helper');
     await user.clear(screen.getByLabelText('Instructions'));
     await user.type(screen.getByLabelText('Instructions'), 'Answer every email.');
-    await user.selectOptions(await screen.findByLabelText('Model'), 'claude-haiku-5-5');
+    expect(await screen.findByRole('radio', { name: 'Claude Sonnet 5.5' })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: 'Claude Haiku 5.5' }));
     await user.click(screen.getByRole('button', { name: 'Shuffle' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Mail helper is saved.')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/bots/mail-helper'));
     expect(fake.state.bodies[0]).toMatchObject({ name: 'Mail helper', instructions: 'Answer every email.', model: 'claude-haiku-5-5' });
+  });
+
+  it('picks the model out of a searched, paged list with both prices', async () => {
+    on();
+    const { user } = renderApp('/bots/inbox-helper');
+    const models = await screen.findByRole('list', { name: 'Models' });
+    await waitFor(() => expect(within(models).getAllByRole('radio')).toHaveLength(6));
+    const picker = screen.getByRole('group', { name: 'Model' });
+    expect(picker).toHaveTextContent('1–6 of 12');
+    expect(picker).toHaveTextContent('20% markup');
+    // Sonnet 5.5 on Glyphh's key: $3 + 20% = $3.60 in; on the org's own key: the 20% only, $0.60.
+    const sonnet = within(models).getByRole('radio', { name: 'Claude Sonnet 5.5' }).closest('label');
+    expect(sonnet).toHaveTextContent('Glyphh’s key: $3.60 in · $18.00 out');
+    expect(sonnet).toHaveTextContent('Your key: $0.60 in · $3.00 out');
+    expect(within(picker).getByRole('button', { name: 'Previous' })).toBeDisabled();
+    await user.click(within(picker).getByRole('button', { name: 'Next' }));
+    expect(picker).toHaveTextContent('7–12 of 12');
+    expect(within(models).getByRole('radio', { name: /Haiku 4\.5/ })).toBeInTheDocument();
+    expect(within(picker).getByRole('button', { name: 'Next' })).toBeDisabled();
+    await user.type(within(picker).getByLabelText('Search models'), 'opus');
+    expect(within(models).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual([
+      'Claude Opus 5.5',
+      'Claude Opus 5',
+      'Claude Opus 4.6',
+    ]);
+    expect(picker).toHaveTextContent('1–3 of 3');
+    await user.clear(within(picker).getByLabelText('Search models'));
+    await user.type(within(picker).getByLabelText('Search models'), 'zzz');
+    expect(within(models).getByText('No model matches “zzz”.')).toBeInTheDocument();
   });
 
   it('scopes the tools per connection: adds a connection, ticks its tools with search and all or none, and saves', async () => {
@@ -37,6 +66,10 @@ describe('a bot’s page', () => {
     const list = await within(gmail).findByRole('list', { name: 'Gmail · chris@example.com tools' });
     expect(within(list).getByRole('checkbox', { name: /Find email/ })).toBeChecked();
     expect(within(list).getByRole('checkbox', { name: /Send email/ })).not.toBeChecked();
+    // The org's own permission for each tool shows beside it.
+    expect(within(list).getByRole('checkbox', { name: /Send email/ }).closest('label')).toHaveTextContent('Needs approval');
+    expect(within(list).getByRole('checkbox', { name: /Find email/ }).closest('label')).not.toHaveTextContent('Needs approval');
+    expect(within(gmail).getByRole('link', { name: 'Change Gmail’s permissions' })).toHaveAttribute('href', '/connections/gmail?tab=tools');
     expect(gmail).toHaveTextContent('1 of 3 tools allowed');
 
     await user.type(within(gmail).getByLabelText('Search tools'), 'send');
@@ -86,20 +119,44 @@ describe('a bot’s page', () => {
     expect(await screen.findByText('Connections are not set up')).toBeInTheDocument();
   });
 
-  it('lets the bot ask the org’s Ada models', async () => {
-    server.use(...adaFake({ models: [tickets()] }).handlers);
-    const fake = on();
-    const { user } = renderApp('/bots/inbox-helper?tab=models');
-    const box = await screen.findByRole('checkbox', { name: /tickets/ });
-    expect(box).not.toBeChecked();
-    expect(screen.getByRole('list', { name: 'Ada models' })).toHaveTextContent('1,240 precedents');
-    await user.click(box);
-    await user.click(screen.getByRole('button', { name: 'Save models' }));
-    expect(await screen.findByText('Inbox helper’s Ada models are saved.')).toBeInTheDocument();
-    expect(fake.state.bodies[0]).toEqual({ models: ['tickets'] });
+  it('edits the loop as JSON and the skills, and lists the problems the server finds', async () => {
+    const fake = on({ problems: ['loop[2]: no such tool gmail-send', 'gates.easy: needs options'] });
+    const { user } = renderApp('/bots/inbox-helper?tab=loop');
+    const spec = await screen.findByLabelText('Spec');
+    expect(screen.getByRole('list', { name: 'Steps' })).toHaveTextContent('3. reply · uses Send email · waits for your approval');
+    await user.clear(spec);
+    await user.type(spec, '{{"loop": [[');
+    expect(screen.getByText(/Not JSON yet/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save loop and skills' })).toBeDisabled();
+    await user.clear(spec);
+    await user.type(spec, '{{"loop": [[{{"step": "fetch"}]}');
+    expect(screen.getByRole('list', { name: 'Steps' })).toHaveTextContent('1. fetch');
+
+    expect(screen.getByLabelText('Skill name')).toHaveValue('tone');
+    await user.click(screen.getByRole('button', { name: 'Add skill' }));
+    const names = screen.getAllByLabelText('Skill name');
+    await user.type(names[1]!, 'tone');
+    expect(screen.getByText('Another skill has this name.')).toBeInTheDocument();
+    await user.clear(names[1]!);
+    await user.type(names[1]!, 'urgency');
+    await user.type(screen.getAllByLabelText('What it says')[1]!, 'Urgent means down.');
+
+    await user.click(screen.getByRole('button', { name: 'Save loop and skills' }));
+    const problems = await screen.findByRole('list', { name: 'Problems' });
+    expect(within(problems).getAllByRole('listitem').map((p) => p.textContent)).toEqual(['loop[2]: no such tool gmail-send', 'gates.easy: needs options']);
+    expect(fake.state.bodies[0]).toEqual({ spec: { loop: [{ step: 'fetch' }] }, skills: { tone: 'Write short, warm replies.', urgency: 'Urgent means down.' } });
   });
 
-  it('runs the bot and follows the run until it is done, with its steps, answer, tokens and cost', async () => {
+  it('saves a loop the server takes', async () => {
+    const fake = on();
+    const { user } = renderApp('/bots/inbox-helper?tab=loop');
+    await user.click(await screen.findByRole('button', { name: 'Remove tone' }));
+    await user.click(screen.getByRole('button', { name: 'Save loop and skills' }));
+    expect(await screen.findByText('Inbox helper’s loop is saved.')).toBeInTheDocument();
+    expect(fake.state.bots[0]!.skills).toEqual({});
+  });
+
+  it('runs the bot, follows the run until it asks, and answers its batch', async () => {
     const fake = on();
     const { user } = renderApp('/bots/inbox-helper?tab=runs');
     expect(await screen.findByText('No runs yet')).toBeInTheDocument();
@@ -109,34 +166,77 @@ describe('a bot’s page', () => {
     await user.click(run);
     const detail = await screen.findByRole('region', { name: 'Run' });
     expect(within(detail).getByText('Clear the inbox.')).toBeInTheDocument();
-    await waitFor(() => expect(within(detail).getByText('Answered 2 emails.')).toBeInTheDocument(), { timeout: 6000 });
-    expect(detail).toHaveTextContent('Done');
-    expect(detail).toHaveTextContent('1,500 tokens');
-    expect(detail).toHaveTextContent('Tool · gmail-find-email');
-    expect(detail).toHaveTextContent('Both are easy.');
-    expect(screen.getByRole('list', { name: 'Runs' })).toHaveTextContent('Clear the inbox.');
+    const question = await within(detail).findByRole('region', { name: 'Question' }, { timeout: 6000 });
+    expect(detail).toHaveTextContent('Needs you');
+    expect(within(detail).getByLabelText('Log')).toHaveTextContent('Found 2 emails.');
+    expect(within(detail).getByLabelText('Data')).toHaveTextContent('"emails": 2');
+    expect(detail).toHaveTextContent('1,020 tokens');
+    expect(question).toHaveTextContent('Answer these emails?');
+    const send = within(question).getByRole('button', { name: 'Send answers' });
+    expect(send).toBeDisabled();
+    await user.click(within(question).getByRole('button', { name: 'answer' }));
+    await user.click(within(within(question).getByRole('radiogroup', { name: 'Invoice overdue' })).getByRole('radio', { name: 'leave' }));
+    expect(within(within(question).getByRole('radiogroup', { name: 'Lunch on Friday?' })).getByRole('radio', { name: 'answer' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(send);
+    await waitFor(() => expect(detail).toHaveTextContent('Answered 1 email.'));
+    expect(fake.state.bodies.at(-1)).toEqual({ '1': 'answer', '2': 'leave' });
     expect(fake.state.seen).toContain('run inbox-helper');
   }, 10_000);
 
-  it('saves its limits, and deletes it once asked', async () => {
+  it('answers a one-option question with a button, and cancels a waiting run', async () => {
+    const fake = on({
+      runs: [
+        waiting({ id: 'r-1', question: { question: 'Send the reply?', options: ['yes', 'no'], batch: null, answer_with: null } }),
+        waiting({ id: 'r-2', input: 'Second', created_at: '2026-11-19T09:00:00Z' }),
+      ],
+    });
+    const { user, router } = renderApp('/bots/inbox-helper?tab=runs');
+    const question = await screen.findByRole('region', { name: 'Question' });
+    await user.click(within(question).getByRole('button', { name: 'yes' }));
+    await waitFor(() => expect(fake.state.seen).toContain('answer r-1'));
+    expect(fake.state.bodies.at(-1)).toBe('yes');
+
+    await user.click(within(screen.getByRole('list', { name: 'Runs' })).getByRole('button', { name: /Second/ }));
+    expect(router.state.location.search).toContain('run=r-2');
+    const other = await screen.findByRole('region', { name: 'Question' });
+    await user.click(within(other).getByRole('button', { name: 'Cancel run' }));
+    await waitFor(() => expect(fake.state.seen).toContain('cancel r-2'));
+    expect(await screen.findAllByText('Cancelled')).not.toHaveLength(0);
+  });
+
+  it('marks a finished run as wrong for its gate', async () => {
+    const fake = on({ runs: [waiting({ id: 'r-done', status: 'done', question: null, output: 'Answered 2 emails.' })] });
+    const { user } = renderApp('/bots/inbox-helper?tab=runs&run=r-done');
+    await user.click(await screen.findByRole('button', { name: 'Mark as wrong' }));
+    const dialog = await screen.findByRole('dialog');
+    const correct = within(dialog).getByRole('button', { name: 'Correct it' });
+    expect(correct).toBeDisabled();
+    await user.type(within(dialog).getByLabelText('What should have happened'), 'leave');
+    await user.type(within(dialog).getByLabelText('Item (optional)'), '2');
+    await user.click(correct);
+    expect(await screen.findByText('The easy gate learned “leave”.')).toBeInTheDocument();
+    expect(fake.state.bodies.at(-1)).toEqual({ outcome: 'leave', gate: 'easy', item: '2' });
+  });
+
+  it('shows what each gate learned', async () => {
+    on();
+    renderApp('/bots/inbox-helper?tab=gates');
+    const gate = await screen.findByRole('listitem', { name: 'easy' });
+    expect(gate).toHaveTextContent('14');
+    expect(gate).toHaveTextContent('Asked you: 6');
+    expect(gate).toHaveTextContent('Right on its own: 5');
+  });
+
+  it('says when a bot has no gates', async () => {
+    on({ bots: [inbox({ gate_models: [] })] });
+    renderApp('/bots/inbox-helper?tab=gates');
+    expect(await screen.findByText('No gates')).toBeInTheDocument();
+  });
+
+  it('deletes it once asked', async () => {
     const fake = on();
     const { user, router } = renderApp('/bots/inbox-helper?tab=settings');
-    const turns = await screen.findByLabelText('Most turns a run may take');
-    await user.clear(turns);
-    await user.type(turns, '5');
-    const usd = screen.getByLabelText('Most a run may cost, in dollars');
-    await user.clear(usd);
-    await user.type(usd, '0.5');
-    await user.click(screen.getByRole('button', { name: 'Save limits' }));
-    expect(await screen.findByText('Inbox helper’s limits are saved.')).toBeInTheDocument();
-    expect(fake.state.bodies[0]).toEqual({ limits: { max_turns: 5, usd_per_run: 0.5 } });
-
-    const again = screen.getByLabelText('Most turns a run may take');
-    await user.clear(again);
-    await user.type(again, '1.5');
-    expect(screen.getByRole('button', { name: 'Save limits' })).toBeDisabled();
-
-    await user.click(screen.getByRole('button', { name: 'Delete bot' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete bot' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/bots'));

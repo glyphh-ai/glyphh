@@ -1,7 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useCallback, useSyncExternalStore } from 'react';
 import { api } from './client';
-import { botKeys, type Connection, type ConnectionTool, type ConnectorApp } from './bots';
+import { botKeys, type Connection, type ConnectionTool, type ConnectorApp, type Permission } from './bots';
 
 /**
  * The connections catalog: every app Pipedream connects (`GET /v1/connections/apps`, a page at a time by its cursor),
@@ -59,44 +58,5 @@ export function byApp(connections: Connection[]): ConnectedApp[] {
 const READS = /(^|[-_ ])(get|list|find|search|read|lookup|retrieve|fetch|query|download|export)([-_ ]|$)/i;
 export const readsOnly = (tool: ConnectionTool) => READS.test(tool.key) || READS.test(tool.name);
 
-/**
- * Which of a connection's tools the org's bots may be given: allowed or blocked, per tool. The server keeps no such
- * choice per connection yet (a bot's own scope is what it may use), so this one is kept in this browser.
- */
-export type ToolChoice = 'allow' | 'block';
-type Choices = Record<string, ToolChoice>;
-const storeKey = (connectionId: string) => `glyphh.connection-tools.${connectionId}`;
-const listeners = new Set<() => void>();
-
-function read(connectionId: string): string {
-  try {
-    return localStorage.getItem(storeKey(connectionId)) ?? '{}';
-  } catch {
-    return '{}';
-  }
-}
-
-export function useToolChoices(connectionId: string) {
-  const raw = useSyncExternalStore(
-    (changed) => {
-      listeners.add(changed);
-      return () => listeners.delete(changed);
-    },
-    () => read(connectionId),
-  );
-  const choices = JSON.parse(raw) as Choices;
-  const set = useCallback(
-    (keys: string[], choice: ToolChoice) => {
-      const next = { ...(JSON.parse(read(connectionId)) as Choices) };
-      for (const key of keys) next[key] = choice;
-      try {
-        localStorage.setItem(storeKey(connectionId), JSON.stringify(next));
-      } catch {
-        /* storage off: the choice holds until the page is left */
-      }
-      listeners.forEach((l) => l());
-    },
-    [connectionId],
-  );
-  return { choiceOf: (key: string): ToolChoice => choices[key] ?? 'allow', set };
-}
+/** What the org's bots may do with a tool, as the person reads it; a tool never set needs approval. */
+export const PERMISSIONS: Record<Permission, string> = { allow: 'Always allow', ask: 'Needs approval', deny: 'Blocked' };

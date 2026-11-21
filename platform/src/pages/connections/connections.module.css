@@ -57,6 +57,22 @@ a.row:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
+/* A catalog card with its + on the right, a button beside the link (never inside it). */
+.catalogItem {
+  position: relative;
+}
+
+.withAdd {
+  padding-right: 52px;
+}
+
+.quickAdd {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+}
+
 .rowText {
   display: flex;
   flex: 1;
@@ -314,9 +330,21 @@ a.row:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 112px;
+  min-width: 140px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.choice[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.allowed {
+  color: #4ade80;
+}
+
+.asks {
+  color: #fbbf24;
 }
 
 .choice select {

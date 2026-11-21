@@ -1,6 +1,7 @@
 import { Outlet, useMatches, useParams } from 'react-router';
 import { StaffNav } from '@/admin/StaffGate';
 import { useAdaCloud } from '@/api/ada';
+import { useApprovals } from '@/api/bots';
 import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
@@ -93,10 +94,15 @@ function AdaNav() {
 /** Bots and the connections they use, Ada Cloud on or off. */
 function BotsNav() {
   const ada = useAdaCloud();
+  const waiting = useApprovals().data?.length ?? 0;
   return (
     <NavGroup label="Bots">
       <NavItem to="/bots" icon="user">
         Bots
+      </NavItem>
+      {/* The runs waiting on someone's yes, counted (2026-11-21). */}
+      <NavItem to="/approvals" icon="check" badge={waiting}>
+        Approvals
       </NavItem>
       <NavItem to="/connections" icon="external">
         Connections
@@ -161,6 +167,9 @@ export function SettingsLayout() {
                 Releases
               </NavItem>
             )}
+            <NavItem to="/settings/claude-key" icon="key">
+              Claude key
+            </NavItem>
           </NavGroup>
           <NavGroup label="Personal">
             <NavItem to="/settings/profile" icon="user">

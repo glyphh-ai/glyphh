@@ -6,6 +6,7 @@ import { Cat } from '@/bots/cat/Cat';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
 import { Button, Card, Chip, EmptyState, Icon, LoadingCard, panelId, tabId, Tabs, useToast } from '@/ui';
+import { useConnect } from '../connections/useConnect';
 import styles from './templates.module.css';
 
 type Tab = 'overview' | 'tools';
@@ -19,30 +20,49 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/** The services it needs, each said as connected or with the way to connect it. */
-function Needs({ template }: { template: BotTemplate }) {
+/** The apps it needs that the org has not connected yet; none until the connections are read. */
+function useMissing(template: BotTemplate) {
   const connections = useConnections();
   const have = new Set((connections.data ?? []).map((c) => c.app));
+  return { ready: connections.isSuccess, missing: connections.isSuccess ? template.required_apps.filter((a) => !have.has(a.slug)) : [] };
+}
+
+/**
+ * The services it needs, each said as connected or with Connect, which signs in right here (Pipedream's popup, the
+ * spinner) and leaves the person on this page, its Add now open to them.
+ */
+function Needs({ template }: { template: BotTemplate }) {
+  const { missing } = useMissing(template);
+  const { connect, connecting, error, dialog } = useConnect({ onConnected: () => undefined });
+  const away = new Set(missing.map((a) => a.slug));
   if (template.required_apps.length === 0) return <p className={styles.sectionAbout}>It needs no connection.</p>;
   return (
-    <List label="Connections it needs">
-      {template.required_apps.map((app) => (
-        <Row
-          key={app.slug}
-          title={app.name}
-          meta={have.has(app.slug) ? 'Connected' : 'Not connected yet'}
-          actions={
-            have.has(app.slug) ? (
-              <Chip tone="green">Connected</Chip>
-            ) : (
+    <>
+      <List label="Connections it needs">
+        {template.required_apps.map((app) => (
+          <Row
+            key={app.slug}
+            title={
               <Link to={`/connections/${encodeURIComponent(app.slug)}`} className={styles.open}>
-                Connect <Icon name="chevronRight" />
+                {app.name}
               </Link>
-            )
-          }
-        />
-      ))}
-    </List>
+            }
+            meta={away.has(app.slug) ? 'Not connected yet' : 'Connected'}
+            actions={
+              away.has(app.slug) ? (
+                <Button size="sm" variant="secondary" icon="plus" loading={connecting === app.slug} onClick={() => connect({ ...app, description: null })}>
+                  Connect
+                </Button>
+              ) : (
+                <Chip tone="green">Connected</Chip>
+              )
+            }
+          />
+        ))}
+      </List>
+      <ApiErrorNotice error={error} />
+      {dialog}
+    </>
   );
 }
 
@@ -109,7 +129,9 @@ function Details({ template }: { template: BotTemplate }) {
   const toast = useToast();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
-  const added = (bot: { slug: string; name: string }) => {
+  // The server adds it only once every app it needs is connected (422, reason connections): Add waits for them.
+  const { ready, missing } = useMissing(template);
+  const added =(bot: { slug: string; name: string }) => {
     toast.show(`${bot.name} is yours: it’s in Bots.`);
     navigate(`/bots/${encodeURIComponent(bot.slug)}`);
   };
@@ -129,7 +151,14 @@ function Details({ template }: { template: BotTemplate }) {
           </div>
         </div>
         <div className={styles.heroActions}>
-          <Button variant="primary" icon="plus" loading={add.isPending} onClick={() => add.mutate(template.slug, { onSuccess: added })}>
+          {missing.length > 0 && <span className={styles.sectionAbout}>Connect {missing.map((a) => a.name).join(' and ')} first</span>}
+          <Button
+            variant="primary"
+            icon="plus"
+            disabled={!ready || missing.length > 0}
+            loading={add.isPending}
+            onClick={() => add.mutate(template.slug, { onSuccess: added })}
+          >
             Add to my bots
           </Button>
         </div>
