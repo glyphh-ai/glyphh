@@ -232,10 +232,12 @@ def check_spec(spec: Mapping[str, Any], folder: Path) -> List[str]:
         return problems
     if len(set(ids)) != len(ids):
         problems.append("step ids must differ")
+    if "input" in ids:
+        problems.append("no step may be called input: $input is what the run is given")
     approvals = 0
     for i, step in enumerate(loop):
         problems += _check_step(step, ids, gates, folder)
-        problems += _check_rules(step, ids, ids[:i], gates, touches if touches in TOUCHES else "deletes")
+        problems += _check_rules(step, ids, ["input"] + ids[:i], gates, touches if touches in TOUCHES else "deletes")
         approvals += bool(step.get("approval"))
     if touches in OUTWARD and not approvals:
         problems.append(f"the bot touches {touches} but no step has an approval: it would act outward unasked")

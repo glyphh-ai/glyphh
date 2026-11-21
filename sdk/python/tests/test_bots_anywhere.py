@@ -131,6 +131,24 @@ def test_a_single_gates_fields_read_the_runs_data(tmp_path):
     assert outcome == "drop" and case["i"]["s"]["id"] == "run" and case["i"]["s"]["title"][0]["title"] == "one"
 
 
+def test_a_run_is_given_its_input_and_no_step_may_be_called_input(tmp_path):
+    given = spec()
+    given["loop"] = [{"id": "worth", "gate": "worth", "each": "$input.items", "label": "title", "key": "id",
+                      "on": {"empty:keep": "end"}}]
+    ada = FakeAda()
+    runner = Runner(Bot.load(write_bot(tmp_path / "g", given), program=Host()), ada, claude=ApiClaude(client=FakeApi()),
+                    ask=lambda q, o: "keep")
+    runner.install()
+    done = runner.run(given={"items": [{"id": 7, "title": "seven"}]})
+    assert done.status == "done" and done.data["input"]["items"][0]["id"] == 7
+    assert ada.cases["bot-lister-gate-worth"][0][0] == {"i": {"s": {"title": "seven", "id": 7}}}
+    named = spec()
+    named["loop"][0]["id"] = "input"
+    with pytest.raises(BotError) as e:
+        Bot.load(write_bot(tmp_path / "n", named), program=Host())
+    assert "no step may be called input: $input is what the run is given" in e.value.problems
+
+
 def test_api_claude_counts_its_cost_and_says_what_failed():
     api = FakeApi(model="claude-opus-5-5")
     claude = ApiClaude(client=api, model="haiku")

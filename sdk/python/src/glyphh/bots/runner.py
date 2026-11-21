@@ -457,8 +457,9 @@ class Runner:
 
     # running
 
-    def run(self, routine: bool = False) -> RunResult:
-        """One run of the loop, from its first step. `routine`: nobody is watching, so a question stops the run."""
+    def run(self, routine: bool = False, given: Any = None) -> RunResult:
+        """One run of the loop, from its first step. `routine`: nobody is watching, so a question stops the run.
+        `given`: what the run is given to work on, `$input` to its steps."""
         self._refuse()
         limits = self.bot.limits
         day = self.today().isoformat()
@@ -468,9 +469,10 @@ class Runner:
             return RunResult(self.bot.slug, "", "skipped",
                              f"runs_per_day: {limits['runs_per_day']} runs today already, no more until tomorrow")
         run_id = new_run_id()
-        self.store.save(run_id, "running", 0, {}, {}, "", [], day=day)
+        data: Dict[str, Any] = {} if given is None else {"input": given}
+        self.store.save(run_id, "running", 0, data, {}, "", [], day=day)
         self.echo(f"{self.bot.slug} run {run_id}{' (routine)' if routine else ''}")
-        return self._walk(run_id, 0, {}, routine, None, [])
+        return self._walk(run_id, 0, data, routine, None, [])
 
     def resume(self, answer: Any = None, routine: bool = False) -> RunResult:
         """Carry on the run that stopped for the person, with their answer: one of its options; for a batch of items,
