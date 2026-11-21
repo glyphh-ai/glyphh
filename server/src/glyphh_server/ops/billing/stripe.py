@@ -39,8 +39,8 @@ class StripeClient:
         self.http, self.secret_key, self.ada_meter = http, secret_key, ada_meter
 
     async def call(self, method: str, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
-        """A call to Stripe; a DELETE's parameters ride the query, as Stripe reads them."""
-        sent = {"params" if method == "DELETE" else "data": form(data or {})}
+        """A call to Stripe; a GET's and a DELETE's parameters ride the query, as Stripe reads them."""
+        sent = {"params" if method in ("GET", "DELETE") else "data": form(data or {})}
         try:
             res = await self.http.request(
                 method, f"{API}{path}", **sent, headers={"authorization": f"Bearer {self.secret_key}"}
@@ -102,6 +102,24 @@ class StripeClient:
         }
         await self.call("POST", "/billing/meter_events", body)
 
-    async def portal(self, customer: str, return_url: str) -> str:
-        session = await self.call("POST", "/billing_portal/sessions", {"customer": customer, "return_url": return_url})
+    async def portal(self, customer: str, return_url: str, flow: str | None = None) -> str:
+        """The portal; with a flow (payment_method_update), straight to that page of it."""
+        body: dict[str, Any] = {"customer": customer, "return_url": return_url}
+        if flow:
+            body["flow_data"] = {"type": flow}
+        session = await self.call("POST", "/billing_portal/sessions", body)
         return str(session["url"])
+
+    async def default_card(self, customer: str) -> dict[str, Any] | None:
+        """The card invoices are charged to: the customer's default, else its newest card; None without one."""
+        found = await self.call(
+            "GET", f"/customers/{customer}", {"expand": ["invoice_settings.default_payment_method"]}
+        )
+        method = (found.get("invoice_settings") or {}).get("default_payment_method")
+        if not isinstance(method, dict) or "card" not in method:
+            cards = await self.call("GET", f"/customers/{customer}/payment_methods", {"type": "card", "limit": 1})
+            method = next(iter(cards.get("data") or []), None)
+        return None if method is None else method["card"]
+
+    async def invoices(self, customer: str, limit: int) -> list[dict[str, Any]]:
+        return list((await self.call("GET", "/invoices", {"customer": customer, "limit": limit}))["data"])
