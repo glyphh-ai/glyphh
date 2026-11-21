@@ -33,6 +33,11 @@ export const defaultHandlers: HttpHandler[] = [
   // Hosted models off (no GLYPHH_LLM): billing without tokens or a balance, and no registry.
   http.get(v1('/billing'), () => HttpResponse.json(fixtures.billing)),
   http.get(v1('/llm/models'), () => apiError(404, 'E_NOT_FOUND', 'Not found.')),
+  // The use by day for Usage's charts, the days asked for; the admin's card on file and invoices.
+  http.get(v1('/billing/series'), ({ request }) =>
+    HttpResponse.json({ days: fixtures.seriesDays(Number(new URL(request.url).searchParams.get('days') ?? '30')) }),
+  ),
+  http.get(v1('/billing/payment'), () => HttpResponse.json(fixtures.payment)),
 ];
 
 /**

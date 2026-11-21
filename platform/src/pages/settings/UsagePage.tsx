@@ -9,6 +9,7 @@ import { NodeCount, NodeList } from './licence/Nodes';
 import { SettingsTitle } from './SettingsTitle';
 import { TokensSection } from './tokens/TokensSection';
 import { ConnectionsMeter } from './usage/ConnectionsCard';
+import { UsageCharts } from './usage/UsageCharts';
 import styles from './UsagePage.module.css';
 
 /**
@@ -36,6 +37,8 @@ export function UsagePage() {
           </div>
         )}
       </SettingsSection>
+
+      <UsageCharts ada={false} />
 
       <TokensSection />
 

@@ -382,3 +382,37 @@ export type LedgerEntry = {
   model: string | null;
   note: string | null;
 };
+
+/**
+ * One UTC day of the org's use, as `GET /v1/billing/series?days=30` lists it under `days`, oldest first and one a day:
+ * Ada Cloud's reads (decides among them), bot runs, what the balance was charged, and the connections held at its end.
+ */
+export type SeriesDay = {
+  /** YYYY-MM-DD. */
+  day: string;
+  reads: number;
+  decides: number;
+  bot_runs: number;
+  charged_cents: number;
+  charged_micros?: number;
+  connections: number;
+  connections_added: number;
+};
+
+/** The card on file, as Stripe has it; nothing of it is kept by Glyphh. */
+export type PaymentCard = { brand: string; last4: string; exp_month: number; exp_year: number };
+
+export type Invoice = {
+  id: string;
+  number: string | null;
+  status: 'draft' | 'open' | 'paid' | 'uncollectible' | 'void' | string;
+  total_cents: number;
+  currency: string;
+  created: IsoDate;
+  /** Stripe's page for it. */
+  url: string | null;
+  pdf: string | null;
+};
+
+/** `GET /v1/billing/payment` (the admin's): the card on file (null: none) and the last twelve invoices, newest first. */
+export type Payment = { card: PaymentCard | null; invoices: Invoice[] };

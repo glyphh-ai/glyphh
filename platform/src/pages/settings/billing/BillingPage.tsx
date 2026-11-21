@@ -9,6 +9,8 @@ import { AdminOnlyNote, SettingsTitle } from '../SettingsTitle';
 import settings from '../settings.module.css';
 import { BalanceCard } from '../tokens/BalanceCard';
 import { LedgerTable } from '../tokens/Ledger';
+import { OveragesSection } from './OveragesSection';
+import { PaymentSection } from './PaymentSection';
 import { PlanCard } from './PlanCard';
 
 export function BillingPage() {
@@ -28,7 +30,7 @@ export function BillingPage() {
   const done = params.get('done');
   useEffect(() => {
     if (!done) return;
-    for (const queryKey of [keys.me, keys.org, keys.licenceKeys, keys.billing]) void client.invalidateQueries({ queryKey });
+    for (const queryKey of [keys.me, keys.org, keys.licenceKeys, keys.billing, keys.payment]) void client.invalidateQueries({ queryKey });
     toast.show('Billing is up to date.');
     setParams({}, { replace: true });
   }, [done, client, setParams, toast]);
@@ -63,22 +65,28 @@ export function BillingPage() {
         )}
       </SettingsSection>
 
-      {/* Hosted models on: the prepaid balance tokens past the plan's month are charged to, in dollars. */}
+      {/* The prepaid balance tokens past the plan's month are charged to, in dollars: one-time top-ups. */}
       {balance && me.data && (
-        <>
-          <SettingsSection
-            title="Overage balance"
-            description="Glyphh’s hosted models draw on your plan’s tokens a month first. Past them, each request is charged here at the model’s rates."
-          >
-            <BalanceCard balance={balance} isAdmin={isAdmin} adding={adding} />
-          </SettingsSection>
-          <SettingsSection title="Balance history" description="Top-ups, grants, refunds and charges, newest first.">
-            {ledger.isPending && <LoadingCard lines={3} />}
-            <ApiErrorNotice error={ledger.error} />
-            {ledger.data?.length === 0 && <EmptyState icon="card" title="Nothing yet" />}
-            {ledger.data && ledger.data.length > 0 && <LedgerTable entries={ledger.data} models={models} />}
-          </SettingsSection>
-        </>
+        <SettingsSection
+          title="Buy more usage"
+          description="Bots and Glyphh’s hosted models use your plan’s tokens a month first. Past them, each request is charged to this balance at the model’s rates. Top it up once, any time."
+        >
+          <BalanceCard balance={balance} isAdmin={isAdmin} adding={adding} />
+        </SettingsSection>
+      )}
+
+      {me.data && billing.data && <OveragesSection plan={me.data.plan} billing={billing.data} ada={me.data.ada_cloud === true} />}
+
+      {/* The card on file and the invoices are Stripe's, and the admin's to see. */}
+      {isAdmin && <PaymentSection />}
+
+      {balance && me.data && (
+        <SettingsSection title="Balance history" description="Top-ups, grants, refunds and charges, newest first.">
+          {ledger.isPending && <LoadingCard lines={3} />}
+          <ApiErrorNotice error={ledger.error} />
+          {ledger.data?.length === 0 && <EmptyState icon="card" title="Nothing yet" />}
+          {ledger.data && ledger.data.length > 0 && <LedgerTable entries={ledger.data} models={models} />}
+        </SettingsSection>
       )}
     </>
   );

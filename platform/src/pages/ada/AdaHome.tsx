@@ -1,83 +1,51 @@
-import { Link, useNavigate } from 'react-router';
-import { useAdaModels, useAdaUsage } from '@/api/ada';
-import { useMe } from '@/api/queries';
+import { useNavigate } from 'react-router';
+import { useAdaUsage } from '@/api/ada';
+import { useBilling, useMe } from '@/api/queries';
 import { useSession } from '@/api/session';
-import { List, Row } from '@/components/List';
+import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
-import { date, plural } from '@/lib/format';
-import { Button, Card, Chip, CopyField, EmptyState, LoadingCard } from '@/ui';
-import { AdaErrorNotice } from './AdaErrorNotice';
-import { PrecedentsMeter, RequestsMeter, RequestsNote } from './AdaUsagePage';
-import styles from './ada.module.css';
+import { ActivityCard } from '@/pages/home/ActivityCard';
+import { greetingFor } from '@/pages/home/greeting';
+import { HomeStats } from '@/pages/home/HomeStats';
+import { Resources } from '@/pages/home/Resources';
+import { WhatsNew } from '@/pages/home/WhatsNew';
+import styles from '@/pages/home/home.module.css';
+import { Button, LoadingCard } from '@/ui';
 
-/** Home, with Ada Cloud on: the org's models, what they use of the plan, and the connector to add in Claude. */
+/**
+ * Home, with Ada Cloud on: a dashboard, not a list of models (Models is for that). A greeting; the balance, the month's
+ * tokens and Ada's requests against the plan; the week's volume; what is new at Glyphh (Ada's releases, the
+ * Marketplace's models and bots); and where to go next.
+ */
 export function AdaHome() {
   const navigate = useNavigate();
   const session = useSession();
-  const models = useAdaModels();
-  const usage = useAdaUsage();
   const me = useMe();
+  const billing = useBilling();
+  const usage = useAdaUsage();
   const connector = session.data ? `${session.data.serverUrl}/mcp` : null;
 
-  const newModel = (
-    <Button variant="primary" icon="plus" onClick={() => navigate('/models/new')}>
-      New model
-    </Button>
+  const actions = (
+    <>
+      <Button icon="key" onClick={() => navigate('/keys')}>
+        API keys
+      </Button>
+      <Button variant="primary" icon="plus" onClick={() => navigate('/models/new')}>
+        New model
+      </Button>
+    </>
   );
 
   return (
     <>
-      <PageHeader title="Home" description="Your Ada models, what they use of your plan, and how Claude reaches them." actions={newModel} />
+      <PageHeader title={greetingFor(me.data?.name)} description="Your month on Glyphh, and what’s new." actions={actions} />
       <div className={styles.stack}>
-        <div className={styles.grid}>
-          <Card>
-            <h2 className={styles.cardTitle}>Connect Claude</h2>
-            {connector && <CopyField value={connector} label="connector URL" />}
-            <span className={styles.meta}>Add it in Claude as a custom connector. You’ll be asked to allow it once.</span>
-          </Card>
-          <Card>
-            <div className={styles.leverHead}>
-              <h2 className={styles.cardTitle}>Usage</h2>
-              {usage.data?.plan && <Chip tone="violet">{usage.data.plan}</Chip>}
-            </div>
-            {usage.isPending && <LoadingCard lines={2} />}
-            <AdaErrorNotice error={usage.error} />
-            {usage.data && (
-              <>
-                <PrecedentsMeter usage={usage.data} />
-                <RequestsMeter usage={usage.data} />
-                <RequestsNote usage={usage.data} centsPer10k={me.data?.plan.cloud?.overage_cents_per_10k} />
-              </>
-            )}
-            <Link to="/usage" className={styles.meta}>
-              See usage
-            </Link>
-          </Card>
-        </div>
-
-        {models.isPending && <LoadingCard />}
-        <AdaErrorNotice error={models.error} />
-        {models.data?.length === 0 && (
-          <EmptyState icon="model" title="No models yet" action={newModel}>
-            Describe your cases once as a spec, load your history, and ask. Or ask Claude to make one with the connector.
-          </EmptyState>
-        )}
-        {models.data && models.data.length > 0 && (
-          <List label="Models">
-            {models.data.map((model) => (
-              <Row
-                key={model.id}
-                title={
-                  <Link to={`/models/${encodeURIComponent(model.name)}`} className={styles.link}>
-                    {model.name}
-                  </Link>
-                }
-                meta={`Version ${model.version} · made ${date(model.created_at)}`}
-                actions={<span className={styles.num}>{plural(model.precedents, 'precedent')}</span>}
-              />
-            ))}
-          </List>
-        )}
+        {billing.isPending && <LoadingCard lines={3} />}
+        <ApiErrorNotice error={billing.error} />
+        {billing.data && <HomeStats billing={billing.data} usage={usage.data} isAdmin={me.data?.role === 'admin'} />}
+        {billing.data && <ActivityCard tokens={Boolean(billing.data.tokens)} />}
+        <WhatsNew ada />
+        <Resources connector={connector} />
       </div>
     </>
   );

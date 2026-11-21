@@ -1,72 +1,24 @@
-import { useMemo } from 'react';
-import { useBilling, useMe, useTokenDays } from '@/api/queries';
-import type { TokenDay, TokenUsage } from '@/api/types';
-import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { Chart, type Series } from '@/components/Chart';
+import { useBilling, useMe } from '@/api/queries';
+import type { TokenUsage } from '@/api/types';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { date, dollars, micros } from '@/lib/format';
-import { Card, Chip, Icon, LoadingCard, ProgressBar } from '@/ui';
+import { Card, Chip, Icon, ProgressBar } from '@/ui';
 import usageStyles from '../UsagePage.module.css';
 import { BotsSection } from '../usage/BotsSection';
 import { BalanceCard } from './BalanceCard';
 import styles from './tokens.module.css';
 
 const n = (value: number) => value.toLocaleString('en-GB');
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS = 30;
-
-/** "2026-11-03" as "3 Nov". */
-const dayText = (day: string) => {
-  const d = new Date(`${day}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? day : `${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
-};
-
-/**
- * Each day's input and output tokens across the models, from the first day with use to the last, a day with none
- * as nothing; in day order, UTC.
- */
-export function tokensByDay(days: TokenDay[]): { labels: string[]; input: number[]; output: number[] } {
-  const totals = new Map<string, { input: number; output: number }>();
-  for (const row of days) {
-    const total = totals.get(row.day) ?? { input: 0, output: 0 };
-    total.input += row.input_tokens;
-    total.output += row.output_tokens;
-    totals.set(row.day, total);
-  }
-  const sorted = [...totals.keys()].sort();
-  const labels: string[] = [];
-  const input: number[] = [];
-  const output: number[] = [];
-  if (sorted.length === 0) return { labels, input, output };
-  const last = new Date(`${sorted.at(-1)}T00:00:00Z`).getTime();
-  for (let t = new Date(`${sorted[0]}T00:00:00Z`).getTime(); t <= last; t += 86_400_000) {
-    const day = new Date(t).toISOString().slice(0, 10);
-    const total = totals.get(day) ?? { input: 0, output: 0 };
-    labels.push(dayText(day));
-    input.push(total.input);
-    output.push(total.output);
-  }
-  return { labels, input, output };
-}
 
 /**
  * Tokens on Usage, the bots' and Glyphh's hosted models' (one meter): the month's against the plan's allowance, the
- * overage balance, each bot's month, the last 30 days by day, and each model's month. Nothing from a server that
- * leaves `tokens` out. */
+ * overage balance, each bot's month and each model's month (the days are Usage's charts, usage/UsageCharts). Nothing
+ * from a server that leaves `tokens` out. */
 export function TokensSection() {
   const billing = useBilling();
   const me = useMe();
   const tokens = billing.data?.tokens ?? null;
   const balance = billing.data?.balance ?? null;
-  const days = useTokenDays(DAYS, tokens !== null);
-  const chart = useMemo(() => tokensByDay(days.data ?? []), [days.data]);
-  const series = useMemo<Series[]>(
-    () => [
-      { label: 'Input', data: chart.input },
-      { label: 'Output', data: chart.output },
-    ],
-    [chart],
-  );
 
   // Off, or not read: the page's other sections carry any refusal.
   if (!tokens) return null;
@@ -84,17 +36,6 @@ export function TokensSection() {
       </SettingsSection>
 
       {billing.data?.bots && <BotsSection bots={billing.data.bots} />}
-
-      <SettingsSection title="Tokens by day" description="The last 30 days, input and output, across every model.">
-        {days.isPending && <LoadingCard lines={4} />}
-        <ApiErrorNotice error={days.error} />
-        {days.data && chart.labels.length === 0 && <p className={styles.meta}>No tokens in the last 30 days.</p>}
-        {days.data && chart.labels.length > 0 && (
-          <Card>
-            <Chart kind="bar" stacked label="Input and output tokens by day, last 30 days" labels={chart.labels} series={series} />
-          </Card>
-        )}
-      </SettingsSection>
 
       <SettingsSection title="Tokens by model" description="This month. Charged is what went on the balance, past the allowance.">
         <ModelTable tokens={tokens} />

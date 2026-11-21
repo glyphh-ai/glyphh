@@ -13,6 +13,7 @@ import {
   Tooltip,
   type ChartConfiguration,
 } from 'chart.js';
+import { money } from '@/lib/format';
 import { reducedMotion, useInk } from '@/lib/tokens';
 import styles from './Chart.module.css';
 
@@ -31,17 +32,19 @@ type ChartProps = {
   across?: boolean;
   /** Values are shares (0 to 1), shown as percentages. */
   percent?: boolean;
+  /** Values are US cents, shown as dollars. */
+  cents?: boolean;
   height?: number;
 };
 
-const show = (value: number | null, percent: boolean) =>
-  value === null ? '–' : percent ? `${Math.round(value * 100)}%` : value.toLocaleString('en-GB');
+const show = (value: number | null, percent: boolean, cents = false) =>
+  value === null ? '–' : percent ? `${Math.round(value * 100)}%` : cents ? money(Math.round(value)) : value.toLocaleString('en-GB');
 
 /**
  * A chart.js chart in the theme's ink (lib/tokens.ts), drawn again when the theme or the data change; with a table of
  * the same numbers for screen readers. No animation when the person asked for less motion.
  */
-export function Chart({ kind, label, labels, series, stacked = false, across = false, percent = false, height = 220 }: ChartProps) {
+export function Chart({ kind, label, labels, series, stacked = false, across = false, percent = false, cents = false, height = 220 }: ChartProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const ink = useInk();
 
@@ -63,7 +66,7 @@ export function Chart({ kind, label, labels, series, stacked = false, across = f
           maxRotation: 0,
           autoSkip: true,
           precision: percent ? undefined : 0,
-          ...(values && percent ? { callback: (v: number | string) => `${Math.round(Number(v) * 100)}%` } : {}),
+          ...(values && (percent || cents) ? { callback: (v: number | string) => show(Number(v), percent, cents) } : {}),
         },
         ...(values && percent ? { max: 1 } : {}),
       };
@@ -96,14 +99,14 @@ export function Chart({ kind, label, labels, series, stacked = false, across = f
             bodyColor: ink.secondary,
             titleFont: { family: ink.mono, size: 12 },
             bodyFont: { family: ink.font, size: 12 },
-            callbacks: { label: (item) => `${item.dataset.label}: ${show(item.parsed[across ? 'x' : 'y'] as number, percent)}` },
+            callbacks: { label: (item) => `${item.dataset.label}: ${show(item.parsed[across ? 'x' : 'y'] as number, percent, cents)}` },
           },
         },
       },
     };
     const chart = new ChartJs(context, config);
     return () => chart.destroy();
-  }, [kind, labels, series, stacked, across, percent, ink]);
+  }, [kind, labels, series, stacked, across, percent, cents, ink]);
 
   return (
     <figure className={styles.figure}>
@@ -127,7 +130,7 @@ export function Chart({ kind, label, labels, series, stacked = false, across = f
             <tr key={name}>
               <th scope="row">{name}</th>
               {series.map((s) => (
-                <td key={s.label}>{show(s.data[i] ?? null, percent)}</td>
+                <td key={s.label}>{show(s.data[i] ?? null, percent, cents)}</td>
               ))}
             </tr>
           ))}

@@ -13,10 +13,12 @@ import type {
   Me,
   Member,
   Org,
+  Payment,
   Plan,
   RuntimeKey,
   RuntimeNodes,
   SelfRuntime,
+  SeriesDay,
   Sso,
   TokenDay,
   TokenUsage,
@@ -312,6 +314,34 @@ export const tokenDays: TokenDay[] = [
   { day: '2026-11-07', model: 'adal-34b-1-0', input_tokens: 1_200_000, output_tokens: 400_000, requests: 300, charged_cents: 0 },
   { day: '2026-11-09', model: 'adal-34b-1-0', input_tokens: 2_000_000, output_tokens: 900_000, requests: 610, charged_cents: 1129.6 },
 ];
+
+/** The last day the fakes' series reach, as if today. */
+export const seriesToday = '2026-11-09';
+
+/**
+ * `GET /v1/billing/series?days=n`: n days to 9 November, oldest first, each with a little use that grows a day at a
+ * time; a connection added on the 5th and on the 9th, so the org holds 2 before them and 4 by the end.
+ */
+export function seriesDays(n: number): SeriesDay[] {
+  const last = new Date(`${seriesToday}T00:00:00Z`).getTime();
+  let held = 2;
+  return Array.from({ length: n }, (_, i) => {
+    const day = new Date(last - (n - 1 - i) * 86_400_000).toISOString().slice(0, 10);
+    const added = day === '2026-11-05' || day === '2026-11-09' ? 1 : 0;
+    held += added;
+    const k = i + 1;
+    return { day, reads: 120 * k, decides: 80 * k, bot_runs: k % 4, charged_cents: day === '2026-11-09' ? 1129.6 : 0, connections: held, connections_added: added };
+  });
+}
+
+/** `GET /v1/billing/payment`: a Visa on file and two invoices, newest first. */
+export const payment: Payment = {
+  card: { brand: 'visa', last4: '4242', exp_month: 4, exp_year: 2029 },
+  invoices: [
+    { id: 'in_2', number: 'GLY-0002', status: 'paid', total_cents: 9_900, currency: 'usd', created: '2026-11-01T00:00:00Z', url: 'https://invoice.stripe.test/in_2', pdf: 'https://invoice.stripe.test/in_2.pdf' },
+    { id: 'in_1', number: 'GLY-0001', status: 'open', total_cents: 4_950, currency: 'usd', created: '2026-10-01T00:00:00Z', url: 'https://invoice.stripe.test/in_1', pdf: null },
+  ],
+};
 
 /** `GET /v1/billing/ledger?limit=50`, newest first. */
 export const ledger: LedgerEntry[] = [

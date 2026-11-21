@@ -27,9 +27,9 @@ describe('from sign-in to a first decision', () => {
       await client.invalidateQueries({ queryKey: keys.me });
       await router.navigate('/');
 
-      // Home: no models yet, and the connector to add in Claude.
-      expect(await screen.findByText('No models yet')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Copy connector URL' })).toBeInTheDocument();
+      // Home: the greeting, and the connector to add in Claude.
+      expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening)/, level: 1 })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Copy connector URL' })).toBeInTheDocument();
       await user.click(screen.getAllByRole('button', { name: 'New model' })[0]!);
 
       // A model from the support tickets example.

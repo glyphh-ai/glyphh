@@ -32,7 +32,7 @@ describe('with Ada Cloud on', () => {
     expect(within(ada).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Marketplace', 'API Keys', 'Usage']);
     const runtimes = within(sidebar()).getByRole('group', { name: 'Runtimes & licences' });
     expect(within(runtimes).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/runtimes', '/licence', '/apps', '/runtime-keys']);
-    expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening)/, level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaHome');
   });
 
@@ -60,7 +60,7 @@ describe('with Ada Cloud on', () => {
 
   it('opens Home, not Add a runtime, from the old ?add=1 link', async () => {
     renderApp('/?add=1');
-    expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening)/, level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByText(/rrotor|runtime/i)).not.toBeInTheDocument();
   });
