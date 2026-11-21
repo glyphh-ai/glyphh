@@ -11,6 +11,7 @@ import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
 import { AppsPage } from '@/pages/apps/AppsPage';
 import { BotPage } from '@/pages/bots/BotPage';
 import { BotsPage } from '@/pages/bots/BotsPage';
+import { ConnectionPage } from '@/pages/connections/ConnectionPage';
 import { ConnectionsPage } from '@/pages/connections/ConnectionsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
@@ -156,6 +157,11 @@ export const routes: RouteObject[] = [
       { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
       { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
       { path: 'connections', element: <ConnectionsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections' }] } },
+      {
+        path: 'connections/:name',
+        element: <ConnectionPage />,
+        handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections', to: '/connections' }, { label: ':name' }] },
+      },
       {
         path: 'usage',
         element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
