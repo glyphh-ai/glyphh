@@ -352,7 +352,11 @@ export function botsFake({
     http.get(v1('/bot-templates'), ({ request }) => {
       if (!templates) return;
       const q = (new URL(request.url).searchParams.get('q') ?? '').toLowerCase();
-      return HttpResponse.json({ templates: templates.filter((t) => `${t.name} ${t.summary}`.toLowerCase().includes(q)) });
+      // As the server sends them: the apps a template needs are slugs.
+      const served = templates
+        .filter((t) => `${t.name} ${t.summary}`.toLowerCase().includes(q))
+        .map(({ required_apps, ...t }) => ({ ...t, apps: required_apps.map((a) => a.slug) }));
+      return HttpResponse.json({ templates: served });
     }),
     http.get(v1('/bot-templates/:slug'), ({ params }) => {
       if (!templates) return;
