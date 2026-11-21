@@ -118,6 +118,13 @@ def test_a_hosts_program_must_have_every_function_and_a_case_must_be_a_name_or_f
     assert "case must name the program.py function that builds its case, or be its fields" in e.value.problems[0]
 
 
+def test_fill_fills_inside_objects_and_lists():
+    from glyphh.bots import fill
+
+    data = {"a": {"to": "x@y.z", "n": 2}}
+    assert fill({"to": "$a.to", "cc": ["$a.to", "n=$a.n"], "k": 3}, data) == {"to": "x@y.z", "cc": ["x@y.z", "n=2"], "k": 3}
+
+
 def test_a_single_gates_fields_read_the_runs_data(tmp_path):
     one = spec()
     one["gates"]["worth"]["case"] = {"i": {"s": {"title": "$fetch.items", "id": "run"}}}

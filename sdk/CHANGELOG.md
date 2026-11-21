@@ -14,6 +14,7 @@ package carries the version unchanged.
   `claude -p` as before.
 - `Answer` carries `input_tokens` and `output_tokens` (from `claude -p`'s usage too); `Runner.tokens` sums them
   for a host that reports them.
+- `fill` (a step's `input`, a gate's fields) fills `$id.path` inside objects and lists too, not only a string.
 - `Runner.run(given=...)`: what the run is given to work on, `$input` to its steps (no step may be called `input`).
 - `Bot.load(folder, program=...)`: the host gives the functions bot.json names instead of program.py.
 - A gate's `case` may be its fields (layer, segment, role, as Ada's case is) instead of a function: `$item.x` is a

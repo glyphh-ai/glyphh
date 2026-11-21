@@ -318,7 +318,11 @@ class Ctx:
 
 def fill(value: Any, data: Dict[str, Any]) -> Any:
     """`$id` (or `$id.path`) in a step's input or prompt: an earlier step's data (the whole value, or as JSON inside a
-    string). An id no step has made yet is left as written."""
+    string), inside objects and lists too. An id no step has made yet is left as written."""
+    if isinstance(value, dict):
+        return {k: fill(v, data) for k, v in value.items()}
+    if isinstance(value, list):
+        return [fill(v, data) for v in value]
     if isinstance(value, str) and REF.fullmatch(value):
         path = value[1:]
         return resolve(path, data) if path.split(".")[0] in data else None
@@ -633,12 +637,7 @@ class Runner:
         filled: `$item.x` from the item, `$step.x` from the run's data."""
         if isinstance(gate["case"], str):
             return self._code(gate["case"], ctx, of)
-        data = {**ctx.data, "item": of} if item else of
-
-        def filled(value: Any) -> Any:
-            return {k: filled(v) for k, v in value.items()} if isinstance(value, dict) else fill(value, data)
-
-        return filled(gate["case"])
+        return fill(gate["case"], {**ctx.data, "item": of} if item else of)
 
     def _code(self, function: str, ctx: Ctx, *inputs: Any) -> Any:
         try:
