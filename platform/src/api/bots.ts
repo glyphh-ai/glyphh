@@ -30,8 +30,12 @@ export type Bot = {
   name: string;
   summary: string | null;
   look: Look;
+  /** Its own drawn mascot (safe SVG from the server), shown in place of its cat; empty for the cat. */
+  mascot?: string;
   instructions: string;
   model: string;
+  permission_mode?: PermissionMode;
+  voice?: string;
   spec: BotSpec;
   skills: Record<string, string>;
   gate_models: string[];
@@ -72,9 +76,41 @@ export type BotRun = {
 };
 export type GateStats = Record<string, { precedents?: number; asked?: number; right?: number; [k: string]: unknown }>;
 export type BotKey = { set: boolean; hint: string; set_at: string | null; glyphh_key: boolean };
-export type NewBot = { name: string; summary?: string; look: Look; instructions: string; model?: string; spec?: BotSpec; skills?: Record<string, string> };
-export type BotChange = Partial<NewBot>;
+/** Which tool steps wait for the person: ask (unless the connection allows the tool), connection (as it says), auto (none). */
+export type PermissionMode = 'ask' | 'connection' | 'auto';
 export type BotScope = { connection_id: string; tools: string[] };
+export type NewBot = {
+  name: string;
+  summary?: string;
+  look: Look;
+  mascot?: string;
+  instructions: string;
+  model?: string;
+  permission_mode?: PermissionMode;
+  voice?: string;
+  spec?: BotSpec;
+  skills?: Record<string, string>;
+  connections?: BotScope[];
+};
+export type BotChange = Partial<Omit<NewBot, 'connections'>>;
+export type BotVoice = { id: string; name: string; accent: string; gender: string; default: boolean };
+export type BotVoices = { voices: BotVoice[]; samples: boolean };
+/** One line of the conversation with the bot maker. */
+export type Said = { role: 'user' | 'assistant'; content: string };
+/** The bot as the bot maker drafted it: ready for POST /v1/bots, but `apps` (what it needs connected). */
+export type BotDraft = {
+  name: string;
+  summary: string;
+  look: Look;
+  mascot: string;
+  instructions: string;
+  model: string;
+  spec: BotSpec;
+  skills: Record<string, string>;
+  apps: { app: string; tools: string[] }[];
+  connections: BotScope[];
+};
+export type DraftReply = { reply: string; draft: BotDraft | null; problems: string[]; missing_apps: string[] };
 /** An answer to a run's question: one option, or for a batch `1=keep 2=drop` or a map of item to option. */
 export type Answer = string | Record<string, string>;
 export type Wrong = { outcome: string; gate?: string; item?: string };
@@ -84,6 +120,7 @@ export const botKeys = {
   search: (q: string) => ['bots', '~search', q] as const,
   bot: (slug: string) => ['bots', slug] as const,
   models: ['bots', '~models'] as const,
+  voices: ['bots', '~voices'] as const,
   gates: (slug: string) => ['bots', slug, 'gates'] as const,
   runs: (slug: string) => ['bots', slug, 'runs'] as const,
   run: (id: string) => ['bot-runs', id] as const,
@@ -109,6 +146,7 @@ export const useBotSearch = (q: string) =>
   });
 export const useBot = (slug: string) => useQuery({ queryKey: botKeys.bot(slug), queryFn: () => api.get<Bot>(one(slug)) });
 export const useBotModels = () => useQuery({ queryKey: botKeys.models, queryFn: () => api.get<BotModels>('/bots/models'), staleTime: 60_000 });
+export const useBotVoices = () => useQuery({ queryKey: botKeys.voices, queryFn: () => api.get<BotVoices>('/bots/voices'), staleTime: 60 * 60_000 });
 export const useBotGates = (slug: string) =>
   useQuery({ queryKey: botKeys.gates(slug), queryFn: async () => (await api.get<{ gates: GateStats }>(`${one(slug)}/gates`)).gates });
 
@@ -157,6 +195,11 @@ function useWrite<A, T>(fn: (args: A) => Promise<T>, refresh: ReadonlyArray<read
 }
 
 export const useCreateBot = () => useWrite((bot: NewBot) => api.post<Bot>('/bots', bot), [botKeys.bots]);
+/** Create with AI: the bot maker's next turn, a question or the bot drafted and checked (it makes nothing). */
+export const useDraftBot = () =>
+  useMutation({ mutationFn: (body: { messages: Said[]; draft?: BotDraft | null }) => api.post<DraftReply>('/bots/draft', body) });
+/** A new mascot drawn from words: safe black-and-white SVG for a bot's `mascot`. */
+export const useDrawMascot = () => useMutation({ mutationFn: (prompt: string) => api.post<{ mascot: string }>('/bots/mascot', { prompt }) });
 export const useUpdateBot = (slug: string) => useWrite((change: BotChange) => api.patch<Bot>(one(slug), change), [botKeys.bots]);
 export const useDeleteBot = () => useWrite((slug: string) => api.delete<void>(one(slug)), [botKeys.bots]);
 export const useScopeBot = (slug: string) =>

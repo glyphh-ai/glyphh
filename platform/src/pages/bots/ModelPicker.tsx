@@ -1,103 +1,77 @@
-import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { useBotKey, useBotModels, type BotModel } from '@/api/bots';
+import { useBotKey, useBotModels, useBotVoices, type BotModel, type PermissionMode } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { rate } from '@/lib/format';
-import { Button, Chip, Skeleton, TextField } from '@/ui';
+import { Select } from '@/ui';
 import styles from './bots.module.css';
 
-const PER_PAGE = 6;
+export const MODES: ReadonlyArray<{ value: PermissionMode; label: string; hint: string }> = [
+  { value: 'ask', label: 'Ask first', hint: 'Every tool step waits for your yes, unless its connection allows that tool.' },
+  { value: 'connection', label: 'Follow connections', hint: 'Only the tools a connection says to ask about wait for you.' },
+  { value: 'auto', label: 'Run on its own', hint: 'Allowed tools run without asking. Blocked tools still never run.' },
+];
 
-const per = (input: number, output: number) => `${rate(input)} in · ${rate(output)} out`;
+const per = (m: BotModel, own: boolean) =>
+  own
+    ? `${rate(m.own_key_input_cents_per_mtok)} in · ${rate(m.own_key_output_cents_per_mtok)} out`
+    : `${rate(m.input_cents_per_mtok)} in · ${rate(m.output_cents_per_mtok)} out`;
 
-function Row({ model, checked, name, ownKey, onPick }: { model: BotModel; checked: boolean; name: string; ownKey: boolean; onPick: () => void }) {
+type Props = { model: string; onModel: (id: string) => void; mode: PermissionMode; onMode: (mode: PermissionMode) => void };
+
+/**
+ * The Claude model a bot runs on, as a plain list of names (what the org pays for the chosen one under it, per million
+ * tokens: on its own Claude key the markup only, else the rate and the markup), and beside it the permission mode.
+ */
+export function ModelAndMode({ model, onModel, mode, onMode }: Props) {
+  const models = useBotModels();
+  const key = useBotKey();
+  const own = key.data?.set ?? false;
+  const list = models.data?.models ?? [];
+  const chosen = list.find((m) => m.id === model);
+  const options = list.length
+    ? list.map((m) => ({ value: m.id, label: m.default ? `${m.name} (default)` : m.name }))
+    : [{ value: model, label: model || 'Loading models…' }];
+
   return (
-    <li>
-      <label className={styles.model}>
-        <input type="radio" name={name} checked={checked} onChange={onPick} aria-label={model.name} />
-        <span className={styles.row}>
-          <span className={styles.toolName}>{model.name}</span>
-          {model.default && <Chip tone="violet">Default</Chip>}
-        </span>
-        <span className={styles.prices}>
-          <span className={ownKey ? undefined : styles.pays}>Glyphh’s key: {per(model.input_cents_per_mtok, model.output_cents_per_mtok)}</span>
-          <span className={ownKey ? styles.pays : undefined}>Your key: {per(model.own_key_input_cents_per_mtok, model.own_key_output_cents_per_mtok)}</span>
-        </span>
-      </label>
-    </li>
+    <div className={styles.field}>
+      <div className={styles.pair}>
+        <Select label="Model" value={model} onChange={(e) => onModel(e.target.value)} options={options} disabled={!list.length} />
+        <Select
+          label="Permission mode"
+          value={mode}
+          onChange={(e) => onMode(e.target.value as PermissionMode)}
+          options={MODES.map(({ value, label }) => ({ value, label }))}
+        />
+      </div>
+      <span className={styles.muted}>
+        {chosen ? `${per(chosen, own)} per million tokens on ${own ? 'your' : 'Glyphh’s'} Claude key. ` : ''}
+        {MODES.find((m) => m.value === mode)?.hint} <Link to="/settings/claude-key">Claude key</Link>
+      </span>
+      <ApiErrorNotice error={models.error} />
+    </div>
   );
 }
 
 /**
- * The Claude model a bot runs on, out of every one the server offers: searched by name, a page of six at a time, each
- * with both its prices per million tokens (on Glyphh's key: the rate and the markup; on the org's own key: the markup
- * only). The price the org pays now is the brighter one.
+ * The voice a bot speaks in, out of the open voices the server lists. Glyphh does not make speech yet, so there is no
+ * sample to play: the choice is kept for when bots speak.
  */
-export function ModelPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const models = useBotModels();
-  const key = useBotKey();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
-  const ownKey = key.data?.set ?? false;
-  const found = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return (models.data?.models ?? []).filter((m) => !needle || `${m.name} ${m.id}`.toLowerCase().includes(needle));
-  }, [models.data, q]);
-  const last = Math.max(1, Math.ceil(found.length / PER_PAGE));
-  const at = Math.min(page, last);
-  const shown = found.slice((at - 1) * PER_PAGE, at * PER_PAGE);
-  const chosen = models.data?.models.find((m) => m.id === value);
-
+export function VoicePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const voices = useBotVoices();
+  const options = [
+    { value: '', label: 'No voice' },
+    ...(voices.data?.voices ?? []).map((v) => ({ value: v.id, label: `${v.name} · ${v.accent} ${v.gender}` })),
+  ];
   return (
-    <div className={styles.field} role="group" aria-label="Model">
-      <span className={styles.label}>Model</span>
-      <span className={styles.muted}>
-        {chosen ? `${chosen.name} · ` : value ? `${value} · ` : ''}
-        {ownKey ? 'Runs on your Claude key: you pay Glyphh the markup only.' : 'Runs on Glyphh’s Claude key: you pay the rate and the markup.'}{' '}
-        <Link to="/settings/claude-key">Claude key</Link>
-      </span>
-      <TextField
-        label="Search models"
-        type="search"
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Search by name"
+    <div className={styles.field}>
+      <Select
+        label="Voice"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        options={options}
+        hint={voices.data?.samples ? undefined : 'You can hear it once bots speak: samples are not out yet.'}
       />
-      <ApiErrorNotice error={models.error} />
-      <ul className={styles.models} aria-label="Models" aria-busy={models.isPending || undefined}>
-        {models.isPending
-          ? Array.from({ length: PER_PAGE }, (_, i) => (
-              <li key={i} className={styles.model} aria-hidden="true">
-                <Skeleton height={14} width={14} />
-                <Skeleton height={14} width="50%" />
-                <Skeleton height={12} width={180} />
-              </li>
-            ))
-          : shown.map((m) => <Row key={m.id} model={m} name="bot-model" checked={m.id === value} ownKey={ownKey} onPick={() => onChange(m.id)} />)}
-        {models.data && shown.length === 0 && (
-          <li className={styles.model}>
-            <span />
-            <span className={styles.muted}>No model matches “{q.trim()}”.</span>
-          </li>
-        )}
-      </ul>
-      <div className={styles.pager}>
-        <span>
-          {found.length === 0 ? 'None' : `${(at - 1) * PER_PAGE + 1}–${Math.min(at * PER_PAGE, found.length)} of ${found.length}`}
-          {models.data ? ` · prices per million tokens, ${models.data.markup_pct}% markup` : ''}
-        </span>
-        <span className={styles.row}>
-          <Button size="sm" disabled={at <= 1} onClick={() => setPage(at - 1)}>
-            Previous
-          </Button>
-          <Button size="sm" disabled={at >= last} onClick={() => setPage(at + 1)}>
-            Next
-          </Button>
-        </span>
-      </div>
+      <ApiErrorNotice error={voices.error} />
     </div>
   );
 }

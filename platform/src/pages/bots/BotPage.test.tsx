@@ -21,42 +21,63 @@ describe('a bot’s page', () => {
     await user.type(name, 'Mail helper');
     await user.clear(screen.getByLabelText('Instructions'));
     await user.type(screen.getByLabelText('Instructions'), 'Answer every email.');
-    expect(await screen.findByRole('radio', { name: 'Claude Sonnet 5.5' })).toBeChecked();
-    await user.click(screen.getByRole('radio', { name: 'Claude Haiku 5.5' }));
-    await user.click(screen.getByRole('button', { name: 'Shuffle' }));
+    const model = screen.getByRole('combobox', { name: 'Model' });
+    await waitFor(() => expect(model).toHaveValue('claude-sonnet-5-5'));
+    await user.selectOptions(model, 'claude-haiku-5-5');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Permission mode' }), 'auto');
+    const voice = await screen.findByRole('combobox', { name: 'Voice' });
+    await waitFor(() => expect(within(voice).getAllByRole('option')).toHaveLength(6));
+    await user.selectOptions(voice, 'bm_george');
+    const crew = screen.getByRole('list', { name: 'Glyphh cats' });
+    await user.click(within(crew).getByRole('button', { name: 'Koda' }));
+    expect(within(crew).getByRole('button', { name: 'Koda' })).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Mail helper is saved.')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/bots/mail-helper'));
-    expect(fake.state.bodies[0]).toMatchObject({ name: 'Mail helper', instructions: 'Answer every email.', model: 'claude-haiku-5-5' });
+    expect(fake.state.bodies[0]).toMatchObject({
+      name: 'Mail helper',
+      instructions: 'Answer every email.',
+      model: 'claude-haiku-5-5',
+      permission_mode: 'auto',
+      voice: 'bm_george',
+      mascot: '',
+      look: { head: 'folded', eye: 'sleepy', accessory: 'shades' },
+    });
   });
 
-  it('picks the model out of a searched, paged list with both prices', async () => {
+  it('picks the model from a plain list of names, its price under it, the permission mode beside it and a voice', async () => {
     on();
     const { user } = renderApp('/bots/inbox-helper');
-    const models = await screen.findByRole('list', { name: 'Models' });
-    await waitFor(() => expect(within(models).getAllByRole('radio')).toHaveLength(6));
-    const picker = screen.getByRole('group', { name: 'Model' });
-    expect(picker).toHaveTextContent('1–6 of 12');
-    expect(picker).toHaveTextContent('20% markup');
-    // Sonnet 5.5 on Glyphh's key: $3 + 20% = $3.60 in; on the org's own key: the 20% only, $0.60.
-    const sonnet = within(models).getByRole('radio', { name: 'Claude Sonnet 5.5' }).closest('label');
-    expect(sonnet).toHaveTextContent('Glyphh’s key: $3.60 in · $18.00 out');
-    expect(sonnet).toHaveTextContent('Your key: $0.60 in · $3.00 out');
-    expect(within(picker).getByRole('button', { name: 'Previous' })).toBeDisabled();
-    await user.click(within(picker).getByRole('button', { name: 'Next' }));
-    expect(picker).toHaveTextContent('7–12 of 12');
-    expect(within(models).getByRole('radio', { name: /Haiku 4\.5/ })).toBeInTheDocument();
-    expect(within(picker).getByRole('button', { name: 'Next' })).toBeDisabled();
-    await user.type(within(picker).getByLabelText('Search models'), 'opus');
-    expect(within(models).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual([
-      'Claude Opus 5.5',
-      'Claude Opus 5',
-      'Claude Opus 4.6',
-    ]);
-    expect(picker).toHaveTextContent('1–3 of 3');
-    await user.clear(within(picker).getByLabelText('Search models'));
-    await user.type(within(picker).getByLabelText('Search models'), 'zzz');
-    expect(within(models).getByText('No model matches “zzz”.')).toBeInTheDocument();
+    const model = await screen.findByRole('combobox', { name: 'Model' });
+    await waitFor(() => expect(within(model).getAllByRole('option')).toHaveLength(12));
+    expect(within(model).getAllByRole('option').slice(0, 3).map((o) => o.textContent)).toEqual(['Claude Sonnet 5.5 (default)', 'Claude Haiku 5.5', 'Claude Opus 5.5']);
+    // Sonnet 5.5 on Glyphh's key: $3 + 20% = $3.60 in.
+    expect(screen.getByText(/\$3\.60 in · \$18\.00 out per million tokens on Glyphh’s Claude key/)).toBeInTheDocument();
+    expect(screen.getByText(/Every tool step waits for your yes/)).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Permission mode' }), 'connection');
+    expect(screen.getByText(/Only the tools a connection says to ask about/)).toBeInTheDocument();
+    const voice = await screen.findByRole('combobox', { name: 'Voice' });
+    await waitFor(() => expect(within(voice).getAllByRole('option').map((o) => o.textContent)).toContain('George · British male'));
+    expect(screen.getByText('You can hear it once bots speak: samples are not out yet.')).toBeInTheDocument();
+  });
+
+  it('keeps the connections folded under their count until opened, and draws a mascot from words', async () => {
+    const fake = on();
+    const { user } = renderApp('/bots/inbox-helper');
+    const fold = (await screen.findByText('Connections', { selector: 'summary' })).closest('details')!;
+    expect(fold).not.toHaveAttribute('open');
+    expect(fold).toHaveTextContent('(1 · 1 tool)');
+    await user.click(within(fold).getByText('Connections', { selector: 'summary' }));
+    expect(fold).toHaveAttribute('open');
+    expect(await within(fold).findByRole('region', { name: 'Gmail · chris@example.com' })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Describe a new one'), 'a cat in a party hat');
+    await user.click(screen.getByRole('button', { name: 'Draw it' }));
+    const drawn = await screen.findByRole('img', { name: 'Its own mascot' });
+    expect(drawn.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
+    expect(fake.state.seen).toContain('mascot a cat in a party hat');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(fake.state.bodies[0]).toMatchObject({ mascot: expect.stringContaining('<svg') }));
   });
 
   it('scopes the tools per connection: adds a connection, ticks its tools with search and all or none, and saves', async () => {
