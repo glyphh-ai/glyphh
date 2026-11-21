@@ -35,7 +35,8 @@ describe('an app’s page', () => {
     expect(await screen.findByText('Notion is connected.')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(router.state.location.search).toBe('?tab=tools');
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true');
+    // The Tools tab opens once the connections read again holds Notion; that read lands a moment after the dialog closes.
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true'));
     expect(fake.state.seen).toEqual(['link notion', 'sync']);
   });
 
@@ -60,8 +61,8 @@ describe('an app’s page', () => {
     await waitFor(() => expect(fake.state.seen.filter((s) => s === 'link slack')).toHaveLength(3));
   });
 
-  it('shows a connected app’s accounts and its tools, read-only apart, each allowed or blocked', async () => {
-    on();
+  it('shows a connected app’s accounts and its tools, read-only apart, each always allowed, needing approval or blocked on the server', async () => {
+    const fake = on();
     const { user } = renderApp('/connections/gmail');
     expect(await screen.findByRole('heading', { name: 'Gmail' })).toBeInTheDocument();
     expect(screen.getByText('Added')).toBeInTheDocument();
@@ -72,11 +73,18 @@ describe('an app’s page', () => {
     const writes = screen.getByRole('region', { name: 'Write/delete tools' });
     expect(within(reads).getAllByRole('listitem').map((t) => t.textContent)).toEqual([expect.stringContaining('Find email')]);
     expect(within(writes).getAllByRole('listitem')).toHaveLength(2);
-    await user.selectOptions(within(writes).getByLabelText('Delete email'), 'block');
-    expect(within(writes).getByLabelText('All write/delete tools')).toHaveValue('mixed');
-    await user.selectOptions(within(writes).getByLabelText('All write/delete tools'), 'block');
-    expect(within(writes).getByLabelText('Send email')).toHaveValue('block');
-    expect(JSON.parse(localStorage.getItem('glyphh.connection-tools.c-gmail')!)).toEqual({ 'gmail-delete-email': 'block', 'gmail-send-email': 'block' });
+    expect(within(reads).getByLabelText('Find email')).toHaveValue('allow');
+    // Never set: it needs approval.
+    expect(within(writes).getByLabelText('Send email')).toHaveValue('ask');
+    expect(within(writes).getByLabelText('All write/delete tools')).toHaveValue('ask');
+    await user.selectOptions(within(writes).getByLabelText('Delete email'), 'deny');
+    await waitFor(() => expect(within(writes).getByLabelText('All write/delete tools')).toHaveValue('mixed'));
+    await waitFor(() => expect(within(writes).getByLabelText('All write/delete tools')).toBeEnabled());
+    await user.selectOptions(within(writes).getByLabelText('All write/delete tools'), 'deny');
+    await waitFor(() => expect(within(writes).getByLabelText('Send email')).toHaveValue('deny'));
+    expect(fake.state.bodies).toEqual([{ 'gmail-delete-email': 'deny' }, { 'gmail-send-email': 'deny', 'gmail-delete-email': 'deny' }]);
+    expect(fake.state.connections[0]!.permissions).toEqual({ 'gmail-find-email': 'allow', 'gmail-delete-email': 'deny', 'gmail-send-email': 'deny' });
+    expect(screen.queryByText(/kept in this browser/)).not.toBeInTheDocument();
     await user.click(within(writes).getByRole('button', { name: /Write\/delete tools/ }));
     expect(within(writes).queryByRole('listitem')).not.toBeInTheDocument();
   });

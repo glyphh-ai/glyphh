@@ -25,6 +25,7 @@ describe('with Ada Cloud on', () => {
       'Apps',
       'Runtime keys',
       'Bots',
+      'Approvals',
       'Connections',
     ]);
     const ada = within(sidebar()).getByRole('group', { name: 'Ada' });

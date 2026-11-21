@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { botsFake } from '@/test/bots';
+import { botsFake, waiting } from '@/test/bots';
 import { apiError, http, server } from '@/test/server';
 import { ApiError } from './client';
-import { connectionsOff, useBotRun, useBots, useConnectionTools } from './bots';
+import { connectionsOff, problemsOf, useBotRun, useBots, useConnectionTools } from './bots';
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -20,15 +20,12 @@ describe('the bots API', () => {
     await waitFor(() => expect(tools.result.current.data).toHaveLength(3));
   });
 
-  it('asks for a run again while it is queued or running, and stops once it is done', async () => {
-    const fake = botsFake();
+  it('asks for a run again while it is queued or running, and stops once it waits on the person', async () => {
+    const fake = botsFake({ runs: [waiting({ id: 'r-x', status: 'queued', question: null })] });
     server.use(...fake.handlers);
-    fake.state.runs.push({
-      id: 'r-x', bot_slug: 'inbox-helper', status: 'queued', input: 'Go.', output: null, error: null, steps: [],
-      input_tokens: 0, output_tokens: 0, cost_micros: 0, created_at: '2026-11-20T09:00:00Z', started_at: null, finished_at: null,
-    });
     const run = renderHook(() => useBotRun('r-x', 20), { wrapper: wrapper() });
-    await waitFor(() => expect(run.result.current.data?.status).toBe('done'));
+    await waitFor(() => expect(run.result.current.data?.status).toBe('needs_input'));
+    expect(run.result.current.data?.question?.batch).toHaveLength(2);
     const reads = fake.state.reads.get('r-x');
     await new Promise((r) => setTimeout(r, 100));
     expect(fake.state.reads.get('r-x')).toBe(reads);
@@ -45,5 +42,11 @@ describe('the bots API', () => {
     await waitFor(() => expect(bots.result.current.error).toBeInstanceOf(ApiError));
     expect(connectionsOff(bots.result.current.error)).toBe(true);
     expect(connectionsOff(new Error('no'))).toBe(false);
+  });
+
+  it('reads the SDK’s problems off a refused bot, and none off anything else', () => {
+    const refused = new ApiError(422, { code: 'E_INVALID', message: 'Not valid.', trace_id: 't', problems: ['loop[0]: no step', 'gates.x: unknown'] } as never);
+    expect(problemsOf(refused)).toEqual(['loop[0]: no step', 'gates.x: unknown']);
+    expect(problemsOf(new Error('no'))).toEqual([]);
   });
 });

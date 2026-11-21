@@ -8,6 +8,7 @@ import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date } from '@/lib/format';
 import { Button, EmptyState, Icon, Menu, MenuLabel, MenuRadioItem, Skeleton, Tabs, TextField } from '@/ui';
 import { AppIcon } from './AppIcon';
+import { useConnect } from './useConnect';
 import styles from './connections.module.css';
 
 type View = 'yours' | 'catalog';
@@ -95,10 +96,13 @@ function Catalog({ q, show, connected }: { q: string; show: Show; connected: Set
   const catalog = useAppCatalog(q.trim());
   const apps = (catalog.data?.pages ?? []).flatMap((p) => p.apps).filter((a) => show === 'all' || (show === 'connected') === connected.has(a.slug));
   const nothing = !catalog.isPending && apps.length === 0;
+  // The + on a card connects the app straight away, as its page's Connect does, then lands on its tools.
+  const { connect, connecting, error, dialog } = useConnect();
 
   return (
     <>
-      <ApiErrorNotice error={catalog.error} />
+      <ApiErrorNotice error={catalog.error ?? error} />
+      {dialog}
       {nothing && !catalog.error ? (
         <EmptyState icon="search" title="Nothing matches">
           {q ? `No app matches “${q}”.` : 'No app here.'}
@@ -106,8 +110,8 @@ function Catalog({ q, show, connected }: { q: string; show: Show; connected: Set
       ) : (
         <ul className={styles.grid} aria-label="Catalog" aria-busy={catalog.isFetching || undefined}>
           {apps.map((a) => (
-            <li key={a.slug}>
-              <Link to={`/connections/${encodeURIComponent(a.slug)}`} state={{ app: a }} className={styles.row}>
+            <li key={a.slug} className={styles.catalogItem}>
+              <Link to={`/connections/${encodeURIComponent(a.slug)}`} state={{ app: a }} className={`${styles.row} ${styles.withAdd}`}>
                 <AppIcon icon={a.icon} name={a.name} />
                 <div className={styles.rowText}>
                   <span className={styles.rowName}>
@@ -121,6 +125,17 @@ function Catalog({ q, show, connected }: { q: string; show: Show; connected: Set
                   <span className={styles.oneLine}>{a.description || 'Connector'}</span>
                 </div>
               </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="plus"
+                className={styles.quickAdd}
+                aria-label={connected.has(a.slug) ? `Add another ${a.name} account` : `Connect ${a.name}`}
+                title={connected.has(a.slug) ? 'Add another account' : 'Connect'}
+                loading={connecting === a.slug}
+                disabled={connecting !== undefined && connecting !== a.slug}
+                onClick={() => connect(a)}
+              />
             </li>
           ))}
           {(catalog.isPending || catalog.isFetchingNextPage) && <Placeholders count={6} />}

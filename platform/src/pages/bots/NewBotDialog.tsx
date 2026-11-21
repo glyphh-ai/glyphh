@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useBotModels, useCreateBot } from '@/api/bots';
 import { randomLook } from '@/bots/cat/look';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { Button, Dialog, Select, TextField } from '@/ui';
+import { Button, Dialog, TextField } from '@/ui';
+import { ModelPicker } from './ModelPicker';
 import { botPath, CatPicker, TextArea } from './parts';
 import styles from './bots.module.css';
 
-/** Makes a bot: its name, what it is for, its cat, what it does (its instructions) and the Claude model it runs on. */
+/** Makes a bot from nothing: its name, what it is for, its cat, its instructions and the Claude model it runs on. */
 export function NewBotDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const models = useBotModels();
@@ -17,7 +18,7 @@ export function NewBotDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [look, setLook] = useState(randomLook);
   const [instructions, setInstructions] = useState('');
   const [model, setModel] = useState('');
-  const chosen = model || models.data?.find((m) => m.default)?.id || models.data?.[0]?.id || '';
+  const chosen = model || models.data?.models.find((m) => m.default)?.id || models.data?.models[0]?.id || '';
   const ready = name.trim() !== '' && instructions.trim() !== '';
 
   const make = () =>
@@ -32,7 +33,7 @@ export function NewBotDialog({ open, onClose }: { open: boolean; onClose: () => 
       onClose={onClose}
       size="wide"
       title="New bot"
-      description="A bot is a Claude agent that runs on Glyphh, with the tools you allow it and your Ada models."
+      description="A bot runs a loop of steps on Glyphh: Claude where judgment is needed, gates that learn from your answers, and the tools you allow."
       actions={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -45,6 +46,9 @@ export function NewBotDialog({ open, onClose }: { open: boolean; onClose: () => 
       }
     >
       <div className={styles.form}>
+        <p className={styles.muted}>
+          Or start from a ready one: <Link to="/bots?tab=browse" onClick={onClose}>browse bots</Link>.
+        </p>
         <CatPicker look={look} onChange={setLook} />
         <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
         <TextField label="What it is for" value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={200} />
@@ -54,9 +58,7 @@ export function NewBotDialog({ open, onClose }: { open: boolean; onClose: () => 
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
         />
-        {models.data && models.data.length > 0 && (
-          <Select label="Model" value={chosen} onChange={(e) => setModel(e.target.value)} options={models.data.map((m) => ({ value: m.id, label: m.name }))} />
-        )}
+        <ModelPicker value={chosen} onChange={setModel} />
         <ApiErrorNotice error={create.error} />
       </div>
     </Dialog>

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { HttpResponse } from 'msw';
 import type { BotTemplate } from '@/api/botTemplates';
-import { botsFake, gmail, look } from '@/test/bots';
+import { botsFake, gmail, look, slack } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { apiError, http, server } from '@/test/server';
 
@@ -24,11 +24,11 @@ const triage = (): BotTemplate => ({
 
 const plain = (n: number): BotTemplate => ({ ...triage(), slug: `bot-${n}`, name: `Helper ${n}`, required_apps: [], tools: [`tool_${n}`], gates: [], skills: {} });
 
-/** Ada Cloud off (the default account), the org's bots and only Gmail connected, and the Marketplace's bots. */
-function on(templates: BotTemplate[] = [triage()]) {
+/** Ada Cloud off (the default account), the org's bots and only Gmail connected (or both), and the Marketplace's bots. */
+function on(templates: BotTemplate[] = [triage()], connections = [gmail()]) {
   const seen: string[] = [];
   server.use(
-    ...botsFake({ connections: [gmail()] }).handlers,
+    ...botsFake({ connections }).handlers,
     http.get('*/api/v1/bot-templates', () => HttpResponse.json({ templates })),
     http.post('*/api/v1/bot-templates/:slug/install', ({ params }) => {
       seen.push(`add ${params.slug}`);
@@ -88,7 +88,11 @@ describe('the Marketplace’s bots', () => {
     expect(screen.getByText('Reads what came in overnight and files each email.')).toBeInTheDocument();
     const needs = screen.getByRole('list', { name: 'Connections it needs' });
     expect(await within(needs).findByText('Connected', { selector: 'span' })).toBeInTheDocument();
-    expect(within(needs).getByRole('link', { name: /Connect/ })).toHaveAttribute('href', '/connections/slack');
+    expect(within(needs).getByRole('link', { name: 'Slack' })).toHaveAttribute('href', '/connections/slack');
+    // Slack is connected right here (useConnect's popup); Add waits for it.
+    expect(within(needs).getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to my bots' })).toBeDisabled();
+    expect(screen.getByText('Connect Slack first')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Its gates' })).toHaveTextContent('file_it');
     const facts = screen.getByLabelText('About this bot', { selector: 'div' });
     expect(facts).toHaveTextContent('Runs onclaude-sonnet-5-5');
@@ -110,7 +114,7 @@ describe('the Marketplace’s bots', () => {
   });
 
   it('adds a bot to the org, then opens the copy in Bots', async () => {
-    const seen = on();
+    const seen = on([triage()], [gmail(), slack()]);
     const { user, router } = renderApp('/marketplace/bots/inbox-triage');
     await user.click(await screen.findByRole('button', { name: 'Add to my bots' }));
     expect(await screen.findByText('Inbox triage is yours: it’s in Bots.')).toBeInTheDocument();
@@ -119,7 +123,7 @@ describe('the Marketplace’s bots', () => {
   });
 
   it('says what the server refused, a bot that is not there, and an empty Marketplace', async () => {
-    on();
+    on([triage()], [gmail(), slack()]);
     server.use(http.post('*/api/v1/bot-templates/:slug/install', () => apiError(409, 'E_BOT_EXISTS', 'You have a bot named inbox-triage.')));
     const { user } = renderApp('/marketplace/bots/inbox-triage');
     await user.click(await screen.findByRole('button', { name: 'Add to my bots' }));

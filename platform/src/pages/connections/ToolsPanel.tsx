@@ -1,27 +1,39 @@
 import { useState } from 'react';
-import type { Connection, ConnectionTool } from '@/api/bots';
-import { readsOnly, useAppTools, useToolChoices, type ToolChoice } from '@/api/connections';
+import { useSetPermissions, type Connection, type ConnectionTool, type Permission } from '@/api/bots';
+import { PERMISSIONS, readsOnly, useAppTools } from '@/api/connections';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { cx } from '@/lib/cx';
-import { EmptyState, Icon, Skeleton } from '@/ui';
+import { EmptyState, Icon, Skeleton, type IconName } from '@/ui';
 import styles from './connections.module.css';
 
-const CHOICES: Record<ToolChoice, string> = { allow: 'Allowed', block: 'Blocked' };
+const MODES = Object.keys(PERMISSIONS) as Permission[];
+const ICONS: Record<Permission, IconName> = { allow: 'check', ask: 'alert', deny: 'close' };
+const TONES: Record<Permission, string | undefined> = { allow: styles.allowed, ask: styles.asks, deny: styles.blocked };
 
-/** A small select of Allowed or Blocked; a group's shows Mixed while its tools differ. */
-function Choice({ label, value, onChange }: { label: string; value: ToolChoice | 'mixed'; onChange: (c: ToolChoice) => void }) {
+/** A small select of Always allow, Needs approval or Blocked; a group's shows Mixed while its tools differ. */
+function Choice({
+  label,
+  value,
+  busy,
+  onChange,
+}: {
+  label: string;
+  value: Permission | 'mixed';
+  busy: boolean;
+  onChange: (p: Permission) => void;
+}) {
   return (
-    <span className={cx(styles.choice, value === 'block' && styles.blocked)}>
-      <Icon name={value === 'block' ? 'close' : 'check'} size={14} />
-      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as ToolChoice)}>
+    <span className={cx(styles.choice, value !== 'mixed' && TONES[value])} aria-busy={busy || undefined}>
+      <Icon name={value === 'mixed' ? 'layers' : ICONS[value]} size={14} />
+      <select aria-label={label} value={value} disabled={busy} onChange={(e) => onChange(e.target.value as Permission)}>
         {value === 'mixed' && (
           <option value="mixed" disabled>
             Mixed
           </option>
         )}
-        {(Object.keys(CHOICES) as ToolChoice[]).map((c) => (
-          <option key={c} value={c}>
-            {CHOICES[c]}
+        {MODES.map((p) => (
+          <option key={p} value={p}>
+            {PERMISSIONS[p]}
           </option>
         ))}
       </select>
@@ -30,10 +42,12 @@ function Choice({ label, value, onChange }: { label: string; value: ToolChoice |
   );
 }
 
-function Group({ title, tools, choices }: { title: string; tools: ConnectionTool[]; choices: ReturnType<typeof useToolChoices> }) {
+type SetFn = (keys: string[], p: Permission) => void;
+
+function Group({ title, tools, set, busy }: { title: string; tools: ConnectionTool[]; set: SetFn; busy: boolean }) {
   const [open, setOpen] = useState(true);
   if (tools.length === 0) return null;
-  const all = new Set(tools.map((t) => choices.choiceOf(t.key)));
+  const all = new Set(tools.map((t) => t.permission));
   const value = all.size === 1 ? [...all][0]! : 'mixed';
   return (
     <section className={styles.group} aria-label={title}>
@@ -42,7 +56,7 @@ function Group({ title, tools, choices }: { title: string; tools: ConnectionTool
           {title} <span className={styles.muted}>{tools.length}</span>
           <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
         </button>
-        <Choice label={`All ${title.toLowerCase()}`} value={value} onChange={(c) => choices.set(tools.map((t) => t.key), c)} />
+        <Choice label={`All ${title.toLowerCase()}`} value={value} busy={busy} onChange={(p) => set(tools.map((t) => t.key), p)} />
       </div>
       {open && (
         <ul className={styles.tools}>
@@ -51,8 +65,8 @@ function Group({ title, tools, choices }: { title: string; tools: ConnectionTool
               <span className={styles.toolName} title={t.key}>
                 {t.name}
               </span>
-              <span className={styles.toolAbout}>{t.description ?? t.key}</span>
-              <Choice label={t.name} value={choices.choiceOf(t.key)} onChange={(c) => choices.set([t.key], c)} />
+              <span className={styles.toolAbout}>{t.description || t.key}</span>
+              <Choice label={t.name} value={t.permission} busy={busy} onChange={(p) => set([t.key], p)} />
             </li>
           ))}
         </ul>
@@ -61,26 +75,31 @@ function Group({ title, tools, choices }: { title: string; tools: ConnectionTool
   );
 }
 
-/** The app's tools, read-only ones apart from those that write, send or delete, each allowed or blocked for bots. */
+/**
+ * The app's tools, read-only ones apart from those that write, send or delete, each one always allowed, waiting for
+ * the person's approval (a tool never set) or blocked for every bot of the org; kept on the server.
+ */
 export function ToolsPanel({ connection }: { connection: Connection }) {
   const tools = useAppTools(connection.id);
-  const choices = useToolChoices(connection.id);
+  const save = useSetPermissions(connection.id);
+  const set: SetFn = (keys, p) => save.mutate(Object.fromEntries(keys.map((k) => [k, p])));
   const reads = (tools.data ?? []).filter(readsOnly);
   const writes = (tools.data ?? []).filter((t) => !readsOnly(t));
 
   return (
     <div className={styles.sections}>
       <p className={styles.lede}>
-        Choose which of {connection.app_name}’s tools your bots may be given. For now the choice is kept in this browser; each bot still uses only the tools set on the bot itself.
+        Choose what your bots may do with each of {connection.app_name}’s tools: always allow it, have a bot wait for your approval in
+        Approvals, or block it. A tool you never set needs approval.
       </p>
-      <ApiErrorNotice error={tools.error} />
+      <ApiErrorNotice error={tools.error ?? save.error} />
       {tools.isPending ? (
         <ul className={styles.tools} aria-busy="true" aria-label="Loading tools">
           {Array.from({ length: 6 }, (_, i) => (
             <li key={i} className={styles.tool} aria-hidden="true">
               <Skeleton height={14} width="60%" />
               <Skeleton height={12} width="90%" />
-              <Skeleton height={14} width={90} />
+              <Skeleton height={14} width={120} />
             </li>
           ))}
         </ul>
@@ -90,8 +109,8 @@ export function ToolsPanel({ connection }: { connection: Connection }) {
         </EmptyState>
       ) : (
         <>
-          <Group title="Read-only tools" tools={reads} choices={choices} />
-          <Group title="Write/delete tools" tools={writes} choices={choices} />
+          <Group title="Read-only tools" tools={reads} set={set} busy={save.isPending} />
+          <Group title="Write/delete tools" tools={writes} set={set} busy={save.isPending} />
         </>
       )}
     </div>
