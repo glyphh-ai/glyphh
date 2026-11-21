@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from glyphh_server.mcp.tools.base import Context, Done, Tool, dump
+from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
 from glyphh_server.mcp.tools.bots import SLUG, Slug
 from glyphh_server.ops.bots import runs, store
 from glyphh_server.ops.bots.views import RunView, WrongIn
@@ -56,6 +56,13 @@ async def list_runs(ctx: Context, args: Slug) -> Done:
     return Done("\n".join(run_line(r) for r in found) or "No runs yet.", {"runs": [dump(r) for r in found]})
 
 
+async def approvals(ctx: Context, _: NoArgs) -> Done:
+    found = await runs.waiting(ctx.conn)
+    return Done(
+        "\n".join(run_line(r) for r in found) or "No bot is waiting on you.", {"runs": [dump(r) for r in found]}
+    )
+
+
 async def get_run(ctx: Context, args: RunId) -> Done:
     found = await runs.get(ctx.conn, args.run_id)
     return Done(run_line(found), dump(found))
@@ -94,6 +101,15 @@ TOOLS: tuple[Tool, ...] = (
         RunArgs,
         run,
         False,
+    ),
+    _tool(
+        "bot_approvals",
+        "Bots waiting on you",
+        "The org's approvals queue: every bot run waiting on the person (a gate unsure, an approval, a tool its "
+        "connection asks about), each with what it asks. bot_run_answer answers one.",
+        NoArgs,
+        approvals,
+        True,
     ),
     _tool("bot_runs", "A bot's runs", "A bot's runs, the newest first.", Slug, list_runs, True),
     _tool("bot_run_get", "A bot run", "One run: its status, log, data, question, tokens.", RunId, get_run, True),

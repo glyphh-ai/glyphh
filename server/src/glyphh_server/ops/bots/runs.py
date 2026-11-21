@@ -59,6 +59,18 @@ async def listing(conn: AsyncConnection, bot: Any) -> list[RunView]:
     return [view(r, bot.slug) for r in await conn.execute(newest)]
 
 
+async def waiting(conn: AsyncConnection) -> list[RunView]:
+    """The org's runs waiting on the person (its approvals queue), oldest first: what each asks."""
+    asked = (
+        select(BotRun, Bot.slug)
+        .join(Bot, Bot.id == BotRun.bot_id)
+        .where(BotRun.status == "needs_input")
+        .order_by(BotRun.created_at)
+        .limit(SHOWN)
+    )
+    return [view(r, r.slug) for r in await conn.execute(asked)]
+
+
 async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid.UUID, given: str) -> RunView:
     """The run, queued and committed, so its task finds it; refused while the bot has a live run."""
     try:

@@ -6,7 +6,7 @@ their own."""
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -14,8 +14,8 @@ from glyphh_server.db import tenancy
 from glyphh_server.errors import Invalid, NotFound
 from glyphh_server.models import Connection
 from glyphh_server.ops.auth.principal import Principal
+from glyphh_server.ops.bots.connviews import ASK, Apps, AppView, ConnectionView, Link, PermissionsIn, ToolView
 from glyphh_server.ops.bots.pipedream import Pipedream
-from glyphh_server.ops.bots.views import Apps, AppView, ConnectionView, Link, ToolView
 
 MISSING: str = "The org has no such connection."
 PAGE: int = 30
@@ -108,7 +108,20 @@ async def tools(pd: Pipedream, engine: AsyncEngine, who: Principal, connection_i
     """What a bot may be let do with the connection: its app's Pipedream actions."""
     found = await _found(engine, who, connection_id)
     return [
-        ToolView(key=a["key"], name=a.get("name") or a["key"], description=a.get("description") or "")
+        ToolView(
+            key=a["key"],
+            name=a.get("name") or a["key"],
+            description=a.get("description") or "",
+            permission=found.permissions.get(a["key"], ASK),
+        )
         for a in await pd.actions(found.app)
         if a.get("key")
     ]
+
+
+async def set_permissions(conn: AsyncConnection, connection_id: uuid.UUID, given: PermissionsIn) -> ConnectionView:
+    """What the org's bots may do with each tool named (the rest kept as they were)."""
+    found = await row(conn, connection_id)
+    now = {**found.permissions, **given.permissions}
+    await conn.execute(update(Connection).where(Connection.id == connection_id).values(permissions=now))
+    return shown(await row(conn, connection_id))

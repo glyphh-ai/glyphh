@@ -30,6 +30,8 @@ class Connection(Base):
     app_icon: Mapped[str] = mapped_column(Text, server_default="")
     account_id: Mapped[str] = mapped_column(Text)  # Pipedream's account id (apn_...)
     label: Mapped[str] = mapped_column(Text, server_default="")  # the account's own name (an email, a workspace)
+    # per tool key: allow, ask (a step that uses it waits for the person's yes) or deny; a tool not named asks
+    permissions: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = created_at()
 
 

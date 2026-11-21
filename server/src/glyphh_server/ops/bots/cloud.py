@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_server.errors import Invalid
 from glyphh_server.models import Connection
 from glyphh_server.ops.bots import props
+from glyphh_server.ops.bots.connviews import ASK
 from glyphh_server.ops.bots.pipedream import Pipedream
 
 Call = Callable[[dict[str, Any]], Awaitable[Any]]
@@ -120,16 +122,44 @@ def _action(pd: Pipedream, org_id: uuid.UUID, key: str, defined: list[dict[str, 
     return call
 
 
-async def calls(pd: Pipedream, conn: AsyncConnection, bot: Any) -> dict[str, Call]:
-    """The tools the bot may use, each ready to call (a connection removed since is left out)."""
+def _denied(key: str, app_name: str) -> Call:
+    async def call(given: dict[str, Any]) -> Any:
+        raise PermissionError(f"{key} is blocked on the {app_name} connection: allow it there for the bot to use it")
+
+    return call
+
+
+async def calls(pd: Pipedream, conn: AsyncConnection, bot: Any) -> tuple[dict[str, Call], set[str]]:
+    """The tools the bot may use, each ready to call, and those of them its connection says to ask the person
+    about first. A tool its connection denies fails the step that runs it, saying so; one of a connection removed
+    since is left out."""
     ids = [uuid.UUID(s["connection_id"]) for s in bot.scopes]
     linked = {str(r.id): r for r in await conn.execute(select(Connection).where(Connection.id.in_(ids)))} if ids else {}
     made: dict[str, Call] = {}
+    asked: set[str] = set()
     for scope in bot.scopes:
         found = linked.get(scope["connection_id"])
         if found is None:
             continue
         for key in scope["tools"]:
+            permission = found.permissions.get(key, ASK)
+            if permission == "deny":
+                made[key] = _denied(key, found.app_name)
+                continue
             defined = (await pd.component(key)).get("configurable_props") or []
             made[key] = _action(pd, bot.org_id, key, defined, found.account_id)
-    return made
+            if permission == ASK:
+                asked.add(key)
+    return made, asked
+
+
+def guarded(bot: Any, asked: set[str]) -> Any:
+    """The bot as this go runs it: each step that runs a tool to ask about waits for the person's yes first (an
+    approval of its own, unless the step has one)."""
+    loop = [
+        {**s, "approval": f"use {s['run']}"}
+        if isinstance(s, dict) and s.get("run") in asked and not s.get("approval")
+        else s
+        for s in bot.spec.get("loop") or []
+    ]
+    return SimpleNamespace(**{**dict(bot._mapping), "spec": {**bot.spec, "loop": loop}})

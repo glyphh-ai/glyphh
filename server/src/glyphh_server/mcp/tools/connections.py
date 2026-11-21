@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from glyphh_server.errors import Unavailable
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
 from glyphh_server.ops.bots import connections
+from glyphh_server.ops.bots.connviews import LinkIn, PermissionsIn
 from glyphh_server.ops.bots.pipedream import OFF, Pipedream
-from glyphh_server.ops.bots.views import LinkIn
 
 
 class AppsArgs(BaseModel):
@@ -51,8 +51,18 @@ async def link(ctx: Context, args: LinkIn) -> Done:
 
 async def list_tools(ctx: Context, args: ConnectionArgs) -> Done:
     found = await connections.tools(pipedream(ctx), ctx.bots.engine, ctx.who, args.connection_id)
-    lines = [f"{t.key}: {t.name}" for t in found]
+    lines = [f"{t.key}: {t.name} ({t.permission})" for t in found]
     return Done("\n".join(lines) or "It has no tools.", {"tools": [dump(t) for t in found]})
+
+
+class Permissions(PermissionsIn, ConnectionArgs):
+    pass
+
+
+async def set_permissions(ctx: Context, args: Permissions) -> Done:
+    found = await connections.set_permissions(ctx.conn, args.connection_id, PermissionsIn(permissions=args.permissions))
+    said = ", ".join(f"{k} {v}" for k, v in sorted(args.permissions.items()))
+    return Done(f"{found.app_name} {found.label}: {said}.".replace("  ", " "), dump(found))
 
 
 TOOLS: tuple[Tool, ...] = (
@@ -84,10 +94,19 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "connection_tools",
         "A connection's tools",
-        "What a bot may be let do with a connection: each tool's key, as bot_connections_set takes it.",
+        "What a bot may be let do with a connection: each tool's key, as bot_connections_set takes it, and its "
+        "permission (allow, ask or deny).",
         ConnectionArgs,
         list_tools,
         True,
     ),
+    Tool(
+        "connection_permissions_set",
+        "Set a connection's tool permissions",
+        "Per tool key, what the org's bots may do with it: allow, ask (a step that uses it waits for the person's yes, "
+        "in the approvals queue) or deny. A tool never set asks. Keys not named keep what they had.",
+        Permissions,
+        set_permissions,
+    ),
 )
-DETACHED: frozenset[str] = frozenset(t.name for t in TOOLS)
+DETACHED: frozenset[str] = frozenset(t.name for t in TOOLS) - {"connection_permissions_set"}

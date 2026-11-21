@@ -9,52 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field
 LOOK_PARTS: tuple[str, ...] = ("head", "tail", "eye", "extra", "accessory", "pose")
 
 
-class ConnectionView(BaseModel):
-    id: uuid.UUID
-    app: str = Field(description="The service, as Pipedream names it (gmail, slack, ...)")
-    app_name: str
-    app_icon: str
-    account_id: str
-    label: str = Field(description="The account's own name at the service")
-    created_at: datetime
-
-
-class Connections(BaseModel):
-    connections: list[ConnectionView]
-
-
-class AppView(BaseModel):
-    slug: str
-    name: str
-    description: str
-    icon: str
-
-
-class Apps(BaseModel):
-    apps: list[AppView]
-    next_cursor: str | None
-
-
-class LinkIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    app: str = Field(min_length=1, max_length=200, description="The service's slug (connection_apps lists them)")
-
-
-class Link(BaseModel):
-    url: str = Field(description="Pipedream's page where the person signs in to the service for the org")
-    expires_at: str | None
-
-
-class ToolView(BaseModel):
-    key: str = Field(description="The tool's key, as a bot's scope names it")
-    name: str
-    description: str
-
-
-class Tools(BaseModel):
-    tools: list[ToolView]
-
-
 SPEC_ABOUT: str = (
     "The bot's loop, as the SDK's bot.json has it but its slug, name and agent (bot_guide says how): loop (its "
     "steps: run a tool, a gate that learns in Ada, an agent step Claude does, a ladder), gates, touches, hosts, "

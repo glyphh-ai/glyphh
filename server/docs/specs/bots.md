@@ -220,12 +220,17 @@ a run answers 503 `anthropic_off`.
 
 | Call | What |
 |---|---|
-| `GET /v1/connections` | `{connections: [{id, app, app_name, app_icon, account_id, label, created_at}]}` |
+| `GET /v1/connections` | `{connections: [{id, app, app_name, app_icon, account_id, label, permissions, created_at}]}` |
 | `GET /v1/connections/apps?q=&cursor=` | `{apps: [{slug, name, description, icon}], next_cursor}` |
 | `POST /v1/connections/link` | `{app}` → `{url, expires_at}` |
 | `POST /v1/connections/sync` | `{connections}` |
 | `DELETE /v1/connections/{id}` | 204; its Pipedream account deleted too |
-| `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description}]}` |
+| `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description, permission}]}` |
+| `PUT /v1/connections/{id}/permissions` | `{permissions: {tool: allow\|ask\|deny}}`, merged → the connection |
+| `GET /v1/bots?q=` | The org's bots, those whose name, slug or summary have every word when `q` is given |
+| `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, gates}` |
+| `POST /v1/bot-templates/{slug}/install` | `{name?}` → 201, the org's own copy, each app's tools scoped to its first connection of that app; an app not connected is 422 `connections` with `apps` |
+| `GET /v1/bot-approvals` | `{runs}`: every run waiting on the person, oldest first |
 | `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
 | `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
@@ -241,6 +246,11 @@ Without Pipedream set up (`GLYPHH_PIPEDREAM_CLIENT_ID`, `_CLIENT_SECRET`, `_PROJ
 answers 503 `E_UNAVAILABLE` `pipedream_off`. The connector's tools: `bot_guide`, `bots`, `bot`, `bot_create`,
 `bot_update`, `bot_delete`, `bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`,
 `bot_run_answer`, `bot_run_wrong`, `bot_run_cancel`, `bot_gates`, `connections`, `connection_apps`, `connection_link`,
-`connection_tools`.
+`connection_tools`, `connection_permissions_set`, `bot_approvals`, `bot_templates`, `bot_template`,
+`bot_template_install`.
+
+A bot has no permission mode of its own: each tool on a connection is allowed, asked about or denied, and a tool never
+set asks. A step that runs a tool to ask about waits for the person's yes (`use <tool>`, unless the step has an approval
+already), so it shows in the approvals queue; a denied tool fails the step that runs it, saying where to allow it.
 
 Not yet: who in the org may use a connection or a bot, schedules, running a cloud bot on a chosen rrotor.

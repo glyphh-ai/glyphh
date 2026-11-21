@@ -479,6 +479,7 @@ CREATE TABLE IF NOT EXISTS connections (
     app_icon TEXT DEFAULT '' NOT NULL,
     account_id TEXT NOT NULL,
     label TEXT DEFAULT '' NOT NULL,
+    permissions JSONB DEFAULT '{}'::jsonb NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
