@@ -33,7 +33,8 @@ class PlanVersion(Base):
     cloud_precedents across its models, cloud_requests (reads) a calendar month, cloud_rps calls a second; past
     cloud_requests, cloud_overage meters the rest (Basic, Pro, Team) or the reads are refused until the month turns
     (Free). llm_tokens: the Glyphh-hosted models' tokens a calendar month (docs/specs/tokens.md), past which they
-    are charged to the org's overage balance; null, by contract.
+    are charged to the org's overage balance; null, by contract. connections: the connections to other services
+    (Pipedream accounts) included, null every one; connection_cents: each one past them a month, null not priced.
     A version that changes only these takes over the Stripe price and the orgs of the one before it (db/seed.py)."""
 
     __tablename__ = "plan_versions"
@@ -47,6 +48,9 @@ class PlanVersion(Base):
             name="plan_versions_cloud",
         ),
         CheckConstraint("coalesce(llm_tokens, 0) >= 0", name="plan_versions_llm"),
+        CheckConstraint(
+            "coalesce(connections, 0) >= 0 AND coalesce(connection_cents, 0) >= 0", name="plan_versions_connections"
+        ),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -67,4 +71,6 @@ class PlanVersion(Base):
     cloud_rps: Mapped[int | None]
     cloud_overage: Mapped[bool] = mapped_column(server_default="false")
     llm_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    connections: Mapped[int | None]
+    connection_cents: Mapped[int | None]
     created_at: Mapped[datetime] = created_at()

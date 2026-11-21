@@ -65,10 +65,13 @@ class PlanSeed:
     features: Features
     cloud: Cloud = Cloud()
     llm_tokens: int | None = None  # Glyphh-hosted models' tokens a month (docs/specs/tokens.md); None: by contract
+    connections: int | None = None  # connections included; None: every one (TBD, Chris)
+    connection_cents: int | None = None  # each connection past them a month; None: not priced (TBD, Chris)
 
     def carried(self) -> dict[str, int | bool | None]:
         """What a version changing only these keeps the price and orgs of the one before for (_carry)."""
-        return {**asdict(self.cloud), "llm_tokens": self.llm_tokens}
+        more = {"connections": self.connections, "connection_cents": self.connection_cents}
+        return {**asdict(self.cloud), "llm_tokens": self.llm_tokens, **more}
 
 
 FREE: str = "Free"

@@ -11,7 +11,6 @@ from sqlalchemy import select
 
 from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.pages import to_platform
-from glyphh_server.errors import NotFound
 from glyphh_server.llm import usage as llm_usage
 from glyphh_server.llm.usage import Ledger
 from glyphh_server.models import Org
@@ -58,22 +57,22 @@ def cloud_redis(request: Request) -> Redis | None:
 @router.get("/v1/billing", operation_id="billing")
 async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingView:
     """The org's billing: its plan and price and the precedents its fullest runtime holds of the plan's per node;
-    with Ada Cloud on, its plan's cloud limits and what the org uses of them (precedents, reads this month)."""
+    with Ada Cloud on, its plan's cloud limits and what the org uses of them (precedents, reads this month); its
+    connections against the plan's; the month's tokens, the hosted models' and the bots' (one meter), and the
+    balance they are charged to past the plan's."""
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
-    used = await usage(conn, caller.org_id, cloud_redis(request), request.app.state.settings.hosted)
+    used = await usage(conn, caller.org_id, cloud_redis(request), tokens=True)
     return BillingView(**used.model_dump(), **row._mapping)
 
 
 @router.post("/v1/billing/topup", operation_id="topUpBalance")
 async def top_up(body: TopupIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
-    """Stripe Checkout's address to add $10 to $1,000 to the overage balance the Glyphh-hosted models draw on past
-    the plan's tokens; credited once Stripe says it is paid. The admin's."""
-    settings = request.app.state.settings
-    if not settings.hosted:
-        raise NotFound("Glyphh-hosted models are not on this server.", reason="llm_off")
-    return await topup.topup(conn, caller, stripe, settings, body.amount_cents)
+    """Stripe Checkout's address to add $10 to $1,000 to the overage balance the bots and the Glyphh-hosted models
+    draw on past the plan's tokens; credited once Stripe says it is paid. The admin's. Open whether hosted models are
+    on or not: the bots' tokens are charged to it either way."""
+    return await topup.topup(conn, caller, stripe, request.app.state.settings, body.amount_cents)
 
 
 @router.get("/v1/billing/ledger", operation_id="balanceLedger")

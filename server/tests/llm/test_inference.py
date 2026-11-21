@@ -45,7 +45,8 @@ async def test_a_request_within_the_month_is_answered_and_counted_not_charged(
     assert inference.calls == [("Bearer ik_test", ASK | {"temperature": 0.2})]
     shown = await billing(hosted, who)
     assert shown["tokens"]["used"] == 1_500 and shown["tokens"]["max"] == 250_000 and shown["tokens"]["over_used"] == 0
-    model = {"id": MODEL, "name": "adaL 34B 1.0", "input_tokens": 1_000, "output_tokens": 500, "requests": 1}
+    model = {"id": MODEL, "name": "adaL 34B 1.0", "kind": "hosted", "input_tokens": 1_000, "output_tokens": 500}
+    model["requests"] = 1
     assert shown["tokens"]["models"] == [model | {"charged_cents": 0.0, "charged_micros": 0}]
     assert shown["balance"] == {"cents": 0.0, "micros": 0, "low": True}
     signed_in = await hosted.post("/v1/chat/completions", json=ASK, headers=who.headers)  # a sign-in, as the Ada API

@@ -4,6 +4,7 @@ ledger. Money is given in cents (fractional: a request's charge is microdollars)
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -12,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from glyphh_ada.requests import turns
 from glyphh_server.llm import ledger, registry
 from glyphh_server.models import LlmBalance, LlmLedger, LlmUsageDay
+from glyphh_server.ops.bots import prices
 
 LOW_MICROS: int = 5_000_000  # a balance under $5 is low (TBD, Chris)
 
@@ -19,6 +21,7 @@ LOW_MICROS: int = 5_000_000  # a balance under $5 is low (TBD, Chris)
 class ModelMonth(BaseModel):
     id: str
     name: str
+    kind: Literal["hosted", "bot"] = Field(description="A Glyphh-hosted model's, or a bot's (Claude) on the same meter")
     input_tokens: int
     output_tokens: int
     requests: int
@@ -86,18 +89,26 @@ async def balance(conn: AsyncConnection, org_id: uuid.UUID) -> Balance:
 
 
 def _name(model_id: str) -> str:
-    found = registry.find(model_id)
+    found = registry.find(model_id) or prices.CLAUDE.get(model_id)
     return model_id if found is None else found.name
 
 
 async def _models(conn: AsyncConnection, org_id: uuid.UUID, month: str) -> list[ModelMonth]:
+    """Each model's month: the hosted models' and the bots' Claude models' (charged by the same meter)."""
     first = date.fromisoformat(f"{month}-01")
     sums = [func.sum(getattr(LlmUsageDay, c)) for c in ("input_tokens", "output_tokens", "requests", "charged_micros")]
     found = select(LlmUsageDay.model, *sums).where(LlmUsageDay.org_id == org_id, LlmUsageDay.day >= first)
     rows = await conn.execute(found.group_by(LlmUsageDay.model).order_by(LlmUsageDay.model))
     return [
         ModelMonth(
-            id=m, name=_name(m), input_tokens=i, output_tokens=o, requests=r, charged_cents=cents(c), charged_micros=c
+            id=m,
+            name=_name(m),
+            kind="bot" if m in prices.CLAUDE else "hosted",
+            input_tokens=i,
+            output_tokens=o,
+            requests=r,
+            charged_cents=cents(c),
+            charged_micros=c,
         )
         for m, i, o, r, c in rows
     ]

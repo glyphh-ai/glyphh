@@ -20,6 +20,17 @@ is [Against what is built](#against-what-is-built).
 | Ada Cloud calls a second | 5 | 10 | 50 | 200 | By contract |
 | Hosted-model tokens a month (TBD) | 250,000 | 5,000,000 | 25,000,000 | 100,000,000 | By contract |
 | Past the tokens | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | By contract |
+| Connections (bots' accounts at other services) | Every one (TBD) | Every one (TBD) | Every one (TBD) | Every one (TBD) | By contract |
+| Past the connections | Not priced (TBD) | Not priced (TBD) | Not priced (TBD) | Not priced (TBD) | By contract |
+
+**Bots' tokens** are charged on the same meter as the hosted models' (the plan's tokens first, then the balance): on
+Glyphh's Anthropic key at Anthropic's rate plus Glyphh's 20% markup, on the org's own key at the markup alone
+([specs/bots.md](specs/bots.md)). The balance can be topped up whether hosted models are on or not.
+
+**Connections** are priced per plan version: `connections` included (null: every one) and `connection_cents`, each
+one past them a month (null: not priced). Both are null on every plan until Chris sets them; nothing is charged for a
+connection until then, and the Stripe line that would charge one is not built. `GET /v1/billing` says the org's
+connections against them (`connections: {used, included, over, cents_a_month, due_cents}`).
 
 **Hosted-model rates** (TBD placeholders), in dollars per million tokens past the plan's month, charged to the org's
 prepaid overage balance (topped up $10 to $1,000 at a time); the price on the page is the charge on the bill:
