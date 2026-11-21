@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional, 
 from .. import __version__
 from ..client import Ada
 from ..errors import AdaError, ModelMissingError
-from .claude import Claude
+from .claude import ApiClaude, Claude
 from .gates import Call, Gate, Policy
 from .memory import MEMORY_SPEC, memory_context, remember
 from .package import KINDS, OUTWARD, Bot, BotError
@@ -318,7 +318,11 @@ class Ctx:
 
 def fill(value: Any, data: Dict[str, Any]) -> Any:
     """`$id` (or `$id.path`) in a step's input or prompt: an earlier step's data (the whole value, or as JSON inside a
-    string). An id no step has made yet is left as written."""
+    string), inside objects and lists too. An id no step has made yet is left as written."""
+    if isinstance(value, dict):
+        return {k: fill(v, data) for k, v in value.items()}
+    if isinstance(value, list):
+        return [fill(v, data) for v in value]
     if isinstance(value, str) and REF.fullmatch(value):
         path = value[1:]
         return resolve(path, data) if path.split(".")[0] in data else None
@@ -381,7 +385,7 @@ class Runner:
         bot: Bot,
         ada: Ada,
         *,
-        claude: Optional[Claude] = None,
+        claude: Optional[Claude | ApiClaude] = None,
         orchestrator: Optional["Orchestrator"] = None,
         ask: Optional[Ask] = None,
         echo: Optional[Callable[[str], None]] = None,
@@ -400,6 +404,8 @@ class Runner:
         self.today = today or dt.date.today
         self.now = now or dt.datetime.now
         self.store = RunStore(bot.dir)
+        #: The Claude tokens this runner's agent steps used, for a host that reports them (rrotor, Glyphh's cloud).
+        self.tokens: Dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
 
     def trust(self) -> str:
         return self.orchestrator.trust_of(self.bot.slug) if self.orchestrator else "ask_all"
@@ -455,8 +461,9 @@ class Runner:
 
     # running
 
-    def run(self, routine: bool = False) -> RunResult:
-        """One run of the loop, from its first step. `routine`: nobody is watching, so a question stops the run."""
+    def run(self, routine: bool = False, given: Any = None) -> RunResult:
+        """One run of the loop, from its first step. `routine`: nobody is watching, so a question stops the run.
+        `given`: what the run is given to work on, `$input` to its steps."""
         self._refuse()
         limits = self.bot.limits
         day = self.today().isoformat()
@@ -466,9 +473,10 @@ class Runner:
             return RunResult(self.bot.slug, "", "skipped",
                              f"runs_per_day: {limits['runs_per_day']} runs today already, no more until tomorrow")
         run_id = new_run_id()
-        self.store.save(run_id, "running", 0, {}, {}, "", [], day=day)
+        data: Dict[str, Any] = {} if given is None else {"input": given}
+        self.store.save(run_id, "running", 0, data, {}, "", [], day=day)
         self.echo(f"{self.bot.slug} run {run_id}{' (routine)' if routine else ''}")
-        return self._walk(run_id, 0, {}, routine, None, [])
+        return self._walk(run_id, 0, data, routine, None, [])
 
     def resume(self, answer: Any = None, routine: bool = False) -> RunResult:
         """Carry on the run that stopped for the person, with their answer: one of its options; for a batch of items,
@@ -624,6 +632,13 @@ class Runner:
         self._after(ctx, result, at, routine)
         return result
 
+    def _case(self, gate: Mapping[str, Any], ctx: Ctx, of: Any, item: bool = False) -> Any:
+        """A gate's case: its program function's answer, or its fields (layer, segment, role, as Ada's case is)
+        filled: `$item.x` from the item, `$step.x` from the run's data."""
+        if isinstance(gate["case"], str):
+            return self._code(gate["case"], ctx, of)
+        return fill(gate["case"], {**ctx.data, "item": of} if item else of)
+
     def _code(self, function: str, ctx: Ctx, *inputs: Any) -> Any:
         try:
             return getattr(self.bot.program, function)(ctx, *inputs)
@@ -675,7 +690,7 @@ class Runner:
         gate = self.bot.gates[name]
         policy = Policy.of(name, gate)
         outcomes = list(gate["outcomes"])
-        case = pending.get("case") if answer is not None and pending.get("case") is not None else self._code(gate["case"], ctx, data)
+        case = pending.get("case") if answer is not None and pending.get("case") is not None else self._case(gate, ctx, data)
         model_name = self.bot.gate_model(name)
         row = {"gate": name, "step": step["id"], "n": 0, "key": "", "label": "", "kind": "gate", "case": case}
         if answer is None:
@@ -788,7 +803,7 @@ class Runner:
         left = policy.max_questions
         entries = []
         for i, (key, item) in enumerate(keyed, 1):
-            case = self._code(gate["case"], ctx, item)
+            case = self._case(gate, ctx, item, True)
             call = policy.judge(model.decide(case) if n else None, n, f"{ctx.run_id}:{name}:{key}")
             e = {"n": i, "key": key, "label": _item_label(step, item), "item": item, "case": case, "outcome": None,
                  "by": None, "p": call.p, "guess": call.outcome, "mode": call.mode, "why": call.why, "agreed": None}
@@ -874,7 +889,7 @@ class Runner:
         case = None
         if name:
             gate = self.bot.gates[name]
-            case = pending.get("case") if said is not None and pending.get("case") is not None else self._code(gate["case"], ctx, data)
+            case = pending.get("case") if said is not None and pending.get("case") is not None else self._case(gate, ctx, data)
             if said is None:
                 call = self._judge(name, case, f"{ctx.run_id}:{name}:{sid}")
                 if allows and not call.ask:
@@ -929,7 +944,7 @@ class Runner:
         rungs = list(gate["outcomes"])
         policy = Policy.of(name, gate)
         key = _item_key(step, item) if n else ""
-        case = self._code(gate["case"], ctx, item)
+        case = self._case(gate, ctx, item, True)
         call = self._judge(name, case, f"{ctx.run_id}:{name}:{key}")
         start = step.get("start") or policy.default or rungs[0]
         start, by = (call.outcome, "ada") if call.sure and call.outcome in rungs else (start, "default")
@@ -986,6 +1001,8 @@ class Runner:
                 )
             except BotError as e:
                 raise Stop("failed", f"{step['id']}: {e.message}") from e
+            self.tokens["input_tokens"] += got.input_tokens
+            self.tokens["output_tokens"] += got.output_tokens
             if got.cost_usd:
                 self.store.spend(ctx.run_id, ctx.today.isoformat(), got.cost_usd, f"agent {step['id']}")
             problems = self._answer_problems(ctx, step, data, got.text)

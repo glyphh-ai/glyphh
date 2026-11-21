@@ -83,13 +83,15 @@ def frontmatter(text: str) -> Tuple[Dict[str, str], str]:
 class Bot:
     """A bot's package, loaded and checked. `spec` is its bot.json; `program` its program.py, imported."""
 
-    def __init__(self, folder: Path, spec: Dict[str, Any], program: ModuleType) -> None:
+    def __init__(self, folder: Path, spec: Dict[str, Any], program: Any) -> None:
         self.dir, self.spec, self.program = folder, spec, program
         self.slug: str = spec["slug"]
 
     @classmethod
-    def load(cls, folder: Path) -> "Bot":
-        """The bot in this folder, every part checked; `BotError` names each problem."""
+    def load(cls, folder: Path, program: Any = None) -> "Bot":
+        """The bot in this folder, every part checked; `BotError` names each problem. `program` stands in for
+        program.py: an object whose attributes are the functions bot.json names, given by the host that runs the
+        bot (Glyphh's cloud gives a bot no code of its own, only its connections' actions)."""
         folder = Path(folder)
         problems: List[str] = []
         try:
@@ -101,8 +103,9 @@ class Bot:
         if not isinstance(spec, dict):
             raise BotError(f"{folder}/bot.json is not a JSON object")
         problems += check_spec(spec, folder)
-        program: Optional[ModuleType] = None
-        if (folder / "program.py").exists():
+        if program is not None:
+            pass
+        elif (folder / "program.py").exists():
             try:
                 program = _import(folder, str(spec.get("slug") or folder.name))
             except Exception as e:  # noqa: BLE001  the bot's own code: whatever it raises is the problem
@@ -229,10 +232,12 @@ def check_spec(spec: Mapping[str, Any], folder: Path) -> List[str]:
         return problems
     if len(set(ids)) != len(ids):
         problems.append("step ids must differ")
+    if "input" in ids:
+        problems.append("no step may be called input: $input is what the run is given")
     approvals = 0
     for i, step in enumerate(loop):
         problems += _check_step(step, ids, gates, folder)
-        problems += _check_rules(step, ids, ids[:i], gates, touches if touches in TOUCHES else "deletes")
+        problems += _check_rules(step, ids, ["input"] + ids[:i], gates, touches if touches in TOUCHES else "deletes")
         approvals += bool(step.get("approval"))
     if touches in OUTWARD and not approvals:
         problems.append(f"the bot touches {touches} but no step has an approval: it would act outward unasked")
@@ -248,8 +253,10 @@ def _check_gate(slug: str, name: str, gate: Any) -> List[str]:
     why = check_model_name(model_name("bot", slug, "gate", name))
     if why:
         problems.append(f"gate {name}: {why}")
-    if not isinstance(gate.get("case"), str):
-        problems.append(f"gate {name}: case must name the program.py function that builds its case")
+    case = gate.get("case")
+    if not (isinstance(case, str) and case) and not (isinstance(case, dict) and case):
+        problems.append(f"gate {name}: case must name the program.py function that builds its case, or be its fields"
+                        " (role to value: `$item.x` the item's, `$step.x` an earlier step's)")
     outcomes = gate.get("outcomes")
     if not isinstance(outcomes, list) or len(outcomes) < 2 or not all(isinstance(o, str) and o for o in outcomes):
         problems.append(f"gate {name}: outcomes must be two or more names")
@@ -390,7 +397,7 @@ def _check_step(step: Dict[str, Any], ids: List[str], gates: Mapping[str, Any], 
     return problems
 
 
-def check_program(spec: Mapping[str, Any], program: ModuleType) -> List[str]:
+def check_program(spec: Mapping[str, Any], program: Any) -> List[str]:
     """Every function bot.json names that program.py does not have."""
     problems = []
     for step in spec.get("loop") or []:

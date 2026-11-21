@@ -19,7 +19,7 @@ from glyphh.bots import Claude
 @pytest.fixture
 def glyphh_bot(monkeypatch, fake_ada: FakeAda, fake_claude: FakeClaude, bots_home: Path, capsys):
     monkeypatch.setattr(bots_cli, "connect", lambda root: fake_ada)
-    monkeypatch.setattr(bots_cli, "Claude", lambda: Claude(run=fake_claude))
+    monkeypatch.setattr(bots_cli, "from_env", lambda: Claude(run=fake_claude))
     monkeypatch.setattr("sys.stdin", io.StringIO(""))
 
     def run(*argv: str, code: int = 0) -> Any:

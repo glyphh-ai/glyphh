@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
-from .claude import Claude
+from .claude import from_env
 from .orchestrator import KEEP, TRUST, Orchestrator, connect
 from .package import TOUCHES, Bot, BotError, bots_root
 from .routine import install as install_routine
@@ -36,7 +36,7 @@ def orchestrator(a: argparse.Namespace) -> Orchestrator:
     """The orchestrator for a command: questions asked at the terminal when there is one and no routine runs."""
     root = bots_root()
     ask = _terminal_ask if not getattr(a, "routine", False) and sys.stdin.isatty() else None
-    return Orchestrator(connect(root), root=root, claude=Claude(), ask=ask, echo=_echo(getattr(a, "quiet", False)))
+    return Orchestrator(connect(root), root=root, claude=from_env(), ask=ask, echo=_echo(getattr(a, "quiet", False)))
 
 
 def register(sub: Any, out: Out) -> None:
