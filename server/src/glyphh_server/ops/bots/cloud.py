@@ -129,10 +129,20 @@ def _denied(key: str, app_name: str) -> Call:
     return call
 
 
+def asks(mode: str, permission: str | None) -> bool:
+    """Whether a step running a tool waits for the person, by the bot's permission mode and the connection's say
+    (None: the connection names it nowhere): ask, unless allowed; connection, only when it says ask; auto, never."""
+    if mode == "auto":
+        return False
+    if mode == "connection":
+        return permission == ASK
+    return permission in (None, ASK)
+
+
 async def calls(pd: Pipedream, conn: AsyncConnection, bot: Any) -> tuple[dict[str, Call], set[str]]:
-    """The tools the bot may use, each ready to call, and those of them its connection says to ask the person
-    about first. A tool its connection denies fails the step that runs it, saying so; one of a connection removed
-    since is left out."""
+    """The tools the bot may use, each ready to call, and those of them to ask the person about first (asks). A
+    tool its connection denies fails the step that runs it, saying so, whatever the mode; one of a connection
+    removed since is left out."""
     ids = [uuid.UUID(s["connection_id"]) for s in bot.scopes]
     linked = {str(r.id): r for r in await conn.execute(select(Connection).where(Connection.id.in_(ids)))} if ids else {}
     made: dict[str, Call] = {}
@@ -142,13 +152,13 @@ async def calls(pd: Pipedream, conn: AsyncConnection, bot: Any) -> tuple[dict[st
         if found is None:
             continue
         for key in scope["tools"]:
-            permission = found.permissions.get(key, ASK)
+            permission = found.permissions.get(key)
             if permission == "deny":
                 made[key] = _denied(key, found.app_name)
                 continue
             defined = (await pd.component(key)).get("configurable_props") or []
             made[key] = _action(pd, bot.org_id, key, defined, found.account_id)
-            if permission == ASK:
+            if asks(bot.permission_mode, permission):
                 asked.add(key)
     return made, asked
 

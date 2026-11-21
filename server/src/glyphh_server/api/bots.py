@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query, Request, Response
 
 from glyphh_server.api.auth import Caller, Cfg, Conn
 from glyphh_server.api.templates import Person
-from glyphh_server.ops.bots import keys, prices, runs, store, templates
+from glyphh_server.ops.bots import keys, prices, runs, store, templates, voices
 from glyphh_server.ops.bots.prices import BotModels
 from glyphh_server.ops.bots.views import (
     AnswerIn,
@@ -49,6 +49,12 @@ async def list_bots(
 async def list_models(caller: Caller) -> BotModels:
     """The Claude models a bot's agent steps may run on, at their rates."""
     return prices.listing()
+
+
+@router.get("/v1/bots/voices", operation_id="listBotVoices")
+async def list_voices(caller: Caller) -> voices.Voices:
+    """The voices a bot may speak in (Kokoro's, the open TTS model); `samples` false while no speech is made."""
+    return voices.listing()
 
 
 @router.get("/v1/bot-templates", operation_id="listBotTemplates")

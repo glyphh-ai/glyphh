@@ -193,13 +193,29 @@ the org's accounts back as its connections (the new ones added, the gone ones re
 Pipedream's account id, the app and the account's name. A connection's tools are its app's Pipedream actions.
 
 **A bot** is a name (its slug, the org's own, at most 30 characters, fixed once made), a summary, a look (its cat:
-`head`, `tail`, `eye`, `extra`, `accessory`, `pose`, the glyphh-bot mascots' parts), instructions (its `agent.md`), the
-Claude model its agent steps run on (one of those `GET /v1/bots/models` lists, its default when none is given), its
+`head`, `tail`, `eye`, `extra`, `accessory`, `pose`, the glyphh-bot mascots' parts) or a **mascot** of its own (below),
+instructions (its `agent.md`), the Claude model its agent steps run on (one of those `GET /v1/bots/models` lists, its
+default when none is given), its **permission mode** (below), its **voice** (one of `GET /v1/bots/voices`: Kokoro-82M's,
+the open TTS model; only the choice is kept, no speech is made yet, so `samples` is false), its
 spec (`bot.json`: touches, hosts, seed, gates, loop, limits), its skills (`{name: SKILL.md}`) and **per connection, the
 tools it may use** (its scope). It is checked by the SDK when made and when changed, every problem said at once (422,
 `problems`); fetch hosts must be public names. It gets its own Ada key, made as the person who made it and revoked when
 it is deleted; its gate and memory models are `bot-<slug>-gate-<gate>` and `bot-<slug>-<kind>`. `bot_guide` (and
 `ops/bots/guide.py`) says how a cloud bot is written.
+
+**Create with AI.** `POST /v1/bots/draft` is the bot maker's next turn (`ops/bots/maker.py`): given the conversation
+(`{messages: [{role, content}], draft?}`), Claude asks a short question or drafts the whole bot (name, summary, cat,
+instructions, model, spec, skills, and the apps and tools it needs) from `bot_guide`'s text and the org's connected apps.
+The draft is checked by the SDK as a bot being made (every tool it names counted as scoped); one the check finds wrong
+is sent back to Claude once with its problems. Its apps are scoped to the org's first connection of each
+(`connections`, ready for `POST /v1/bots`), the ones not connected named (`missing_apps`). It answers `{reply, draft,
+problems, missing_apps}` and makes nothing. **A mascot**: `POST /v1/bots/mascot` (`{prompt}` → `{mascot}`) has Claude
+draw a new black-and-white character in Spike's style as SVG; a bot keeps it as `mascot`, shown in place of its cat.
+Whoever drew it, a mascot is made safe before it is kept (`ops/bots/svg.py`): only `g` and the basic shapes, numeric
+and path attributes, transforms, and the two colours white and ink survive (no script, style, link, image, text,
+entity, event handler or other colour), at most 30 KB; the platform shows it as an image, never as markup. Both ask
+Claude on the bots' key (the org's own or Glyphh's), metered as agent steps are; with neither, 503 `anthropic_off`;
+Claude failing is 503 `claude`.
 
 **A run** is a background task in the server's own process, at most `GLYPHH_BOT_RUNS_AT_ONCE` (4) a machine, the rest
 queued; a bot has one live run at a time (queued, running or waiting on the person). The bot's package is written to a
@@ -231,9 +247,12 @@ a run answers 503 `anthropic_off`.
 | `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, gates}` |
 | `POST /v1/bot-templates/{slug}/install` | `{name?}` → 201, the org's own copy, each app's tools scoped to its first connection of that app; an app not connected is 422 `connections` with `apps` |
 | `GET /v1/bot-approvals` | `{runs}`: every run waiting on the person, oldest first |
-| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
 | `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
+| `GET /v1/bots/voices` | `{voices: [{id, name, accent, gender, default}], samples}` |
+| `POST /v1/bots/draft` | `{messages, draft?}` → `{reply, draft: {name, summary, look, mascot, instructions, model, spec, skills, apps: [{app, tools}], connections} \| null, problems, missing_apps}` |
+| `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
 | `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT` |
 | `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, created_at, started_at, finished_at}` |
@@ -247,10 +266,18 @@ answers 503 `E_UNAVAILABLE` `pipedream_off`. The connector's tools: `bot_guide`,
 `bot_update`, `bot_delete`, `bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`,
 `bot_run_answer`, `bot_run_wrong`, `bot_run_cancel`, `bot_gates`, `connections`, `connection_apps`, `connection_link`,
 `connection_tools`, `connection_permissions_set`, `bot_approvals`, `bot_templates`, `bot_template`,
-`bot_template_install`.
+`bot_template_install`, `bot_draft`, `bot_mascot`, `bot_voices`.
 
-A bot has no permission mode of its own: each tool on a connection is allowed, asked about or denied, and a tool never
-set asks. A step that runs a tool to ask about waits for the person's yes (`use <tool>`, unless the step has an approval
-already), so it shows in the approvals queue; a denied tool fails the step that runs it, saying where to allow it.
+**Permission mode.** Each tool on a connection is allowed, asked about or denied (a tool never set is unset), and the
+bot's `permission_mode` says which of its tool steps wait for the person's yes (`ops/bots/cloud.py`, `asks`): `ask`
+(the default, and what bots did before it existed): each, unless its connection allows the tool; `connection`: only
+those its connection says to ask about; `auto`: none. A step that waits does so as `use <tool>` (unless the step has
+an approval already), so it shows in the approvals queue; a denied tool fails the step that runs it, in every mode,
+saying where to allow it. A step's own `approval` in the loop always asks.
+
+**The marketplace** ships, beside Inbox Triage, Support Triage (Gmail to Slack, a three-way gate), Meeting Prep
+(Google Calendar to Notion), PR Review Digest (GitHub to Slack), Lead Scoring (`$input` read by Claude into leads, a
+gate scoring each, Google Sheets), Weekly Report (GitHub to Notion, a one-case gate before filing) and News Brief (no
+connection: `fetch` from a public API). Each installs, checked by the SDK, once its apps are connected.
 
 Not yet: who in the org may use a connection or a bot, schedules, running a cloud bot on a chosen rrotor.

@@ -19,12 +19,15 @@ from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import seal, unseal
-from glyphh_server.ops.bots import cloud, package, prices
+from glyphh_server.ops.bots import cloud, package, prices, svg, voices
 from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
 from glyphh_server.ops.runtime_keys import key_hash
 
 MISSING: str = "There is no such bot."
-FIELDS: tuple[str, ...] = ("id", "slug", "name", "summary", "look", "instructions", "model", "spec", "skills")
+FIELDS: tuple[str, ...] = (
+    *("id", "slug", "name", "summary", "look", "mascot", "instructions", "model", "permission_mode", "voice"),
+    *("spec", "skills"),
+)
 
 
 def slugify(name: str) -> str:
@@ -107,8 +110,11 @@ async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn
         "name": body.name,
         "summary": body.summary,
         "look": _look(body.look),
+        "mascot": svg.clean(body.mascot),
         "instructions": body.instructions,
         "model": prices.model(body.model or prices.DEFAULT).id,
+        "permission_mode": body.permission_mode,
+        "voice": voices.voice(body.voice),
         "spec": body.spec,
         "skills": body.skills,
         "scopes": await _scoped(conn, body.connections),
@@ -123,6 +129,10 @@ def _changes(body: BotPatch) -> dict[str, Any]:
     given = body.model_dump(exclude_unset=True)
     if "look" in given:
         given["look"] = _look(given["look"] or {})
+    if "mascot" in given:
+        given["mascot"] = svg.clean(given["mascot"] or "")
+    if "voice" in given:
+        given["voice"] = voices.voice(given["voice"] or "")
     if "model" in given:
         given["model"] = prices.model(given["model"] or prices.DEFAULT).id
     return {k: v for k, v in given.items() if v is not None}

@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +16,14 @@ SPEC_ABOUT: str = (
 )
 SKILLS_ABOUT: str = "Its skills, by name: each a SKILL.md, how its agent does one kind of step"
 INSTRUCTIONS_ABOUT: str = "Its agent's prompt: who it is and how it works (agent.md's body)"
+MASCOT_ABOUT: str = "Its own drawn mascot (black-and-white SVG, made safe), shown in place of its cat; empty: the cat"
+MASCOT_MAX: int = 30_000
+Mode = Literal["ask", "connection", "auto"]
+MODE_ABOUT: str = (
+    "Which tool steps wait for the person's yes: ask (each, unless its connection allows the tool), connection (only "
+    "those its connection says to ask about) or auto (none); a tool its connection denies always fails"
+)
+VOICE_ABOUT: str = "The voice it speaks in, one GET /v1/bots/voices lists; empty for none"
 
 
 class Scope(BaseModel):
@@ -43,8 +51,11 @@ class BotView(BaseModel):
     name: str
     summary: str
     look: dict[str, str] = Field(description="Its cat: head, tail, eye, extra, accessory, pose")
+    mascot: str = Field(description=MASCOT_ABOUT)
     instructions: str = Field(description=INSTRUCTIONS_ABOUT)
     model: str = Field(description="The Claude model its agent steps run on")
+    permission_mode: Mode = Field(description=MODE_ABOUT)
+    voice: str = Field(description=VOICE_ABOUT)
     spec: dict[str, Any] = Field(description=SPEC_ABOUT)
     skills: dict[str, str] = Field(description=SKILLS_ABOUT)
     gate_models: list[str] = Field(description="Its own Ada models: one per gate, and its memory")
@@ -63,8 +74,11 @@ class BotIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     summary: str = Field("", max_length=500)
     look: dict[str, str] = Field(default_factory=dict, description="Its cat: head, tail, eye, extra, accessory, pose")
+    mascot: str = Field("", max_length=MASCOT_MAX, description=MASCOT_ABOUT)
     instructions: str = Field(min_length=1, max_length=20_000, description=INSTRUCTIONS_ABOUT)
     model: str | None = Field(None, description="A Claude model bot_models lists; left out, the default")
+    permission_mode: Mode = Field("ask", description=MODE_ABOUT)
+    voice: str = Field("", max_length=40, description=VOICE_ABOUT)
     spec: dict[str, Any] = Field(description=SPEC_ABOUT)
     skills: dict[str, str] = Field(default_factory=dict, max_length=30, description=SKILLS_ABOUT)
     connections: list[ScopeIn] = Field(
@@ -77,8 +91,11 @@ class BotPatch(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=80, description="Its name; its slug stays")
     summary: str | None = Field(None, max_length=500)
     look: dict[str, str] | None = None
+    mascot: str | None = Field(None, max_length=MASCOT_MAX, description=MASCOT_ABOUT)
     instructions: str | None = Field(None, min_length=1, max_length=20_000, description=INSTRUCTIONS_ABOUT)
     model: str | None = None
+    permission_mode: Mode | None = Field(None, description=MODE_ABOUT)
+    voice: str | None = Field(None, max_length=40, description=VOICE_ABOUT)
     spec: dict[str, Any] | None = Field(None, description=SPEC_ABOUT)
     skills: dict[str, str] | None = Field(None, max_length=30, description=SKILLS_ABOUT)
 
