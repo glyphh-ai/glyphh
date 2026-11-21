@@ -1,5 +1,6 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
-import { botsFake } from '@/test/bots';
+import { screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { apps, botsFake } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -9,70 +10,87 @@ function on(given?: Parameters<typeof botsFake>[0]) {
   return fake;
 }
 
-afterEach(() => vi.restoreAllMocks());
-
 describe('the Connections page', () => {
-  it('lists the org’s connections with their app, label and date', async () => {
+  it('shows your connections first, one row an app, searchable', async () => {
     on();
-    renderApp('/connections');
-    const list = await screen.findByRole('list', { name: 'Connections' });
-    expect(list).toHaveTextContent('Gmail');
-    expect(list).toHaveTextContent('chris@example.com · Connected');
-    expect(list).toHaveTextContent('Slack');
+    const { user } = renderApp('/connections');
+    const yours = await screen.findByRole('list', { name: 'Your connections' });
+    expect(within(yours).getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Gmail'), expect.stringContaining('Slack')]);
+    expect(yours).toHaveTextContent('chris@example.com · Connected');
+    expect(screen.getByRole('tab', { name: 'Yours' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('BotsConnections');
+    await user.type(screen.getByLabelText('Search'), 'sla');
+    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Your connections' })).getAllByRole('link')).toHaveLength(1));
+    await user.clear(screen.getByLabelText('Search'));
+    await user.type(screen.getByLabelText('Search'), 'zzz');
+    expect(await screen.findByText('Nothing matches')).toBeInTheDocument();
   });
 
-  it('finds an app, opens its sign-in in a popup and syncs when the popup closes', async () => {
-    const fake = on({ connections: [] });
-    const popup = { closed: false };
-    const open = vi.spyOn(window, 'open').mockReturnValue(popup as Window);
+  it('sorts your connections by the newest', async () => {
+    const at = (day: number) => `2026-11-${String(day).padStart(2, '0')}T00:00:00Z`;
+    on({
+      connections: [
+        { id: 'c-a', app: 'airtable', app_name: 'Airtable', app_icon: null, account_id: 'a', label: null, created_at: at(1) },
+        { id: 'c-z', app: 'zoom', app_name: 'Zoom', app_icon: 'https://icons.test/zoom.png', account_id: 'z', label: null, created_at: at(20) },
+        { id: 'c-z2', app: 'zoom', app_name: 'Zoom', app_icon: null, account_id: 'z2', label: null, created_at: at(19) },
+      ],
+    });
+    const { user } = renderApp('/connections');
+    const names = async () => within(await screen.findByRole('list', { name: 'Your connections' })).getAllByRole('link').map((l) => l.textContent);
+    expect(await names()).toEqual([expect.stringContaining('Airtable'), expect.stringContaining('2 accounts')]);
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Recently connected' }));
+    await waitFor(async () => expect((await names())[0]).toContain('Zoom'));
+  });
+
+  it('shows the catalog with what is added, filtered and searched', async () => {
+    on();
+    const { user } = renderApp('/connections');
+    await user.click(await screen.findByRole('tab', { name: 'Catalog' }));
+    const catalog = await screen.findByRole('list', { name: 'Catalog' });
+    await waitFor(() => expect(within(catalog).getAllByRole('link')).toHaveLength(3));
+    expect(within(catalog).getByRole('link', { name: /Gmail/ })).toHaveTextContent('Added');
+    expect(within(catalog).getByRole('link', { name: /Notion/ })).not.toHaveTextContent('Added');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Not connected' }));
+    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Catalog' })).getAllByRole('link')).toHaveLength(1));
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'All apps' }));
+    await user.type(screen.getByLabelText('Search'), 'xyz');
+    expect(await screen.findByText('No app matches “xyz”.')).toBeInTheDocument();
+  });
+
+  it('pages through the catalog by its cursor', async () => {
+    on();
+    const asked: string[] = [];
+    server.use(
+      http.get('*/api/v1/connections/apps', ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get('cursor') ?? '';
+        asked.push(cursor);
+        return cursor ? HttpResponse.json({ apps: [apps[2]], next_cursor: null }) : HttpResponse.json({ apps: apps.slice(0, 2), next_cursor: 'c2' });
+      }),
+    );
+    const { user } = renderApp('/connections?tab=catalog');
+    const catalog = await screen.findByRole('list', { name: 'Catalog' });
+    await waitFor(() => expect(within(catalog).getAllByRole('link')).toHaveLength(2));
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+    await waitFor(() => expect(within(catalog).getAllByRole('link')).toHaveLength(3));
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(asked).toEqual(['', 'c2']);
+  });
+
+  it('sends you to the catalog when nothing is connected', async () => {
+    on({ connections: [] });
     const { user } = renderApp('/connections');
     expect(await screen.findByText('No connections yet')).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: 'Add connection' })[0]!);
-    const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Search apps'), 'not');
-    await waitFor(() => expect(within(dialog).getAllByRole('listitem')).toHaveLength(1));
-    await user.click(within(dialog).getByRole('button', { name: 'Connect Notion' }));
-    await waitFor(() => expect(open).toHaveBeenCalledWith('https://pipedream.test/connect/notion', 'glyphh-connect', expect.any(String)));
-    expect(within(dialog).getByRole('status')).toHaveTextContent('Sign in to Notion in the window that opened');
-    popup.closed = true;
-    await waitFor(() => expect(fake.state.seen).toContain('sync'));
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
-    expect(await screen.findByRole('list', { name: 'Connections' })).toHaveTextContent('Notion');
-    expect(fake.state.seen).toEqual(['link notion', 'sync']);
-  });
-
-  it('syncs when the window has the focus again, and gives a link when the popup is stopped', async () => {
-    const fake = on({ connections: [] });
-    vi.spyOn(window, 'open').mockReturnValue(null);
-    const { user } = renderApp('/connections');
-    await user.click((await screen.findAllByRole('button', { name: 'Add connection' }))[0]!);
-    const dialog = await screen.findByRole('dialog');
-    await user.click(await within(dialog).findByRole('button', { name: 'Connect Slack' }));
-    expect(await within(dialog).findByRole('link', { name: 'Open Slack’s sign-in' })).toHaveAttribute('href', 'https://pipedream.test/connect/slack');
-    act(() => {
-      window.dispatchEvent(new Event('focus'));
-    });
-    await waitFor(() => expect(fake.state.seen).toContain('sync'));
-    expect(await within(dialog).findByText(/Your connections are up to date/)).toBeInTheDocument();
-  });
-
-  it('removes a connection once asked', async () => {
-    const fake = on();
-    const { user } = renderApp('/connections');
-    await user.click(await screen.findByRole('button', { name: 'Remove Slack' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Bots that use it lose its tools.');
-    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
-    expect(await screen.findByText('Slack is removed.')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('list', { name: 'Connections' })).not.toHaveTextContent('Slack'));
-    expect(fake.state.seen).toEqual(['remove c-slack']);
+    await user.click(screen.getByRole('link', { name: 'Browse the catalog' }));
+    expect(await screen.findByRole('tab', { name: 'Catalog' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('says plainly when Pipedream is not set up', async () => {
     on({ off: true });
     renderApp('/connections');
     expect(await screen.findByText('Connections are not set up')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add connection' })).toBeDisabled();
+    expect(screen.queryByRole('tab', { name: 'Catalog' })).not.toBeInTheDocument();
   });
 });
