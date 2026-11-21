@@ -38,9 +38,27 @@ export type Plan = {
   cloud?: CloudLimits | null;
   /**
    * Tokens a month on Glyphh's hosted models (Free 250,000, Basic 5,000,000, Pro 25,000,000, Team 100,000,000); null is
-   * by contract (Enterprise). Missing while hosted models are off (`GLYPHH_LLM`).
+   * by contract (Enterprise). The bots' tokens draw on it too.
    */
   llm_tokens?: number | null;
+  /** Connections to other services (the bots' accounts): what the plan includes and the price past it. */
+  connections?: ConnectionPrice;
+};
+
+/** A plan's connections: `included` null is every one; `cents_a_month` null is not priced (nothing is charged). */
+export type ConnectionPrice = { included: number | null; cents_a_month: number | null };
+
+/** The org's connections against its plan's, and what those past it cost a month (null while not priced). */
+export type ConnectionUsage = ConnectionPrice & { used: number; over: number; due_cents: number | null };
+
+/** A bot's month: its runs, its tokens and what they were charged, past the plan's tokens. */
+export type BotUsage = {
+  slug: string;
+  name: string;
+  runs: number;
+  input_tokens: number;
+  output_tokens: number;
+  charged_cents: number;
 };
 
 /**
@@ -300,6 +318,8 @@ export type LlmModelsAnswer = LlmModel[] | { models: LlmModel[] };
 export type TokenModelUse = {
   id: string;
   name: string;
+  /** A Glyphh-hosted model's, or a bot's Claude model's (the same meter). Missing from an older server: hosted. */
+  kind?: 'hosted' | 'bot';
   input_tokens: number;
   output_tokens: number;
   requests: number;
@@ -323,7 +343,10 @@ export type TokenUsage = {
 /** The prepaid overage balance, in dollars: `cents` may be fractional, `micros` (1 = $0.000001) is exact. */
 export type Balance = { cents: number; micros?: number; low: boolean };
 
-/** `GET /v1/billing`: the plan and its use; `tokens` and `balance` are missing (or null) while hosted models are off. */
+/**
+ * `GET /v1/billing`: the plan and its use: precedents, Ada Cloud's (while on), connections, the month's tokens (the
+ * hosted models' and the bots'), the balance and each bot's month; any of the last four missing from an older server.
+ */
 export type Billing = {
   plan: Plan;
   billing_status: string;
@@ -331,8 +354,10 @@ export type Billing = {
   plan_until: IsoDate | null;
   precedents: { used: number; limit: number | null };
   cloud?: CloudUsage | null;
+  connections?: ConnectionUsage | null;
   tokens?: TokenUsage | null;
   balance?: Balance | null;
+  bots?: BotUsage[] | null;
 };
 
 /** One model's use on one day, UTC, as `GET /v1/llm/usage?days=30` lists it under `days`. */

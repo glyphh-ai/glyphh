@@ -1,5 +1,16 @@
 import { adaPlans, onFree, plans } from '@/test/fixtures';
-import { factText, machinesText, planFacts, precedentsText, priceText } from './plans';
+import { connectionFacts, factText, machinesText, planFacts, precedentsText, priceText } from './plans';
+
+describe('plan wording for connections', () => {
+  it('says unlimited while no cap is set, the cap, and the price past it only once priced', () => {
+    expect(connectionFacts(undefined)).toEqual([]);
+    expect(connectionFacts({ included: null, cents_a_month: null }).map(factText)).toEqual(['Unlimited connections']);
+    expect(connectionFacts({ included: 1, cents_a_month: null }).map(factText)).toEqual(['1 connection']);
+    expect(connectionFacts({ included: 5, cents_a_month: 500 }).map(factText)).toEqual(['5 connections', 'Then $5 a connection a month']);
+    const pro = plans[2]!;
+    expect(planFacts({ ...pro, connections: { included: null, cents_a_month: null } }).map(factText)).toContain('Unlimited connections');
+  });
+});
 
 describe('plan wording with Ada Cloud on', () => {
   it('shows each plan’s cloud caps in place of runtime nodes and precedents per node, and the price past a metered month', () => {

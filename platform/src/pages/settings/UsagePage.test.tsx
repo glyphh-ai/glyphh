@@ -193,7 +193,28 @@ describe('Tokens on Glyphh’s hosted models', () => {
     renderApp('/usage');
     expect(await screen.findByText('Past 25,000,000, tokens are charged to the balance.')).toBeInTheDocument();
     expect(await screen.findByText('No tokens in the last 30 days.')).toBeInTheDocument();
-    expect(screen.getByText('No hosted model used this month.')).toBeInTheDocument();
+    expect(screen.getByText('No model used this month.')).toBeInTheDocument();
+  });
+
+  it('marks a bot’s model, lists each bot’s month, and says when no bot ran', async () => {
+    const sonnet = { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', kind: 'bot' as const, input_tokens: 1_000, output_tokens: 200, requests: 3, charged_cents: 2.5 };
+    const bots = [{ slug: 'inbox', name: 'Inbox triage', runs: 2, input_tokens: 150, output_tokens: 30, charged_cents: 3 }];
+    server.use(
+      http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, tokens: { ...tokenUsage, models: [...tokenUsage.models, sonnet] }, bots })),
+      ...llmHandlers(),
+    );
+    const { unmount } = renderApp('/usage');
+    const byModel = await screen.findByRole('table', { name: 'Tokens by model' });
+    expect(within(byModel).getByText('Claude Sonnet 5.5').closest('tr')).toHaveTextContent('Bots');
+    expect(within(byModel).getByText('adaL 34B 1.0').closest('tr')).not.toHaveTextContent('Bots');
+    const byBot = screen.getByRole('table', { name: 'Tokens by bot' });
+    const row = within(byBot).getByRole('link', { name: 'Inbox triage' });
+    expect(row).toHaveAttribute('href', '/bots/inbox');
+    expect(row.closest('tr')).toHaveTextContent('Inbox triage215030$0.03');
+    unmount();
+    server.use(http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, bots: [] })));
+    renderApp('/usage');
+    expect(await screen.findByText('No bot has run this month.')).toBeInTheDocument();
   });
 
   it('an empty balance says requests stop; a member cannot add funds', async () => {
