@@ -1,0 +1,247 @@
+/* Bots and Connections: the bots as cards with their cats, one bot's tabs, and the org's connections. */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  height: 100%;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+}
+
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* The cat's tile: white edges on ink, as the Glyphh Bot app shows them. */
+.catTile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: #0b0a0f;
+  padding: 6px;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--text-md);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.summary,
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.textarea {
+  min-height: 140px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+/* A connection's tools, as checkboxes. */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.tool {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.tool input {
+  margin-top: 3px;
+}
+
+.toolName {
+  font-weight: 500;
+}
+
+.block {
+  display: block;
+}
+
+.icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  object-fit: contain;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.runRow {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.runRow[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--line-strong);
+  font-size: var(--text-sm);
+}
+
+.stepError {
+  border-left-color: var(--danger, #e5484d);
+}
+
+.pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.output {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
