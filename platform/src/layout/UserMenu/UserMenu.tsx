@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useNavigate } from 'react-router';
 import { useMe } from '@/api/queries';
 import { useTheme, type ThemeChoice } from '@/theme/ThemeProvider';
 import { Avatar, Icon, Menu, MenuItem, MenuLabel, MenuRadioItem, MenuSeparator, MenuSubmenu, type IconName } from '@/ui';
@@ -13,10 +14,11 @@ const themes: Array<{ choice: ThemeChoice; label: string; icon: IconName }> = [
   { choice: 'system', label: 'System preference', icon: 'monitor' },
 ];
 
-/** The person at the bottom of the sidebar: who they are, the theme and log out. */
+/** The person at the bottom of the sidebar: their account, billing, settings, theme and log out. */
 export function UserMenu() {
   const { data: me } = useMe();
   const { choice, setChoice } = useTheme();
+  const navigate = useNavigate();
   const logOut = useRef<HTMLFormElement>(null);
   const name = me?.name ?? me?.email ?? '';
 
@@ -34,7 +36,16 @@ export function UserMenu() {
         )}
       >
         {me && <MenuLabel>{me.email}</MenuLabel>}
-        {me && <MenuSeparator />}
+        <MenuItem icon="user" onSelect={() => navigate('/settings/profile')}>
+          Account
+        </MenuItem>
+        <MenuItem icon="card" onSelect={() => navigate('/settings/billing')}>
+          Billing
+        </MenuItem>
+        <MenuItem icon="settings" onSelect={() => navigate('/settings/general')}>
+          Settings
+        </MenuItem>
+        <MenuSeparator />
         <MenuSubmenu icon="sun" label="Theme">
           {themes.map((theme) => (
             <MenuRadioItem key={theme.choice} icon={theme.icon} checked={choice === theme.choice} onSelect={() => setChoice(theme.choice)}>

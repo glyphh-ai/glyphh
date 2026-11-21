@@ -44,7 +44,7 @@ describe('safeReturnTo', () => {
 describe('GET /auth/session', () => {
   it('is signed out with no cookie, and names the server', async () => {
     const res = await setup().request('/auth/session');
-    expect(await body(res)).toEqual({ signedIn: false, serverUrl: 'https://api.test', clientName: 'Glyphh' });
+    expect(await body(res)).toEqual({ signedIn: false, serverUrl: 'https://api.test', adaUrl: 'https://ada.test', clientName: 'Glyphh' });
   });
 
   it('is signed in with a sealed session', async () => {
@@ -377,36 +377,49 @@ describe('/api/v1/*, more', () => {
   });
 });
 
-describe('what is gone with Glyphh’s products (2026-11-18)', () => {
-  it.each(['/api/ada/v1/usage', '/api/ada/v1/models'])('has no route to Ada Cloud at %s', async (path) => {
+describe('/api/ada/v1/*', () => {
+  it('calls Ada Cloud’s host with the session’s token', async () => {
     const ctx = setup();
-    expect((await ctx.request(path, { headers: { cookie: sessionCookie() } })).status).toBe(404);
-    expect(ctx.server.state.seen).toHaveLength(0);
+    const res = await ctx.request('/api/ada/v1/usage?x=1', { headers: { cookie: sessionCookie() } });
+    expect(res.status).toBe(200);
+    expect((await body(res)).plan).toBe('Pro');
+    const call = ctx.server.state.seen.find((r) => r.path === '/v1/usage')!;
+    expect([call.host, call.search, call.headers.get('authorization')]).toEqual(['ada.test', '?x=1', 'Bearer access-1']);
   });
 
-  it('has no file upload to Ada Cloud either', async () => {
+  it('is signed out without a session, and refuses a write from another site', async () => {
     const ctx = setup();
-    const res = await ctx.request('/api/ada/v1/uploads/signed.link', { method: 'PUT', headers: { ...origin, cookie: sessionCookie() }, body: 'a,b\n' });
-    expect(res.status).toBe(404);
-    expect(ctx.server.state.seen).toHaveLength(0);
+    expect((await ctx.request('/api/ada/v1/usage')).status).toBe(401);
+    const res = await ctx.request('/api/ada/v1/models', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site', cookie: sessionCookie() }, body: '{}' });
+    expect(res.status).toBe(403);
+  });
+
+  it('passes back a 429 with its Retry-After, so the page knows when to ask again', async () => {
+    const ctx = setup();
+    const res = await ctx.request('/api/ada/v1/decide', { method: 'POST', headers: { ...origin, cookie: sessionCookie(), 'content-type': 'application/json' }, body: '{}' });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('1');
+    expect(((await body(res)).error as { code: string }).code).toBe('E_RATE');
   });
 });
 
-describe('the old staff view’s addresses (the console moved to the root, 2026-11-19)', () => {
-  it.each([
-    ['/admin', '/'],
-    ['/admin/', '/'],
-    ['/admin/games/frank?tab=review', '/games/frank?tab=review'],
-    ['/admin/traffic', '/traffic'],
-    ['/admin/events', '/events'],
-    ['/admin/audit', '/audit'],
-  ])('sends %s to %s for good', async (from, to) => {
-    const res = await setup().request(from);
-    expect(res.status).toBe(301);
-    expect(res.headers.get('location')).toBe(to);
+describe('PUT /api/ada/v1/uploads/:link', () => {
+  const put = (ctx: ReturnType<typeof setup>, headers: Record<string, string>) =>
+    ctx.request('/api/ada/v1/uploads/signed.link', { method: 'PUT', headers, body: 'a,b\n1,2\n' });
+
+  it('streams the file to the upload link with no token, the link being its own credential', async () => {
+    const ctx = setup();
+    const res = await put(ctx, { ...origin, cookie: sessionCookie(), 'content-type': 'text/csv' });
+    expect(res.status).toBe(202);
+    expect(await body(res)).toEqual({ id: 'job-1', state: 'queued', bytes: 8 });
+    const call = ctx.server.state.seen.find((r) => r.path === '/v1/uploads/signed.link')!;
+    expect([call.host, call.body, call.headers.get('authorization'), call.headers.get('content-type')]).toEqual(['ada.test', 'a,b\n1,2\n', null, 'text/csv']);
   });
 
-  it('leaves other addresses alone', async () => {
-    expect((await setup().request('/administrator')).status).toBe(404);
+  it('takes files from this site’s signed-in pages only', async () => {
+    const ctx = setup();
+    expect((await put(ctx, { 'sec-fetch-site': 'cross-site', cookie: sessionCookie() })).status).toBe(403);
+    expect((await put(ctx, origin)).status).toBe(401);
+    expect(ctx.server.state.seen).toHaveLength(0);
   });
 });

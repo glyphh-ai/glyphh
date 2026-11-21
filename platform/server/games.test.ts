@@ -1,167 +1,123 @@
-import { createApp } from './app.js';
-import { callTool, fromDays, GameError, readGames } from './games.js';
-import { seal } from './seal.js';
-import { fakeGames, fakeServer, testConfig, testGames } from './testing.js';
-import type { Tokens } from './oauth.js';
+import { readFile } from 'node:fs/promises';
+import { describe, expect, it } from 'vitest';
+import { createGames, readGamesHost } from './games.js';
 
-const body = async (res: Response): Promise<any> => res.json();
-const origin = { origin: testConfig.platformUrl, 'sec-fetch-site': 'same-origin' };
-const noon = Date.parse('1970-01-12T12:00:00Z');
+describe('readGamesHost', () => {
+  it('defaults to games.glyphh.ai', () => {
+    expect(readGamesHost({})).toBe('games.glyphh.ai');
+  });
 
-function setup({ staff = true, unset = [] as string[] } = {}) {
-  const server = fakeServer();
-  server.state.staff = staff;
-  const games = fakeGames();
-  const lines: string[] = [];
-  const fetcher = ((input: Request | string | URL, init?: RequestInit) => {
-    const host = new URL(input instanceof Request ? input.url : String(input)).host;
-    return host === 'api.test' ? server.fetch(input, init) : games.fetch(input, init);
-  }) as typeof fetch;
-  const app = createApp({ config: testConfig, games: testGames(unset), fetch: fetcher, now: () => noon, log: (line) => lines.push(line) });
-  const request = (path: string, init: RequestInit = {}) => app.request(`${testConfig.platformUrl}${path}`, init);
-  return { server, games, lines, request };
-}
-
-function cookie(tokens: Partial<Tokens> = {}) {
-  const value: Tokens = { accessToken: 'access-1', refreshToken: 'refresh-1', expiresAt: noon + 3_000_000, ...tokens };
-  return `__Host-glyphh_session=${seal(value, testConfig.sessionKey, 'glyphh.session')}`;
-}
-
-const tool = (ctx: ReturnType<typeof setup>, game: string, name: string, args: unknown = {}, headers: Record<string, string> = { ...origin, cookie: cookie() }) =>
-  ctx.request(`/api/games/${game}/tools/${name}`, { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ arguments: args }) });
-
-describe('readGames', () => {
-  it('reads each game’s key and address from the environment, and none without', () => {
-    const games = readGames({ GAME_ADMIN_KEY_FRANK: ' k1 ', GAME_URL_CRABBY: 'http://localhost:8787/' });
-    expect(games.map((g) => g.id)).toEqual(['frank', 'crabby', 'mahj', 'carol']);
-    expect(games[0]).toMatchObject({ key: 'k1', base: 'https://freefallfrank.com' });
-    expect(games[1]).toMatchObject({ key: undefined, base: 'http://localhost:8787' });
-    expect(games[3]).toMatchObject({ name: 'Send a Carol', base: 'https://sendacarol.com' });
+  it('reads GAMES_HOST, lower case', () => {
+    expect(readGamesHost({ GAMES_HOST: ' Games.Example.com ' })).toBe('games.example.com');
   });
 });
 
-describe('fromDays', () => {
-  it('adds today and the six days before it', () => {
-    expect(fromDays([{ d: '1970-01-12', revenue: 5 }, { d: '1970-01-06', revenue: 7 }, { d: '1970-01-05', revenue: 100 }], '1970-01-12')).toEqual({ today: 5, d7: 12 });
-  });
-});
+describe('the pages', () => {
+  const get = (path: string) => createGames().request(`https://games.test${path}`);
 
-describe('callTool', () => {
-  const [frank, crabby] = testGames();
-  it('calls the game’s MCP endpoint with its key and gives back the structured answer', async () => {
-    const games = fakeGames();
-    expect(await callTool(frank!, games.fetch, 'admin_queue')).toMatchObject({ waiting: 2 });
-    expect(games.calls).toEqual([{ game: 'frank', key: 'key-frank', tool: 'admin_queue', args: {} }]);
-  });
-
-  it('refuses a tool the game does not have, without calling it', async () => {
-    const games = fakeGames();
-    await expect(callTool(frank!, games.fetch, 'admin_ban')).rejects.toMatchObject({ status: 404, code: 'E_NO_TOOL' });
-    expect(games.calls).toEqual([]);
-  });
-
-  it('says what the game said when it could not do it', async () => {
-    await expect(callTool(crabby!, fakeGames().fetch, 'admin_ban', { uid: 'x' })).rejects.toEqual(new GameError(422, 'E_GAME_SAID', 'There is no such player.'));
-  });
-
-  it('says when the key is wrong, missing, or the game is down', async () => {
-    const games = fakeGames();
-    await expect(callTool({ ...frank!, key: 'wrong' }, games.fetch, 'admin_stats')).rejects.toMatchObject({ code: 'E_GAME_KEY', message: 'Free Fall Frank refused the admin key.' });
-    await expect(callTool({ ...frank!, key: undefined }, games.fetch, 'admin_stats')).rejects.toMatchObject({ status: 503, message: 'GAME_ADMIN_KEY_FRANK is not set on the platform.' });
-    games.down.add('frank');
-    await expect(callTool(frank!, games.fetch, 'admin_stats')).rejects.toMatchObject({ code: 'E_GAME_DOWN' });
-  });
-});
-
-describe('GET /api/games', () => {
-  it('lists the games for staff, never their keys', async () => {
-    const res = await setup({ unset: ['carol'] }).request('/api/games', { headers: { cookie: cookie() } });
+  it.each([
+    ['/', 'text/html'],
+    ['/games.css', 'text/css'],
+    ['/games.js', 'text/javascript'],
+    ['/home.js', 'text/javascript'],
+    ['/glyphh-logo-text-white.png', 'image/png'],
+    ['/game.css', 'text/css'],
+    ['/game.js', 'text/javascript'],
+    ['/free-fall-frank/', 'text/html'],
+    ['/bams-and-brags/', 'text/html'],
+    ['/crabby-knife-fight/', 'text/html'],
+  ])('serves %s', async (path, type) => {
+    const res = await get(path);
     expect(res.status).toBe(200);
-    const text = await res.text();
-    expect(text).not.toContain('key-');
-    expect(JSON.parse(text).games).toEqual([
-      { id: 'frank', name: 'Free Fall Frank', site: 'https://freefallfrank.com', icon: 'https://freefallfrank.com/icon-192.png', connected: true },
-      { id: 'crabby', name: 'Crabby Knife Fight', site: 'https://crabbyknifefight.com', icon: 'https://crabbyknifefight.com/icon-192.png', connected: true },
-      { id: 'mahj', name: 'Bams & Brags', site: 'https://bamsandbrags.com', icon: 'https://bamsandbrags.com/icon-192.png', connected: true },
-      { id: 'carol', name: 'Send a Carol', site: 'https://sendacarol.com', icon: 'https://sendacarol.com/favicon.ico', connected: false },
-    ]);
+    expect(res.headers.get('content-type')).toContain(type);
   });
 
-  it('refuses anyone who is not staff, and anyone signed out', async () => {
-    const ctx = setup({ staff: false });
-    const res = await ctx.request('/api/games', { headers: { cookie: cookie() } });
-    expect(res.status).toBe(403);
-    expect((await body(res)).error.code).toBe('E_STAFF_ONLY');
-    expect((await ctx.request('/api/games')).status).toBe(401);
+  it('sends /free-fall-frank to /free-fall-frank/', async () => {
+    const res = await get('/free-fall-frank');
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('/free-fall-frank/');
   });
 
-  it('renews an expired session before asking who it is', async () => {
-    const ctx = setup();
-    const res = await ctx.request('/api/games', { headers: { cookie: cookie({ expiresAt: noon - 1 }) } });
-    expect(res.status).toBe(200);
-    expect(ctx.server.state.seen.find((s) => s.path === '/v1/me')?.headers.get('authorization')).toBe('Bearer access-2');
-  });
-});
-
-describe('GET /api/games/overview', () => {
-  it('reads every game’s health and numbers, in one shape', async () => {
-    const res = await setup().request('/api/games/overview', { headers: { cookie: cookie() } });
-    const { games } = await body(res);
-    const [frank, crabby, mahj, carol] = games;
-    expect(frank).toMatchObject({
-      id: 'frank',
-      health: { ok: true, build: 'build-frank' },
-      error: null,
-      summary: { players: 1200, new24: 30, active24: 80, revenue: { today: 99, d7: 297, d30: null, all: 4500 }, pending: [{ label: 'Levels to review', count: 2, tab: 'review' }] },
-    });
-    expect(crabby.summary).toMatchObject({ players: 300, revenue: null, pending: [{ label: 'Open reports', count: 3 }] });
-    expect(mahj.summary).toMatchObject({ revenue: { today: 999, d7: 999, all: 2997 }, pending: [{ count: 5 }, { count: 1 }] });
-    expect(carol.summary).toMatchObject({ players: 64, playersAre: 'accounts', revenue: { today: 499, d7: 1996, d30: 4990, all: 12050 }, pending: [{ count: 2 }, { count: 1 }] });
+  it('links every live game card to a page it serves, with its picture', async () => {
+    const { GAMES } = (await import('../games/public/games.js')) as { GAMES: { href?: string; art?: string; soon?: boolean }[] };
+    const live = GAMES.filter((g) => !g.soon);
+    expect(live.length).toBeGreaterThan(0);
+    for (const g of live) {
+      expect((await get(g.href!)).status).toBe(200);
+      expect((await get(g.art!)).status).toBe(200);
+    }
   });
 
-  it('shows a game that is down or not connected beside the others', async () => {
-    const ctx = setup({ unset: ['carol'] });
-    ctx.games.down.add('crabby');
-    const { games } = await body(await ctx.request('/api/games/overview', { headers: { cookie: cookie() } }));
-    expect(games[1]).toMatchObject({ health: { ok: false, build: null }, summary: null, error: 'Crabby Knife Fight did not answer.' });
-    expect(games[3]).toMatchObject({ connected: false, summary: null, error: 'GAME_ADMIN_KEY_CAROL is not set on the platform.' });
-    expect(games[0].summary.players).toBe(1200);
+  it('serves every picture and script a page of its own names', async () => {
+    for (const page of ['index.html', 'free-fall-frank/index.html', 'bams-and-brags/index.html', 'crabby-knife-fight/index.html']) {
+      const html = await readFile(`games/public/${page}`, 'utf8');
+      const own = [...html.matchAll(/(?:src|href|poster)="(\/[^"#]+)"/g)].map((m) => m[1]!);
+      expect(own.length).toBeGreaterThan(3);
+      for (const path of own) expect([path, (await get(path)).status]).toEqual([path, 200]);
+    }
   });
 
-  it('is for staff only', async () => {
-    expect((await setup({ staff: false }).request('/api/games/overview', { headers: { cookie: cookie() } })).status).toBe(403);
+  it.each(['/login', '/auth/session', '/api/v1/session', '/api/state', '/../server/games.ts', '/no-such-game/'])('has nothing at %s', async (path) => {
+    const res = await get(path);
+    const end = res.status === 308 ? await get(res.headers.get('location')!) : res;
+    expect(end.status).toBe(404);
   });
 });
 
-describe('POST /api/games/:game/tools/:tool', () => {
-  it('runs a game’s admin tool with the arguments given, and writes an action to the log', async () => {
-    const ctx = setup();
-    const res = await tool(ctx, 'frank', 'admin_review', { id: 'lv1', decision: 'approve' });
-    expect(res.status).toBe(200);
-    expect(await body(res)).toEqual({ result: { id: 'lv1', status: 'public' } });
-    expect(ctx.games.calls).toEqual([{ game: 'frank', key: 'key-frank', tool: 'admin_review', args: { id: 'lv1', decision: 'approve' } }]);
-    expect(ctx.lines).toHaveLength(1);
-    expect(JSON.parse(ctx.lines[0]!)).toMatchObject({ games_admin: 'action', staff: 'chris@example.com', game: 'frank', tool: 'admin_review' });
+describe('Free Fall Frank’s page', () => {
+  const html = () => readFile('games/public/free-fall-frank/index.html', 'utf8');
+
+  it('sends Advertise to support@glyphh.ai', async () => {
+    expect(await html()).toContain('href="mailto:support@glyphh.ai?subject=Advertise%20in%20Free%20Fall%20Frank"');
   });
 
-  it('does not log a read', async () => {
-    const ctx = setup();
-    expect((await tool(ctx, 'frank', 'admin_queue')).status).toBe(200);
-    expect(ctx.lines).toEqual([]);
+  it('gives the connector’s address and links to the game with its source', async () => {
+    const page = await html();
+    expect(page).toContain('https://freefallfrank.com/mcp');
+    expect(page).toContain('href="https://freefallfrank.com/?src=games"');
   });
 
-  it('passes on what the game said when it could not', async () => {
-    const res = await tool(setup(), 'crabby', 'admin_ban', { uid: 'nobody', why: 'test' });
-    expect(res.status).toBe(422);
-    expect((await body(res)).error).toEqual({ code: 'E_GAME_SAID', message: 'There is no such player.' });
+  it('plays the game’s own videos', async () => {
+    const page = await html();
+    for (const video of ['ad.mp4', 'ad2.mp4', 'ad3.mp4']) expect(page).toContain(`src="https://freefallfrank.com/${video}"`);
   });
 
-  it('refuses an unknown game, a tool the game lacks, another site, and anyone not staff', async () => {
-    const ctx = setup();
-    expect((await tool(ctx, 'pong', 'admin_stats')).status).toBe(404);
-    expect((await body(await tool(ctx, 'crabby', 'delete_place'))).error.code).toBe('E_NO_TOOL');
-    expect((await tool(ctx, 'frank', 'admin_stats', {}, { cookie: cookie(), 'sec-fetch-site': 'cross-site' })).status).toBe(403);
-    expect((await tool(setup({ staff: false }), 'frank', 'admin_stats')).status).toBe(403);
-    expect(ctx.games.calls).toEqual([]);
+  it('shows the second level, ROCK BOTTOM, with its price and the way to try it', async () => {
+    const page = await html();
+    expect(page).toContain('id="rock"');
+    expect(page).toContain('THE LANDLORD');
+    expect(page).toContain('$0.99');
+    expect(page).toContain('href="https://freefallfrank.com/play?level=rock&amp;src=games"');
+  });
+});
+
+describe.each([
+  { name: 'Bams & Brags', folder: 'bams-and-brags', site: 'https://bamsandbrags.com', subject: 'Advertise%20in%20Bams%20%26%20Brags', videos: ['landing/reel-720.mp4'] },
+  { name: 'Crabby Knife Fight', folder: 'crabby-knife-fight', site: 'https://crabbyknifefight.com', subject: 'Advertise%20in%20Crabby%20Knife%20Fight', videos: ['landing/play-wide.mp4', 'landing/play-tall.mp4'] },
+])('$name’s page', ({ folder, site, subject, videos }) => {
+  const html = () => readFile(`games/public/${folder}/index.html`, 'utf8');
+
+  it('sends Advertise to support@glyphh.ai', async () => {
+    expect(await html()).toContain(`href="mailto:support@glyphh.ai?subject=${subject}"`);
+  });
+
+  it('gives the connector’s address and links to the game with its source', async () => {
+    const page = await html();
+    expect(page).toContain(`${site}/mcp`);
+    expect(page).toContain(`href="${site}/?src=games"`);
+  });
+
+  it('plays the game’s own videos, each with a poster of its own', async () => {
+    const page = await html();
+    for (const video of videos) expect(page).toMatch(new RegExp(`poster="/${folder}/[^"]+" src="${site}/${video}"`));
+  });
+});
+
+describe('Bams & Brags’ page', () => {
+  it('gives the game’s own prices and never speaks of prize money', async () => {
+    const page = await readFile('games/public/bams-and-brags/index.html', 'utf8');
+    expect(page).toContain('$2.99');
+    expect(page).toContain('$29.99');
+    expect(page.toLowerCase()).not.toContain('prize');
   });
 });

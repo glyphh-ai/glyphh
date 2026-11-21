@@ -98,6 +98,10 @@
   --neutral-text: #bdbdbd;
   --neutral-bg: #181818;
   --neutral-line: #444444;
+
+  --logo: url('/glyphh-logo-text-white.png');
+  --logo-ratio: 3.21;
+  --logo-scale: 1;
 }
 
 [data-theme='light'] {
@@ -149,6 +153,10 @@
   --neutral-text: #4a4a4a;
   --neutral-bg: #f6f6f6;
   --neutral-line: #e2e2e2;
+
+  --logo: url('/glyphh-logo-text-black.png');
+  --logo-ratio: 2.73;
+  --logo-scale: 1.2;
 }
 
 /*
@@ -202,6 +210,10 @@
   --neutral-text: #eaeaea;
   --neutral-bg: #141414;
   --neutral-line: #7a7a7a;
+
+  --logo: url('/glyphh-logo-text-white.png');
+  --logo-ratio: 3.21;
+  --logo-scale: 1;
 }
 
 [data-theme='light-hc'] {
@@ -253,4 +265,8 @@
   --neutral-text: #1a1a1a;
   --neutral-bg: #ededed;
   --neutral-line: #3a3a3a;
+
+  --logo: url('/glyphh-logo-text-black.png');
+  --logo-ratio: 2.73;
+  --logo-scale: 1.2;
 }

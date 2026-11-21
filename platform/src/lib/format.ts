@@ -96,10 +96,3 @@ export function duration(seconds: number): string {
   if (next && rest > 0) parts.push(next[1](rest));
   return parts.join(' ');
 }
-
-/** "12" or "12.50" as cents; anything else (or more than two decimals) is null. */
-export function dollarsToCents(text: string): number | null {
-  const trimmed = text.trim().replace(/^\$/, '').replaceAll(',', '');
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return null;
-  return Math.round(Number(trimmed) * 100);
-}

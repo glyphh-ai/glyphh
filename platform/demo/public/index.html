@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demos · Glyphh</title>
+  <meta name="description" content="Ada, live: try her on real decisions, no sign-in.">
+  <link rel="icon" type="image/png" href="/glyphh-mascot-square-black.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/home.css">
+  <link rel="stylesheet" href="/platform.css">
+</head>
+<body>
+  <header class="head">
+    <a href="https://glyphh.ai" aria-label="Glyphh"><img src="/glyphh-logo-text-white.png" alt="Glyphh" class="logo"></a>
+    <a class="pill" href="https://platform.glyphh.ai">Start free</a>
+  </header>
+
+  <main class="frame">
+    <section class="intro">
+      <p class="kicker">Demos</p>
+      <h1>Ada, live.</h1>
+      <p class="lede">Each demo is a real Ada model deciding from its own past decisions. No sign-in.</p>
+      <label class="search">
+        <span class="sr">Search demos</span>
+        <input id="q" type="search" placeholder="Search demos" autocomplete="off">
+      </label>
+    </section>
+
+    <section class="cards" id="cards" aria-live="polite"></section>
+    <p class="none" id="none" hidden>No demo matches that.</p>
+  </main>
+
+  <script src="/home.js" type="module"></script>
+</body>
+</html>

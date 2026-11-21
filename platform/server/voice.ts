@@ -1,0 +1,437 @@
+import { randomUUID } from 'node:crypto';
+import { Hono, type Context } from 'hono';
+import { getCookie, setCookie } from 'hono/cookie';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { LIMITS as DEMO_LIMITS, Refusal, Window, type DemoConfig } from './demo.js';
+
+/**
+ * demo.glyphh.ai/voice: a game, Ada reading how you sound against how you usually sound. No audio leaves the browser:
+ * the page measures each take there (pitch, loudness, pace, pauses, wobble, length), sends only those numbers, each
+ * as a change from the visitor's own usual voice, and throws the recording away. The name stays in the browser too.
+ *
+ * One model, `launch-demo-voice-2`, named here and nowhere else, never reset: it is everyone's takes, each carrying its
+ * visitor's id (the cookie), so a visitor who comes back is still known and their own takes count most. Forget takes
+ * every one of a visitor's precedents out of the model, checked against that id before each is deleted.
+ */
+
+// The second: Ada reads a stored case's numbers by its spec's ranges and will not change them in place
+// (E_SPEC_READING), so the ranges a voice moves by came with a new model; the first, `launch-demo-voice`, is left.
+export const VOICE_MODEL = 'launch-demo-voice-2';
+
+export const MOODS = ['truth', 'lie', 'stressed', 'angry'] as const;
+export type Mood = (typeof MOODS)[number];
+export const PHRASES = ['self', 'truth', 'lie', 'free'] as const;
+export type Phrase = (typeof PHRASES)[number];
+
+/**
+ * Each measure as a change from the visitor's usual voice, and the range it is read over. The ranges are what a voice
+ * moves by between calm and upset, no wider: a number is encoded by how far along its range it sits, so a range ten
+ * times too wide makes every take look the same to Ada (the first cut's did, and stress and anger never showed).
+ */
+export const MEASURES = {
+  pitch: { min: -6, max: 6, bin: 0.5 }, // semitones up or down
+  range: { min: 0.5, max: 2, bin: 0.1 }, // how far the pitch roams, × usual
+  loudness: { min: -9, max: 9, bin: 0.75 }, // dB
+  pace: { min: 0.6, max: 1.6, bin: 0.05 }, // syllables a second, × usual
+  pauses: { min: -0.3, max: 0.3, bin: 0.03 }, // share of the take that is silence, against usual
+  wobble: { min: 0.5, max: 2, bin: 0.1 }, // frame-to-frame pitch jumps, × usual
+  length: { min: 0.5, max: 2, bin: 0.1 }, // seconds a word, × usual
+} as const;
+export type Measures = Record<keyof typeof MEASURES, number>;
+
+export const VOICE_SPEC = {
+  name: VOICE_MODEL,
+  layers: [
+    {
+      name: 'take',
+      segments: [
+        {
+          name: 'voice',
+          roles: [
+            // Who spoke counts a little, so a visitor's own takes come first; how they sounded decides.
+            { name: 'speaker', similarity_weight: 0.3 },
+            { name: 'phrase', similarity_weight: 0 },
+            ...Object.entries(MEASURES).map(([name, m]) => ({ name, numeric_config: { min_value: m.min, max_value: m.max, bin_width: m.bin } })),
+          ],
+        },
+      ],
+    },
+  ],
+  // Four moods: under 45% sure of one, the page says Ada cannot tell.
+  output: { ask_below: 0.45 },
+};
+
+/**
+ * What the model starts from, so every mood is there before anyone teaches it: takes of no one (`speaker`
+ * `research`), each mood as the vocal-emotion research describes it against a calm voice (Juslin & Laukka 2003;
+ * Scherer 2003; for lies, DePaulo et al. 2003, whose cues are weak): anger louder, higher, faster, roaming wider;
+ * stress higher, faster, shakier, narrower; a lie a little higher, slower, with more pauses. Eight of each, spread a
+ * little, the same every time.
+ */
+const PROFILES: Record<Mood, Measures> = {
+  truth: { pitch: 0, range: 1, loudness: 0, pace: 1, pauses: 0, wobble: 1, length: 1 },
+  lie: { pitch: 0.8, range: 0.95, loudness: -0.5, pace: 0.92, pauses: 0.08, wobble: 1.1, length: 1.2 },
+  stressed: { pitch: 2.5, range: 0.8, loudness: 1.5, pace: 1.15, pauses: -0.03, wobble: 1.45, length: 0.92 },
+  angry: { pitch: 2, range: 1.5, loudness: 6, pace: 1.15, pauses: -0.08, wobble: 1.25, length: 0.9 },
+};
+const SPREAD: Measures = { pitch: 0.6, range: 0.08, loudness: 1.2, pace: 0.05, pauses: 0.03, wobble: 0.08, length: 0.06 };
+export const SEED_SPEAKER = 'research';
+
+export function seeds(): { mood: Mood; measures: Measures }[] {
+  let x = 7;
+  const next = () => ((x = (x * 48271) % 2147483647) / 2147483647) * 2 - 1;
+  return MOODS.flatMap((mood) =>
+    Array.from({ length: 8 }, () => ({
+      mood,
+      measures: Object.fromEntries(Object.entries(PROFILES[mood]).map(([k, v]) => [k, Math.round((v + next() * SPREAD[k as keyof Measures]) * 1000) / 1000])) as Measures,
+    })),
+  );
+}
+
+/** Whether the model's spec reads takes as this one does: every role and its range, the speaker's weight, the bar. */
+export const sameSpec = (spec: unknown) => canonical(spec) === canonical(VOICE_SPEC);
+
+const canonical = (v: unknown): string =>
+  Array.isArray(v)
+    ? `[${v.map(canonical).join(',')}]`
+    : typeof v === 'object' && v !== null
+      ? `{${Object.keys(v)
+          .sort()
+          .map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`)
+          .join(',')}}`
+      : JSON.stringify(v);
+
+export const VOICE_LIMITS = {
+  /** A visitor's takes kept in the model; past it, their oldest are not deleted, new ones are refused. */
+  takes: 60,
+  /** Precedents in the model, all visitors together. */
+  precedents: 20_000,
+  forgetEveryMs: 60 * 1000,
+};
+
+const VISITOR_COOKIE = 'glyphh_voice';
+const MAP_POINTS = 600;
+const MAP_FOR_MS = 5000;
+const MINUTE = 60 * 1000;
+const DAY = 24 * 60 * MINUTE;
+
+type Take = { phrase: Phrase; measures: Measures };
+
+const asData = (speaker: string, t: Take) => ({ take: { voice: { speaker, phrase: t.phrase, ...t.measures } } });
+
+/** The speaker a stored precedent carries, wherever the kernel's terms put it (`situation`, nested by layer). */
+export function speakerOf(situation: unknown, depth = 0): string | undefined {
+  if (typeof situation !== 'object' || situation === null || depth > 4) return undefined;
+  for (const [k, v] of Object.entries(situation)) {
+    if (k === 'speaker' && typeof v === 'string') return v;
+    const found = speakerOf(v, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** One take from the page, as the model takes it; anything else is refused. */
+export function readTake(value: unknown): Take {
+  if (typeof value !== 'object' || value === null) throw new Refusal(400, 'No take was sent.');
+  const t = value as Record<string, unknown>;
+  if (!PHRASES.includes(t.phrase as Phrase)) throw new Refusal(400, 'The phrase is not one the demo knows.');
+  const m = (typeof t.measures === 'object' && t.measures !== null ? t.measures : {}) as Record<string, unknown>;
+  const extra = Object.keys(m).find((k) => !(k in MEASURES));
+  if (extra) throw new Refusal(400, 'The demo takes numbers about the voice and nothing else.');
+  const measures = {} as Measures;
+  for (const [name, range] of Object.entries(MEASURES) as [keyof Measures, (typeof MEASURES)[keyof Measures]][]) {
+    const v = m[name];
+    if (typeof v !== 'number' || !Number.isFinite(v)) throw new Refusal(400, `The take is missing its ${name}.`);
+    measures[name] = Math.round(Math.min(range.max, Math.max(range.min, v)) * 1000) / 1000;
+  }
+  return { phrase: t.phrase as Phrase, measures };
+}
+
+export const readMood = (value: unknown): Mood => {
+  if (!MOODS.includes(value as Mood)) throw new Refusal(400, 'Say whether it was the truth, a lie, stressed or angry.');
+  return value as Mood;
+};
+
+type Deps = {
+  config: DemoConfig & { voiceDailyCalls?: number };
+  fetch?: typeof fetch;
+  now?: () => number;
+  secureCookies?: boolean;
+};
+
+export function createVoice({ config, fetch: fetcher = fetch, now = Date.now, secureCookies = true }: Deps) {
+  const app = new Hono();
+  const base = `${config.adaUrl}/v1/models/${encodeURIComponent(VOICE_MODEL)}`;
+  const dailyCalls = config.voiceDailyCalls ?? 300;
+
+  let ready: Promise<void> | null = null;
+  let precedents = 0;
+  let day = Math.floor(now() / DAY);
+  let calls = 0;
+  // Takes per visitor since this process started: a cap, not a record (the model holds the takes).
+  const takes = new Map<string, number>();
+  let map: { at: number; body: unknown } | null = null;
+
+  const minute = new Window(DEMO_LIMITS.perMinute, MINUTE);
+  const daily = new Window(DEMO_LIMITS.perDay, DAY);
+  const forgets = new Window(1, VOICE_LIMITS.forgetEveryMs);
+
+  async function ada<T>(method: string, url: string, body?: unknown): Promise<T> {
+    const today = Math.floor(now() / DAY);
+    if (today !== day) {
+      day = today;
+      calls = 0;
+    }
+    if (calls >= dailyCalls) throw new Refusal(429, 'Ada has listened enough for today. The game opens again at midnight UTC.');
+    calls += 1;
+    const headers: Record<string, string> = { authorization: `Bearer ${config.key}`, accept: 'application/json' };
+    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (method !== 'GET') headers['idempotency-key'] = randomUUID();
+    let res: Response;
+    try {
+      res = await fetcher(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch {
+      throw new Refusal(502, 'Ada Cloud could not be reached.');
+    }
+    const json = (await res.json().catch(() => ({}))) as T & { error?: { code?: string } };
+    if (res.status === 404 && method !== 'POST') throw new Refusal(400, 'Ada does not have that take.');
+    if (res.status === 429) throw new Refusal(429, 'Ada Cloud is busy. Try again in a moment.', Number(res.headers.get('retry-after')) || 5);
+    if (!res.ok) throw new Refusal(502, `Ada Cloud did not answer (${json.error?.code ?? res.status}).`);
+    return json;
+  }
+
+  /** The research takes, recorded once: when the model is made, or read anew by a changed spec. */
+  async function seed() {
+    const got = await ada<{ precedents?: number }>('POST', `${base}/record_many`, {
+      cases: seeds().map((s) => ({ data: asData(SEED_SPEAKER, { phrase: 'free', measures: s.measures }), outcome: s.mood })),
+    });
+    precedents = got.precedents ?? precedents;
+  }
+
+  /** A new version's job, followed until it is done (a minute at most), so what is recorded next lands in it. */
+  async function settle(job: string | undefined) {
+    for (let i = 0; job && i < 30; i++) {
+      const got = await ada<{ state?: string; status?: string }>('GET', `${config.adaUrl}/v1/jobs/${encodeURIComponent(job)}`);
+      const state = got.state ?? got.status;
+      if (state === 'done' || state === 'failed') return;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+
+  /**
+   * The model there and reading takes as VOICE_SPEC does, once per process: made the first time, never emptied. A
+   * model on an older spec gets this one as a new version (its takes read again), then the research takes.
+   */
+  function prepare() {
+    ready ??= (async () => {
+      const { models = [] } = await ada<{ models?: { name: string; precedents?: number }[] }>('GET', `${config.adaUrl}/v1/models`);
+      const found = models.find((m) => m.name === VOICE_MODEL);
+      if (!found) {
+        await ada('POST', `${config.adaUrl}/v1/models`, { name: VOICE_MODEL, spec: VOICE_SPEC });
+        return seed();
+      }
+      precedents = found.precedents ?? 0;
+      const { spec } = await ada<{ spec?: unknown }>('GET', base);
+      if (sameSpec(spec)) return;
+      let made: { job?: string | { id?: string } | null };
+      try {
+        made = await ada('PUT', `${base}/spec`, { spec: VOICE_SPEC, note: 'Voice check: ranges a voice moves by, the research takes' });
+      } catch (e) {
+        // Ada holds this spec already (it reads it back in another form), or will not take it in place: the game
+        // goes on with the model as it is rather than refusing every take.
+        if (e instanceof Refusal && e.status === 502) {
+          if (!e.message.includes('E_NO_CHANGE')) console.error('voice demo: the spec was not taken:', e.message);
+          return;
+        }
+        throw e;
+      }
+      await settle(typeof made.job === 'string' ? made.job : (made.job?.id ?? undefined));
+      await seed();
+    })().catch((e) => {
+      ready = null;
+      throw e;
+    });
+    return ready;
+  }
+
+  const addressOf = (c: Context) =>
+    c.req.header('cf-connecting-ip') ?? c.req.header('fly-client-ip') ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+
+  /** The visitor's id: a year in an HttpOnly cookie, so Ada knows their voice when they come back. */
+  const visitorOf = (c: Context) => {
+    let id = getCookie(c, VISITOR_COOKIE);
+    if (!id || !/^[a-f0-9-]{36}$/.test(id)) {
+      id = randomUUID();
+      setCookie(c, VISITOR_COOKIE, id, { httpOnly: true, secure: secureCookies, sameSite: 'Lax', path: '/', maxAge: 365 * 24 * 3600 });
+    }
+    return id;
+  };
+
+  const limit = (c: Context) => {
+    const who = addressOf(c);
+    const wait = minute.take(who, now()) || daily.take(who, now());
+    if (wait) throw new Refusal(429, 'That is a lot of talking. Give it a minute.', wait);
+  };
+
+  async function readBody(c: Context): Promise<Record<string, unknown>> {
+    const raw = await c.req.text();
+    if (raw.length > DEMO_LIMITS.bodyBytes) throw new Refusal(413, 'That is more than a take.');
+    try {
+      const body: unknown = raw ? JSON.parse(raw) : {};
+      return typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
+    } catch {
+      throw new Refusal(400, 'The demo could not read that.');
+    }
+  }
+
+  async function record(visitor: string, cases: { take: Take; mood: Mood }[]) {
+    const had = takes.get(visitor) ?? 0;
+    if (had + cases.length > VOICE_LIMITS.takes) throw new Refusal(429, `Ada keeps ${VOICE_LIMITS.takes} takes a person. Forget yours to start again.`);
+    if (precedents + cases.length > VOICE_LIMITS.precedents) throw new Refusal(503, 'Ada has heard all the voices she can for now.');
+    const got = await ada<{ ids?: string[]; precedents?: number }>('POST', `${base}/record_many`, {
+      cases: cases.map((k) => ({ data: asData(visitor, k.take), outcome: k.mood })),
+    });
+    takes.set(visitor, had + cases.length);
+    precedents = got.precedents ?? precedents + cases.length;
+    map = null;
+    return got.ids ?? [];
+  }
+
+  app.use('/api/voice/*', async (c, next) => {
+    c.header('cache-control', 'no-store');
+    if (!config.key) throw new Refusal(503, 'The demo is not set up yet.');
+    if (c.req.method !== 'GET') {
+      const site = c.req.header('sec-fetch-site');
+      const same = site ? site === 'same-origin' : c.req.header('origin') === `https://${config.host}`;
+      if (!same) throw new Refusal(403, 'Writes come from the demo page only.');
+    }
+    await prepare();
+    await next();
+  });
+
+  /** The three set phrases: the visitor's own words, the truth and the lie, each recorded as what it is. */
+  app.post('/api/voice/enrol', async (c) => {
+    const body = await readBody(c);
+    const list = Array.isArray(body.takes) ? body.takes : [];
+    if (list.length !== 3) throw new Refusal(400, 'Enrolling takes the three phrases.');
+    const set = list.map(readTake);
+    if (set.map((t) => t.phrase).join() !== 'self,truth,lie') throw new Refusal(400, 'The three phrases come in order: yours, the truth, the lie.');
+    const visitor = visitorOf(c);
+    limit(c);
+    const ids = await record(visitor, set.map((take) => ({ take, mood: take.phrase === 'lie' ? 'lie' : 'truth' })));
+    return c.json({ ids });
+  });
+
+  app.post('/api/voice/read', async (c) => {
+    const take = readTake((await readBody(c)).take);
+    const visitor = visitorOf(c);
+    limit(c);
+    const started = performance.now();
+    const d = await ada<{ outcome?: string; probabilities?: Record<string, number>; ask?: boolean; receipts?: { id: string; sim: number; outcome: string }[] }>(
+      'POST',
+      `${config.adaUrl}/v1/decide`,
+      { model: VOICE_MODEL, data: asData(visitor, take) },
+    );
+    return c.json({
+      outcome: d.outcome ?? null,
+      probabilities: Object.fromEntries(MOODS.map((m) => [m, d.probabilities?.[m] ?? 0])),
+      ask: Boolean(d.ask),
+      receipts: (d.receipts ?? []).slice(0, 5).map((r) => ({ sim: r.sim, outcome: r.outcome })),
+      ms: Math.round(performance.now() - started),
+    });
+  });
+
+  /** The visitor says what the take really was; Ada keeps it, and knows their voice a little better. */
+  app.post('/api/voice/teach', async (c) => {
+    const body = await readBody(c);
+    const take = readTake(body.take);
+    const mood = readMood(body.mood);
+    const visitor = visitorOf(c);
+    limit(c);
+    const [id] = await record(visitor, [{ take, mood }]);
+    return c.json({ id });
+  });
+
+  /**
+   * The model in 3D, as the platform's view draws it (`GET /v1/models/{name}/map`): each take's glyph bits, its
+   * mood, and its nearest. Held a few seconds, and dropped when a take is recorded or forgotten, so a new take shows.
+   */
+  app.get('/api/voice/map', async (c) => {
+    limit(c);
+    if (!map || now() - map.at > MAP_FOR_MS) {
+      const got = await ada<{ dim?: number; points?: { id: string; outcome: string | null; bits: string | null }[]; edges?: [number, number, number][] }>(
+        'GET',
+        `${base}/map?limit=${MAP_POINTS}`,
+      );
+      map = {
+        at: now(),
+        body: {
+          dim: got.dim ?? 0,
+          points: (got.points ?? []).map((p) => ({ id: p.id, outcome: p.outcome, bits: p.bits })),
+          edges: got.edges ?? [],
+        },
+      };
+    }
+    return c.json(map.body);
+  });
+
+  /** Every take of the visitor's out of the model: each checked to be theirs, then deleted. */
+  app.post('/api/voice/forget', async (c) => {
+    const body = await readBody(c);
+    const ids = (Array.isArray(body.ids) ? body.ids : []).filter((x): x is string => typeof x === 'string' && /^[\w-]{1,80}$/.test(x));
+    if (ids.length > VOICE_LIMITS.takes) throw new Refusal(400, 'That is more takes than a person has.');
+    const visitor = visitorOf(c);
+    const wait = forgets.take(addressOf(c), now());
+    if (wait) throw new Refusal(429, 'Ada forgot you a moment ago.', wait);
+    let forgotten = 0;
+    for (const id of ids) {
+      const path = `${base}/precedents/${encodeURIComponent(id)}`;
+      let p: { situation?: unknown };
+      try {
+        p = await ada('GET', path);
+      } catch (e) {
+        if (e instanceof Refusal && e.status === 400) continue; // already gone
+        throw e;
+      }
+      if (speakerOf(p.situation) !== visitor) continue;
+      await ada('DELETE', path).catch((e) => {
+        if (!(e instanceof Refusal && e.status === 400)) throw e;
+      });
+      forgotten += 1;
+    }
+    takes.delete(visitor);
+    precedents = Math.max(0, precedents - forgotten);
+    map = null;
+    // A new id from here on: what was left of the old one, if anything, is no longer theirs.
+    setCookie(c, VISITOR_COOKIE, randomUUID(), { httpOnly: true, secure: secureCookies, sameSite: 'Lax', path: '/', maxAge: 365 * 24 * 3600 });
+    return c.json({ forgotten });
+  });
+
+  app.all('/api/voice/*', () => {
+    throw new Refusal(403, 'The voice demo answers enrol, read, teach, forget and map only.');
+  });
+
+  app.onError((e, c) => {
+    if (e instanceof Refusal) {
+      if (e.retryAfter) c.header('retry-after', String(e.retryAfter));
+      c.header('cache-control', 'no-store');
+      return c.json({ error: e.message }, e.status);
+    }
+    console.error('voice demo:', e);
+    return c.json({ error: 'The demo hit a snag. Try again.' }, 502);
+  });
+
+  return app;
+}
+
+/** Requests the voice demo answers on the demo's host: its API, and /voice sent on to the page. The page itself
+ * (demo/public/voice) is served with the other demos' (serveDemoPage). */
+export const isVoicePath = (path: string) => path === '/voice' || path.startsWith('/voice/3d/') || path.startsWith('/api/voice/');
+
+/** /voice sent on to the page, and the platform's 3D view, built (vite.demo.config.ts), at /voice/3d. */
+export function serveVoiceRedirect(app: Hono, built = 'dist/demo') {
+  app.get('/voice', (c) => c.redirect('/voice/', 308));
+  app.get('/voice/3d/glyph-view.js', serveStatic({ root: built, rewriteRequestPath: () => '/glyph-view.js' }));
+  app.notFound((c) => c.text('Not found', 404));
+  return app;
+}

@@ -1,25 +1,34 @@
 import type { ReactNode } from 'react';
+import { Navigate } from 'react-router';
 import { useMe } from '@/api/queries';
-import { AuthLayout } from '@/layout/AuthLayout/AuthLayout';
-import { Button, LoadingCard } from '@/ui';
+import { NavGroup, NavItem } from '@/layout/Sidebar/Sidebar';
+import { LoadingCard } from '@/ui';
+import { inOrgView } from './staffView';
 
-/** The whole console is staff only (the server refuses anyone else too); anyone else sees one line and Sign out. */
+/** The staff view's pages: staff only (the server refuses anyone else too); anyone else goes home. */
 export function RequireStaff({ children }: { children: ReactNode }) {
   const { data: me, isPending } = useMe();
   if (isPending) return <LoadingCard />;
-  if (!me?.staff) return <StaffOnlyPage />;
+  if (!me?.staff) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
-/** Game players never come here (their accounts live on each game's site); a signed-in non-staff person sees this. */
-export function StaffOnlyPage() {
+/** In their own org's view, staff keep a way back to the staff view, at the foot of the sidebar's pages. */
+export function StaffNav() {
+  const { data: me } = useMe();
+  if (!me?.staff) return null;
   return (
-    <AuthLayout title="This is Glyphh’s staff console.">
-      <form method="post" action="/auth/logout">
-        <Button type="submit" variant="secondary" style={{ width: '100%' }}>
-          Sign out
-        </Button>
-      </form>
-    </AuthLayout>
+    <NavGroup label="Glyphh">
+      <NavItem to="/admin" icon="flag">
+        Staff view
+      </NavItem>
+    </NavGroup>
   );
+}
+
+/** Home: for staff, the staff view first, unless they chose their own org in this tab. */
+export function StaffHome({ children }: { children: ReactNode }) {
+  const { data: me } = useMe();
+  if (me?.staff && !inOrgView()) return <Navigate to="/admin" replace />;
+  return <>{children}</>;
 }

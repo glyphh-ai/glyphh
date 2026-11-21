@@ -1,10 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import { renderApp } from '@/test/render';
-import { staffHandlers } from '@/test/admin';
-import { server } from '@/test/server';
+import { http, HttpResponse, server, v1 } from '@/test/server';
 
 // The stylesheets as written: the tests run in Node, and the UI's tsconfig carries no Node types, hence the narrow one.
-type Fs = { readFileSync(path: string, encoding: 'utf8'): string; existsSync(path: string): boolean };
+type Fs = { readFileSync(path: string, encoding: 'utf8'): string };
 const fs = (globalThis as unknown as { process: { getBuiltinModule(id: 'node:fs'): Fs } }).process.getBuiltinModule('node:fs');
 const stylesheet = (path: string) => fs.readFileSync(`src/${path}`, 'utf8');
 const shellCss = stylesheet('layout/AppShell/AppShell.module.css');
@@ -13,13 +12,10 @@ const menuCss = stylesheet('ui/Menu/Menu.module.css');
 
 const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentElement!;
 
-// The console is staff only: every test here signs in as staff.
-beforeEach(() => server.use(...staffHandlers()));
-
 describe('the sidebar on a phone', () => {
   it('opens from the Menu button and closes from the scrim', async () => {
-    const { user } = renderApp('/');
-    await screen.findByRole('heading', { name: 'Games', level: 1 });
+    const { user } = renderApp('/runtimes');
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     expect(shell()).toHaveAttribute('data-sidebar', 'open');
     await user.click(screen.getByRole('button', { name: 'Close menu' }));
@@ -28,8 +24,8 @@ describe('the sidebar on a phone', () => {
   });
 
   it('closes when the Menu button is pressed again', async () => {
-    const { user } = renderApp('/');
-    await screen.findByRole('heading', { name: 'Games', level: 1 });
+    const { user } = renderApp('/runtimes');
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
     const menu = await screen.findByRole('button', { name: 'Menu' });
     await user.click(menu);
     await user.click(menu);
@@ -39,8 +35,8 @@ describe('the sidebar on a phone', () => {
   it('closes on moving to another page', async () => {
     const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Audit log' }));
-    expect(await screen.findByRole('heading', { name: 'Audit log' })).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'API Keys' }));
+    expect(await screen.findByRole('heading', { name: 'API Keys' })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-sidebar', 'closed');
   });
 });
@@ -53,10 +49,13 @@ const rule = (css: string, selector: string, from = 0) => {
 };
 
 describe('the account menu on a phone', () => {
-  it('is in the rail', async () => {
-    renderApp('/');
-    const rail = await screen.findByRole('complementary', { name: 'Main' });
-    expect(await within(rail).findByRole('button', { name: /Chris Timmerman/ })).toBeInTheDocument();
+  it('is in the rail in both sidebars, the main one and settings', async () => {
+    for (const path of ['/', '/settings/general']) {
+      const { unmount } = renderApp(path);
+      const rail = await screen.findByRole('complementary', { name: 'Main' });
+      expect(await within(rail).findByRole('button', { name: /Chris Timmerman/ })).toBeInTheDocument();
+      unmount();
+    }
   });
 
   // On a phone 100vh is the viewport with the browser's toolbar hidden: with it out, a 100vh rail's foot, the account
@@ -78,25 +77,22 @@ describe('the account menu on a phone', () => {
 });
 
 describe('the main sidebar', () => {
-  it('has the logo, the games and Glyphh’s own pages, all at the root', async () => {
+  it('has the logo and Runtimes & licences, and no organisation group: settings is in the account menu', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
-    await screen.findByRole('heading', { name: 'Games', level: 1 });
+    // The links come once the account says Ada Cloud is off.
+    await within(main).findByRole('link', { name: 'Runtimes' });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
-    const links = within(main).getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['All games', 'Free Fall Frank', 'Crabby Knife Fight', 'Bams & Brags', 'Send a Carol', 'Traffic', 'Log alerts', 'Audit log']);
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/games/frank', '/games/crabby', '/games/mahj', '/games/carol', '/traffic', '/events', '/audit']);
+    for (const name of ['Runtimes', 'Licence', 'API Keys']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
+    expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
+    for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
   });
 
-  it('crumbs a game’s page back to the games', async () => {
-    renderApp('/games/frank');
-    expect(await screen.findByRole('link', { name: 'Games' })).toHaveAttribute('href', '/');
-  });
-
-  // The file glyphh.ai's header shows, at its 38px: the cat and the name in black with a white outline.
-  it('shows the logo file at 38px high, never typed', () => {
-    const logoCss = stylesheet('ui/Logo/Logo.module.css');
-    expect(rule(logoCss, '.logo')).toMatch(/height: var\(--logo-h, 38px\);.*url\('\/glyphh-logo-black\.png'\)/);
-    expect(fs.existsSync('public/glyphh-logo-black.png')).toBe(true);
+  it('has nothing Glyphh hosted and no Models with Ada Cloud off: no Machines, Logs or Models', async () => {
+    server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
+    renderApp('/');
+    const main = await screen.findByRole('complementary', { name: 'Main' });
+    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'Apps', 'API Keys', 'Usage']);
   });
 });
