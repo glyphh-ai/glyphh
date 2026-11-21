@@ -1,6 +1,6 @@
 """The org's own Anthropic API key (BYOK): its bots' agent steps run on it and the org pays Anthropic for the tokens
-itself, nothing charged here. Kept sealed (ops/auth/sealed.py), shown only by its last four characters; a key is
-tried with Anthropic before it is kept. Without one, the bots run on Glyphh's key, billed by tokens."""
+itself, Glyphh's markup alone charged here. Kept sealed (ops/auth/sealed.py), shown only by its last four characters;
+a key is tried with Anthropic before it is kept. Without one, the bots run on Glyphh's key (its rate and the markup)."""
 
 import uuid
 from collections.abc import Awaitable, Callable

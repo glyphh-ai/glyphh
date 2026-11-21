@@ -1,6 +1,6 @@
 """What one go of a bot's runner needs, gathered on the server's loop before the worker thread starts: the bot, its
 program (its scoped tools, ready to call), its Ada (by its own key) and its Claude (the org's own Anthropic key, or
-Glyphh's metered); and the go itself, its state kept on the bot after."""
+Glyphh's; metered on either, ops/bots/prices.py); and the go itself, its state kept on the bot after."""
 
 import asyncio
 import uuid
@@ -57,13 +57,11 @@ class Goes:
             return await keys.own(conn, self.settings.secret_key)
 
     async def claude_of(self, bot: Any) -> tuple[Any, bool]:
-        """The bot's Claude, and whether it is on the org's own key."""
+        """The bot's Claude, metered on either key (the markup alone on the org's own), and whether it is the org's."""
         own = await self.own_key(bot.org_id)
-        if own:
-            return self.claude_for(own, bot.model), True
-        if not self.settings.anthropic_api_key:
+        if not own and not self.settings.anthropic_api_key:
             raise Unavailable(NO_KEY, reason="anthropic_off")
-        priced = prices.model(bot.model)
+        priced = prices.charged(bot.model, own_key=bool(own))
 
         async def admit() -> Any:
             return await meter.admit(self.engine, self.redis, self.settings, bot.org_id)
@@ -71,8 +69,8 @@ class Goes:
         async def record(admitted: Any, got: Any) -> int:
             return await meter.record(self.engine, admitted, priced, got.input_tokens, got.output_tokens)
 
-        inner = self.claude_for(self.settings.anthropic_api_key, bot.model)
-        return engine.Metered(inner, asyncio.get_running_loop(), admit, record), False
+        inner = self.claude_for(own or self.settings.anthropic_api_key, bot.model)
+        return engine.Metered(inner, asyncio.get_running_loop(), admit, record), bool(own)
 
     async def go(self, bot: Any, act: Callable[[Runner], Any], claude: Any = None) -> engine.Left:
         """One go of the bot's runner in a worker thread; the state it leaves kept on the bot."""

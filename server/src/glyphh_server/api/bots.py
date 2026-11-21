@@ -2,8 +2,8 @@
 hard limits, its agent's prompt and skills), with a look (its cat), the Claude model its agent steps run on and, per
 connection, the tools it may use; run in the background by the SDK's runner. A run that stops for the person waits
 (needs_input) until it is answered; a gate's wrong call is corrected and learned. The agent steps run on the org's own
-Anthropic key when it has set one (nothing charged), else on Glyphh's, drawn from the plan's allowance and then the
-org's balance."""
+Anthropic key when it has set one (Glyphh's markup charged), else on Glyphh's (Anthropic's rate and the markup), drawn
+from the plan's allowance and then the org's balance."""
 
 import uuid
 from typing import Any

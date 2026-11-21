@@ -212,9 +212,11 @@ said wrong is learned as a precedent. A run records its machine; when that machi
 or running are failed (`interrupted by a restart`); one waiting on the person is left waiting.
 
 **Claude (BYOK).** Agent steps run on the org's own Anthropic API key when it has set one (`PUT /v1/bot-key`, tried with
-Anthropic before it is kept, sealed, shown by its last four characters): nothing is charged. Without one they run on
-Glyphh's key, each step let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
-charged after at Anthropic's rates; with neither, starting a run answers 503 `anthropic_off`.
+Anthropic before it is kept, sealed, shown by its last four characters), else on Glyphh's key; the org chooses. Both
+are charged: each step is let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
+charged after, on Glyphh's key at Anthropic's rate plus Glyphh's markup (20%, `ops/bots/prices.py`), on the org's own
+key at the markup alone (it pays Anthropic itself). `GET /v1/bots/models` lists both rates. With neither key, starting
+a run answers 503 `anthropic_off`.
 
 | Call | What |
 |---|---|
@@ -226,7 +228,7 @@ charged after at Anthropic's rates; with neither, starting a run answers 503 `an
 | `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description}]}` |
 | `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
-| `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, default}]}` |
+| `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
 | `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT` |
 | `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, created_at, started_at, finished_at}` |

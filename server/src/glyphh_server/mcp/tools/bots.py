@@ -71,9 +71,11 @@ async def set_connections(ctx: Context, args: Scopes) -> Done:
 async def models(ctx: Context, _: NoArgs) -> Done:
     found = prices.listing()
     lines = [
-        f"{m.id}: ${m.input_cents_per_mtok / 100:g}/${m.output_cents_per_mtok / 100:g} per Mtok" for m in found.models
+        f"{m.id}: ${m.input_cents_per_mtok / 100:g}/${m.output_cents_per_mtok / 100:g} per Mtok on Glyphh's key, "
+        f"${m.own_key_input_cents_per_mtok / 100:g}/${m.own_key_output_cents_per_mtok / 100:g} on the org's own"
+        for m in found.models
     ]
-    return Done("\n".join(lines), dump(found))
+    return Done("\n".join(lines) + f"\n(Glyphh's markup: {found.markup_pct}%)", dump(found))
 
 
 def _tool(name: str, title: str, about: str, args: type[BaseModel], handler: object, read_only: bool) -> Tool:

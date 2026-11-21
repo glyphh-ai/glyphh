@@ -44,6 +44,6 @@ gate over items, $step.x for one case. Make one role the key (key_part true, sim
 
 A run that asks waits (needs_input) until bot_run_answer answers it: one option, or for a batch "1=keep 2=drop
 rest=drop". bot_run_wrong corrects a gate's call; it is learned as a precedent. One live run a bot at a time.
-The agent steps run on the org's own Anthropic key when it has set one in the platform (nothing charged), else on
-Glyphh's, billed by tokens.
+The agent steps run on the org's own Anthropic key when it has set one in the platform (Glyphh's markup charged),
+else on Glyphh's (Anthropic's rate and the markup); bot_models lists both.
 """

@@ -58,7 +58,8 @@ async def test_a_bot_is_made_scoped_run_answered_and_corrected_through_the_conne
 
     changed = await tool(served.http, auth, "bot_update", slug="inbox-cat", summary="Keeps the inbox")
     assert changed["structuredContent"]["summary"] == "Keeps the inbox"
-    assert "claude-opus-5-5: $4/$20 per Mtok" in (await tool(served.http, auth, "bot_models"))["content"][0]["text"]
+    priced = (await tool(served.http, auth, "bot_models"))["content"][0]["text"]
+    assert "claude-opus-5-5: $4.8/$24 per Mtok on Glyphh's key, $0.8/$4 on the org's own" in priced
     assert (await tool(served.http, auth, "bot_delete", slug="inbox-cat"))["isError"] is False
     missing = await tool(served.http, auth, "bot", slug="inbox-cat")
     assert missing["isError"] is True and missing["structuredContent"]["error"]["code"] == "E_NOT_FOUND"

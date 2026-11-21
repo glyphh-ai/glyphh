@@ -158,7 +158,7 @@ class RunView(BaseModel):
     question: Question | None = Field(description="What it waits on, when it needs input")
     input_tokens: int
     output_tokens: int
-    cost_micros: int = Field(description="What its tokens were charged, microdollars: 0 on the org's own key")
+    cost_micros: int = Field(description="Its tokens' charge, microdollars (the markup alone on the org's own key)")
     own_key: bool = Field(description="Its agent steps ran on the org's own Anthropic key")
     created_at: datetime
     started_at: datetime | None
