@@ -22,7 +22,7 @@ describe('rrotor shelved, with Ada Cloud on', () => {
     'sends %s to Home',
     async (path) => {
       const { router } = renderApp(path);
-      expect(await screen.findByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening)/, level: 1 })).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/');
     },
   );

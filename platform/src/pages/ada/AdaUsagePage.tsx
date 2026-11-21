@@ -9,6 +9,7 @@ import { Card, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
 import usageStyles from '@/pages/settings/UsagePage.module.css';
 import { TokensSection } from '@/pages/settings/tokens/TokensSection';
 import { ConnectionsMeter } from '@/pages/settings/usage/ConnectionsCard';
+import { UsageCharts } from '@/pages/settings/usage/UsageCharts';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import styles from './ada.module.css';
 
@@ -116,6 +117,8 @@ export function AdaUsagePage() {
           </div>
         )}
       </SettingsSection>
+
+      <UsageCharts ada />
 
       <TokensSection />
 

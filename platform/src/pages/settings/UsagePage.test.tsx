@@ -169,10 +169,11 @@ describe('Tokens on Glyphh’s hosted models', () => {
     expect(within(balance).getByText('$18.70')).toBeInTheDocument();
     expect(within(balance).getByRole('button', { name: 'Add funds' })).toBeInTheDocument();
 
-    // The chart's table: input and output each day, a day with none filled in between.
+    // The chart's table: input and output each of the 30 days, a day with none as nothing.
     const byDay = await screen.findByRole('table', { name: 'Input and output tokens by day, last 30 days' });
     const rows = within(byDay).getAllByRole('row').slice(1).map((row) => row.textContent);
-    expect(rows).toEqual(['7 Nov1,200,000400,000', '8 Nov00', '9 Nov2,000,000900,000']);
+    expect(rows).toHaveLength(30);
+    expect(rows.slice(-3)).toEqual(['7 Nov1,200,000400,000', '8 Nov00', '9 Nov2,000,000900,000']);
 
     const byModel = screen.getByRole('table', { name: 'Tokens by model' });
     const row = within(byModel).getByText('adaL 34B 1.0').closest('tr')!;
@@ -192,7 +193,7 @@ describe('Tokens on Glyphh’s hosted models', () => {
     );
     renderApp('/usage');
     expect(await screen.findByText('Past 25,000,000, tokens are charged to the balance.')).toBeInTheDocument();
-    expect(await screen.findByText('No tokens in the last 30 days.')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Tokens in and out' })).toHaveTextContent('0 tokens');
     expect(screen.getByText('No model used this month.')).toBeInTheDocument();
   });
 

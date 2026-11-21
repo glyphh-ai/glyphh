@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { adaFake, tickets } from '@/test/ada';
 import { renderApp } from '@/test/render';
-import { apiError, http, server } from '@/test/server';
+import { triage } from '@/test/bots';
+import { apiError, http, HttpResponse, llmHandlers, server, v1 } from '@/test/server';
 
 function on(models = [tickets()]) {
   const fake = adaFake({ models });
@@ -10,25 +11,70 @@ function on(models = [tickets()]) {
 }
 
 describe('Ada Home', () => {
-  it('shows the models, the precedents against the plan, and the connector URL to add in Claude', async () => {
+  const marketplace = () =>
+    server.use(
+      http.get(v1('/templates'), () =>
+        HttpResponse.json({
+          templates: [
+            { slug: 'agentic-memory', name: 'Agentic memory', category: 'Memory', summary: 'Remembers you.', version: 1, models: [], tools: [], instructions: '', installed: true, installed_version: 1 },
+          ],
+        }),
+      ),
+      http.get(v1('/bot-templates'), () => HttpResponse.json({ templates: [triage()] })),
+    );
+
+  it('greets the person, and shows the month against the plan without listing the models', async () => {
     on();
+    marketplace();
+    server.use(...llmHandlers());
     renderApp('/');
-    const list = await screen.findByRole('list', { name: 'Models' });
-    expect(within(list).getByRole('link', { name: 'tickets' })).toHaveAttribute('href', '/models/tickets');
-    expect(within(list).getByText('1,240 precedents')).toBeInTheDocument();
-    expect(screen.getByText('http://api.test/mcp')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy connector URL' })).toBeInTheDocument();
-    expect(await screen.findByText('of 100,000 precedents')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Precedents' })).toHaveAttribute('aria-valuenow', '1240');
-    expect(screen.getByText('of 1,000,000 requests')).toBeInTheDocument();
-    expect(await screen.findByText('Past 1,000,000, requests go on at $1 per 10,000. The count starts again on 1 Nov 2026.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Chris$/, level: 1 })).toBeInTheDocument();
+    const balance = await screen.findByRole('region', { name: 'Balance' });
+    expect(within(balance).getByText('$18.70')).toBeInTheDocument();
+    expect(within(balance).getByRole('button', { name: 'Add funds' })).toBeInTheDocument();
+    const tokens = screen.getByRole('region', { name: 'Tokens this month' });
+    // The allowance used and the tokens past it, together.
+    expect(within(tokens).getByText('27,400,000')).toBeInTheDocument();
+    expect(within(tokens).getByRole('progressbar', { name: 'Tokens this month' })).toHaveAttribute('aria-valuemax', '25000000');
+    expect(within(tokens).getByText('$11.30 charged past the plan.')).toBeInTheDocument();
+    const requests = await screen.findByRole('region', { name: 'Requests this month' });
+    expect(within(requests).getByText('of 1,000,000 in your plan')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Models' })).not.toBeInTheDocument();
   });
 
-  it('starts a first model from the empty state', async () => {
+  it('charts the week, and shows what is new in Ada and the Marketplace, and where to go next', async () => {
+    on();
+    marketplace();
+    server.use(...llmHandlers());
+    renderApp('/');
+    const week = await screen.findByRole('table', { name: 'Token volume by day, last 7 days' });
+    const rows = within(week).getAllByRole('row').slice(1).map((row) => row.textContent);
+    expect(rows).toEqual(['3 Nov00', '4 Nov00', '5 Nov00', '6 Nov00', '7 Nov1,200,000400,000', '8 Nov00', '9 Nov2,000,000900,000']);
+    expect(screen.getByText('4,500,000 tokens')).toBeInTheDocument();
+
+    const ada = await screen.findByRole('region', { name: 'New in Ada' });
+    expect(await within(ada).findByRole('link', { name: 'ada-1-2-beta' })).toHaveAttribute('href', '/settings/releases#ada-1-2-beta');
+    expect(within(ada).getByText('Pairs it never learned weigh nothing.')).toBeInTheDocument();
+    const models = screen.getByRole('region', { name: 'Marketplace models' });
+    expect(await within(models).findByRole('link', { name: 'Agentic memory' })).toHaveAttribute('href', '/marketplace/models/agentic-memory');
+    const bots = screen.getByRole('region', { name: 'Marketplace bots' });
+    expect(await within(bots).findByRole('link', { name: triage().name })).toHaveAttribute('href', `/marketplace/bots/${triage().slug}`);
+
+    expect(screen.getByText('http://api.test/mcp')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy pip command' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Docs/ })).toHaveAttribute('href', 'https://docs.glyphh.ai');
+  });
+
+  it('shows the plan and Ada’s requests by day where hosted models are off, and starts a model', async () => {
     on([]);
+    marketplace();
     const { user, router } = renderApp('/');
-    expect(await screen.findByText('No models yet')).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: 'New model' }).at(-1)!);
+    const plan = await screen.findByRole('region', { name: 'Plan' });
+    expect(within(plan).getByText('Pro')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Tokens this month' })).not.toBeInTheDocument();
+    const week = await screen.findByRole('table', { name: 'Requests by day, last 7 days' });
+    expect(within(week).getAllByRole('row').at(-1)).toHaveTextContent('9 Nov840');
+    await user.click(screen.getByRole('button', { name: 'New model' }));
     expect(router.state.location.pathname).toBe('/models/new');
   });
 });

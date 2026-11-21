@@ -10,7 +10,9 @@ import type {
   LedgerEntry,
   LlmModel,
   LlmModelsAnswer,
+  Payment,
   PlansAnswer,
+  SeriesDay,
   TokenDay,
   Invite,
   LicenceKeys,
@@ -49,6 +51,8 @@ export const keys = {
   apps: ['apps'] as const,
   billing: ['billing'] as const,
   ledger: ['billing', 'ledger'] as const,
+  series: ['billing', 'series'] as const,
+  payment: ['billing', 'payment'] as const,
   tokenDays: ['llm', 'usage'] as const,
   llmModels: ['llm', 'models'] as const,
 };
@@ -95,6 +99,14 @@ export const useTokenDays = (days: number, enabled: boolean) =>
     enabled,
     queryFn: async () => (await api.get<{ days: TokenDay[] }>(`/llm/usage?days=${days}`)).days,
   });
+/** The org's use by UTC day, the last `days` days, one a day: Ada reads, bot runs, charges and connections. */
+export const useUsageSeries = (days: number) =>
+  useQuery({
+    queryKey: [...keys.series, days],
+    queryFn: async () => (await api.get<{ days: SeriesDay[] }>(`/billing/series?days=${days}`)).days,
+  });
+/** The card on file and the invoices, from Stripe through the server; the admin's, so asked only for them. */
+export const usePayment = (enabled: boolean) => useQuery({ queryKey: keys.payment, enabled, queryFn: () => api.get<Payment>('/billing/payment') });
 /** The balance's movements, newest first: top-ups, charges, grants and refunds. */
 export const useLedger = (enabled: boolean, limit = 50) =>
   useQuery({
@@ -182,6 +194,8 @@ export const useCheckout = () => useWrite((plan: string) => api.post<{ url: stri
 /** Stripe Checkout's page to add `amount_cents` ($10 to $1,000) to the overage balance; it is credited once Stripe says paid. */
 export const useTopUp = () => useWrite((amount_cents: number) => api.post<{ url: string }>('/billing/topup', { amount_cents }), []);
 export const usePortal = () => useWrite(() => api.post<{ url: string }>('/billing/portal'), []);
+/** Stripe's page to add or replace the card on file. */
+export const useChangeCard = () => useWrite(() => api.post<{ url: string }>('/billing/card'), []);
 // A new plan is a new licence key and a new count of runtime nodes.
 export const useChangePlan = () =>
   useWrite((plan: string) => api.post<Org>('/billing/plan', { plan }), [keys.org, keys.me, keys.licenceKeys, keys.nodes]);
