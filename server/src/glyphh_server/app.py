@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager, suppress
 
 import httpx
 from fastapi import FastAPI
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_ada.api import HostRouter
@@ -14,6 +15,8 @@ from glyphh_server.api import (
     apps,
     attribution,
     billing,
+    bots,
+    connections,
     connector,
     device,
     device_pages,
@@ -44,6 +47,7 @@ from glyphh_server.obs import events, metrics
 from glyphh_server.obs.logs import configure
 from glyphh_server.ops import github_app, tend
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.bots.service import Bots
 from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.github_traffic import GitHub
 from glyphh_server.ops.license import load_key
@@ -64,6 +68,8 @@ ROUTERS = (
     self_hosted,
     apps,
     templates,
+    connections,
+    bots,
     github,
     github_pages,
     oauth_meta,
@@ -105,11 +111,14 @@ def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[N
     return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github))
 
 
-def _share_http(app: FastAPI, http: httpx.AsyncClient) -> None:
-    """The server's HTTP client, the Ada app's too while it is on: the hosted models' inference (api/inference.py)."""
+async def _share_http(app: FastAPI, http: httpx.AsyncClient, cfg: Settings, engine: AsyncEngine, redis: Redis) -> None:
+    """The server's HTTP client, the Ada app's too while it is on (the hosted models' inference, api/inference.py),
+    and the hosted bots' (Pipedream), their runs this machine left running when it stopped failed."""
     app.state.http = http
     if app.state.ada is not None:
         app.state.ada.http = http
+    app.state.bots = Bots(engine, redis, cfg, http, app.state.ada)
+    await app.state.bots.recover()
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -123,11 +132,12 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        _share_http(app, http or httpx.AsyncClient(timeout=10))
+        await _share_http(app, http or httpx.AsyncClient(timeout=10), cfg, engine, redis)
         idle = _tending(app, cfg, engine)
         flushing = asyncio.create_task(metrics.flush_forever(app.state.metrics, redis))
         yield
         await metrics.stop(flushing, app.state.metrics, redis)
+        await app.state.bots.close()
         idle.cancel()
         with suppress(asyncio.CancelledError):
             await idle

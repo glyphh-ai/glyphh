@@ -4,6 +4,8 @@ from typing import Literal
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from glyphh_server.bot_settings import BotSettings
+
 
 class AdaCloudSettings(BaseSettings):
     """Ada Cloud (docs/specs/ada-cloud.md): off by default. Off, nothing of it is reachable (no host routes to it) and
@@ -83,7 +85,7 @@ class TrafficSettings(BaseSettings):
     github_traffic_repos: str = "glyphh-ai/glyphh"
 
 
-class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings):
+class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings, BotSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"

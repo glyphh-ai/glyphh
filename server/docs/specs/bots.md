@@ -178,3 +178,51 @@ person's own. Bots count against the plan's models (each bot's memory is three, 
 - Whether a bot's memory should be its own (above) or a slice of the person's glyphh.
 - Whether agent steps in one run share one agent session (context carries from step to step) or each start fresh
   (above: cleaner, each step only what the program gives it).
+
+## 9. Hosted bots and connections (built)
+
+The platform's bots, separate from the packaged bots above: an org's bots run on Glyphh's server, with the org's
+connections to other services, and are billed by their tokens. They are first-class on the platform (Bots and
+Connections pages) and in the connector; for now anyone in the org may make, change and run them.
+
+**Connections** are Pipedream Connect accounts. The org is one external user of Glyphh's Pipedream project,
+`org_<org id>`; someone in the org signs in to a service on Pipedream's own page (a Connect link), and a sync then reads
+the org's accounts back as its connections (the new ones added, the gone ones removed). Glyphh keeps no sign-in, only
+Pipedream's account id, the app and the account's name. A connection's tools are its app's Pipedream actions.
+
+**A bot** is a name (its slug, the org's own), a summary, a look (its cat: `head`, `tail`, `eye`, `extra`,
+`accessory`, `pose`, the glyphh-bot mascots' parts), instructions, the Claude model it runs on (one of those `GET /v1/bots/models`
+lists, its default when none is given), the Ada models it may ask and teach, and **per connection, the tools it may use** (its
+scope). Limits: 20 turns and $2.00 of tokens a run by default.
+
+**A run** is a background task in the server's own process, at most `GLYPHH_BOT_RUNS_AT_ONCE` (4) a machine, the rest
+queued. Claude is called turn by turn (the Messages API, the server-side refusal fallback on, effort high), offered only
+the bot's scoped actions (each named by its key; its input the action's props but the app's, which the server fills with
+the connection's account) and, with Ada models, `ada_decide` and `ada_record` over them, asked as the person who started
+the run. Each turn is let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
+accounted after at Anthropic's rates; a run stops at its turns or its dollars, on a refusal, or when one turn runs out of
+room. A tool's failure is answered to Claude as an error. Every step (Claude's words, a tool, an Ada call) is written to
+the run as it is taken. A run records its machine; when that machine starts again, its runs left queued or running are
+failed (`interrupted by a restart`).
+
+| Call | What |
+|---|---|
+| `GET /v1/connections` | `{connections: [{id, app, app_name, app_icon, account_id, label, created_at}]}` |
+| `GET /v1/connections/apps?q=&cursor=` | `{apps: [{slug, name, description, icon}], next_cursor}` |
+| `POST /v1/connections/link` | `{app}` → `{url, expires_at}` |
+| `POST /v1/connections/sync` | `{connections}` |
+| `DELETE /v1/connections/{id}` | 204; its Pipedream account deleted too |
+| `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description}]}` |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, models, connections: [{connection_id, app, app_name, tools}], limits: {max_turns, usd_per_run}, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
+| `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot |
+| `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, default}]}` |
+| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, steps: [{kind, name, input, output, is_error, at}], input_tokens, output_tokens, cost_micros, created_at, started_at, finished_at}` |
+
+Without Pipedream set up (`GLYPHH_PIPEDREAM_CLIENT_ID`, `_CLIENT_SECRET`, `_PROJECT_ID`) every connections route
+answers 503 `E_UNAVAILABLE` `pipedream_off`; without `GLYPHH_ANTHROPIC_API_KEY`, starting a run answers 503
+`anthropic_off`. The connector's tools: `bots`, `bot`, `bot_create`, `bot_update`, `bot_delete`,
+`bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`, `connections`, `connection_apps`,
+`connection_link`, `connection_tools`.
+
+Not yet: who in the org may use a connection or a bot, schedules and triggers, prompt caching of a run's turns.

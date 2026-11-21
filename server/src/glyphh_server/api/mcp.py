@@ -85,7 +85,7 @@ async def mcp(request: Request) -> Response:
             return rpc_refusal(err)
         if call.id is None:
             return Response(status_code=202)
-        ctx = Context(conn, who, state.settings, state.http, state.hub, state.signing_key, state.ada)
+        ctx = Context(conn, who, state.settings, state.http, state.hub, state.signing_key, state.ada, state.bots)
         if not registry.detached(ctx, call.method, call.params):
             return await respond(ctx, call)
     return await respond(ctx, call)
