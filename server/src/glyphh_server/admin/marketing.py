@@ -1,6 +1,5 @@
-"""Sign-ups and paid conversions by where they came from (the campaign tags kept at sign-up, while there were
-sign-ups): orgs made in the last `days` days, grouped by their sign-up's utm_source (else the ad click id it
-carried: google, meta, reddit), utm_medium and
+"""Sign-ups and paid conversions by where they came from (ops/attribution.py): orgs made in the last `days` days,
+grouped by their sign-up's utm_source (else the ad click id it carried: google, meta, reddit), utm_medium and
 utm_campaign; untagged ones as `(none)`. People are counted by their own tags (an invited person joins another org)."""
 
 from datetime import timedelta

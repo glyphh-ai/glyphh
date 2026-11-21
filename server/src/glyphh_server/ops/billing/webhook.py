@@ -1,12 +1,14 @@
-"""Stripe's events, keeping orgs true while the old subscriptions end: a paid invoice, and every change to a
-subscription (a cancellation above all); a top-up of the prepaid balance paid late credits it
-(ops/billing/topup.py). The subscription is read fresh from Stripe, so events arriving late or out of order can't
-leave an org behind (ops/billing/sync.py)."""
+"""Stripe's events, keeping orgs true: a finished checkout, a paid invoice, and every change to a subscription; a paid
+top-up of the hosted models' overage balance credits it (ops/billing/topup.py). The
+subscription is read fresh from Stripe, so events arriving late or out of order can't leave an org behind. A payment
+(the checkout, each paid invoice) issues the org a licence key to the paid period's end; a subscription ended revokes
+them (ops/billing/sync.py)."""
 
 import logging
 import uuid
 from typing import Any
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -14,13 +16,16 @@ from glyphh_server.models import Org
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops.billing import topup
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.billing.sync import sync_subscription
+from glyphh_server.ops.billing.sync import issue_paid, sync_subscription
 
 log = logging.getLogger("glyphh.billing")
 
 SUBSCRIPTION_EVENTS: frozenset[str] = frozenset(
     {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}
 )
+
+
+PAID: frozenset[str] = frozenset({"checkout.session.completed", "invoice.payment_succeeded"})
 
 
 def _target(kind: str, obj: dict[str, Any]) -> tuple[str | None, str | None, str | None] | None:
@@ -37,9 +42,14 @@ def _target(kind: str, obj: dict[str, Any]) -> tuple[str | None, str | None, str
     return None
 
 
-async def handle_event(conn: AsyncConnection, stripe: StripeClient, event: dict[str, Any]) -> None:
+async def handle_event(
+    conn: AsyncConnection,
+    stripe: StripeClient,
+    event: dict[str, Any],
+    signing_key: Ed25519PrivateKey,
+) -> None:
     kind, obj = event.get("type", ""), event.get("data", {}).get("object", {})
-    if kind in topup.PAID_EVENTS and obj.get("mode") == "payment":  # the prepaid balance's top-up
+    if kind in topup.PAID_EVENTS and obj.get("mode") == "payment":  # the overage balance's top-up
         await topup.credited(conn, await _org(conn, obj.get("client_reference_id"), obj.get("customer")), obj)
         return
     target = _target(kind, obj)
@@ -51,7 +61,10 @@ async def handle_event(conn: AsyncConnection, stripe: StripeClient, event: dict[
     if org_id is None or not sub_id:
         log.warning("stripe event for no org", extra=fields(type=kind, customer=customer))
         return
-    await sync_subscription(conn, org_id, await stripe.subscription(sub_id))
+    sub = await stripe.subscription(sub_id)
+    await sync_subscription(conn, org_id, sub)
+    if kind in PAID:
+        await issue_paid(conn, signing_key, org_id, sub)
 
 
 async def _org(conn: AsyncConnection, given: str | None, customer: str | None) -> uuid.UUID | None:

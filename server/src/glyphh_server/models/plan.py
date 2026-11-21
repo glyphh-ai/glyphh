@@ -25,11 +25,16 @@ class PlanVersion(Base):
     """A plan's price, limits and features at one moment. Never changed: a new price is a new version with its own
     Stripe price. A null limit is unlimited. price_cents is a month's or a year's (billing_interval, null when free),
     null when set per customer; self_serve plans are bought through Stripe Checkout, the others by contract.
+    max_machines is the org's runtime nodes, its people's together (the licence key's max_nodes); precedents what one
+    node may hold across its Ada models (the key's max_precedents). The features are signed into the licence, sync
+    as the key's cluster_sync_enabled.
 
-    Nothing is sold or enforced any more (the products were retired on 2026-11-18): a version is the record of what
-    an org paid for, and its Stripe price is how the webhook knows a subscription's plan. The limits and features
-    (max_machines, precedents, sync, ha, offline, sso, the cloud_* limits, llm_tokens) are kept as they were sold
-    and read only by the staff view."""
+    Ada Cloud's limits (docs/specs/ada-cloud.md, section 7), the org's whatever its people, models or keys:
+    cloud_precedents across its models, cloud_requests (reads) a calendar month, cloud_rps calls a second; past
+    cloud_requests, cloud_overage meters the rest (Basic, Pro, Team) or the reads are refused until the month turns
+    (Free). llm_tokens: the Glyphh-hosted models' tokens a calendar month (docs/specs/tokens.md), past which they
+    are charged to the org's overage balance; null, by contract.
+    A version that changes only these takes over the Stripe price and the orgs of the one before it (db/seed.py)."""
 
     __tablename__ = "plan_versions"
     __table_args__ = (

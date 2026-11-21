@@ -3,23 +3,38 @@ COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv UV_NO_CACHE=1 PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
-# Every dependency is public (PyPI): no build secret, no deploy key.
+# Ada Cloud's kernel is ada-private at the commit uv.lock pins, read over SSH with a read-only deploy key given as the
+# build secret ada_deploy_key (CI: the ADA_DEPLOY_KEY secret; Fly: flyctl deploy --build-secret). The key is never in
+# a layer, and the image is pushed only to private registries (Fly's, and ghcr.io/glyphh-ai/server, private).
 FROM base AS deps
+RUN apt-get update && apt-get install -y --no-install-recommends git openssh-client && rm -rf /var/lib/apt/lists/*
+RUN git config --global url."ssh://git@github.com/glyphh-ai/ada-private".insteadOf "https://github.com/glyphh-ai/ada-private"
+# ssh refuses a key file without its final newline ("error in libcrypto"), and flyctl's --build-secret NAME=VALUE drops
+# it: this wrapper copies the key to a private temporary file with the newline put back, for each ssh call only.
+RUN printf '%s\n' '#!/bin/sh' \
+      'key=$(mktemp) && { cat /run/secrets/ada_deploy_key; echo; } > "$key" && chmod 600 "$key"' \
+      'ssh -i "$key" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts "$@"; status=$?' \
+      'rm -f "$key"; exit $status' > /usr/local/bin/ssh-ada && chmod 755 /usr/local/bin/ssh-ada
+ENV GIT_SSH_COMMAND="/usr/local/bin/ssh-ada"
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev
+RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-install-project --no-dev
+# Ada versions (docs/specs/ada-cloud.md, 12.4): the latest stable's kernel is the venv's (uv.lock); every other kernel
+# the list names goes into /opt/ada/<kernel>, at its commit, where its own worker processes import it from.
+COPY src/glyphh_ada/ada_versions.json scripts/ada-kernels.py /tmp/ada/
+RUN --mount=type=secret,id=ada_deploy_key,required=true \
+    /opt/venv/bin/python /tmp/ada/ada-kernels.py /tmp/ada/ada_versions.json /opt/ada
 
 FROM deps AS test
-RUN uv sync --frozen --no-install-project
+RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-install-project
 COPY src ./src
 COPY tests ./tests
-RUN uv sync --frozen
+COPY scripts ./scripts
+RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen
 CMD ["pytest"]
 
-# The image holds all of src/glyphh_server: the server, the schema step (db/schema.sql beside it) and the wind-down
-# command, `python -m glyphh_server.winddown`, which is only ever run by hand (scripts/wind-down/README.md).
 FROM deps AS runtime
 COPY src ./src
-RUN uv sync --frozen --no-dev
+RUN --mount=type=secret,id=ada_deploy_key,required=true uv sync --frozen --no-dev
 ARG GLYPHH_VERSION=dev
 ENV GLYPHH_VERSION=$GLYPHH_VERSION
 RUN useradd --uid 1000 --create-home glyphh

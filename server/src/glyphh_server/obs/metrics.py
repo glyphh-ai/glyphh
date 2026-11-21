@@ -1,9 +1,9 @@
-"""The server's own request metrics, for its staff (admin/infra.py): every request's time in a histogram, and every
-request counted by route and status class (2xx, 4xx, 5xx). Counted in the process as each request ends (a few dict
-additions, no I/O), and added to Redis every FLUSH_EVERY seconds in one pipeline: per minute, kept 7 days, and per
-hour, kept 8.
+"""The server's own request metrics, for its staff (admin/infra.py): every request's time in a histogram, Ada reads
+(decide, query, probabilities, facts, beam) apart from the rest of the API, and every request counted by route and
+status class (2xx, 4xx, 5xx). Counted in the process as each request ends (a few dict additions, no I/O), and added to
+Redis every FLUSH_EVERY seconds in one pipeline: per minute, kept 7 days, and per hour, kept 8.
 
-Keys: `ops:lat:api:m:<YYYYMMDDHHMM>` and `…:h:<YYYYMMDDHH>`, a hash of bucket index → count with `n` (requests)
+Keys: `ops:lat:<read|api>:m:<YYYYMMDDHHMM>` and `…:h:<YYYYMMDDHH>`, a hash of bucket index → count with `n` (requests)
 and `ms` (their total time); `ops:http:m:<minute>` and `ops:http:h:<hour>`, a hash of `<METHOD> <route>|<class>` →
 count.
 A bucket i holds times up to BOUNDS_MS[i]; the last, those past BOUNDS_MS[-1]."""
@@ -21,7 +21,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 log = logging.getLogger("glyphh.metrics")
 
 BOUNDS_MS: tuple[int, ...] = (5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000)
-KIND: str = "api"  # the one kind of request left: Ada's reads were counted apart, as `read`
+READS: tuple[str, ...] = ("/query", "/probabilities", "/facts", "/decide", "/beam")
 MINUTE_TTL: int = 7 * 86_400 + 3_600
 HOUR_TTL: int = 8 * 86_400
 FLUSH_EVERY: float = 5.0
@@ -29,6 +29,10 @@ FLUSH_EVERY: float = 5.0
 
 def minute_of(at: float) -> str:
     return time.strftime("%Y%m%d%H%M", time.gmtime(at))
+
+
+def kind_of(method: str, route: str) -> str:
+    return "read" if method == "POST" and route.endswith(READS) else "api"
 
 
 class Recorder:
@@ -40,7 +44,7 @@ class Recorder:
 
     def observe(self, method: str, route: str, status: int, ms: float, at: float | None = None) -> None:
         minute = minute_of(time.time() if at is None else at)
-        counts = self.latency[(KIND, minute)]
+        counts = self.latency[(kind_of(method, route), minute)]
         counts[str(bisect_left(BOUNDS_MS, ms))] += 1
         counts["n"] += 1
         counts["ms"] += round(ms)
@@ -85,7 +89,7 @@ async def stop(task: asyncio.Task[None], recorder: Recorder, redis: Redis) -> No
 
 
 class MetricsMiddleware:
-    """Each HTTP request's route (its template, `/v1/admin/orgs/{org_id}`; `unmatched` when none), status and time."""
+    """Each HTTP request's route (its template, `/v1/models/{name}/decide`; `unmatched` when none), status and time."""
 
     def __init__(self, app: ASGIApp, recorder: Recorder) -> None:
         self.app, self.recorder = app, recorder

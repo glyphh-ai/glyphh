@@ -1,27 +1,32 @@
 """The staff view's traffic, read from what the hourly pull kept: each zone's and hostname's days, its tops (the
 account's own sites left out of referrers), what its plan allowed, and the last 7 and 30 days against the period
-before, with the sign-ups in them. Not connected without a Cloudflare token. The public repositories' traffic from
-GitHub went with the products: its key is answered not connected, with no repositories."""
+before, with the sign-ups in them. Not connected without a Cloudflare token. And the public repositories' views and
+clones from GitHub, the last 14 days and since tracking began."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import Date, cast, delete, func, select
+from sqlalchemy import Date, cast, delete, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.admin import traffic as admin_traffic
+from glyphh_server.admin.github_traffic import HISTORY
 from glyphh_server.admin.traffic import Point, traffic
-from glyphh_server.app import create_app
-from glyphh_server.models import TrafficDay, TrafficTop, TrafficZone, User
+from glyphh_server.models import (
+    GitHubTrafficDay,
+    GitHubTrafficRepo,
+    GitHubTrafficTop,
+    TrafficDay,
+    TrafficTop,
+    TrafficZone,
+    User,
+)
 from glyphh_server.ops.traffic import store
 from tests.admin.conftest import Admin
-from tests.conftest import PROVIDER_SETTINGS, _client
-from tests.fakes import fake_http
 
 TODAY: date = datetime.now(UTC).date()
 AT: datetime = datetime(2026, 10, 23, 12, tzinfo=UTC)
-NO_GITHUB: dict[str, object] = {"connected": False, "repos": []}
 
 
 @pytest.fixture
@@ -48,10 +53,6 @@ async def kept(engine: AsyncEngine) -> AsyncIterator[None]:
             ("glyphh.ai", TODAY, "page", "/"): 3,
             ("docs.glyphh.ai", TODAY, "page", "/guide"): 2,
             ("glyphh.ai", TODAY - timedelta(days=40), "page", "/old"): 3,
-            ("glyphh.ai", TODAY, "rum_page", "/pricing"): 4,
-            ("glyphh.ai", TODAY - timedelta(days=1), "rum_page", "/pricing"): 2,
-            ("glyphh.ai", TODAY, "rum_referrer", "news.ycombinator.com"): 6,
-            ("glyphh.ai", TODAY, "rum_referrer", "glyphh.ai"): 60,
         }
         await store.tops(conn, "glyphh.ai", tops, keep_larger=False)
     yield
@@ -70,10 +71,8 @@ async def test_staff_see_each_zone_its_hosts_and_its_tops(admin: Admin, engine: 
     found = res.json()
     assert found["connected"] is False  # no token in the suite's settings
     assert found["pulled_at"].startswith("2026-10-23T12:00") and found["since"] == str(TODAY - timedelta(days=6))
-    assert found["days"] == 7
     ai, app = found["zones"]
     assert (ai["name"], app["name"], app["plan"], app["series"][-1]["uniques"]) == ("glyphh.ai", "glyphh.app", None, 0)
-    assert (ai["plan"], app["hosts"], app["available"], app["pages"]) == ("Free Website", [], {}, [])
     assert ai["available"]["pages"]["note"] == "Not on" and len(ai["series"]) == 7
     assert ai["series"][-1] == {
         "day": str(TODAY),
@@ -95,9 +94,7 @@ async def test_staff_see_each_zone_its_hosts_and_its_tops(admin: Admin, engine: 
     assert ai["countries"] == [{"host": "", "key": "GB", "n": 5}]
     assert ai["referrers"] == [{"host": "glyphh.ai", "key": "www.google.com", "n": 7}]  # our own sites left out
     pages = [{"host": "glyphh.ai", "key": "/", "n": 3}, {"host": "docs.glyphh.ai", "key": "/guide", "n": 2}]
-    assert ai["pages"] == pages  # the one 40 days back is before the days asked
-    assert ai["rum_pages"] == [{"host": "glyphh.ai", "key": "/pricing", "n": 6}]  # its days added up
-    assert ai["rum_referrers"] == [{"host": "glyphh.ai", "key": "news.ycombinator.com", "n": 6}]
+    assert ai["pages"] == pages and ai["rum_pages"] == []
 
 
 async def test_the_summary_sets_visitors_against_the_period_before_and_sign_ups(
@@ -105,41 +102,63 @@ async def test_the_summary_sets_visitors_against_the_period_before_and_sign_ups(
 ) -> None:
     monkeypatch.setattr(admin_traffic, "TOPS", 1)
     found = (await admin.get("/traffic")).json()
-    assert found["days"] == 30 and len(found["zones"][0]["series"]) == 30
     assert [p["key"] for p in found["zones"][0]["pages"]] == ["/"]  # the most kept of each list
     week, month = found["last_7"], found["last_30"]
-    assert (week["days"], week["visitors"], week["previous_visitors"], week["page_views"]) == (7, 140, 70, 280)
-    assert week["previous_page_views"] == 140
+    assert (week["visitors"], week["previous_visitors"], week["page_views"]) == (140, 70, 280)
     assert week["visitors_change"] == 1.0 and week["page_views_change"] == 1.0
-    assert (month["days"], month["visitors"], month["previous_visitors"]) == (30, 140 + 23 * 10, 300)
-    assert month["visitors_change"] == round((370 - 300) / 300, 4)
+    assert (month["visitors"], month["previous_visitors"]) == (140 + 23 * 10, 300)
     assert week["sign_ups"] == await _signed_up(engine, 7)
     assert week["conversion"] == round(week["sign_ups"] / 140, 4)
 
 
-async def test_github_traffic_went_with_the_products(admin: Admin, kept: None) -> None:
-    assert (await admin.get("/traffic", days=7)).json()["github"] == NO_GITHUB
+GITHUB_TABLES = (GitHubTrafficRepo, GitHubTrafficDay, GitHubTrafficTop)
+
+
+async def test_staff_see_the_repositorys_views_and_clones_last_14_days_and_since_tracking_began(
+    admin: Admin, engine: AsyncEngine
+) -> None:
+    repo = "glyphh-ai/glyphh"
+    counts = {"views": 30, "view_uniques": 9, "clones": 6, "clone_uniques": 4}
+    async with engine.begin() as conn:
+        for table in GITHUB_TABLES:
+            await conn.execute(delete(table))
+        await conn.execute(insert(GitHubTrafficRepo).values(repo=repo, pulled_at=AT, **counts))
+        days = [TODAY - timedelta(days=400), TODAY - timedelta(days=1), TODAY]
+        await conn.execute(insert(GitHubTrafficDay).values([{"repo": repo, "day": d, **counts} for d in days]))
+        tops = [
+            (TODAY - timedelta(days=1), "referrer", "old.example", 99),
+            (TODAY, "referrer", "github.com", 5),
+            (TODAY, "referrer", "Google", 8),
+            (TODAY, "path", "/glyphh-ai/glyphh", 20),
+        ]
+        rows = [
+            {"repo": repo, "pulled_on": on, "kind": k, "key": key, "count": n, "uniques": 1} for on, k, key, n in tops
+        ]
+        await conn.execute(insert(GitHubTrafficTop).values(rows))
+    found = (await admin.get("/traffic", days=7)).json()["github"]
+    assert found["connected"] is False  # no token in the suite's settings
+    (r,) = found["repos"]
+    assert r["name"] == repo and r["pulled_at"].startswith("2026-10-23T12:00")
+    assert r["last_14"] == counts and r["since"] == str(TODAY - timedelta(days=400))
+    assert r["total"] == {k: 3 * n for k, n in counts.items()}
+    assert len(r["series"]) == HISTORY and r["series"][0] == {
+        "day": str(TODAY - timedelta(days=HISTORY - 1)),
+        **dict.fromkeys(counts, 0),
+    }
+    assert r["series"][-1] == {"day": str(TODAY), **counts}
+    assert [t["key"] for t in r["referrers"]] == ["Google", "github.com"]  # the latest pull's, the most first
+    assert r["paths"] == [{"key": "/glyphh-ai/glyphh", "count": 20, "uniques": 1}]
 
 
 async def test_with_nothing_pulled_there_is_nothing_to_compare(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
-        for table in (TrafficZone, TrafficDay, TrafficTop):
+        for table in (TrafficZone, TrafficDay, TrafficTop, *GITHUB_TABLES):
             await conn.execute(delete(table))
-        found = await traffic(conn, True, 30, TODAY)
-    assert found.github.model_dump() == NO_GITHUB
+        found = await traffic(conn, True, 30, TODAY, github_connected=True)
+    assert found.github.connected and found.github.repos == []
     assert found.connected and found.pulled_at is None and found.zones == []
     assert found.last_7.visitors == 0 and found.last_7.visitors_change is None and found.last_7.conversion is None
     assert Point(day=TODAY).cached_share is None
-
-
-async def test_with_a_cloudflare_token_the_page_says_connected(admin: Admin, engine: AsyncEngine) -> None:
-    settings = PROVIDER_SETTINGS.model_copy(
-        update={"staff_emails": admin.staff.email, "cloudflare_api_token": "cf-test-token"}
-    )
-    async for http in _client(create_app(settings, http=fake_http())):
-        found = await http.get("/v1/admin/traffic", headers=admin.headers)
-        assert found.status_code == 200 and found.json()["connected"] is True
-        assert found.json()["github"] == NO_GITHUB  # whatever is connected
 
 
 async def test_the_days_asked_are_bounded(admin: Admin) -> None:

@@ -8,7 +8,6 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncEngine
-from starlette.exceptions import HTTPException
 
 from glyphh_server.app import create_app
 from glyphh_server.errors import Conflict, Unavailable
@@ -43,7 +42,6 @@ def _probe_app() -> FastAPI:
         ("/probe/crash", crash),
         ("/probe/count", count),
         ("/probe/stream", crash_midway),
-        ("/auth/probe/crash", crash),
     ):
         app.add_api_route(path, fn, methods=["GET"])
     return app
@@ -97,19 +95,28 @@ async def test_invalid_input_lists_its_problems(probe: httpx.AsyncClient) -> Non
     assert err["code"] == "E_INVALID" and err["problems"][0]["loc"] == ["query", "n"]
 
 
-async def test_an_http_refusal_answers_in_the_same_shape_and_an_unmapped_status_has_a_generic_code(
-    probe: httpx.AsyncClient,
-) -> None:
+async def test_an_unknown_path_and_a_wrong_method_answer_in_the_same_shape(probe: httpx.AsyncClient) -> None:
+    missing = await probe.get("/nowhere")
+    assert missing.status_code == 404 and missing.json()["error"]["code"] == "E_NOT_FOUND"
+    wrong = await probe.delete("/v1/health")
+    assert wrong.status_code == 405 and wrong.json()["error"]["code"] == "E_METHOD_NOT_ALLOWED"
+
+
+async def test_an_unmapped_http_status_has_a_generic_code(probe: httpx.AsyncClient) -> None:
+    from starlette.exceptions import HTTPException
+
     app = probe._transport.app  # type: ignore[attr-defined]
 
-    async def refuse(status: int) -> None:
-        raise HTTPException(status_code=status, detail="No.", headers={"x-why": "probe"})
+    async def teapot() -> None:
+        raise HTTPException(status_code=418, detail="I'm a teapot")
 
-    app.add_api_route("/probe/http/{status}", refuse, methods=["GET"])
-    for status, code in ((400, "E_INVALID"), (403, "E_FORBIDDEN"), (404, "E_NOT_FOUND"), (418, "E_HTTP")):
-        res = await probe.get(f"/probe/http/{status}")
-        assert res.status_code == status and res.headers["x-why"] == "probe"
-        assert res.json()["error"] == {"code": code, "message": "No.", "trace_id": res.headers["x-request-id"]}
+    app.add_api_route("/probe/teapot", teapot, methods=["GET"])
+    res = await probe.get("/probe/teapot")
+    assert res.status_code == 418 and res.json()["error"] == {
+        "code": "E_HTTP",
+        "message": "I'm a teapot",
+        "trace_id": res.headers["x-request-id"],
+    }
 
 
 async def test_every_request_is_logged_once_with_its_status_and_time(
@@ -124,24 +131,13 @@ async def test_every_request_is_logged_once_with_its_status_and_time(
 
 
 async def test_a_refusal_in_a_browser_flow_goes_to_the_platforms_error_page(probe: httpx.AsyncClient) -> None:
-    for path, code, said in (
-        ("/auth/google/start", "E_NOT_FOUND", "doesn't sign in with that provider"),  # none is configured here
-        ("/auth/google/callback", "E_INVALID", "not valid"),  # no state: the request itself is refused
-        ("/auth/probe/crash", "E_INTERNAL", "Quote the trace id"),
-    ):
-        res = await probe.get(path)
-        assert res.status_code == 302 and res.headers["location"].startswith("http://localhost:3000/error?"), path
-        query = {k: v[0] for k, v in parse_qs(urlsplit(res.headers["location"]).query).items()}
-        assert query["code"] == code and said in query["message"], path
-        assert query["trace"] == res.headers["x-request-id"] and "secret internals" not in res.headers["location"]
-
-
-async def test_the_steps_the_platform_reads_are_refused_in_json(probe: httpx.AsyncClient) -> None:
-    bad = await probe.get("/auth/consent")
+    res = await probe.get("/v1/device", params={"code": "NOPE-NOPE"})
+    assert res.status_code == 302 and res.headers["location"].startswith("http://localhost:3000/error?")
+    query = {k: v[0] for k, v in parse_qs(urlsplit(res.headers["location"]).query).items()}
+    assert query["code"] == "E_INVALID" and "expired" in query["message"]
+    assert query["trace"] == res.headers["x-request-id"]
+    bad = await probe.post("/v1/device/token", json={})
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "E_INVALID"
-    assert bad.json()["error"]["problems"][0]["loc"] == ["query", "consent"]
-    unsigned = await probe.get("/auth/consent", params={"consent": "x"})
-    assert unsigned.status_code == 422 and unsigned.json()["error"]["reason"] == "invalid"
 
 
 async def test_a_bad_trace_id_from_a_caller_is_replaced(probe: httpx.AsyncClient) -> None:

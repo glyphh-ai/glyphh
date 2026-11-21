@@ -39,13 +39,13 @@ class Org(Base):
     billing_status: Mapped[str] = mapped_column(Text, server_default="none")
     # When the subscription renews, from Stripe; empty when not subscribed or ending at the period's end.
     renews_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # An Enterprise deal's last day, as it was granted; cleared when its subscription ends (ops/billing/sync.py).
+    # An Enterprise grant's end: past it, the org is back on Free (ops/enterprise.py).
     plan_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()
     # Suspended by Glyphh's staff (admin/actions.py): its people and keys are refused until it is lifted.
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     suspended_reason: Mapped[str | None] = mapped_column(Text)
-    # Where its sign-up came from: the website's campaign tags; null when untagged.
+    # Where its sign-up came from: the website's campaign tags (ops/attribution.py); null when untagged.
     source: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # When it first paid (a subscription first active): a paid conversion, for the staff view.
     first_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

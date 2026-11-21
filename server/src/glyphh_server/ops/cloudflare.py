@@ -1,4 +1,4 @@
-"""Cloudflare's API, read only, for Glyphh's own sites' traffic (ops/traffic/): the zones the token sees and the
+"""Cloudflare's API, read only, for Glyphh's own sites' traffic (ops/traffic.py): the zones the token sees and the
 GraphQL Analytics API. Every failure is a CloudflareError of a kind (unreachable, auth, rate, refused, query) whose
 message is Cloudflare's own words, never the token."""
 

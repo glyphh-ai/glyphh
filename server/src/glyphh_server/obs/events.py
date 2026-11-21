@@ -1,6 +1,6 @@
 """The server's own errors and warnings, kept for its staff as ops events (ops_events, admin view): every warning or
-worse a `glyphh.*` logger writes, in the API (a crash, a 5xx, a Stripe webhook that failed) and the minute tick's (a
-part that failed). A logging handler puts each on a
+worse a `glyphh.*` logger writes, in the API (a crash, a 5xx, a Stripe webhook that failed) and in the Ada workers (a
+worker's failure or death, a job's), and the minute tick's (a part that failed). A logging handler puts each on a
 Redis list as it is logged, a few hundred bytes, only on a warning or worse, never on the request's way; the tick
 moves the list to Postgres (obs/events_store.py). A Redis that is down loses the event, never the request: the
 handler swallows its own failures and never logs them."""
@@ -19,11 +19,18 @@ QUEUE: str = "ops:events:in"
 KEPT: int = 10_000  # the list is cut to this many: a flood of one error can't fill Redis
 HANDLER_NAME: str = "glyphh-ops"
 TIMEOUT: float = 0.25
-# Warnings that are no fault: the schema step's own notes.
-QUIET: frozenset[str] = frozenset({"migrated: %s", "database kept: GLYPHH_RESET_DATABASE is not set"})
+# Warnings that are no fault: a worker group idling while Ada Cloud is off, the schema step's own notes.
+QUIET: frozenset[str] = frozenset(
+    {
+        "Ada Cloud is off (GLYPHH_ADA_CLOUD): this worker group does nothing",
+        "migrated: %s",
+        "database kept: GLYPHH_RESET_DATABASE is not set",
+    }
+)
 KINDS: dict[str, str] = {
     "glyphh.request": "crash",
     "glyphh.api": "http",
+    "glyphh.ada": "worker",
     "glyphh.billing": "stripe",
     "glyphh.staff": "staff",
 }
@@ -34,9 +41,13 @@ def severity(level: int) -> str:
 
 
 def kind_of(record: logging.LogRecord, about: dict[str, Any]) -> str:
-    """What an event is about: Stripe, a crash, an HTTP refusal; else its logger's name (`tick`, `traffic`)."""
+    """What an event is about: a job, Stripe, the tick, a worker, a crash, an HTTP refusal; else its logger's name."""
+    if record.name == "glyphh.ada" and str(record.msg).startswith("job"):
+        return "job"
     if str(about.get("path", "")).startswith("/v1/stripe"):
         return "stripe"
+    if record.name == "glyphh.runtime":
+        return "tick" if str(record.msg).startswith("tick") else "runtime"
     return KINDS.get(record.name, record.name.removeprefix("glyphh."))
 
 

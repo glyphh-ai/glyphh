@@ -3,7 +3,7 @@
 import ast
 from pathlib import Path
 
-SRC: Path = Path(__file__).resolve().parent.parent / "src"  # glyphh_server
+SRC: Path = Path(__file__).resolve().parent.parent / "src"  # glyphh_server and glyphh_ada
 MAX_FILE_LINES: int = 200
 MAX_FUNCTION_LINES: int = 40
 MAX_CLASS_LINES: int = 120
