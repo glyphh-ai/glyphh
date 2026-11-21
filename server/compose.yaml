@@ -1,8 +1,7 @@
 name: glyphh
 
 services:
-  # Postgres 17. Nothing needs pgvector any more (it was Ada Cloud's); its image is kept so a dev volume from before
-  # the clean-up, whose database still has the extension and Ada's schemas, opens as it is.
+  # Postgres 17 with pgvector, which Ada Cloud's precedents need (production: the Extensions page of the cluster).
   db:
     image: pgvector/pgvector:pg17
     environment:
@@ -17,7 +16,7 @@ services:
       timeout: 3s
       retries: 30
 
-  # The request metrics, the tick's heartbeat and ops events on their way to Postgres: nothing kept, so nothing saved.
+  # Live signals (pub/sub) and Ada Cloud's work in flight (streams): nothing kept lives here, so nothing is saved.
   redis:
     image: redis:8-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
@@ -28,9 +27,10 @@ services:
       retries: 30
 
   server:
-    build:
+    build: &runtime
       context: .
       target: runtime
+      secrets: [ada_deploy_key]
     env_file:
       - path: .env
         required: false
@@ -44,6 +44,33 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Ada Cloud's workers (`docker compose --profile ada up`), with GLYPHH_ADA_CLOUD=on in .env for the server too.
+  ada:
+    profiles: ["ada"]
+    build: *runtime
+    command: ["python", "-m", "glyphh_ada.worker", "--queue", "sync"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      GLYPHH_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - server
+
+  adajobs:
+    profiles: ["ada"]
+    build: *runtime
+    command: ["python", "-m", "glyphh_ada.worker", "--queue", "jobs"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh
+      GLYPHH_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - server
 
   # The platform (glyphh-ai/platform, checked out beside this repo): every page a person sees, on :5173.
   # Its settings, including its OAuth client at this server, are in ../platform/.env.docker.
@@ -63,6 +90,7 @@ services:
     build:
       context: .
       target: test
+      secrets: [ada_deploy_key]
     environment:
       GLYPHH_ENV: test
       GLYPHH_DATABASE_URL: postgresql+asyncpg://glyphh:glyphh@db:5432/glyphh_test
@@ -76,3 +104,9 @@ services:
 
 volumes:
   db:
+
+# The read-only deploy key of the private ada-private repo, which holds Ada's kernel (Dockerfile, deps stage). CI
+# writes it from the ADA_DEPLOY_KEY secret; on a laptop, point ADA_DEPLOY_KEY_FILE at a key that can read the repo.
+secrets:
+  ada_deploy_key:
+    file: ${ADA_DEPLOY_KEY_FILE:-${HOME}/.ssh/glyphh_ada_deploy_key}

@@ -1,0 +1,124 @@
+"""The hub: which server process holds which runtime's link.
+
+Each process keeps its own links in memory, one per runtime, each with the protocol its hello said. A message for a
+runtime held here goes straight down its link, said in that protocol; otherwise it is published on the runtime's
+Redis channel, `runtime:{id}`, in protocol 3's names, which the process holding that link listens on and says in
+the link's own protocol, and nobody hearing it means the runtime is not connected. A newer link of the same runtime
+takes over: here at once, elsewhere by a `takeover` on the channel, and the older link is closed (4409). A runtime
+whose token is gone (rotated, or the runtime deleted) is dropped the same way, by a `drop`, and closed 4401. Frames
+never cross processes: they stay with the process holding the link, best effort."""
+
+import json
+import logging
+import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+
+import anyio
+from redis.asyncio import Redis
+from redis.asyncio.client import PubSub
+from starlette.websockets import WebSocket, WebSocketDisconnect
+
+from glyphh_server.db.signals import publish
+from glyphh_server.obs.logs import fields
+from glyphh_server.ops.link.protocol import OUTBOUND, PROTOCOL, REFUSED, REPLACED, RESTART, Message
+
+log = logging.getLogger("glyphh.link")
+
+
+def channel(runtime_id: uuid.UUID) -> str:
+    return f"runtime:{runtime_id}"
+
+
+class Link:
+    """One rrotor's open WebSocket, speaking the protocol its hello said. Sends are taken one at a time; a send to a
+    link already gone answers False."""
+
+    def __init__(self, ws: WebSocket, runtime_id: uuid.UUID, protocol: int) -> None:
+        self.id, self.ws, self.runtime_id, self.protocol = uuid.uuid4(), ws, runtime_id, protocol
+        self.replaced = False
+        self._sending = anyio.Lock()
+
+    async def send(self, message: Message) -> bool:
+        frame = json.dumps(message.for_protocol(self.protocol), separators=(",", ":"))
+        async with self._sending:
+            try:
+                await self.ws.send_text(frame)
+            except (RuntimeError, WebSocketDisconnect):
+                return False
+        return True
+
+    async def close(self, code: int, reason: str) -> None:
+        with suppress(RuntimeError, WebSocketDisconnect):
+            await self.ws.close(code, reason)
+
+    async def replace(self) -> None:
+        self.replaced = True
+        await self.close(REPLACED, "A newer link of this runtime took over.")
+
+
+class Hub:
+    def __init__(self, redis: Redis) -> None:
+        self.redis = redis
+        self.links: dict[uuid.UUID, Link] = {}
+
+    async def attach(self, link: Link) -> None:
+        """This process now holds the runtime's link; an older one, here or on another process, is closed. Said once
+        the link is listening on its channel, which hears its own takeover and passes over it."""
+        older = self.links.get(link.runtime_id)
+        self.links[link.runtime_id] = link
+        if older is not None:
+            await older.replace()
+        await publish(self.redis, channel(link.runtime_id), "takeover", {"link": str(link.id)})
+
+    def detach(self, link: Link) -> None:
+        if self.links.get(link.runtime_id) is link:
+            del self.links[link.runtime_id]
+
+    async def deliver(self, runtime_id: uuid.UUID, message: Message) -> bool:
+        """Down the runtime's link, wherever it is held, in its protocol. False: no process holds it."""
+        link = self.links.get(runtime_id)
+        if link is not None:
+            return await link.send(message)
+        return await publish(self.redis, channel(runtime_id), "send", message.for_protocol(PROTOCOL)) > 0
+
+    async def drop(self, runtime_id: uuid.UUID, reason: str) -> None:
+        """Close the runtime's link wherever it is held: its token no longer stands."""
+        link = self.links.get(runtime_id)
+        if link is not None:
+            await link.close(REFUSED, reason)
+            return
+        await publish(self.redis, channel(runtime_id), "drop", {"reason": reason})
+
+    @asynccontextmanager
+    async def listening(self, link: Link) -> AsyncIterator[PubSub]:
+        """Subscribed to the runtime's channel for the link's life; the Redis connection goes back after."""
+        pubsub = self.redis.pubsub()
+        try:
+            await pubsub.subscribe(channel(link.runtime_id))
+            yield pubsub
+        finally:
+            with anyio.CancelScope(shield=True):
+                await pubsub.aclose()
+
+    async def relay(self, link: Link, pubsub: PubSub) -> None:
+        """What other processes publish for this runtime goes down its link. Ends when another link takes over."""
+        while True:
+            heard = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
+            if heard is None:
+                continue
+            signal = json.loads(heard["data"])
+            if signal["event"] == "send":
+                await link.send(OUTBOUND.validate_python(signal["data"]))
+            elif signal["event"] == "drop":
+                await link.close(REFUSED, signal["data"]["reason"])
+                return
+            elif signal["data"]["link"] != str(link.id):
+                log.info("link taken over", extra=fields(runtime=str(link.runtime_id)))
+                await link.replace()
+                return
+
+    async def close_all(self) -> None:
+        """The server is stopping: every link here is closed so its rrotor reconnects to another process."""
+        for link in list(self.links.values()):
+            await link.close(RESTART, "The server is restarting. Reconnect.")

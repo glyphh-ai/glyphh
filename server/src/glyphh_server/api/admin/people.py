@@ -1,4 +1,4 @@
-"""People, plans, marketing (sign-ups by source) and the admin audit log, for staff."""
+"""People, plans, marketing (sign-ups by source), models by Ada version and the admin audit log, for staff."""
 
 import uuid
 from datetime import datetime
@@ -6,7 +6,8 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
-from glyphh_server.admin import audit
+from glyphh_server.admin import adascan, audit
+from glyphh_server.admin.ada_versions import AdaVersions, by_version
 from glyphh_server.admin.marketing import SourceRow, sources
 from glyphh_server.admin.plans import PlanRow, plans
 from glyphh_server.admin.users import PeoplePage, people
@@ -29,7 +30,7 @@ async def list_users(
 
 @router.get("/plans", operation_id="adminPlans")
 async def list_plans(staff: Staff) -> list[PlanRow]:
-    """Every plan's versions as they were sold: prices, Stripe ids, limits and the orgs on each."""
+    """Every plan's versions: prices, Stripe ids, limits, cloud caps and the orgs on each."""
     return await plans(staff.conn)
 
 
@@ -37,6 +38,12 @@ async def list_plans(staff: Staff) -> list[PlanRow]:
 async def marketing(staff: Staff, days: Annotated[int, Query(ge=1, le=3660)] = 90) -> list[SourceRow]:
     """Sign-ups and paid conversions by source, medium and campaign, of the last `days` days."""
     return await sources(staff.conn, days)
+
+
+@router.get("/ada-versions", operation_id="adminAdaVersions")
+async def ada_versions(staff: Staff) -> AdaVersions:
+    """Live models by the Ada version their active version runs."""
+    return by_version(await adascan.scan(staff.conn, staff.request.app.state.redis))
 
 
 @router.get("/audit", operation_id="adminAudit")

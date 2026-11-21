@@ -1,7 +1,10 @@
 site_name: Glyphh
 docs_dir: docs
 nav:
-  - The server: architecture.md
+  - Glyphh: architecture.md
+  - Pricing: pricing.md
+  - "Plan: Ada Cloud": specs/ada-cloud.md
+  - "Plan: hosted-model tokens": specs/tokens.md
 theme:
   name: material
   palette:
@@ -13,3 +16,8 @@ theme:
 markdown_extensions:
   - admonition
   - tables
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

@@ -15,10 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.models import TrafficDay, TrafficTop, TrafficZone
 from glyphh_server.ops import tend
 from glyphh_server.ops.cloudflare import Cloudflare, CloudflareError
+from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.traffic import pull, queries, store
 from glyphh_server.ops.traffic.queries import Limits
 from glyphh_server.ops.traffic.rum import NO_PAGE_LOADS
 from tests.cloudflare import FIELDS, TOKEN, FakeCloudflare, cloudflare_http, zone
+from tests.conftest import SETTINGS
 
 NOW: datetime = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
 TODAY: date = NOW.date()
@@ -198,7 +200,7 @@ async def test_the_pull_runs_once_an_hour_from_the_tick(engine: AsyncEngine, cle
     await redis.delete(pull.KEY)
     fake = FakeCloudflare()
     cf = Cloudflare(cloudflare_http(fake), TOKEN)
-    assert await tend.tend(engine, redis, cf)
+    assert await tend.tend(engine, Hub(redis), SETTINGS, 60, None, cf)
     asked = len(fake.queries)
     assert asked and sorted((await _kept(engine))[0]) == ["glyphh.ai", "glyphh.app"]
     assert not await pull.hourly(engine, redis, cf)

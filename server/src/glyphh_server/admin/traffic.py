@@ -2,7 +2,8 @@
 each zone's days (requests, page views, daily unique visitors, bytes, threats, the cached share), each hostname's days
 (requests and visits) where its plan gave them, its countries, pages and referrers (the account's own sites left out
 of referrers), and what its plan allowed; and the last 7 and 30 days' visitors and page views against the period
-before, with the sign-ups in them for a visitor-to-sign-up rate. Visitors are Cloudflare's daily uniques, added up."""
+before, with the sign-ups in them for a visitor-to-sign-up rate. Visitors are Cloudflare's daily uniques, added up.
+And Glyphh's public repositories' views and clones from GitHub (admin/github_traffic.py)."""
 
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -11,13 +12,8 @@ from pydantic import BaseModel
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_server.admin.github_traffic import GitHubTraffic, github_traffic
 from glyphh_server.models import TrafficDay, TrafficTop, TrafficZone, User
-
-
-class GitHubTraffic(BaseModel):
-    connected: bool = False
-    repos: list[Any] = []
-
 
 TOPS: int = 50
 METRICS: tuple[str, ...] = ("requests", "page_views", "uniques", "bytes", "threats")
@@ -92,8 +88,7 @@ class Traffic(BaseModel):
     last_7: Period
     last_30: Period
     zones: list[Zone]
-    # The public repositories' traffic from GitHub went with the products; the platform's page still reads the key.
-    github: GitHubTraffic = GitHubTraffic()
+    github: GitHubTraffic
 
 
 def _change(now: int, before: int) -> float | None:
@@ -180,7 +175,9 @@ def _zone(z: Any, every_day: list[date], series: Series, tops: dict[tuple[str, s
     )
 
 
-async def traffic(conn: AsyncConnection, connected: bool, days: int, today: date | None = None) -> Traffic:
+async def traffic(
+    conn: AsyncConnection, connected: bool, days: int, today: date | None = None, github_connected: bool = False
+) -> Traffic:
     today = today or datetime.now(UTC).date()
     since = today - timedelta(days=days - 1)
     every_day = [since + timedelta(days=i) for i in range(days)]
@@ -195,4 +192,5 @@ async def traffic(conn: AsyncConnection, connected: bool, days: int, today: date
         last_7=await period(conn, 7, today),
         last_30=await period(conn, 30, today),
         zones=[_zone(z, every_day, series, tops) for z in zones],
+        github=await github_traffic(conn, github_connected, today),
     )

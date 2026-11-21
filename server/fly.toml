@@ -1,10 +1,10 @@
 # The Glyphh server on Fly: the app glyphh-ai-server, at https://api.glyphh.ai.
 # Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own, every one a
 # GLYPHH_ setting (docs/architecture.md, Settings): GLYPHH_DATABASE_URL (`fly mpg attach`), GLYPHH_REDIS_URL,
-# GLYPHH_SECRET_KEY, GLYPHH_PLATFORM_CLIENT_ID and _SECRET, the sign-in providers' (GLYPHH_GOOGLE_*, GLYPHH_GITHUB_*),
-# GLYPHH_STRIPE_SECRET_KEY and GLYPHH_STRIPE_WEBHOOK_SECRET, GLYPHH_STAFF_EMAILS, GLYPHH_CLOUDFLARE_API_TOKEN.
-# Glyphh's products were retired on 2026-11-18: one process group is left. The secrets no setting reads any more
-# are listed in scripts/wind-down/README.md, to unset once this is deployed.
+# GLYPHH_SECRET_KEY, GLYPHH_LICENSE_SIGNING_KEY (the Ed25519 key that signs licences and licence keys; a secret
+# set as GLYPHH_LICENSE_KEY, its old name, is still read, but to rrotor that name is the customer's key string),
+# GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in providers, the Stripe prices and meter
+# (scripts/stripe-setup.py prints them) as they are added.
 app = "glyphh-ai-server"
 primary_region = "iad"
 
@@ -17,8 +17,15 @@ primary_region = "iad"
   GLYPHH_PUBLIC_URL = "https://api.glyphh.ai"
   GLYPHH_PLATFORM_URL = "https://platform.glyphh.ai"
 
+# Three process groups, one image (docs/specs/ada-cloud.md, 3.1). `app` serves HTTP and MCP as ever, at api.glyphh.ai
+# and, with GLYPHH_ADA_CLOUD on, at ada.glyphh.ai (a second certificate on this app). `ada` answers Ada's synchronous
+# calls (reads, records); `adajobs` its jobs (learn, calibrate): one single-threaded worker process per vCPU each,
+# scaled on their own (`fly scale count ada=2 adajobs=1`, `fly scale vm performance-2x --process-group ada`). With
+# GLYPHH_ADA_CLOUD off the two worker groups idle, touching neither Postgres nor Redis.
 [processes]
   app = "sh -c 'python -m glyphh_server.db.schema && exec uvicorn glyphh_server.main:app --host 0.0.0.0 --port 8080'"
+  ada = "python -m glyphh_ada.worker --queue sync"
+  adajobs = "python -m glyphh_ada.worker --queue jobs"
 
 [http_service]
   processes = ["app"]
@@ -39,3 +46,17 @@ primary_region = "iad"
   processes = ["app"]
   size = "shared-cpu-1x"
   memory = "1024mb"
+
+# Performance VMs, dedicated CPUs (2026-11-02): on shared CPUs, throttled under steady load, a burst of 50 decides
+# timed out at 10 s and a large learn's restatement crawled. Each group runs a worker per vCPU. A job worker holds up
+# to limits.JOB_SAMPLE precedents (about 1.3 GB) and its restatement beside them, so 4 GB per vCPU; a sync worker
+# keeps at most cache.LOADED_MAX precedents read whole (about 200 MB).
+[[vm]]
+  processes = ["ada"]
+  size = "performance-2x"
+  memory = "4096mb"
+
+[[vm]]
+  processes = ["adajobs"]
+  size = "performance-2x"
+  memory = "8192mb"

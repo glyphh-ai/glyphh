@@ -3,15 +3,14 @@ Stripe's webhook last left them (ops/billing/sync.py), and the reads past a mont
 MRR is every paying org's price a month (a year's price over twelve); an Enterprise deal's price is its contract's, not
 held here, so those orgs are counted apart."""
 
-from datetime import UTC, datetime
-
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_ada.requests import period
 from glyphh_server.models import AdaMeterEvent, Org, Plan, PlanVersion
+from glyphh_server.ops.plans import OVERAGE_CENTS_PER_10K
 
-OVERAGE_CENTS_PER_10K: int = 100  # what a metered plan's reads past its month cost: $1 per 10,000
 PAYING: tuple[str, ...] = ("active", "past_due")  # what MRR counts: trialing has not paid yet
 
 
@@ -57,8 +56,7 @@ async def money(conn: AsyncConnection) -> Money:
     )
     rows = list(await conn.execute(found))
     plans = [PlanMix(plan=r[0], orgs=r[1], paying=r[2], mrr_cents=int(r[3])) for r in rows]
-    month = datetime.now(UTC).strftime("%Y-%m")
-    over = select(func.coalesce(func.sum(AdaMeterEvent.requests), 0)).where(AdaMeterEvent.period == month)
+    over = select(func.coalesce(func.sum(AdaMeterEvent.requests), 0)).where(AdaMeterEvent.period == period())
     reads_over = int((await conn.execute(over)).scalar_one())
     return Money(
         mrr_cents=sum(p.mrr_cents for p in plans),

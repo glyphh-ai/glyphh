@@ -1,0 +1,167 @@
+"""Tuning a model (docs/specs/ada-cloud.md, section 5): every change of its spec or settings is a new version, kept
+with who made it and why; one is active, and any other can be made active again (a rollback). A backtest scores up
+to ten candidates on the model's own held-out precedents first, without touching the live version.
+
+A change answers {version, active, job}: active at once when the new version reads the stored cases as they are;
+else `job` re-encodes them into a store of the new version's own while the old one serves, and makes it active when
+done (GET /v1/jobs/{id})."""
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from glyphh_ada import limits
+from glyphh_ada.api.auth import AdaWho
+from glyphh_ada.api.body import bounded
+from glyphh_ada.api.call import call
+from glyphh_ada.api.jobs import start
+
+router = APIRouter(prefix="/v1/models/{name}", tags=["tuning"], dependencies=[Depends(bounded)])
+NOTE = Field(None, max_length=500, description="Why: kept with the version")
+BACKTEST = Field(None, description="The backtest job this change was chosen by: kept with the version")
+
+
+class NewSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    spec: dict[str, Any]
+    note: str | None = NOTE
+    backtest: str | None = BACKTEST
+
+
+class Changes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    changes: dict[str, Any] = Field(description="Settings to change: {lever: value}, each checked by the kernel")
+    note: str | None = NOTE
+    backtest: str | None = BACKTEST
+
+
+class Notes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str = Field(max_length=500, description="Why it was made: its release notes (empty: none)")
+
+
+class Candidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    settings: dict[str, Any] | None = Field(None, description="The active version's settings with these changed")
+    spec_version: int | None = Field(None, ge=1, description="Another version of the model")
+    spec: dict[str, Any] | None = Field(None, description="A whole spec")
+    ada: str | None = Field(None, max_length=40, description="Scored on this Ada version; alone, the active spec on it")
+    name: str | None = Field(None, max_length=80, description="What to call it in the answer")
+
+    @model_validator(mode="after")
+    def _one(self) -> "Candidate":
+        given = sum(x is not None for x in (self.settings, self.spec_version, self.spec))
+        if given > 1 or (given == 0 and self.ada is None):
+            raise ValueError(
+                "a candidate is one of settings, spec_version or spec, an Ada version, or one and the other"
+            )
+        return self
+
+
+class Holdout(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    newest: int | None = Field(None, ge=1, le=limits.JOB_SAMPLE, description="The newest so many graded precedents")
+    fraction: float | None = Field(None, gt=0, lt=1, description="Or a fraction of them, chosen by seed")
+    seed: int = 0
+
+
+class NewBacktest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    candidates: list[Candidate] = Field(default_factory=list, max_length=limits.CANDIDATES_MAX)
+    ada: str | None = Field(None, max_length=40, description='Shorthand for one more candidate, {"ada": ...}')
+    holdout: Holdout = Field(default_factory=lambda: Holdout(newest=200))
+    output: str | None = Field(None, description="A named output; left out, the default one")
+    clearance: float = Field(1.0, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def _ada(self) -> "NewBacktest":
+        if self.ada is not None:
+            self.candidates = [*self.candidates, Candidate(ada=self.ada)]
+        if len(self.candidates) > limits.CANDIDATES_MAX:
+            raise ValueError(f"a backtest scores at most {limits.CANDIDATES_MAX} candidates")
+        return self
+
+
+def _changed(body: BaseModel) -> dict[str, Any]:
+    return body.model_dump(exclude_none=True)
+
+
+@router.put("/spec", operation_id="putAdaSpec")
+async def put_spec(name: str, body: NewSpec, who: AdaWho, request: Request) -> dict[str, Any]:
+    """A new version from a whole spec: {version, active, job}."""
+    return dict(await call(request, who, name, "spec", _changed(body)))
+
+
+@router.get("/settings", operation_id="getAdaSettings")
+async def get_settings(name: str, who: AdaWho, request: Request) -> dict[str, Any]:
+    """Every lever as it stands on the active version: {version, settings}."""
+    return dict(await call(request, who, name, "versions", {"levers": True}))
+
+
+@router.patch("/settings", operation_id="patchAdaSettings")
+async def patch_settings(name: str, body: Changes, who: AdaWho, request: Request) -> dict[str, Any]:
+    """A new version with these settings changed: {version, active, job}."""
+    return dict(await call(request, who, name, "settings", _changed(body)))
+
+
+@router.get("/versions", operation_id="listAdaVersions")
+async def list_versions(name: str, who: AdaWho, request: Request) -> dict[str, Any]:
+    """Every version, oldest first: who made it, when and why, which is active, which made a store of its own; what
+    changed against the version before; the precedents when it was made; what it had learned; the newest backtest of
+    it; its store (active, kept until it may be dropped, being made, or dropped)."""
+    return {"versions": await call(request, who, name, "versions", {})}
+
+
+@router.get("/versions/{version}", operation_id="getAdaVersion")
+async def get_version(name: str, version: int, who: AdaWho, request: Request) -> dict[str, Any]:
+    """One version as the list answers it, with its whole spec and every lever its settings stand at."""
+    return dict(await call(request, who, name, "versions", {"version": version}))
+
+
+@router.get("/versions/{version}/diff", operation_id="diffAdaVersion")
+async def diff_version(
+    name: str,
+    version: int,
+    who: AdaWho,
+    request: Request,
+    against: int | None = Query(None, ge=1, description="The version to compare with; left out, the active one"),
+) -> dict[str, Any]:
+    """What making this version active would change: {version, against, changes: [{path, from, to, restates}]}."""
+    return dict(await call(request, who, name, "versions", {"version": version, "against": against}))
+
+
+@router.patch("/versions/{version}", operation_id="patchAdaVersion")
+async def patch_version(name: str, version: int, body: Notes, who: AdaWho, request: Request) -> dict[str, Any]:
+    """A version's note (why it was made, its release notes) written again: {version, note}."""
+    return dict(await call(request, who, name, "note", {"version": version, "note": body.note}))
+
+
+@router.post("/versions/{version}/activate", operation_id="activateAdaVersion")
+async def activate(name: str, version: int, who: AdaWho, request: Request) -> dict[str, Any]:
+    """Make another version active (a rollback): at once, or by a job that brings its store up to date first."""
+    return dict(await call(request, who, name, "activate", {"version": version}))
+
+
+@router.post("/backtest", operation_id="backtestAdaModel", status_code=202)
+async def backtest(name: str, body: NewBacktest, who: AdaWho, request: Request) -> dict[str, Any]:
+    """Score the active version and up to ten candidates on the model's own held-out precedents, as a job; a
+    candidate naming an Ada version (or `ada`, for one more) is learned and scored by that version's kernel."""
+    args = body.model_dump(exclude_none=True, exclude={"ada"})
+    args["candidates"] = [c.model_dump(exclude_none=True) for c in body.candidates]
+    return await start(request, who, name, "backtest", args)
+
+
+class Upgrade(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ada: str | None = Field(None, max_length=40, description="The Ada version to move to; left out, the latest stable")
+    note: str | None = NOTE
+    backtest: str | None = BACKTEST
+
+
+@router.post("/upgrade", operation_id="upgradeAdaModel", status_code=202)
+async def upgrade(name: str, body: Upgrade, who: AdaWho, request: Request) -> dict[str, Any]:
+    """The active spec as a new version on another Ada version (any supported one, an older one too): {version,
+    active: false, job, ada, from}. The job re-encodes the cases into a store of its own with that version's kernel,
+    learns and calibrates, then makes it active; roll back by activating the version before."""
+    return dict(await call(request, who, name, "upgrade", _changed(body)))

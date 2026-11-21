@@ -1,7 +1,7 @@
 [project]
 name = "glyphh-server"
 version = "0.1.0"
-description = "The Glyphh server after its products were retired: staff sign-in, the staff view, Stripe's webhook"
+description = "The Glyphh server: accounts, orgs, invites, plans and billing, installs, licences for local rrotors, the connector and Ada Cloud"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
@@ -10,8 +10,12 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30",
     "httpx>=0.28",
+    "cryptography>=44",
     "python-multipart>=0.0.20",
     "redis>=5.2",
+    # Ada Cloud's kernel (docs/specs/ada-cloud.md, 3.2): the private ada-private repo at a pinned commit, never
+    # published. CI and Fly's builder read it with a read-only deploy key (the Dockerfile's ada_deploy_key secret).
+    "glyphh-kernel[postgres] @ git+https://github.com/glyphh-ai/ada-private@f28212c414a7ce031cdb5253f5c4e2258141401d",
 ]
 
 [dependency-groups]
@@ -23,6 +27,8 @@ dev = [
     "ruff>=0.8",
     "asgi-lifespan>=2.1.0",
     "httpx-ws>=0.9.0",
+    "glyphh==3.0.0",
+    "jsonschema>=4.23",
 ]
 docs = [
     "mkdocs-material>=9.6",
@@ -32,18 +38,21 @@ docs = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true  # the kernel, from its private repo at a pinned commit
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/glyphh_server"]
+packages = ["src/glyphh_server", "src/glyphh_ada"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
-addopts = "--cov=glyphh_server --cov-branch --cov-report=term-missing --cov-fail-under=100"
+addopts = "--cov=glyphh_server --cov=glyphh_ada --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [tool.coverage.run]
-source = ["glyphh_server"]
+source = ["glyphh_server", "glyphh_ada"]
 # SQLAlchemy's async engine switches greenlets; without this, lines resumed after one go unseen.
 concurrency = ["greenlet", "thread"]
 

@@ -42,8 +42,8 @@ async def test_each_org_sees_only_its_own_grants_tokens_and_codes(engine: AsyncE
         await _granted(engine, who, client_id)
     async with engine.begin() as conn:
         await tenancy.enter(conn, ada.org_id)
-        for table, own in ((ConnectorGrant, 2), (ConnectorToken, 3), (OAuthCode, 1)):  # with her platform sign-in's
-            assert (await conn.execute(select(func.count()).select_from(table))).scalar_one() == own, table
+        for table in (ConnectorGrant, ConnectorToken, OAuthCode):
+            assert (await conn.execute(select(func.count()).select_from(table))).scalar_one() == 1, table
         seen = await conn.execute(select(OAuthClient.id).where(OAuthClient.id == client_id))
         assert seen.scalar_one() == client_id
 

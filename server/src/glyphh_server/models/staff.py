@@ -41,7 +41,7 @@ class AdminAudit(Base):
 
 
 class OpsEvent(Base):
-    """An error or warning the server logged (a crash, a 5xx, a tick part's failure, Stripe's):
+    """An error or warning the server logged (a crash, a 5xx, a worker's failure, a tick part's, Stripe's, a job's):
     alike ones (kind, source, message, severity) within one drain folded into one row, `count` of them from `first_at`
     to `last_at`. Acknowledged by a staff member once seen."""
 
