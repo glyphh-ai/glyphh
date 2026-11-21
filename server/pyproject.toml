@@ -17,6 +17,8 @@ dependencies = [
     # published. CI and Fly's builder read it with a read-only deploy key (the Dockerfile's ada_deploy_key secret).
     "glyphh-kernel[postgres] @ git+https://github.com/glyphh-ai/ada-private@f28212c414a7ce031cdb5253f5c4e2258141401d",
     "anthropic>=2.12.0",
+    # The hosted bots run the SDK's own bot loop (glyphh.bots, docs/specs/bots.md, 9)
+    "glyphh[api]==3.11.0",
 ]
 
 [dependency-groups]
@@ -28,7 +30,6 @@ dev = [
     "ruff>=0.8",
     "asgi-lifespan>=2.1.0",
     "httpx-ws>=0.9.0",
-    "glyphh==3.0.0",
     "jsonschema>=4.23",
 ]
 docs = [

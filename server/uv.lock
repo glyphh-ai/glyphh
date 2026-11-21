@@ -555,11 +555,16 @@ wheels = [
 
 [[package]]
 name = "glyphh"
-version = "3.0.0"
+version = "3.11.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b0/c8/dabfa0134655fd2dad62157bdb55d5539f3912117ab5d556f4c3bf999376/glyphh-3.0.0.tar.gz", hash = "sha256:adbfdf7293d52f8f9cbd04ff59540b3ccc588eb98f9a81c00a63db0fbf326670", size = 7446, upload-time = "2026-10-18T21:49:41.688Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/3f/c931fcdfa7933152982946897e94c127de6b14403d87ea8f8e102d020ea0/glyphh-3.11.0.tar.gz", hash = "sha256:81e37e0c6a77824a60a92cac23fb9828cd9657f1afa66b9a26e26be39c668506", size = 259842, upload-time = "2026-11-21T15:24:32.509Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/e5/4e526c4c1a6a6f7d362b9f3ba0008d41bb7fcf977e8110f84b71694592c1/glyphh-3.0.0-py3-none-any.whl", hash = "sha256:468143934540529bcb1ac04e7fcaf80cdb1b9206cd023c4572cb079e16714fa5", size = 6494, upload-time = "2026-10-18T21:49:40.576Z" },
+    { url = "https://files.pythonhosted.org/packages/10/09/afca00fff5f3c9e4e5babafb93084012cf1a7eb4cf4969e5bbf1b0441419/glyphh-3.11.0-py3-none-any.whl", hash = "sha256:f8fc41399ffa2bab4ab51405b2336d605100ffd231074c5d5fa23610e9c4b676", size = 116087, upload-time = "2026-11-21T15:24:31.265Z" },
+]
+
+[package.optional-dependencies]
+api = [
+    { name = "anthropic" },
 ]
 
 [[package]]
@@ -584,6 +589,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "glyphh", extra = ["api"] },
     { name = "glyphh-kernel", extra = ["postgres"] },
     { name = "httpx" },
     { name = "pydantic-settings" },
@@ -596,7 +602,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
-    { name = "glyphh" },
     { name = "httpx" },
     { name = "httpx-ws" },
     { name = "jsonschema" },
@@ -615,6 +620,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "cryptography", specifier = ">=44" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "glyphh", extras = ["api"], specifier = "==3.11.0" },
     { name = "glyphh-kernel", extras = ["postgres"], git = "https://github.com/glyphh-ai/ada-private?rev=f28212c414a7ce031cdb5253f5c4e2258141401d" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic-settings", specifier = ">=2.6" },
@@ -627,7 +633,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "glyphh", specifier = "==3.0.0" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "httpx-ws", specifier = ">=0.9.0" },
     { name = "jsonschema", specifier = ">=4.23" },
