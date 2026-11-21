@@ -21,6 +21,8 @@ from glyphh_server.mcp.tools import (
     ada_releases,
     apps,
     billing,
+    bots,
+    connections,
     grants,
     people,
     runtime,
@@ -38,8 +40,11 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 # import's concurrent index build waits out every such transaction. A tool an installed template adds (glyphh_*, the
 # person's own: listed by `listing`) waits on a worker too.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
+# The bots' tools that call Pipedream or make a run: on transactions of their own too.
+DETACHED |= bots.DETACHED | connections.DETACHED
 MINE: str = "glyphh_"
-TOOLS: dict[str, Tool] = {t.name: t for t in (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS)}
+_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *bots.TOOLS, *connections.TOOLS)
+TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only
 # while GLYPHH_RROTOR is on, the default.
 RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
