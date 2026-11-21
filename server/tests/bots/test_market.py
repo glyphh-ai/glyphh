@@ -69,6 +69,8 @@ async def test_an_installed_template_runs_its_loop_end_to_end(served: Served, en
     run = await started(served, ada, given="me@navy.test", slug="inbox-triage")
     assert run["question"] is not None, (run["status"], run["error"], run["log"])
     assert run["question"]["options"] == ["read", "skip"], run
+    queue = (await served.http.get("/v1/bot-approvals", headers=ada.headers)).json()["runs"]
+    assert [r["id"] for r in queue] == [run["id"]]
     run = await answered(served, ada, run, "1=read 2=skip")
     assert "email you the digest" in run["question"]["question"], run
     run = await answered(served, ada, run, "yes")
