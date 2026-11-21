@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { Config } from './config.js';
 import { authorizeUrl, exchangeCode, OAuthError, refresh, revoke, type Tokens } from './oauth.js';
-import { callTool, GameError, health, isAction, summary, type Game } from './games.js';
+import { callTool, GameError, health, isAction, summary, type Game } from './gamesAdmin.js';
 import { pkce, randomToken, seal, unseal } from './seal.js';
 
 type Deps = {
@@ -67,16 +67,8 @@ export function createApp({ config, games = [], log = (line) => console.log(line
     return origin === config.platformUrl;
   };
 
-  /** The old staff view's addresses (/admin, /admin/...): the same page at the root, where the console now lives. */
-  const fromOldAdmin = (c: Context) => {
-    const url = new URL(c.req.url);
-    return c.redirect(`${url.pathname.replace(/^\/admin/, '') || '/'}${url.search}`, 301);
-  };
-  app.get('/admin', fromOldAdmin);
-  app.get('/admin/*', fromOldAdmin);
-
   app.get('/auth/session', (c) =>
-    c.json({ signedIn: readSession(c) !== null, serverUrl: config.serverUrl, clientName: config.clientName }),
+    c.json({ signedIn: readSession(c) !== null, serverUrl: config.serverUrl, adaUrl: config.adaUrl, clientName: config.clientName }),
   );
 
   app.get('/auth/providers', async () => {
@@ -160,7 +152,7 @@ export function createApp({ config, games = [], log = (line) => console.log(line
 
   /**
    * The answer passed back as the server gave it, keeping any cookie set on the way (a renewed session), and a 429's
-   * Retry-After, so the page knows when to ask again.
+   * Retry-After (Ada's E_RATE), so the page knows when to ask again.
    */
   const passBack = (c: Context, upstream: Response) => {
     const headers: Record<string, string> = { 'cache-control': 'no-store' };
@@ -171,8 +163,23 @@ export function createApp({ config, games = [], log = (line) => console.log(line
     return c.newResponse(upstream.status === 204 ? null : upstream.body, upstream.status as ContentfulStatusCode, headers);
   };
 
-  // The account API (/api/v1/* → {server}/v1/*), with the session's token.
+  // An import's file, to Ada Cloud's upload link: the link is its own credential, so no token goes with it, and the
+  // file streams through rather than being held here. Signed-in pages of this site only.
+  app.put('/api/ada/v1/uploads/:link', async (c) => {
+    if (!sameOrigin(c)) return forbidden(c);
+    if (!readSession(c)) return noSession(c);
+    const headers: Record<string, string> = { accept: 'application/json' };
+    for (const name of ['content-type', 'content-length']) {
+      const value = c.req.header(name);
+      if (value) headers[name] = value;
+    }
+    const init = { method: 'PUT', headers, body: c.req.raw.body, duplex: 'half' } as RequestInit;
+    return passBack(c, await fetcher(`${config.adaUrl}/v1/uploads/${encodeURIComponent(c.req.param('link'))}`, init));
+  });
+
+  // The account API (/api/v1/* → {server}/v1/*) and Ada Cloud's (/api/ada/v1/* → {ada}/v1/*), with the session's token.
   app.all('/api/v1/*', (c) => forward(c, config.serverUrl, /^\/api/));
+  app.all('/api/ada/v1/*', (c) => forward(c, config.adaUrl, /^\/api\/ada/));
 
   /**
    * Calls the server with the session's token, renewing it once when it has expired or the server says 401. Null

@@ -3,6 +3,31 @@ import { AuthLayout } from '@/layout/AuthLayout/AuthLayout';
 import { CopyField, ErrorNotice } from '@/ui';
 import styles from './flows.module.css';
 
+export function DeviceDonePage() {
+  const [params] = useSearchParams();
+  const approved = params.get('result') === 'approved';
+  return (
+    <AuthLayout title={approved ? 'Signed in' : 'Nothing was signed in'}>
+      <p className={styles.text}>{approved ? 'Go back to Claude. You can close this tab.' : 'You denied the sign-in. You can close this tab.'}</p>
+    </AuthLayout>
+  );
+}
+
+export function GitHubInstalledPage() {
+  const [params] = useSearchParams();
+  const login = params.get('installed');
+  return (
+    <AuthLayout title="GitHub App installed">
+      <p className={styles.text}>
+        Glyphh’s GitHub App is installed on <span className={styles.strong}>{login ?? 'your account'}</span>.
+      </p>
+      <Link to="/" className={styles.text}>
+        Go to Glyphh
+      </Link>
+    </AuthLayout>
+  );
+}
+
 /** Any refusal the server met in a browser step: its message, and the trace id to quote. */
 export function ErrorPage() {
   const [params] = useSearchParams();

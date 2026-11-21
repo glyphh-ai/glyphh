@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { useAdminAudit, type AuditFilter } from '@/api/admin';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
@@ -48,7 +49,7 @@ export function AuditPage() {
                     <td className={styles.num}>{stamp(e.at)}</td>
                     <td>{e.staff_email}</td>
                     <td className={styles.mono}>{e.action}</td>
-                    <td className={styles.mono}>{e.org_id ?? '–'}</td>
+                    <td className={styles.mono}>{e.org_id ? <Link to={`/admin/orgs/${e.org_id}`}>{e.org_id}</Link> : '–'}</td>
                     <td className={styles.mono}>{JSON.stringify(e.detail)}</td>
                     <td>
                       <Chip tone={e.outcome === 'ok' ? 'green' : 'amber'}>{e.outcome}</Chip>

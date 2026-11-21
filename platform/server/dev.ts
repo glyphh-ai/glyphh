@@ -3,7 +3,7 @@ import { getRequestListener } from '@hono/node-server';
 import { createServer as createVite } from 'vite';
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
-import { readGames } from './games.js';
+import { readGames } from './gamesAdmin.js';
 
 /**
  * Development: one port. Vite serves the pages with hot reload; /auth and /api go to the route handlers,
