@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { HttpResponse } from 'msw';
 import type { Template } from '@/api/templates';
 import { adaFake } from '@/test/ada';
@@ -47,41 +47,60 @@ function on(start = false, more: Template[] = []) {
       installed = false;
       return HttpResponse.json(memory(false));
     }),
+    http.get('*/api/v1/bot-templates', () => HttpResponse.json({ templates: [] })),
   );
   return seen;
 }
 
-describe('the Templates page', () => {
-  it('is in the sidebar under Ada and shows each template as a card that opens its details', async () => {
+describe('the Marketplace’s models', () => {
+  it('is Marketplace in the sidebar under Ada, on its Models tab, each template a card that opens its details', async () => {
     on();
     const { user, router } = renderApp('/models');
     const sidebar = await screen.findByRole('complementary', { name: 'Main' });
-    await user.click(await within(sidebar).findByRole('link', { name: 'Templates' }));
-    expect(router.state.location.pathname).toBe('/templates');
+    expect(within(sidebar).queryByRole('link', { name: 'Templates' })).not.toBeInTheDocument();
+    await user.click(await within(sidebar).findByRole('link', { name: 'Marketplace' }));
+    expect(router.state.location.pathname).toBe('/marketplace/models');
+    expect(await screen.findByRole('heading', { name: 'Marketplace', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Models' })).toHaveAttribute('aria-selected', 'true');
     const card = await screen.findByRole('link', { name: 'Agentic memory' });
     expect(card).toHaveTextContent('Your glyphh: what any AI you use knows about you.');
     expect(card).toHaveTextContent('1 model · 1 tool · v1');
     expect(card).toHaveTextContent('Memory');
     await user.click(card);
-    expect(router.state.location.pathname).toBe('/templates/agentic-memory');
+    expect(router.state.location.pathname).toBe('/marketplace/models/agentic-memory');
     expect(await screen.findByRole('heading', { name: 'Agentic memory', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: "Agentic memory's models" })).toHaveTextContent('What it knows about you');
     expect(screen.getByRole('list', { name: "Agentic memory's tools" })).toHaveTextContent('glyphh_recall');
     expect(screen.getByLabelText('About this template')).toHaveTextContent('Not installed');
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaTemplatesagentic-memory');
-    const back = within(screen.getByRole('main')).getAllByRole('link', { name: 'Templates' })[0]!; // ← Templates, top left
-    await user.click(back);
-    expect(router.state.location.pathname).toBe('/templates');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Marketplaceagentic-memory');
+    await user.click(within(screen.getByRole('main')).getAllByRole('link', { name: 'Marketplace' })[0]!);
+    expect(router.state.location.pathname).toBe('/marketplace/models');
+  });
+
+  it('switches to the Bots tab, and the old Templates paths come here', async () => {
+    on();
+    const { user, router } = renderApp('/marketplace');
+    expect(await screen.findByRole('tab', { name: 'Models' })).toHaveAttribute('aria-selected', 'true');
+    expect(router.state.location.pathname).toBe('/marketplace/models');
+    await user.click(screen.getByRole('tab', { name: 'Bots' }));
+    expect(router.state.location.pathname).toBe('/marketplace/bots');
+    expect(await screen.findByText('No bots yet')).toBeInTheDocument();
+
+    const old = renderApp('/templates?q=memory');
+    await waitFor(() => expect(old.router.state.location.pathname).toBe('/marketplace/models'));
+    expect(old.router.state.location.search).toBe('?q=memory');
+    const one = renderApp('/templates/agentic-memory');
+    await waitFor(() => expect(one.router.state.location.pathname).toBe('/marketplace/models/agentic-memory'));
   });
 
   it('searches the library and pages it', async () => {
     on(false, Array.from({ length: 30 }, (_, i) => another(i + 1)));
-    const { user } = renderApp('/templates');
-    const grid = await screen.findByRole('list', { name: 'Templates' });
+    const { user } = renderApp('/marketplace/models');
+    const grid = await screen.findByRole('list', { name: 'Model templates' });
     expect(within(grid).getAllByRole('link')).toHaveLength(24);
     expect(screen.getByRole('navigation', { name: 'Pages' })).toHaveTextContent('1–24 of 31');
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(within(await screen.findByRole('list', { name: 'Templates' })).getAllByRole('link')).toHaveLength(7);
+    expect(within(await screen.findByRole('list', { name: 'Model templates' })).getAllByRole('link')).toHaveLength(7);
     await user.type(screen.getByLabelText('Search'), 'route_7');
     expect(await screen.findByRole('link', { name: 'Support desk 7' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Agentic memory' })).not.toBeInTheDocument();
@@ -92,7 +111,7 @@ describe('the Templates page', () => {
 
   it('installs a template from its details, then removes it once its slug is typed', async () => {
     const seen = on();
-    const { user } = renderApp('/templates/agentic-memory');
+    const { user } = renderApp('/marketplace/models/agentic-memory');
     await user.click(await screen.findByRole('button', { name: 'Install' }));
     expect(await screen.findByText('Installed')).toBeInTheDocument();
     expect(screen.getByLabelText('About this template')).toHaveTextContent('Installed, v1');
@@ -109,21 +128,21 @@ describe('the Templates page', () => {
   it('says what the server refused, and a template that is not there', async () => {
     on();
     server.use(http.post('*/api/v1/templates/:slug/install', () => apiError(503, 'E_UNAVAILABLE', 'Ada Cloud is busy.')));
-    const { user } = renderApp('/templates/agentic-memory');
+    const { user } = renderApp('/marketplace/models/agentic-memory');
     await user.click(await screen.findByRole('button', { name: 'Install' }));
     expect(await screen.findByText(/Ada Cloud is busy/)).toBeInTheDocument();
-    renderApp('/templates/nope');
+    renderApp('/marketplace/models/nope');
     expect(await screen.findByText(/There is no such template/)).toBeInTheDocument();
   });
 
   it('cancels a removal, and says when the library is empty', async () => {
     on(true);
-    const { user } = renderApp('/templates/agentic-memory');
+    const { user } = renderApp('/marketplace/models/agentic-memory');
     await user.click(await screen.findByRole('button', { name: 'Remove' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     server.use(http.get('*/api/v1/templates', () => HttpResponse.json({ templates: [] })));
-    renderApp('/templates');
-    expect(await screen.findByText('No templates yet')).toBeInTheDocument();
+    renderApp('/marketplace/models');
+    expect(await screen.findByText('No models yet')).toBeInTheDocument();
   });
 });

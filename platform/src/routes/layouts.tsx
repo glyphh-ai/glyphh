@@ -57,13 +57,9 @@ function AdaNav() {
         <NavItem to="/models" icon="model">
           Models
         </NavItem>
-        {/* Ada's own versions, after Models (his order, 2026-10-23). */}
-        <NavItem to="/ada" icon="layers">
-          Ada
-        </NavItem>
-        {/* The template library: your glyphh, beside the models it is made of (2026-11-02). */}
-        <NavItem to="/templates" icon="layers">
-          Templates
+        {/* Models and bots to add, where Templates was (2026-11-21); Ada's versions are Settings' Releases now. */}
+        <NavItem to="/marketplace" icon="layers">
+          Marketplace
         </NavItem>
         <NavItem to="/keys" icon="key">
           API Keys
@@ -96,6 +92,7 @@ function AdaNav() {
 
 /** Bots and the connections they use, Ada Cloud on or off. */
 function BotsNav() {
+  const ada = useAdaCloud();
   return (
     <NavGroup label="Bots">
       <NavItem to="/bots" icon="user">
@@ -104,6 +101,12 @@ function BotsNav() {
       <NavItem to="/connections" icon="external">
         Connections
       </NavItem>
+      {/* With Ada Cloud on the Marketplace sits in Ada's group; off, it holds bots only. */}
+      {ada === false && (
+        <NavItem to="/marketplace" icon="layers">
+          Marketplace
+        </NavItem>
+      )}
     </NavGroup>
   );
 }
@@ -132,6 +135,7 @@ function RuntimeNav() {
 }
 
 export function SettingsLayout() {
+  const ada = useAdaCloud();
   return (
     <AppShell
       crumbs={useCrumbs()}
@@ -151,6 +155,12 @@ export function SettingsLayout() {
             <NavItem to="/settings/auth" icon="key">
               Auth
             </NavItem>
+            {/* Ada's versions (2026-11-21, was the Ada page in the main sidebar). */}
+            {ada && (
+              <NavItem to="/settings/releases" icon="layers">
+                Releases
+              </NavItem>
+            )}
           </NavGroup>
           <NavGroup label="Personal">
             <NavItem to="/settings/profile" icon="user">

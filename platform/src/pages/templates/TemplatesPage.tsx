@@ -1,13 +1,12 @@
 import { Link } from 'react-router';
 import { useTemplates, type Template } from '@/api/templates';
 import { NoMatch, Pager, SearchField, useSearchPaging } from '@/components/SearchPaged';
-import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { plural } from '@/lib/format';
 import { Chip, EmptyState, Icon, LoadingCard } from '@/ui';
 import { AdaErrorNotice } from '../ada/AdaErrorNotice';
 import styles from './templates.module.css';
 
-export const templatePath = (slug: string) => `/templates/${encodeURIComponent(slug)}`;
+export const templatePath = (slug: string) => `/marketplace/models/${encodeURIComponent(slug)}`;
 
 const matchesTemplate = (t: Template, q: string) =>
   [t.name, t.category, t.summary, ...t.tools.map((tool) => tool.name)].some((s) => s.toLowerCase().includes(q));
@@ -47,27 +46,23 @@ function TemplateCard({ template }: { template: Template }) {
 }
 
 /**
- * Templates: the library a person installs from for themselves, as cards with a search and pages, like Models and
- * API Keys. Each template makes Ada models of the person's own and adds tools to their own Glyphh connector, so any
- * AI on it shares them; a card opens the template's details (TemplatePage), where it is installed or removed.
+ * The Marketplace's Models: the Ada model templates a person installs for themselves, as cards with a search and
+ * pages. Each makes Ada models of the person's own and adds tools to their own Glyphh connector, so any AI on it
+ * shares them; a card opens the template's details (TemplatePage), where it is installed or removed.
  */
-export function TemplatesPage() {
+export function ModelTemplates() {
   const templates = useTemplates();
   const paged = useSearchPaging(templates.data, matchesTemplate);
   const some = templates.data !== undefined && templates.data.length > 0;
   return (
     <>
-      <PageHeader
-        title="Templates"
-        description="Build your glyphh. A template adds tools to your own connector over Ada models of your own, so every AI you use shares what it keeps."
-      />
       {templates.isPending && <LoadingCard />}
       <AdaErrorNotice error={templates.error} />
-      {templates.data?.length === 0 && <EmptyState icon="layers" title="No templates yet" />}
+      {templates.data?.length === 0 && <EmptyState icon="layers" title="No models yet" />}
       {some && <SearchField typed={paged.typed} onChange={paged.setTyped} placeholder="Template name, kind or tool" />}
       {some && paged.total === 0 && <NoMatch q={paged.q} noun="template" />}
       {paged.total > 0 && (
-        <ul className={styles.grid} aria-label="Templates">
+        <ul className={styles.grid} aria-label="Model templates">
           {paged.shown.map((template) => (
             <TemplateCard key={template.slug} template={template} />
           ))}
