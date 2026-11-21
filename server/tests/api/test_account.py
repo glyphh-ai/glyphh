@@ -32,6 +32,7 @@ async def test_me_has_the_org_role_and_plan(client: httpx.AsyncClient, engine: A
         "built": {"sync": False, "ha": False, "offline": True, "sso": True},
         "cloud": None,  # Ada Cloud is off
         "llm_tokens": 100_000_000,
+        "connections": {"included": None, "cents_a_month": None},  # not priced yet: every one included
     }
     assert me["precedents"] == {"used": 0, "limit": 500_000} and "hosting" not in me
     assert me["ada_cloud"] is False and me["cloud"] is None  # off by default: the platform shows today's pages

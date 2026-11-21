@@ -53,9 +53,12 @@ tokens, as below. (memory.md is not yet in this repository; this pointer lives h
 ## The API (what the platform reads)
 
 - `GET /v1/me` gains `llm: bool` (hosted models on: show their pages).
-- `GET /v1/billing` (and the connector's usage) gains `tokens` and `balance`, null while off:
-  `tokens: {month, resets_at, used, max|null, over_used, models: [{id, name, input_tokens, output_tokens, requests,
-  charged_cents, charged_micros}]}`, `balance: {cents, micros, low}` (`low`: under $5, TBD).
+- `GET /v1/billing` gains `tokens`, `balance` and `bots`, whether hosted models are on or not (the bots' Claude
+  tokens are on the same meter; the connector's usage only while on):
+  `tokens: {month, resets_at, used, max|null, over_used, models: [{id, name, kind (hosted|bot), input_tokens,
+  output_tokens, requests, charged_cents, charged_micros}]}`, `balance: {cents, micros, low}` (`low`: under $5, TBD),
+  `bots: [{slug, name, runs, input_tokens, output_tokens, charged_cents, charged_micros}]` (this month's, the
+  costliest first).
 - `GET /v1/llm/usage?days=30` (1..90) -> `{days: [{day, model, input_tokens, output_tokens, requests, charged_cents,
   charged_micros}]}`, oldest first.
 - `GET /v1/billing/ledger?limit=50` (1..200) -> `{entries: [{at, kind, amount_cents, amount_micros, model|null,
@@ -64,7 +67,8 @@ tokens, as below. (memory.md is not yet in this repository; this pointer lives h
 - `GET /v1/llm/models` -> `{models: [{id, name, status, context_tokens, input_cents_per_mtok, output_cents_per_mtok,
   allowance_weight, released, summary}]}`, on the account API (no sign-in needed, as `/v1/plans`) and the Ada hosts.
 - `POST /v1/billing/topup {amount_cents}` (admin, 1000..100000) -> `{url}`; Stripe returns to the platform's
-  `/settings/billing?topup=1` (cancel: `/settings/billing`). 404 `reason: llm_off` while off.
+  `/settings/billing?topup=1` (cancel: `/settings/billing`). Open while hosted models are off too: the bots draw on
+  the balance.
 - Stripe's webhook credits `checkout.session.completed` or `checkout.session.async_payment_succeeded` with
   `mode=payment`, `payment_status=paid`, `currency=usd` and `metadata.kind=llm_topup`, once per session id.
 

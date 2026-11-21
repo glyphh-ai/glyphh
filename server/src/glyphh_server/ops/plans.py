@@ -51,6 +51,14 @@ class CloudLimits(BaseModel):
     overage_cents_per_10k: int | None = Field(description="What 10,000 reads past the month cost; null: none sold")
 
 
+class ConnectionPrice(BaseModel):
+    """Connections to other services (Pipedream accounts), the org's whatever its bots: none priced until Chris sets
+    a price (the seed's TBD), so every one is included."""
+
+    included: int | None = Field(description="Connections included; null = every one")
+    cents_a_month: int | None = Field(description="Each connection past the included, a month; null = not priced")
+
+
 class PlanView(BaseModel):
     name: str
     version: int
@@ -69,6 +77,7 @@ class PlanView(BaseModel):
         description="Glyphh-hosted models' tokens a calendar month, UTC, before tokens are charged to the overage "
         "balance at each model's rates (GET /v1/llm/models); null = by contract",
     )
+    connections: ConnectionPrice = Field(ConnectionPrice(included=None, cents_a_month=None))
 
 
 COLUMNS = (
@@ -90,6 +99,8 @@ COLUMNS = (
     PlanVersion.cloud_rps,
     PlanVersion.cloud_overage,
     PlanVersion.llm_tokens,
+    PlanVersion.connections,
+    PlanVersion.connection_cents,
 )
 
 
@@ -124,6 +135,7 @@ def view(row: Row, cloud: bool = False) -> PlanView:
         features=features(row),
         cloud=cloud_limits(row) if cloud else None,
         llm_tokens=row.llm_tokens,
+        connections=ConnectionPrice(included=row.connections, cents_a_month=row.connection_cents),
     )
 
 

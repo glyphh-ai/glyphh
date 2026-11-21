@@ -112,9 +112,8 @@ async def test_hosted_models_off_show_nothing_of_them(
 ) -> None:
     who = await person(engine)
     shown = (await client.get("/v1/billing", headers=who.headers)).json()
-    assert shown["tokens"] is None and shown["balance"] is None
-    res = await client.post("/v1/billing/topup", json={"amount_cents": 1_000}, headers=who.headers)
-    assert (res.status_code, res.json()["error"]["reason"]) == (404, "llm_off")
+    # the bots' tokens are metered whether hosted models are on or not, so the month and the balance still show
+    assert (shown["tokens"]["models"], shown["tokens"]["max"], shown["balance"]["micros"]) == ([], 250_000, 0)
     assert (await ada.post("/v1/chat/completions", json=ASK, headers=who.headers)).status_code == 404
     names = [t["name"] for t in (await rpc(ada, await signed_in(engine, who), "tools/list"))["result"]["tools"]]
     assert "topup" not in names and "usage" in names
