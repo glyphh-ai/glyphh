@@ -467,8 +467,10 @@ CREATE TABLE IF NOT EXISTS template_installs (
 CREATE UNIQUE INDEX IF NOT EXISTS template_installs_one_per_person ON template_installs (user_id, slug);
 CREATE INDEX IF NOT EXISTS ix_template_installs_org_id ON template_installs (org_id);
 
--- connections, bots, bot_runs: hosted bots (docs/specs/bots.md): an org's accounts at other services (Pipedream's),
--- its bots (a Claude agent, its look, the Ada models it may ask, per connection the tools it may use) and their runs
+-- connections, bots, bot_runs, bot_keys: hosted bots (docs/specs/bots.md): an org's accounts at other services
+-- (Pipedream's), its bots (the SDK's bot package: its loop, gates and limits, its agent's prompt and skills, its look
+-- and per connection the tools it may use; the runner's state; its Ada key, sealed), their runs, and the org's own
+-- Anthropic API key (sealed) its bots' agent steps run on
 CREATE TABLE IF NOT EXISTS connections (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID NOT NULL,
@@ -493,10 +495,11 @@ CREATE TABLE IF NOT EXISTS bots (
     look JSONB DEFAULT '{}'::jsonb NOT NULL,
     instructions TEXT DEFAULT '' NOT NULL,
     model TEXT NOT NULL,
-    models JSONB DEFAULT '[]'::jsonb NOT NULL,
     scopes JSONB DEFAULT '[]'::jsonb NOT NULL,
-    max_turns INTEGER DEFAULT 20 NOT NULL,
-    usd_per_run_micros BIGINT DEFAULT 2000000 NOT NULL,
+    spec JSONB DEFAULT '{}'::jsonb NOT NULL,
+    skills JSONB DEFAULT '{}'::jsonb NOT NULL,
+    state BYTEA,
+    ada_key TEXT DEFAULT '' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
@@ -514,21 +517,37 @@ CREATE TABLE IF NOT EXISTS bot_runs (
     input TEXT DEFAULT '' NOT NULL,
     output TEXT DEFAULT '' NOT NULL,
     error TEXT DEFAULT '' NOT NULL,
-    steps JSONB DEFAULT '[]'::jsonb NOT NULL,
+    log JSONB DEFAULT '[]'::jsonb NOT NULL,
+    data JSONB DEFAULT '{}'::jsonb NOT NULL,
+    question JSONB DEFAULT '{}'::jsonb NOT NULL,
+    loop_run TEXT DEFAULT '' NOT NULL,
     input_tokens BIGINT DEFAULT 0 NOT NULL,
     output_tokens BIGINT DEFAULT 0 NOT NULL,
     cost_micros BIGINT DEFAULT 0 NOT NULL,
+    own_key BOOLEAN DEFAULT false NOT NULL,
     machine TEXT DEFAULT '' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     started_at TIMESTAMP WITH TIME ZONE,
     finished_at TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),
-    CONSTRAINT bot_runs_status CHECK (status IN ('queued', 'running', 'done', 'failed')),
+    CONSTRAINT bot_runs_status CHECK (status IN ('queued', 'running', 'needs_input', 'done', 'failed', 'skipped')),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS bot_runs_newest ON bot_runs (bot_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS bot_runs_one_live ON bot_runs (bot_id) WHERE status IN ('queued', 'running', 'needs_input');
+
+CREATE TABLE IF NOT EXISTS bot_keys (
+    org_id UUID NOT NULL,
+    anthropic_key TEXT NOT NULL,
+    hint TEXT NOT NULL,
+    set_by UUID,
+    set_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (org_id),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(set_by) REFERENCES users (id) ON DELETE SET NULL
+);
 
 -- nodes
 CREATE TABLE IF NOT EXISTS nodes (
@@ -779,6 +798,10 @@ ALTER TABLE bot_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bot_runs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON bot_runs;
 CREATE POLICY tenant ON bot_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE bot_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bot_keys FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON bot_keys;
+CREATE POLICY tenant ON bot_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;

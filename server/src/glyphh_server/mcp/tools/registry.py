@@ -21,6 +21,7 @@ from glyphh_server.mcp.tools import (
     ada_releases,
     apps,
     billing,
+    bot_runs,
     bots,
     connections,
     grants,
@@ -41,9 +42,10 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 # person's own: listed by `listing`) waits on a worker too.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
-DETACHED |= bots.DETACHED | connections.DETACHED
+DETACHED |= bot_runs.DETACHED | connections.DETACHED
 MINE: str = "glyphh_"
-_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *bots.TOOLS, *connections.TOOLS)
+_BOTS = (*bots.TOOLS, *bot_runs.TOOLS, *connections.TOOLS)
+_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only
 # while GLYPHH_RROTOR is on, the default.

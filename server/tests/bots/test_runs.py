@@ -1,30 +1,17 @@
-"""A bot's runs, end to end with Claude and Pipedream faked: the tools it is offered (only its scope's), a tool call
-run as the org with the connection's account, every step kept, its tokens metered, and each way a run stops."""
+"""A bot's runs, end to end with Pipedream, Ada and Claude faked: the SDK's loop walks the inbox bot's steps (a scoped
+tool run as the org, a gate over the mail asking the person as one batch, Claude drafting, an approval before the
+send), each stop for the person waits until it is answered, the gate learns from the answers, and a wrong call is
+corrected."""
 
-from types import SimpleNamespace
+from typing import Any
 
-from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import BotRun, LlmUsageDay
-from glyphh_server.ops.bots import runs
-from tests.bots.conftest import BOTS, Served, connected, made_bot, serve
-from tests.bots.fakes import FakePipedream, reply, text, use
+from tests.bots.conftest import Served, made_bot
 from tests.db.helpers import Person, person
 
-SEND_ARGS = {"to": ["grace@navy.test"], "subject": "Hi", "body": "Hello"}
 
-
-async def scoped(s: Served, who: Person, **over: object) -> dict:
-    bot = await made_bot(s, who, **over)
-    gmail = await connected(s, who)
-    scopes = {"connections": [{"connection_id": gmail["id"], "tools": ["gmail-send-email"]}]}
-    res = await s.http.put(f"/v1/bots/{bot['slug']}/connections", json=scopes, headers=who.headers)
-    assert res.status_code == 200, res.text
-    return bot
-
-
-async def ran(s: Served, who: Person, slug: str = "inbox-cat", given: str = "Mail Grace") -> dict:
+async def started(s: Served, who: Person, given: str = "is:unread", slug: str = "inbox-cat") -> dict[str, Any]:
     res = await s.http.post(f"/v1/bots/{slug}/runs", json={"input": given}, headers=who.headers)
     assert res.status_code == 202, res.text
     assert res.json()["status"] == "queued"
@@ -32,126 +19,112 @@ async def ran(s: Served, who: Person, slug: str = "inbox-cat", given: str = "Mai
     return dict((await s.http.get(f"/v1/bot-runs/{res.json()['id']}", headers=who.headers)).json())
 
 
-async def test_a_run_uses_its_scoped_tool_as_the_org_and_keeps_every_step(served: Served, engine: AsyncEngine) -> None:
+async def answered(s: Served, who: Person, run: dict[str, Any], answer: Any) -> dict[str, Any]:
+    res = await s.http.post(f"/v1/bot-runs/{run['id']}/answer", json={"answer": answer}, headers=who.headers)
+    assert res.status_code == 202, res.text
+    await s.settled()
+    return dict((await s.http.get(f"/v1/bot-runs/{run['id']}", headers=who.headers)).json())
+
+
+async def test_a_run_asks_learns_drafts_waits_for_a_yes_and_sends(served: Served, engine: AsyncEngine) -> None:
     ada = await person(engine)
-    await scoped(served, ada)
-    served.claude.replies = [
-        reply(text("Sending it."), use("gmail-send-email", SEND_ARGS), stop="tool_use"),
-        reply(text("Sent to Grace."), tokens=(1500, 100)),
+    bot = await made_bot(served, ada)
+    run = await started(served, ada)
+    assert run["status"] == "needs_input" and run["error"] == ""
+    asked = run["question"]
+    assert asked["options"] == ["answer", "skip"] and [b["label"] for b in asked["batch"]] == [
+        "Lunch on Friday?",
+        "You won!",
     ]
-    run = await ran(served, ada)
-    assert run["status"] == "done" and run["output"] == "Sent to Grace." and run["error"] == ""
-    assert [(s["kind"], s["name"], s["is_error"]) for s in run["steps"]] == [
-        ("text", "claude", False),
-        ("tool", "gmail-send-email", False),
-        ("text", "claude", False),
-    ]
-    assert run["steps"][1]["output"] == {"exports": {"$summary": "Sent"}, "ret": {"id": "msg_1"}}
-    assert (run["input_tokens"], run["output_tokens"], run["cost_micros"]) == (2500, 300, 0)  # within the plan
-    assert served.pd.runs == [
-        {
-            "id": "gmail-send-email",
-            "external_user_id": f"org_{ada.org_id}",
-            "configured_props": {**SEND_ARGS, "gmail": {"authProvisionId": "apn_1"}},
-        }
-    ]
-    first = served.claude.requests[0]
-    assert [t["name"] for t in first["tools"]] == ["gmail-send-email"]  # only its scope's, no Ada (Ada Cloud off)
-    schema = first["tools"][0]["input_schema"]
-    assert set(schema["properties"]) == {"to", "subject", "body", "format"} and schema["required"] == ["to", "subject"]
-    assert schema["properties"]["format"]["enum"] == ["text", "html"]
-    assert (first["model"], first["betas"], first["fallbacks"]) == (
-        "claude-opus-5-5",
-        ["server-side-fallback-2026-07-01"],
-        "default",
+    assert asked["answer_with"] == "1=answer 2=skip"
+    assert served.pd.runs[0]["id"] == "gmail-find-email" and served.pd.runs[0]["configured_props"]["q"] == "is:unread"
+    assert served.pd.runs[0]["external_user_id"] == f"org_{ada.org_id}"
+
+    run = await answered(served, ada, run, "1=answer 2=skip")
+    assert run["status"] == "needs_input" and "send the reply" in run["question"]["question"]
+    assert run["question"]["options"] == ["yes", "no"]
+    assert served.ada.outcomes("bot-inbox-cat-gate-worth") == ["answer", "skip"]
+    assert served.ada.cases["bot-inbox-cat-gate-worth"][0][0] == {
+        "m": {"s": {"subject": "Lunch on Friday?", "id": "m1"}}
+    }
+    sent = served.claude.requests[0]
+    assert sent["model"] == "claude-opus-5-5" and sent["system"].startswith("You are Inbox Cat.")
+    assert "One paragraph, no sign-off." in sent["messages"][0]["content"]
+    assert len(served.pd.runs) == 1  # nothing sent before the yes
+
+    run = await answered(served, ada, run, "yes")
+    assert run["status"] == "done" and run["question"] is None and run["finished_at"]
+    assert served.pd.runs[1]["id"] == "gmail-send-email"
+    assert served.pd.runs[1]["configured_props"]["body"] == "Happy to, see you Friday."
+    assert run["data"]["send"]["ret"] == {"id": "msg_1"} and '"msg_1"' in run["output"]
+    assert (run["input_tokens"], run["output_tokens"], run["own_key"]) == (1000, 200, False)
+    assert any("gmail-send-email" in line for line in run["log"])
+    assert set(served.claude.keys) == {"sk-ant-glyphh-test-key"}
+    assert len(set(served.ada.keys)) == 1 and served.ada.keys[0].startswith("glyphh_ak_")
+    assert bot["gate_models"][0] == "bot-inbox-cat-gate-worth"
+
+
+async def test_a_gate_that_is_sure_asks_nothing_and_a_no_ends_the_run(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    await made_bot(served, ada)
+    served.ada.cases["bot-inbox-cat-gate-worth"].append(({}, "skip"))  # it decides alone once it holds one
+    served.ada.rule["bot-inbox-cat-gate-worth"] = lambda case: (
+        ("answer", 0.95) if "Lunch" in case["m"]["s"]["subject"] else ("skip", 0.95)
     )
-    assert first["output_config"] == {"effort": "high"} and "tool_choice" not in first
-    assert first["messages"] == [{"role": "user", "content": "Mail Grace"}]
-    answered = served.claude.requests[1]["messages"][2]["content"][0]
-    assert answered["tool_use_id"] == "tu_1" and answered["is_error"] is False
-    async with engine.begin() as conn:
-        day = (await conn.execute(select(LlmUsageDay).where(LlmUsageDay.org_id == ada.org_id))).one()
-    assert (day.model, day.input_tokens, day.output_tokens, day.requests) == ("claude-opus-5-5", 2500, 300, 2)
-    bot = (await served.http.get("/v1/bots/inbox-cat", headers=ada.headers)).json()
-    assert bot["last_run"]["id"] == run["id"] and bot["last_run"]["status"] == "done"
+    run = await started(served, ada)
+    assert run["status"] == "needs_input" and run["question"]["options"] == ["yes", "no"]
+    assert [d["by"] for d in run["data"]["worth"]["decisions"]] == ["ada", "ada"]
+    run = await answered(served, ada, run, "no")
+    assert run["status"] == "done" and "said no" in run["error"] and len(served.pd.runs) == 1
+
+
+async def test_nothing_worth_it_ends_the_run_and_wrong_teaches_the_gate(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    await made_bot(served, ada)
+    served.pd.mail = [{"id": "m3", "subject": "Newsletter"}]
+    run = await started(served, ada)
+    run = await answered(served, ada, run, "skip")
+    assert run["status"] == "done" and "the run ends here" in run["error"]
+    res = await served.http.post(
+        f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "answer", "item": "m3"}, headers=ada.headers
+    )
+    assert res.status_code == 200, res.text
+    assert (res.json()["said"], res.json()["now"]) == ("skip", "answer")
+    assert served.ada.outcomes("bot-inbox-cat-gate-worth") == ["skip", "answer"]
+    bad = await served.http.post(f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "maybe"}, headers=ada.headers)
+    assert bad.status_code == 422 and bad.json()["error"]["reason"] == "wrong"
+    gates = (await served.http.get("/v1/bots/inbox-cat/gates", headers=ada.headers)).json()["gates"]
+    assert gates["worth"]["precedents"] == 2
+
+
+async def test_one_live_run_a_bot_answers_that_do_not_fit_and_cancelling(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    await made_bot(served, ada)
+    run = await started(served, ada)
+    again = await served.http.post("/v1/bots/inbox-cat/runs", json={}, headers=ada.headers)
+    assert again.status_code == 409 and again.json()["error"]["code"] == "E_CONFLICT"
+    for wrong in ("1=maybe", "nonsense"):
+        res = await served.http.post(f"/v1/bot-runs/{run['id']}/answer", json={"answer": wrong}, headers=ada.headers)
+        assert res.status_code == 422 and res.json()["error"]["reason"] == "answer"
+    res = await served.http.post(f"/v1/bot-runs/{run['id']}/cancel", headers=ada.headers)
+    assert res.status_code == 200 and (res.json()["status"], res.json()["error"]) == ("failed", "cancelled")
+    for path in ("answer", "cancel"):
+        body = {"answer": "yes"} if path == "answer" else None
+        res = await served.http.post(f"/v1/bot-runs/{run['id']}/{path}", json=body, headers=ada.headers)
+        assert res.status_code == 409
+    nothing = await served.http.post(f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "skip"}, headers=ada.headers)
+    assert nothing.status_code == 422  # it passed the gate, but asked, and was never answered
+    assert (await started(served, ada))["status"] == "needs_input"  # the cancelled run is not the one carried on
+
+
+async def test_a_single_answer_and_runs_listed(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    await made_bot(served, ada)
+    served.pd.mail = [{"id": "m4", "subject": "Coffee?"}]
+    run = await started(served, ada)
+    run = await answered(served, ada, run, ["answer"])
+    assert run["question"]["options"] == ["yes", "no"]
+    run = await answered(served, ada, run, " YES ")
+    assert run["status"] == "done"
     listed = (await served.http.get("/v1/bots/inbox-cat/runs", headers=ada.headers)).json()["runs"]
     assert [r["id"] for r in listed] == [run["id"]]
-
-
-async def test_a_failing_tool_and_one_out_of_scope_are_errors_claude_sees(served: Served, engine: AsyncEngine) -> None:
-    ada = await person(engine)
-    await scoped(served, ada)
-    served.pd.fail_run = True
-    served.claude.replies = [
-        reply(use("gmail-send-email", SEND_ARGS, "tu_1"), use("gmail-find-email", {"q": "x"}, "tu_2"), stop="tool_use"),
-        reply(text("Could not send.")),
-    ]
-    run = await ran(served, ada)
-    assert run["status"] == "done"
-    assert [(s["name"], s["is_error"]) for s in run["steps"][:2]] == [
-        ("gmail-send-email", True),
-        ("gmail-find-email", True),
-    ]
-    results = served.claude.requests[1]["messages"][2]["content"]
-    assert [(r["tool_use_id"], r["is_error"]) for r in results] == [("tu_1", True), ("tu_2", True)]
-    assert "revoked" in results[0]["content"] and "may not use" in results[1]["content"]
-
-
-async def test_a_run_stops_at_its_turns(served: Served, engine: AsyncEngine) -> None:
-    ada = await person(engine)
-    await scoped(served, ada, limits={"max_turns": 2, "usd_per_run": 2.0})
-    served.claude.replies = [reply(use("gmail-send-email", SEND_ARGS), stop="tool_use")]
-    run = await ran(served, ada)
-    assert run["status"] == "failed" and "limit of 2 turns" in run["error"] and len(served.claude.requests) == 2
-
-
-async def test_a_run_stops_at_its_dollars(served: Served, engine: AsyncEngine) -> None:
-    ada = await person(engine)
-    await scoped(served, ada, limits={"max_turns": 20, "usd_per_run": 0.01})
-    # 1,000 in and 1,000 out on Opus: 0.4 + 2 cents, past the run's cent after the first turn
-    served.claude.replies = [reply(use("gmail-send-email", SEND_ARGS), stop="tool_use", tokens=(1000, 1000))]
-    run = await ran(served, ada)
-    assert run["status"] == "failed" and "spent its limit, $0.01" in run["error"] and len(served.claude.requests) == 1
-
-
-async def test_a_refusal_and_a_cut_off_turn_fail_the_run_and_pause_turn_goes_on(
-    served: Served, engine: AsyncEngine
-) -> None:
-    ada = await person(engine)
-    await made_bot(served, ada, model="claude-haiku-5-5")
-    refused = reply(stop="refusal")
-    refused.stop_details = SimpleNamespace(category="cyber")
-    served.claude.replies = [refused]
-    run = await ran(served, ada)
-    assert run["status"] == "failed" and "declined the job (cyber)" in run["error"]
-    assert "fallbacks" not in served.claude.requests[0] and "tools" not in served.claude.requests[0]
-    served.claude.replies = [reply(text("Half"), stop="max_tokens")]
-    assert "past its room" in (await ran(served, ada))["error"]
-    served.claude.replies = [reply(stop="pause_turn"), reply(text("Finished."))]
-    run = await ran(served, ada)
-    assert run["status"] == "done" and run["output"] == "Finished."
-
-
-async def test_without_an_anthropic_key_a_run_is_refused(engine: AsyncEngine) -> None:
-    async for s in serve(BOTS.model_copy(update={"anthropic_api_key": ""}), FakePipedream()):
-        s.app.state.bots.claude = None
-        ada = await person(engine)
-        await made_bot(s, ada)
-        res = await s.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)
-        assert res.status_code == 503 and res.json()["error"]["reason"] == "anthropic_off"
-
-
-async def test_a_restart_fails_this_machines_runs_it_cut_off(engine: AsyncEngine) -> None:
-    pd = FakePipedream()
-    async for s in serve(BOTS, pd):
-        ada = await person(engine)
-        bot = await made_bot(s, ada)
-    async with engine.begin() as conn:
-        values = {"org_id": ada.org_id, "bot_id": bot["id"], "status": "running", "machine": runs.machine()}
-        cut = (await conn.execute(insert(BotRun).values(values).returning(BotRun.id))).scalar_one()
-        elsewhere = values | {"machine": "another-machine"}
-        kept = (await conn.execute(insert(BotRun).values(elsewhere).returning(BotRun.id))).scalar_one()
-    async for s in serve(BOTS, pd):
-        first = (await s.http.get(f"/v1/bot-runs/{cut}", headers=ada.headers)).json()
-        assert (first["status"], first["error"]) == ("failed", runs.INTERRUPTED)
-        assert (await s.http.get(f"/v1/bot-runs/{kept}", headers=ada.headers)).json()["status"] == "running"

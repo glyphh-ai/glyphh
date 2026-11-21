@@ -1,13 +1,17 @@
-"""Pipedream and Claude, faked: Pipedream at the HTTP layer (the server's own client calls it unchanged), Claude as
-an AsyncAnthropic whose beta.messages.create answers the turns a test scripted, remembering every request."""
+"""Pipedream, Ada and Claude, faked: Pipedream at the HTTP layer (the server's own client calls it unchanged), Ada as
+the SDK's client in memory (models, precedents, decisions), and Claude as an anthropic.Anthropic whose
+messages.stream answers the texts a test scripted, remembering every request."""
 
-import asyncio
 import json
+from collections import defaultdict
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 from urllib.parse import parse_qsl
 
 import httpx
+from glyphh.client import Decision, ModelInfo
+from glyphh.errors import ModelMissingError
 
 PROJECT: str = "proj_test"
 CONNECT: str = f"/v1/connect/{PROJECT}"
@@ -32,6 +36,7 @@ FIND: dict[str, Any] = {
     "description": "Find emails",
     "configurable_props": [{"name": "gmail", "type": "app", "app": "gmail"}, {"name": "q", "type": "string"}],
 }
+MAIL: list[dict[str, Any]] = [{"id": "m1", "subject": "Lunch on Friday?"}, {"id": "m2", "subject": "You won!"}]
 
 
 def account(account_id: str, app: dict[str, Any] = GMAIL, name: str = "ada@gmail.test") -> dict[str, Any]:
@@ -46,9 +51,9 @@ class FakePipedream:
         self.accounts: list[dict[str, Any]] = []
         self.calls: list[tuple[str, str, Any]] = []
         self.runs: list[dict[str, Any]] = []
+        self.mail: list[dict[str, Any]] = list(MAIL)
         self.fail_run: bool = False
-        # past the token: "down" answers 500, "broken" never answers, "garbled" runs an action answering no JSON,
-        # "refusing" refuses a deletion
+        # past the token: "down" answers 500, "broken" never answers, "refusing" refuses a deletion
         self.mode: str = ""
 
     def _body(self, request: httpx.Request) -> Any:
@@ -65,11 +70,17 @@ class FakePipedream:
             return httpx.Response(500, text="Pipedream is down")
         if self.mode == "broken":
             raise httpx.ConnectError("no route", request=request)
-        if self.mode == "garbled" and path.endswith("/actions/run"):
-            return httpx.Response(200, text="<html>not json</html>")
         if self.mode == "refusing" and method == "DELETE":
             return httpx.Response(403, json={"error": "not allowed"})
         return self._connect(method, path, body, query)
+
+    def _run(self, body: Any) -> httpx.Response:
+        self.runs.append(body)
+        if self.fail_run:
+            return httpx.Response(400, json={"error": "the account's token was revoked"})
+        if body["id"] == FIND["key"]:
+            return httpx.Response(200, json={"exports": {"$summary": "Found"}, "ret": {"messages": self.mail}})
+        return httpx.Response(200, json={"exports": {"$summary": "Sent"}, "ret": {"id": "msg_1"}})
 
     def _connect(self, method: str, path: str, body: Any, query: dict[str, str]) -> httpx.Response:
         if (method, path) == ("POST", f"{CONNECT}/tokens"):
@@ -94,10 +105,7 @@ class FakePipedream:
             key = path.rsplit("/", 1)[1]
             return httpx.Response(200, json={"data": {SEND["key"]: SEND, FIND["key"]: FIND}[key]})
         if (method, path) == ("POST", f"{CONNECT}/actions/run"):
-            self.runs.append(body)
-            if self.fail_run:
-                return httpx.Response(400, json={"error": "the account's token was revoked"})
-            return httpx.Response(200, json={"exports": {"$summary": "Sent"}, "ret": {"id": "msg_1"}})
+            return self._run(body)
         return httpx.Response(404, json={"error": f"no fake for {method} {path}"})
 
 
@@ -105,37 +113,90 @@ def pipedream_http(pd: FakePipedream) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(pd.handle))
 
 
-def text(said: str) -> SimpleNamespace:
-    return SimpleNamespace(type="text", text=said)
+class FakeModel:
+    def __init__(self, ada: "FakeAda", name: str) -> None:
+        self.ada, self.name = ada, name
+
+    def _there(self) -> None:
+        if self.name not in self.ada.specs:
+            raise ModelMissingError("E_MODEL_MISSING", f"no model {self.name}", 404)
+
+    def info(self) -> ModelInfo:
+        self._there()
+        return ModelInfo({"name": self.name, "precedents": len(self.ada.cases[self.name])})
+
+    def record(self, data: dict[str, Any], outcome: str | None = None) -> SimpleNamespace:
+        self._there()
+        self.ada.cases[self.name].append((data, outcome))
+        return SimpleNamespace(data={"id": f"p{len(self.ada.cases[self.name])}"})
+
+    def decide(self, data: dict[str, Any]) -> Decision:
+        self._there()
+        if self.name in self.ada.rule:
+            outcome, p = self.ada.rule[self.name](data)
+            return Decision.of({"outcome": outcome, "probabilities": {outcome: p}, "ask": p < 0.7}, self.name)
+        return Decision.of({"outcome": None, "probabilities": {}, "ask": True}, self.name)
+
+    def facts(self, data: dict[str, Any], top: int | None = None) -> SimpleNamespace:
+        self._there()
+        return SimpleNamespace(data=[])
 
 
-def use(name: str, given: dict[str, Any], use_id: str = "tu_1") -> SimpleNamespace:
-    return SimpleNamespace(type="tool_use", id=use_id, name=name, input=given)
+class FakeAda:
+    """Ada Cloud in memory, as the SDK's client is: `rule[model] = f(case) -> (outcome, p)` decides each case (asking
+    under 0.7); else it asks. `keys` are the Ada keys it was reached with."""
+
+    def __init__(self) -> None:
+        self.specs: dict[str, dict[str, Any]] = {}
+        self.cases: dict[str, list[tuple[dict[str, Any], Any]]] = defaultdict(list)
+        self.rule: dict[str, Callable[[dict[str, Any]], tuple[str, float]]] = {}
+        self.keys: list[str] = []
+
+    def models(self) -> list[ModelInfo]:
+        return [ModelInfo({"name": n, "precedents": len(self.cases[n])}) for n in self.specs]
+
+    def model(self, name: str) -> FakeModel:
+        return FakeModel(self, name)
+
+    def create_model(self, name: str, spec: dict[str, Any]) -> FakeModel:
+        self.specs[name] = spec
+        return FakeModel(self, name)
+
+    def outcomes(self, name: str) -> list[Any]:
+        return [o for _, o in self.cases[name]]
 
 
-def reply(*content: Any, stop: str = "end_turn", model: str = "claude-opus-5-5", tokens: tuple[int, int] = (1000, 200)):
-    usage = SimpleNamespace(input_tokens=tokens[0], output_tokens=tokens[1])
-    return SimpleNamespace(content=list(content), stop_reason=stop, model=model, usage=usage, stop_details=None)
+class Stream:
+    def __init__(self, message: Any) -> None:
+        self.message = message
+
+    def __enter__(self) -> "Stream":
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        return None
+
+    def get_final_message(self) -> Any:
+        return self.message
 
 
-class FakeClaude:
-    """beta.messages.create answering the scripted replies in turn (the last one again once they run out)."""
+class FakeAnthropic:
+    """anthropic.Anthropic, faked: messages.stream answers the scripted texts in turn (the last again once they run
+    out), each with `tokens`; `fail` is raised instead; every request is kept with the key it came on."""
 
-    def __init__(self, *replies: Any) -> None:
-        self.replies = list(replies)
+    def __init__(self, *texts: str, tokens: tuple[int, int] = (1000, 200)) -> None:
+        self.texts = list(texts) or ["Done."]
+        self.tokens = tokens
         self.requests: list[dict[str, Any]] = []
-        self.beta = SimpleNamespace(messages=SimpleNamespace(create=self.create))
-        self.raises: BaseException | None = None  # raised by every request instead
-        self.hold: asyncio.Event | None = None  # a request waits for it to be set
-        self.closed = False
+        self.keys: list[str] = []
+        self.fail: Exception | None = None
+        self.messages = self
 
-    async def create(self, **sent: Any) -> Any:
-        self.requests.append({**sent, "messages": list(sent["messages"])})
-        if self.hold is not None:
-            await self.hold.wait()
-        if self.raises is not None:
-            raise self.raises
-        return self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
-
-    async def close(self) -> None:
-        self.closed = True
+    def stream(self, **sent: Any) -> Stream:
+        self.requests.append(sent)
+        if self.fail is not None:
+            raise self.fail
+        said = self.texts.pop(0) if len(self.texts) > 1 else self.texts[0]
+        usage = SimpleNamespace(input_tokens=self.tokens[0], output_tokens=self.tokens[1])
+        content = [SimpleNamespace(type="text", text=said)]
+        return Stream(SimpleNamespace(content=content, stop_reason="end_turn", model=sent["model"], usage=usage))
