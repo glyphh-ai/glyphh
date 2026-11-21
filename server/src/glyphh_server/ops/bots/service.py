@@ -2,7 +2,8 @@
 started by a background task of the server's own process, a few at once (bot_runs_at_once; the rest wait their turn,
 queued). Started, a run is committed queued before its task begins, so its page finds it at once; answered, a run
 that waited on the person is queued again and carries on. The agent steps run on the org's own Anthropic key when it
-has set one (nothing charged), else on Glyphh's (billed by tokens through the meter); with neither, a run is refused.
+has set one, else on Glyphh's; billed by tokens through the meter on either (ops/bots/prices.py); with neither, a
+run is refused.
 At the server's start, the runs this machine was running when it stopped are failed."""
 
 import asyncio

@@ -20,9 +20,17 @@ from tests.db.helpers import person
 OWN: str = "sk-ant-api03-the-orgs-own-key-1234"
 
 
-async def test_an_own_key_is_tried_kept_by_its_last_four_and_its_runs_charge_nothing(
-    served: Served, engine: AsyncEngine
+async def test_an_own_key_is_tried_kept_by_its_last_four_and_its_runs_charge_the_markup_alone(
+    served: Served, engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    rates: list[tuple[int, int]] = []
+    real = goes.meter.record
+
+    async def record(engine_: Any, who: Any, model: Any, i: int, o: int) -> int:
+        rates.append((model.input_cents_per_mtok, model.output_cents_per_mtok))
+        return await real(engine_, who, model, i, o)
+
+    monkeypatch.setattr(goes.meter, "record", record)
     ada = await person(engine)
     none = (await served.http.get("/v1/bot-key", headers=ada.headers)).json()
     assert none == {"set": False, "hint": "", "set_at": None, "glyphh_key": True}
@@ -41,9 +49,12 @@ async def test_an_own_key_is_tried_kept_by_its_last_four_and_its_runs_charge_not
     await made_bot(served, ada)
     run = await answered(served, ada, await started(served, ada), "1=answer 2=skip")
     assert set(served.claude.keys) == {OWN}
-    assert (run["own_key"], run["cost_micros"], run["input_tokens"]) == (True, 0, 1000)
+    assert (run["own_key"], run["input_tokens"]) == (True, 1000)
+    await answered(served, ada, run, "no")
     gone = await served.http.delete("/v1/bot-key", headers=ada.headers)
     assert gone.json()["set"] is False
+    await answered(served, ada, await started(served, ada), "1=answer 2=skip")
+    assert rates == [(80, 400), (480, 2400)]  # Opus: 20% of Anthropic's rate on the own key, 120% on Glyphh's
 
 
 async def test_with_no_key_at_all_a_run_is_refused_and_an_own_key_lets_it_run(engine: AsyncEngine) -> None:
