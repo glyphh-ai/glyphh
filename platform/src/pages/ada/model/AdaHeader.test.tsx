@@ -17,7 +17,7 @@ describe('a model’s Ada in its header', () => {
     const line = (await screen.findByText('Runs on')).parentElement!;
     expect(line).toHaveTextContent('Runs on ada-1-1 About this version');
     expect(within(line).queryByText('Beta')).not.toBeInTheDocument();
-    expect(within(line).getByRole('link', { name: 'About this version' })).toHaveAttribute('href', '/ada#ada-1-1');
+    expect(within(line).getByRole('link', { name: 'About this version' })).toHaveAttribute('href', '/settings/releases#ada-1-1');
     expect(screen.queryByRole('status', { name: 'Ada version' })).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe('a model’s Ada in its header', () => {
     const { user, router } = renderApp('/models/tickets');
     const notice = await screen.findByRole('status', { name: 'Ada version' });
     expect(notice).toHaveTextContent('ada-1-1 is available: see what changes.');
-    expect(within(notice).getByRole('link', { name: 'See what changes' })).toHaveAttribute('href', '/ada#ada-1-1');
+    expect(within(notice).getByRole('link', { name: 'See what changes' })).toHaveAttribute('href', '/settings/releases#ada-1-1');
     await user.click(within(notice).getByRole('link', { name: 'Backtest and upgrade' }));
     expect(router.state.location.search).toBe('?tab=versions&upgrade=ada-1-1');
     const dialog = await screen.findByRole('dialog', { name: 'Upgrade Ada' });
@@ -67,7 +67,7 @@ describe('a model’s Ada in its header', () => {
     const notice = await screen.findByRole('status', { name: 'Ada version' });
     expect(notice).toHaveTextContent('Moved from ada-0-9 (retired) to ada-1-1.');
     expect(notice.className).toMatch(/noticeInfo/);
-    expect(within(notice).getByRole('link', { name: 'See what changes' })).toHaveAttribute('href', '/ada#ada-1-1');
+    expect(within(notice).getByRole('link', { name: 'See what changes' })).toHaveAttribute('href', '/settings/releases#ada-1-1');
     expect(within(notice).queryByRole('link', { name: /upgrade/i })).not.toBeInTheDocument();
   });
 });

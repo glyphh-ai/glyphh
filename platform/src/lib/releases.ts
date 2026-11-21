@@ -14,8 +14,8 @@ export function releaseOf(releases: AdaReleases | undefined, name: string): AdaR
 /** A model's Upgrade Ada flow, on its Versions tab, `to` chosen first (none: the latest stable). */
 export const upgradePath = (model: string, to = '') => `/models/${encodeURIComponent(model)}?tab=versions&upgrade=${encodeURIComponent(to)}`;
 
-/** An Ada version's notes on the Ada page. */
-export const notesPath = (name: string) => `/ada#${encodeURIComponent(name)}`;
+/** An Ada version's notes on Settings › Releases (the link opens that version). */
+export const notesPath = (name: string) => `/settings/releases#${encodeURIComponent(name)}`;
 
 /** Whether a name is a beta's: from the registry when it is known, else by its `-beta` ending, as every beta is named. */
 export const isBeta = (releases: AdaReleases | undefined, name: string) => releaseOf(releases, name)?.beta ?? name.endsWith('-beta');

@@ -1,11 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useAdaModels, useAdaReleases, type AdaModelRow, type AdaRelease, type AdaReleases } from '@/api/ada';
 import { List, Row } from '@/components/List';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { date, plural } from '@/lib/format';
 import { releaseOf, upgradePath } from '@/lib/releases';
-import { Card, Chip, LoadingCard } from '@/ui';
+import { Card, Chip, Icon, LoadingCard } from '@/ui';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import { AdaStatusChip, ReleaseNotes } from './AdaRelease';
 import styles from './ada.module.css';
@@ -27,21 +27,14 @@ function statusNote(release: AdaRelease): string | null {
   return null;
 }
 
-function ReleaseCard({ release, before, releases, models }: { release: AdaRelease; before?: AdaRelease; releases: AdaReleases; models: AdaModelRow[] | undefined }) {
+type BodyProps = { release: AdaRelease; before?: AdaRelease; releases: AdaReleases; models: AdaModelRow[] | undefined };
+
+/** An open version: its summary, what it changes, its notes, and the org's models on it. */
+function ReleaseBody({ release, before, releases, models }: BodyProps) {
   const on = models?.filter((m) => releaseOf(releases, m.ada)?.name === release.name) ?? [];
   const note = statusNote(release);
   return (
-    <Card id={release.name} aria-labelledby={`${release.name}-title`} className={styles.release}>
-      <div className={styles.leverHead}>
-        <div className={styles.chips}>
-          <h2 id={`${release.name}-title`} className={`${styles.cardTitle} ${styles.mono}`}>
-            {release.name}
-          </h2>
-          <AdaStatusChip release={release} />
-          {release.name === releases.latest_stable && <Chip tone="blue">Default for new models</Chip>}
-        </div>
-        <span className={styles.meta}>Released {date(release.released)}</span>
-      </div>
+    <>
       <p className={styles.summary}>{release.summary}</p>
       <p className={styles.meta}>
         {changesText(release, before)}
@@ -78,28 +71,63 @@ function ReleaseCard({ release, before, releases, models }: { release: AdaReleas
         {release.deprecated && ` · deprecated ${date(release.deprecated)}`}
         {release.ends && ` · ends ${date(release.ends)}`}
       </p>
+    </>
+  );
+}
+
+/** One version, collapsed to its name, status and date until it is opened (a link to it opens it). */
+function ReleaseCard({ opened, ...props }: BodyProps & { opened: boolean }) {
+  const { release, releases } = props;
+  const [open, setOpen] = useState(opened);
+  useEffect(() => {
+    if (opened) setOpen(true);
+  }, [opened]);
+  const body = `${release.name}-body`;
+  return (
+    <Card id={release.name} aria-labelledby={`${release.name}-title`} className={styles.release}>
+      {/* The heading holds the toggle (a heading can't sit inside a button); the card is named by the version alone. */}
+      <h2 className={styles.releaseHeading}>
+        <button type="button" className={styles.releaseToggle} aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
+          <span className={styles.chips}>
+            <Icon name={open ? 'chevronDown' : 'chevronRight'} />
+            <span id={`${release.name}-title`} className={`${styles.cardTitle} ${styles.mono}`}>
+              {release.name}
+            </span>
+            <AdaStatusChip release={release} />
+            {release.name === releases.latest_stable && <Chip tone="blue">Default for new models</Chip>}
+          </span>
+          <span className={styles.meta}>Released {date(release.released)}</span>
+        </button>
+      </h2>
+      {open && (
+        <div id={body} className={styles.release}>
+          <ReleaseBody {...props} />
+        </div>
+      )}
     </Card>
   );
 }
 
 /**
- * Ada, the versions of it: each one's status, when it was released, whether it changes answers from the one before,
- * its release notes, and the org's models on it with the way to backtest and upgrade each.
+ * Releases (in Settings): the versions of Ada, each collapsed to its name, status and date until opened; open, its
+ * summary, whether it changes answers from the one before, its release notes, and the org's models on it with the
+ * way to backtest and upgrade each.
  */
 export function AdaReleasesPage() {
   const releases = useAdaReleases();
   const models = useAdaModels();
   const { hash } = useLocation();
+  const linked = hash ? decodeURIComponent(hash.slice(1)) : '';
 
-  // A link to one version's notes (`/ada#ada-1-1`) lands on it once the list is read.
+  // A link to one version's notes (`/settings/releases#ada-1-1`) opens it and lands on it once the list is read.
   useEffect(() => {
-    if (releases.data && hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView?.({ block: 'start' });
-  }, [releases.data, hash]);
+    if (releases.data && linked) document.getElementById(linked)?.scrollIntoView?.({ block: 'start' });
+  }, [releases.data, linked]);
 
   return (
     <>
       <PageHeader
-        title="Ada"
+        title="Releases"
         description="The versions of Ada your models answer with. A model keeps the version it was made with until you upgrade it, with a backtest first."
       />
       {releases.isPending && <LoadingCard />}
@@ -107,7 +135,14 @@ export function AdaReleasesPage() {
       {releases.data && (
         <div className={styles.stack}>
           {releases.data.versions.map((release, i) => (
-            <ReleaseCard key={release.name} release={release} before={releases.data.versions[i + 1]} releases={releases.data} models={models.data} />
+            <ReleaseCard
+              key={release.name}
+              release={release}
+              before={releases.data.versions[i + 1]}
+              releases={releases.data}
+              models={models.data}
+              opened={release.name === linked}
+            />
           ))}
         </div>
       )}

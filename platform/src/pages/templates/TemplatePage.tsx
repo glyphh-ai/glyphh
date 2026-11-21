@@ -132,8 +132,8 @@ export function TemplatePage() {
   const template = useTemplate(name);
   return (
     <>
-      <Link to="/templates" className={styles.back}>
-        <Icon name="arrowLeft" size={14} /> Templates
+      <Link to="/marketplace/models" className={styles.back}>
+        <Icon name="arrowLeft" size={14} /> Marketplace
       </Link>
       {template.isPending && <LoadingCard />}
       <AdaErrorNotice error={template.error} />

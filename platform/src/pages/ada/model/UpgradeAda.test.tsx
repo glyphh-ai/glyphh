@@ -27,7 +27,7 @@ describe('Upgrade Ada', () => {
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['ada-1-2-beta (Beta)', 'ada-1-1 (latest stable)']);
     expect(dialog).toHaveTextContent('Better calibrated answers.');
     expect(dialog).toHaveTextContent('It can answer differently from ada-1-0: backtest it on your cases first.');
-    expect(within(dialog).getByRole('link', { name: 'Read its release notes' })).toHaveAttribute('href', '/ada#ada-1-1');
+    expect(within(dialog).getByRole('link', { name: 'Read its release notes' })).toHaveAttribute('href', '/settings/releases#ada-1-1');
     await user.selectOptions(select, 'ada-1-2-beta');
     expect(dialog).toHaveTextContent('A beta: never the default, chosen only by name.');
     expect(within(dialog).getByRole('button', { name: 'Upgrade to ada-1-2-beta' })).toBeInTheDocument();

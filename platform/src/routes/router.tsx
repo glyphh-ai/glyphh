@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from 'react-router';
 import { RROTOR_SHOWN } from '@/lib/shelved';
 import { adminRoutes } from '@/admin/routes';
 import { StaffHome } from '@/admin/StaffGate';
@@ -17,8 +17,9 @@ import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
+import { BotTemplatePage } from '@/pages/templates/BotTemplatePage';
+import { MarketplacePage } from '@/pages/templates/MarketplacePage';
 import { TemplatePage } from '@/pages/templates/TemplatePage';
-import { TemplatesPage } from '@/pages/templates/TemplatesPage';
 import { KeysPage } from '@/pages/keys/KeysPage';
 import { RuntimesPage } from '@/pages/runtimes/RuntimesPage';
 import { PlansPage } from '@/pages/plans/PlansPage';
@@ -46,6 +47,18 @@ const crumbs = (...labels: string[]): RouteHandle => ({
 function Moved({ to }: { to: string }) {
   const { search } = useLocation();
   return <Navigate to={`${to}${search}`} replace />;
+}
+
+/** A path that moved, a link into the page (`#ada-1-1`) kept. */
+function MovedWithHash({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
+/** A template's old page, at its place in the Marketplace. */
+function MovedTemplate() {
+  const { name = '' } = useParams();
+  return <Navigate to={`/marketplace/models/${encodeURIComponent(name)}`} replace />;
 }
 
 /** The crumbs of a page in Runtimes & licences. */
@@ -126,33 +139,36 @@ export const routes: RouteObject[] = [
         ),
         handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: ':name' }] },
       },
+      // Ada's versions moved to Settings as Releases (2026-11-21); the hash (a version's notes) comes along.
+      { path: 'ada', element: <MovedWithHash to="/settings/releases" /> },
+      // The Marketplace (2026-11-21, was Templates): Models (Ada model templates) and Bots (bot templates).
+      { path: 'marketplace', element: <AdaOr ada={<Navigate to="models" replace />} off={<Navigate to="bots" replace />} /> },
       {
-        path: 'ada',
+        path: 'marketplace/models',
         element: (
-          <AdaOnly otherwise="/">
-            <AdaReleasesPage />
+          <AdaOnly otherwise="/marketplace/bots">
+            <MarketplacePage kind="models" />
           </AdaOnly>
         ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Ada versions' }] },
+        handle: { crumbs: [{ label: 'Marketplace' }, { label: 'Models' }] },
       },
       {
-        path: 'templates',
+        path: 'marketplace/models/:name',
         element: (
-          <AdaOnly otherwise="/">
-            <TemplatesPage />
-          </AdaOnly>
-        ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Templates' }] },
-      },
-      {
-        path: 'templates/:name',
-        element: (
-          <AdaOnly otherwise="/">
+          <AdaOnly otherwise="/marketplace/bots">
             <TemplatePage />
           </AdaOnly>
         ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Templates', to: '/templates' }, { label: ':name' }] },
+        handle: { crumbs: [{ label: 'Marketplace', to: '/marketplace/models' }, { label: ':name' }] },
       },
+      { path: 'marketplace/bots', element: <MarketplacePage kind="bots" />, handle: { crumbs: [{ label: 'Marketplace' }, { label: 'Bots' }] } },
+      {
+        path: 'marketplace/bots/:name',
+        element: <BotTemplatePage />,
+        handle: { crumbs: [{ label: 'Marketplace', to: '/marketplace/bots' }, { label: ':name' }] },
+      },
+      { path: 'templates', element: <Moved to="/marketplace/models" /> },
+      { path: 'templates/:name', element: <MovedTemplate /> },
       // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
       { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
       { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
@@ -188,6 +204,16 @@ export const routes: RouteObject[] = [
       { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
+      // Ada's versions (2026-11-21, was the Ada page in the main sidebar).
+      {
+        path: 'releases',
+        element: (
+          <AdaOnly otherwise="/settings/general">
+            <AdaReleasesPage />
+          </AdaOnly>
+        ),
+        handle: crumbs('Settings', 'Releases'),
+      },
     ],
   },
   // Choosing a plan: over the whole window, no sidebar.
