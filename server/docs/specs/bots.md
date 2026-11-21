@@ -181,29 +181,40 @@ person's own. Bots count against the plan's models (each bot's memory is three, 
 
 ## 9. Hosted bots and connections (built)
 
-The platform's bots, separate from the packaged bots above: an org's bots run on Glyphh's server, with the org's
-connections to other services, and are billed by their tokens. They are first-class on the platform (Bots and
-Connections pages) and in the connector; for now anyone in the org may make, change and run them.
+The platform's bots: the packaged bots above, run by the SDK's own loop (`glyphh.bots.Runner`, `glyphh[api]`) on
+Glyphh's server, with the org's connections to other services. **No code runs in the cloud**: a cloud bot has no
+`program.py`; its run steps are `fetch` or one of its scoped tools, and a gate's case is mapped from fields. A bot with
+code runs on rrotor. They are first-class on the platform (Bots and Connections pages) and in the connector; for now
+anyone in the org may make, change and run them.
 
 **Connections** are Pipedream Connect accounts. The org is one external user of Glyphh's Pipedream project,
 `org_<org id>`; someone in the org signs in to a service on Pipedream's own page (a Connect link), and a sync then reads
 the org's accounts back as its connections (the new ones added, the gone ones removed). Glyphh keeps no sign-in, only
 Pipedream's account id, the app and the account's name. A connection's tools are its app's Pipedream actions.
 
-**A bot** is a name (its slug, the org's own), a summary, a look (its cat: `head`, `tail`, `eye`, `extra`,
-`accessory`, `pose`, the glyphh-bot mascots' parts), instructions, the Claude model it runs on (one of those `GET /v1/bots/models`
-lists, its default when none is given), the Ada models it may ask and teach, and **per connection, the tools it may use** (its
-scope). Limits: 20 turns and $2.00 of tokens a run by default.
+**A bot** is a name (its slug, the org's own, at most 30 characters, fixed once made), a summary, a look (its cat:
+`head`, `tail`, `eye`, `extra`, `accessory`, `pose`, the glyphh-bot mascots' parts), instructions (its `agent.md`), the
+Claude model its agent steps run on (one of those `GET /v1/bots/models` lists, its default when none is given), its
+spec (`bot.json`: touches, hosts, seed, gates, loop, limits), its skills (`{name: SKILL.md}`) and **per connection, the
+tools it may use** (its scope). It is checked by the SDK when made and when changed, every problem said at once (422,
+`problems`); fetch hosts must be public names. It gets its own Ada key, made as the person who made it and revoked when
+it is deleted; its gate and memory models are `bot-<slug>-gate-<gate>` and `bot-<slug>-<kind>`. `bot_guide` (and
+`ops/bots/guide.py`) says how a cloud bot is written.
 
 **A run** is a background task in the server's own process, at most `GLYPHH_BOT_RUNS_AT_ONCE` (4) a machine, the rest
-queued. Claude is called turn by turn (the Messages API, the server-side refusal fallback on, effort high), offered only
-the bot's scoped actions (each named by its key; its input the action's props but the app's, which the server fills with
-the connection's account) and, with Ada models, `ada_decide` and `ada_record` over them, asked as the person who started
-the run. Each turn is let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
-accounted after at Anthropic's rates; a run stops at its turns or its dollars, on a refusal, or when one turn runs out of
-room. A tool's failure is answered to Claude as an error. Every step (Claude's words, a tool, an Ada call) is written to
-the run as it is taken. A run records its machine; when that machine starts again, its runs left queued or running are
-failed (`interrupted by a restart`).
+queued; a bot has one live run at a time (queued, running or waiting on the person). The bot's package is written to a
+folder of its own with its runner state (`runs.sqlite`, kept on the bot between goes) and the SDK's runner walks its
+loop in a worker thread: tools run as Pipedream actions as the org (the app prop filled with the connection's account),
+`fetch` GETs JSON from the bot's hosts only (every address public, no redirects, 5 MB at most), gates ask Ada with the
+bot's own key. A run that stops for the person (a gate unsure, an approval) is `needs_input` with its question (a batch
+for a gate over many items, answered `1=answer 2=skip`); answered, it carries on; it can be cancelled. A gate's call
+said wrong is learned as a precedent. A run records its machine; when that machine starts again, its runs left queued
+or running are failed (`interrupted by a restart`); one waiting on the person is left waiting.
+
+**Claude (BYOK).** Agent steps run on the org's own Anthropic API key when it has set one (`PUT /v1/bot-key`, tried with
+Anthropic before it is kept, sealed, shown by its last four characters): nothing is charged. Without one they run on
+Glyphh's key, each step let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
+charged after at Anthropic's rates; with neither, starting a run answers 503 `anthropic_off`.
 
 | Call | What |
 |---|---|
@@ -213,16 +224,21 @@ failed (`interrupted by a restart`).
 | `POST /v1/connections/sync` | `{connections}` |
 | `DELETE /v1/connections/{id}` | 204; its Pipedream account deleted too |
 | `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description}]}` |
-| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, models, connections: [{connection_id, app, app_name, tools}], limits: {max_turns, usd_per_run}, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
-| `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, instructions, model, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
+| `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
 | `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, default}]}` |
-| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued |
-| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, steps: [{kind, name, input, output, is_error, at}], input_tokens, output_tokens, cost_micros, created_at, started_at, finished_at}` |
+| `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
+| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT` |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, created_at, started_at, finished_at}` |
+| `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
+| `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
+| `POST /v1/bot-runs/{id}/cancel` | A waiting run, failed `cancelled` |
+| `GET`/`PUT`/`DELETE /v1/bot-key` | `{set, hint, set_at, glyphh_key}`; `PUT` takes `{key}` |
 
 Without Pipedream set up (`GLYPHH_PIPEDREAM_CLIENT_ID`, `_CLIENT_SECRET`, `_PROJECT_ID`) every connections route
-answers 503 `E_UNAVAILABLE` `pipedream_off`; without `GLYPHH_ANTHROPIC_API_KEY`, starting a run answers 503
-`anthropic_off`. The connector's tools: `bots`, `bot`, `bot_create`, `bot_update`, `bot_delete`,
-`bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`, `connections`, `connection_apps`,
-`connection_link`, `connection_tools`.
+answers 503 `E_UNAVAILABLE` `pipedream_off`. The connector's tools: `bot_guide`, `bots`, `bot`, `bot_create`,
+`bot_update`, `bot_delete`, `bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`,
+`bot_run_answer`, `bot_run_wrong`, `bot_run_cancel`, `bot_gates`, `connections`, `connection_apps`, `connection_link`,
+`connection_tools`.
 
-Not yet: who in the org may use a connection or a bot, schedules and triggers, prompt caching of a run's turns.
+Not yet: who in the org may use a connection or a bot, schedules, running a cloud bot on a chosen rrotor.

@@ -117,7 +117,7 @@ async def _share_http(app: FastAPI, http: httpx.AsyncClient, cfg: Settings, engi
     app.state.http = http
     if app.state.ada is not None:
         app.state.ada.http = http
-    app.state.bots = Bots(engine, redis, cfg, http, app.state.ada)
+    app.state.bots = Bots(engine, redis, cfg, http)
     await app.state.bots.recover()
 
 

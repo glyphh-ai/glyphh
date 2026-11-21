@@ -60,8 +60,3 @@ def model(id: str) -> Model:
     if found is None:
         raise Invalid(f"A bot runs on one of {', '.join(CLAUDE)}: {id!r} is not one.", reason="model")
     return found
-
-
-def priced(id: str, fallback: str) -> Model:
-    """The model that answered (a refusal's fallback may be another), priced; one not on the list as `fallback`."""
-    return CLAUDE.get(id) or CLAUDE[fallback]

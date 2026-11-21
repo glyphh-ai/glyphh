@@ -1,29 +1,37 @@
 """An org's bots: made, read, changed and deleted on the request's transaction (the org entered), each shown with the
-connections it may use (their app joined from the org's connections) and its latest run. A bot's slug comes from its
-name and is the org's own; a second bot of the same slug is refused."""
+connections it may use (their app joined from the org's connections) and its latest run. A bot is the SDK's bot
+package (ops/bots/package.py): what is given is checked by the SDK before it is kept, every problem said at once,
+against the tools its scope lets it use. A bot's slug comes from its name at its making and stays (its Ada models are
+named by it); a second bot of the same slug is refused. Made, a bot gets an Ada API key of its own, as the person
+who made it, for its gates and memory; deleted, the key is revoked."""
 
 import re
 import uuid
+from types import SimpleNamespace
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from glyphh_ada import keys as ada_keys
 from glyphh_server.errors import Conflict, Invalid, NotFound
-from glyphh_server.models import Bot, BotRun, Connection
+from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.bots import prices
-from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Limits, Scope, ScopesIn
+from glyphh_server.ops.auth.sealed import seal, unseal
+from glyphh_server.ops.bots import cloud, package, prices
+from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
+from glyphh_server.ops.runtime_keys import key_hash
 
 MISSING: str = "There is no such bot."
-MICROS: int = 1_000_000
+FIELDS: tuple[str, ...] = ("id", "slug", "name", "summary", "look", "instructions", "model", "spec", "skills")
 
 
 def slugify(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:60].strip("-")
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    slug = re.sub(r"^[^a-z]+", "", slug)[: package.SLUG_MAX].strip("-")
     if not slug:
-        raise Invalid("A bot's name needs a letter or a digit.", reason="name")
+        raise Invalid("A bot's name needs a letter.", reason="name")
     return slug
 
 
@@ -31,8 +39,10 @@ def _look(given: dict[str, str]) -> dict[str, str]:
     return {k: str(v)[:40] for k, v in given.items() if k in LOOK_PARTS}
 
 
-def _limits(limits: Limits) -> dict[str, int]:
-    return {"max_turns": limits.max_turns, "usd_per_run_micros": round(limits.usd_per_run * MICROS)}
+def checked(bot: Any) -> None:
+    """The bot as it would be kept, checked by the SDK against the tools its scope names."""
+    cloud.check_hosts(bot.spec)
+    package.check(bot, cloud.Program(cloud.named(bot.scopes)))
 
 
 async def _scopes(conn: AsyncConnection, bot: Any) -> list[Scope]:
@@ -53,11 +63,10 @@ async def _last(conn: AsyncConnection, bot_id: uuid.UUID) -> LastRun | None:
 
 
 async def view(conn: AsyncConnection, bot: Any) -> BotView:
-    limits = Limits(max_turns=bot.max_turns, usd_per_run=bot.usd_per_run_micros / MICROS)
     return BotView(
-        **{k: getattr(bot, k) for k in ("id", "slug", "name", "summary", "look", "instructions", "model", "models")},
+        **{k: getattr(bot, k) for k in FIELDS},
+        gate_models=package.gate_models(bot.slug, bot.spec),
         connections=await _scopes(conn, bot),
-        limits=limits,
         created_at=bot.created_at,
         updated_at=bot.updated_at,
         last_run=await _last(conn, bot.id),
@@ -88,54 +97,61 @@ async def _saved(conn: AsyncConnection, statement: Any, slug: str) -> Any:
         raise Conflict(f"The org already has a bot {slug!r}: name it another way.", slug=slug) from err
 
 
-async def create(conn: AsyncConnection, who: Principal, body: BotIn) -> BotView:
+async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn) -> BotView:
     slug = slugify(body.name)
-    values = {
-        "org_id": who.org_id,
-        "created_by": who.user_id,
+    values: dict[str, Any] = {
         "slug": slug,
         "name": body.name,
         "summary": body.summary,
         "look": _look(body.look),
         "instructions": body.instructions,
         "model": prices.model(body.model or prices.DEFAULT).id,
-        "models": body.models,
-        **_limits(body.limits or Limits()),
+        "spec": body.spec,
+        "skills": body.skills,
+        "scopes": await _scoped(conn, body.connections),
     }
+    checked(SimpleNamespace(**values, state=None))
+    made = await ada_keys.create(conn, who, f"bot {slug}", None, 0.0)
+    values |= {"org_id": who.org_id, "created_by": who.user_id, "ada_key": seal(secret, made.key)}
     return await view(conn, await _saved(conn, Bot.__table__.insert().values(**values), slug))
 
 
 def _changes(body: BotPatch) -> dict[str, Any]:
-    given = body.model_dump(exclude_unset=True, exclude={"limits"})
-    if "name" in given:
-        given["slug"] = slugify(given["name"])
+    given = body.model_dump(exclude_unset=True)
     if "look" in given:
         given["look"] = _look(given["look"] or {})
     if "model" in given:
         given["model"] = prices.model(given["model"] or prices.DEFAULT).id
-    given = {k: v for k, v in given.items() if v is not None}
-    return given | (_limits(body.limits) if body.limits is not None else {})
+    return {k: v for k, v in given.items() if v is not None}
+
+
+async def _changed(conn: AsyncConnection, bot: Any, changes: dict[str, Any]) -> BotView:
+    now = {k: getattr(bot, k) for k in (*FIELDS, "scopes", "state")} | changes
+    checked(SimpleNamespace(**now))
+    statement = Bot.__table__.update().where(Bot.id == bot.id).values(**changes, updated_at=func.now())
+    return await view(conn, await _saved(conn, statement, bot.slug))
 
 
 async def patch(conn: AsyncConnection, slug: str, body: BotPatch) -> BotView:
-    bot = await row(conn, slug)
-    changes = _changes(body) | {"updated_at": func.now()}
-    statement = Bot.__table__.update().where(Bot.id == bot.id).values(**changes)
-    return await view(conn, await _saved(conn, statement, changes.get("slug", slug)))
+    return await _changed(conn, await row(conn, slug), _changes(body))
 
 
-async def remove(conn: AsyncConnection, slug: str) -> None:
+async def remove(conn: AsyncConnection, slug: str, secret: str) -> None:
     bot = await row(conn, slug)
+    hashed = key_hash(unseal(secret, bot.ada_key))
+    await conn.execute(update(RuntimeKey).where(RuntimeKey.key_hash == hashed).values(revoked_at=func.now()))
     await conn.execute(delete(Bot).where(Bot.id == bot.id))
 
 
-async def set_scopes(conn: AsyncConnection, slug: str, body: ScopesIn) -> BotView:
-    """The tools the bot may use, per connection: the whole list, replacing what it had."""
-    bot = await row(conn, slug)
-    ids = {s.connection_id for s in body.connections}
+async def _scoped(conn: AsyncConnection, given: list[ScopeIn]) -> list[dict[str, Any]]:
+    ids = {s.connection_id for s in given}
     found = set((await conn.scalars(select(Connection.id).where(Connection.id.in_(ids)))).all()) if ids else set()
     if missing := ids - found:
         raise NotFound("The org has no such connection.", connection_ids=sorted(str(i) for i in missing))
-    scopes = [{"connection_id": str(s.connection_id), "tools": sorted(set(s.tools))} for s in body.connections]
-    statement = Bot.__table__.update().where(Bot.id == bot.id).values(scopes=scopes, updated_at=func.now())
-    return await view(conn, await _saved(conn, statement, slug))
+    return [{"connection_id": str(s.connection_id), "tools": sorted(set(s.tools))} for s in given]
+
+
+async def set_scopes(conn: AsyncConnection, slug: str, body: ScopesIn) -> BotView:
+    """The tools the bot may use, per connection: the whole list, replacing what it had (its loop checked again)."""
+    bot = await row(conn, slug)
+    return await _changed(conn, bot, {"scopes": await _scoped(conn, body.connections)})

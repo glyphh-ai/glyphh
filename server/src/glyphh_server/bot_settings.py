@@ -2,8 +2,9 @@ from pydantic_settings import BaseSettings
 
 
 class BotSettings(BaseSettings):
-    """Hosted bots (docs/specs/bots.md). Claude runs them with anthropic_api_key; unset, starting a run answers 503
-    E_UNAVAILABLE (reason anthropic_off).
+    """Hosted bots (docs/specs/bots.md). Their agent steps run on the org's own Anthropic key when it has set one,
+    else on Glyphh's, anthropic_api_key (billed by tokens); with neither, starting a run answers 503 E_UNAVAILABLE
+    (reason anthropic_off).
     Connections are Pipedream Connect accounts (one Pipedream project, its OAuth client); unset, the connections
     routes answer 503 E_UNAVAILABLE (reason pipedream_off) and bots run with Ada and no other tools."""
 
