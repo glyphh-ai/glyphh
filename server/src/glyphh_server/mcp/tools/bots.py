@@ -38,8 +38,13 @@ async def guide(ctx: Context, _: NoArgs) -> Done:
     return Done(GUIDE, {"guide": GUIDE})
 
 
-async def list_bots(ctx: Context, _: NoArgs) -> Done:
-    found = await store.listing(ctx.conn)
+class Search(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    q: str | None = Field(None, max_length=200, description="Words its name, slug or summary has: finds a bot to run")
+
+
+async def list_bots(ctx: Context, args: Search) -> Done:
+    found = await store.listing(ctx.conn, args.q)
     return Done("\n".join(line(b) for b in found) or "The org has no bots yet.", {"bots": [dump(b) for b in found]})
 
 
@@ -87,9 +92,9 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bots",
         "Bots",
-        "The org's Glyphh bots: loops that do a job with the org's connections, gates that learn in Ada, Claude for "
-        "the steps that need judgment.",
-        NoArgs,
+        "The org's Glyphh bots, searched by `q`: loops that do a job with the org's connections, gates that learn in "
+        "Ada, Claude for the steps that need judgment. Each is a tool to use: bot_run runs it on an input.",
+        Search,
         list_bots,
         True,
     ),

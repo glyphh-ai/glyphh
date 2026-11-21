@@ -21,6 +21,7 @@ from glyphh_server.mcp.tools import (
     ada_releases,
     apps,
     billing,
+    bot_market,
     bot_runs,
     bots,
     connections,
@@ -44,7 +45,7 @@ DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETAC
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
 DETACHED |= bot_runs.DETACHED | connections.DETACHED
 MINE: str = "glyphh_"
-_BOTS = (*bots.TOOLS, *bot_runs.TOOLS, *connections.TOOLS)
+_BOTS = (*bots.TOOLS, *bot_runs.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
 _OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only

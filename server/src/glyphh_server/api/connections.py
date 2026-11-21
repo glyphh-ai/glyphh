@@ -12,8 +12,8 @@ from glyphh_server.api.auth import Caller, Conn
 from glyphh_server.api.templates import Person
 from glyphh_server.errors import Unavailable
 from glyphh_server.ops.bots import connections
+from glyphh_server.ops.bots.connviews import Apps, Connections, ConnectionView, Link, LinkIn, PermissionsIn, Tools
 from glyphh_server.ops.bots.pipedream import OFF, Pipedream
-from glyphh_server.ops.bots.views import Apps, Connections, Link, LinkIn, Tools
 
 router = APIRouter(tags=["connections"])
 
@@ -64,6 +64,14 @@ async def delete_connection(connection_id: uuid.UUID, request: Request, who: Per
 
 @router.get("/v1/connections/{connection_id}/tools", operation_id="listConnectionTools")
 async def list_tools(connection_id: uuid.UUID, request: Request, who: Person) -> Tools:
-    """What a bot may be let do with the connection (PUT /v1/bots/{slug}/connections scopes it)."""
+    """What a bot may be let do with the connection (PUT /v1/bots/{slug}/connections scopes it), each tool with what
+    the org's bots may do with it."""
     found = await connections.tools(pipedream(request), request.app.state.engine, who, connection_id)
     return Tools(tools=found)
+
+
+@router.put("/v1/connections/{connection_id}/permissions", operation_id="setConnectionPermissions")
+async def set_permissions(connection_id: uuid.UUID, body: PermissionsIn, caller: Caller, conn: Conn) -> ConnectionView:
+    """Per tool, what the org's bots may do with it: allow, ask (a step using it waits for the person's yes) or deny.
+    A tool not named asks."""
+    return await connections.set_permissions(conn, connection_id, body)

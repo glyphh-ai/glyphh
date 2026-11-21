@@ -77,7 +77,8 @@ class Goes:
         loop = asyncio.get_running_loop()
         async with self.engine.begin() as conn:
             await tenancy.enter(conn, bot.org_id)
-            program = cloud.Program(await cloud.calls(self.pd, conn, bot), loop)
+            made, asked = await cloud.calls(self.pd, conn, bot)
+        program, bot = cloud.Program(made, loop), cloud.guarded(bot, asked)
         ada = self.ada_for(unseal(self.settings.secret_key, bot.ada_key))
         left = await asyncio.to_thread(engine.go, bot, program, ada, claude, act)
         async with self.engine.begin() as conn:

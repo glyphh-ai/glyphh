@@ -80,9 +80,12 @@ async def row(conn: AsyncConnection, slug: str) -> Any:
     return found
 
 
-async def listing(conn: AsyncConnection) -> list[BotView]:
-    rows = await conn.execute(select(Bot).order_by(Bot.name))
-    return [await view(conn, b) for b in rows]
+async def listing(conn: AsyncConnection, q: str | None = None) -> list[BotView]:
+    """The org's bots by name; with `q`, those whose name, slug or summary has every one of its words."""
+    found = select(Bot).order_by(Bot.name)
+    for word in (q or "").split():
+        found = found.where((Bot.name + " " + Bot.slug + " " + Bot.summary).icontains(word, autoescape=True))
+    return [await view(conn, b) for b in await conn.execute(found)]
 
 
 async def one(conn: AsyncConnection, slug: str) -> BotView:

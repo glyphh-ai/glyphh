@@ -23,6 +23,7 @@ async def test_a_bot_is_made_scoped_run_answered_and_corrected_through_the_conne
     found = (await tool(served.http, auth, "connections"))["structuredContent"]["connections"]
     offered = await tool(served.http, auth, "connection_tools", connection_id=found[0]["id"])
     assert [t["key"] for t in offered["structuredContent"]["tools"]] == ["gmail-send-email", "gmail-find-email"]
+    assert "gmail-find-email: Find Email (ask)" in offered["content"][0]["text"]  # never set: it asks
     apps = await tool(served.http, auth, "connection_apps", q="sla")
     assert apps["structuredContent"]["apps"][0]["slug"] == "slack"
     scopes = [{"connection_id": found[0]["id"], "tools": TOOLS}]
@@ -38,6 +39,11 @@ async def test_a_bot_is_made_scoped_run_answered_and_corrected_through_the_conne
     assert started["isError"] is False and started["structuredContent"]["status"] == "queued"
     run_id = started["structuredContent"]["id"]
     await served.settled()
+    queue = await tool(served.http, auth, "bot_approvals")
+    assert "It asks: mail: use gmail-find-email. Yes? (yes, no)" in queue["content"][0]["text"]
+    assert [r["id"] for r in queue["structuredContent"]["runs"]] == [run_id] and served.pd.runs == []
+    await tool(served.http, auth, "bot_run_answer", run_id=run_id, answer="yes")
+    await served.settled()
     got = await tool(served.http, auth, "bot_run_get", run_id=run_id)
     assert (
         "It asks: Worth answering?" in got["content"][0]["text"]
@@ -49,12 +55,27 @@ async def test_a_bot_is_made_scoped_run_answered_and_corrected_through_the_conne
     assert "send the reply. Yes? (yes, no)" in asked and "answer like" not in asked
     cancelled = await tool(served.http, auth, "bot_run_cancel", run_id=run_id)
     assert "cancelled" in cancelled["content"][0]["text"]
+    assert (await tool(served.http, auth, "bot_approvals"))["content"][0]["text"] == "No bot is waiting on you."
+    modes = {"gmail-find-email": "allow", "gmail-send-email": "deny"}
+    set_ = await tool(served.http, auth, "connection_permissions_set", connection_id=found[0]["id"], permissions=modes)
+    assert set_["content"][0]["text"] == "Gmail ada@gmail.test: gmail-find-email allow, gmail-send-email deny."
+    assert set_["structuredContent"]["permissions"] == modes
+    served.pd.mail = [{"id": "m5", "subject": "Lunch again?"}]
+    again = (await tool(served.http, auth, "bot_run", slug="inbox-cat", input="x"))["structuredContent"]["id"]
+    await served.settled()
+    await tool(served.http, auth, "bot_run_answer", run_id=again, answer="answer")
+    await served.settled()
+    await tool(served.http, auth, "bot_run_answer", run_id=again, answer="yes")
+    await served.settled()
+    blocked = (await tool(served.http, auth, "bot_run_get", run_id=again))["structuredContent"]
+    assert blocked["status"] == "failed" and "gmail-send-email is blocked on the Gmail connection" in blocked["error"]
+    assert [r["id"] for r in served.pd.runs] == ["gmail-find-email"] * 2  # found twice, never sent
     listed = await tool(served.http, auth, "bot_runs", slug="inbox-cat")
-    assert "$0.0" in listed["content"][0]["text"] and len(listed["structuredContent"]["runs"]) == 1
+    assert "$0.0" in listed["content"][0]["text"] and len(listed["structuredContent"]["runs"]) == 2
     fixed = await tool(served.http, auth, "bot_run_wrong", run_id=run_id, outcome="skip", item="m1")
     assert fixed["content"][0]["text"] == "Gate worth said answer; it learned skip."
     gates = await tool(served.http, auth, "bot_gates", slug="inbox-cat")
-    assert gates["content"][0]["text"] == "worth: 3 precedents"
+    assert gates["content"][0]["text"] == "worth: 4 precedents"
 
     changed = await tool(served.http, auth, "bot_update", slug="inbox-cat", summary="Keeps the inbox")
     assert changed["structuredContent"]["summary"] == "Keeps the inbox"

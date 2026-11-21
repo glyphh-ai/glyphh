@@ -6,13 +6,13 @@ Anthropic key when it has set one (Glyphh's markup charged), else on Glyphh's (A
 from the plan's allowance and then the org's balance."""
 
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from glyphh_server.api.auth import Caller, Cfg, Conn
 from glyphh_server.api.templates import Person
-from glyphh_server.ops.bots import keys, prices, runs, store
+from glyphh_server.ops.bots import keys, prices, runs, store, templates
 from glyphh_server.ops.bots.prices import BotModels
 from glyphh_server.ops.bots.views import (
     AnswerIn,
@@ -38,14 +38,44 @@ def _bots(request: Request) -> Any:
 
 
 @router.get("/v1/bots", operation_id="listBots")
-async def list_bots(caller: Caller, conn: Conn) -> Bots:
-    return Bots(bots=await store.listing(conn))
+async def list_bots(
+    caller: Caller, conn: Conn, q: Annotated[str | None, Query(max_length=200, description="Words it has")] = None
+) -> Bots:
+    """The org's bots, those whose name or summary has every word of `q` when it is given."""
+    return Bots(bots=await store.listing(conn, q))
 
 
 @router.get("/v1/bots/models", operation_id="listBotModels")
 async def list_models(caller: Caller) -> BotModels:
     """The Claude models a bot's agent steps may run on, at their rates."""
     return prices.listing()
+
+
+@router.get("/v1/bot-templates", operation_id="listBotTemplates")
+async def list_templates(
+    caller: Caller, q: Annotated[str | None, Query(max_length=200, description="Words its name has")] = None
+) -> templates.BotTemplates:
+    """The bots marketplace: bot templates Glyphh ships, each ready to copy into the org."""
+    return templates.listing(q)
+
+
+@router.get("/v1/bot-templates/{slug}", operation_id="getBotTemplate")
+async def get_template(slug: str, caller: Caller) -> templates.BotTemplate:
+    return templates.one(slug)
+
+
+@router.post("/v1/bot-templates/{slug}/install", operation_id="installBotTemplate", status_code=201)
+async def install_template(slug: str, body: templates.InstallIn, who: Caller, conn: Conn, settings: Cfg) -> BotView:
+    """The org's own bot copied from the template, scoped to its connection of each app the bot needs (422, reason
+    connections, naming the apps to connect first)."""
+    return await templates.install(conn, who, settings.secret_key, slug, body)
+
+
+@router.get("/v1/bot-approvals", operation_id="listBotApprovals")
+async def list_approvals(caller: Caller, conn: Conn) -> Runs:
+    """The org's approvals queue: every run of its bots waiting on the person (a gate unsure, an approval, a tool its
+    connection asks about), oldest first; POST /v1/bot-runs/{id}/answer answers one."""
+    return Runs(runs=await runs.waiting(conn))
 
 
 @router.get("/v1/bot-key", operation_id="getBotKey")
@@ -55,7 +85,7 @@ async def get_key(caller: Caller, conn: Conn, settings: Cfg) -> KeyView:
 
 
 @router.put("/v1/bot-key", operation_id="setBotKey")
-async def set_key(body: KeyIn, request: Request, who: Person, conn: Conn, settings: Cfg) -> KeyView:
+async def set_key(body: KeyIn, request: Request, who: Caller, conn: Conn, settings: Cfg) -> KeyView:
     """The org's own Anthropic API key, tried with Anthropic, then kept sealed: its bots run on it from now on."""
     kept = await keys.put(conn, who, settings.secret_key, body.key, _bots(request).check_key)
     return keys.view(kept, bool(settings.anthropic_api_key))

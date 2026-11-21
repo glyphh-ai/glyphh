@@ -106,12 +106,19 @@ def inbox(**over: Any) -> dict[str, Any]:
     return {**copy.deepcopy(INBOX), **over}
 
 
-async def connected(s: Served, who: Person, account_id: str = "apn_1") -> dict[str, Any]:
-    """A Gmail account signed in at Pipedream and synced: the org's connection."""
+async def connected(s: Served, who: Person, account_id: str = "apn_1", allow: bool = True) -> dict[str, Any]:
+    """A Gmail account signed in at Pipedream and synced: the org's connection, both its tools allowed (unless not:
+    then each asks)."""
     s.pd.accounts.append(account(account_id))
     res = await s.http.post("/v1/connections/sync", headers=who.headers)
     assert res.status_code == 200, res.text
-    return next(c for c in res.json()["connections"] if c["account_id"] == account_id)
+    made = next(c for c in res.json()["connections"] if c["account_id"] == account_id)
+    if allow:
+        modes = {"permissions": {t: "allow" for t in TOOLS}}
+        res = await s.http.put(f"/v1/connections/{made['id']}/permissions", json=modes, headers=who.headers)
+        assert res.status_code == 200, res.text
+        made = res.json()
+    return dict(made)
 
 
 async def made_bot(s: Served, who: Person, **over: Any) -> dict[str, Any]:
