@@ -2,6 +2,22 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.11.0 — 2026-11-21
+
+Bots anywhere: the same loop runs at a terminal, on rrotor and in Glyphh's cloud. Python only; the TypeScript
+package carries the version unchanged.
+
+- `ApiClaude`: a bot's agent steps over the Claude API on the person's own Anthropic API key (`api_key`, else
+  `ANTHROPIC_API_KEY`), so they pay Anthropic for their tokens themselves. agent.md's `model` (`opus`, `sonnet`,
+  `haiku` or a model id) wins over its default, Claude Opus 5.5. Needs `pip install 'glyphh[api]'`.
+- `glyphh bot` uses it when `GLYPHH_BOT_CLAUDE=api` (rrotor sets it; `GLYPHH_BOT_MODEL` picks the model), else
+  `claude -p` as before.
+- `Answer` carries `input_tokens` and `output_tokens` (from `claude -p`'s usage too); `Runner.tokens` sums them
+  for a host that reports them.
+- `Bot.load(folder, program=...)`: the host gives the functions bot.json names instead of program.py.
+- A gate's `case` may be its fields (layer, segment, role, as Ada's case is) instead of a function: `$item.x` is a
+  per-item gate's item, `$step.x` an earlier step's data.
+
 ## 3.10.0 — 2026-11-04
 
 The beam: a chain of models, one model's outcome the next model's question. Contract 5 still: the `beam` schema is

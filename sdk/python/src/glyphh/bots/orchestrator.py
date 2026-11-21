@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union
 
 from ..client import Ada
-from .claude import Claude
+from .claude import ApiClaude, Claude
 from .memory import MEMORY_SPEC, recall, remember
 from .package import KINDS, TOUCHES, Bot, BotError, bots_root, model_name
 from .runner import Ask, Fetch, Runner, RunStore, held
@@ -131,7 +131,7 @@ class Orchestrator:
         ada: Ada,
         *,
         root: Optional[Path] = None,
-        claude: Optional[Claude] = None,
+        claude: Optional[Claude | ApiClaude] = None,
         ask: Optional[Ask] = None,
         echo: Optional[Callable[[str], None]] = None,
         notify: Optional[Callable[[str, str], None]] = None,

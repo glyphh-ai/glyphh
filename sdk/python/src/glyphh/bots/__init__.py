@@ -15,7 +15,7 @@ moves them); the `glyphh bot` command drives them.
         orch.runner("launch_watch").resume(result.options[0])
 """
 
-from .claude import Answer, Claude
+from .claude import MODELS, PRICES, Answer, ApiClaude, Claude, from_env, priced
 from .gates import POLICY, Call, Gate, Policy
 from .memory import MEMORY_SPEC, glyphh_models, memory_context, recall, remember
 from .orchestrator import GATES, KEEP, OUTCOMES, TRUST, Orchestrator, api_key, connect, slug_of
@@ -30,6 +30,11 @@ __all__ = [
     "KEEP",
     "KINDS",
     "MEMORY_SPEC",
+    "MODELS",
+    "PRICES",
+    "ApiClaude",
+    "from_env",
+    "priced",
     "OUTCOMES",
     "OUTWARD",
     "POLICY",

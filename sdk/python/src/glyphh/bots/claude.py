@@ -1,6 +1,7 @@
-"""Claude, called as `claude -p`. A bot's agent step runs lean: only what the program gives it, no tools, no MCP
-servers, no settings, hooks or CLAUDE.md, no session kept (a step costs cents, not a full session's context). The
-orchestrator's builder alone gets Read and Write, in the new bot's folder only."""
+"""Claude, called as `claude -p` (`Claude`) or over the Claude API with the person's own Anthropic API key
+(`ApiClaude`). A bot's agent step runs lean: only what the program gives it, no tools, no MCP servers, no settings,
+hooks or CLAUDE.md, no session kept (a step costs cents, not a full session's context). The orchestrator's builder
+alone gets Read and Write, in the new bot's folder only (`claude -p` only)."""
 
 from __future__ import annotations
 
@@ -16,13 +17,86 @@ from .package import BotError
 
 Run = Callable[..., "subprocess.CompletedProcess[str]"]
 
+#: The Claude models an agent step may name (agent.md's `model`, or ApiClaude's own), a short name read as its id.
+MODELS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5"}
+#: Anthropic's prices, US dollars per million tokens (input, output), for the spend limits' count.
+PRICES = {"claude-opus-5-5": (4.0, 20.0), "claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-5-5": (0.1, 0.5)}
+DEFAULT_MODEL = "claude-opus-5-5"
+
 
 @dataclass
 class Answer:
-    """What an agent step said, and what it cost in US dollars."""
+    """What an agent step said, what it cost in US dollars, and its tokens."""
 
     text: str
     cost_usd: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+def priced(model: str, input_tokens: int, output_tokens: int) -> float:
+    """What these tokens cost on this model, in US dollars (an unknown model at Opus's price)."""
+    i, o = PRICES.get(model, PRICES[DEFAULT_MODEL])
+    return (input_tokens * i + output_tokens * o) / 1_000_000
+
+
+class ApiClaude:
+    """Agent steps over the Claude API, on the person's own Anthropic API key (`api_key`, else ANTHROPIC_API_KEY):
+    they pay Anthropic for the tokens themselves. `model` is the default (agent.md's `model` wins); `client` is an
+    `anthropic.Anthropic` (a fake in tests). Needs the `anthropic` package (`pip install glyphh[api]`)."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = DEFAULT_MODEL, client: Any = None,
+                 max_tokens: int = 16000) -> None:
+        self.model = MODELS.get(model, model)
+        self.max_tokens = max_tokens
+        if client is None:
+            key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+            if not key:
+                raise BotError("no Anthropic API key: set ANTHROPIC_API_KEY, the bot's agent runs on your own key")
+            try:
+                import anthropic
+            except ImportError:
+                raise BotError("the anthropic package is not installed: pip install 'glyphh[api]'") from None
+            client = anthropic.Anthropic(api_key=key, max_retries=3)
+        self.client = client
+
+    def agent(self, name: str, definition: Mapping[str, Any], prompt: str, *, turns: int = 3, seconds: int = 300) -> str:
+        return self.answer(name, definition, prompt, turns=turns, seconds=seconds).text
+
+    def answer(
+        self, name: str, definition: Mapping[str, Any], prompt: str, *, turns: int = 3, seconds: int = 300
+    ) -> Answer:
+        """One agent step: the agent's prompt as the system prompt, the step's prompt as the one message (no tools,
+        so one turn is all there is)."""
+        model = MODELS.get(str(definition.get("model") or ""), str(definition.get("model") or "")) or self.model
+        try:
+            with self.client.messages.stream(
+                model=model,
+                max_tokens=self.max_tokens,
+                system=str(definition.get("prompt") or ""),
+                messages=[{"role": "user", "content": prompt}],
+                thinking={"type": "adaptive"},
+                timeout=float(seconds),
+            ) as stream:
+                message = stream.get_final_message()
+        except Exception as e:  # noqa: BLE001  the API's errors (key, rate, overload) fail the step, said plainly
+            raise BotError(f"Claude failed: {type(e).__name__}: {str(e)[:300]}") from e
+        if message.stop_reason == "refusal":
+            raise BotError("Claude declined this step")
+        text = "".join(b.text for b in message.content if getattr(b, "type", "") == "text").strip()
+        used_in, used_out = int(message.usage.input_tokens or 0), int(message.usage.output_tokens or 0)
+        return Answer(text, priced(str(message.model or model), used_in, used_out), used_in, used_out)
+
+    def build(self, prompt: str, folder: Path, *, turns: int = 20, seconds: int = 900) -> str:
+        raise BotError("making a bot needs Claude Code (`claude -p`): ApiClaude runs agent steps only")
+
+
+def from_env() -> "Claude | ApiClaude":
+    """The Claude a bot command uses: the Claude API on ANTHROPIC_API_KEY when GLYPHH_BOT_CLAUDE is `api` (rrotor
+    sets it), else `claude -p`."""
+    if os.environ.get("GLYPHH_BOT_CLAUDE") == "api":
+        return ApiClaude(model=os.environ.get("GLYPHH_BOT_MODEL") or DEFAULT_MODEL)
+    return Claude()
 
 
 class Claude:
@@ -84,7 +158,9 @@ class Claude:
             cost = float(got.get("total_cost_usd") or 0.0)
         except (TypeError, ValueError):
             cost = 0.0
-        return Answer(str(got.get("result") or "").strip(), max(0.0, cost))
+        usage = got.get("usage") if isinstance(got.get("usage"), dict) else {}
+        tokens = [int(usage.get(k) or 0) if isinstance(usage.get(k), int) else 0 for k in ("input_tokens", "output_tokens")]
+        return Answer(str(got.get("result") or "").strip(), max(0.0, cost), *tokens)
 
     def build(self, prompt: str, folder: Path, *, turns: int = 20, seconds: int = 900) -> str:
         """The builder: Claude writes a bot's files into `folder` (Read and Write only, edits there accepted)."""

@@ -824,7 +824,7 @@ def test_a_run_waiting_from_3_8_carries_on(orch, bot_folder, fake_ada):
 @pytest.fixture
 def glyphh_bot(monkeypatch, fake_ada: FakeAda, fake_claude: FakeClaude, bots_home: Path, capsys, world: World):
     monkeypatch.setattr(bots_cli, "connect", lambda root: fake_ada)
-    monkeypatch.setattr(bots_cli, "Claude", lambda: Claude(run=fake_claude))
+    monkeypatch.setattr(bots_cli, "from_env", lambda: Claude(run=fake_claude))
     monkeypatch.setattr("sys.stdin", io.StringIO(""))
     monkeypatch.setattr("glyphh.bots.runner._urlopen", world.fetch)
 
