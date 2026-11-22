@@ -699,6 +699,68 @@ def test_requires_skips_a_step_or_ends_the_run(orch, tmp_path, world):
     assert ended.status == "done" and ended.reason.startswith("last requires") and "last" not in ended.data
 
 
+# a step's own words for a run it ends early (`empty`), and what the bot takes (`takes`, `try`)
+
+
+def test_a_step_that_ends_the_run_says_its_own_words_and_the_log_keeps_the_engines(orch, tmp_path, fake_ada, world):
+    fake_ada.cases["bot-lister-gate-worth"].append(({}, "drop"))
+    fake_ada.sure["bot-lister-gate-worth"] = "drop"
+    said = "Nothing is waiting on your review, so there was nothing to rank or post."
+    ok = {"ok": {"case": "ok_case", "outcomes": ["yes", "no"], "spec": YESNO_SPEC, "max_questions": 0, "default": "no"}}
+    each = [{"id": "fetch", "run": "fetch"},
+            {"id": "worth", "gate": "worth", "each": "$fetch.items", "label": "title", "key": "id",
+             "on": {"empty:keep": "end"}},
+            {"id": "deliver", "run": "deliver", "input": "$worth.keep"}]
+    single = [{"id": "fetch", "run": "fetch"}, {"id": "ok", "gate": "ok", "on": {"yes": "end", "no": "end"}}]
+    needs = [{"id": "fetch", "run": "fetch"},
+             {"id": "last", "run": "deliver", "requires": "len($fetch.items) > 5", "otherwise": "end"}]
+    for n, (loop, gates, at, line) in enumerate((
+        (each, None, 1, "gate worth: keep 0, drop 3; the run ends here"),
+        (single, ok, 1, "gate ok said no: the run ends here"),
+        (needs, {}, 1, "last requires len($fetch.items) > 5: it does not hold, the run ends here"),
+    )):
+        plain = install(orch, tmp_path, items_spec(loop=loop, gates=gates), f"plain{n}").run()
+        assert plain.status == "done" and plain.reason == line and plain.log[-1].endswith(line)
+        loop = [dict(step) for step in loop]
+        loop[at]["empty"] = said
+        runner = install(orch, tmp_path, items_spec(loop=loop, gates=gates, takes="a search", **{"try": "is:open"}),
+                         f"own{n}")
+        own = runner.run()
+        assert own.status == "done" and own.reason == said and own.to_result()["data"]["reason"] == said
+        assert own.log[-1].endswith(line) and said not in "\n".join(own.log)
+        assert own.log == plain.log
+        assert runner.store.get(own.run_id)["reason"] == said and "deliver" not in own.data
+
+
+def test_empty_is_said_only_when_its_step_ends_the_run(orch, tmp_path, fake_ada, world):
+    loop = [{"id": "fetch", "run": "fetch", "empty": "Nothing to fetch."},
+            {"id": "worth", "gate": "worth", "each": "$fetch.items", "label": "title", "key": "id",
+             "on": {"empty:keep": "end"}, "empty": "Nothing worth keeping."},
+            {"id": "deliver", "run": "deliver", "input": "$worth.keep", "requires": "len($worth.keep) > 5",
+             "empty": "Too few to deliver."}]
+    fake_ada.cases["bot-lister-gate-worth"].append(({}, "keep"))
+    fake_ada.sure["bot-lister-gate-worth"] = "keep"
+    got = install(orch, tmp_path, items_spec(loop=loop)).run()
+    assert got.status == "done" and got.reason == "" and got.data["deliver"] is None
+
+
+def test_words_for_the_person_must_say_something_in_300_characters(tmp_path):
+    loop = [{"id": "fetch", "run": "fetch", "empty": ""},
+            {"id": "worth", "gate": "worth", "each": "$fetch.items", "on": {"empty:keep": "end"}, "empty": "x" * 301},
+            {"id": "deliver", "run": "deliver", "requires": "len($worth.keep) > 0", "otherwise": "end", "empty": 3},
+            {"id": "again", "run": "deliver", "empty": "   "}]
+    found = problems(write_bot(tmp_path / "bad", items_spec(loop=loop, takes=["a search"], **{"try": "y" * 301}), PROGRAM))
+    for sid in ("fetch", "worth", "deliver", "again"):
+        assert f"step {sid}: empty must say what to tell the person when the step ends the run, in at most 300" in found
+    assert "takes must say what the text a run is given is used as, in at most 300 characters" in found
+    assert "try must say an example of what to give a run, in at most 300 characters" in found
+    assert len(found.split(" | ")) == 6
+    loop = [dict(step, empty="x" * 300) for step in loop]
+    bot = Bot.load(write_bot(tmp_path / "good", items_spec(loop=loop, takes="a GitHub search", **{"try": "y" * 300}), PROGRAM))
+    assert bot.spec["takes"] == "a GitHub search" and bot.loop[1]["empty"] == "x" * 300
+    assert "takes must say" in problems(write_bot(tmp_path / "blank", items_spec(takes="", **{"try": " "}), PROGRAM))
+
+
 def test_a_paused_bot_refuses_to_run_until_resumed(orch, tmp_path):
     runner = install(orch, tmp_path, items_spec())
     runner.run(routine=True)

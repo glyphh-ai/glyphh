@@ -6,6 +6,8 @@ Its program controls its agent: the runner walks the loop, runs the code steps i
 models that learn from your answers, so they ask less run after run), and calls Claude (`claude -p`, lean: no tools,
 no MCP servers, no settings) only for the steps that need judgment. The format is
 [`BUILDING.md`](../../sdk/python/src/glyphh/bots/BUILDING.md), the same file the orchestrator's builder follows.
+A step that can end a run early says why in the bot's own words (`empty`, as `hn_reader`'s and `launch_watch`'s
+gates do); a bot whose steps read `$input` says what that text is used as (`takes`) and gives an example (`try`).
 
 | Bot | What it does | Shows |
 |---|---|---|

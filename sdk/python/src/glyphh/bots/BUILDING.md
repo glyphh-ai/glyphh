@@ -28,6 +28,8 @@ Never put a hard limit in a learned gate, and never let a gate's guess stand in 
   "slug": "snake_case_name",
   "name": "Human name",
   "summary": "One sentence: what it does, when",
+  "takes": "what the text a run is given is used as (only when a step reads $input): a GitHub search",
+  "try": "an example of that text: is:pr is:open review-requested:@me",
   "version": 1,
   "agent": "agent.md",
   "reads_glyphh": true,
@@ -59,7 +61,7 @@ Never put a hard limit in a learned gate, and never let a gate's guess stand in 
   "loop": [
     {"id": "fetch", "run": "fetch"},
     {"id": "decide", "gate": "gate_name", "each": "$fetch.items", "label": "title", "key": "id",
-     "on": {"empty:a": "end"}},
+     "on": {"empty:a": "end"}, "empty": "What to tell the person when nothing came out a, in a plain sentence."},
     {"id": "write", "agent": "The step's job for Claude, with $decide.a filled in", "skill": "skill-name",
      "remember": true},
     {"id": "deliver", "run": "deliver", "input": "$write", "requires": "len($decide.a) > 0"}
@@ -83,6 +85,14 @@ Never put a hard limit in a learned gate, and never let a gate's guess stand in 
 - Any step may carry `requires`: a plain expression over earlier data (comparisons `== != < <= > >=`, `and`, `or`,
   `not`, `len(...)`, numbers, strings, `true false null`, `$id.path`); when it does not hold, the step is skipped, or
   with `"otherwise": "end"` the run ends.
+- A step that can end the run early (a gate whose `on` goes to `end`, a `requires` with `"otherwise": "end"`) carries
+  `empty`: the sentence the person is told when it does, in the bot's own words ("Nothing is waiting on your review,
+  so there was nothing to rank or post."). It becomes the run's `reason`; without it the person sees the engine's
+  line (`gate decide: a 0, b 3; the run ends here`), which goes to the log either way. Write one on every such step.
+- `$input` is what a run is given to work on (`Runner.run(given=...)`, a hosted bot's `glyphh bots run <slug> --input ...`, a host's text box). A bot whose
+  steps read it says so at the top level: `takes` is what that text is used as ("a GitHub search"), `try` an example
+  of it ("is:pr is:open review-requested:@me"). Leave both out when no step reads `$input`.
+- `empty`, `takes` and `try` are each a non-empty string of at most 300 characters.
 
 ### Per-item gates: the gate for lists
 

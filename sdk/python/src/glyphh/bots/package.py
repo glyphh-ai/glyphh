@@ -34,6 +34,10 @@ USD_LIMITS = ("usd_per_run", "usd_per_day")
 OTHERWISE = ("skip", "end")
 ON_FAIL = ("next", "end", "fail")
 EACH_RULES = ("empty", "any", "all", "else")
+#: Words for the person: a step's `empty` (said when it ends the run early), the bot's `takes` and `try` (what the
+#: text a run is given is used as, and an example of it). Each a non-empty string, at most this long.
+MAX_WORDS = 300
+SAID = {"takes": "what the text a run is given is used as", "try": "an example of what to give a run"}
 
 
 class BotError(AdaError):
@@ -208,6 +212,9 @@ def check_spec(spec: Mapping[str, Any], folder: Path) -> List[str]:
     routine = spec.get("routine")
     if routine is not None and (not isinstance(routine, dict) or len(str(routine.get("cron", "")).split()) != 5):
         problems.append('routine must be {"cron": "M H dom mon dow"}, five fields')
+    for key, what in SAID.items():
+        if key in spec and not _words(spec[key]):
+            problems.append(f"{key} must say {what}, in at most {MAX_WORDS} characters")
 
     agent = folder / str(spec.get("agent") or "agent.md")
     if not agent.exists():
@@ -242,6 +249,11 @@ def check_spec(spec: Mapping[str, Any], folder: Path) -> List[str]:
     if touches in OUTWARD and not approvals:
         problems.append(f"the bot touches {touches} but no step has an approval: it would act outward unasked")
     return problems
+
+
+def _words(value: Any) -> bool:
+    """Whether a value is words for the person: a string that says something, at most MAX_WORDS characters."""
+    return isinstance(value, str) and bool(value.strip()) and len(value) <= MAX_WORDS
 
 
 def _check_gate(slug: str, name: str, gate: Any) -> List[str]:
@@ -358,6 +370,9 @@ def _check_step(step: Dict[str, Any], ids: List[str], gates: Mapping[str, Any], 
     if len(kinds) != 1:
         return [f"step {sid}: it must be exactly one of run, gate, agent or ladder"]
     kind, problems = kinds[0], []
+    if "empty" in step and not _words(step["empty"]):
+        problems.append(f"step {sid}: empty must say what to tell the person when the step ends the run, in at most "
+                        f"{MAX_WORDS} characters")
     if not isinstance(step[kind], str) or not step[kind]:
         return [f"step {sid}: {kind} must be a non-empty string"]
     if kind == "ladder" and not isinstance(gates.get(step["ladder"]), dict):
