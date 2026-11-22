@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { runsOnPending, useBotRun, useBotRuns, useCancelRun, useRunBot, useWrongRun, working, type Bot, type BotRun } from '@/api/bots';
+import { useBotPlaces, useBotRun, useBotRuns, useCancelRun, useRunBot, useWrongRun, working, type Bot, type BotRun } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ago, dollars, stamp } from '@/lib/format';
-import { Button, Card, Dialog, EmptyState, ErrorNotice, LoadingCard, Select, Skeleton, TextField, useToast } from '@/ui';
-import { COMING } from './ModelPicker';
+import { Button, Card, Dialog, EmptyState, LoadingCard, Select, Skeleton, TextField, useToast } from '@/ui';
 import { QuestionForm, RunChip, TextArea } from './parts';
 import styles from './bots.module.css';
 
@@ -53,14 +52,23 @@ function WrongDialog({ run, gates, open, onClose }: { run: BotRun; gates: string
 }
 
 /** One run: what it was asked, its log and data, the question it waits on (answered here), cancel and mark wrong. */
+/** Where a run ran, by the place's name: `on Acme`; nothing for Glyphh cloud. */
+function usePlaceName() {
+  const places = useBotPlaces();
+  const named = new Map((places.data ?? []).map((p) => [p.id, p]));
+  return (id: string | null | undefined) => (id ? (named.get(id) ?? { id, name: 'your machine', mode: 'self' as const, linked: false }) : null);
+}
+
 function RunDetail({ id, gates }: { id: string; gates: string[] }) {
   const run = useBotRun(id);
   const cancel = useCancelRun();
+  const place = usePlaceName();
   const [marking, setMarking] = useState(false);
   if (run.isPending) return <LoadingCard lines={5} />;
   if (run.error) return <ApiErrorNotice error={run.error} />;
   const r = run.data;
   const data = Object.keys(r.data).length > 0 ? JSON.stringify(r.data, null, 2) : '';
+  const where = place(r.runs_on);
   return (
     <Card>
       <section className={styles.form} aria-label="Run">
@@ -69,10 +77,11 @@ function RunDetail({ id, gates }: { id: string; gates: string[] }) {
             <RunChip status={r.status} />
             <span className={styles.muted} title={stamp(r.created_at)}>
               {ago(r.created_at)}
+              {where && ` · on ${where.name}`}
             </span>
           </span>
           <span className={styles.muted}>
-            {(r.input_tokens + r.output_tokens).toLocaleString('en-GB')} tokens · {dollars(r.cost_micros)} · {r.own_key ? 'your Claude key' : 'Glyphh’s Claude key'}
+            {(r.input_tokens + r.output_tokens).toLocaleString('en-GB')} tokens · {dollars(r.cost_micros)} · {where ? `the Claude key on ${where.name}` : r.own_key ? 'your Claude key' : 'Glyphh’s Claude key'}
           </span>
         </div>
         <div>
@@ -145,6 +154,8 @@ export function RunsTab({ bot }: { bot: Bot }) {
     );
   const shown = params.get('run') ?? runs.data?.[0]?.id ?? null;
   const gates = bot.gate_models.map((g) => g.replace(`${bot.slug}-`, ''));
+  const place = usePlaceName();
+  const home = place(bot.runs_on);
 
   const run = () =>
     start.mutate(input.trim(), {
@@ -159,8 +170,14 @@ export function RunsTab({ bot }: { bot: Bot }) {
       <Card>
         <div className={styles.form}>
           <TextArea label="What to do" hint="The bot reads this with its instructions." value={input} onChange={(e) => setInput(e.target.value)} />
-          {bot.runs_on && !start.error && <span className={styles.muted}>{COMING}</span>}
-          {runsOnPending(start.error) ? <ErrorNotice message={COMING} /> : <ApiErrorNotice error={start.error} />}
+          {home && (
+            <span className={styles.muted}>
+              {home.linked
+                ? `It runs on ${home.name}, on the Claude key set there.`
+                : `It runs on ${home.name}, which is offline: start it, or choose Glyphh cloud in Overview, to run the bot.`}
+            </span>
+          )}
+          <ApiErrorNotice error={start.error} />
           <div className={styles.row}>
             <Button variant="primary" disabled={input.trim() === ''} loading={start.isPending} onClick={run}>
               Run
@@ -194,6 +211,7 @@ export function RunsTab({ bot }: { bot: Bot }) {
                 </span>
                 <span className={styles.muted} title={stamp(r.created_at)}>
                   {ago(r.created_at)} · {dollars(r.cost_micros)}
+                  {r.runs_on && ` · on ${place(r.runs_on)!.name}`}
                 </span>
               </button>
             </li>

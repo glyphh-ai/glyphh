@@ -1,0 +1,157 @@
+/* Swarms: the crew in order, a run's turns as a timeline, each turn's pull request as a card. */
+
+.crew {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.order {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The turns, one under another on a line, the newest last. */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 11px;
+  width: 2px;
+  background: var(--line);
+}
+
+.turn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.turn::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: calc(-1 * var(--space-6) + 6px);
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--line-strong);
+  background: var(--bg);
+}
+
+.turnHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.turnName {
+  font-weight: 600;
+}
+
+.pr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.prTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* On a phone the branch goes under the title rather than squeezing it. */
+.prHead {
+  flex-wrap: wrap;
+}
+
+.prTitle svg {
+  flex: none;
+}
+
+a.prTitle:hover {
+  text-decoration: underline;
+}
+
+.said {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.files li {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* A repo, branch or file path. */
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.added {
+  color: var(--green-text);
+}
+
+.removed {
+  color: var(--red-text);
+}
+
+.error {
+  margin: 0;
+  color: var(--red-text);
+  font-size: var(--text-sm);
+}

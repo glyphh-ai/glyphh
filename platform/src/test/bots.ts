@@ -350,13 +350,18 @@ export function botsFake({
     http.post(v1('/bots/:slug/runs'), async ({ params, request }) => {
       const bot = find(params.slug);
       if (!bot) return missing();
-      if (bot.runs_on) return apiError(409, 'E_CONFLICT', 'Running bots on your machines is coming.', { reason: 'runs_on_pending' });
+      // As the server: a bot on one of the org's rrotors is sent there (dispatched), unless that rrotor is offline.
+      const home = bot.runs_on ? places().find((p) => p.id === bot.runs_on) : undefined;
+      if (home && !home.linked)
+        return apiError(409, 'E_CONFLICT', `${home.name} is not linked to Glyphh right now: start it, or check its link, then try again.`, { reason: 'rrotor_offline' });
       const { input } = (await request.json()) as { input: string };
       const created = stamp();
       const made = waiting({
         id: `r-${next++}`,
         bot_slug: bot.slug,
-        status: 'queued',
+        status: home ? 'dispatched' : 'queued',
+        runs_on: home?.id ?? null,
+        kind: 'bot',
         input,
         log: [],
         data: {},
@@ -364,12 +369,12 @@ export function botsFake({
         input_tokens: 0,
         output_tokens: 0,
         cost_micros: 0,
-        own_key: state.key.set,
+        own_key: Boolean(home) || state.key.set, // a rrotor runs on the Claude key set there
         created_at: created,
         started_at: null,
       });
       state.runs.unshift(made);
-      bot.last_run = { id: made.id, status: 'queued', created_at: created };
+      bot.last_run = { id: made.id, status: made.status, created_at: created };
       state.seen.push(`run ${bot.slug}`);
       return HttpResponse.json(made, { status: 202 });
     }),
@@ -379,7 +384,7 @@ export function botsFake({
       const reads = (state.reads.get(r.id) ?? 0) + 1;
       state.reads.set(r.id, reads);
       if (reads === 2 && r.status === 'queued') r.status = 'running';
-      if (reads >= 3 && r.status === 'running') {
+      if (reads >= 3 && (r.status === 'running' || r.status === 'dispatched')) {
         const asked = waiting();
         Object.assign(r, { status: 'needs_input', log: asked.log, data: asked.data, question: asked.question, input_tokens: 900, output_tokens: 120, cost_micros: 4200 });
         settle(r);

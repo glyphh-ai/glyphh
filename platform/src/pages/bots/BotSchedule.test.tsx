@@ -85,18 +85,34 @@ describe('where a bot runs', () => {
     expect(acme).toBeDisabled();
     expect(studio).toBeEnabled();
     await user.selectOptions(where, 'rr-studio');
-    expect(screen.getByText(/Running on your machines is coming/)).toBeInTheDocument();
+    expect(screen.getByText(/It runs on that machine, on the Claude key set there/)).toBeInTheDocument();
+    expect(screen.queryByText(/coming/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(fake.state.bodies[0]).toMatchObject({ runs_on: 'rr-studio' }));
   });
 
-  it('says running on your machines is coming when a run of a bot on one is refused', async () => {
-    on({ bots: [inbox({ runs_on: 'rr-studio' })] });
+  it('runs a bot on its machine and says where each run ran', async () => {
+    const fake = on({ bots: [inbox({ runs_on: 'rr-studio' })] });
     const { user } = renderApp('/bots/inbox-helper?tab=runs');
-    expect(await screen.findByText(/Running on your machines is coming/)).toBeInTheDocument();
+    expect(await screen.findByText('It runs on Studio Mac, on the Claude key set there.')).toBeInTheDocument();
     await user.type(screen.getByLabelText('What to do'), 'Clear the inbox.');
     await user.click(screen.getByRole('button', { name: 'Run' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Running on your machines is coming');
+    const run = await screen.findByRole('region', { name: 'Run' });
+    expect(await within(run).findByText('Running there')).toBeInTheDocument();
+    expect(within(run).getByText(/· on Studio Mac/)).toBeInTheDocument();
+    expect(within(run).getByText(/the Claude key on Studio Mac/)).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Runs' })).getByText(/· on Studio Mac/)).toBeInTheDocument();
+    expect(await within(run).findByRole('region', { name: 'Question' }, { timeout: 4000 })).toBeInTheDocument(); // its result came back
+    expect(fake.state.seen).toContain('run inbox-helper');
+  });
+
+  it('says so when the bot’s machine is offline, and the server’s refusal', async () => {
+    on({ bots: [inbox({ runs_on: 'rr-acme' })] });
+    const { user } = renderApp('/bots/inbox-helper?tab=runs');
+    expect(await screen.findByText(/It runs on Acme, which is offline/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('What to do'), 'Clear the inbox.');
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Acme is not linked to Glyphh right now');
   });
 
   it('shows on the Bots list with the next run', async () => {

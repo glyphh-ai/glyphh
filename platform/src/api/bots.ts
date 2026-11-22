@@ -22,7 +22,8 @@ export type Connection = {
 export type ConnectorApp = { slug: string; name: string; description: string | null; icon: string | null };
 export type ConnectionTool = { key: string; name: string; description: string | null; permission: Permission };
 export type BotConnection = { connection_id: string; app: string; app_name: string; tools: string[] };
-export type RunStatus = 'queued' | 'running' | 'needs_input' | 'done' | 'failed' | 'skipped';
+/** `dispatched`: sent to the org's rrotor the bot runs on, running there until its result comes back. */
+export type RunStatus = 'queued' | 'running' | 'dispatched' | 'needs_input' | 'done' | 'failed' | 'skipped';
 export type BotSpec = Record<string, unknown> & { loop?: Array<Record<string, unknown>>; gates?: Record<string, unknown> };
 export type Bot = {
   id: string;
@@ -85,6 +86,11 @@ export type BotRun = {
   output_tokens: number;
   cost_micros: number;
   own_key: boolean;
+  /** The org's rrotor it ran on; none for Glyphh cloud. */
+  runs_on?: string | null;
+  /** `swarm`: in the approvals queue, a swarm's pull request waiting for merge or reject (`swarm_slug` its swarm). */
+  kind?: 'bot' | 'swarm';
+  swarm_slug?: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -171,7 +177,7 @@ export const useBotPlaces = () =>
 export const useBotGates = (slug: string) =>
   useQuery({ queryKey: botKeys.gates(slug), queryFn: async () => (await api.get<{ gates: GateStats }>(`${one(slug)}/gates`)).gates });
 
-export const working = (status: RunStatus | undefined) => status === 'queued' || status === 'running';
+export const working = (status: RunStatus | undefined) => status === 'queued' || status === 'running' || status === 'dispatched';
 
 /** A bot's runs, asked for again every two seconds while one of them is queued or running. */
 export const useBotRuns = (slug: string, every = 2000) =>
@@ -253,9 +259,6 @@ export const useSetPermissions = (id: string) =>
 export const connectionsOff = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 503 && (error.detail as { reason?: unknown }).reason === 'pipedream_off';
 
-/** A run of a bot set to run on one of the org's machines: not sent to rrotors yet (409, reason runs_on_pending). */
-export const runsOnPending = (error: unknown): boolean =>
-  error instanceof ApiError && error.status === 409 && (error.detail as { reason?: unknown }).reason === 'runs_on_pending';
 
 /** The SDK's problems with a bot the server would not take (422, `problems`), one a line; else none. */
 export const problemsOf = (error: unknown): string[] => {

@@ -12,6 +12,9 @@ import { AppsPage } from '@/pages/apps/AppsPage';
 import { ApprovalsPage } from '@/pages/bots/ApprovalsPage';
 import { BotPage } from '@/pages/bots/BotPage';
 import { BotsPage } from '@/pages/bots/BotsPage';
+import { SwarmPage } from '@/pages/swarms/SwarmPage';
+import { NewSwarmPage, SwarmsPage } from '@/pages/swarms/SwarmsPage';
+import { GitHubTokenPage } from '@/pages/settings/GitHubTokenPage';
 import { ConnectionPage } from '@/pages/connections/ConnectionPage';
 import { ConnectionsPage } from '@/pages/connections/ConnectionsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
@@ -175,6 +178,9 @@ export const routes: RouteObject[] = [
       { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
       { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
       { path: 'approvals', element: <ApprovalsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Approvals' }] } },
+      { path: 'swarms', element: <SwarmsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Swarms' }] } },
+      { path: 'swarms/new', element: <NewSwarmPage />, handle: { crumbs: [{ label: 'Swarms', to: '/swarms' }, { label: 'New swarm' }] } },
+      { path: 'swarms/:name', element: <SwarmPage />, handle: { crumbs: [{ label: 'Swarms', to: '/swarms' }, { label: ':name' }] } },
       { path: 'connections', element: <ConnectionsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections' }] } },
       {
         path: 'connections/:name',
@@ -206,6 +212,7 @@ export const routes: RouteObject[] = [
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
       { path: 'claude-key', element: <ClaudeKeyPage />, handle: crumbs('Settings', 'Claude key') },
+      { path: 'github-token', element: <GitHubTokenPage />, handle: crumbs('Settings', 'GitHub token') },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
       // Ada's versions (2026-11-21, was the Ada page in the main sidebar).
