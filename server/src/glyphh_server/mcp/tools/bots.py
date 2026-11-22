@@ -5,7 +5,7 @@ tools), reading, changing and deleting it. Its runs are bot_runs.py's."""
 from pydantic import BaseModel, ConfigDict, Field
 
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
-from glyphh_server.ops.bots import prices, store
+from glyphh_server.ops.bots import prices, store, voices
 from glyphh_server.ops.bots.guide import GUIDE
 from glyphh_server.ops.bots.views import BotIn, BotPatch, BotView, ScopeIn, ScopesIn
 
@@ -83,6 +83,11 @@ async def models(ctx: Context, _: NoArgs) -> Done:
     return Done("\n".join(lines) + f"\n(Glyphh's markup: {found.markup_pct}%)", dump(found))
 
 
+async def list_voices(ctx: Context, _: NoArgs) -> Done:
+    found = voices.listing()
+    return Done(", ".join(f"{v.id} ({v.accent} {v.gender})" for v in found.voices), dump(found))
+
+
 def _tool(name: str, title: str, about: str, args: type[BaseModel], handler: object, read_only: bool) -> Tool:
     return Tool(name, title, about, args, handler, read_only)  # type: ignore[arg-type]
 
@@ -103,8 +108,10 @@ TOOLS: tuple[Tool, ...] = (
         "bot_create",
         "Make a bot",
         "Make a Glyphh bot (bot_guide says how): a name, a summary, its cat (look: head, tail, eye, extra, accessory, "
-        "pose), instructions (its agent's prompt), the Claude model (bot_models), its spec (loop, gates, limits), "
-        "skills and, per connection, its tools. Checked before it is made: every problem is said at once.",
+        "pose) or a drawn mascot (bot_mascot), instructions (its agent's prompt), the Claude model (bot_models), its "
+        "permission mode (ask, connection or auto: which tool steps wait for the person), its voice (bot_voices), its "
+        "spec (loop, gates, limits), skills and, per connection, its tools. Checked before it is made: every problem "
+        "is said at once.",
         BotIn,
         create,
         False,
@@ -128,4 +135,5 @@ TOOLS: tuple[Tool, ...] = (
         False,
     ),
     _tool("bot_models", "Bot models", "The Claude models a bot may run on, at their rates.", NoArgs, models, True),
+    _tool("bot_voices", "Bot voices", "The voices a bot may speak in (its `voice`).", NoArgs, list_voices, True),
 )

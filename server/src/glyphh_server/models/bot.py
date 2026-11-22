@@ -15,6 +15,7 @@ from glyphh_server.models.base import Base, created_at, guid
 
 RUN_STATUSES: tuple[str, ...] = ("queued", "running", "needs_input", "done", "failed", "skipped")
 LIVE: tuple[str, ...] = ("queued", "running", "needs_input")
+PERMISSION_MODES: tuple[str, ...] = ("ask", "connection", "auto")
 
 
 class Connection(Base):
@@ -37,7 +38,10 @@ class Connection(Base):
 
 class Bot(Base):
     __tablename__ = "bots"
-    __table_args__ = (Index("bots_one_slug", "org_id", "slug", unique=True),)
+    __table_args__ = (
+        Index("bots_one_slug", "org_id", "slug", unique=True),
+        CheckConstraint(f"permission_mode IN {PERMISSION_MODES}", name="bots_permission_mode"),
+    )
 
     id: Mapped[uuid.UUID] = guid()
     org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"))
@@ -46,6 +50,12 @@ class Bot(Base):
     name: Mapped[str] = mapped_column(Text)
     summary: Mapped[str] = mapped_column(Text, server_default="")
     look: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))  # its cat's parts
+    mascot: Mapped[str] = mapped_column(
+        Text, server_default=""
+    )  # its own drawn mascot, SVG made safe (ops/bots/svg.py)
+    # which tool steps wait for the person: ask (unless allowed), connection (as its connection says), auto (none)
+    permission_mode: Mapped[str] = mapped_column(Text, server_default="ask")
+    voice: Mapped[str] = mapped_column(Text, server_default="")  # the TTS voice it speaks in (ops/bots/voices.py)
     instructions: Mapped[str] = mapped_column(Text, server_default="")  # its agent's prompt (agent.md's body)
     model: Mapped[str] = mapped_column(Text)  # the Claude model its agent steps run on (ops/bots/prices.py)
     # per connection, the tools it may use: [{"connection_id": "...", "tools": ["gmail-send-email", ...]}]

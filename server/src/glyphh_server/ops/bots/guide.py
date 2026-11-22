@@ -7,9 +7,11 @@ A Glyphh bot is a loop of steps that a program walks, not an agent that roams. C
 decide, each its own Ada model that learns from the person's answers and asks less run after run; Claude is called
 only for the steps that need judgment. Hard limits in the loop hold whatever Claude says.
 
-A bot is: name, summary, look (its cat), instructions (its agent's prompt: who it is, how it writes), model (the
-Claude model its agent steps run on, bot_models), connections (per connection, the tool keys it may use,
-connection_tools lists them), skills ({name: SKILL.md text}, how its agent does one kind of step) and spec:
+A bot is: name, summary, look (its cat) or mascot (its own drawing, bot_mascot), permission_mode (ask: each tool
+step waits for the person unless its connection allows the tool; connection: only those the connection says ask;
+auto: none; a denied tool always fails), voice (bot_voices), instructions (its agent's prompt: who it is, how it
+writes), model (the Claude model its agent steps run on, bot_models), connections (per connection, the tool keys it
+may use, connection_tools lists them), skills ({name: SKILL.md text}, how its agent does one kind of step) and spec:
 
 spec = {
   "touches": "read_only" | "drafts" | "sends" | "pays" | "deletes",   # how far out it reaches; sends and beyond
