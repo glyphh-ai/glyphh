@@ -5,6 +5,7 @@ tools called over HTTP at the host (HttpProgram), and what it left goes over the
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import io
 import json
 import urllib.error
@@ -204,6 +205,8 @@ def test_a_result_goes_over_the_wire_and_comes_back():
     wire = done.to_result()
     assert (wire["status"], wire["step"], wire["prompt"], wire["data"]["output"]) == ("done", None, None, "the sum")
     assert RunResult.from_result(wire).data == {"sum": "the sum"}
+    dated = RunResult("lister", "r1", "done", data={"on": dt.date(2026, 11, 21)}).to_result()
+    assert dated["data"]["data"] == {"on": "2026-11-21"}  # JSON all through
     skipped = RunResult("lister", "", "skipped", "quiet hours")
     assert skipped.to_result()["status"] == "done" and RunResult.from_result(skipped.to_result()).status == "skipped"
 

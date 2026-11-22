@@ -115,7 +115,8 @@ class RunResult:
         approval: `step` and `prompt`, answered yes or no) or `failed` (`data.reason`). `data` holds the whole run:
         bot, run_id, status, reason, question, options, batch, answer_with, step, approval, log, data, output, tokens
         and state, so `from_result` gives it back."""
-        data: Dict[str, Any] = {k: v for k, v in asdict(self).items() if v is not None}
+        kept = {k: v for k, v in asdict(self).items() if v is not None}
+        data: Dict[str, Any] = json.loads(json.dumps(kept, default=str))  # JSON all through, as the wire is
         data.setdefault("tokens", {"input_tokens": 0, "output_tokens": 0})
         if self.status == "needs_input":
             data["schema"] = None
