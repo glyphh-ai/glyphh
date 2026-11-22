@@ -2,6 +2,16 @@
 
 Newest first. The version is `.claude-plugin/plugin.json`'s and the marketplace's.
 
+## 1.22.0 — 2026-11-21
+
+The pinned rrotor is 0.5.0: it runs Glyphh bots and swarm turns for the server (the built-in programs `glyphh_bot`
+and `glyphh_swarm`) and carries Glyphh SDK 3.12.0.
+
+- `rrotor.sh update` (or update in the Account section) brings a running rrotor up to 0.5.0; the local compose file
+  and the Helm chart (0.6.0) pin it too.
+
+The hook's User-Agent is `glyphh-hook/1.22.0`.
+
 ## 1.21.0 — 2026-11-18
 
 Pipelines and the graph: rrotor 0.4.0 keeps one graph, its semantic layer, and the plugin teaches Claude to fill it
