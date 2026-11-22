@@ -9,6 +9,11 @@
   cursor: pointer;
 }
 
+/* An option that cannot be chosen, greyed but still readable (never darker than the muted labels). */
+.select option:disabled {
+  color: var(--text-muted);
+}
+
 .chevron {
   position: absolute;
   top: 50%;

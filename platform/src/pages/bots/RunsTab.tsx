@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useBotRun, useBotRuns, useCancelRun, useRunBot, useWrongRun, working, type Bot, type BotRun } from '@/api/bots';
+import { runsOnPending, useBotRun, useBotRuns, useCancelRun, useRunBot, useWrongRun, working, type Bot, type BotRun } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ago, dollars, stamp } from '@/lib/format';
-import { Button, Card, Dialog, EmptyState, LoadingCard, Select, Skeleton, TextField, useToast } from '@/ui';
+import { Button, Card, Dialog, EmptyState, ErrorNotice, LoadingCard, Select, Skeleton, TextField, useToast } from '@/ui';
+import { COMING } from './ModelPicker';
 import { QuestionForm, RunChip, TextArea } from './parts';
 import styles from './bots.module.css';
 
@@ -158,7 +159,8 @@ export function RunsTab({ bot }: { bot: Bot }) {
       <Card>
         <div className={styles.form}>
           <TextArea label="What to do" hint="The bot reads this with its instructions." value={input} onChange={(e) => setInput(e.target.value)} />
-          <ApiErrorNotice error={start.error} />
+          {bot.runs_on && !start.error && <span className={styles.muted}>{COMING}</span>}
+          {runsOnPending(start.error) ? <ErrorNotice message={COMING} /> : <ApiErrorNotice error={start.error} />}
           <div className={styles.row}>
             <Button variant="primary" disabled={input.trim() === ''} loading={start.isPending} onClick={run}>
               Run

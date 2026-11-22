@@ -6,7 +6,8 @@ import styles from './Select.module.css';
 type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> & {
   label: string;
   hint?: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
+  /** A disabled option is shown greyed and cannot be chosen. */
+  options: ReadonlyArray<{ value: string; label: string; disabled?: boolean }>;
 };
 
 /** A native select in the field's look, so the keyboard, the screen reader and the phone picker all just work. */
@@ -22,7 +23,7 @@ export function Select({ label, hint, options, id, ...rest }: SelectProps) {
       <div className={styles.box}>
         <select id={selectId} className={`${fieldStyles.input} ${styles.select}`} aria-describedby={hint ? noteId : undefined} {...rest}>
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </option>
           ))}

@@ -40,10 +40,25 @@ export type Bot = {
   skills: Record<string, string>;
   gate_models: string[];
   connections: BotConnection[];
+  /** When it runs on its own, as chosen in plain words (off when never set). */
+  schedule?: Schedule;
+  /** The schedule in the server's words: `Every day at 9:00`. */
+  schedule_summary?: string;
+  next_run_at?: string | null;
+  /** Its next run in the schedule's time zone, `Mon 9:00`; empty when it is off. */
+  next_run?: string;
+  /** The org's rrotor it runs on; none for Glyphh cloud. */
+  runs_on?: string | null;
   created_at: string;
   updated_at: string;
   last_run: { id: string; status: RunStatus; created_at: string } | null;
 };
+/** How often a bot runs on its own: off, every hour, every day, weekdays, one day each week or one day each month. */
+export type Every = 'off' | 'hour' | 'day' | 'weekdays' | 'week' | 'month';
+/** A bot's schedule as the person chooses it, never cron: `at` is HH:MM in `timezone`; `weekday` 0 is Monday. */
+export type Schedule = { every: Every; at: string; weekday: number; day: number; timezone: string; input: string };
+/** Where a bot can run: Glyphh cloud (`id` null) or one of the org's rrotors, linked to Glyphh right now or not. */
+export type Place = { id: string | null; name: string; mode: 'cloud' | 'local' | 'self'; linked: boolean };
 export type BotModel = {
   id: string;
   name: string;
@@ -91,6 +106,8 @@ export type NewBot = {
   spec?: BotSpec;
   skills?: Record<string, string>;
   connections?: BotScope[];
+  schedule?: Schedule;
+  runs_on?: string | null;
 };
 export type BotChange = Partial<Omit<NewBot, 'connections'>>;
 export type BotVoice = { id: string; name: string; accent: string; gender: string; default: boolean };
@@ -121,6 +138,7 @@ export const botKeys = {
   bot: (slug: string) => ['bots', slug] as const,
   models: ['bots', '~models'] as const,
   voices: ['bots', '~voices'] as const,
+  places: ['bots', '~places'] as const,
   gates: (slug: string) => ['bots', slug, 'gates'] as const,
   runs: (slug: string) => ['bots', slug, 'runs'] as const,
   run: (id: string) => ['bot-runs', id] as const,
@@ -147,6 +165,9 @@ export const useBotSearch = (q: string) =>
 export const useBot = (slug: string) => useQuery({ queryKey: botKeys.bot(slug), queryFn: () => api.get<Bot>(one(slug)) });
 export const useBotModels = () => useQuery({ queryKey: botKeys.models, queryFn: () => api.get<BotModels>('/bots/models'), staleTime: 60_000 });
 export const useBotVoices = () => useQuery({ queryKey: botKeys.voices, queryFn: () => api.get<BotVoices>('/bots/voices'), staleTime: 60 * 60_000 });
+/** Where the org's bots can run: Glyphh cloud first, then its rrotors, each linked right now or not. */
+export const useBotPlaces = () =>
+  useQuery({ queryKey: botKeys.places, queryFn: async () => (await api.get<{ places: Place[] }>('/bots/places')).places, staleTime: 60_000 });
 export const useBotGates = (slug: string) =>
   useQuery({ queryKey: botKeys.gates(slug), queryFn: async () => (await api.get<{ gates: GateStats }>(`${one(slug)}/gates`)).gates });
 
@@ -231,6 +252,10 @@ export const useSetPermissions = (id: string) =>
 /** Not set up on the server: no Pipedream project (503 E_UNAVAILABLE, reason pipedream_off). */
 export const connectionsOff = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 503 && (error.detail as { reason?: unknown }).reason === 'pipedream_off';
+
+/** A run of a bot set to run on one of the org's machines: not sent to rrotors yet (409, reason runs_on_pending). */
+export const runsOnPending = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 409 && (error.detail as { reason?: unknown }).reason === 'runs_on_pending';
 
 /** The SDK's problems with a bot the server would not take (422, `problems`), one a line; else none. */
 export const problemsOf = (error: unknown): string[] => {

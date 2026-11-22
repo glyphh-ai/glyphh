@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import type { Bot, BotDraft, BotKey, BotModels, BotRun, BotVoices, Connection, ConnectionTool, ConnectorApp, DraftReply, Permission, Said } from '@/api/bots';
+import type { Bot, BotDraft, BotKey, BotModels, BotRun, BotVoices, Connection, ConnectionTool, ConnectorApp, DraftReply, Permission, Place, Said, Schedule } from '@/api/bots';
 import type { BotTemplate } from '@/api/botTemplates';
+import { summary } from '@/pages/bots/schedule';
 import { apiError } from './server';
 
 /**
@@ -175,6 +176,24 @@ export const botVoices: BotVoices = {
   ],
 };
 
+/** Where the org's bots can run: Glyphh cloud, a computer linked right now and a self-hosted rrotor offline. */
+export const places = (): Place[] => [
+  { id: null, name: 'Glyphh cloud', mode: 'cloud', linked: true },
+  { id: 'rr-studio', name: 'Studio Mac', mode: 'local', linked: true },
+  { id: 'rr-acme', name: 'Acme', mode: 'self', linked: false },
+];
+
+/** A schedule as the server keeps one. */
+export const weekdays = (given: Partial<Schedule> = {}): Schedule => ({
+  every: 'weekdays',
+  at: '09:00',
+  weekday: 0,
+  day: 1,
+  timezone: 'America/Chicago',
+  input: 'is:unread',
+  ...given,
+});
+
 /** A mascot as the server sends one back: black-and-white shapes only. */
 export const drawnMascot =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path d="M40 60 L70 20 L90 55 L120 55 L140 20 L165 60 C180 110 160 170 100 175 C40 170 20 110 40 60 Z" fill="#0b0a0f" stroke="#ffffff" stroke-width="12" stroke-linejoin="round" /><circle cx="80" cy="105" r="16" fill="#ffffff" /><circle cx="84" cy="102" r="7" fill="#0b0a0f" /><circle cx="125" cy="105" r="16" fill="#ffffff" /><circle cx="129" cy="102" r="7" fill="#0b0a0f" /><path d="M60 40 L100 8 L140 40 Z" fill="#ffffff" /></svg>';
@@ -256,6 +275,7 @@ export function botsFake({
   const handlers = [
     http.get(v1('/bots/models'), () => HttpResponse.json(botModels)),
     http.get(v1('/bots/voices'), () => HttpResponse.json(botVoices)),
+    http.get(v1('/bots/places'), () => HttpResponse.json({ places: places() })),
     http.post(v1('/bots/draft'), async ({ request }) => {
       const body = (await request.json()) as { messages: Said[]; draft: BotDraft | null };
       state.bodies.push(body);
@@ -294,6 +314,11 @@ export function botsFake({
       if (problems.length && change.spec) return bad();
       Object.assign(bot, change, { updated_at: stamp() });
       if (change.name) bot.slug = slugOf(change.name);
+      if (change.schedule) {
+        // As the server: the schedule said back, and its next run worked out (here, always the coming Monday).
+        const off = change.schedule.every === 'off';
+        Object.assign(bot, { schedule_summary: summary(change.schedule), next_run: off ? '' : 'Mon 9:00', next_run_at: off ? null : '2026-11-23T15:00:00Z' });
+      }
       state.seen.push(`update ${params.slug}`);
       return HttpResponse.json(bot);
     }),
@@ -325,6 +350,7 @@ export function botsFake({
     http.post(v1('/bots/:slug/runs'), async ({ params, request }) => {
       const bot = find(params.slug);
       if (!bot) return missing();
+      if (bot.runs_on) return apiError(409, 'E_CONFLICT', 'Running bots on your machines is coming.', { reason: 'runs_on_pending' });
       const { input } = (await request.json()) as { input: string };
       const created = stamp();
       const made = waiting({
