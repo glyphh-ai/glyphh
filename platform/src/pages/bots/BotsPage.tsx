@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { useBotSearch, useBots, type Bot } from '@/api/bots';
+import { useBotPlaces, useBotSearch, useBots, type Bot } from '@/api/bots';
 import { useBotTemplates, type BotTemplate } from '@/api/botTemplates';
 import { botTemplatePath } from '@/pages/templates/BotTemplates';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { useUrlSearch } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { ago, plural } from '@/lib/format';
-import { Button, EmptyState, Skeleton, Tabs, TextField } from '@/ui';
+import { Button, Chip, EmptyState, Skeleton, Tabs, TextField } from '@/ui';
 import { BotMaker } from './BotMaker';
 import { NewBotDialog } from './NewBotDialog';
 import { botPath, CatTile, RunChip } from './parts';
@@ -40,7 +40,8 @@ function Placeholders({ count }: { count: number }) {
   );
 }
 
-function BotCard({ bot }: { bot: Bot }) {
+/** A bot in the list: its cat, name and what it has, its last run, its next one, and (off Glyphh cloud) where it runs. */
+function BotCard({ bot, place }: { bot: Bot; place?: string }) {
   const title = `bot-${bot.slug}`;
   const tools = bot.connections.reduce((n, c) => n + c.tools.length, 0);
   return (
@@ -62,6 +63,12 @@ function BotCard({ bot }: { bot: Bot }) {
             </span>
           ) : (
             <span className={styles.muted}>Never run</span>
+          )}
+          {bot.next_run && <span className={styles.muted}>Next run {bot.next_run}</span>}
+          {bot.runs_on && (
+            <span className={styles.place}>
+              <Chip tone="violet">On {place ?? 'your machine'}</Chip>
+            </span>
           )}
         </div>
       </Link>
@@ -94,6 +101,8 @@ function TemplateCard({ template, have }: { template: BotTemplate; have: boolean
 /** The org's bots the server finds for what is typed (`GET /v1/bots?q=`). */
 function Yours({ q, onMake, onAi }: { q: string; onMake: () => void; onAi: () => void }) {
   const found = useBotSearch(q.trim());
+  const places = useBotPlaces();
+  const named = new Map((places.data ?? []).map((p) => [p.id, p.name]));
   const shown = found.data;
   if (found.error) return <ApiErrorNotice error={found.error} />;
   if (shown === undefined)
@@ -133,7 +142,7 @@ function Yours({ q, onMake, onAi }: { q: string; onMake: () => void; onAi: () =>
   return (
     <ul className={styles.grid} aria-label="Your bots" aria-busy={found.isFetching || undefined}>
       {shown.map((bot) => (
-        <BotCard key={bot.id} bot={bot} />
+        <BotCard key={bot.id} bot={bot} place={named.get(bot.runs_on ?? null)} />
       ))}
     </ul>
   );

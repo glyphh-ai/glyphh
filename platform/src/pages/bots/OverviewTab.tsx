@@ -7,12 +7,15 @@ import { Button, Card, TextField, useToast } from '@/ui';
 import { MascotPicker, type Face } from './MascotPicker';
 import { ModelAndMode, VoicePicker } from './ModelPicker';
 import { botPath, TextArea } from './parts';
+import { scheduleOf, same } from './schedule';
+import { SchedulePicker } from './SchedulePicker';
 import { ToolsTab } from './ToolsTab';
 import cs from '../connections/connections.module.css';
 import styles from './bots.module.css';
 
 /**
- * The bot's editor: its mascot, name, what it is for, instructions, model and permission mode, voice, and (folded away
+ * The bot's editor: its mascot, name, what it is for, instructions, model, permission mode and where it runs, voice,
+ * its schedule, and (folded away
  * under their count) its connections and the tools it may use on each; beside them what it has.
  */
 type Props = { bot: Bot; connectionsOpen?: boolean; onConnections?: (open: boolean) => void };
@@ -28,12 +31,14 @@ export function OverviewTab({ bot, connectionsOpen = false, onConnections }: Pro
   const [mode, setMode] = useState<PermissionMode>(bot.permission_mode ?? 'ask');
   const [voice, setVoice] = useState(bot.voice ?? '');
   const [face, setFace] = useState<Face>({ look: bot.look, mascot: bot.mascot ?? '' });
+  const [schedule, setSchedule] = useState(() => scheduleOf(bot.schedule));
+  const [runsOn, setRunsOn] = useState<string | null>(bot.runs_on ?? null);
   const ready = name.trim() !== '' && instructions.trim() !== '';
   const tools = bot.connections.reduce((n, c) => n + c.tools.length, 0);
 
   const save = () =>
     update.mutate(
-      { name: name.trim(), summary: summary.trim(), instructions: instructions.trim(), model, permission_mode: mode, voice, ...face },
+      { name: name.trim(), summary: summary.trim(), instructions: instructions.trim(), model, permission_mode: mode, voice, ...face, schedule, runs_on: runsOn },
       {
         onSuccess: (saved) => {
           toast.show(`${saved.name} is saved.`);
@@ -51,8 +56,9 @@ export function OverviewTab({ bot, connectionsOpen = false, onConnections }: Pro
             <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
             <TextField label="What it is for" value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={200} />
             <TextArea label="Instructions" hint="What Claude reads before each step that needs judgment." value={instructions} onChange={(e) => setInstructions(e.target.value)} />
-            <ModelAndMode model={model} onModel={setModel} mode={mode} onMode={setMode} />
+            <ModelAndMode model={model} onModel={setModel} mode={mode} onMode={setMode} runsOn={runsOn} onRunsOn={setRunsOn} />
             <VoicePicker value={voice} onChange={setVoice} />
+            <SchedulePicker value={schedule} onChange={setSchedule} next={same(schedule, scheduleOf(bot.schedule)) ? bot.next_run : undefined} />
             <ApiErrorNotice error={update.error} />
             <div className={styles.row}>
               <Button variant="primary" disabled={!ready} loading={update.isPending} onClick={save}>

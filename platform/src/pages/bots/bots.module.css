@@ -54,6 +54,39 @@
   gap: var(--space-3);
 }
 
+/* Three side by side: the model, the permission mode and where it runs. */
+.triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* The bot's schedule: how often, then the day and time as that needs, wrapping on a narrow screen. */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.scheduleLegend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.scheduleRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Where a bot runs, on its card in the list: a rrotor's name. */
+.place {
+  align-self: flex-start;
+}
+
 @media (max-width: 640px) {
   .pair {
     grid-template-columns: 1fr;

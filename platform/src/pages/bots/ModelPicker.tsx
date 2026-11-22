@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { useBotKey, useBotModels, useBotVoices, type BotModel, type PermissionMode } from '@/api/bots';
+import { useBotKey, useBotModels, useBotPlaces, useBotVoices, type BotModel, type PermissionMode } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { rate } from '@/lib/format';
 import { Select } from '@/ui';
@@ -16,13 +16,39 @@ const per = (m: BotModel, own: boolean) =>
     ? `${rate(m.own_key_input_cents_per_mtok)} in · ${rate(m.own_key_output_cents_per_mtok)} out`
     : `${rate(m.input_cents_per_mtok)} in · ${rate(m.output_cents_per_mtok)} out`;
 
-type Props = { model: string; onModel: (id: string) => void; mode: PermissionMode; onMode: (mode: PermissionMode) => void };
+type Props = {
+  model: string;
+  onModel: (id: string) => void;
+  mode: PermissionMode;
+  onMode: (mode: PermissionMode) => void;
+  /** Where it runs (none: Glyphh cloud); given with onRunsOn, a third choice beside the two. */
+  runsOn?: string | null;
+  onRunsOn?: (id: string | null) => void;
+};
+
+export const COMING = 'Running on your machines is coming: until then, this bot’s runs wait. Choose Glyphh cloud to run it now.';
+
+/**
+ * Where a bot runs: Glyphh cloud, or one of the org's rrotors (one offline right now is greyed and cannot be chosen,
+ * unless the bot is already on it).
+ */
+function RunsOn({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const places = useBotPlaces();
+  const list = places.data ?? [{ id: null, name: 'Glyphh cloud', mode: 'cloud' as const, linked: true }];
+  const options = list.map((p) => ({
+    value: p.id ?? '',
+    label: p.linked ? p.name : `${p.name} (offline)`,
+    disabled: !p.linked && p.id !== value,
+  }));
+  return <Select label="Runs on" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} options={options} />;
+}
 
 /**
  * The Claude model a bot runs on, as a plain list of names (what the org pays for the chosen one under it, per million
- * tokens: on its own Claude key the markup only, else the rate and the markup), and beside it the permission mode.
+ * tokens: on its own Claude key the markup only, else the rate and the markup), and beside it the permission mode and,
+ * in the editor, where it runs.
  */
-export function ModelAndMode({ model, onModel, mode, onMode }: Props) {
+export function ModelAndMode({ model, onModel, mode, onMode, runsOn = null, onRunsOn }: Props) {
   const models = useBotModels();
   const key = useBotKey();
   const own = key.data?.set ?? false;
@@ -34,7 +60,7 @@ export function ModelAndMode({ model, onModel, mode, onMode }: Props) {
 
   return (
     <div className={styles.field}>
-      <div className={styles.pair}>
+      <div className={onRunsOn ? `${styles.pair} ${styles.triple}` : styles.pair}>
         <Select label="Model" value={model} onChange={(e) => onModel(e.target.value)} options={options} disabled={!list.length} />
         <Select
           label="Permission mode"
@@ -42,11 +68,13 @@ export function ModelAndMode({ model, onModel, mode, onMode }: Props) {
           onChange={(e) => onMode(e.target.value as PermissionMode)}
           options={MODES.map(({ value, label }) => ({ value, label }))}
         />
+        {onRunsOn && <RunsOn value={runsOn} onChange={onRunsOn} />}
       </div>
       <span className={styles.muted}>
         {chosen ? `${per(chosen, own)} per million tokens on ${own ? 'your' : 'Glyphh’s'} Claude key. ` : ''}
         {MODES.find((m) => m.value === mode)?.hint} <Link to="/settings/claude-key">Claude key</Link>
       </span>
+      {runsOn && <span className={styles.muted}>{COMING}</span>}
       <ApiErrorNotice error={models.error} />
     </div>
   );
