@@ -71,6 +71,8 @@ class Bot(Base):
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # where it runs: one of the org's rrotors, or none for Glyphh cloud
     runs_on: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="SET NULL"))
+    # the tools it adds to the org's connector, by purpose (ops/bots/exposed.py): its template's, or its own
+    connector_tools: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -108,6 +110,8 @@ class BotRun(Base):
     rrotor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="SET NULL"))
     remote_seq: Mapped[int] = mapped_column(BigInteger, server_default="0")
     remote: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    # the person's yes to the step it waits at, by the tool that step runs, used once (ops/bots/approvals.py)
+    approvals: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     machine: Mapped[str] = mapped_column(Text, server_default="")  # the machine running it, so its restart can end it
     created_at: Mapped[datetime] = created_at()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

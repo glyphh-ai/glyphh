@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from glyphh_server.ops.bots.exposed import ABOUT as TOOLS_ABOUT
+from glyphh_server.ops.bots.exposed import ConnectorTool
 from glyphh_server.ops.bots.schedule import Schedule
 
 LOOK_PARTS: tuple[str, ...] = ("head", "tail", "eye", "extra", "accessory", "pose")
@@ -69,6 +71,7 @@ class BotView(BaseModel):
     next_run_at: datetime | None = Field(description="When the schedule runs it next")
     next_run: str = Field(description="When, in the schedule's time zone: Mon 9:00; empty when it is off")
     runs_on: uuid.UUID | None = Field(description=RUNS_ON_ABOUT)
+    connector_tools: list[ConnectorTool] = Field(description=TOOLS_ABOUT)
     created_at: datetime
     updated_at: datetime
     last_run: LastRun | None
@@ -95,6 +98,7 @@ class BotIn(BaseModel):
     )
     schedule: Schedule = Field(default_factory=Schedule, description=SCHEDULE_ABOUT)
     runs_on: uuid.UUID | None = Field(None, description=RUNS_ON_ABOUT)
+    connector_tools: list[ConnectorTool] = Field(default_factory=list, max_length=20, description=TOOLS_ABOUT)
 
 
 class BotPatch(BaseModel):
@@ -111,6 +115,7 @@ class BotPatch(BaseModel):
     skills: dict[str, str] | None = Field(None, max_length=30, description=SKILLS_ABOUT)
     schedule: Schedule | None = Field(None, description=SCHEDULE_ABOUT)
     runs_on: uuid.UUID | None = Field(None, description=RUNS_ON_ABOUT + " (null: back to Glyphh cloud)")
+    connector_tools: list[ConnectorTool] | None = Field(None, max_length=20, description=TOOLS_ABOUT)
 
 
 class ScopesIn(BaseModel):
@@ -128,6 +133,8 @@ class Question(BaseModel):
     options: list[str] = Field(description="The answers it takes")
     batch: list[dict[str, Any]] | None = Field(None, description="For a gate over many items: each item, numbered")
     answer_with: str | None = Field(None, description="How a batch is answered: N=option for each, rest=option")
+    step: str | None = Field(None, description="The step of its loop it waits at")
+    approval: bool = Field(False, description="An approval: the person's yes (or no) before the step acts")
 
 
 class RunView(BaseModel):

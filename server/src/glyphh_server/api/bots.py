@@ -3,15 +3,16 @@ hard limits, its agent's prompt and skills), with a look (its cat), the Claude m
 connection, the tools it may use; run in the background by the SDK's runner. A run that stops for the person waits
 (needs_input) until it is answered; a gate's wrong call is corrected and learned. The agent steps run on the org's own
 Anthropic key when it has set one (Glyphh's markup charged), else on Glyphh's (Anthropic's rate and the markup), drawn
-from the plan's allowance and then the org's balance."""
+from the plan's allowance and then the org's balance. Each route takes a person's Ada API key too (api/key_auth.py)."""
 
 import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
 
-from glyphh_server.api.auth import Caller, Cfg, Conn
-from glyphh_server.api.templates import Person
+from glyphh_server.api.auth import Cfg, Conn
+from glyphh_server.api.key_auth import KeyCaller as Caller
+from glyphh_server.api.key_auth import KeyPerson as Person
 from glyphh_server.ops.bots import keys, places, prices, runs, store, templates, voices
 from glyphh_server.ops.bots.prices import BotModels
 from glyphh_server.ops.bots.views import (

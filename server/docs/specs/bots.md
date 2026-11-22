@@ -273,7 +273,17 @@ with `Authorization: Bearer <tool_token>` and are answered `{result}` or `{error
 (a URL, or `{url, headers}`; https on one of the hosts its bot.json names, a public address, no redirects, at most
 5 MB) or one of its connections' tools, run as the org, as the cloud runs them. Any other tool, host or input is an
 `error`; another run's token, one past its six hours, or none is 401; a run no longer out on its rrotor is an `error`.
-The approvals its permission mode asks for are in the package itself, so they wait on the rrotor as questions.
+The approvals its permission mode asks for are in the package itself, so they wait on the rrotor as questions; but the
+server does not trust the rrotor's guard alone (a rrotor taken over holds the run's token and could call the bot's
+tools directly), so it holds the permissions itself (`ops/bots/approvals.py`): a tool its connection denies is
+refused, never run; a tool to ask about (by the bot's permission mode and the connection, as `cloud.asks` says) runs
+only by taking the person's yes. When the person answers a run on a rrotor that waits at an approval (`question.step`,
+`question.approval`) with yes, the yes is kept on the run (`bot_runs.approvals`, by the tool that step runs, who said it
+and when; that one alone, replacing any before; any other answer keeps none). The rrotor's call of that tool takes
+it, in the same transaction it reads the run: one call, of that tool, for that run. A call with no yes to take is an
+`error` (`<tool> asks the person first, and this run has no yes of theirs to it`), and every refused call is logged
+(`bot tool call refused`, with the run, the tool and why). A tool to ask about is so called only from the step its
+approval guards. Runs on Glyphh cloud are unchanged: the cloud runs the guard itself.
 
 **Claude (BYOK).** Agent steps run on the org's own Anthropic API key when it has set one (`PUT /v1/bot-key`, tried with
 Anthropic before it is kept, sealed, shown by its last four characters), else on Glyphh's key; the org chooses. Both
@@ -292,10 +302,10 @@ a run answers 503 `anthropic_off`.
 | `GET /v1/connections/{id}/tools` | `{tools: [{key, name, description, permission}]}` |
 | `PUT /v1/connections/{id}/permissions` | `{permissions: {tool: allow\|ask\|deny}}`, merged → the connection |
 | `GET /v1/bots?q=` | The org's bots, those whose name, slug or summary have every word when `q` is given |
-| `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, gates}` |
+| `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, connector_tools, gates}` |
 | `POST /v1/bot-templates/{slug}/install` | `{name?}` → 201, the org's own copy, each app's tools scoped to its first connection of that app; an app not connected is 422 `connections` with `apps` |
 | `GET /v1/bot-approvals` | `{runs}`: every run waiting on the person, oldest first |
-| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], schedule, schedule_summary, next_run_at, next_run, runs_on, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT`; `PATCH` with `runs_on: null` puts it back on Glyphh cloud |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], schedule, schedule_summary, next_run_at, next_run, runs_on, connector_tools, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT`; `PATCH` with `runs_on: null` puts it back on Glyphh cloud |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
 | `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
 | `GET /v1/bots/voices` | `{voices: [{id, name, accent, gender, default}], samples}` |
@@ -304,7 +314,7 @@ a run answers 503 `anthropic_off`.
 | `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
 | `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued (on a rrotor: `dispatched`); a live run already is `E_CONFLICT`; a bot whose rrotor is not linked is `E_CONFLICT` `rrotor_offline` |
-| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, swarm_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a swarm's pull request in the approvals queue is `swarm`, section 10) |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with, step, approval}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, swarm_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a swarm's pull request in the approvals queue is `swarm`, section 10) |
 | `POST /v1/bots/runs/{id}/tool` | A bot on a rrotor calls a tool: bearer its run's tool token, `{tool, input, run_id?}` → `{result}` or `{error}` |
 | `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
 | `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
@@ -331,6 +341,34 @@ saying where to allow it. A step's own `approval` in the loop always asks.
 (Google Calendar to Notion), PR Review Digest (GitHub to Slack), Lead Scoring (`$input` read by Claude into leads, a
 gate scoring each, Google Sheets), Weekly Report (GitHub to Notion, a one-case gate before filing) and News Brief (no
 connection: `fetch` from a public API). Each installs, checked by the SDK, once its apps are connected.
+
+**Tools by purpose** (`ops/bots/exposed.py`, `mcp/tools/bot_tools.py`). A bot is an agent built around its Ada models,
+so it shows in the person's Glyphh connector as the tools its job needs, found by Claude's tool search like any tool
+(a resume screener's `screen_application`, `applicants`, `correct`), beside the generic `bot_run`. A template declares
+them (`connector_tools` in `library/*.json`), an installed bot keeps its copy, and any bot may declare its own
+(`connector_tools` on `POST`/`PATCH /v1/bots`, at most 20, checked with the bot: every problem said at once, 422
+`connector_tools`):
+
+```json
+{"name": "screen_application", "title": "Screen an application", "description": "Screen one application ...",
+ "op": "run", "args": {"resume": "The applicant's email or resume, as text"}, "required": ["resume"],
+ "given": "resume", "verdicts": "fit", "wait": 45}
+```
+
+`name` is lowercase, `_` between words, at most 48 characters, never `glyphh_` (a template's); `op` is `run` (a run
+of the bot: `args` its text arguments, `required` those it needs, `given` the one whose text is the run's `$input`, else
+all of them as JSON; it waits up to `wait` seconds, at most 50, for the run to end or ask, and answers
+`{run_id, status, input, verdicts, question?, error?}`, `verdicts` the data of the loop step it names), `runs` (its
+last 20 runs, each so), `wrong` (`{run_id, outcome, item?}`: a verdict of its `gate` corrected, learned in Ada as a
+precedent) or `answer` (`{run_id, answer}`: a run of it waiting on the person, answered). `wrong` and `answer` take
+only the bot's own runs. Each is listed for the org (tools/list reads the org's bots); a name the server's own tools
+or an earlier bot's already have becomes `<name>__<bot slug>`. Each calls its bot on transactions of its own.
+
+**The SDK's key.** Every bots route (`/v1/bots*`, `/v1/bot-runs*`, `/v1/bot-approvals`, `/v1/bot-templates*`) takes a
+person's live Ada API key (`glyphh_ak_`) as its bearer as well as their sign-in (`api/key_auth.py`): the key acts as
+the person who made it, in their org, so their own code (the SDK's bots client) uses the key it uses for Ada. An
+unknown, revoked or expired key is 401, and so is a bot's own Ada key (named `bot <slug>`, held where the bot runs, a
+rrotor too): it is never a person, so a rrotor cannot answer its own run's approvals.
 
 Not yet: who in the org may use a connection or a bot.
 

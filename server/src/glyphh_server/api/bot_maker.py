@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from glyphh_server.api.templates import Person
+from glyphh_server.api.key_auth import KeyPerson as Person
 from glyphh_server.ops.bots import maker, mascot
 from glyphh_server.ops.bots.maker_views import DraftIn, DraftView, MascotIn, MascotView
 

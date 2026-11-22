@@ -17,7 +17,7 @@ from glyphh_server.errors import Conflict, GlyphhError
 from glyphh_server.llm import meter
 from glyphh_server.models import BotRun
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.bots import cloud, mend, remote_in, runs
+from glyphh_server.ops.bots import approvals, cloud, mend, remote_in, runs
 from glyphh_server.ops.bots.goes import Goes
 from glyphh_server.ops.bots.views import RunView
 from glyphh_server.ops.link import calls
@@ -72,14 +72,17 @@ class Remote:
             await runs.failed(self.svc.engine, org_id, run_id, err.message)
 
     async def answer(self, who: Principal, found: Any, answer: Any) -> RunView:
-        """The waiting run carried on with the person's answer (already fitted to its question)."""
+        """The waiting run carried on with the person's answer (already fitted to its question); their yes to an
+        approval kept here, by the tool its step runs, for the rrotor's call of it to take (ops/bots/approvals.py)."""
         remote = {**found.remote, "answer": answer}
+        bot = await self.svc.bot(who.org_id, found.bot_id)
+        yes = approvals.granted(found.question, bot.spec, answer, who.user_id)
         async with self.svc.engine.begin() as conn:
             await tenancy.enter(conn, who.org_id)
             moved = (
                 update(BotRun)
                 .where(BotRun.id == found.id, BotRun.status == "needs_input")
-                .values(status="dispatched", question={}, remote=remote)
+                .values(status="dispatched", question={}, remote=remote, approvals=yes)
             )
             if (await conn.execute(moved)).rowcount != 1:
                 raise Conflict(mend.NOT_WAITING, run_id=str(found.id))

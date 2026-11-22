@@ -19,14 +19,15 @@ from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import seal, unseal
-from glyphh_server.ops.bots import cloud, package, places, prices, schedule, svg, voices
+from glyphh_server.ops.bots import cloud, exposed, package, places, prices, schedule, svg, voices
 from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
 from glyphh_server.ops.runtime_keys import key_hash
 
 MISSING: str = "There is no such bot."
+KEY_NAME: str = "bot "  # its own Ada key's name, then its slug: never a person's key (api/key_auth.py)
 FIELDS: tuple[str, ...] = (
     *("id", "slug", "name", "summary", "look", "mascot", "instructions", "model", "permission_mode", "voice"),
-    *("spec", "skills"),
+    *("spec", "skills", "connector_tools"),
 )
 
 
@@ -46,6 +47,7 @@ def checked(bot: Any) -> None:
     """The bot as it would be kept, checked by the SDK against the tools its scope names."""
     cloud.check_hosts(bot.spec)
     package.check(bot, cloud.Program(cloud.named(bot.scopes)))
+    exposed.check(bot.spec, getattr(bot, "connector_tools", []))  # a maker's draft declares none
 
 
 async def _scopes(conn: AsyncConnection, bot: Any) -> list[Scope]:
@@ -122,9 +124,10 @@ async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn
         "schedule": body.schedule.model_dump(),
         "next_run_at": schedule.next_after(body.schedule, schedule.now()),
         "runs_on": await places.checked(conn, body.runs_on),
+        "connector_tools": [t.model_dump(mode="json") for t in body.connector_tools],
     }
     checked(SimpleNamespace(**values, state=None))
-    made = await ada_keys.create(conn, who, f"bot {slug}", None, 0.0)
+    made = await ada_keys.create(conn, who, f"{KEY_NAME}{slug}", None, 0.0)
     values |= {"org_id": who.org_id, "created_by": who.user_id, "ada_key": seal(secret, made.key)}
     return await view(conn, await _saved(conn, Bot.__table__.insert().values(**values), slug))
 

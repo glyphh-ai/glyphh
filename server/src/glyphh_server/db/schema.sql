@@ -511,6 +511,7 @@ CREATE TABLE IF NOT EXISTS bots (
     schedule JSONB DEFAULT '{}'::jsonb NOT NULL,
     next_run_at TIMESTAMP WITH TIME ZONE,
     runs_on UUID,
+    connector_tools JSONB DEFAULT '[]'::jsonb NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
@@ -546,6 +547,7 @@ CREATE TABLE IF NOT EXISTS bot_runs (
     rrotor_id UUID,
     remote_seq BIGINT DEFAULT 0 NOT NULL,
     remote JSONB DEFAULT '{}'::jsonb NOT NULL,
+    approvals JSONB DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT bot_runs_status
         CHECK (status IN ('queued', 'running', 'dispatched', 'needs_input', 'done', 'failed', 'skipped')),

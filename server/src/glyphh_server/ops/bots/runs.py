@@ -111,7 +111,8 @@ def _question(result: RunResult) -> dict[str, Any]:
         return {}
     asked = {"question": result.question or result.reason, "options": result.options or []}
     shown = re.sub(r"^glyphh bot continue \S+\s*", "", result.answer_with) if result.answer_with else None
-    return asked | {"batch": result.batch, "answer_with": shown}
+    where = {"step": result.step, "approval": bool(result.approval)}  # an approval's step: approvals.granted
+    return asked | {"batch": result.batch, "answer_with": shown} | where
 
 
 async def ended(

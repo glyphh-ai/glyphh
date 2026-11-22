@@ -2,10 +2,14 @@
 run's tool token, `{tool, input, run_id}`), answered `{result}` or `{error}` as the cloud's program answers its own
 steps (ops/bots/cloud.py): `fetch`, a GET of JSON from one of the bot's hosts (https, the host named in its bot.json,
 a public address, no redirects, at most 5 MB), or one of its connections' tools, run as the org with the
-connection's account (a tool its connection denies fails, saying so). The bot's egress on the rrotor is its manifest's
-hosts alone, so its fetches come here. The token opens this run only, while it is out on its rrotor."""
+connection's account. The server holds the bot's permissions itself, not trusting the rrotor's guard: a tool its
+connection denies is refused, and one to ask the person about (by the bot's permission mode and the connection) runs
+only by taking the person's yes to the step that runs it (ops/bots/approvals.py), once; every refusal is logged. The
+bot's egress on the rrotor is its manifest's hosts alone, so its fetches come here. The token opens this run only,
+while it is out on its rrotor."""
 
 import asyncio
+import logging
 import urllib.parse
 import urllib.request
 import uuid
@@ -17,9 +21,10 @@ from sqlalchemy import select
 from glyphh_server.db import tenancy
 from glyphh_server.errors import GlyphhError
 from glyphh_server.models import Bot
-from glyphh_server.ops.bots import cloud, remote_in, runs
+from glyphh_server.ops.bots import approvals, cloud, remote_in, runs
 from glyphh_server.ops.bots.goes import Goes
 
+log = logging.getLogger("glyphh.bots")
 AGENT: str = "glyphh-bot (Glyphh's cloud, for a bot on a rrotor)"
 NOT_OUT: str = "This run is not out on its rrotor now."
 
@@ -56,21 +61,39 @@ async def _ran(calls: dict[str, cloud.Call], bot: Any, body: ToolIn) -> Any:
     return await asyncio.wait_for(calls[body.tool](given), cloud.TOOL_SECONDS)
 
 
-async def call(svc: Goes, token: str, run_id: uuid.UUID, body: ToolIn) -> dict[str, Any]:
-    """The tool's answer: {"result": ...}, or {"error": why} (the step that ran it fails, saying so)."""
-    org_id = remote_in.opened(svc.settings.secret_key, token, run_id)
+async def _allowed(svc: Goes, org_id: uuid.UUID, run_id: uuid.UUID, tool: str) -> tuple[Any, Any, str | None]:
+    """The bot and its tools ready to call, once the run is out on its rrotor and, for a tool to ask the person
+    about, their yes to it is taken (in the same transaction: used once); else why the call is refused."""
     async with svc.engine.begin() as conn:
         await tenancy.enter(conn, org_id)
         run = await runs.row(conn, run_id)
         if run.status != "dispatched" or run.rrotor_id is None:
-            return {"error": NOT_OUT}
+            return None, None, NOT_OUT
         bot = (await conn.execute(select(Bot).where(Bot.id == run.bot_id))).one()
-        made, _ = await cloud.calls(svc.pd, conn, bot)
+        made, asked = await cloud.calls(svc.pd, conn, bot)
+        if tool in asked and not await approvals.take(conn, run_id, tool):
+            return None, None, approvals.UNAPPROVED.format(tool=tool)
+    return bot, made, None
+
+
+async def call(svc: Goes, token: str, run_id: uuid.UUID, body: ToolIn) -> dict[str, Any]:
+    """The tool's answer: {"result": ...}, or {"error": why} (the step that ran it fails, saying so); logged."""
+    org_id = remote_in.opened(svc.settings.secret_key, token, run_id)
+    said = await _answer(svc, org_id, run_id, body)
+    if "error" in said:
+        log.warning("bot tool call refused", extra={"run_id": str(run_id), "tool": body.tool, "why": said["error"]})
+    return said
+
+
+async def _answer(svc: Goes, org_id: uuid.UUID, run_id: uuid.UUID, body: ToolIn) -> dict[str, Any]:
+    bot, made, refused = await _allowed(svc, org_id, run_id, body.tool)
+    if refused:
+        return {"error": refused}
     try:
         return {"result": await _ran(made, bot, body)}
     except GlyphhError as err:
         return {"error": err.message}
-    except ValueError as err:  # a tool, host or input the bot may not use: said as it is
+    except (ValueError, PermissionError) as err:  # a tool its connection denies, a host or input it may not use
         return {"error": str(err)}
     except TimeoutError:
         return {"error": f"{body.tool} took longer than {cloud.TOOL_SECONDS:g} seconds"}

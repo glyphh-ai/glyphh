@@ -24,6 +24,7 @@ from glyphh_server.mcp.tools import (
     bot_maker,
     bot_market,
     bot_runs,
+    bot_tools,
     bots,
     connections,
     grants,
@@ -65,8 +66,10 @@ def available(ctx: Context) -> dict[str, Tool]:
 
 
 async def listing(ctx: Context) -> dict[str, Tool]:
-    """The tools this person sees: what the server offers, and while Ada Cloud is on, their installed templates'."""
+    """The tools this person sees: what the server offers, the org's bots' own (bot_tools.py), and while Ada Cloud
+    is on, their installed templates'."""
     offered = available(ctx)
+    offered = offered | await bot_tools.offered(ctx.conn, set(offered))
     if ctx.ada is None:
         return offered
     return offered | templates.mine(await installs.installed(ctx.conn, ctx.who))
@@ -76,18 +79,23 @@ def _mine(ctx: Context, name: str) -> bool:
     return ctx.ada is not None and name.startswith(MINE) and name not in available(ctx)
 
 
+def _detached(ctx: Context, name: str) -> bool:
+    """A tool that waits on a worker (DETACHED), or one the server does not offer itself: a template's, or a bot's
+    (it makes runs); none is called on the request's transaction."""
+    return name in DETACHED or name not in available(ctx)
+
+
 def detached(ctx: Context, method: str, params: dict[str, Any]) -> bool:
-    """A call of a tool that waits on a worker (DETACHED, or a template's), while it is offered."""
-    name = params.get("name", "")
-    return method == "tools/call" and ((name in DETACHED and name in available(ctx)) or _mine(ctx, name))
+    return method == "tools/call" and _detached(ctx, params.get("name", ""))
 
 
 async def _found(ctx: Context, name: str) -> Tool | None:
-    """The tool called: one the server offers, else one of the person's templates' (read on a short transaction of
-    its own, the request's having ended)."""
+    """The tool called: one the server offers, else one of the person's templates' or of the org's bots' (read on a
+    short transaction of its own, the request's having ended)."""
     if _mine(ctx, name):
         return templates.mine(await installs.installed_by(ctx.ada.engine, ctx.who)).get(name)
-    return available(ctx).get(name)
+    offered = available(ctx)
+    return offered.get(name) or await bot_tools.one(ctx, set(offered), name)
 
 
 def listed(tool: Tool, with_panel: bool) -> dict[str, Any]:
@@ -118,7 +126,7 @@ async def call(ctx: Context, params: dict[str, Any]) -> dict[str, Any]:
         problems = jsonable_encoder(err.errors(include_url=False))
         return refused(Invalid("The tool's arguments are not valid.", problems=problems))
     try:
-        if tool.name in DETACHED or _mine(ctx, tool.name):  # no request transaction: its own short ones
+        if _detached(ctx, tool.name):  # no request transaction: its own short ones
             done = await tool.handler(ctx, args)
         else:
             async with ctx.conn.begin_nested():
