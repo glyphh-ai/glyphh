@@ -41,8 +41,8 @@ function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
     if (String(e.argv[1]).endsWith('/skills/rrotor/scripts/rrotor.sh') && e.argv[2] === 'update') {
       // The rrotor skill's script: the pinned release pulled and run, the link kept.
       const from = server.s.rrotor.version
-      server.s.rrotor.version = '0.4.0'
-      const out = JSON.stringify({ ok: true, from, to: '0.4.0', link: server.s.rrotor.link })
+      server.s.rrotor.version = '0.5.0'
+      const out = JSON.stringify({ ok: true, from, to: '0.5.0', link: server.s.rrotor.link })
       return { value: { exitCode: 0, stdout: `${out}\n`, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
     }
     return { value: { exitCode: 0, stdout: 'testmac', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
@@ -222,12 +222,12 @@ for (const surface of SURFACES) {
     expect(w.server.s.tokens).toEqual([{ runtime_id: 'rt-local-1', token: 'rtok-1' }])
 
     // 0.2.0 is behind the release this plugin pins: the row says so and offers update, which runs the skill's script.
-    expect(await ui.find({ type: 'Text', text: 'Update to 0.4.0' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Update to 0.5.0' })).toBeDefined()
     expect((await ui.find({ type: 'Button', key: 'rrotor-update' }))?.props.label).toBe('update')
     await ui.press({ key: 'rrotor-update' })
     expect(w.ran.some(argv => argv[0] === 'sh' && String(argv[1]).endsWith('/skills/rrotor/scripts/rrotor.sh') && argv[2] === 'update')).toBe(true)
-    expect(await ui.find({ type: 'Text', text: 'rrotor updated from 0.2.0 to 0.4.0. Claude Code loads its tools again at /mcp or its next start.' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'Linked as rt-local-1 (rrotor 0.4.0)' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'rrotor updated from 0.2.0 to 0.5.0. Claude Code loads its tools again at /mcp or its next start.' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Linked as rt-local-1 (rrotor 0.5.0)' })).toBeDefined()
     expect(await ui.find({ type: 'Button', key: 'rrotor-update' })).toBeUndefined()
   })
 
