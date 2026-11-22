@@ -133,7 +133,10 @@ class Question(BaseModel):
 class RunView(BaseModel):
     id: uuid.UUID
     bot_slug: str
-    status: str = Field(description="queued, running, needs_input (it waits on the person), done, failed or skipped")
+    status: str = Field(
+        description="queued, running, dispatched (sent to its rrotor), needs_input (it waits on the person), done, "
+        "failed or skipped"
+    )
     input: str
     output: str = Field(description="Its last step's answer, as text")
     error: str = Field(description="Why it failed, ended early or was skipped")
@@ -144,6 +147,9 @@ class RunView(BaseModel):
     output_tokens: int
     cost_micros: int = Field(description="Its tokens' charge, microdollars (the markup alone on the org's own key)")
     own_key: bool = Field(description="Its agent steps ran on the org's own Anthropic key")
+    runs_on: uuid.UUID | None = Field(None, description="The org's rrotor it ran on; none for Glyphh cloud")
+    kind: Literal["bot", "swarm"] = Field("bot", description="In the approvals queue: a bot's run, or a swarm's")
+    swarm_slug: str | None = Field(None, description="A swarm's run: its swarm (POST /v1/swarm-runs/{id}/answer)")
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None

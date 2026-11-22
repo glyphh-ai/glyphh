@@ -59,7 +59,7 @@ async def test_a_self_hosted_runtime_is_welcomed_with_its_licence_and_keys(engin
     assert payload["mods"] == {"ada": {"limits": {"precedents": None}}} and payload["limits"] == {"machines": 3}
     public = Ed25519PublicKey.from_public_bytes(base64.b64decode(key["public_key"]))
     public.verify(base64.b64decode(welcome["licence"]["signature"]), canonical(payload))
-    ctx = session.Context(engine, None, None)  # type: ignore[arg-type]
+    ctx = session.Context(engine, None, None, None)  # type: ignore[arg-type]
     runtime = Runtime(rt.id, ada.user_id, ada.org_id, "self", "https://rrotor.acme.test")
     assert (await session._welcome(ctx, runtime)).licence is None  # no key to sign with: no licence
 

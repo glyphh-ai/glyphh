@@ -11,6 +11,7 @@ from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
 from glyphh_server.mcp.tools.bots import SLUG, Slug
 from glyphh_server.ops.bots import runs, store
 from glyphh_server.ops.bots.views import RunView, WrongIn
+from glyphh_server.ops.swarms import runs as swarm_runs
 
 
 class RunArgs(BaseModel):
@@ -42,13 +43,16 @@ def run_line(run: RunView) -> str:
             said += f"; answer like {run.question.answer_with}"
     else:
         said = run.error or run.output[:300]
+    if run.kind == "swarm":
+        return f"Swarm run {run.id} of {run.swarm_slug}: {said} (swarm_run_answer)"
     tokens = run.input_tokens + run.output_tokens
-    return f"Run {run.id} of {run.bot_slug}: {run.status}, {tokens} tokens, {cost}. {said}".strip()
+    where = f" on rrotor {run.runs_on}" if run.runs_on else ""
+    return f"Run {run.id} of {run.bot_slug}{where}: {run.status}, {tokens} tokens, {cost}. {said}".strip()
 
 
 async def run(ctx: Context, args: RunArgs) -> Done:
     made = await ctx.bots.start(ctx.who, args.slug, args.input)
-    return Done(f"Run {made.id} queued: bot_run_get follows it.", dump(made))
+    return Done(f"Run {made.id} {made.status}: bot_run_get follows it.", dump(made))
 
 
 async def list_runs(ctx: Context, args: Slug) -> Done:
@@ -57,7 +61,7 @@ async def list_runs(ctx: Context, args: Slug) -> Done:
 
 
 async def approvals(ctx: Context, _: NoArgs) -> Done:
-    found = await runs.waiting(ctx.conn)
+    found = await swarm_runs.queue(ctx.conn)
     return Done(
         "\n".join(run_line(r) for r in found) or "No bot is waiting on you.", {"runs": [dump(r) for r in found]}
     )

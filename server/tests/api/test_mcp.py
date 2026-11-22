@@ -185,6 +185,16 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "connection_apps",
         "connection_link",
         "connection_tools",
+        "swarms",
+        "swarm",
+        "swarm_create",
+        "swarm_update",
+        "swarm_delete",
+        "swarm_run",
+        "swarm_runs",
+        "swarm_run_get",
+        "swarm_run_answer",
+        "swarm_run_cancel",
     }
     panels = {n: t["_meta"]["ui"]["resourceUri"] for n, t in tools.items() if "_meta" in t}
     assert panels == {

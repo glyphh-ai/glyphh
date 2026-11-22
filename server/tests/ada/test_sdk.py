@@ -1,4 +1,4 @@
-"""SDK 3 (PyPI `glyphh` 3.11.0, the client as customers have it) against the cloud with only its URL and key changed:
+"""SDK 3 (PyPI `glyphh` 3.12.0, the client as customers have it) against the cloud with only its URL and key changed:
 every function an Ada model has, through `POST /v1/runs`, each answer valid against the contract the SDK was built to
 (contract.json: glyphh-ai/glyphh contract/, at 6c5123e), and its refusals the codes the SDK knows."""
 
@@ -44,7 +44,7 @@ async def _sdk(ada: httpx.AsyncClient, key: dict[str, str], seen: list[Any]) -> 
 async def test_sdk_3_works_against_the_cloud(
     engine: AsyncEngine, ada: httpx.AsyncClient, worker: Worker, jobs_worker: Worker
 ) -> None:
-    assert metadata.version("glyphh") == "3.11.0"
+    assert metadata.version("glyphh") == "3.12.0"
     _, key = await an_org(engine, ada)
     await a_model(ada, key)
     seen: list[Any] = []

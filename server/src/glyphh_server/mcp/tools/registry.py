@@ -30,6 +30,7 @@ from glyphh_server.mcp.tools import (
     people,
     runtime,
     self_hosted,
+    swarms,
     templates,
     tokens,
 )
@@ -44,14 +45,14 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 # person's own: listed by `listing`) waits on a worker too.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
-DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED
+DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | swarms.DETACHED
 MINE: str = "glyphh_"
 _BOTS = (*bots.TOOLS, *bot_maker.TOOLS, *bot_runs.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
 _OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
-# rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only
-# while GLYPHH_RROTOR is on, the default.
-RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
+# rrotor's: its runtime keys, self-hosted runtimes and offline licences, the org's apps, and its swarms (they run on
+# its rrotors): offered only while GLYPHH_RROTOR is on, the default.
+RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS, *swarms.TOOLS)}
 HOSTED: dict[str, Tool] = {t.name: t for t in tokens.TOOLS}  # docs/specs/tokens.md, while GLYPHH_LLM is on
 
 

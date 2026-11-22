@@ -86,8 +86,9 @@ async def introspect_sign_in(body: Introspect, request: Request) -> Response:
 
 @router.websocket("/link")
 async def runtime_link(websocket: WebSocket) -> None:
-    """The runtime's outbound link (protocol 2), local or self-hosted: `Authorization: Bearer <runtime token>`, then
-    `hello`. Licensing goes down it (the licence key, a self-hosted runtime's licence and keys); usage comes back."""
+    """The runtime's outbound link (protocol 3), local or self-hosted: `Authorization: Bearer <runtime token>`, then
+    `hello`. Licensing goes down it (the licence key, a self-hosted runtime's licence and keys) and the bots' and
+    swarms' calls; usage and the calls' results come back."""
     state = websocket.app.state
-    ctx = session.Context(state.engine, state.hub, state.signing_key)
+    ctx = session.Context(state.engine, state.hub, state.bots.landed, state.signing_key)
     await session.serve(websocket, ctx, bearer(websocket.headers.get("authorization")))

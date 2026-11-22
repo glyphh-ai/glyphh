@@ -2,8 +2,8 @@
 rrotors: a local one (on someone's computer, named by its install) or a self-hosted one (named by the person). Only
 the org's are offered or taken (the rrotors its people own, as row-level security shows them; a local one whose
 install was signed out is gone). `linked` is whether it holds its link to Glyphh right now (its state, set at its
-hello and its link's close, ops/link/presence.py). Runs are not sent to a rrotor yet: until they are, starting one
-of a bot that runs on a rrotor is refused (ops/bots/service.py)."""
+hello and its link's close, ops/link/presence.py): a run of a bot on a rrotor is sent there over that link
+(ops/bots/remote.py), refused while the rrotor is offline. A swarm runs on one of these rrotors too."""
 
 import uuid
 from typing import Literal
@@ -19,10 +19,6 @@ from glyphh_server.ops.link.presence import ONLINE
 CLOUD: str = "Glyphh cloud"
 LOCAL: str = "Local rrotor"
 NOT_ORGS: str = "That is not one of the org's rrotors: GET /v1/bots/places lists where its bots can run."
-PENDING: str = (
-    "This bot runs on one of your machines, and running bots on your machines is coming: until then, set it to run "
-    "on Glyphh cloud to run it."
-)
 
 
 class Place(BaseModel):

@@ -1,5 +1,6 @@
-"""What a runtime reports over its link: each key's calls, counted once, and its precedents. A result, an event or a
-deployed version is acked and kept nowhere; a usage report that cannot be recorded closes the link unacked."""
+"""What a runtime reports over its link: each key's calls, counted once, and its precedents. A result goes to the run
+it answers (none here: tests/bots/test_remote.py has them), an event or a deployed version is acked and kept nowhere;
+a usage report that cannot be recorded closes the link unacked. A run's call, continue and cancel go down it."""
 
 import uuid
 from datetime import UTC, datetime
@@ -10,7 +11,7 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import RuntimeKey
-from glyphh_server.ops.link import reports
+from glyphh_server.ops.link import calls, reports
 from glyphh_server.ops.runtime_keys import key_hash
 from tests.db.helpers import person
 from tests.link import closed, linked, local_runtime, receive, runtime_row, self_runtime, server
@@ -90,6 +91,27 @@ async def test_results_events_and_deploys_are_acked_and_kept_nowhere(engine: Asy
         await _send(ws, {"type": "usage", "id": "u1", "seq": 3, "precedents": 10})  # numbers skipped are fine
     row = await runtime_row(engine, rt.id)
     assert (row.seq, row.precedents) == (3, 10)
+
+
+async def test_a_runs_call_continue_and_cancel_go_down_the_link(engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    rt = await local_runtime(engine, ada)
+    run_id = uuid.uuid4()
+    async with server() as srv, linked(srv, rt) as ws:
+        hub = srv.app.state.hub
+        assert await calls.call(hub, rt.id, run_id, "glyphh_bot", "run", {"given": "hi"})
+        sent = await receive(ws, "call")
+        assert (sent["run_id"], sent["program"], sent["version"], sent["function"]) == (
+            str(run_id),
+            "glyphh_bot",
+            None,
+            "run",
+        )
+        assert sent["inputs"] == {"given": "hi"} and sent["caller"] == "routine"
+        assert await calls.carry_on(hub, rt.id, run_id, "yes")
+        assert (await receive(ws, "continue"))["answer"] == "yes"
+        assert await calls.cancel(hub, rt.id, run_id)
+        assert (await receive(ws, "cancel"))["run_id"] == str(run_id)
 
 
 async def test_a_usage_report_that_cannot_be_recorded_closes_the_link_unacked(
