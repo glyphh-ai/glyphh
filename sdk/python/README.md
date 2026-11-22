@@ -191,6 +191,11 @@ The gates (3.9), each declared in bot.json and enforced by the runner:
 - **Hard gates**: `limits` (`usd_per_run`, `usd_per_day` from Claude's reported cost and `ctx.spend`;
   `runs_per_day`; `quiet_hours`; `max_items`; `seconds`, `agent_turns`, `steps`), `requires` (a small safe
   expression over earlier data: skip the step or end the run), `glyphh bot pause`; all refused at load if malformed.
+- **Words for the person** (3.14): a step that ends the run early (a gate routed to `end`, a `requires` with
+  `"otherwise": "end"`) may carry `empty`, the bot's own sentence for it ("Nothing is waiting on your review, so
+  there was nothing to rank or post."): it is the run's `reason`, and the engine's line (`gate worth: read 0, skip
+  30; the run ends here`) stays in the log. bot.json's `takes` says what the text a run is given (`$input`) is used
+  as ("a GitHub search") and `try` gives an example of it. Each at most 300 characters.
 
 ```bash
 glyphh bot install examples/bots/hn_reader        # the demo: a per-item gate on Hacker News's front page

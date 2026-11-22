@@ -2,6 +2,23 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.14.0 — 2026-11-22
+
+A bot says in its own words why a run ended early, and what it takes. Python only; the TypeScript package carries
+the version unchanged.
+
+- A loop step may carry `empty`: what to tell the person when that step ends the run early (a per-item gate whose
+  `on` rule goes to `end`, a gate whose outcome goes to `end`, a step whose `requires` does not hold with
+  `"otherwise": "end"`). It is then the run's `reason` (`RunResult.reason`, what `glyphh bot run` prints, a
+  `Result`'s `data.reason`); the engine's line (`gate worth: keep 0, drop 3; the run ends here`) is still the log's
+  last line. Without `empty`, nothing changes.
+- bot.json may carry `takes` (what the text a run is given, `$input`, is used as: "a GitHub search") and `try` (an
+  example of it), for hosts to show beside where that text is typed.
+- `glyphh bot check` and `Bot.load` refuse an `empty`, `takes` or `try` that is not a non-empty string of at most
+  300 characters.
+- The example bots (`hn_reader`, `launch_watch`) say `empty` on the gate that ends their run; BUILDING.md and the
+  glyphh-bots skill describe the three keys.
+
 ## 3.13.0 — 2026-11-22
 
 Hosted bots: the bots Glyphh hosts for your org, from your own code, as Ada models are. Python and TypeScript.

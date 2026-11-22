@@ -43,6 +43,14 @@ When you write or change a bot (or brief the person on what `new` made), use the
 
 A gate's policy sits beside its spec: `ask_below`, `min_precedents` (answers before Ada decides alone), `audit` (a
 share of sure calls still asked), `shadow` (always asked, agreement measured), `max_questions` a run, `default`.
+
+Words for the person (SDK 3.14, each at most 300 characters): a step that can end the run early (a gate whose `on`
+goes to `end`, a `requires` with `"otherwise": "end"`) carries `empty`, the plain sentence the person is told when it
+does ("Nothing is waiting on your review, so there was nothing to rank or post."); it is the run's `reason`, and the
+engine's line stays in the log. A bot whose steps read `$input` says at the top of bot.json what that text is used
+as (`takes`: "a GitHub search") and an example of it (`try`: "is:pr is:open review-requested:@me"). When a run ends
+early, tell the person its `reason`, never the log's line.
+
 The full format is `BUILDING.md` in the SDK (`glyphh/bots/BUILDING.md`), which the builder follows.
 
 ## Setup

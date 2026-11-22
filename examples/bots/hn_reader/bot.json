@@ -48,7 +48,8 @@
   "loop": [
     {"id": "stories", "run": "front_page"},
     {"id": "worth", "gate": "worth", "each": "$stories.items", "label": "title", "key": "id",
-     "on": {"empty:read": "end"}},
+     "on": {"empty:read": "end"},
+     "empty": "None of today's front-page stories looked worth reading, so there is no digest."},
     {"id": "digest", "agent": "Write today's digest of these Hacker News stories, the ones the person will want to read (title, url, site, points, comments, the discussion link):\n\n$worth.read",
      "skill": "hn-digest", "check": "digest_ok", "remember": true},
     {"id": "deliver", "run": "deliver", "input": "$digest"}

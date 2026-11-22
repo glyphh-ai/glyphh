@@ -14,7 +14,11 @@ person's yes and no; it still asks until both that gate is sure and the bot's tr
 Hard gates are code, never learned and never overridden: a run step answering `{"_end": why}` ends the run; bot.json's
 `limits` cap spend (per run, per day), runs a day, quiet hours, items per list, steps and seconds; `requires` skips a
 step or ends the run on a plain expression over earlier data; a paused bot does not run; code reaches only the bot's
-hosts."""
+hosts.
+
+A step that ends the run early (a gate routed to `end`, a `requires` that does not hold with `otherwise: end`) may
+carry `empty`: the bot's own sentence for the person, which is then the run's `reason`. The engine's line (`gate ...;
+the run ends here`) goes to the log either way."""
 
 from __future__ import annotations
 
@@ -626,7 +630,10 @@ class Runner:
                 before = {} if resumed else before
                 if step.get("requires") and not resumed and not holds(step["requires"], data):
                     if step.get("otherwise") == "end":
-                        raise End(f"{sid} requires {step['requires']}: it does not hold, the run ends here")
+                        line = f"{sid} requires {step['requires']}: it does not hold, the run ends here"
+                        ctx.log(line)
+                        reason = step.get("empty") or line
+                        break
                     ctx.log(f"skip {sid}: it requires {step['requires']}, which does not hold")
                     data[sid] = None
                     at += 1
@@ -652,8 +659,9 @@ class Runner:
                     data[sid] = out
                     target = self._route_each(step, out)
                     if target == "end":
-                        reason = f"gate {step['gate']}: {self._each_summary(out, step)}; the run ends here"
-                        ctx.log(reason)
+                        line = f"gate {step['gate']}: {self._each_summary(out, step)}; the run ends here"
+                        ctx.log(line)
+                        reason = step.get("empty") or line
                         break
                     if target:
                         data.get("_approved", {}).pop(sid, None)
@@ -665,8 +673,9 @@ class Runner:
                     data[sid] = outcome
                     target = step["on"][outcome]
                     if target == "end":
-                        reason = f"gate {step['gate']} said {outcome}: the run ends here"
-                        ctx.log(reason)
+                        line = f"gate {step['gate']} said {outcome}: the run ends here"
+                        ctx.log(line)
+                        reason = step.get("empty") or line
                         break
                     data.get("_approved", {}).pop(sid, None)
                     at = ids.index(target)

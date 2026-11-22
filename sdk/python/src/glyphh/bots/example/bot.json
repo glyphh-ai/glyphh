@@ -42,7 +42,8 @@
   "loop": [
     {"id": "numbers", "run": "numbers"},
     {"id": "keep", "run": "keep", "input": "$numbers"},
-    {"id": "worth", "gate": "worth_sending", "on": {"send": "summary", "skip": "end"}},
+    {"id": "worth", "gate": "worth_sending", "on": {"send": "summary", "skip": "end"},
+     "empty": "Not enough moved today to be worth a summary, so none was written."},
     {"id": "summary", "agent": "Write today's launch summary from today's numbers and the days before.\n\nToday: $numbers\n\nThe days before (newest first): $keep",
      "skill": "launch-summary", "remember": true},
     {"id": "deliver", "run": "deliver", "input": "$summary"}
