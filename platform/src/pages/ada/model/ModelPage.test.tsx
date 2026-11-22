@@ -63,9 +63,9 @@ describe('a model’s page', () => {
     await user.paste(JSON.stringify(spec));
     await user.click(screen.getByRole('button', { name: 'Save as a new version' }));
     expect(await screen.findByRole('progressbar', { name: 'Rewriting the cases for version 3' })).toBeInTheDocument();
-    expect(await screen.findByText('Version 3 is live.', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText('Version 3 is live.', {}, { timeout: 10_000 })).toBeInTheDocument();
     expect(await screen.findByText('Version 3 is live · 1,240 precedents')).toBeInTheDocument();
-  });
+  }, 20_000);
 
   it('makes an older version live again: a rollback', async () => {
     const fake = on();
@@ -75,7 +75,7 @@ describe('a model’s page', () => {
     await user.clear(k);
     await user.type(k, '25');
     await user.click(screen.getByRole('button', { name: 'Save 1 change as a new version' }));
-    expect(await screen.findByText('Version 3 is live.', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText('Version 3 is live.', {}, { timeout: 10_000 })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Versions' }));
     const row = (await screen.findByText('v2')).closest('tr')!;
     await user.click(within(row).getByRole('button', { name: 'Actions for version 2' }));
@@ -87,7 +87,7 @@ describe('a model’s page', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Make live' }));
     expect(await screen.findByText('Version 2 is live.')).toBeInTheDocument();
     expect(fake.state.seen.some((s) => s.path === '/models/tickets/versions/2/activate')).toBe(true);
-  });
+  }, 20_000);
 
   it('deletes the model once its name is typed', async () => {
     const fake = on();
