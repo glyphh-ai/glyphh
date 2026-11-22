@@ -12,7 +12,13 @@ import { RROTOR_SHOWN } from '@/lib/shelved';
  * Each route names its own crumbs in `handle.crumbs`, and in `adaCrumbs` where they differ with Ada Cloud on; the
  * deepest one wins. A crumb `:name` is the route's own `name`.
  */
-export type RouteHandle = { crumbs: Crumb[]; adaCrumbs?: Crumb[] };
+export type RouteHandle = { crumbs: Crumb[]; adaCrumbs?: Crumb[]; /** The page fills the screen as an app of its own (Bots). */ bare?: boolean };
+
+/** Whether the deepest route is a bare page. */
+function useBare(): boolean {
+  const matches = useMatches();
+  return Boolean((matches.at(-1)?.handle as RouteHandle | undefined)?.bare);
+}
 
 function useCrumbs(): Crumb[] {
   const matches = useMatches();
@@ -34,6 +40,7 @@ export function MainLayout() {
   return (
     <AppShell
       crumbs={useCrumbs()}
+      bare={useBare()}
       sidebar={
         <Sidebar footer={<UserMenu />}>
           {ada === undefined ? null : ada ? <AdaNav /> : <RuntimeNav />}

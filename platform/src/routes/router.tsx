@@ -10,8 +10,7 @@ import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
 import { AppsPage } from '@/pages/apps/AppsPage';
 import { ApprovalsPage } from '@/pages/bots/ApprovalsPage';
-import { BotPage } from '@/pages/bots/BotPage';
-import { BotsPage } from '@/pages/bots/BotsPage';
+import { BotsShell } from '@/pages/bots/shell/BotsShell';
 import { SwarmPage } from '@/pages/swarms/SwarmPage';
 import { NewSwarmPage, SwarmsPage } from '@/pages/swarms/SwarmsPage';
 import { GitHubTokenPage } from '@/pages/settings/GitHubTokenPage';
@@ -175,8 +174,10 @@ export const routes: RouteObject[] = [
       { path: 'templates', element: <Moved to="/marketplace/models" /> },
       { path: 'templates/:name', element: <MovedTemplate /> },
       // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
-      { path: 'bots', element: <BotsPage />, handle: { crumbs: [{ label: 'Bots' }] } },
-      { path: 'bots/:name', element: <BotPage />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }] } },
+      // The Bots area is the Glyphh Bot app's interface (2026-11-22): one shell that fills the screen, a bot or a
+      // project's crew picked in its rail.
+      { path: 'bots', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots' }], bare: true } },
+      { path: 'bots/:name', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }], bare: true } },
       { path: 'approvals', element: <ApprovalsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Approvals' }] } },
       { path: 'swarms', element: <SwarmsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Swarms' }] } },
       { path: 'swarms/new', element: <NewSwarmPage />, handle: { crumbs: [{ label: 'Swarms', to: '/swarms' }, { label: 'New swarm' }] } },
