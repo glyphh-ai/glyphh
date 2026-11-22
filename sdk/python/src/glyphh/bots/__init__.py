@@ -20,6 +20,7 @@ from .gates import POLICY, Call, Gate, Policy
 from .memory import MEMORY_SPEC, glyphh_models, memory_context, recall, remember
 from .orchestrator import GATES, KEEP, OUTCOMES, TRUST, Orchestrator, api_key, connect, slug_of
 from .package import KINDS, OUTWARD, TOUCHES, Bot, BotError, bots_root, check_model_name, model_name
+from .remote import HttpProgram, ToolError
 from .report import gate_stats, write_report
 from .routine import calendar
 from .rules import ExprError, holds, parse_answers, parse_expr, validate
@@ -33,6 +34,8 @@ __all__ = [
     "MODELS",
     "PRICES",
     "ApiClaude",
+    "HttpProgram",
+    "ToolError",
     "from_env",
     "priced",
     "OUTCOMES",

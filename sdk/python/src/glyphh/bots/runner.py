@@ -73,11 +73,21 @@ class End(Exception):
         self.reason = reason
 
 
+#: How a Result the bot never reached ended, said (RunResult.from_result).
+ENDED = {"failed": "the run failed", "cancelled": "the run was cancelled",
+         "expired": "the run expired: nobody answered in time"}
+
+
 @dataclass
 class RunResult:
     """How a run stands: `done` (`reason` says why it ended early, when it did), `needs_input` (`question`, one of
     `options` to answer with `continue`; for a batch of items, `batch` lists them and `answer_with` shows how),
-    `failed` (`reason`) or `skipped` (a hard limit kept it from starting: quiet hours, runs a day)."""
+    `failed` (`reason`) or `skipped` (a hard limit kept it from starting: quiet hours, runs a day). A waiting run
+    names the `step` it waits at, and `approval` is True when that is an approval (yes or no).
+
+    A run a host ran away from the bot's home (rrotor, Glyphh's cloud; glyphh.bots.remote) carries what it left too:
+    `output` (the run's answer as text), `tokens` (its agent steps' Claude tokens) and `state` (the runner's state,
+    its runs.sqlite, base64), and goes over the wire as a `Result` (`to_result`, `from_result`)."""
 
     bot: str
     run_id: str
@@ -89,10 +99,62 @@ class RunResult:
     answer_with: Optional[str] = None
     log: List[str] = field(default_factory=list)
     data: Dict[str, Any] = field(default_factory=dict)
+    step: Optional[str] = None
+    approval: Optional[bool] = None
+    output: Optional[str] = None
+    tokens: Optional[Dict[str, int]] = None
+    state: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         out = asdict(self)
         return {k: v for k, v in out.items() if v not in (None, "")}
+
+    def to_result(self) -> Dict[str, Any]:
+        """The run as rrotor's `Result` (its link carries `{status, data, step, prompt}`): `done` (a skipped run too:
+        `data.status` says which), `needs_input` (`prompt` the question, `data.options`), `needs_approval` (an
+        approval: `step` and `prompt`, answered yes or no) or `failed` (`data.reason`). `data` holds the whole run:
+        bot, run_id, status, reason, question, options, batch, answer_with, step, approval, log, data, output, tokens
+        and state, so `from_result` gives it back."""
+        kept = {k: v for k, v in asdict(self).items() if v is not None}
+        data: Dict[str, Any] = json.loads(json.dumps(kept, default=str))  # JSON all through, as the wire is
+        data.setdefault("tokens", {"input_tokens": 0, "output_tokens": 0})
+        if self.status == "needs_input":
+            data["schema"] = None
+            data.setdefault("options", [])
+            status = "needs_approval" if self.approval else "needs_input"
+            return {"status": status, "data": data, "step": self.step, "prompt": self.question or self.reason}
+        if self.status == "failed":
+            return {"status": "failed", "data": data, "step": self.step or "bot", "prompt": None}
+        return {"status": "done", "data": data, "step": None, "prompt": None}
+
+    @classmethod
+    def from_result(cls, result: Mapping[str, Any]) -> "RunResult":
+        """The run a `Result` carries (as `to_result` made it). A `needs_approval` is the run waiting for a yes or a
+        no; a Result the bot never reached (a run rrotor failed, cancelled or let expire before or around it: no
+        `data.bot`) is `failed`, with what rrotor said."""
+        status = str(result.get("status") or "failed")
+        given = result.get("data")
+        data: Mapping[str, Any] = given if isinstance(given, Mapping) else {}
+        known = {f for f in cls.__dataclass_fields__ if f not in ("status", "bot", "run_id")}
+        kept = {k: data[k] for k in known if data.get(k) is not None}
+        if status in ("needs_input", "needs_approval"):
+            kept.setdefault("question", result.get("prompt"))
+            kept.setdefault("step", result.get("step"))
+            if status == "needs_approval":
+                kept["approval"] = True
+                kept["options"] = kept.get("options") or ["yes", "no"]
+            return cls(str(data.get("bot") or ""), str(data.get("run_id") or ""), "needs_input", **kept)
+        if status == "done":
+            ran = str(data.get("status") or "done")
+            return cls(str(data.get("bot") or ""), str(data.get("run_id") or ""), ran if ran == "skipped" else "done",
+                       **kept)
+        if status != "failed" or not data.get("bot"):
+            said = str(data.get("reason") or result.get("prompt") or "")
+            words = ENDED.get(status, f"the run ended {status}")
+            code = f" ({data['code']})" if data.get("code") else ""
+            kept["reason"] = f"{words}{code}{': ' + said if said else ''}"
+            kept.setdefault("step", result.get("step"))
+        return cls(str(data.get("bot") or ""), str(data.get("run_id") or ""), "failed", **kept)
 
 
 DECISION_COLUMNS = ("run", "gate", "step", "n", "key", "label", "kind", "case_json", "outcome", "by", "p", "guess",
@@ -628,6 +690,8 @@ class Runner:
         result = RunResult(
             self.bot.slug, run_id, status, reason, pending.get("question"), pending.get("options"), pending.get("batch"),
             pending.get("answer_with"), log, data,
+            step=pending.get("step") if status == "needs_input" else None,
+            approval=True if status == "needs_input" and pending.get("approval") else None,
         )
         self._after(ctx, result, at, routine)
         return result
