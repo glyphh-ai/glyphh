@@ -71,7 +71,7 @@ async def waiting(conn: AsyncConnection) -> list[RunView]:
     return [view(r, r.slug) for r in await conn.execute(asked)]
 
 
-async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid.UUID, given: str) -> RunView:
+async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid.UUID | None, given: str) -> RunView:
     """The run, queued and committed, so its task finds it; refused while the bot has a live run."""
     try:
         async with engine.begin() as conn:

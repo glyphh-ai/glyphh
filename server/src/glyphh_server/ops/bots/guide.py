@@ -11,7 +11,10 @@ A bot is: name, summary, look (its cat) or mascot (its own drawing, bot_mascot),
 step waits for the person unless its connection allows the tool; connection: only those the connection says ask;
 auto: none; a denied tool always fails), voice (bot_voices), instructions (its agent's prompt: who it is, how it
 writes), model (the Claude model its agent steps run on, bot_models), connections (per connection, the tool keys it
-may use, connection_tools lists them), skills ({name: SKILL.md text}, how its agent does one kind of step) and spec:
+may use, connection_tools lists them), schedule (when it runs on its own, in plain words, never cron: {"every":
+"off" | "hour" | "day" | "weekdays" | "week" | "month", "at": "09:00", "weekday": 0 (Monday) to 6, "day": 1 to 31,
+"timezone": "America/Chicago", "input": what each scheduled run is given}), runs_on (one of bot_places: a rrotor of
+the org's, or none for Glyphh cloud), skills ({name: SKILL.md text}, how its agent does one kind of step) and spec:
 
 spec = {
   "touches": "read_only" | "drafts" | "sends" | "pays" | "deletes",   # how far out it reaches; sends and beyond

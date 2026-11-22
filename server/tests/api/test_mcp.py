@@ -175,6 +175,7 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "bot_draft",
         "bot_mascot",
         "bot_voices",
+        "bot_places",
         "bot_approvals",
         "bot_templates",
         "bot_template",

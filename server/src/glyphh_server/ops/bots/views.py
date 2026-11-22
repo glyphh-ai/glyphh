@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from glyphh_server.ops.bots.schedule import Schedule
+
 LOOK_PARTS: tuple[str, ...] = ("head", "tail", "eye", "extra", "accessory", "pose")
 
 
@@ -24,6 +26,8 @@ MODE_ABOUT: str = (
     "those its connection says to ask about) or auto (none); a tool its connection denies always fails"
 )
 VOICE_ABOUT: str = "The voice it speaks in, one GET /v1/bots/voices lists; empty for none"
+SCHEDULE_ABOUT: str = "When it runs on its own, in plain words (every: off, hour, day, weekdays, week, month)"
+RUNS_ON_ABOUT: str = "Where it runs: a rrotor of the org's (GET /v1/bots/places lists them), or none for Glyphh cloud"
 
 
 class Scope(BaseModel):
@@ -60,6 +64,11 @@ class BotView(BaseModel):
     skills: dict[str, str] = Field(description=SKILLS_ABOUT)
     gate_models: list[str] = Field(description="Its own Ada models: one per gate, and its memory")
     connections: list[Scope]
+    schedule: Schedule = Field(description=SCHEDULE_ABOUT)
+    schedule_summary: str = Field(description="Its schedule in plain words: Every day at 9:00")
+    next_run_at: datetime | None = Field(description="When the schedule runs it next")
+    next_run: str = Field(description="When, in the schedule's time zone: Mon 9:00; empty when it is off")
+    runs_on: uuid.UUID | None = Field(description=RUNS_ON_ABOUT)
     created_at: datetime
     updated_at: datetime
     last_run: LastRun | None
@@ -84,6 +93,8 @@ class BotIn(BaseModel):
     connections: list[ScopeIn] = Field(
         default_factory=list, max_length=50, description="Per connection, the tools it may use (its steps name them)"
     )
+    schedule: Schedule = Field(default_factory=Schedule, description=SCHEDULE_ABOUT)
+    runs_on: uuid.UUID | None = Field(None, description=RUNS_ON_ABOUT)
 
 
 class BotPatch(BaseModel):
@@ -98,6 +109,8 @@ class BotPatch(BaseModel):
     voice: str | None = Field(None, max_length=40, description=VOICE_ABOUT)
     spec: dict[str, Any] | None = Field(None, description=SPEC_ABOUT)
     skills: dict[str, str] | None = Field(None, max_length=30, description=SKILLS_ABOUT)
+    schedule: Schedule | None = Field(None, description=SCHEDULE_ABOUT)
+    runs_on: uuid.UUID | None = Field(None, description=RUNS_ON_ABOUT + " (null: back to Glyphh cloud)")
 
 
 class ScopesIn(BaseModel):
