@@ -223,6 +223,12 @@ The API key is `GLYPHH_API_KEY`, else `GLYPHH_API_KEY=` in `~/.glyphh/bots/.env`
 (`install`, `new`, `runner(slug)`, `review`, `verdict`, `status`), `Runner` (`run`, `resume`, `wrong`, `outcome`, `pause`, `unpause`, `gates`, `report`, `status`),
 `Bot.load(folder)`. Examples: [`examples/bots`](https://github.com/glyphh-ai/glyphh/tree/main/examples/bots).
 
+A host that runs bots away from their home (rrotor's built-in `glyphh-bot` program, Glyphh's cloud) uses
+`glyphh.bots.remote`: `go(files, ada=, claude=, program=, state=, given=, answer=)` runs one go of a bot whose package
+and state it holds, `HttpProgram(url, token)` calls the bot's tools at the host (`POST {tool, input, run_id}` with the
+bearer token, answered `{result}` or `{error}`), and `RunResult.to_result()` / `from_result()` carry the run as
+rrotor's `Result`.
+
 ## Your local runtime: programs and CLIs
 
 `Runtime` is a client for rrotor, the runtime you install on your own machine (a Docker image, bound to

@@ -2,6 +2,25 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.12.0 — 2026-11-21
+
+Remote bots: a bot or a swarm runs on a chosen rrotor, its package and state held by the server. Python only; the
+TypeScript package carries the version unchanged.
+
+- `HttpProgram(url, token, tools=None)`: a bot's program whose functions are its host's tools. Each call POSTs
+  `{"tool", "input", "run_id"}` to `url` with the bearer `token`; `{"result": ...}` is the step's data, `{"error": ...}`
+  (a 4xx or 5xx with one too) fails the step (`ToolError`). `fetch` is a tool like the others: the host fetches.
+- `glyphh.bots.remote.go(files, ada=, claude=, program=, state=, given=, answer=)`: one go of a bot a host holds, its
+  package (files by path, no code) and its runner's `state` (runs.sqlite, base64) opened in a folder of its own: a
+  run from its first step, or with `answer` the waiting run carried on. Its gate and memory models are made once per
+  shape of its gates and seed. Also `write_package`, `pack_state`, `output_of` and `installed`.
+- `RunResult.to_result()` and `RunResult.from_result()`: the run as rrotor's `Result` (`{status, data, step,
+  prompt}`: `done`, `needs_input`, `needs_approval` for an approval, `failed`), `data` carrying the whole run, its
+  `output`, `tokens` and `state` too; a Result the bot never reached (rrotor failed, cancelled or let it expire) reads
+  back as `failed`, saying what rrotor said.
+- `RunResult` names the `step` a waiting run waits at and whether it is an `approval`, and carries `output`,
+  `tokens` and `state` when a host ran it (all None otherwise: `to_dict` is unchanged).
+
 ## 3.11.0 — 2026-11-21
 
 Bots anywhere: the same loop runs at a terminal, on rrotor and in Glyphh's cloud. Python only; the TypeScript
