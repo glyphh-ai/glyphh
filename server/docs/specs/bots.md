@@ -340,7 +340,48 @@ saying where to allow it. A step's own `approval` in the loop always asks.
 **The marketplace** ships, beside Inbox Triage, Support Triage (Gmail to Slack, a three-way gate), Meeting Prep
 (Google Calendar to Notion), PR Review Digest (GitHub to Slack), Lead Scoring (`$input` read by Claude into leads, a
 gate scoring each, Google Sheets), Weekly Report (GitHub to Notion, a one-case gate before filing) and News Brief (no
-connection: `fetch` from a public API). Each installs, checked by the SDK, once its apps are connected.
+connection: `fetch` from a public API). Each installs, checked by the SDK, once its apps are connected. A template
+may carry a `schedule` (the Resume Screener's: every hour), the installed bot's own.
+
+**Built-in tools** (`ops/bots/builtins.py`): steps any bot may run beside `fetch` and its scoped tools, by name, with
+no scope. They are Glyphh's own code, not the bot's, so a cloud bot still runs no code of its own; a bot on a rrotor
+calls them through its tool endpoint, as it calls `fetch`, so both places run the same code. The Gmail ones reach
+Gmail's own API through Pipedream's Connect proxy (`/connect/{project}/proxy/{url, base64url}`, as the account of the
+bot's first Gmail connection; `ops/bots/gmail.py`); a bot with none fails that step, saying so.
+
+| Tool | Input | Answers |
+|---|---|---|
+| `inbox_applications` | `{given?, q?, most?}` | `{applications, rejected, polled}`: the application `given` holds (a resume's text, or `{resume, letter?, sender?, role?}`, the person's own: no sender checks), else the new messages of the Gmail search `q` (at most `most`, 25; 100 at most), each read whole (headers, text, attachments of at most 5 MB as PDF, DOCX or text) |
+| `probe_generated` | `{applications, gate}` | `{generated, human, reference}`: the gate asked about each application (on the runner's thread, with the bot's own Ada key; `ops/bots/probe.py`), those whose nearest precedent's similarity is at least the gate's reference p5 sent on as `generated`, the rest `human` (`{id, nearest}`); a gate with no reference (unseeded, or a bot on a rrotor) is sent them all |
+| `screen_verdicts` | `{applications, rejected, source, fit, probe, made}` (the gates' `decisions`, the probe's data) | `{verdicts, rejected, summary}`: per applicant its `verdict` (`strong`, `borderline`, `poor`, `spam` or `waiting`), its `fit`, `generated` and `source` each `{outcome, confidence, by}` (confidence Ada's probability, 1 for the person's answer); `generated` is `{outcome: human, by: probe, nearest, reference}` for one the probe found human |
+| `inbox_label` | `{verdicts, rejected}` | `{labelled}`: each screened message labelled `Screened` and `Screened/Strong`, `/Borderline`, `/Poor` or `/Spam` (a refused one `/Spam`), the labels made where missing |
+
+An application (`ops/bots/applicants.py`) is one item: the sender (`from`, `domain`, `sender_kind` free, company,
+edu or unknown), `auth` (SPF, DKIM and DMARC as the receiving server found them, from `Authentication-Results` and
+`Received-SPF`), `bulk` (`List-Unsubscribe`, `Precedence: bulk` or `Auto-Submitted`), `role` (the subject's words),
+`opening` (the letter's first 300 characters), the resume's fields (`ops/bots/resumes.py`: `name`, `email`, `years`
+from its date spans merged, `skills`, `titles`, `education`) and `signals` (`ops/bots/signals.py`: stock phrases per
+thousand words and which, how unevenly long its sentences are, specific numbers per thousand words, long dashes,
+links). Code refuses before Ada sees it a message with no sender, one whose SPF failed with no DKIM passing, and one
+with nothing to screen. Measuring is code; deciding is Ada's alone.
+
+**Seed sets** (`ops/bots/seeds.py`): a gate's `seed_from` names a set Glyphh ships (`library/seeds/<name>.json`;
+another name is 422), whose cases are recorded as the gate's first precedents when its model is made (at the bot's
+first run), each item made by the code a run uses and its case filled as the loop fills it; a case of the set's
+`train` split is a precedent of each gate its `labels` names, one of its `test` split never is. A gate with `probe`
+also gets its reference: its nearest precedent's similarity (the gate's own, on Ada's receipts) over the test split's
+cases, its p5, p25, p50, p75 and p95 kept in the runner's state for `probe_generated`. The SDK ignores both keys.
+
+**The Resume Screener** (`library/resume-screener.json`): Gmail in; `inbox_applications`; three gates over the
+applicants, each its own Ada model seeded from `resume-screener` (200 past applicants to five roles, one in five held
+out as the test split, generated and labelled by `scripts/resume-screener-seed.py`): `source` (`real` or `spam`,
+asks under 0.7), `fit` (`strong`, `borderline` or `poor` for the role, from the role, skills, titles, years and
+degree; under 0.7) and `made` (how much of it was generated: `some`, `mostly` or `fully`, from the writing's signals;
+under 0.55). There is no human class: `made` holds only generated applications, and `probe_generated` before it
+answers human for one with no generated precedent as close as its reference's p5, so the gate decides only the
+rest. Then `screen_verdicts` and `inbox_label`. A probed-human application has no `made` call to correct. Every hour, and on demand with a resume as `$input`. What a gate is unsure of waits for the person
+as one batch; `wrong` on a gate's call is learned. Its connector tools (`connector_tools`): `screen_application`,
+`screen_inbox`, `applicants`, `correct` (fit), `correct_generated`, `correct_source` and `screener_answer`.
 
 **Tools by purpose** (`ops/bots/exposed.py`, `mcp/tools/bot_tools.py`). A bot is an agent built around its Ada models,
 so it shows in the person's Glyphh connector as the tools its job needs, found by Claude's tool search like any tool

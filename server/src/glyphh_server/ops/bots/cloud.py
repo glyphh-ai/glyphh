@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Invalid
 from glyphh_server.models import Connection
-from glyphh_server.ops.bots import props
+from glyphh_server.ops.bots import builtins, props
 from glyphh_server.ops.bots.connviews import ASK
 from glyphh_server.ops.bots.pipedream import Pipedream
 
@@ -100,6 +100,8 @@ class Program:
         def tool(ctx: Any, given: Any) -> Any:
             if self._loop is None:
                 raise RuntimeError("the bot is only being checked")
+            if name in builtins.ON_RUNNER:  # a built-in that asks the bot's own gates, on the runner's thread
+                return builtins.ON_RUNNER[name](ctx, given)
             ask = calls[name](given if isinstance(given, dict) else {})
             return asyncio.run_coroutine_threadsafe(ask, self._loop).result(TOOL_SECONDS)  # type: ignore[arg-type]
 
@@ -112,7 +114,7 @@ def named(scopes: list[dict[str, Any]]) -> dict[str, Call]:
     async def never(given: dict[str, Any]) -> Any:
         raise RuntimeError("not called")  # pragma: no cover
 
-    return {key: never for s in scopes for key in s["tools"]}
+    return {key: never for key in (*builtins.NAMES, *(k for s in scopes for k in s["tools"]))}
 
 
 def _action(pd: Pipedream, org_id: uuid.UUID, key: str, defined: list[dict[str, Any]], account: str) -> Call:
@@ -145,7 +147,8 @@ async def calls(pd: Pipedream, conn: AsyncConnection, bot: Any) -> tuple[dict[st
     removed since is left out."""
     ids = [uuid.UUID(s["connection_id"]) for s in bot.scopes]
     linked = {str(r.id): r for r in await conn.execute(select(Connection).where(Connection.id.in_(ids)))} if ids else {}
-    made: dict[str, Call] = {}
+    gmail = next((r.account_id for s in bot.scopes if (r := linked.get(s["connection_id"])) and r.app == "gmail"), None)
+    made: dict[str, Call] = builtins.made(pd, bot.org_id, gmail)
     asked: set[str] = set()
     for scope in bot.scopes:
         found = linked.get(scope["connection_id"])

@@ -3,6 +3,7 @@
 bot's tool is a Pipedream action run as the org with one of its accounts. The server holds no one's sign-in, only
 Pipedream's account ids. The project's OAuth client mints the access token, kept until a minute before it ends."""
 
+import base64
 import time
 import uuid
 from typing import Any
@@ -94,3 +95,11 @@ class Pipedream:
     async def run(self, org_id: uuid.UUID, key: str, props: dict[str, Any]) -> Any:
         sent = {"id": key, "external_user_id": external_user(org_id), "configured_props": props}
         return await self._send("POST", self._connect("/actions/run"), json=sent)
+
+    async def proxy(self, org_id: uuid.UUID, account_id: str, method: str, url: str, body: Any = None) -> Any:
+        """A call of the app's own API as the account (Connect's proxy: Pipedream adds the account's sign-in), for
+        Glyphh's built-in tools (ops/bots/builtins.py); the target URL travels base64url-encoded, its query in it."""
+        target = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
+        params = {"external_user_id": external_user(org_id), "account_id": account_id}
+        sent = {"json": body} if body is not None else {}
+        return await self._send(method, self._connect(f"/proxy/{target}"), params=params, **sent)

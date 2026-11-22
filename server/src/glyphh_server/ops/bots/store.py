@@ -19,7 +19,7 @@ from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import seal, unseal
-from glyphh_server.ops.bots import cloud, exposed, package, places, prices, schedule, svg, voices
+from glyphh_server.ops.bots import cloud, exposed, package, places, prices, schedule, seeds, svg, voices
 from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
 from glyphh_server.ops.runtime_keys import key_hash
 
@@ -46,6 +46,7 @@ def _look(given: dict[str, str]) -> dict[str, str]:
 def checked(bot: Any) -> None:
     """The bot as it would be kept, checked by the SDK against the tools its scope names."""
     cloud.check_hosts(bot.spec)
+    seeds.named(bot.spec)
     package.check(bot, cloud.Program(cloud.named(bot.scopes)))
     exposed.check(bot.spec, getattr(bot, "connector_tools", []))  # a maker's draft declares none
 

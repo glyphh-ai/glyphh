@@ -14,7 +14,7 @@ from typing import Any
 from glyphh.bots import BotError, Runner, RunResult
 
 from glyphh_server.errors import GlyphhError
-from glyphh_server.ops.bots import cloud, package
+from glyphh_server.ops.bots import cloud, package, seeds
 
 OUTPUT_MAX: int = 50_000
 INSTALLED: str = "_glyphh_installed"
@@ -66,11 +66,13 @@ def output(bot: Any, result: RunResult) -> str:
 
 def installed(runner: Runner) -> None:
     """The bot's gate and memory models made and its seed lines kept, once for each shape of its gates and seed (the
-    SDK's install keeps the seed lines again each time it is called)."""
+    SDK's install keeps the seed lines again each time it is called); a gate made now gets its seed set's precedents
+    (ops/bots/seeds.py)."""
     spec = runner.bot.spec
     shape = hashlib.sha256(json.dumps([spec.get("gates"), spec.get("seed")], sort_keys=True).encode()).hexdigest()
     if runner.store.state(INSTALLED) != shape:
-        runner.install()
+        made = runner.install()["made"]
+        seeds.plant(runner, made)
         runner.store.set_state(INSTALLED, shape)
 
 

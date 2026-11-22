@@ -72,7 +72,7 @@ async def test_every_template_installs_once_its_apps_are_connected(
 ) -> None:
     ada = await person(engine)
     t = templates.one(slug)
-    assert t.gates and t.skills
+    assert t.gates and (t.skills or not any("agent" in step for step in t.spec["loop"]))  # skills for agent steps
     for i, app in enumerate(t.apps):
         served.pd.accounts.append(account(f"apn_{i}", {"name_slug": app, "name": app.title(), "img_src": ""}))
     if t.apps:

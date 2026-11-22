@@ -19,6 +19,8 @@ dependencies = [
     "anthropic>=2.12.0",
     # The hosted bots run the SDK's own bot loop (glyphh.bots, docs/specs/bots.md, 9); 3.12 reads a rrotor's Result
     "glyphh[api]==3.12.0",
+    # The bots' built-in tools read resumes sent as PDF (ops/bots/resumes.py); pure Python, no system libraries
+    "pypdf>=5.0",
 ]
 
 [dependency-groups]

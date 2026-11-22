@@ -18,6 +18,7 @@ from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.bots import store
 from glyphh_server.ops.bots.exposed import ABOUT as TOOLS_ABOUT
 from glyphh_server.ops.bots.exposed import ConnectorTool
+from glyphh_server.ops.bots.schedule import Schedule
 from glyphh_server.ops.bots.views import BotIn, BotView, ScopeIn
 
 LIBRARY: Path = Path(__file__).with_name("library")
@@ -38,6 +39,7 @@ class BotTemplate(BaseModel):
     tools: list[str] = Field(description="The tools it uses, by key")
     connector_tools: list[ConnectorTool] = Field(default_factory=list, description=TOOLS_ABOUT)
     gates: list[str] = Field(default_factory=list, description="Its gates, each its own Ada model that learns")
+    schedule: Schedule = Field(default_factory=Schedule, description="When the installed bot runs on its own")
 
 
 class BotTemplates(BaseModel):
@@ -83,6 +85,6 @@ async def install(conn: AsyncConnection, who: Principal, secret: str, slug: str,
     ]
     body = BotIn(
         name=given.name or t.name, summary=t.summary, look=t.look, instructions=t.instructions, model=t.model,
-        spec=t.spec, skills=t.skills, connections=scopes, connector_tools=t.connector_tools,
+        spec=t.spec, skills=t.skills, connections=scopes, connector_tools=t.connector_tools, schedule=t.schedule,
     )  # fmt: skip
     return await store.create(conn, who, secret, body)

@@ -39,6 +39,12 @@ Steps (each has an id; none may be called input):
 - {"id": "send", "run": "gmail-send-email", "input": {"to": "$draft.to", "body": "$draft.body"},
    "approval": "send this reply"}  an approval asks the person yes or no before the step runs
 - any step: "requires": "$mail.count > 0" (a small expression over earlier data), "otherwise": "skip" | "end"
+- Glyphh's built-in tools, run like a scoped tool, no scope needed (Gmail ones read the bot's Gmail connection):
+  inbox_applications {"given": "$input", "q": "<a Gmail search>", "most": 25} reads job applications (resumes as
+  PDF, Word or text) into items with the sender's checks, the resume's fields and its writing's signals, or screens
+  the one given; probe_generated {"applications": "$source.real", "gate": "made"} sends on to the gate only those
+  with a close precedent in it (the rest human); screen_verdicts puts the source, fit, probe and made data together;
+  inbox_label labels each screened message in Gmail with its verdict (the Resume Screener template uses all four)
 
 $id.path reads an earlier step's data (inside objects and lists too); $input is what the run was given.
 
@@ -46,6 +52,8 @@ A gate: {"outcomes": ["keep", "drop"], "question": "Worth answering?", "case": {
 "$item.subject", ...}}}, "spec": <an Ada spec whose layers, segments and roles match the case>, "ask_below": 0.75,
 "min_precedents": 10, "audit": 0.1, "max_questions": 10, "default": "drop"}. The case is its fields: $item.x for a
 gate over items, $step.x for one case. Make one role the key (key_part true, similarity_weight 0) so items stay apart.
+"seed_from": "resume-screener" starts a gate from a seed set Glyphh ships (past cases, labelled), recorded once;
+"probe": true also measures its reference for probe_generated over the set's test split.
 
 A run that asks waits (needs_input) until bot_run_answer answers it: one option, or for a batch "1=keep 2=drop
 rest=drop". bot_run_wrong corrects a gate's call; it is learned as a precedent. One live run a bot at a time.

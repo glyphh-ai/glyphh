@@ -130,11 +130,20 @@ class FakeModel:
         self.ada.cases[self.name].append((data, outcome))
         return SimpleNamespace(data={"id": f"p{len(self.ada.cases[self.name])}"})
 
+    def record_many(self, cases: list[dict[str, Any]]) -> dict[str, Any]:
+        for c in cases:
+            self.record(c["data"], c.get("outcome"))
+        return {"added": len(cases), "precedents": len(self.ada.cases[self.name])}
+
     def decide(self, data: dict[str, Any]) -> Decision:
         self._there()
         if self.name in self.ada.rule:
             outcome, p = self.ada.rule[self.name](data)
-            return Decision.of({"outcome": outcome, "probabilities": {outcome: p}, "ask": p < 0.7}, self.name)
+            near = self.ada.near.get(self.name, lambda c: 1.0)(data)
+            receipts = [{"id": "p1", "sim": near, "outcome": outcome}]
+            return Decision.of(
+                {"outcome": outcome, "probabilities": {outcome: p}, "ask": p < 0.7, "receipts": receipts}, self.name
+            )
         return Decision.of({"outcome": None, "probabilities": {}, "ask": True}, self.name)
 
     def facts(self, data: dict[str, Any], top: int | None = None) -> SimpleNamespace:
@@ -150,6 +159,7 @@ class FakeAda:
         self.specs: dict[str, dict[str, Any]] = {}
         self.cases: dict[str, list[tuple[dict[str, Any], Any]]] = defaultdict(list)
         self.rule: dict[str, Callable[[dict[str, Any]], tuple[str, float]]] = {}
+        self.near: dict[str, Callable[[dict[str, Any]], float]] = {}  # the nearest precedent's sim (else 1)
         self.keys: list[str] = []
 
     def models(self) -> list[ModelInfo]:
