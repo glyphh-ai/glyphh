@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { botsFake, inbox, weekdays } from '@/test/bots';
+import { botsFake, inbox, waiting, weekdays } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 import { browserZone, clock, scheduleOf, sentence, summary, zones } from './schedule';
@@ -40,7 +40,7 @@ describe('a bot’s schedule, in plain words', () => {
 
   it('is chosen from dropdowns and a time picker, said back, saved, and its next run shown', async () => {
     const fake = on();
-    const { user } = renderApp('/bots/inbox-helper');
+    const { user } = renderApp('/bots/inbox-helper?tab=settings');
     const runs = await screen.findByRole('combobox', { name: 'Runs' });
     expect(runs).toHaveValue('off');
     expect(screen.getByText('It runs only when you run it.')).toBeInTheDocument();
@@ -74,9 +74,10 @@ describe('a bot’s schedule, in plain words', () => {
 });
 
 describe('where a bot runs', () => {
-  it('is chosen beside the model: Glyphh cloud by default, an offline machine greyed', async () => {
+  it('is chosen beside the model under Advanced: Glyphh cloud by default, an offline machine greyed', async () => {
     const fake = on();
-    const { user } = renderApp('/bots/inbox-helper');
+    const { user } = renderApp('/bots/inbox-helper?tab=settings');
+    await user.click(await screen.findByText('Advanced', { exact: true }));
     const where = await screen.findByRole('combobox', { name: 'Runs on' });
     expect(where).toHaveValue('');
     await waitFor(() => expect(within(where).getAllByRole('option')).toHaveLength(3));
@@ -102,9 +103,9 @@ describe('where a bot runs', () => {
     expect(within(run).getByText(/· on Studio Mac/)).toBeInTheDocument();
     expect(within(run).getByText(/the Claude key on Studio Mac/)).toBeInTheDocument();
     expect(within(screen.getByRole('list', { name: 'Runs' })).getByText(/· on Studio Mac/)).toBeInTheDocument();
-    expect(await within(run).findByRole('region', { name: 'Question' }, { timeout: 4000 })).toBeInTheDocument(); // its result came back
+    expect(await within(run).findByRole('region', { name: 'Question' }, { timeout: 6000 })).toBeInTheDocument(); // its result came back
     expect(fake.state.seen).toContain('run inbox-helper');
-  });
+  }, 10_000);
 
   it('says so when the bot’s machine is offline, and the server’s refusal', async () => {
     on({ bots: [inbox({ runs_on: 'rr-acme' })] });
@@ -116,12 +117,15 @@ describe('where a bot runs', () => {
   });
 
   it('shows on the Bots list with the next run', async () => {
-    on({ bots: [inbox({ runs_on: 'rr-acme', schedule: weekdays(), next_run: 'Mon 9:00' }), inbox({ id: 'b-2', slug: 'quiet', name: 'Quiet' })] });
+    on({ bots: [inbox({ runs_on: 'rr-acme', schedule: weekdays(), next_run: 'Mon 9:00' }), inbox({ id: 'b-2', slug: 'quiet', name: 'Quiet' })], runs: [waiting()] });
     renderApp('/bots');
-    const card = (await screen.findByRole('link', { name: 'Inbox helper' })) as HTMLElement;
+    const list = await screen.findByRole('list', { name: 'Your bots' });
+    expect(within(screen.getByRole('navigation', { name: 'The crew' })).getAllByRole('link').map((l) => l.textContent)).toEqual(['Inbox helper', 'Quiet']);
+    const card = within(list).getByRole('link', { name: 'Inbox helper' });
     expect(within(card).getByText('Next run Mon 9:00')).toBeInTheDocument();
     expect(await within(card).findByText('On Acme')).toBeInTheDocument();
-    const quiet = screen.getByRole('link', { name: 'Quiet' });
+    expect(within(card).getByText('1 waiting on you')).toBeInTheDocument();
+    const quiet = within(list).getByRole('link', { name: 'Quiet' });
     expect(within(quiet).queryByText(/Next run/)).not.toBeInTheDocument();
     expect(within(quiet).queryByText(/^On /)).not.toBeInTheDocument();
   });

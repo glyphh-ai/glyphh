@@ -12,7 +12,7 @@ function on(given?: Parameters<typeof botsFake>[0]) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('the Bots page', () => {
-  it('is in the sidebar under Bots and shows each bot as a card with its cat and last run', async () => {
+  it('is in the sidebar under Bots and shows each bot as a row with its cat, its Ada gates, what it watches and its last run', async () => {
     on({ bots: [inbox({ last_run: { id: 'r-1', status: 'failed', created_at: '2026-11-20T09:00:00Z' } })] });
     const { user, router } = renderApp('/usage');
     const sidebar = await screen.findByRole('complementary', { name: 'Main' });
@@ -22,7 +22,8 @@ describe('the Bots page', () => {
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(/^Bots$/);
     const card = await screen.findByRole('link', { name: 'Inbox helper' });
     expect(card).toHaveTextContent('Answers the easy emails.');
-    expect(card).toHaveTextContent('1 tool · 1 gate · 1 skill');
+    expect(card).toHaveTextContent('Ada: easy');
+    expect(card).toHaveTextContent('Watches Gmail');
     expect(card).toHaveTextContent('Failed');
     expect(card.querySelector('svg.cat-svg')).not.toBeNull();
     expect(card).toHaveAttribute('href', '/bots/inbox-helper');
@@ -49,7 +50,8 @@ describe('the Bots page', () => {
     expect(router.state.location.search).toBe('?tab=browse');
     const list = await screen.findByRole('list', { name: 'Bots to add' });
     const card = await within(list).findByRole('link', { name: 'Support triage' });
-    expect(card).toHaveTextContent('Needs Gmail, Notion · 1 gate');
+    expect(card).toHaveTextContent('Ada: urgent');
+    expect(card).toHaveTextContent('Needs Gmail, Notion');
     expect(card).toHaveAttribute('href', '/marketplace/bots/support-triage');
     expect(screen.getByRole('link', { name: 'Open the Marketplace' })).toHaveAttribute('href', '/marketplace/bots');
     expect(within(list).getByRole('link', { name: 'Daily digest' })).toHaveTextContent('Added');
@@ -131,7 +133,10 @@ describe('the Bots page', () => {
   it('creates a bot with AI: a chat that asks, drafts the bot as a card, connects what it needs and makes it', async () => {
     const fake = on({ bots: [], connections: [] });
     const { user, router } = renderApp('/bots');
-    await user.click(await screen.findByRole('button', { name: 'Create with AI' }));
+    expect(await screen.findByText('No bots yet')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create with AI' })).not.toBeInTheDocument(); // in New bot's dialog, not on the page
+    await user.click(screen.getByRole('button', { name: 'New bot' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Create with AI' }));
     const dialog = await screen.findByRole('dialog', { name: 'Create with AI' });
     const chat = within(dialog).getByRole('list', { name: 'Conversation' });
     expect(chat).toHaveTextContent('Tell me what you want a bot to do');

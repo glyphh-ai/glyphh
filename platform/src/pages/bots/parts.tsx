@@ -6,8 +6,9 @@ import type { Look } from '@/bots/cat/look';
 import { mascotSrc } from '@/bots/cat/mascots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ago, dollars, stamp } from '@/lib/format';
-import { Button, Chip, type ChipTone } from '@/ui';
+import { Button } from '@/ui';
 import styles from './bots.module.css';
+import look from './look.module.css';
 
 export const botPath = (slug: string) => `/bots/${encodeURIComponent(slug)}`;
 
@@ -56,16 +57,17 @@ export function CatTile({ look, mascot, size = 56, busy, label }: TileProps) {
   );
 }
 
-const tones: Record<RunStatus, ChipTone> = {
-  queued: 'neutral',
-  running: 'blue',
-  dispatched: 'blue',
-  needs_input: 'amber',
-  done: 'green',
-  failed: 'red',
-  skipped: 'neutral',
+/** A run's state in black and white, as the Glyphh Bot app's dots: waiting on you is the white pill. */
+const dots: Record<RunStatus, string | undefined> = {
+  queued: look.dot,
+  running: look.dotLive,
+  dispatched: look.dotLive,
+  needs_input: look.dot,
+  done: look.dotOk,
+  failed: look.dotBad,
+  skipped: look.dotBad,
 };
-const words: Record<RunStatus, string> = {
+export const runWords: Record<RunStatus, string> = {
   queued: 'Queued',
   running: 'Running',
   dispatched: 'Running there',
@@ -75,8 +77,13 @@ const words: Record<RunStatus, string> = {
   skipped: 'Cancelled',
 };
 
-export function RunChip({ status }: { status: RunStatus }) {
-  return <Chip tone={tones[status]}>{words[status]}</Chip>;
+export function RunChip({ status, small }: { status: RunStatus; small?: boolean }) {
+  return (
+    <span className={`${look.pill} ${small ? look.pillSmall : ''} ${status === 'needs_input' ? look.pillOn : ''}`}>
+      <span className={`${look.dot} ${dots[status] ?? ''}`} aria-hidden="true" />
+      {runWords[status]}
+    </span>
+  );
 }
 
 type AreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: string; mono?: boolean };

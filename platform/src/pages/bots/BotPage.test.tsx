@@ -10,18 +10,78 @@ function on(given?: Parameters<typeof botsFake>[0]) {
 }
 
 describe('a bot’s page', () => {
-  it('opens on Overview with its cat, and saves a change of name, instructions, model and cat', async () => {
-    const fake = on();
-    const { user, router } = renderApp('/bots/inbox-helper');
+  it('opens on Overview: its gates in Ada, what waits on you, its decisions, what it watches and its tools in Claude', async () => {
+    const decided = waiting({
+      id: 'r-done',
+      status: 'done',
+      input: 'Morning',
+      question: null,
+      data: {
+        _gates: { easy: { each: true, outcome: 'answer 1, leave 1', by: 'ada', asked: 1, decided: 1, defaulted: 0 } },
+        decide: {
+          decisions: [
+            { n: 1, label: 'Lunch on Friday?', outcome: 'answer', by: 'ada', p: 0.92 },
+            { n: 2, label: 'Invoice overdue', outcome: 'leave', by: 'person' },
+          ],
+        },
+      },
+      created_at: '2026-11-19T09:00:00Z',
+    });
+    const fake = on({ runs: [waiting(), decided] });
+    const { user } = renderApp('/bots/inbox-helper');
     expect(await screen.findByRole('heading', { name: 'Inbox helper', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Botsinbox-helper');
-    const name = screen.getByLabelText('Name');
+
+    const gate = await screen.findByRole('link', { name: 'easy gate' });
+    expect(gate).toHaveAttribute('href', '/bots/inbox-helper?tab=gates');
+    expect(gate).toHaveTextContent('14precedents');
+    expect(gate).toHaveTextContent('Ada decided 8 · you 6');
+    expect(gate).toHaveTextContent('Asks you40%');
+    expect(gate).toHaveTextContent('Right when it asked83% (5 of 6)');
+
+    const asks = await screen.findByRole('region', { name: 'Waiting on you' });
+    expect(within(asks).getByRole('region', { name: 'Question' })).toHaveTextContent('Answer these emails?');
+
+    const latest = await screen.findByRole('list', { name: 'Latest runs' });
+    const items = within(latest).getByRole('list', { name: 'easy items' });
+    expect(within(items).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      expect.stringContaining('1. Lunch on Friday?answerAda · 92% sure'),
+      expect.stringContaining('2. Invoice overdueleaveYou'),
+    ]);
+    await user.click(within(items).getByRole('button', { name: 'Wrong? easy item 2' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Mark as wrong' });
+    expect(within(dialog).getByLabelText('Item (optional)')).toHaveValue('2');
+    await user.type(within(dialog).getByLabelText('What should have happened'), 'answer');
+    await user.click(within(dialog).getByRole('button', { name: 'Correct it' }));
+    expect(await screen.findByText('The easy gate learned “answer”.')).toBeInTheDocument();
+    expect(fake.state.bodies.at(-1)).toEqual({ outcome: 'answer', gate: 'easy', item: '2' });
+
+    expect(screen.getByLabelText('What it watches')).toHaveTextContent('WatchesGmail · Find email');
+    expect(screen.getByLabelText('What it watches')).toHaveTextContent('ThenGmail · Send email · asks you first');
+    expect(within(screen.getByRole('list', { name: 'Tools in Claude' })).getAllByRole('listitem').map((li) => li.querySelector('code')?.textContent)).toEqual([
+      'bot_run',
+      'bot_runs',
+      'bot_run_answer',
+      'bot_run_wrong',
+      'bot_gates',
+      'bot_approvals',
+    ]);
+  });
+
+  it('keeps the model, permission mode and voice under Advanced in Settings, and saves a change of name, instructions, model and cat', async () => {
+    const fake = on();
+    const { user, router } = renderApp('/bots/inbox-helper?tab=settings');
+    const name = await screen.findByLabelText('Name');
     await user.clear(name);
     await user.type(name, 'Mail helper');
     await user.clear(screen.getByLabelText('Instructions'));
     await user.type(screen.getByLabelText('Instructions'), 'Answer every email.');
-    const model = screen.getByRole('combobox', { name: 'Model' });
+    const advanced = screen.getByText('Advanced', { exact: true }).closest('details')!;
+    expect(advanced).not.toHaveAttribute('open');
+    await user.click(screen.getByText('Advanced', { exact: true }));
+    expect(advanced).toHaveAttribute('open');
+    const model = within(advanced).getByRole('combobox', { name: 'Model' });
     await waitFor(() => expect(model).toHaveValue('claude-sonnet-5-5'));
     await user.selectOptions(model, 'claude-haiku-5-5');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Permission mode' }), 'auto');
@@ -47,7 +107,8 @@ describe('a bot’s page', () => {
 
   it('picks the model from a plain list of names, its price under it, the permission mode beside it and a voice', async () => {
     on();
-    const { user } = renderApp('/bots/inbox-helper');
+    const { user } = renderApp('/bots/inbox-helper?tab=settings');
+    await user.click(await screen.findByText('Advanced', { exact: true }));
     const model = await screen.findByRole('combobox', { name: 'Model' });
     await waitFor(() => expect(within(model).getAllByRole('option')).toHaveLength(12));
     expect(within(model).getAllByRole('option').slice(0, 3).map((o) => o.textContent)).toEqual(['Claude Sonnet 5.5 (default)', 'Claude Haiku 5.5', 'Claude Opus 5.5']);
@@ -61,17 +122,10 @@ describe('a bot’s page', () => {
     expect(screen.getByText('You can hear it once bots speak: samples are not out yet.')).toBeInTheDocument();
   });
 
-  it('keeps the connections folded under their count until opened, and draws a mascot from words', async () => {
+  it('draws a mascot from words in Settings, and saves it', async () => {
     const fake = on();
-    const { user } = renderApp('/bots/inbox-helper');
-    const fold = (await screen.findByText('Connections', { selector: 'summary' })).closest('details')!;
-    expect(fold).not.toHaveAttribute('open');
-    expect(fold).toHaveTextContent('(1 · 1 tool)');
-    await user.click(within(fold).getByText('Connections', { selector: 'summary' }));
-    expect(fold).toHaveAttribute('open');
-    expect(await within(fold).findByRole('region', { name: 'Gmail · chris@example.com' })).toBeInTheDocument();
-
-    await user.type(screen.getByLabelText('Describe a new one'), 'a cat in a party hat');
+    const { user } = renderApp('/bots/inbox-helper?tab=settings');
+    await user.type(await screen.findByLabelText('Describe a new one'), 'a cat in a party hat');
     await user.click(screen.getByRole('button', { name: 'Draw it' }));
     const drawn = await screen.findByRole('img', { name: 'Its own mascot' });
     expect(drawn.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
@@ -243,9 +297,19 @@ describe('a bot’s page', () => {
     on();
     renderApp('/bots/inbox-helper?tab=gates');
     const gate = await screen.findByRole('listitem', { name: 'easy' });
-    expect(gate).toHaveTextContent('14');
-    expect(gate).toHaveTextContent('Asked you: 6');
-    expect(gate).toHaveTextContent('Right on its own: 5');
+    expect(within(gate).getByLabelText('Outcomes')).toHaveTextContent('answerleave');
+    expect(gate).toHaveTextContent('14precedents');
+    expect(gate).toHaveTextContent('Asks you40%');
+    expect(gate).toHaveTextContent('Right when it asked83% (5 of 6)');
+    expect(gate).toHaveTextContent('Corrected1 time');
+    expect(within(gate).getByText('No decisions in its recent runs.')).toBeInTheDocument();
+  });
+
+  it('opens the loop as JSON from an old link (?tab=loop) in Settings, Advanced open', async () => {
+    on();
+    renderApp('/bots/inbox-helper?tab=loop');
+    expect(await screen.findByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Spec').closest('details')).toHaveAttribute('open');
   });
 
   it('says when a bot has no gates', async () => {

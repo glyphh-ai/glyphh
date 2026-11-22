@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { Bot, BotDraft, BotKey, BotModels, BotRun, BotVoices, Connection, ConnectionTool, ConnectorApp, DraftReply, Permission, Place, Said, Schedule } from '@/api/bots';
+import type { Bot, BotDraft, BotKey, BotModels, BotRun, BotVoices, Connection, ConnectionTool, ConnectorApp, DraftReply, GateStat, Permission, Place, Said, Schedule } from '@/api/bots';
 import type { BotTemplate } from '@/api/botTemplates';
 import { summary } from '@/pages/bots/schedule';
 import { apiError } from './server';
@@ -162,6 +162,21 @@ export const waiting = (given: Partial<BotRun> = {}): BotRun => ({
   created_at: at,
   started_at: at,
   finished_at: null,
+  ...given,
+});
+
+/** A gate as the server reads it from the bot's runner (the SDK's `gate_stats`). */
+export const gateStat = (given: Partial<GateStat> = {}): GateStat => ({
+  precedents: 14,
+  outcomes: ['answer', 'leave'],
+  policy: {},
+  decisions: { ada: 8, person: 6, default: 0, total: 14 },
+  ask_rate: 0.4,
+  ask_rate_by_run: [],
+  agreement: { asked: 6, agreed: 5, rate: 0.833 },
+  audit: { asked: 0, agreed: 0, rate: null },
+  shadow: { asked: 0, agreed: 0, rate: null },
+  overrules: { wrong: 1, audit: 0, world: 0, total: 1 },
   ...given,
 });
 
@@ -343,7 +358,7 @@ export function botsFake({
     }),
     http.get(v1('/bots/:slug/gates'), ({ params }) =>
       find(params.slug)
-        ? HttpResponse.json({ gates: Object.fromEntries(find(params.slug)!.gate_models.map((g) => [g.replace(`${params.slug}-`, ''), { precedents: 14, asked: 6, right: 5 }])) })
+        ? HttpResponse.json({ gates: Object.fromEntries(find(params.slug)!.gate_models.map((g) => [g.replace(`${params.slug}-`, ''), gateStat()])) })
         : missing(),
     ),
     http.get(v1('/bots/:slug/runs'), ({ params }) => HttpResponse.json({ runs: state.runs.filter((r) => r.bot_slug === params.slug) })),

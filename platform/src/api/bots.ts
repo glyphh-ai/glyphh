@@ -95,7 +95,39 @@ export type BotRun = {
   started_at: string | null;
   finished_at: string | null;
 };
-export type GateStats = Record<string, { precedents?: number; asked?: number; right?: number; [k: string]: unknown }>;
+/** Asked against agreed: how often the person was asked, and how often Ada's own guess matched their answer. */
+export type Agreement = { asked: number; agreed: number; rate: number | null };
+/**
+ * One gate as `GET /v1/bots/{slug}/gates` sends it (the SDK's `gate_stats`): its precedents in Ada, its outcomes,
+ * who decided (Ada, the person, the default), how often it asks over the last runs, how often Ada's guess was right
+ * when it asked, and how often it was overruled. Any field may be missing on an older runner.
+ */
+export type GateStat = {
+  precedents?: number;
+  outcomes?: string[];
+  policy?: Record<string, unknown>;
+  decisions?: { ada: number; person: number; default: number; total: number };
+  ask_rate?: number | null;
+  ask_rate_by_run?: { run: string; asked: number; of: number; rate: number | null }[];
+  agreement?: Agreement;
+  audit?: Agreement;
+  shadow?: Agreement;
+  overrules?: { wrong: number; audit: number; world: number; total: number };
+  [k: string]: unknown;
+};
+export type GateStats = Record<string, GateStat>;
+/** A gate's decision in one run (`run.data._gates`): one outcome, or for a gate over many items their summary. */
+export type GateDecision = {
+  outcome: string;
+  by: string;
+  p?: number | null;
+  each?: boolean;
+  asked?: number;
+  decided?: number;
+  defaulted?: number;
+};
+/** One item a gate over many items decided (`run.data[step].decisions`). */
+export type ItemDecision = { n: number; label: string; outcome: string; by: string; p?: number | null };
 export type BotKey = { set: boolean; hint: string; set_at: string | null; glyphh_key: boolean };
 /** Which tool steps wait for the person: ask (unless the connection allows the tool), connection (as it says), auto (none). */
 export type PermissionMode = 'ask' | 'connection' | 'auto';

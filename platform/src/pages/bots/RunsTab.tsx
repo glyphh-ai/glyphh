@@ -1,57 +1,14 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useBotPlaces, useBotRun, useBotRuns, useCancelRun, useRunBot, useWrongRun, working, type Bot, type BotRun } from '@/api/bots';
+import { useBotPlaces, useBotRun, useBotRuns, useCancelRun, useRunBot, working, type Bot } from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ago, dollars, stamp } from '@/lib/format';
-import { Button, Card, Dialog, EmptyState, LoadingCard, Select, Skeleton, TextField, useToast } from '@/ui';
-import { QuestionForm, RunChip, TextArea } from './parts';
+import { Button, EmptyState, LoadingCard, Skeleton } from '@/ui';
+import { DecisionLines, decisionsOf, gateNames, WrongDialog } from './ada';
+import { QuestionForm, RunChip } from './parts';
 import styles from './bots.module.css';
+import look from './look.module.css';
 
-/** Says a finished run (or one item of it) went wrong: what really happened, for the gate that decided to learn. */
-function WrongDialog({ run, gates, open, onClose }: { run: BotRun; gates: string[]; open: boolean; onClose: () => void }) {
-  const toast = useToast();
-  const wrong = useWrongRun();
-  const [outcome, setOutcome] = useState('');
-  const [gate, setGate] = useState(gates[0] ?? '');
-  const [item, setItem] = useState('');
-  const send = () =>
-    wrong.mutate(
-      { id: run.id, outcome: outcome.trim(), gate: gate || undefined, item: item.trim() || undefined },
-      {
-        onSuccess: (r) => {
-          toast.show(`The ${r.gate} gate learned “${r.now}”.`);
-          onClose();
-        },
-      },
-    );
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Mark as wrong"
-      description="Say what should have happened. The gate that decided learns it, so the next run is right."
-      actions={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" disabled={outcome.trim() === ''} loading={wrong.isPending} onClick={send}>
-            Correct it
-          </Button>
-        </>
-      }
-    >
-      <div className={styles.form}>
-        <TextField label="What should have happened" value={outcome} onChange={(e) => setOutcome(e.target.value)} placeholder="leave" />
-        {gates.length > 1 && <Select label="Gate" value={gate} onChange={(e) => setGate(e.target.value)} options={gates.map((g) => ({ value: g, label: g }))} />}
-        <TextField label="Item (optional)" hint="Its number, for a run that decided many." value={item} onChange={(e) => setItem(e.target.value)} />
-        <ApiErrorNotice error={wrong.error} />
-      </div>
-    </Dialog>
-  );
-}
-
-/** One run: what it was asked, its log and data, the question it waits on (answered here), cancel and mark wrong. */
 /** Where a run ran, by the place's name: `on Acme`; nothing for Glyphh cloud. */
 function usePlaceName() {
   const places = useBotPlaces();
@@ -59,7 +16,8 @@ function usePlaceName() {
   return (id: string | null | undefined) => (id ? (named.get(id) ?? { id, name: 'your machine', mode: 'self' as const, linked: false }) : null);
 }
 
-function RunDetail({ id, gates }: { id: string; gates: string[] }) {
+/** One run in full: what it was asked, what each gate decided (corrected in place), the question it waits on, its log. */
+function RunDetail({ id, bot }: { id: string; bot: Bot }) {
   const run = useBotRun(id);
   const cancel = useCancelRun();
   const place = usePlaceName();
@@ -67,77 +25,83 @@ function RunDetail({ id, gates }: { id: string; gates: string[] }) {
   if (run.isPending) return <LoadingCard lines={5} />;
   if (run.error) return <ApiErrorNotice error={run.error} />;
   const r = run.data;
-  const data = Object.keys(r.data).length > 0 ? JSON.stringify(r.data, null, 2) : '';
+  const rest = Object.fromEntries(Object.entries(r.data ?? {}).filter(([k]) => k !== '_gates'));
+  const data = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
   const where = place(r.runs_on);
   return (
-    <Card>
-      <section className={styles.form} aria-label="Run">
-        <div className={styles.spread}>
-          <span className={styles.row}>
-            <RunChip status={r.status} />
-            <span className={styles.muted} title={stamp(r.created_at)}>
-              {ago(r.created_at)}
-              {where && ` · on ${where.name}`}
-            </span>
+    <section className={`${look.panel} ${look.panelBody} ${styles.form}`} aria-label="Run">
+      <div className={look.runHead}>
+        <span className={look.facts}>
+          <RunChip status={r.status} />
+          <span className={look.muted} title={stamp(r.created_at)}>
+            {ago(r.created_at)}
+            {where && ` · on ${where.name}`}
           </span>
-          <span className={styles.muted}>
-            {(r.input_tokens + r.output_tokens).toLocaleString('en-GB')} tokens · {dollars(r.cost_micros)} · {where ? `the Claude key on ${where.name}` : r.own_key ? 'your Claude key' : 'Glyphh’s Claude key'}
-          </span>
+        </span>
+        <span className={look.muted}>
+          {(r.input_tokens + r.output_tokens).toLocaleString('en-GB')} tokens · {dollars(r.cost_micros)} ·{' '}
+          {where ? `the Claude key on ${where.name}` : r.own_key ? 'your Claude key' : 'Glyphh’s Claude key'}
+        </span>
+      </div>
+      <div>
+        <span className={look.label}>Asked</span>
+        <p className={styles.output}>{r.input || '—'}</p>
+      </div>
+      {decisionsOf(r, bot.spec).length > 0 && (
+        <div className={look.tight}>
+          <span className={look.label}>What its gates decided</span>
+          <DecisionLines run={r} bot={bot} limit={20} />
         </div>
+      )}
+      {r.status === 'needs_input' && r.question && (
+        <div className={look.ask}>
+          <QuestionForm run={r} />
+        </div>
+      )}
+      {r.output && (
         <div>
-          <span className={styles.label}>Asked</span>
-          <p className={styles.output}>{r.input || '—'}</p>
+          <span className={look.label}>Result</span>
+          <p className={styles.output}>{r.output}</p>
         </div>
-        {r.status === 'needs_input' && r.question && (
-          <div className={styles.waiting}>
-            <QuestionForm run={r} />
-          </div>
+      )}
+      {r.error && <p className={styles.output}>{r.error}</p>}
+      <div>
+        <span className={look.label}>Log</span>
+        {r.log.length > 0 ? (
+          <pre className={styles.log} aria-label="Log">
+            {r.log.join('\n')}
+          </pre>
+        ) : (
+          <p className={look.muted}>{working(r.status) ? 'Starting…' : 'Nothing logged.'}</p>
         )}
+      </div>
+      {data && (
         <div>
-          <span className={styles.label}>Log</span>
-          {r.log.length > 0 ? (
-            <pre className={styles.log} aria-label="Log">
-              {r.log.join('\n')}
-            </pre>
-          ) : (
-            <p className={styles.muted}>{working(r.status) ? 'Starting…' : 'Nothing logged.'}</p>
-          )}
+          <span className={look.label}>Data</span>
+          <pre className={styles.log} aria-label="Data">
+            {data}
+          </pre>
         </div>
-        {data && (
-          <div>
-            <span className={styles.label}>Data</span>
-            <pre className={styles.log} aria-label="Data">
-              {data}
-            </pre>
-          </div>
+      )}
+      <ApiErrorNotice error={cancel.error} />
+      <div className={styles.row}>
+        {working(r.status) && (
+          <Button variant="ghost" icon="close" loading={cancel.isPending} onClick={() => cancel.mutate(r.id)}>
+            Cancel run
+          </Button>
         )}
-        {r.output && (
-          <div>
-            <span className={styles.label}>Result</span>
-            <p className={styles.output}>{r.output}</p>
-          </div>
+        {(r.status === 'done' || r.status === 'failed') && (
+          <Button variant="secondary" icon="undo" onClick={() => setMarking(true)}>
+            Mark as wrong
+          </Button>
         )}
-        {r.error && <p className={styles.output}>{r.error}</p>}
-        <ApiErrorNotice error={cancel.error} />
-        <div className={styles.row}>
-          {working(r.status) && (
-            <Button variant="ghost" icon="close" loading={cancel.isPending} onClick={() => cancel.mutate(r.id)}>
-              Cancel run
-            </Button>
-          )}
-          {(r.status === 'done' || r.status === 'failed') && (
-            <Button variant="secondary" icon="undo" onClick={() => setMarking(true)}>
-              Mark as wrong
-            </Button>
-          )}
-        </div>
-      </section>
-      <WrongDialog key={String(marking)} run={r} gates={gates} open={marking} onClose={() => setMarking(false)} />
-    </Card>
+      </div>
+      <WrongDialog key={String(marking)} run={r} gates={gateNames(bot)} open={marking} onClose={() => setMarking(false)} />
+    </section>
   );
 }
 
-/** Run the bot with an input; its runs, newest first (`?run=` opens one); the open run in full. */
+/** Run the bot (the app's composer); every run, newest first, with what its gates decided (`?run=` opens one in full). */
 export function RunsTab({ bot }: { bot: Bot }) {
   const runs = useBotRuns(bot.slug);
   const start = useRunBot(bot.slug);
@@ -153,7 +117,6 @@ export function RunsTab({ bot }: { bot: Bot }) {
       { replace: true },
     );
   const shown = params.get('run') ?? runs.data?.[0]?.id ?? null;
-  const gates = bot.gate_models.map((g) => g.replace(`${bot.slug}-`, ''));
   const place = usePlaceName();
   const home = place(bot.runs_on);
 
@@ -166,59 +129,84 @@ export function RunsTab({ bot }: { bot: Bot }) {
     });
 
   return (
-    <div className={styles.stack}>
-      <Card>
-        <div className={styles.form}>
-          <TextArea label="What to do" hint="The bot reads this with its instructions." value={input} onChange={(e) => setInput(e.target.value)} />
-          {home && (
-            <span className={styles.muted}>
-              {home.linked
-                ? `It runs on ${home.name}, on the Claude key set there.`
-                : `It runs on ${home.name}, which is offline: start it, or choose Glyphh cloud in Overview, to run the bot.`}
-            </span>
-          )}
-          <ApiErrorNotice error={start.error} />
-          <div className={styles.row}>
-            <Button variant="primary" disabled={input.trim() === ''} loading={start.isPending} onClick={run}>
-              Run
-            </Button>
+    <div className={look.columns}>
+      <div className={look.stack}>
+        <section className={look.section} aria-label="Run it">
+          <div className={look.composer}>
+            <label htmlFor="bot-input" className={look.label}>
+              What to do
+            </label>
+            <textarea
+              id="bot-input"
+              rows={2}
+              placeholder={`Give ${bot.name} a task…`}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && input.trim()) run();
+              }}
+            />
+            <div className={look.runHead}>
+              <span className={look.muted}>
+                {home
+                  ? home.linked
+                    ? `It runs on ${home.name}, on the Claude key set there.`
+                    : `It runs on ${home.name}, which is offline: start it, or choose Glyphh cloud in Settings, to run the bot.`
+                  : 'The bot reads this with its instructions.'}
+              </span>
+              <Button variant="primary" disabled={input.trim() === ''} loading={start.isPending} onClick={run}>
+                Run
+              </Button>
+            </div>
           </div>
+          <ApiErrorNotice error={start.error} />
+        </section>
+        {shown && <RunDetail key={shown} id={shown} bot={bot} />}
+      </div>
+      <section className={look.section} aria-label="Decisions">
+        <div className={look.labelRow}>
+          <h2 className={look.label}>Every run · {runs.data?.length ?? 0}</h2>
         </div>
-      </Card>
-      <ApiErrorNotice error={runs.error} />
-      {runs.isPending && (
-        <ul className={styles.steps} aria-busy="true" aria-label="Loading runs">
-          {Array.from({ length: 3 }, (_, i) => (
-            <li key={i} aria-hidden="true" className={styles.runRow}>
-              <Skeleton height={14} width="60%" />
-            </li>
-          ))}
-        </ul>
-      )}
-      {runs.data?.length === 0 && (
-        <EmptyState icon="logs" title="No runs yet">
-          Give the bot something to do and run it.
-        </EmptyState>
-      )}
-      {runs.data && runs.data.length > 0 && (
-        <ul className={styles.steps} aria-label="Runs">
-          {runs.data.map((r) => (
-            <li key={r.id}>
-              <button type="button" className={styles.runRow} aria-pressed={r.id === shown} onClick={() => open(r.id)}>
-                <span className={styles.spread}>
-                  <span className={styles.grow}>{r.input || 'Run'}</span>
-                  <RunChip status={r.status} />
-                </span>
-                <span className={styles.muted} title={stamp(r.created_at)}>
-                  {ago(r.created_at)} · {dollars(r.cost_micros)}
-                  {r.runs_on && ` · on ${place(r.runs_on)!.name}`}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {shown && <RunDetail key={shown} id={shown} gates={gates} />}
+        <ApiErrorNotice error={runs.error} />
+        {runs.isPending && (
+          <ul className={`${look.panel} ${look.feed}`} aria-busy="true" aria-label="Loading runs">
+            {Array.from({ length: 3 }, (_, i) => (
+              <li key={i} aria-hidden="true" className={look.run}>
+                <Skeleton height={14} width="60%" />
+              </li>
+            ))}
+          </ul>
+        )}
+        {runs.data?.length === 0 && (
+          <EmptyState icon="logs" title="No runs yet">
+            Give the bot something to do and run it.
+          </EmptyState>
+        )}
+        {runs.data && runs.data.length > 0 && (
+          <ul className={`${look.panel} ${look.feed}`} aria-label="Runs">
+            {runs.data.map((r) => {
+              const said = decisionsOf(r, bot.spec)
+                .map((d) => `${d.gate} ${d.outcome}`)
+                .join(' · ');
+              return (
+                <li key={r.id}>
+                  <button type="button" className={look.runButton} aria-pressed={r.id === shown} onClick={() => open(r.id)}>
+                    <span className={look.runHead}>
+                      <span className={look.outcome}>{r.input || 'Run'}</span>
+                      <RunChip status={r.status} small />
+                    </span>
+                    {said && <span className={look.by}>{said}</span>}
+                    <span className={look.muted} title={stamp(r.created_at)}>
+                      {ago(r.created_at)} · {dollars(r.cost_micros)}
+                      {r.runs_on && ` · on ${place(r.runs_on)!.name}`}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

@@ -4,8 +4,10 @@ import { connectionsOff, useConnections, useConnectionTools, useScopeBot, type B
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { PERMISSIONS } from '@/api/connections';
 import { plural } from '@/lib/format';
-import { Button, Card, Chip, EmptyState, LoadingCard, Select, TextField, useToast } from '@/ui';
+import { Button, Card, EmptyState, LoadingCard, Select, TextField, useToast } from '@/ui';
+import { InClaude } from './ada';
 import styles from './bots.module.css';
+import look from './look.module.css';
 
 type Scope = { connection_id: string; tools: string[] };
 
@@ -81,7 +83,9 @@ function ConnectionScope({
                       <input type="checkbox" checked={chosen.has(t.key)} onChange={() => toggle(t.key)} />
                       <span>
                         <span className={styles.toolName}>{t.name}</span>{' '}
-                        {t.permission !== 'allow' && <Chip tone={t.permission === 'deny' ? 'red' : 'amber'}>{PERMISSIONS[t.permission]}</Chip>}
+                        {t.permission !== 'allow' && (
+                          <span className={`${look.pill} ${look.pillSmall} ${t.permission === 'deny' ? '' : look.pillOn}`}>{PERMISSIONS[t.permission]}</span>
+                        )}
                         {t.description && <span className={`${styles.muted} ${styles.block}`}>{t.description}</span>}
                       </span>
                     </label>
@@ -133,6 +137,17 @@ export function ToolsTab({ bot }: { bot: Bot }) {
 
   return (
     <div className={styles.stack}>
+      <section className={look.section} aria-label="In Claude">
+        <div className={look.labelRow}>
+          <h2 className={look.label}>In Claude · the tools your Glyphh connection gives it</h2>
+        </div>
+        <div className={look.panel}>
+          <InClaude bot={bot} />
+        </div>
+      </section>
+      <div className={look.labelRow}>
+        <h2 className={look.label}>Tools it may use · per connection</h2>
+      </div>
       <ApiErrorNotice error={connections.error} />
       {connections.data?.length === 0 && scopes.length === 0 && (
         <EmptyState icon="external" title="No connections yet">
