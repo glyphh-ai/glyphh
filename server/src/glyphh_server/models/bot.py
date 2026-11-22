@@ -40,6 +40,7 @@ class Bot(Base):
     __tablename__ = "bots"
     __table_args__ = (
         Index("bots_one_slug", "org_id", "slug", unique=True),
+        Index("bots_due", "next_run_at", postgresql_where=text("next_run_at IS NOT NULL")),
         CheckConstraint(f"permission_mode IN {PERMISSION_MODES}", name="bots_permission_mode"),
     )
 
@@ -64,6 +65,11 @@ class Bot(Base):
     skills: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))  # name: SKILL.md
     state: Mapped[bytes | None] = mapped_column(LargeBinary)  # the runner's runs.sqlite, between runs
     ada_key: Mapped[str] = mapped_column(Text, server_default="")  # its Ada API key, sealed (ops/auth/sealed.py)
+    # when it runs on its own, as chosen in plain words (ops/bots/schedule.py), and its next run then (none: off)
+    schedule: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # where it runs: one of the org's rrotors, or none for Glyphh cloud
+    runs_on: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

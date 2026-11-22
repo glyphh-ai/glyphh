@@ -5,7 +5,7 @@ tools), reading, changing and deleting it. Its runs are bot_runs.py's."""
 from pydantic import BaseModel, ConfigDict, Field
 
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool, dump
-from glyphh_server.ops.bots import prices, store, voices
+from glyphh_server.ops.bots import places, prices, store, voices
 from glyphh_server.ops.bots.guide import GUIDE
 from glyphh_server.ops.bots.views import BotIn, BotPatch, BotView, ScopeIn, ScopesIn
 
@@ -31,7 +31,16 @@ def line(bot: BotView) -> str:
     steps = len(bot.spec.get("loop") or [])
     gates = len(bot.spec.get("gates") or {})
     last = f", last run {bot.last_run.status}" if bot.last_run else ""
-    return f"{bot.name} ({bot.slug}): {bot.summary or 'no summary'}; {steps} steps, {gates} gates, {bot.model}{last}"
+    when = f"schedule {bot.schedule_summary}" + (f", Next run {bot.next_run}" if bot.next_run else "")
+    where = f"runs on rrotor {bot.runs_on}" if bot.runs_on else "runs on Glyphh cloud"
+    said = f"{bot.name} ({bot.slug}): {bot.summary or 'no summary'}; {steps} steps, {gates} gates, {bot.model}{last}"
+    return f"{said}; {when}; {where}"
+
+
+async def list_places(ctx: Context, _: NoArgs) -> Done:
+    found = await places.listing(ctx.conn)
+    shown = [f"{p.name} ({p.mode}{'' if p.linked else ', offline'}): {p.id or 'none'}" for p in found.places]
+    return Done("\n".join(shown) + "\n(bot_create and bot_update take the id as runs_on)", dump(found))
 
 
 async def guide(ctx: Context, _: NoArgs) -> Done:
@@ -110,8 +119,9 @@ TOOLS: tuple[Tool, ...] = (
         "Make a Glyphh bot (bot_guide says how): a name, a summary, its cat (look: head, tail, eye, extra, accessory, "
         "pose) or a drawn mascot (bot_mascot), instructions (its agent's prompt), the Claude model (bot_models), its "
         "permission mode (ask, connection or auto: which tool steps wait for the person), its voice (bot_voices), its "
-        "spec (loop, gates, limits), skills and, per connection, its tools. Checked before it is made: every problem "
-        "is said at once.",
+        "spec (loop, gates, limits), skills and, per connection, its tools; its schedule in plain words (every: off, "
+        "hour, day, weekdays, week, month; at HH:MM, weekday, day, the person's timezone, the input) and where it runs "
+        "(runs_on, one of bot_places; none: Glyphh cloud). Checked before it is made: every problem is said at once.",
         BotIn,
         create,
         False,
@@ -119,7 +129,8 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bot_update",
         "Change a bot",
-        "Change what is given of a bot, checked again; its slug stays.",
+        "Change what is given of a bot (its schedule, where it runs: runs_on null is Glyphh cloud), checked again; "
+        "its slug stays.",
         Update,
         update,
         False,
@@ -136,4 +147,12 @@ TOOLS: tuple[Tool, ...] = (
     ),
     _tool("bot_models", "Bot models", "The Claude models a bot may run on, at their rates.", NoArgs, models, True),
     _tool("bot_voices", "Bot voices", "The voices a bot may speak in (its `voice`).", NoArgs, list_voices, True),
+    _tool(
+        "bot_places",
+        "Where bots run",
+        "Where a bot can run (its runs_on): Glyphh cloud, then the org's rrotors, each said linked or offline.",
+        NoArgs,
+        list_places,
+        True,
+    ),
 )

@@ -5,7 +5,8 @@ plan's month reported to Stripe's ada_requests meter (ops/billing/ada_meter.py).
 (GLYPHH_CLOUDFLARE_API_TOKEN), once an hour, Glyphh's own sites' traffic pulled from Cloudflare's analytics
 (ops/traffic/pull.py); with a GitHub token (GLYPHH_GITHUB_TRAFFIC_TOKEN), once an hour, its public repositories' views
 and clones pulled from GitHub (ops/traffic/github.py). Always first, its heartbeat (obs/tick.py) and the ops events
-logged since the last tick moved to Postgres (obs/events_store.py), for the staff view.
+logged since the last tick moved to Postgres (obs/events_store.py), for the staff view. Given the hosted bots, the
+bots whose schedule is due run (ops/bots/due.py), on the ticking process.
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 in a transaction it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -26,6 +27,8 @@ from glyphh_server.config import Settings
 from glyphh_server.obs import events_store, tick
 from glyphh_server.ops.billing import ada_meter
 from glyphh_server.ops.billing.stripe import StripeClient
+from glyphh_server.ops.bots import due
+from glyphh_server.ops.bots.service import Bots
 from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.enterprise import expire
 from glyphh_server.ops.github_traffic import GitHub
@@ -47,6 +50,7 @@ async def tend(
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None = None,
     github: GitHub | None = None,
+    bots: Bots | None = None,
 ) -> bool:
     """One tick, if no other process is ticking: answers whether it ran. The lock is the held transaction's, so it
     goes when the transaction ends however it ends (through a connection pooler too), never left behind on a
@@ -55,7 +59,7 @@ async def tend(
         if not (await held.execute(text("SELECT pg_try_advisory_xact_lock(:lock)"), {"lock": TICK})).scalar_one():
             log.info("tick skipped: another process is ticking")
             return False
-        await _tick(engine, hub, settings, step, stripe, cloudflare, github)
+        await _tick(engine, hub, settings, step, stripe, cloudflare, github, bots)
     return True
 
 
@@ -81,6 +85,7 @@ async def _tick(
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None,
     github: GitHub | None,
+    bots: Bots | None = None,
 ) -> None:
     """The keys that expired since the last tick (with a tick to spare) taken off their runtimes, the Enterprise grants
     past their date ended. With Ada Cloud on, its reads flushed to the database, and with Stripe those past a metered
@@ -99,4 +104,6 @@ async def _tick(
     if github is not None:
         listed = github_traffic.repos(settings.github_traffic_repos)
         parts.append(("github traffic", lambda: github_traffic.hourly(engine, hub.redis, github, listed)))
+    if bots is not None:
+        parts.append(("bot schedules", lambda: due.fire(bots)))
     await _each(parts)

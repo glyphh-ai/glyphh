@@ -81,8 +81,10 @@ async def test_the_app_ticks_every_minute_and_survives_a_failure(
     ticks: list[int] = []
     stopped = asyncio.Event()
 
-    async def ticked(engine: AsyncEngine, hub: Any, cfg: Any, step: int, stripe: Any, cf: Any, gh: Any) -> None:
-        assert stripe is not None and cf is not None and gh is not None
+    async def ticked(
+        engine: AsyncEngine, hub: Any, cfg: Any, step: int, stripe: Any, cf: Any, gh: Any, bots: Any
+    ) -> None:
+        assert stripe is not None and cf is not None and gh is not None and bots is not None
         ticks.append(step)
         if len(ticks) == 1:
             raise RuntimeError("hiccup")

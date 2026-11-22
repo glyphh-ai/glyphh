@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query, Request, Response
 
 from glyphh_server.api.auth import Caller, Cfg, Conn
 from glyphh_server.api.templates import Person
-from glyphh_server.ops.bots import keys, prices, runs, store, templates, voices
+from glyphh_server.ops.bots import keys, places, prices, runs, store, templates, voices
 from glyphh_server.ops.bots.prices import BotModels
 from glyphh_server.ops.bots.views import (
     AnswerIn,
@@ -55,6 +55,12 @@ async def list_models(caller: Caller) -> BotModels:
 async def list_voices(caller: Caller) -> voices.Voices:
     """The voices a bot may speak in (Kokoro's, the open TTS model); `samples` false while no speech is made."""
     return voices.listing()
+
+
+@router.get("/v1/bots/places", operation_id="listBotPlaces")
+async def list_places(caller: Caller, conn: Conn) -> places.Places:
+    """Where a bot can run: Glyphh cloud, then the org's rrotors, each with whether it is linked right now."""
+    return await places.listing(conn)
 
 
 @router.get("/v1/bot-templates", operation_id="listBotTemplates")

@@ -94,23 +94,25 @@ async def tend_forever(
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None = None,
     github: GitHub | None = None,
+    bots: Bots | None = None,
 ) -> None:
     """Every minute, the server's tick (ops/tend.py); a failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), stripe, cloudflare, github)
+            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), stripe, cloudflare, github, bots)
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tick failed")
 
 
 def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
     """The minute tick, always; with billing set up, Stripe (Ada Cloud's meter); with a Cloudflare token, the hourly
-    traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull."""
+    traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull; the bots' schedules."""
     meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_ada)
     cloudflare = Cloudflare(app.state.http, cfg.cloudflare_api_token) if cfg.cloudflare_api_token else None
     github = GitHub(app.state.http, cfg.github_traffic_token) if cfg.github_traffic_token else None
-    return asyncio.create_task(tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github))
+    tending = tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github, app.state.bots)
+    return asyncio.create_task(tending)
 
 
 async def _share_http(app: FastAPI, http: httpx.AsyncClient, cfg: Settings, engine: AsyncEngine, redis: Redis) -> None:

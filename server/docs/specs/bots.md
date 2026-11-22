@@ -227,6 +227,24 @@ for a gate over many items, answered `1=answer 2=skip`); answered, it carries on
 said wrong is learned as a precedent. A run records its machine; when that machine starts again, its runs left queued
 or running are failed (`interrupted by a restart`); one waiting on the person is left waiting.
 
+**A schedule** is chosen in plain words, never as cron: `schedule: {every, at, weekday, day, timezone, input}`, `every`
+one of `off` (the default), `hour` (every hour, on the hour), `day`, `weekdays` (Monday to Friday), `week` (on
+`weekday`, 0 Monday to 6 Sunday) or `month` (on `day`, 1 to 31; past a month's end, its last day), at `at` (`HH:MM`,
+24 hours) in `timezone` (IANA, the person's, which the platform detects in the browser; anything else is 422), each run
+given `input`. It is kept as chosen; the server works out `next_run_at` in that zone (`ops/bots/schedule.py`) when the
+bot is made and whenever its schedule is given, and the view says it back (`schedule_summary`: `Every day at 9:00`;
+`next_run`: `Mon 9:00`, or `Mon 15 Dec 9:00` past the week; empty when off). The minute tick fires the bots that are due
+(`ops/bots/due.py`), every org's, on the ticking process (one process at a time: the tick's lock): each due bot's
+`next_run_at` is worked out again from now before its run is queued, so ticks missed (the server down for hours) fire
+it once, not once for each run missed; its run is the person's who made it. A bot whose run is still live is skipped
+that time, as is one that runs on a rrotor or has no Anthropic key to run on; each skip is logged.
+
+**Where it runs**, `runs_on`: none, Glyphh cloud (the default), or one of the org's own rrotors (those its people own;
+another's is 422 `runs_on`); `GET /v1/bots/places` lists them with whether each is linked right now (its state, set at
+its link's hello and close), and a rrotor deleted puts its bots back on the cloud. Runs are not sent to a rrotor yet:
+until they are, starting a run of a bot that runs on one is 409 `E_CONFLICT` `runs_on_pending`, and its schedule skips
+it.
+
 **Claude (BYOK).** Agent steps run on the org's own Anthropic API key when it has set one (`PUT /v1/bot-key`, tried with
 Anthropic before it is kept, sealed, shown by its last four characters), else on Glyphh's key; the org chooses. Both
 are charged: each step is let in by the hosted models' meter (`tokens.md`: the plan's allowance, then the balance) and
@@ -247,14 +265,15 @@ a run answers 503 `anthropic_off`.
 | `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, gates}` |
 | `POST /v1/bot-templates/{slug}/install` | `{name?}` → 201, the org's own copy, each app's tools scoped to its first connection of that app; an app not connected is 422 `connections` with `apps` |
 | `GET /v1/bot-approvals` | `{runs}`: every run waiting on the person, oldest first |
-| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT` |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], schedule, schedule_summary, next_run_at, next_run, runs_on, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT`; `PATCH` with `runs_on: null` puts it back on Glyphh cloud |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
 | `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
 | `GET /v1/bots/voices` | `{voices: [{id, name, accent, gender, default}], samples}` |
+| `GET /v1/bots/places` | `{places: [{id, name, mode, linked}]}`: Glyphh cloud first (`id` null, `mode` cloud), then the org's rrotors (`local` or `self`) by name |
 | `POST /v1/bots/draft` | `{messages, draft?}` → `{reply, draft: {name, summary, look, mascot, instructions, model, spec, skills, apps: [{app, tools}], connections} \| null, problems, missing_apps}` |
 | `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
-| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT` |
+| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT`; a bot on a rrotor is `E_CONFLICT` `runs_on_pending` |
 | `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, created_at, started_at, finished_at}` |
 | `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
 | `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
@@ -266,7 +285,9 @@ answers 503 `E_UNAVAILABLE` `pipedream_off`. The connector's tools: `bot_guide`,
 `bot_update`, `bot_delete`, `bot_connections_set`, `bot_models`, `bot_run`, `bot_runs`, `bot_run_get`,
 `bot_run_answer`, `bot_run_wrong`, `bot_run_cancel`, `bot_gates`, `connections`, `connection_apps`, `connection_link`,
 `connection_tools`, `connection_permissions_set`, `bot_approvals`, `bot_templates`, `bot_template`,
-`bot_template_install`, `bot_draft`, `bot_mascot`, `bot_voices`.
+`bot_template_install`, `bot_draft`, `bot_mascot`, `bot_voices`, `bot_places`; `bot_create` and `bot_update` take
+`schedule` and `runs_on`, and `bots` and `bot` say each bot's schedule, its next run (`Next run Mon 9:00`) and where it
+runs.
 
 **Permission mode.** Each tool on a connection is allowed, asked about or denied (a tool never set is unset), and the
 bot's `permission_mode` says which of its tool steps wait for the person's yes (`ops/bots/cloud.py`, `asks`): `ask`

@@ -21,7 +21,7 @@ from glyphh_server.config import Settings
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, GlyphhError, Unavailable
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.bots import engine, keys, mend, runs, store
+from glyphh_server.ops.bots import engine, mend, places, runs, store
 from glyphh_server.ops.bots.goes import NO_KEY, Goes
 from glyphh_server.ops.bots.views import RunView, WrongIn
 
@@ -55,10 +55,16 @@ class Bots(Goes):
         async with self.engine.begin() as conn:
             await tenancy.enter(conn, who.org_id)
             bot = await store.row(conn, slug)
-            has_own = await keys.get(conn) is not None
-        if not has_own and not self.settings.anthropic_api_key:
+        return await self.queued(bot, who.user_id, given)
+
+    async def queued(self, bot: Any, user_id: uuid.UUID | None, given: str) -> RunView:
+        """A run of the bot (the person's, or its schedule's: ops/bots/due.py), queued. Refused while the bot runs on
+        a rrotor: runs are not sent to rrotors yet."""
+        if bot.runs_on is not None:
+            raise Conflict(places.PENDING, reason="runs_on_pending", slug=bot.slug)
+        if not await self.own_key(bot.org_id) and not self.settings.anthropic_api_key:
             raise Unavailable(NO_KEY, reason="anthropic_off")
-        made = await runs.create(self.engine, who.org_id, bot, who.user_id, given)
+        made = await runs.create(self.engine, bot.org_id, bot, user_id, given)
         self._spawn(self._run(bot.org_id, bot.id, made.id, lambda r: r.run(given=given or None)))
         return made
 

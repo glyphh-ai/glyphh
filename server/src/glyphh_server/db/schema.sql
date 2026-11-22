@@ -472,7 +472,8 @@ CREATE INDEX IF NOT EXISTS ix_template_installs_org_id ON template_installs (org
 
 -- connections, bots, bot_runs, bot_keys: hosted bots (docs/specs/bots.md): an org's accounts at other services
 -- (Pipedream's), its bots (the SDK's bot package: its loop, gates and limits, its agent's prompt and skills, its look
--- or its own drawn mascot, and per connection the tools it may use; the runner's state; its Ada key, sealed), their runs, and the org's own
+-- or its own drawn mascot, and per connection the tools it may use; the runner's state; its Ada key, sealed; its
+-- schedule and next run; the org's rrotor it runs on, none for Glyphh cloud), their runs, and the org's own
 -- Anthropic API key (sealed) its bots' agent steps run on
 CREATE TABLE IF NOT EXISTS connections (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -507,14 +508,19 @@ CREATE TABLE IF NOT EXISTS bots (
     skills JSONB DEFAULT '{}'::jsonb NOT NULL,
     state BYTEA,
     ada_key TEXT DEFAULT '' NOT NULL,
+    schedule JSONB DEFAULT '{}'::jsonb NOT NULL,
+    next_run_at TIMESTAMP WITH TIME ZONE,
+    runs_on UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
+    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL,
     CONSTRAINT bots_permission_mode CHECK (permission_mode IN ('ask', 'connection', 'auto'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS bots_one_slug ON bots (org_id, slug);
+CREATE INDEX IF NOT EXISTS bots_due ON bots (next_run_at) WHERE next_run_at IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS bot_runs (
     id UUID DEFAULT gen_random_uuid() NOT NULL,

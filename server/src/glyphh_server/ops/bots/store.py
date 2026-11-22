@@ -19,7 +19,7 @@ from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import seal, unseal
-from glyphh_server.ops.bots import cloud, package, prices, svg, voices
+from glyphh_server.ops.bots import cloud, package, places, prices, schedule, svg, voices
 from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
 from glyphh_server.ops.runtime_keys import key_hash
 
@@ -70,6 +70,7 @@ async def view(conn: AsyncConnection, bot: Any) -> BotView:
         **{k: getattr(bot, k) for k in FIELDS},
         gate_models=package.gate_models(bot.slug, bot.spec),
         connections=await _scopes(conn, bot),
+        **schedule.shown(bot),
         created_at=bot.created_at,
         updated_at=bot.updated_at,
         last_run=await _last(conn, bot.id),
@@ -118,6 +119,9 @@ async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn
         "spec": body.spec,
         "skills": body.skills,
         "scopes": await _scoped(conn, body.connections),
+        "schedule": body.schedule.model_dump(),
+        "next_run_at": schedule.next_after(body.schedule, schedule.now()),
+        "runs_on": await places.checked(conn, body.runs_on),
     }
     checked(SimpleNamespace(**values, state=None))
     made = await ada_keys.create(conn, who, f"bot {slug}", None, 0.0)
@@ -126,7 +130,7 @@ async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn
 
 
 def _changes(body: BotPatch) -> dict[str, Any]:
-    given = body.model_dump(exclude_unset=True)
+    given = body.model_dump(exclude_unset=True, exclude={"runs_on"})
     if "look" in given:
         given["look"] = _look(given["look"] or {})
     if "mascot" in given:
@@ -135,7 +139,10 @@ def _changes(body: BotPatch) -> dict[str, Any]:
         given["voice"] = voices.voice(given["voice"] or "")
     if "model" in given:
         given["model"] = prices.model(given["model"] or prices.DEFAULT).id
-    return {k: v for k, v in given.items() if v is not None}
+    changes = {k: v for k, v in given.items() if v is not None}
+    if body.schedule is not None:  # its next run worked out again, from now
+        changes["next_run_at"] = schedule.next_after(body.schedule, schedule.now())
+    return changes
 
 
 async def _changed(conn: AsyncConnection, bot: Any, changes: dict[str, Any]) -> BotView:
@@ -146,7 +153,10 @@ async def _changed(conn: AsyncConnection, bot: Any, changes: dict[str, Any]) -> 
 
 
 async def patch(conn: AsyncConnection, slug: str, body: BotPatch) -> BotView:
-    return await _changed(conn, await row(conn, slug), _changes(body))
+    changes = _changes(body)
+    if "runs_on" in body.model_fields_set:  # null is Glyphh cloud again
+        changes["runs_on"] = await places.checked(conn, body.runs_on)
+    return await _changed(conn, await row(conn, slug), changes)
 
 
 async def remove(conn: AsyncConnection, slug: str, secret: str) -> None:
