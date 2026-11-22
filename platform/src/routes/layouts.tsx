@@ -104,6 +104,9 @@ function BotsNav() {
       <NavItem to="/approvals" icon="check" badge={waiting}>
         Approvals
       </NavItem>
+      <NavItem to="/swarms" icon="team">
+        Swarms
+      </NavItem>
       <NavItem to="/connections" icon="external">
         Connections
       </NavItem>
@@ -169,6 +172,9 @@ export function SettingsLayout() {
             )}
             <NavItem to="/settings/claude-key" icon="key">
               Claude key
+            </NavItem>
+            <NavItem to="/settings/github-token" icon="github">
+              GitHub token
             </NavItem>
           </NavGroup>
           <NavGroup label="Personal">

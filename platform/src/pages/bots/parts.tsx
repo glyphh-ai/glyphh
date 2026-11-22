@@ -56,10 +56,19 @@ export function CatTile({ look, mascot, size = 56, busy, label }: TileProps) {
   );
 }
 
-const tones: Record<RunStatus, ChipTone> = { queued: 'neutral', running: 'blue', needs_input: 'amber', done: 'green', failed: 'red', skipped: 'neutral' };
+const tones: Record<RunStatus, ChipTone> = {
+  queued: 'neutral',
+  running: 'blue',
+  dispatched: 'blue',
+  needs_input: 'amber',
+  done: 'green',
+  failed: 'red',
+  skipped: 'neutral',
+};
 const words: Record<RunStatus, string> = {
   queued: 'Queued',
   running: 'Running',
+  dispatched: 'Running there',
   needs_input: 'Needs you',
   done: 'Done',
   failed: 'Failed',

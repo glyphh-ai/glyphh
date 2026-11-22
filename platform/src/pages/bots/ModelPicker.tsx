@@ -26,7 +26,8 @@ type Props = {
   onRunsOn?: (id: string | null) => void;
 };
 
-export const COMING = 'Running on your machines is coming: until then, this bot’s runs wait. Choose Glyphh cloud to run it now.';
+export const ON_RROTOR =
+  'It runs on that machine, on the Claude key set there (ANTHROPIC_API_KEY), so you pay Anthropic directly. Its tools still go through Glyphh. The machine must be online when it runs.';
 
 /**
  * Where a bot runs: Glyphh cloud, or one of the org's rrotors (one offline right now is greyed and cannot be chosen,
@@ -74,7 +75,7 @@ export function ModelAndMode({ model, onModel, mode, onMode, runsOn = null, onRu
         {chosen ? `${per(chosen, own)} per million tokens on ${own ? 'your' : 'Glyphh’s'} Claude key. ` : ''}
         {MODES.find((m) => m.value === mode)?.hint} <Link to="/settings/claude-key">Claude key</Link>
       </span>
-      {runsOn && <span className={styles.muted}>{COMING}</span>}
+      {runsOn && <span className={styles.muted}>{ON_RROTOR}</span>}
       <ApiErrorNotice error={models.error} />
     </div>
   );
