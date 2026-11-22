@@ -13,8 +13,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from glyphh_server.models.base import Base, created_at, guid
 
-RUN_STATUSES: tuple[str, ...] = ("queued", "running", "needs_input", "done", "failed", "skipped")
-LIVE: tuple[str, ...] = ("queued", "running", "needs_input")
+# dispatched: sent to the rrotor the bot runs on, its result not back yet
+RUN_STATUSES: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input", "done", "failed", "skipped")
+LIVE: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input")
 PERMISSION_MODES: tuple[str, ...] = ("ask", "connection", "auto")
 
 
@@ -101,6 +102,12 @@ class BotRun(Base):
     output_tokens: Mapped[int] = mapped_column(BigInteger, server_default="0")
     cost_micros: Mapped[int] = mapped_column(BigInteger, server_default="0")
     own_key: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))  # on the org's own Anthropic key
+    # run on one of the org's rrotors (ops/bots/remote.py): which, the last result's seq taken from its link (each
+    # applied once), and what the current call began with (tokens in, out; when its run there began to wait; the
+    # answer it carries)
+    rrotor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="SET NULL"))
+    remote_seq: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    remote: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     machine: Mapped[str] = mapped_column(Text, server_default="")  # the machine running it, so its restart can end it
     created_at: Mapped[datetime] = created_at()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -5,10 +5,11 @@ must be `hello` (ops/link/hello.py), of protocol 3 or 2: another protocol is clo
 link remembers the protocol the hello said and says everything down it in that protocol's names. Then the server
 answers `welcome`, the runtime is online, and three things run until one ends: reading the rrotor's messages, a ping
 every 20 seconds (nothing heard for three closes it, 4408), and the hub's relay of what other processes send it
-(`keys`, `app`). An unreadable message is logged and skipped; one that cannot be recorded closes the link (1011) and
-is not acked, so the rrotor replays it after it reconnects."""
+(`keys`, `app`, a run's `call`, `continue`, `cancel`). An unreadable message is logged and skipped; one that cannot
+be recorded closes the link (1011) and is not acked, so the rrotor replays it after it reconnects."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from functools import partial
 
@@ -37,6 +38,7 @@ from glyphh_server.ops.link.protocol import (
     Inbound,
     Ping,
     Pong,
+    Ran,
     Usage,
     Welcome,
 )
@@ -52,6 +54,7 @@ MISSED: int = 3
 class Context:
     engine: AsyncEngine
     hub: Hub
+    landed: Callable[[Runtime, Ran], Awaitable[None]]  # a run's result, to its run (the bots')
     signing_key: Ed25519PrivateKey | None = None  # signs the licence a self-hosted runtime's welcome carries
 
 
@@ -145,13 +148,14 @@ async def _read(ctx: Context, runtime: Runtime, link: Link, clock: Clock) -> Non
 
 
 async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -> bool:
-    """Answer or record one message; False once the link is closed because it could not be recorded. A result or an
-    event (Passed) is acked and kept nowhere; a deployed app makes its catalogue row."""
+    """Answer or record one message; False once the link is closed because it could not be recorded. An event
+    (Passed) is acked and kept nowhere; a deployed app makes its catalogue row; a run's result goes to the run it
+    answers (ctx.landed, ops/bots/remote.py: a bot's or a swarm's), once."""
     if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
             await link.send(Pong())
         return True
-    if isinstance(message, Usage | Deployed):
+    if isinstance(message, Usage | Deployed | Ran):
         try:
             await _record(ctx, runtime, message)
         except Exception:
@@ -162,7 +166,10 @@ async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -
     return True
 
 
-async def _record(ctx: Context, runtime: Runtime, message: Usage | Deployed) -> None:
+async def _record(ctx: Context, runtime: Runtime, message: Usage | Deployed | Ran) -> None:
+    if isinstance(message, Ran):
+        await ctx.landed(runtime, message)
+        return
     async with ctx.engine.begin() as conn:
         await tenancy.enter(conn, runtime.org_id)
         if isinstance(message, Deployed):

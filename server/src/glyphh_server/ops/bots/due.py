@@ -1,8 +1,9 @@
 """The bots whose schedule is due, run by the minute tick (ops/tend.py, which holds its lock, so one process fires
 them). Each due bot (every org's: no org is entered) has its next run worked out again from now before its run is
-queued, so a tick missed (the server down for an hour) fires a bot once, not once per run it missed. A bot whose last
-run is still live (queued, running or waiting on the person) is skipped this time, as is one that runs on a rrotor
-(runs are not sent to rrotors yet) or one with no Anthropic key to run on; each skip is logged."""
+queued, so a tick missed (the server down for an hour) fires a bot once, not once per run it missed. A bot that runs
+on a rrotor has its run sent there (ops/bots/remote.py). A bot whose last run is still live (queued, running,
+dispatched or waiting on the person) is skipped this time, as is one whose rrotor is offline or one with no Anthropic
+key to run on; each skip is logged."""
 
 import logging
 from datetime import datetime

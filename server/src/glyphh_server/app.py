@@ -37,6 +37,7 @@ from glyphh_server.api import (
     plans,
     runtime,
     self_hosted,
+    swarms,
     templates,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
@@ -72,6 +73,7 @@ ROUTERS = (
     connections,
     bot_maker,
     bots,
+    swarms,
     github,
     github_pages,
     oauth_meta,
@@ -117,11 +119,12 @@ def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[N
 
 async def _share_http(app: FastAPI, http: httpx.AsyncClient, cfg: Settings, engine: AsyncEngine, redis: Redis) -> None:
     """The server's HTTP client, the Ada app's too while it is on (the hosted models' inference, api/inference.py),
-    and the hosted bots' (Pipedream), their runs this machine left running when it stopped failed."""
+    and the hosted bots' (Pipedream), their runs this machine left running when it stopped failed; their runs and the
+    swarms' on the org's rrotors go over the hub's links."""
     app.state.http = http
     if app.state.ada is not None:
         app.state.ada.http = http
-    app.state.bots = Bots(engine, redis, cfg, http)
+    app.state.bots = Bots(engine, redis, cfg, http, app.state.hub)
     await app.state.bots.recover()
 
 

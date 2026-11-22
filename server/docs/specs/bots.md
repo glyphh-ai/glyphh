@@ -237,13 +237,43 @@ bot is made and whenever its schedule is given, and the view says it back (`sche
 (`ops/bots/due.py`), every org's, on the ticking process (one process at a time: the tick's lock): each due bot's
 `next_run_at` is worked out again from now before its run is queued, so ticks missed (the server down for hours) fire
 it once, not once for each run missed; its run is the person's who made it. A bot whose run is still live is skipped
-that time, as is one that runs on a rrotor or has no Anthropic key to run on; each skip is logged.
+that time, as is one whose rrotor is not linked or that has no Anthropic key to run on; each skip is logged.
 
 **Where it runs**, `runs_on`: none, Glyphh cloud (the default), or one of the org's own rrotors (those its people own;
 another's is 422 `runs_on`); `GET /v1/bots/places` lists them with whether each is linked right now (its state, set at
-its link's hello and close), and a rrotor deleted puts its bots back on the cloud. Runs are not sent to a rrotor yet:
-until they are, starting a run of a bot that runs on one is 409 `E_CONFLICT` `runs_on_pending`, and its schedule skips
-it.
+its link's hello and close), and a rrotor deleted puts its bots back on the cloud.
+
+**A run on a rrotor** (`ops/bots/remote.py`, `remote_in.py`, `remote_out.py`): the server keeps the bot, its state
+and its runs; the rrotor runs it, as its built-in program `glyphh_bot` (rrotor 0.5, SDK 3.12: an older rrotor's
+glyphh_bot answers `E_SDK`). Started by the person or its schedule, the run is refused while the rrotor is not linked
+(409 `E_CONFLICT` `rrotor_offline`; its schedule skips it) or the org's tokens are spent; else it is sent down the link
+as a `call` (`{run_id, program: "glyphh_bot", version: null, function: "run", inputs}`, version null: the rrotor's
+active one) and is `dispatched`, with `rrotor_id` on the run. Its inputs: the bot's package by path (as the cloud
+writes it, with the approvals its permission mode adds), its state (base64), `given` or `answer`, its Ada (`ada_base`,
+its own Ada key), `model`, `claude: "api"` (the rrotor's `ANTHROPIC_API_KEY`, the org's own) and where its tools are:
+`tool_url`, this server's `POST /v1/bots/runs/{id}/tool` (https only: a server or Ada Cloud not on https fails the
+run, `not_https`), with `tool_token`, signed for that run alone, six hours. A call bigger than one link message (4 MB,
+less a margin) fails the run saying so (`too_big`: run it on Glyphh cloud); a rrotor whose link dropped as the call
+went fails it too, saying the rrotor is not linked.
+
+The rrotor's `result` (`{status, data, step, prompt}`, the SDK's `RunResult.to_result`) comes back up the link and is
+taken once per run (its `seq` past the last the run took, from the rrotor the run is on, while the run is out there
+or waits): the run's end or its question, kept as a run in the cloud keeps its own, and the bot's state from it. The
+tokens it reports are the whole call's so far; what is new since the run's last result goes on the meter at the org's
+own key's rate (the markup alone: it ran on the org's key). A question waits in the approvals queue as any run's does
+(`runs_on` on the run says where). Answered within 14 minutes (the rrotor holds a waiting run 15), the answer goes as
+`continue {run_id, answer}`; later, or after the rrotor said its wait `expired`, or when a `continue` finds no run there
+(`E_RUN_MISSING`: it restarted), as a fresh `call` carrying the bot's state and the answer. Cancelled, a run out there
+is failed `cancelled` here and `cancel {run_id}` goes down; a waiting one is cancelled as the cloud's are and the
+rrotor's wait ended too. A result that cannot be kept fails the run, saying why. The server's restart leaves a run on
+a rrotor as it is.
+
+**Its tools** (`ops/bots/tool_calls.py`): glyphh_bot's steps that run a tool post `{tool, input, run_id}` to `tool_url`
+with `Authorization: Bearer <tool_token>` and are answered `{result}` or `{error}` (the step fails, saying so): `fetch`
+(a URL, or `{url, headers}`; https on one of the hosts its bot.json names, a public address, no redirects, at most
+5 MB) or one of its connections' tools, run as the org, as the cloud runs them. Any other tool, host or input is an
+`error`; another run's token, one past its six hours, or none is 401; a run no longer out on its rrotor is an `error`.
+The approvals its permission mode asks for are in the package itself, so they wait on the rrotor as questions.
 
 **Claude (BYOK).** Agent steps run on the org's own Anthropic API key when it has set one (`PUT /v1/bot-key`, tried with
 Anthropic before it is kept, sealed, shown by its last four characters), else on Glyphh's key; the org chooses. Both
@@ -273,8 +303,9 @@ a run answers 503 `anthropic_off`.
 | `POST /v1/bots/draft` | `{messages, draft?}` → `{reply, draft: {name, summary, look, mascot, instructions, model, spec, skills, apps: [{app, tools}], connections} \| null, problems, missing_apps}` |
 | `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
-| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued; a live run already is `E_CONFLICT`; a bot on a rrotor is `E_CONFLICT` `runs_on_pending` |
-| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, created_at, started_at, finished_at}` |
+| `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued (on a rrotor: `dispatched`); a live run already is `E_CONFLICT`; a bot whose rrotor is not linked is `E_CONFLICT` `rrotor_offline` |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, swarm_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a swarm's pull request in the approvals queue is `swarm`, section 10) |
+| `POST /v1/bots/runs/{id}/tool` | A bot on a rrotor calls a tool: bearer its run's tool token, `{tool, input, run_id?}` → `{result}` or `{error}` |
 | `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
 | `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
 | `POST /v1/bot-runs/{id}/cancel` | A waiting run, failed `cancelled` |
@@ -301,4 +332,59 @@ saying where to allow it. A step's own `approval` in the loop always asks.
 gate scoring each, Google Sheets), Weekly Report (GitHub to Notion, a one-case gate before filing) and News Brief (no
 connection: `fetch` from a public API). Each installs, checked by the SDK, once its apps are connected.
 
-Not yet: who in the org may use a connection or a bot, schedules, running a cloud bot on a chosen rrotor.
+Not yet: who in the org may use a connection or a bot.
+
+## 10. Swarms (built)
+
+A swarm is Glyphh Bot's crew (glyphh-bot, `src/renderer/src/engine.ts`, `swarm()`) on the server: the org's bots, in
+speaking order, taking turns on one GitHub repo, on one of the org's rrotors (never on Glyphh cloud), each turn a pull
+request. `swarms`: `slug` (from its name, kept), `name`, `repo_url` (`https://github.com/<owner>/<name>`),
+`base_branch` (`main`), `members` (1 to 8 of the org's bot ids, each once, in order), `rounds` (1 to 10), `review`
+(`each_turn`, the default: each pull request waits for the person; `auto`: merged as it opens) and `runs_on` (the
+rrotor; deleting it deletes its swarms).
+
+**A run** (`ops/swarms/`): `POST /v1/swarms/{slug}/runs {task}` is refused while the rrotor is not linked (409
+`rrotor_offline`), without the org's GitHub token (404 `github_key`), with no bot of the crew left (422 `members`), or
+while the swarm has a run going (409). Then, for each round and each bot in order, a turn: a call of rrotor's built-in
+`glyphh_swarm` (`turn`: a fresh branch `turn-<n>-<bot>-<stamp>` off the base, Claude Code doing the bot's part with
+the rrotor's `ANTHROPIC_API_KEY`, committed as the bot and opened as a pull request; `{repo, base, branch, prompt,
+persona, model, bot_id, bot_name, github_token}`). The words each turn is told (`ops/swarms/turns.py`: the prompt,
+the transcript of the last fourteen things said, the persona, the branch, the DONE rule) are Glyphh Bot's, character
+for character, as rrotor's `programs/glyphh_swarm/swarm_turns.py` has them (the same file, and the same tests). A
+server bot's card for them: its name, they/them, its summary as its task, its agent's prompt as its personality, and
+its cat's parts as its look. The bots are read again at each turn, so an edit made while the swarm runs is picked up;
+a bot of the crew deleted since ends the run, `failed`.
+
+Each turn's result comes back up the link as a bot run's does, taken once (`swarm_turns.remote_seq`, from the run's
+rrotor alone). A turn with changes is `open` (`pr_url`, `number`, `head_sha`, `files`, `said`, `title`): with
+`each_turn` the run `needs_input` and the pull request waits in the approvals queue (`GET /v1/bot-approvals`, beside
+the bots' runs, `kind: "swarm"`: "Merge PR #<n> by <bot>?", `merge` or `reject`), answered with `POST
+/v1/swarm-runs/{id}/answer {answer}` (a call of `merge`: `merged`, or `conflict` left open with its reason; or of
+`reject`: closed, `rejected`); with `auto`, merged at once. A turn with no changes is `unchanged`. Then the DONE rule:
+a bot that says DONE on its own last line is kept, any other turn empties the row; two in a row (or a crew of one's
+one) ends the run `done`, as does the last round. A turn that fails (`{status: failed, data.reason}`), or a call that
+cannot go (the rrotor not linked, a turn too big), ends the run `failed`, saying why. Cancelled (`POST
+/v1/swarm-runs/{id}/cancel`), the turn out on the rrotor is stopped (`cancel`) and the run `failed` `cancelled`; an
+open pull request stays open on GitHub.
+
+**The org's GitHub token** (`ops/swarms/github.py`, `github_keys`): a fine-grained token the person makes (the repos'
+contents and pull requests, read and write), set on the platform with `PUT /v1/github-key {token}`, tried with GitHub
+(`GET /user`: its login), kept sealed, shown by its last four characters and its login, sent with each call (in git's
+environment on the rrotor, never kept there). Not the org's GitHub connection: Pipedream runs a connection's actions
+but gives no token out for an account signed in through its own OAuth app, and git needs one. Not the Glyphh GitHub
+App: it is installed per person and mints read-only tokens.
+
+A swarm's turns run on the org's own Anthropic key on its rrotor and report no tokens: nothing goes on the meter.
+
+| Call | What |
+|---|---|
+| `GET`/`POST /v1/swarms`, `GET`/`PATCH`/`DELETE /v1/swarms/{slug}` | A swarm: `{id, slug, name, repo_url, base_branch, members: [{id, slug, name}], rounds, review, runs_on, created_at, updated_at}`; a slug taken is `E_CONFLICT`; deleting it deletes its runs |
+| `POST /v1/swarms/{slug}/runs` | `{task}` → 202, its run: `{id, swarm_slug, task, status, rounds, review, runs_on, error, turns: [{n, round, bot_id, bot_slug, bot_name, branch, status, said, title, pr_url, number, head_sha, files, done, error, created_at, finished_at}], created_at, finished_at}` |
+| `GET /v1/swarms/{slug}/runs`, `GET /v1/swarm-runs/{id}` | Its runs, the newest first (the last 50); one run |
+| `POST /v1/swarm-runs/{id}/answer` | `{answer: merge \| reject}` → 202; a run not waiting is `E_CONFLICT` |
+| `POST /v1/swarm-runs/{id}/cancel` | The run ended, its turn out stopped; one ended already is `E_CONFLICT` |
+| `GET`/`PUT`/`DELETE /v1/github-key` | `{set, hint, login, set_at}`; `PUT` takes `{token}`, one GitHub does not take is 422 `token` |
+
+The connector's tools: `swarms`, `swarm`, `swarm_create`, `swarm_update`, `swarm_delete`, `swarm_run`, `swarm_runs`,
+`swarm_run_get`, `swarm_run_answer`, `swarm_run_cancel`; a swarm's pull request also shows in `bot_approvals`. The
+GitHub token is set on the platform only, never through the chat.

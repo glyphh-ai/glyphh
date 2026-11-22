@@ -555,11 +555,11 @@ wheels = [
 
 [[package]]
 name = "glyphh"
-version = "3.11.0"
+version = "3.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2b/3f/c931fcdfa7933152982946897e94c127de6b14403d87ea8f8e102d020ea0/glyphh-3.11.0.tar.gz", hash = "sha256:81e37e0c6a77824a60a92cac23fb9828cd9657f1afa66b9a26e26be39c668506", size = 259842, upload-time = "2026-11-21T15:24:32.509Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/af/7755dfb68a64e7e89915b26f0116a7dd951725b562c98ef60d025757880a/glyphh-3.12.0.tar.gz", hash = "sha256:287825ab729961e32c53a6dc2ddd2d5a6b025ce74464fe4c10473cce165a4d31", size = 267701, upload-time = "2026-11-22T02:33:51.886Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/09/afca00fff5f3c9e4e5babafb93084012cf1a7eb4cf4969e5bbf1b0441419/glyphh-3.11.0-py3-none-any.whl", hash = "sha256:f8fc41399ffa2bab4ab51405b2336d605100ffd231074c5d5fa23610e9c4b676", size = 116087, upload-time = "2026-11-21T15:24:31.265Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/13/b3db43d6c70f8b75d6b51967abeace8559cec74ab3d5ba9547f731a2426b/glyphh-3.12.0-py3-none-any.whl", hash = "sha256:8a551e5ed3986095930788eedeb7be6d11de8a92bcff84781276ddac58066c8a", size = 121425, upload-time = "2026-11-22T02:33:50.477Z" },
 ]
 
 [package.optional-dependencies]
@@ -620,7 +620,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "cryptography", specifier = ">=44" },
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "glyphh", extras = ["api"], specifier = "==3.11.0" },
+    { name = "glyphh", extras = ["api"], specifier = "==3.12.0" },
     { name = "glyphh-kernel", extras = ["postgres"], git = "https://github.com/glyphh-ai/ada-private?rev=f28212c414a7ce031cdb5253f5c4e2258141401d" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic-settings", specifier = ">=2.6" },

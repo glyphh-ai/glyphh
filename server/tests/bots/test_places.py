@@ -1,6 +1,6 @@
 """Where a bot runs: Glyphh cloud by default or one of the org's own rrotors (another org's refused), listed with
-whether each is linked right now; until runs are sent to rrotors, starting a run of a bot on one is refused (409
-runs_on_pending), and set back on Glyphh cloud it runs. A rrotor deleted puts its bots back on the cloud."""
+whether each is linked right now; a run of a bot on one that is not linked is refused (409 rrotor_offline), its
+schedule skips, and set back on Glyphh cloud it runs. A rrotor deleted puts its bots back on the cloud."""
 
 from datetime import timedelta
 
@@ -36,7 +36,9 @@ async def test_the_places_are_glyphh_cloud_and_the_orgs_rrotors(served: Served, 
     assert "Glyphh cloud (cloud): none" in said and f"Acme (self, offline): {acme.id}" in said
 
 
-async def test_a_bot_on_a_rrotor_waits_for_runs_on_rrotors(served: Served, engine: AsyncEngine) -> None:
+async def test_a_bot_on_an_offline_rrotor_is_refused_and_its_schedule_skips(
+    served: Served, engine: AsyncEngine
+) -> None:
     ada, other = await person(engine), await person(engine)
     theirs = await self_runtime(engine, other, "https://rrotor.other.test")
     gmail_bot = await made_bot(served, ada)
@@ -46,8 +48,8 @@ async def test_a_bot_on_a_rrotor_waits_for_runs_on_rrotors(served: Served, engin
     res = await served.http.patch("/v1/bots/inbox-cat", json={"runs_on": str(acme.id)}, headers=ada.headers)
     assert res.status_code == 200 and res.json()["runs_on"] == str(acme.id)
     run = await served.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)
-    assert run.status_code == 409 and run.json()["error"]["reason"] == "runs_on_pending"
-    assert "running bots on your machines is coming" in run.json()["error"]["message"]
+    assert run.status_code == 409 and run.json()["error"]["reason"] == "rrotor_offline"
+    assert "Acme is not linked to Glyphh right now" in run.json()["error"]["message"]
 
     await served.http.patch("/v1/bots/inbox-cat", json={"schedule": {"every": "hour"}}, headers=ada.headers)
     await _due(engine, ada, timedelta(minutes=1))

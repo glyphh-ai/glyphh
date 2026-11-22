@@ -5,14 +5,13 @@ or 3 is accepted (ACCEPTED), and the catalogue's messages go down that link in t
 the one place the two differ, read by `for_protocol`, and nothing else branches on it. A hello of any other protocol
 is closed 4426 (`upgrade_needed`). The protocol 2 names leave once no rrotor of 0.2.0 is heard any more.
 
-The link carries licensing, and the catalogue of apps: the hello (who the runtime is, the node it is), the welcome
-(the org's licence key, a self-hosted runtime's licence and runtime keys, the runtime's apps and the org's reviewer
-groups), `keys` when those change, `app` after each review (docs/specs/apps.md), and rrotor's `usage` (each runtime
-key's calls, its precedents) and `deployed` (an app's makes its catalogue row). rrotor may still send a `result` or
-an `event`: the server keeps neither and acks each, so rrotor stops owing it. Every message is checked here; anything
-the models refuse is unreadable, logged and skipped, and the link stays. `usage` carries `seq`, one rising counter
-per runtime: the server acks each by its `id` and applies a `seq` once, so a replay after a reconnect is never
-doubled."""
+The link carries licensing, the catalogue of apps and Glyphh's own programs' runs: the hello, the welcome (the org's
+licence key, a self-hosted runtime's licence and keys, its apps, the org's reviewer groups), `keys`, `app` after each
+review (docs/specs/apps.md), rrotor's `usage` and `deployed`; and `call`, `continue`, `cancel` down for a bot's or a
+swarm's run on the rrotor (glyphh_bot, glyphh_swarm: docs/specs/bots.md, 9), each answered by numbered `result`s up
+(ops/bots/remote.py keeps them). An `event` is acked and kept nowhere. Every message is checked here; anything the
+models refuse is unreadable, logged and skipped, and the link stays. `usage` and `result` carry `seq`, one rising
+counter per runtime: each is acked by its `id` and applied once, so a replay after a reconnect is never doubled."""
 
 import uuid
 from datetime import datetime
@@ -88,9 +87,19 @@ class Usage(Message):
 
 
 class Passed(Message):
-    """A run's result or a program's event: rrotor still sends them, the server keeps none."""
+    """A program's event: rrotor still sends them, the server keeps none."""
 
-    type: Literal["result", "event"]
+    type: Literal["event"]
+
+
+class Ran(Message):
+    """A Result of a run the server called (`{status, data, step, prompt}`), numbered."""
+
+    type: Literal["result"]
+    seq: Seq
+    run_id: uuid.UUID
+    result: dict[str, Any]
+    seconds: int = 0
 
 
 class Deployed(Message):
@@ -119,7 +128,7 @@ class Ack(Message):
     of: Id
 
 
-Inbound = Annotated[Usage | Passed | Deployed | Ping | Pong | Ack, Field(discriminator="type")]
+Inbound = Annotated[Usage | Ran | Passed | Deployed | Ping | Pong | Ack, Field(discriminator="type")]
 INBOUND: TypeAdapter[Inbound] = TypeAdapter(Inbound)
 
 
@@ -163,6 +172,29 @@ class Keys(Message):
     hashes: list[str]
 
 
+class Call(Message):
+    """A run of one of Glyphh's programs on the rrotor (version null: its active one)."""
+
+    type: Literal["call"] = "call"
+    run_id: uuid.UUID
+    program: Name
+    version: int | None = None
+    function: Name
+    inputs: dict[str, Any]
+    caller: Literal["routine"] = "routine"
+
+
+class Continue(Message):
+    type: Literal["continue"] = "continue"
+    run_id: uuid.UUID
+    answer: Any = None
+
+
+class Cancel(Message):
+    type: Literal["cancel"] = "cancel"
+    run_id: uuid.UUID
+
+
 # What one process publishes for a link another holds (ops/link/hub.py), always in protocol 3's names.
-Outbound = Annotated[AppState | Keys, Field(discriminator="type")]
+Outbound = Annotated[AppState | Keys | Call | Continue | Cancel, Field(discriminator="type")]
 OUTBOUND: TypeAdapter[Outbound] = TypeAdapter(Outbound)

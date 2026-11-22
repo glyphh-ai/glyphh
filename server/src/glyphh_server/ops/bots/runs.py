@@ -1,7 +1,8 @@
-"""A bot's runs in the database: made queued (a bot has one live run at a time: queued, running, or waiting on the
-person), started, and ended with what the runner left: done, failed, skipped by a hard limit, or needs_input with
-the question it waits on (answered, the same run is queued again and carries on). A run records the machine running
-it: when that machine starts again, its runs still queued or running were cut off, and are failed."""
+"""A bot's runs in the database: made queued (a bot has one live run at a time: queued, running, dispatched to its
+rrotor, or waiting on the person), started, and ended with what the runner left: done, failed, skipped by a hard
+limit, or needs_input with the question it waits on (answered, the same run is queued again and carries on). A run
+records the machine running it: when that machine starts again, its runs still queued or running were cut off, and
+are failed; a run on a rrotor is the rrotor's, never cut off by a restart here."""
 
 import os
 import re
@@ -35,9 +36,9 @@ def now() -> datetime:
 
 
 def view(run: Any, slug: str) -> RunView:
-    fields = RunView.model_fields.keys() - {"bot_slug", "question"}
+    fields = RunView.model_fields.keys() - {"bot_slug", "question", "runs_on", "kind", "swarm_slug"}
     asked = Question(**run.question) if run.question else None
-    return RunView(bot_slug=slug, question=asked, **{k: getattr(run, k) for k in fields})
+    return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **{k: getattr(run, k) for k in fields})
 
 
 async def row(conn: AsyncConnection, run_id: uuid.UUID) -> Any:
@@ -83,7 +84,7 @@ async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid
     return view(made, bot.slug)
 
 
-async def _set(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, **values: Any) -> None:
+async def put(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, **values: Any) -> None:
     async with engine.begin() as conn:
         await tenancy.enter(conn, org_id)
         await conn.execute(update(BotRun).where(BotRun.id == run_id).values(**values))
@@ -102,7 +103,7 @@ async def queue(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID) -> bo
 
 
 async def start(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, own_key: bool) -> None:
-    await _set(engine, org_id, run_id, status="running", started_at=now(), own_key=own_key)
+    await put(engine, org_id, run_id, status="running", started_at=now(), own_key=own_key)
 
 
 def _question(result: RunResult) -> dict[str, Any]:
@@ -114,9 +115,10 @@ def _question(result: RunResult) -> dict[str, Any]:
 
 
 async def ended(
-    engine: AsyncEngine, run: Any, result: RunResult, out: str, tokens: dict[str, int], charged: int
+    engine: AsyncEngine, run: Any, result: RunResult, out: str, tokens: dict[str, int], charged: int, **more: Any
 ) -> None:
-    """What the runner left: the run's status, log, data, question and output; its tokens added to what it had."""
+    """What the runner left: the run's status, log, data, question and output; its tokens added to what it had (and
+    `more`: a run on a rrotor's own)."""
     values: dict[str, Any] = {
         "status": result.status,
         "error": result.reason if result.status != "needs_input" else "",
@@ -131,20 +133,17 @@ async def ended(
     }
     if result.status != "needs_input":
         values["finished_at"] = now()
-    await _set(engine, run.org_id, run.id, **values)
+    await put(engine, run.org_id, run.id, **values, **more)
 
 
 async def failed(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, error: str) -> None:
-    await _set(engine, org_id, run_id, status="failed", error=error, question={}, finished_at=now())
+    await put(engine, org_id, run_id, status="failed", error=error, question={}, finished_at=now())
 
 
 async def recover(engine: AsyncEngine, here: str) -> int:
     """This machine's runs cut off by its restart, failed (with no org entered: every org's). A run waiting on the
-    person is not cut off: it carries on when it is answered."""
+    person is not cut off: it carries on when it is answered; nor is one on a rrotor (dispatched there)."""
     async with engine.begin() as conn:
-        cut = (
-            update(BotRun)
-            .where(BotRun.machine == here, BotRun.status.in_(("queued", "running")))
-            .values(status="failed", error=INTERRUPTED, finished_at=now())
-        )
+        mine = (BotRun.machine == here, BotRun.status.in_(("queued", "running")), BotRun.rrotor_id.is_(None))
+        cut = update(BotRun).where(*mine).values(status="failed", error=INTERRUPTED, finished_at=now())
         return (await conn.execute(cut)).rowcount

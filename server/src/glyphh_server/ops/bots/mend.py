@@ -44,7 +44,7 @@ async def _idle(svc: Goes, who: Principal, slug: str) -> Any:
         await tenancy.enter(conn, who.org_id)
         bot = await store.row(conn, slug)
         shown = await store.view(conn, bot)
-    if shown.last_run is not None and shown.last_run.status in ("queued", "running"):
+    if shown.last_run is not None and shown.last_run.status in ("queued", "running", "dispatched"):
         raise Conflict(GOING, slug=slug)
     return bot
 
@@ -67,9 +67,9 @@ async def cancel(svc: Goes, who: Principal, run_id: uuid.UUID) -> RunView:
         raise Conflict(NOT_WAITING, run_id=str(run_id))
     bot = await _idle(svc, who, found.slug)
 
-    def ended(r: Runner) -> None:  # a run that waits on the person is always in the runner's store
-        had = r.store.get(found.loop_run)
-        r.store.save(found.loop_run, "failed", had["at"], had["data"], {}, "cancelled", had["log"])
+    def ended(r: Runner) -> None:  # in the runner's store, unless its rrotor's state came back without it
+        if had := r.store.get(found.loop_run):
+            r.store.save(found.loop_run, "failed", had["at"], had["data"], {}, "cancelled", had["log"])
 
     await svc.go(bot, ended)
     await runs.failed(svc.engine, who.org_id, run_id, "cancelled")
