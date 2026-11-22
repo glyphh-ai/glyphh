@@ -2,6 +2,23 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.13.0 — 2026-11-22
+
+Hosted bots: the bots Glyphh hosts for your org, from your own code, as Ada models are. Python and TypeScript.
+
+- `HostedBots(url=None, key=None, transport=None)` (TypeScript `new HostedBots({url, key, transport})`, or
+  `Ada().bots` / `new Ada().bots` on the same key): the Glyphh API at `DEFAULT_API_URL` (https://api.glyphh.ai;
+  GLYPHH_API_URL moves it) with the API key Ada takes, as a bearer. `list(q)` / `search(q)`, `get(slug)`,
+  `bot(slug)` (`HostedBot`: `info`, `run`, `runs`, `gates`), `run(slug, input, wait=)`, `runs(slug)`, `get_run`
+  (`getRun`), `wait(run, timeout=, poll=, on_progress=)` until the run ends or asks the person, `answer(run, answer,
+  wait=)`, `cancel(run)`, `wrong(run, outcome, gate=, item=)`, `approvals()`, `gates(slug)`, `templates(q)`,
+  `template(slug)` and `install(slug, name=)`. Reads are sent again while the API is unreachable; a run, an answer, a
+  cancel or an install is sent once.
+- `BotInfo`, `BotRun` (Python: `going`, `waiting`, `approval`, `ended`), `BotTemplate`; a run's `question` carries
+  `step` and `approval` when the server says them.
+- `glyphh bots list|get|gates|run|runs|status|answer|cancel|wrong|approvals|templates|template|install`: the hosted
+  bots from a shell (`--wait` on run, status and answer). `glyphh bot ...` stays the bots on this machine.
+
 ## 3.12.0 — 2026-11-21
 
 Remote bots: a bot or a swarm runs on a chosen rrotor, its package and state held by the server. Python only; the

@@ -10,6 +10,7 @@ mistake exits 2. It runs on an API key: GLYPHH_API_KEY, or the one `glyphh login
     glyphh beam "card lost" --hops @hops.json --width 5       (a chain of models: one's outcome, the next's question)
     glyphh record tickets @case.json --outcome refund
     glyphh bot new "each morning, sum up the repo's new issues"      (bots: glyphh.bots)
+    glyphh bots run inbox-cat --input "lunch?" --wait                (the org's hosted bots: glyphh.hosted)
 
 A JSON argument is the JSON itself, `@file` for a file's, or `-` for stdin's."""
 
@@ -25,6 +26,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
 from . import __version__
+from . import hosted_cli
 from .bots import cli as bots_cli
 from .client import Ada, AdaVersions, Beam, Decision, Job, Usage
 from .credentials import KEY_PREFIX, credentials_path, forget_key, read_key, save_key
@@ -349,6 +351,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("id", help="the job's id")
 
     bots_cli.register(sub, _out)
+    hosted_cli.register(sub, _out)
     return top
 
 

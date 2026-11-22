@@ -105,6 +105,23 @@ decision never waits for input: it says `ask`.
 
 The API and its answers' shapes are in [`contract/contract.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract).
 
+## Your org's hosted bots
+
+The bots Glyphh hosts for your org are `HostedBots`, on the same API key as Ada, at the Glyphh API
+(https://api.glyphh.ai; GLYPHH_API_URL moves it):
+
+```ts
+import { HostedBots } from "@glyphh-ai/glyphh";
+
+const bots = new HostedBots(); // or new Ada().bots
+await bots.list("inbox"); // search the org's bots
+let run = await bots.run("inbox-cat", "lunch on Friday?", { wait: true }); // until it ends or asks the person
+if (run.status === "needs_input") run = await bots.answer(run, "yes", { wait: true }); // run.question.approval
+await bots.approvals(); // every run waiting on the person
+await bots.wrong(run, "skip", { gate: "worth" }); // a gate called it wrong: learned as a precedent
+await bots.install("news-brief"); // one of the templates Glyphh ships (bots.templates())
+```
+
 ## Your local runtime: programs and CLIs
 
 `Runtime` is a client for rrotor, the runtime you install on your own machine (a Docker image, bound to

@@ -610,7 +610,7 @@ def test_the_docs_tell_the_cloud_story():
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
             assert gone not in text, (path.name, gone)
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.12.0"
+    assert glyphh.__version__ == "3.13.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc
