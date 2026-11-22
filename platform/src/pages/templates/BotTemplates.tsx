@@ -36,7 +36,7 @@ function BotCard({ template }: { template: BotTemplate }) {
         <p className={styles.summary}>{template.summary}</p>
         <div className={styles.cardFoot}>
           <span>
-            {plural(template.tools.length, 'tool')} · {plural(template.gates.length, 'gate')}
+            {plural(template.tools.length, 'tool')} · decides {plural(template.gates.length, 'thing')}
           </span>
           <span className={styles.open}>
             Details <Icon name="chevronRight" />

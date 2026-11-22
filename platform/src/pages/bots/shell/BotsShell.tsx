@@ -1,120 +1,37 @@
-// The Bots area is the Glyphh Bot app's interface (glyphh-bot src/renderer/src/App.tsx): its top bar, the rail on the
-// left (BOTS | CONNECTIONS), the chat in the centre, panels that open on the right from the top bar's icons, and the
-// thin status bar. Its styles are that app's own stylesheet (glyphh-bot.css), scoped to this shell.
+// The Bots area is the Glyphh Bot app's interface (glyphh-bot src/renderer/src/App.tsx): its top bar (the workspace,
+// Recents, and on the right edit and Decisions), the rail on the left (BOTS | CONNECTIONS), the chat in the centre,
+// and the thin status bar. One place per thing: connections are the rail's tab, decisions the Decisions panel, a bot's
+// settings its editor, the crew's its one modal. Its styles are that app's own stylesheet (glyphh-bot.css), scoped to
+// this shell.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { useApprovals, useBotPlaces, useBotRuns, useBots, useConnections, type Bot, type Connection } from '@/api/bots';
+import { useBots } from '@/api/bots';
 import { useMe } from '@/api/queries';
-import { useSwarmRuns, useSwarms, type Swarm } from '@/api/swarms';
+import { useWaiting, type Recent } from '@/api/recents';
+import { DecisionsPanel } from '@/bots/decisions/DecisionsPanel';
 import { useShellNav } from '@/layout/AppShell/AppShell';
-import { ago } from '@/lib/format';
-import { ToolsPanel } from '@/pages/connections/ToolsPanel';
-import { GatesTab } from '../GatesTab';
-import { botPath } from '../parts';
-import { ToolsTab } from '../ToolsTab';
-import { BotCat, ShellContext, useEscape, type PanelId, type ShellApi } from './bits';
-import { BotChat, CrewChat, MODES } from './Chat';
-import { DecisionsPanel } from './Decisions';
+import { botPath, BotCat, ShellContext, type ShellApi } from './bits';
+import { BotChat, CrewChat } from './Chat';
+import { ConnectionModals } from './Connections';
+import { useCrew } from './crew';
+import { CrewSettings } from './CrewSettings';
 import { BotEditor } from './Editor';
 import { Icon, ICON, Reactor } from './icons';
-import { ConnectorIcon, Rail, type RailTab } from './Rail';
+import { Rail, type RailTab } from './Rail';
+import { Recents } from './Recents';
+import { WorkPanelHost, WorkPanelIcons, WorkProvider } from './work';
+import { WorkspacePill } from './Workspace';
 import './glyphh-bot.css';
 import './platform.css';
 
-const PANELS: ReadonlyArray<{ id: PanelId; label: string; icon: string }> = [
-  { id: 'decisions', label: 'Decisions', icon: ICON.decisions },
-  { id: 'gates', label: 'Ada gates', icon: ICON.gates },
-  { id: 'tools', label: 'Tools', icon: ICON.tools },
-];
-/** Old links to a bot's tabs still land: its gates and tools open as panels, its settings as the editor. */
-const OLD_TABS: Record<string, PanelId | undefined> = { gates: 'gates', tools: 'tools' };
-
-type Room = { kind: 'bot' | 'crew'; slug: string };
-
-/** Recents: the room's past runs, newest first; one click shows it in the chat. New chat starts from the empty state. */
-function Recents({ rows, onPick, onNew }: { rows: { id: string; title: string; who: ReactNode; sub: string }[] | undefined; onPick: (id: string) => void; onNew: () => void }) {
-  const [open, setOpen] = useState(false);
-  useEscape(() => setOpen(false), open);
-  return (
-    <div className="recents">
-      <button type="button" className={`chip ${open ? 'on' : ''}`} title="Past runs" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon d={ICON.recents} size={14} /> <span className="chiptext">Recents</span> <span className="dim">▾</span>
-      </button>
-      {open && (
-        <>
-          <div className="veil clear" onMouseDown={() => setOpen(false)} />
-          <div className="rpanel" role="dialog" aria-label="Recents">
-            <div className="rhead">
-              <b>Recents</b>
-              <span className="spacer" />
-              <button
-                type="button"
-                className="btn sm"
-                onClick={() => {
-                  setOpen(false);
-                  onNew();
-                }}
-              >
-                <Icon d={ICON.plus} size={12} /> New chat
-              </button>
-            </div>
-            <div className="rlist">
-              {rows === undefined ? (
-                <p className="dim pad">Reading…</p>
-              ) : rows.length ? (
-                <div className="rsec">
-                  {rows.map((r) => (
-                    <div key={r.id} className="rrow">
-                      <button
-                        type="button"
-                        className="rmain"
-                        onClick={() => {
-                          setOpen(false);
-                          onPick(r.id);
-                        }}
-                      >
-                        <span className="rwho">{r.who}</span>
-                        <span className="rtitle">{r.title}</span>
-                        <small>{r.sub}</small>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="dim pad">No runs yet. Every task you give shows up here.</p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function BotRecents({ bot, onPick, onNew }: { bot: Bot; onPick: (id: string) => void; onNew: () => void }) {
-  const runs = useBotRuns(bot.slug);
-  const rows = runs.data?.map((r) => ({
-    id: r.id,
-    title: r.input || 'Run',
-    who: <BotCat look={bot.look} mascot={bot.mascot} size={18} />,
-    sub: `${bot.name} · ${ago(r.created_at)}`,
-  }));
-  return <Recents rows={rows} onPick={onPick} onNew={onNew} />;
-}
-
-function CrewRecents({ swarm, onPick, onNew }: { swarm: Swarm; onPick: (id: string) => void; onNew: () => void }) {
-  const runs = useSwarmRuns(swarm.slug);
-  const rows = runs.data?.map((r) => ({ id: r.id, title: r.task || 'Run', who: <Icon d={ICON.chat} size={14} />, sub: `${swarm.name} · ${ago(r.created_at)}` }));
-  return <Recents rows={rows} onPick={onPick} onNew={onNew} />;
-}
-
 /** A panel on the right, as the Glyphh Bot app's desk draws one: its head with a close, its body. */
-function Panel({ icon, title, onClose, plain, children }: { icon: ReactNode; title: string; onClose: () => void; plain?: boolean; children: ReactNode }) {
+function Panel({ icon, title, onClose, head, children }: { icon: ReactNode; title: string; onClose: () => void; head?: ReactNode; children: ReactNode }) {
   return (
     <section className="dslot panel" aria-label={title}>
       <div className="dhead">
         {icon}
         <span className="dtitle">{title}</span>
+        {head}
         <span className="spacer" />
         <button type="button" title="Close" aria-label={`Close ${title}`} onClick={onClose}>
           ×
@@ -123,42 +40,37 @@ function Panel({ icon, title, onClose, plain, children }: { icon: ReactNode; tit
       {/* The platform's own components keep their own look inside a panel (the app's styles stop at .gb-plain), in the
           dark theme whatever the person's own is: the app is always black. */}
       <div className="dbody pscroll">
-        {plain ? (
-          <div className="gb-plain" data-theme="dark-hc">
-            {children}
-          </div>
-        ) : (
-          children
-        )}
+        <div className="gb-plain" data-theme="dark-hc">
+          {children}
+        </div>
       </div>
     </section>
   );
 }
 
-function StatusBar({ ok, connectors, bot, swarm }: { ok: boolean; connectors: number | undefined; bot: Bot | undefined; swarm: Swarm | undefined }) {
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <span className="clock">{now.toLocaleTimeString('en-GB')}</span>;
+}
+
+/** The thin strip along the bottom: that Glyphh answers, and the time. Settings are not repeated here. */
+function StatusBar({ ok }: { ok: boolean }) {
   const { data: me } = useMe();
-  const places = useBotPlaces();
-  const place = (id: string | null | undefined) => (id ? (places.data?.find((p) => p.id === id)?.name ?? 'your machine') : 'Glyphh cloud');
-  const mode = MODES.find((m) => m.value === (bot?.permission_mode ?? 'ask'))!;
   return (
     <footer className="statusbar">
       <span className={ok ? 'stat ok' : 'stat bad'}>
         <i /> Glyphh {ok ? `connected${me ? ` · ${me.plan.name.toLowerCase()}` : ''}` : 'not reachable'}
       </span>
-      <span className="stat">Connectors {connectors ?? '-'}</span>
-      {bot && <span className={mode.value === 'auto' ? 'stat bad' : 'stat'}>Permissions {mode.label}</span>}
       <span className="eq" aria-hidden>
         {Array.from({ length: 24 }, (_, i) => (
           <i key={i} style={{ animationDelay: `${(i * 137) % 900}ms` }} />
         ))}
       </span>
-      {(bot || swarm) && <span className="stat">Runs on {place(bot ? bot.runs_on : swarm!.runs_on)}</span>}
-      {me && (
-        <span className="stat">
-          {me.plan.name} · {me.precedents.used.toLocaleString('en-GB')}
-          {me.precedents.limit !== null ? ` of ${me.precedents.limit.toLocaleString('en-GB')}` : ''} precedents
-        </span>
-      )}
+      <Clock />
     </footer>
   );
 }
@@ -169,31 +81,21 @@ export function BotsShell() {
   const nav = useShellNav();
   const [params, setParams] = useSearchParams();
   const bots = useBots();
-  const swarms = useSwarms();
-  const approvals = useApprovals();
-  const connections = useConnections();
+  const crew = useCrew(bots.data);
+  const waits = useWaiting();
   const [toast, setToast] = useState('');
   const [fresh, setFresh] = useState<string | null>(null);
   const [railOpen, setRailOpen] = useState(false);
+  const [crewSettings, setCrewSettings] = useState(false);
+  // Whose decisions the panel shows while the crew is the room: one of its bots.
+  const [crewBot, setCrewBot] = useState<string | null>(null);
 
-  // The room: the bot in the address, the crew in ?crew=, else the first project's crew, else the first bot.
-  const settled = !bots.isPending && !swarms.isPending;
-  const crews = swarms.data ?? [];
-  const asked = params.get('crew');
-  const room: Room | null = name
-    ? { kind: 'bot', slug: name }
-    : asked
-      ? { kind: 'crew', slug: asked }
-      : !settled
-        ? null
-        : crews[0]
-          ? { kind: 'crew', slug: crews[0].slug }
-          : bots.data?.[0]
-            ? { kind: 'bot', slug: bots.data[0].slug }
-            : null;
-  const bot = room?.kind === 'bot' ? bots.data?.find((b) => b.slug === room.slug) : undefined;
-  const swarm = room?.kind === 'crew' ? crews.find((s) => s.slug === room.slug) : undefined;
-  const roomKey = room ? `${room.kind}:${room.slug}` : '';
+  // The room: the bot in the address, else the crew.
+  const all = bots.data ?? [];
+  const bot = name ? all.find((b) => b.slug === name) : undefined;
+  const crewOn = !name;
+  const roomKey = name ? `bot:${name}` : 'crew';
+  const members = all.filter((b) => crew.members.includes(b.id));
 
   const set = useCallback(
     (change: Record<string, string | null>) =>
@@ -209,30 +111,36 @@ export function BotsShell() {
     [setParams],
   );
 
+  // Old links still land: a bot's old tabs open Decisions or its settings; an old link to a crew opens its workspace.
   const tab = params.get('tab') ?? '';
-  const open = useMemo(() => {
-    const list = (params.get('panel') ?? '').split(',').filter((p): p is PanelId => PANELS.some((x) => x.id === p));
-    const old = OLD_TABS[tab];
-    return old && !list.includes(old) ? [...list, old] : list;
-  }, [params, tab]);
+  const old = params.get('crew');
+  useEffect(() => {
+    if (!old) return;
+    crew.open(old);
+    set({ crew: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [old]);
+
+  const decisions = (params.get('panel') ?? '').split(',').some((p) => p === 'decisions' || p === 'gates') || tab === 'gates' || tab === 'decisions';
   const connId = params.get('conn');
-  const connection = connections.data?.find((c) => c.id === connId);
-  const railTab: RailTab = params.get('rail') === 'connections' || connId ? 'connections' : 'bots';
+  const catalog = params.get('add') === '1';
+  const railTab: RailTab = params.get('rail') === 'connections' || connId || catalog ? 'connections' : 'bots';
   const editing = params.get('new') ? 'new' : params.get('edit') || tab === 'settings' || tab === 'loop' ? 'edit' : null;
   const focus = params.get('run');
 
-  const togglePanel = (id: PanelId) => set({ panel: (open.includes(id) ? open.filter((p) => p !== id) : [...open, id]).join(',') || null });
   const api: ShellApi = useMemo(
     () => ({
       toast: setToast,
-      openPanel: (id) => set({ panel: [...new Set([...open, id])].join(',') }),
-      editBot: (slug, advanced) => {
+      // From the editor's "Decides: …" line: the editor closes and the panel opens, in one step.
+      openDecisions: () => set({ panel: 'decisions', edit: null, new: null }),
+      editBot: (slug) => {
         if (slug === null) return set({ new: '1', edit: null });
-        if (slug === name) return set({ edit: advanced ? 'advanced' : '1', new: null });
+        if (slug === name) return set({ edit: '1', new: null });
         navigate(`${botPath(slug)}?edit=1`);
       },
+      openConnections: (add) => set({ rail: 'connections', add: add ? '1' : null }),
     }),
-    [set, open, name, navigate],
+    [set, name, navigate],
   );
 
   useEffect(() => {
@@ -243,29 +151,32 @@ export function BotsShell() {
   // A room picked in the drawer closes it (the phone's rail).
   useEffect(() => setRailOpen(false), [roomKey]);
 
-  const waiting = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of approvals.data ?? []) if (r.kind !== 'swarm') m.set(r.bot_slug, (m.get(r.bot_slug) ?? 0) + 1);
-    return m;
-  }, [approvals.data]);
+  const waiting = useMemo(() => new Set((waits.data?.recents ?? []).flatMap((r) => (r.kind === 'bot' && r.bot_slug ? [r.bot_slug] : []))), [waits.data]);
 
-  const pick = (id: string) => {
+  const pick = (r: Recent) => {
     setFresh(null);
-    set({ run: id });
+    if (r.kind === 'bot' && r.bot_slug) return navigate(`${botPath(r.bot_slug)}?run=${encodeURIComponent(r.id)}`);
+    if (r.project_slug) crew.open(r.project_slug);
+    navigate(`/bots?run=${encodeURIComponent(r.id)}`);
   };
   const newChat = () => {
     setFresh(roomKey);
     set({ run: null });
   };
   const closeEditor = () => set({ edit: null, new: null });
-  const shownPanels = PANELS.filter((p) => open.includes(p.id) && bot);
-  const missing = room && settled && !bot && !swarm;
-  const repo = swarm?.repo_url.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\.git$/, '');
+  const settled = !bots.isPending;
+  const missing = Boolean(name) && settled && !bot;
+  // Whose decisions: the bot's own, or in the crew's room one of its bots.
+  const decided = bot ?? (crewOn ? (members.find((b) => b.slug === crewBot) ?? members[0]) : undefined);
+  // The work panels (files, terminal, editor…) are a rrotor's: only when what is selected runs on one.
+  const runsOn = bot ? (bot.runs_on ?? null) : crewOn ? crew.settings.runs_on : null;
 
   return (
     <ShellContext.Provider value={api}>
       <div className="gb">
         <div className="app">
+          {/* The work panels' state, around the top bar and the body (its children keep their indent: a mount, not a rewrite). */}
+          <WorkProvider runsOn={runsOn} runId={focus}>
           <header className="top">
             <button type="button" className="icon onphone" aria-label="Menu" onClick={nav.toggleSidebar}>
               <Icon d={ICON.menu} size={16} />
@@ -278,63 +189,56 @@ export function BotsShell() {
               <img src="/glyphh-logo-text-white.png" alt="Glyphh" />
               <span>Bot</span>
             </div>
-            {swarm && repo && (
-              <a className="chip" href={swarm.repo_url} target="_blank" rel="noreferrer" title="The project’s repo">
-                <Icon d={ICON.folder} size={14} /> <span className="chiptext">{repo.split('/').pop()}</span>
-                <span className="branch">{swarm.base_branch}</span>
-              </a>
-            )}
-            {bot && <BotRecents bot={bot} onPick={pick} onNew={newChat} />}
-            {swarm && <CrewRecents swarm={swarm} onPick={pick} onNew={newChat} />}
+            <WorkspacePill crew={crew} />
+            <Recents bots={all} needsYou={waits.data?.needs_you ?? 0} focus={focus} onPick={pick} onNew={newChat} />
             <div className="spacer" />
             {bot && (
-              <>
-                <button type="button" className="icon" title={`Edit ${bot.name}`} aria-label={`Edit ${bot.name}`} onClick={() => api.editBot(bot.slug)}>
-                  <Icon d={ICON.edit} size={16} />
-                </button>
-                <div className="pbtns" role="toolbar" aria-label="Panels">
-                  {PANELS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`icon ${open.includes(p.id) ? 'on' : ''}`}
-                      title={`${p.label}${open.includes(p.id) ? ' (open: click to close)' : ''}`}
-                      aria-label={p.label}
-                      aria-pressed={open.includes(p.id)}
-                      onClick={() => togglePanel(p.id)}
-                    >
-                      <Icon d={p.icon} size={16} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {swarm && (
-              <Link className="icon" to={`/swarms/${encodeURIComponent(swarm.slug)}`} title={`Edit ${swarm.name}`} aria-label={`Edit ${swarm.name}`}>
+              <button type="button" className="icon" title={`Edit ${bot.name}`} aria-label={`Edit ${bot.name}`} onClick={() => api.editBot(bot.slug)}>
                 <Icon d={ICON.edit} size={16} />
-              </Link>
+              </button>
             )}
+            {crewOn && all.length > 0 && (
+              <button type="button" className="icon" title="Crew settings" aria-label="Edit the crew" onClick={() => setCrewSettings(true)}>
+                <Icon d={ICON.edit} size={16} />
+              </button>
+            )}
+            {decided && (
+              <button
+                type="button"
+                className={`icon ${decisions ? 'on' : ''}`}
+                title={`Decisions${decisions ? ' (open: click to close)' : ''}`}
+                aria-label="Decisions"
+                aria-pressed={decisions}
+                onClick={() => set({ panel: decisions ? null : 'decisions' })}
+              >
+                <Icon d={ICON.decisions} size={16} />
+              </button>
+            )}
+            {/* The work panels' icons (Files, Preview, Terminal, Editor, Diff and the layout manager) mount here, only on a rrotor. */}
+            {runsOn && <WorkPanelIcons />}
           </header>
 
           <main className="grid">
             <Rail
               open={railOpen}
               tab={railTab}
-              onTab={(t) => set({ rail: t === 'connections' ? 'connections' : null, conn: null })}
+              onTab={(t) => set({ rail: t === 'connections' ? 'connections' : null, conn: null, add: null })}
               bots={bots.data}
-              swarms={crews}
-              room={room}
+              crew={crew}
+              bot={name ?? null}
+              crewOn={crewOn}
               waiting={waiting}
-              connection={connId}
-              onConnection={(c: Connection) => set({ conn: connId === c.id ? null : c.id })}
+              onCrewSettings={() => setCrewSettings(true)}
+              onConnection={(id) => set({ conn: id })}
+              onCatalog={(open) => set({ add: open ? '1' : null })}
             />
             {railOpen && <button type="button" className="railscrim" aria-label="Close" onClick={() => setRailOpen(false)} />}
             <section className="desk">
               <div className="deskrow">
                 {bot ? (
                   <BotChat key={bot.slug} bot={bot} focus={focus} fresh={fresh === roomKey} onSent={() => setFresh(null)} />
-                ) : swarm ? (
-                  <CrewChat key={swarm.slug} swarm={swarm} bots={bots.data ?? []} focus={focus} fresh={fresh === roomKey} onSent={() => setFresh(null)} />
+                ) : crewOn && all.length > 0 ? (
+                  <CrewChat key={crew.project?.slug ?? 'none'} crew={crew} bots={all} focus={focus} fresh={fresh === roomKey} onSent={() => setFresh(null)} />
                 ) : (
                   <section className="center" aria-label="Bots">
                     {bots.error ? (
@@ -344,9 +248,9 @@ export function BotsShell() {
                       </div>
                     ) : missing ? (
                       <div className="empty">
-                        <b>{room.kind === 'bot' ? 'There is no such bot' : 'There is no such project'}</b>
+                        <b>There is no such bot</b>
                         <p>
-                          Nothing here is called {room.slug}. Pick one on the left, or <Link to="/bots">go back to your bots</Link>.
+                          Nothing here is called {name}. Pick one on the left, or <Link to="/bots">go back to your bots</Link>.
                         </p>
                       </div>
                     ) : settled ? (
@@ -359,7 +263,7 @@ export function BotsShell() {
                         </div>
                         <div className="floor" />
                         <h1 className="headline">Make your first bot</h1>
-                        <p className="sub">A bot decides with gates in Ada that learn from your answers, and does the rest with Claude and the tools you allow.</p>
+                        <p className="sub">Tell a bot its job in plain words. It does the work with the apps you allow, asks you when it is not sure, and learns from your answers.</p>
                         <div className="ideas">
                           <button type="button" onClick={() => api.editBot(null)}>
                             + New bot
@@ -370,41 +274,48 @@ export function BotsShell() {
                     ) : null}
                   </section>
                 )}
-                {(shownPanels.length > 0 || connection) && (
-                  <div className="panels">
-                    {bot &&
-                      shownPanels.map((p) => (
-                        <Panel key={p.id} icon={<Icon d={p.icon} size={13} />} title={p.label} onClose={() => togglePanel(p.id)} plain={p.id !== 'decisions'}>
-                          {p.id === 'decisions' && <DecisionsPanel bot={bot} />}
-                          {p.id === 'gates' && <GatesTab bot={bot} />}
-                          {p.id === 'tools' && <ToolsTab key={bot.updated_at} bot={bot} />}
-                        </Panel>
-                      ))}
-                    {connection && (
+                {(decisions && decided) || runsOn ? (
+                  <div className={decisions && decided ? 'panels' : 'panels bare'}>
+                    {decisions && decided && (
                       <Panel
-                        icon={<ConnectorIcon name={connection.app_name} icon={connection.app_icon} size={16} />}
-                        title={`${connection.app_name} · tools`}
-                        onClose={() => set({ conn: null })}
-                        plain
+                        icon={<Icon d={ICON.decisions} size={13} />}
+                        title="Decisions"
+                        onClose={() => set({ panel: null })}
+                        head={
+                          crewOn && members.length > 1 ? (
+                            <select className="dwho" aria-label="Whose decisions" value={decided.slug} onChange={(e) => setCrewBot(e.target.value)}>
+                              {members.map((b) => (
+                                <option key={b.id} value={b.slug}>
+                                  {b.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : undefined
+                        }
                       >
-                        <ToolsPanel connection={connection} />
+                        <DecisionsPanel key={decided.slug} slug={decided.slug} />
                       </Panel>
                     )}
+                    {/* The rrotor's work panels (Files, Preview, Terminal, Editor, Diff) mount here. */}
+                    {runsOn && <WorkPanelHost />}
                   </div>
-                )}
+                ) : null}
               </div>
             </section>
           </main>
 
-          <StatusBar ok={!bots.error} connectors={connections.data?.length} bot={bot} swarm={swarm} />
+          <StatusBar ok={!bots.error} />
 
           {editing === 'new' && <BotEditor key="new" bot={null} onClose={closeEditor} />}
-          {editing === 'edit' && bot && <BotEditor key={bot.id} bot={bot} advanced={tab === 'loop' || params.get('edit') === 'advanced'} onClose={closeEditor} />}
+          {editing === 'edit' && bot && <BotEditor key={bot.id} bot={bot} onClose={closeEditor} />}
+          {crewSettings && <CrewSettings crew={crew} bots={all} onClose={() => setCrewSettings(false)} />}
+          <ConnectionModals open={connId} catalog={catalog} onOpen={(id) => set({ conn: id })} onCatalog={(open) => set({ add: open ? '1' : null })} />
           {toast && (
             <div className="toast" role="status" onClick={() => setToast('')}>
               {toast}
             </div>
           )}
+          </WorkProvider>
         </div>
       </div>
     </ShellContext.Provider>

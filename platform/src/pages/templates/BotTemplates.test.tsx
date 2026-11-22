@@ -49,7 +49,7 @@ describe('the Marketplace’s bots', () => {
     const card = await screen.findByRole('link', { name: 'Inbox triage' });
     expect(card).toHaveTextContent('Sorts the morning’s email.');
     expect(card).toHaveTextContent('GmailSlack');
-    expect(card).toHaveTextContent('2 tools · 1 gate');
+    expect(card).toHaveTextContent('2 tools · decides 1 thing');
     await user.click(card);
     expect(router.state.location.pathname).toBe('/marketplace/bots/inbox-triage');
   });
@@ -88,26 +88,45 @@ describe('the Marketplace’s bots', () => {
     expect(screen.getByText('Reads what came in overnight and files each email.')).toBeInTheDocument();
     const needs = screen.getByRole('list', { name: 'Connections it needs' });
     expect(await within(needs).findByText('Connected', { selector: 'span' })).toBeInTheDocument();
-    expect(within(needs).getByRole('link', { name: 'Slack' })).toHaveAttribute('href', '/connections/slack');
-    // Slack is connected right here (useConnect's popup); Add waits for it.
-    expect(within(needs).getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+    // Slack is connected in the Bots area's CONNECTIONS, the one place for it; Add waits for it.
+    expect(within(needs).getByRole('link', { name: 'Connect it in Bots' })).toHaveAttribute('href', '/bots?rail=connections&add=1');
     expect(screen.getByRole('button', { name: 'Add to my bots' })).toBeDisabled();
     expect(screen.getByText('Connect Slack first')).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Its gates' })).toHaveTextContent('file_it');
+    expect(screen.getByRole('heading', { name: 'What it decides' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'What it decides' })).toHaveTextContent('File it');
     const facts = screen.getByLabelText('About this bot', { selector: 'div' });
     expect(facts).toHaveTextContent('Runs onclaude-sonnet-5-5');
     expect(facts).toHaveTextContent('ConnectionsGmail, Slack');
-    expect(facts).toHaveTextContent('Skills1');
+    expect(facts).toHaveTextContent('Decides1 thing');
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Marketplaceinbox-triage');
     await user.click(screen.getByRole('tab', { name: 'Tools' }));
     expect(screen.getByRole('list', { name: "Inbox triage's tools" })).toHaveTextContent('gmail-find-emailslack-send-message');
+  });
+
+  it('says no word of how a bot works inside, on the list and on a bot’s page', async () => {
+    const said = () => {
+      const named = Array.from(document.body.querySelectorAll('[aria-label], [title], [placeholder], [alt]')).flatMap((el) => ['aria-label', 'title', 'placeholder', 'alt'].map((a) => el.getAttribute(a) ?? ''));
+      return [document.body.textContent ?? '', ...named].join('\n');
+    };
+    const clean = () => expect(said().match(/\b(gates?|loop|spec|skills?|json|swarms?|projects?)\b/gi) ?? []).toEqual([]);
+    on();
+    const list = renderApp('/marketplace/bots');
+    expect(await screen.findByRole('link', { name: /Inbox triage/ })).toHaveTextContent('2 tools · decides 1 thing');
+    clean();
+    list.unmount();
+    const { user } = renderApp('/marketplace/bots/inbox-triage');
+    await screen.findByRole('list', { name: 'What it decides' });
+    clean();
+    await user.click(screen.getByRole('tab', { name: 'Tools' }));
+    await screen.findByRole('list', { name: "Inbox triage's tools" });
+    clean();
   });
 
   it('says what a bot without needs, gates or tools has', async () => {
     on([{ ...plain(1), tools: [] }]);
     const { user } = renderApp('/marketplace/bots/bot-1');
     expect(await screen.findByText('It needs no connection.')).toBeInTheDocument();
-    expect(screen.getByText('It has no gates.')).toBeInTheDocument();
+    expect(screen.getByText('It decides nothing on its own.')).toBeInTheDocument();
     expect(screen.getByLabelText('About this bot', { selector: 'div' })).toHaveTextContent('ConnectionsNone');
     await user.click(screen.getByRole('tab', { name: 'Tools' }));
     expect(screen.getByText('It uses no tools')).toBeInTheDocument();

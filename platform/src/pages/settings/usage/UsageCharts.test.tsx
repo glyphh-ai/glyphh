@@ -39,7 +39,8 @@ describe('Usage over time', () => {
     watchDays();
     renderApp('/usage');
     const tokens = await screen.findByRole('region', { name: 'Tokens in and out' });
-    expect(tokens).toHaveTextContent('4,506,000 tokens');
+    // The card is there once the series is read; the tokens' days are a read of their own and may come after it.
+    await waitFor(() => expect(tokens).toHaveTextContent('4,506,000 tokens'));
     expect(rowsOf('Input and output tokens by day, last 30 days').at(-1)).toBe('9 Nov2,005,000901,000');
     expect(screen.getByRole('region', { name: 'Charged to the balance' })).toHaveTextContent('$11.70');
     expect(rowsOf('Charged to the balance by day, last 30 days').at(-1)).toBe('9 Nov$11.70');
@@ -56,7 +57,8 @@ describe('Usage over time', () => {
     const picker = await screen.findByRole('combobox', { name: 'Model' });
     expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual(['All models', 'adaL 34B 1.0', 'Claude Sonnet 5.5 (bots)']);
     await user.selectOptions(picker, 'claude-sonnet-5-5');
-    expect(screen.getByRole('region', { name: 'Tokens in and out' })).toHaveTextContent('6,000 tokens');
+    // The picker is there with the billing; the series and the tokens' days are reads of their own.
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Tokens in and out' })).toHaveTextContent('6,000 tokens'));
     expect(rowsOf('Input and output tokens by day, last 30 days').at(-1)).toBe('9 Nov5,0001,000');
     expect(screen.getByRole('region', { name: 'Charged to the balance' })).toHaveTextContent('$0.40');
   });

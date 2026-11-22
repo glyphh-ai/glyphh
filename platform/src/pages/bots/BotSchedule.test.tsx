@@ -1,7 +1,7 @@
 import { weekdays } from '@/test/bots';
 import { browserZone, clock, scheduleOf, sentence, summary, zones } from './schedule';
 
-// The schedule's words. Choosing it (in the bot editor, under Advanced, and the composer's Schedule pill) and where a
+// The schedule's words. Choosing it (in the bot editor, under When it runs, and the composer's Schedule pill) and where a
 // bot runs are tested with the Bots shell (shell/BotsShell.test.tsx).
 describe('a bot’s schedule, in plain words', () => {
   it('says each schedule in one line, in the person’s time', () => {

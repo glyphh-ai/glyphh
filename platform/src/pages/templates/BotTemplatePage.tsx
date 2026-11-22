@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useAddBotTemplate, useBotTemplate, type BotTemplate } from '@/api/botTemplates';
 import { useConnections } from '@/api/bots';
 import { Cat } from '@/bots/cat/Cat';
+import { topic } from '@/bots/decisions/words';
+import { plural } from '@/lib/format';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { List, Row } from '@/components/List';
 import { Button, Card, Chip, EmptyState, Icon, LoadingCard, panelId, tabId, Tabs, useToast } from '@/ui';
-import { useConnect } from '../connections/useConnect';
 import styles from './templates.module.css';
 
 type Tab = 'overview' | 'tools';
@@ -27,42 +28,33 @@ function useMissing(template: BotTemplate) {
   return { ready: connections.isSuccess, missing: connections.isSuccess ? template.required_apps.filter((a) => !have.has(a.slug)) : [] };
 }
 
-/**
- * The services it needs, each said as connected or with Connect, which signs in right here (Pipedream's popup, the
- * spinner) and leaves the person on this page, its Add now open to them.
- */
+/** Where apps are connected: the Bots area's CONNECTIONS, the one place for them, its catalog open. */
+const CONNECT = '/bots?rail=connections&add=1';
+
+/** The services it needs, each said as connected or not; one that is not is connected in Bots, under Connections. */
 function Needs({ template }: { template: BotTemplate }) {
   const { missing } = useMissing(template);
-  const { connect, connecting, error, dialog } = useConnect({ onConnected: () => undefined });
   const away = new Set(missing.map((a) => a.slug));
   if (template.required_apps.length === 0) return <p className={styles.sectionAbout}>It needs no connection.</p>;
   return (
-    <>
-      <List label="Connections it needs">
-        {template.required_apps.map((app) => (
-          <Row
-            key={app.slug}
-            title={
-              <Link to={`/connections/${encodeURIComponent(app.slug)}`} className={styles.open}>
-                {app.name}
+    <List label="Connections it needs">
+      {template.required_apps.map((app) => (
+        <Row
+          key={app.slug}
+          title={app.name}
+          meta={away.has(app.slug) ? 'Not connected yet' : 'Connected'}
+          actions={
+            away.has(app.slug) ? (
+              <Link to={CONNECT} className={styles.open}>
+                Connect it in Bots
               </Link>
-            }
-            meta={away.has(app.slug) ? 'Not connected yet' : 'Connected'}
-            actions={
-              away.has(app.slug) ? (
-                <Button size="sm" variant="secondary" icon="plus" loading={connecting === app.slug} onClick={() => connect({ ...app, description: null })}>
-                  Connect
-                </Button>
-              ) : (
-                <Chip tone="green">Connected</Chip>
-              )
-            }
-          />
-        ))}
-      </List>
-      <ApiErrorNotice error={error} />
-      {dialog}
-    </>
+            ) : (
+              <Chip tone="green">Connected</Chip>
+            )
+          }
+        />
+      ))}
+    </List>
   );
 }
 
@@ -84,19 +76,19 @@ function Overview({ template }: { template: BotTemplate }) {
         </div>
         <Needs template={template} />
       </Card>
-      <Card aria-labelledby="gates">
+      <Card aria-labelledby="decides">
         <div className={styles.sectionHead}>
-          <h2 id="gates" className={styles.sectionTitle}>
-            What it learns
+          <h2 id="decides" className={styles.sectionTitle}>
+            What it decides
           </h2>
-          <p className={styles.sectionAbout}>Each gate is an Ada model of your own: it asks you until it has learned your answers.</p>
+          <p className={styles.sectionAbout}>Each is learned in an Ada model of your own: it asks you until it has learned your answers.</p>
         </div>
         {template.gates.length === 0 ? (
-          <p className={styles.sectionAbout}>It has no gates.</p>
+          <p className={styles.sectionAbout}>It decides nothing on its own.</p>
         ) : (
-          <List label="Its gates">
+          <List label="What it decides">
             {template.gates.map((g) => (
-              <Row key={g} title={<span className={styles.mono}>{g}</span>} />
+              <Row key={g} title={topic(g)} />
             ))}
           </List>
         )}
@@ -181,8 +173,7 @@ function Details({ template }: { template: BotTemplate }) {
             <Fact label="Runs on">{template.model}</Fact>
             <Fact label="Connections">{template.required_apps.map((a) => a.name).join(', ') || 'None'}</Fact>
             <Fact label="Tools">{template.tools.length}</Fact>
-            <Fact label="Gates">{template.gates.length}</Fact>
-            <Fact label="Skills">{Object.keys(template.skills).length}</Fact>
+            <Fact label="Decides">{plural(template.gates.length, 'thing')}</Fact>
           </dl>
           <p className={styles.note}>Added, it is a copy of your org’s own: change it, teach it, run it. This template stays as it is.</p>
         </Card>

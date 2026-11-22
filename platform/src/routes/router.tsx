@@ -9,13 +9,7 @@ import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
 import { AppsPage } from '@/pages/apps/AppsPage';
-import { ApprovalsPage } from '@/pages/bots/ApprovalsPage';
 import { BotsShell } from '@/pages/bots/shell/BotsShell';
-import { SwarmPage } from '@/pages/swarms/SwarmPage';
-import { NewSwarmPage, SwarmsPage } from '@/pages/swarms/SwarmsPage';
-import { GitHubTokenPage } from '@/pages/settings/GitHubTokenPage';
-import { ConnectionPage } from '@/pages/connections/ConnectionPage';
-import { ConnectionsPage } from '@/pages/connections/ConnectionsPage';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
@@ -57,6 +51,24 @@ function Moved({ to }: { to: string }) {
 function MovedWithHash({ to }: { to: string }) {
   const { search, hash } = useLocation();
   return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
+/**
+ * An old page of one crew (a swarm's, then a project's), at the crew's chat in the Bots area with that workspace
+ * open; `?run=` comes along.
+ */
+function CrewChat() {
+  const { name = '' } = useParams();
+  const params = new URLSearchParams(useLocation().search);
+  params.set('crew', name);
+  return <Navigate to={`/bots?${params}`} replace />;
+}
+
+/** An old page of one app's connection, at the rail's CONNECTIONS, the one place connections are. */
+function ConnectionsRail() {
+  const params = new URLSearchParams(useLocation().search);
+  const catalog = params.get('tab') === 'catalog';
+  return <Navigate to={`/bots?rail=connections${catalog ? '&add=1' : ''}`} replace />;
 }
 
 /** A template's old page, at its place in the Marketplace. */
@@ -174,20 +186,20 @@ export const routes: RouteObject[] = [
       { path: 'templates', element: <Moved to="/marketplace/models" /> },
       { path: 'templates/:name', element: <MovedTemplate /> },
       // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
-      // The Bots area is the Glyphh Bot app's interface (2026-11-22): one shell that fills the screen, a bot or a
-      // project's crew picked in its rail.
+      // The Bots area is the Glyphh Bot app's interface (2026-11-22): one shell that fills the screen, a bot or the
+      // crew picked in its rail. Everything about bots is in it: what waits on a person (the top bar's "Needs you"),
+      // the crew (its card in the rail) and connections (the rail's tab). Their old pages land there.
       { path: 'bots', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots' }], bare: true } },
       { path: 'bots/:name', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }], bare: true } },
-      { path: 'approvals', element: <ApprovalsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Approvals' }] } },
-      { path: 'swarms', element: <SwarmsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Swarms' }] } },
-      { path: 'swarms/new', element: <NewSwarmPage />, handle: { crumbs: [{ label: 'Swarms', to: '/swarms' }, { label: 'New swarm' }] } },
-      { path: 'swarms/:name', element: <SwarmPage />, handle: { crumbs: [{ label: 'Swarms', to: '/swarms' }, { label: ':name' }] } },
-      { path: 'connections', element: <ConnectionsPage />, handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections' }] } },
-      {
-        path: 'connections/:name',
-        element: <ConnectionPage />,
-        handle: { crumbs: [{ label: 'Bots' }, { label: 'Connections', to: '/connections' }, { label: ':name' }] },
-      },
+      { path: 'approvals', element: <Navigate to="/bots" replace /> },
+      { path: 'projects', element: <Navigate to="/bots" replace /> },
+      { path: 'projects/new', element: <Navigate to="/bots" replace /> },
+      { path: 'projects/:name', element: <CrewChat /> },
+      { path: 'swarms', element: <Navigate to="/bots" replace /> },
+      { path: 'swarms/new', element: <Navigate to="/bots" replace /> },
+      { path: 'swarms/:name', element: <CrewChat /> },
+      { path: 'connections', element: <ConnectionsRail /> },
+      { path: 'connections/:name', element: <ConnectionsRail /> },
       {
         path: 'usage',
         element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
@@ -213,7 +225,9 @@ export const routes: RouteObject[] = [
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
       { path: 'claude-key', element: <ClaudeKeyPage />, handle: crumbs('Settings', 'Claude key') },
-      { path: 'github-token', element: <GitHubTokenPage />, handle: crumbs('Settings', 'GitHub token') },
+      // The org's pasted GitHub token is gone (2026-11-22): GitHub is connected from the Bots area's workspace pill,
+      // through the Glyphh GitHub App.
+      { path: 'github-token', element: <Navigate to="/bots" replace /> },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
       // Ada's versions (2026-11-21, was the Ada page in the main sidebar).

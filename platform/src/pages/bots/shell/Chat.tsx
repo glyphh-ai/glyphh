@@ -1,5 +1,5 @@
 // The chat, the centre of the Bots area, as the Glyphh Bot app's (glyphh-bot src/renderer/src/Chat.tsx): one bot's
-// chat, or a project's crew. A run is a conversation: what the person asked on the right, the bot's turn on the left
+// chat, or the crew's. A run is a conversation: what the person asked on the right, the bot's turn on the left
 // with its cat, a line that folds its steps, what Ada decided as rows to keep or correct, its words as markdown, and
 // what it asks, answered in place. Past runs are the chat's history. With nothing said yet: the cat or cats over the
 // rings, the headline, ideas and the composer.
@@ -17,41 +17,52 @@ import {
   type Answer,
   type Bot,
   type BotRun,
-  type Every,
   type PermissionMode,
 } from '@/api/bots';
+import { installUrl } from '@/api/github';
 import {
-  swarmGoing,
-  useAnswerSwarmRun,
-  useCancelSwarmRun,
-  useRunSwarm,
-  useSwarmRun,
-  useSwarmRuns,
-  useUpdateSwarm,
+  runGoing,
+  useAnswerProjectRun,
+  useCancelProjectRun,
+  useProjectRun,
+  useProjectRuns,
+  useRunProject,
+  type Effort,
+  type ProjectRun,
   type Review,
-  type Swarm,
-  type SwarmRun,
-  type SwarmTurn,
-} from '@/api/swarms';
+  type Turn,
+} from '@/api/projects';
+import { noClaudeStep } from '@/bots/decisions/RunData';
 import { ago, dollars, plural, stamp } from '@/lib/format';
-import { EVERY, scheduleOf } from '../schedule';
-import { botTag, BotCat, RUN_WORDS, runSummary, shortModel, useShell } from './bits';
+import { BotCat, effortOptions, EFFORTS, RUN_WORDS, shortModel } from './bits';
 import { Composer, SelectChip } from './Composer';
-import { RunDecisions } from './Decisions';
+import type { Crew } from './crew';
 import { Icon, ICON, Reactor } from './icons';
-import { Markdown } from './Markdown';
+import { useNarration } from './narration';
+import { Rich, TurnBody } from './turn';
 
-/** Which tool steps wait for the person, as the pill says it. */
+/** When a bot must ask before it acts, as the pill and its settings say it. */
 export const MODES: ReadonlyArray<{ value: PermissionMode; label: string; hint: string }> = [
-  { value: 'ask', label: 'Ask first', hint: 'Every tool step waits for your yes, unless its connection allows that tool.' },
-  { value: 'connection', label: 'Follow connections', hint: 'Only the tools a connection says to ask about wait for you.' },
-  { value: 'auto', label: 'Run on its own', hint: 'Allowed tools run without asking. Blocked tools still never run.' },
+  { value: 'ask', label: 'Ask me first', hint: 'It waits for your yes before every action.' },
+  { value: 'connection', label: 'Follow each app’s settings', hint: 'It asks only where an app is set to ask.' },
+  { value: 'auto', label: 'Act on its own', hint: 'It does not ask. What you blocked still never happens.' },
 ];
 
-const REVIEWS: ReadonlyArray<{ value: Review; label: string }> = [
-  { value: 'each_turn', label: 'Ask me each turn' },
-  { value: 'auto', label: 'Merge on its own' },
+/** The crew's permission mode: when its pull requests wait for the person. */
+const CREW_MODES: ReadonlyArray<{ value: Review; label: string }> = [
+  { value: 'each_turn', label: 'Ask me at each pull request' },
+  { value: 'end', label: 'One review at the end' },
 ];
+
+/** Why a run ended, in words; nothing while it has not. */
+const endedWords = (run: Pick<ProjectRun, 'ended' | 'max_turns'>) =>
+  ({
+    '': '',
+    done: "The crew said it's done",
+    orchestrator: "The orchestrator said it's done",
+    max_turns: `Stopped at the safety cap of ${run.max_turns} turns`,
+    max_spend: 'Stopped at the spend cap',
+  })[run.ended];
 
 /** The chat scrolls to the newest as it grows, unless the person scrolled up to read; `focus` is a message to show. */
 function useFollow(dep: unknown, focus: string | null) {
@@ -71,30 +82,6 @@ function useFollow(dep: unknown, focus: string | null) {
     if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
   return { scroller, onScroll };
-}
-
-/** The line that folds a turn's steps away: "Ran 4 steps, asked Ada 3 times". */
-function Steps({ summary, lines, live }: { summary: string; lines: string[]; live?: boolean }) {
-  const [open, setOpen] = useState(false);
-  if (lines.length === 0) return null;
-  return (
-    <div className={`tgroup ${open ? 'open' : ''}`}>
-      <button type="button" className="tsum" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon d={open ? ICON.collapse : ICON.expand} size={12} />
-        {live ? <span className="trun">{lines.at(-1)}</span> : <span>{summary}</span>}
-      </button>
-      {open && (
-        <div className="tools" aria-label="Steps">
-          {lines.map((line, i) => (
-            <div key={i} className={`tool ${live && i === lines.length - 1 ? 'run' : 'ok'}`} title={line}>
-              <span className="ti">•</span>
-              <span className="td">{line}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /** What a run asks, as the bot asking: one option a button, or for many items each item's own; answered here. */
@@ -203,14 +190,10 @@ function BotTurn({ run: listed, bot, place }: { run: BotRun; bot: Bot; place: (i
               </span>
             )}
           </div>
-          <Steps summary={runSummary(run, bot.spec)} lines={run.log} live={going} />
-          <RunDecisions run={run} bot={bot} />
-          {run.output && <Markdown text={run.output} />}
-          {run.status === 'needs_input' && <Ask run={run} bot={bot} />}
-          {run.error && <div className="err">{run.error}</div>}
+          <TurnBody run={run} bot={bot} going={going} ask={<Ask run={run} bot={bot} />} />
           {!going && (
             <small className="rmeta" title={stamp(run.created_at)}>
-              {ago(run.created_at)} · {dollars(run.cost_micros)}
+              {ago(run.created_at)} · {noClaudeStep(run, bot.spec) ? 'No Claude step ran' : `${plural(run.input_tokens + run.output_tokens, 'token')} · ${dollars(run.cost_micros)}`}
               {where && ` · on ${where}`}
             </small>
           )}
@@ -247,9 +230,8 @@ const usePlaceName = () => {
   return (id: string | null | undefined) => (id ? (places.data?.find((p) => p.id === id)?.name ?? 'your machine') : null);
 };
 
-/** One bot's chat: its runs as the conversation, the composer, and its pills (Ada, runs on, model, permission, schedule). */
+/** One bot's chat: its runs as the conversation, the composer, and its three pills (model, effort, permission mode). */
 export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string | null; fresh: boolean; onSent: () => void }) {
-  const shell = useShell();
   const runs = useBotRuns(bot.slug);
   const start = useRunBot(bot.slug);
   const update = useUpdateBot(bot.slug);
@@ -263,7 +245,7 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
   const { scroller, onScroll } = useFollow(runs.data, focus);
   const home = bot.runs_on ? places.data?.find((p) => p.id === bot.runs_on) : undefined;
   const mode = bot.permission_mode ?? 'ask';
-  const schedule = scheduleOf(bot.schedule);
+  const effort = bot.effort ?? models.data?.default_effort ?? 'medium';
 
   const send = (text: string) => start.mutate(text, { onSuccess: onSent });
   const ideas = [...new Set([bot.schedule?.input, 'Do today’s run', 'Run on what is new', 'Show what you would do, and change nothing'].filter((t): t is string => Boolean(t)))].slice(0, 3);
@@ -281,31 +263,12 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
         start.error ? (
           <span className="err">{start.error.message}</span>
         ) : home && !home.linked ? (
-          `${home.name} is offline: start it, or pick Glyphh cloud, to run ${bot.name}.`
+          `${home.name} is offline: start it, or change where ${bot.name} runs in its settings.`
         ) : update.error ? (
           <span className="err">{update.error.message}</span>
         ) : null
       }
     >
-      <button
-        type="button"
-        className={bot.gate_models.length ? 'ctl on hot' : 'ctl'}
-        title="What its gates learned in Ada"
-        onClick={() => shell.openPanel('gates')}
-      >
-        <i className="led" /> Ada · {bot.gate_models.length ? plural(bot.gate_models.length, 'gate') : 'no gates'}
-      </button>
-      <SelectChip
-        title="Runs on"
-        busy={update.isPending}
-        value={bot.runs_on ?? ''}
-        options={(places.data ?? [{ id: null, name: 'Glyphh cloud', mode: 'cloud' as const, linked: true }]).map((p) => ({
-          value: p.id ?? '',
-          label: p.linked ? p.name : `${p.name} (offline)`,
-          disabled: !p.linked && p.id !== (bot.runs_on ?? null),
-        }))}
-        onPick={(id) => update.mutate({ runs_on: id || null })}
-      />
       <SelectChip
         title="Model"
         busy={update.isPending}
@@ -313,6 +276,7 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
         options={models.data?.models.length ? models.data.models.map((m) => ({ value: m.id, label: shortModel(m.name) })) : [{ value: bot.model, label: shortModel(bot.model) || 'Model' }]}
         onPick={(model) => update.mutate({ model })}
       />
+      <SelectChip title="Effort" busy={update.isPending} value={effort} options={effortOptions(effort)} onPick={(next) => update.mutate({ effort: next })} />
       <SelectChip
         title="Permission mode"
         busy={update.isPending}
@@ -320,13 +284,6 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
         value={mode}
         options={MODES}
         onPick={(permission_mode) => update.mutate({ permission_mode })}
-      />
-      <SelectChip
-        title="Schedule"
-        busy={update.isPending}
-        value={schedule.every}
-        options={EVERY.map((e) => ({ value: e.value, label: e.value === 'off' ? 'No schedule' : e.label }))}
-        onPick={(every: Every) => update.mutate({ schedule: { ...schedule, every } })}
       />
     </Composer>
   );
@@ -336,7 +293,6 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
       <div className="room-head">
         <div className="solo">
           <b>{bot.name}</b>
-          <span>{botTag(bot)}</span>
           <small>{bot.summary}</small>
         </div>
       </div>
@@ -351,7 +307,7 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
             </div>
           }
           headline={`What should ${bot.name} do?`}
-          sub={bot.summary || 'Say it or type it. It decides with its gates in Ada, and asks you when it is not sure.'}
+          sub={bot.summary || 'Say it or type it. It asks you when it is not sure, and learns from your answers.'}
           ideas={ideas}
           onIdea={send}
         >
@@ -373,7 +329,8 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
 
 // ------------------------------------------------------------------ a crew
 
-const TURN_WORDS: Record<SwarmTurn['status'], string> = {
+const TURN_WORDS: Record<Turn['status'], string> = {
+  picking: 'choosing',
   running: 'working',
   open: 'open',
   unchanged: 'no changes',
@@ -387,9 +344,9 @@ const TURN_WORDS: Record<SwarmTurn['status'], string> = {
 };
 
 /** A turn's pull request: its number, title and files; merged or rejected here while it waits. */
-function PrCard({ turn, run }: { turn: SwarmTurn; run: SwarmRun }) {
+function PrCard({ turn, run }: { turn: Turn; run: ProjectRun }) {
   const [open, setOpen] = useState(false);
-  const answer = useAnswerSwarmRun();
+  const answer = useAnswerProjectRun();
   const added = turn.files.reduce((n, f) => n + (f.added ?? 0), 0);
   const removed = turn.files.reduce((n, f) => n + (f.removed ?? 0), 0);
   const waits = turn.status === 'open' && run.status === 'needs_input';
@@ -441,66 +398,114 @@ function PrCard({ turn, run }: { turn: SwarmTurn; run: SwarmRun }) {
   );
 }
 
-function CrewRun({ run: listed, bots }: { run: SwarmRun; bots: Bot[] }) {
-  const live = useSwarmRun(swarmGoing(listed.status) ? listed.id : null);
+/** With review at the end: the run's one pull request of it all, merged or rejected here while the run waits on it. */
+function WholePr({ run }: { run: ProjectRun }) {
+  const answer = useAnswerProjectRun();
+  return (
+    <section className="prcard open" aria-label="The run’s pull request">
+      <div className="prrow">
+        <span className="prnum">PR{run.number === null ? '' : ` #${run.number}`}</span>
+        <span className="prtitle">Merge the whole run?</span>
+        <span className="row">
+          <button type="button" className="btn primary sm" disabled={answer.isPending} onClick={() => answer.mutate({ id: run.id, answer: 'merge' })}>
+            Merge
+          </button>
+          <button type="button" className="btn danger sm" disabled={answer.isPending} onClick={() => answer.mutate({ id: run.id, answer: 'reject' })}>
+            Reject
+          </button>
+        </span>
+      </div>
+      <div className="prbody">
+        {run.work_branch && <small className="dim">{run.work_branch}</small>}
+        {run.pr_url && (
+          <a className="link" href={run.pr_url} target="_blank" rel="noreferrer">
+            {run.pr_url}
+          </a>
+        )}
+      </div>
+      {answer.error && <div className="err pad">{answer.error.message}</div>}
+    </section>
+  );
+}
+
+/** The orchestrator's own closing turn: no bot, it says the project is done. */
+const isClosing = (t: Turn) => t.bot_slug === '' && t.status !== 'picking';
+
+function CrewRun({ run: listed, bots }: { run: ProjectRun; bots: Bot[] }) {
+  const live = useProjectRun(runGoing(listed.status) ? listed.id : null);
   const run = live.data?.id === listed.id ? live.data : listed;
+  const whole = run.status === 'needs_input' && run.review === 'end' && run.pr_url !== null && !run.turns.some((t) => t.status === 'open');
+  const ended = run.status === 'done' ? endedWords(run) : '';
   return (
     <div id={`msg-${run.id}`} className="turnpair">
       <div className="msg me">
-        <div className="bubble">{run.task}</div>
+        <div className="bubble">{run.task || '(from the instructions)'}</div>
       </div>
       {run.turns.map((t) => {
+        if (t.status === 'picking')
+          return (
+            <div key={t.n} className="note" role="status">
+              Choosing who goes next…
+            </div>
+          );
         const bot = bots.find((b) => b.slug === t.bot_slug);
         const going = t.status === 'running';
+        const closing = isClosing(t);
         return (
-          <div key={t.n} id={`msg-${run.id}-${t.n}`} className={`msg bot-msg ${going ? 'live' : ''}`} role="article" aria-label={`${t.bot_name}: turn ${t.n}`}>
-            <div className="face">
-              <BotCat look={bot?.look} mascot={bot?.mascot} size={42} busy={going} />
-            </div>
-            <div className="body">
-              <div className="who">
-                {t.bot_name}
-                <span className="turn">turn {t.n}</span>
-                {going && (
-                  <span className="typing" aria-hidden>
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                )}
+          <div key={t.n} className="turnpair">
+            {t.picked_by === 'orchestrator' && !closing && (
+              <div className="note">
+                Orchestrator chose {t.bot_name}
+                {t.why && ` · ${t.why}`}
               </div>
-              {t.said && <Markdown text={t.said} />}
-              {t.number !== null && <PrCard turn={t} run={run} />}
-              {t.error && <div className="err">{t.error}</div>}
+            )}
+            <div id={`msg-${run.id}-${t.n}`} className={`msg bot-msg ${going ? 'live' : ''}`} role="article" aria-label={`${t.bot_name}: turn ${t.n}`}>
+              <div className="face">{closing ? <Icon d={ICON.bots} size={20} /> : <BotCat look={bot?.look} mascot={bot?.mascot} size={42} busy={going} />}</div>
+              <div className="body">
+                <div className="who">
+                  {t.bot_name}
+                  <span className="turn">turn {t.n}</span>
+                  {going && (
+                    <span className="typing" aria-hidden>
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                  )}
+                </div>
+                {t.said && <Rich text={t.said} />}
+                {t.number !== null ? <PrCard turn={t} run={run} /> : t.status === 'unchanged' && !closing && <small className="rmeta">{t.said ? 'no changes' : 'passed · no changes'}</small>}
+                {t.error && <div className="err">{t.error}</div>}
+              </div>
             </div>
           </div>
         );
       })}
+      {whole && <WholePr run={run} />}
       {run.error && <div className="err">{run.error}</div>}
+      {ended && <div className="note">{ended}</div>}
     </div>
   );
 }
 
 /** Who is in the crew, who is up, and how each turn's pull request went (the strip at the top). */
-function Stage({ swarm, bots, run }: { swarm: Swarm; bots: Bot[]; run: SwarmRun | undefined }) {
+function Stage({ members, run }: { members: Bot[]; run: ProjectRun | undefined }) {
   const up = run?.turns.find((t) => t.status === 'running')?.bot_slug;
+  const turns = run?.turns.filter((t) => t.status !== 'picking') ?? [];
   return (
     <div className="stage">
       <div className="queue" aria-label="The crew">
-        {swarm.members.map((m) => {
-          const bot = bots.find((b) => b.slug === m.slug);
-          return (
-            <div key={m.id} className={`seat ${up === m.slug ? 'up thinking' : ''}`}>
-              <BotCat look={bot?.look} mascot={bot?.mascot} size={26} busy={up === m.slug} />
-              <span>{m.name}</span>
-            </div>
-          );
-        })}
-        {run && swarmGoing(run.status) && <span className="stage-info">Turn {run.turns.length}</span>}
+        {members.map((b) => (
+          <div key={b.id} className={`seat ${up === b.slug ? 'up thinking' : ''}`}>
+            <BotCat look={b.look} mascot={b.mascot} size={26} busy={up === b.slug} />
+            <span>{b.name}</span>
+          </div>
+        ))}
+        {run && runGoing(run.status) && <span className="stage-info">Turn {run.turns.length}</span>}
       </div>
-      {run && run.turns.length > 0 && (
+      {run && turns.length > 0 && (
         <div className="turnstrip" aria-label="Turns">
-          {run.turns.map((t) => (
+          {turns.map((t) => (
             <button
               key={t.n}
               type="button"
@@ -508,7 +513,7 @@ function Stage({ swarm, bots, run }: { swarm: Swarm; bots: Bot[]; run: SwarmRun 
               title={t.title || undefined}
               onClick={() => document.getElementById(`msg-${run.id}-${t.n}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })}
             >
-              <b>{t.n}</b> {t.bot_name} <small>{t.number !== null ? `#${t.number} ${TURN_WORDS[t.status]}` : TURN_WORDS[t.status]}</small>
+              <b>{t.n}</b> {t.bot_name} <small>{t.number !== null ? `#${t.number} ${TURN_WORDS[t.status]}` : isClosing(t) ? 'done' : TURN_WORDS[t.status]}</small>
             </button>
           ))}
         </div>
@@ -519,71 +524,103 @@ function Stage({ swarm, bots, run }: { swarm: Swarm; bots: Bot[]; run: SwarmRun 
 
 const CREW_IDEAS = ['Build a one-page site for a product launch', 'Make a tiny browser game with a high score', 'Plan and write a study guide for my next test'];
 
-/** A project's chat: its crew taking turns on one repo, each turn a pull request. */
-export function CrewChat({ swarm, bots, focus, fresh, onSent }: { swarm: Swarm; bots: Bot[]; focus: string | null; fresh: boolean; onSent: () => void }) {
-  const runs = useSwarmRuns(swarm.slug);
-  const start = useRunSwarm(swarm.slug);
-  const update = useUpdateSwarm(swarm.slug);
-  const cancel = useCancelSwarmRun();
-  const places = useBotPlaces();
+const OWN = '';
+
+/**
+ * The crew's chat: the ticked bots taking turns in the workspace, each turn a pull request. Under the composer the
+ * same three pills as a bot's: the model and effort for the next task (each bot's own unless chosen), and when its
+ * pull requests wait for the person. Everything else about the crew is in Crew settings.
+ */
+export function CrewChat({ crew, bots, focus, fresh, onSent }: { crew: Crew; bots: Bot[]; focus: string | null; fresh: boolean; onSent: () => void }) {
+  const slug = crew.project?.slug;
+  const runs = useProjectRuns(slug);
+  const start = useRunProject(slug);
+  const cancel = useCancelProjectRun();
+  const models = useBotModels();
   const thread = [...(runs.data ?? [])].slice(0, 20).reverse();
-  const hero = fresh || (runs.data !== undefined && thread.length === 0);
+  const hero = fresh || !slug || (runs.data !== undefined && thread.length === 0);
   const listed = thread.at(-1);
   // The strip on top follows the run as its turn does: the run itself, read again while a turn is out.
-  const live = useSwarmRun(listed && swarmGoing(listed.status) ? listed.id : null);
+  const live = useProjectRun(listed && runGoing(listed.status) ? listed.id : null);
   const latest = live.data && live.data.id === listed?.id ? live.data : listed;
-  const active = thread.findLast((r) => swarmGoing(r.status));
+  const active = thread.findLast((r) => runGoing(r.status));
   const { scroller, onScroll } = useFollow(runs.data, focus);
-  const members = swarm.members.map((m) => ({ m, bot: bots.find((b) => b.slug === m.slug) }));
-  const machines = (places.data ?? []).filter((p) => p.id !== null);
+  const members = bots.filter((b) => crew.members.includes(b.id));
+  const failed = start.error ?? crew.error;
+  const install = installUrl(failed);
+  useNarration(crew.settings.narrate, latest);
 
-  const send = (text: string) => start.mutate(text, { onSuccess: onSent });
+  const send = (task: string) => {
+    if (slug) start.mutate({ task, model: crew.model, effort: crew.effort }, { onSuccess: onSent });
+  };
 
   const composer = (
     <Composer
       hero={hero}
-      focusKey={swarm.slug}
+      focusKey="crew"
       placeholder="Give the crew a task…"
       busy={Boolean(active)}
       sending={start.isPending}
+      off={!slug || members.length === 0}
       onSend={send}
       onStop={active ? () => cancel.mutate(active.id) : undefined}
-      note={(start.error ?? update.error) ? <span className="err">{(start.error ?? update.error)!.message}</span> : null}
+      allowEmpty
+      note={
+        failed ? (
+          <>
+            <span className="err">{failed.message}</span>
+            {install && (
+              <>
+                {' '}
+                <a href={install} target="_blank" rel="noreferrer">
+                  Connect GitHub
+                </a>
+              </>
+            )}
+          </>
+        ) : !crew.ready ? null : !slug ? (
+          'Choose a workspace in the top bar first: the repository and branch the crew works in.'
+        ) : members.length === 0 ? (
+          'Tick a cat on the crew card to put a bot in the crew.'
+        ) : null
+      }
     >
-      <span className="ctl on hot">
-        <i className="led" /> Project
-      </span>
       <SelectChip
-        title="Runs on"
-        busy={update.isPending}
-        value={swarm.runs_on}
-        options={machines.length ? machines.map((p) => ({ value: p.id!, label: p.linked ? p.name : `${p.name} (offline)`, disabled: !p.linked && p.id !== swarm.runs_on })) : [{ value: swarm.runs_on, label: 'Your machine' }]}
-        onPick={(runs_on) => update.mutate({ runs_on })}
+        title="Model"
+        value={crew.model ?? OWN}
+        options={[{ value: OWN, label: 'Each bot’s model' }, ...(models.data?.models ?? []).map((m) => ({ value: m.id, label: shortModel(m.name) }))]}
+        onPick={(model) => crew.setRun({ model: model || null })}
       />
-      <SelectChip title="Pull requests" busy={update.isPending} value={swarm.review} options={REVIEWS} onPick={(review) => update.mutate({ review })} />
+      <SelectChip
+        title="Effort"
+        value={crew.effort ?? OWN}
+        options={[{ value: OWN, label: 'Each bot’s effort' }, ...EFFORTS]}
+        onPick={(effort) => crew.setRun({ effort: (effort || null) as Effort | null })}
+      />
+      <SelectChip title="Permission mode" wide busy={crew.pending} value={crew.settings.review} options={CREW_MODES} onPick={(review) => crew.save({ settings: { review } })} />
     </Composer>
   );
 
   return (
-    <section className="center" aria-label={`${swarm.name}’s chat`}>
+    <section className="center" aria-label="The crew’s chat">
       <div className="room-head">
-        <Stage swarm={swarm} bots={bots} run={hero ? undefined : latest} />
+        <Stage members={members} run={hero ? undefined : latest} />
       </div>
       {runs.error && <div className="err pad">{runs.error.message}</div>}
       {hero ? (
         <Hero
           cats={
             <div className="hero-crew">
-              {members.map(({ m, bot }) => (
-                <span key={m.id}>
-                  <BotCat look={bot?.look} mascot={bot?.mascot} size={104} mode="full" />
+              {members.map((b) => (
+                <span key={b.id}>
+                  <BotCat look={b.look} mascot={b.mascot} size={104} mode="full" />
                 </span>
               ))}
             </div>
           }
           headline="What are we making?"
-          sub="Say it or type it. The crew takes turns, each turn a pull request."
-          ideas={CREW_IDEAS}
+          sub="Say it or type it. The crew takes turns, and each turn is a pull request."
+          ideas={slug ? CREW_IDEAS : []}
           onIdea={send}
         >
           {composer}

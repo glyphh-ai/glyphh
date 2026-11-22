@@ -1,7 +1,6 @@
 import { Outlet, useMatches, useParams } from 'react-router';
 import { StaffNav } from '@/admin/StaffGate';
 import { useAdaCloud } from '@/api/ada';
-import { useApprovals } from '@/api/bots';
 import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
@@ -98,24 +97,16 @@ function AdaNav() {
   );
 }
 
-/** Bots and the connections they use, Ada Cloud on or off. */
+/**
+ * Bots, Ada Cloud on or off: one entry. What waits on a person, the crew and the connections are all inside the Bots
+ * area itself, so none has an entry of its own here.
+ */
 function BotsNav() {
   const ada = useAdaCloud();
-  const waiting = useApprovals().data?.length ?? 0;
   return (
     <NavGroup label="Bots">
       <NavItem to="/bots" icon="user">
         Bots
-      </NavItem>
-      {/* The runs waiting on someone's yes, counted (2026-11-21). */}
-      <NavItem to="/approvals" icon="check" badge={waiting}>
-        Approvals
-      </NavItem>
-      <NavItem to="/swarms" icon="team">
-        Swarms
-      </NavItem>
-      <NavItem to="/connections" icon="external">
-        Connections
       </NavItem>
       {/* With Ada Cloud on the Marketplace sits in Ada's group; off, it holds bots only. */}
       {ada === false && (
@@ -179,9 +170,6 @@ export function SettingsLayout() {
             )}
             <NavItem to="/settings/claude-key" icon="key">
               Claude key
-            </NavItem>
-            <NavItem to="/settings/github-token" icon="github">
-              GitHub token
             </NavItem>
           </NavGroup>
           <NavGroup label="Personal">

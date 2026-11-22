@@ -25,9 +25,6 @@ describe('with Ada Cloud on', () => {
       'Apps',
       'Runtime keys',
       'Bots',
-      'Approvals',
-      'Swarms',
-      'Connections',
     ]);
     const ada = within(sidebar()).getByRole('group', { name: 'Ada' });
     expect(within(ada).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Marketplace', 'API Keys', 'Usage']);

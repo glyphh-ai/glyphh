@@ -17,6 +17,8 @@ export type Connection = {
   account_id: string;
   label: string | null;
   permissions: Record<string, Permission>;
+  /** How the connection stands, once the server says: `ok` (it works), `sign_in` (the person must sign in again) or `failed`. Not sent yet. */
+  status?: 'ok' | 'sign_in' | 'failed';
   created_at: string;
 };
 export type ConnectorApp = { slug: string; name: string; description: string | null; icon: string | null };
@@ -44,6 +46,8 @@ export type Bot = {
   instructions: string;
   model: string;
   permission_mode?: PermissionMode;
+  /** How hard it thinks: low, medium (the default) or high. */
+  effort?: Effort;
   voice?: string;
   spec: BotSpec;
   skills: Record<string, string>;
@@ -58,16 +62,27 @@ export type Bot = {
   next_run?: string;
   /** The org's rrotor it runs on; none for Glyphh cloud. */
   runs_on?: string | null;
+  /** The folders on that rrotor it may read or change; none on Glyphh cloud. */
+  folders?: BotFolder[];
   created_at: string;
   updated_at: string;
   last_run: { id: string; status: RunStatus; created_at: string } | null;
 };
+/** A folder on the bot's rrotor: `read` to read it only, `write` to read and change it. */
+export type BotFolder = { path: string; access: 'read' | 'write' };
 /** How often a bot runs on its own: off, every hour, every day, weekdays, one day each week or one day each month. */
 export type Every = 'off' | 'hour' | 'day' | 'weekdays' | 'week' | 'month';
 /** A bot's schedule as the person chooses it, never cron: `at` is HH:MM in `timezone`; `weekday` 0 is Monday. */
 export type Schedule = { every: Every; at: string; weekday: number; day: number; timezone: string; input: string };
 /** Where a bot can run: Glyphh cloud (`id` null) or one of the org's rrotors, linked to Glyphh right now or not. */
-export type Place = { id: string | null; name: string; mode: 'cloud' | 'local' | 'self'; linked: boolean };
+export type Place = {
+  id: string | null;
+  name: string;
+  mode: 'cloud' | 'local' | 'self';
+  linked: boolean;
+  /** A rrotor's own address, which the browser asks for that machine's folders (api/rrotorFolders.ts). */
+  url?: string | null;
+};
 export type BotModel = {
   id: string;
   name: string;
@@ -77,9 +92,16 @@ export type BotModel = {
   own_key_output_cents_per_mtok: number;
   default: boolean;
 };
-export type BotModels = { models: BotModel[]; markup_pct: number };
+/** How hard a bot thinks before it answers. */
+export type Effort = string;
+export type BotModels = { models: BotModel[]; markup_pct: number; /** The effort levels every bot model takes, and the one a new bot starts on. */ efforts?: Effort[]; default_effort?: Effort };
 export type BatchItem = { n: number; label: string; [k: string]: unknown };
 export type Question = { question: string; options: string[]; batch: BatchItem[] | null; answer_with: string | null };
+export type RunLink = { url: string; title: string; kind: string };
+/** An MCP App (`ui://…`) a step's tool result carries: its page (`html`, or read from the server by `uri`) and what it shows. */
+export type RunApp = { step: string; uri: string; title: string; html: string | null; input: unknown; result: unknown };
+/** An MCP App's page as `GET /v1/mcp-apps/resource` answers it (the server's own panels). */
+export type McpResource = { uri: string; mimeType: string; text: string; _meta?: { ui?: { prefersBorder?: boolean } } };
 export type BotRun = {
   id: string;
   bot_slug: string;
@@ -94,11 +116,19 @@ export type BotRun = {
   output_tokens: number;
   cost_micros: number;
   own_key: boolean;
+  /** What happened, in a plain sentence or two (the server's words); empty while it runs. */
+  summary?: string;
+  /** When the task did not fit the bot's loop: what the bot does and what to ask it. */
+  hint?: string;
+  /** Pages the run made or touched (a pull request, a Slack message, a doc, an app). */
+  links?: RunLink[];
+  /** MCP App UI resources its steps' tool results carry, shown inline in the turn. */
+  apps?: RunApp[];
   /** The org's rrotor it ran on; none for Glyphh cloud. */
   runs_on?: string | null;
-  /** `swarm`: in the approvals queue, a swarm's pull request waiting for merge or reject (`swarm_slug` its swarm). */
-  kind?: 'bot' | 'swarm';
-  swarm_slug?: string | null;
+  /** `project`: in the approvals queue, a project's pull request waiting for merge or reject (`project_slug` its project). */
+  kind?: 'bot' | 'project';
+  project_slug?: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -148,12 +178,14 @@ export type NewBot = {
   instructions: string;
   model?: string;
   permission_mode?: PermissionMode;
+  effort?: Effort;
   voice?: string;
   spec?: BotSpec;
   skills?: Record<string, string>;
   connections?: BotScope[];
   schedule?: Schedule;
   runs_on?: string | null;
+  folders?: BotFolder[];
 };
 export type BotChange = Partial<Omit<NewBot, 'connections'>>;
 export type BotVoice = { id: string; name: string; accent: string; gender: string; default: boolean };
@@ -239,6 +271,17 @@ export const useBotRun = (id: string | null, every = 2000) =>
 /** Every run of the org waiting on the person (its approvals queue), oldest first; asked for again every 15 seconds. */
 export const useApprovals = (every = 15_000) =>
   useQuery({ queryKey: botKeys.approvals, queryFn: async () => (await api.get<{ runs: BotRun[] }>('/bot-approvals')).runs, refetchInterval: every });
+
+/** An MCP App's page, for a `ui://` resource of the server's own; a page never changes at its address, so it is kept. */
+export const useMcpResource = (uri: string | null) =>
+  useQuery({
+    queryKey: ['mcp-apps', uri ?? ''] as const,
+    enabled: uri !== null,
+    queryFn: () => api.get<McpResource>(`/mcp-apps/resource?uri=${encodeURIComponent(uri!)}`),
+    staleTime: Infinity,
+  });
+/** A connector tool called for an MCP App in the page (its host bridge's `tools/call`), as the person signed in. */
+export const callMcpTool = (name: string, args: unknown) => api.post<Record<string, unknown>>('/mcp-apps/tools/call', { name, arguments: args ?? {} });
 
 export const useBotKey = () => useQuery({ queryKey: botKeys.key, queryFn: () => api.get<BotKey>('/bot-key') });
 

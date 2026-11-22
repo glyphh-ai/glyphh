@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useBotGates, useBotRuns, useWrongRun, type Bot, type BotRun } from '@/api/bots';
+import { useBotGates, useWrongRun, type Bot, type BotRun } from '@/api/bots';
 import { ago, stamp } from '@/lib/format';
 import { byWords, decisionsOf, outcomesOf } from '../ada';
 
 /**
- * Ada's decisions as rows a person reads and trains: what was decided on, the outcome, who decided (Ada with how sure
- * she was, or you), and Right or Wrong. Wrong says what it should have been, and the gate learns it in Ada
- * (`POST /v1/bot-runs/{id}/wrong`). Right keeps the row as it is: the server has nothing to be told for it.
+ * A run's decisions as its own data has them, for a turn whose decisions the server has not copied yet (the chat
+ * shows the server's, src/bots/decisions/TurnDecisions, once it has): what was decided on, the outcome, who decided,
+ * and Right or Wrong. Wrong says what it should have been, and the gate learns it in Ada
+ * (`POST /v1/bot-runs/{id}/wrong`). Right keeps the row as it is here.
  */
 export type Row = { run: BotRun; gate: string; item?: number; label: string; outcome: string; by: string; p?: number | null; /** A gate over many items whose items the run did not keep: its count, not one decision to correct. */ sum?: string };
 
@@ -102,35 +103,6 @@ export function RunDecisions({ run, bot }: { run: BotRun; bot: Bot }) {
       </div>
       {rows.map((r) => (
         <DecisionRow key={key(r)} row={r} bot={bot} />
-      ))}
-    </div>
-  );
-}
-
-/** The Decisions panel: every decision of the bot's runs, newest first, each trainable in place. */
-export function DecisionsPanel({ bot }: { bot: Bot }) {
-  const runs = useBotRuns(bot.slug);
-  const rows = (runs.data ?? []).flatMap((r) => rowsOf(r, bot));
-  if (runs.isPending) return <p className="dim pad">Reading its decisions…</p>;
-  if (runs.error) return <p className="err">{runs.error.message}</p>;
-  if (rows.length === 0)
-    return (
-      <div className="empty">
-        <b>No decisions yet</b>
-        <p>Give {bot.name} a task. Each thing its gates decide in Ada shows here, to keep or to correct.</p>
-      </div>
-    );
-  return (
-    <div className="dtable wide" role="table" aria-label="Every decision">
-      <div className="drow dcols" role="row">
-        <span className="dwhen">When</span>
-        <span className="dlabel">Item</span>
-        <span className="dout">Outcome</span>
-        <span className="dby">Decided by</span>
-        <span className="dact" />
-      </div>
-      {rows.map((r) => (
-        <DecisionRow key={key(r)} row={r} bot={bot} when />
       ))}
     </div>
   );

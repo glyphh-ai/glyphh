@@ -1,81 +1,91 @@
 // The left rail, as the Glyphh Bot app's (glyphh-bot src/renderer/src/Left.tsx): BOTS | CONNECTIONS on top; under
-// Bots each project as a crew card with its cats stacked, then the bots (a round cat, the name with a small tag, a
-// line that says what it is for or what it is doing) and New bot; under Connections the org's connections; the
+// Bots the crew card (tick the cats that are in it; a small edit opens Crew settings), then the bots (a round cat, the
+// name, a line that says what it is for or what it is doing) and New bot; under Connections the org's connections; the
 // account at the foot.
 import { useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { connectionsOff, useBotKey, useConnections, useSyncConnections, working, type Bot, type Connection } from '@/api/bots';
+import { working, type Bot } from '@/api/bots';
 import { useMe } from '@/api/queries';
-import type { Swarm } from '@/api/swarms';
-import { botPath } from '../parts';
-import { botTag, BotCat, useEscape, useShell } from './bits';
+import { botPath, BotCat, useEscape, useShell } from './bits';
+import { Connections } from './Connections';
+import { CREW_MAX, type Crew } from './crew';
 import { Icon, ICON } from './icons';
 
 export type RailTab = 'bots' | 'connections';
-export const crewPath = (slug: string) => `/bots?crew=${encodeURIComponent(slug)}`;
 
-/** A connection's app icon, or a letter tile when it has none. */
-export function ConnectorIcon({ name, icon, size = 20 }: { name: string; icon: string | null; size?: number }) {
-  return icon ? (
-    <img className="cicon" src={icon} width={size} height={size} alt="" />
-  ) : (
-    <span className="cicon blank" style={{ width: size, height: size }} aria-hidden>
-      {name.replace(/[^a-z0-9]/gi, '').charAt(0).toUpperCase() || '?'}
-    </span>
-  );
-}
+type BotsProps = {
+  bots: Bot[] | undefined;
+  crew: Crew;
+  /** The bot whose chat is open; none while the crew is. */
+  bot: string | null;
+  crewOn: boolean;
+  /** The bots a run of which waits on the person. */
+  waiting: Set<string>;
+  onCrewSettings: () => void;
+};
 
-type BotsProps = { bots: Bot[] | undefined; swarms: Swarm[]; room: { kind: 'bot' | 'crew'; slug: string } | null; waiting: Map<string, number> };
-
-function Bots({ bots, swarms, room, waiting }: BotsProps) {
+function Bots({ bots, crew, bot, crewOn, waiting, onCrewSettings }: BotsProps) {
   const shell = useShell();
+  const count = crew.members.length;
+  // A bot that needs the person floats to the top; the rest keep their order.
+  const sorted = [...(bots ?? [])].sort((a, b) => Number(waiting.has(b.slug)) - Number(waiting.has(a.slug)));
   return (
     <div className="rail-scroll">
-      {swarms.map((s) => (
-        <Link key={s.id} to={crewPath(s.slug)} className={room?.kind === 'crew' && room.slug === s.slug ? 'bot crew on' : 'bot crew'} aria-current={room?.kind === 'crew' && room.slug === s.slug ? 'page' : undefined}>
-          <div className="stack">
-            {s.members.slice(0, 4).map((m) => {
-              const b = bots?.find((x) => x.slug === m.slug);
+      <div className={crewOn ? 'bot crew on' : 'bot crew'}>
+        <div className="crewtop">
+          <Link to="/bots" className="meta" aria-current={crewOn ? 'page' : undefined}>
+            <b>The Crew</b>
+            <small>{count === 0 ? 'nobody in yet' : `${count} ${count === 1 ? 'bot' : 'bots'}, ${crew.settings.turn_mode === 'wait' ? 'taking turns' : 'led by an orchestrator'}`}</small>
+          </Link>
+          <button type="button" className="pill" title="Crew settings" aria-label="Crew settings" onClick={onCrewSettings}>
+            edit
+          </button>
+        </div>
+        {bots && bots.length > 0 && (
+          <div className="crewcats" role="group" aria-label="In the crew">
+            {bots.map((b) => {
+              const on = crew.members.includes(b.id);
+              const full = !on && count >= CREW_MAX;
               return (
-                <span key={m.id} className="mini">
-                  <BotCat look={b?.look} mascot={b?.mascot} size={26} />
-                </span>
+                <button
+                  key={b.id}
+                  type="button"
+                  className={on ? 'mini tick on' : 'mini tick'}
+                  aria-pressed={on}
+                  aria-label={b.name}
+                  title={on ? `${b.name} is in the crew: click to take it out` : full ? `The crew is full at ${CREW_MAX}` : `${b.name} is out: click to put it in the crew`}
+                  disabled={crew.pending || full || (on && count === 1)}
+                  onClick={() => crew.toggle(b.id)}
+                >
+                  <BotCat look={b.look} mascot={b.mascot} size={26} />
+                </button>
               );
             })}
           </div>
-          <div className="meta">
-            <b>{s.name}</b>
-            <small>{s.members.length ? `${s.members.length} bots, taking turns` : 'nobody in yet'}</small>
-          </div>
-        </Link>
-      ))}
+        )}
+      </div>
 
       <div className="rail-label">Bots</div>
       {bots === undefined && <p className="dim pad">Reading your bots…</p>}
       {bots?.length === 0 && <p className="dim pad">No bots yet.</p>}
       <nav aria-label="Your bots">
-        {bots?.map((b) => {
-          const asks = waiting.get(b.slug) ?? 0;
-          const status = asks > 0 || b.last_run?.status === 'needs_input' ? 'speaking' : working(b.last_run?.status) ? 'thinking' : '';
-          const on = room?.kind === 'bot' && room.slug === b.slug;
+        {sorted.map((b) => {
+          const asks = waiting.has(b.slug);
+          const busy = !asks && working(b.last_run?.status);
+          const on = bot === b.slug;
           return (
-            <div key={b.id} className={`bot ${on ? 'on' : ''} ${status}`}>
+            <div key={b.id} className={`bot ${on ? 'on' : ''} ${asks ? 'speaking' : busy ? 'thinking' : ''}`}>
               <Link to={botPath(b.slug)} className="botlink" aria-current={on ? 'page' : undefined}>
                 <span className="ava">
-                  <BotCat look={b.look} mascot={b.mascot} size={44} busy={status === 'thinking'} />
+                  <BotCat look={b.look} mascot={b.mascot} size={44} busy={busy} />
                 </span>
                 <div className="meta">
                   <b>
-                    {b.name} <i>{botTag(b)}</i>
+                    {b.name} {asks && <i className="needs">Needs you</i>}
                   </b>
-                  <small>{status === 'speaking' ? 'Needs you' : status === 'thinking' ? 'working' : (b.summary ?? '')}</small>
+                  <small>{busy ? 'working' : (b.summary ?? '')}</small>
                 </div>
               </Link>
-              <div className="bot-actions">
-                <button type="button" className="pill" title={`Edit ${b.name}`} aria-label={`Edit ${b.name}`} onClick={() => shell.editBot(b.slug)}>
-                  edit
-                </button>
-              </div>
             </div>
           );
         })}
@@ -83,48 +93,6 @@ function Bots({ bots, swarms, room, waiting }: BotsProps) {
       <button type="button" className="newbot" onClick={() => shell.editBot(null)}>
         <span>+</span> New bot
       </button>
-    </div>
-  );
-}
-
-function Connections({ onOpen, open }: { onOpen: (c: Connection) => void; open: string | null }) {
-  const connections = useConnections();
-  const sync = useSyncConnections();
-  const key = useBotKey();
-  const off = connectionsOff(connections.error);
-  return (
-    <div className="rail-scroll">
-      <div className="rail-label">
-        Connectors
-        <button type="button" className="link" disabled={sync.isPending || off} onClick={() => sync.mutate()}>
-          {sync.isPending ? 'checking…' : 'refresh'}
-        </button>
-      </div>
-      {connections.isPending && <p className="dim pad">Reading what is connected…</p>}
-      {off && <p className="dim pad">Connections are not set up on this server yet.</p>}
-      {connections.error && !off && <p className="err pad">{connections.error.message}</p>}
-      {connections.data?.length === 0 && <p className="dim pad">No connectors yet.</p>}
-      {connections.data?.map((c) => (
-        <button key={c.id} type="button" className={`conn ${open === c.id ? 'on' : ''}`} title={`${c.app_name}${c.label ? ` · ${c.label}` : ''}: its tools and permissions`} onClick={() => onOpen(c)}>
-          <ConnectorIcon name={c.app_name} icon={c.app_icon} />
-          <b>{c.app_name}</b>
-          <span className="dot ok" />
-          <small>on</small>
-        </button>
-      ))}
-      <Link className="btn wide" to="/connections">
-        + Add connectors
-      </Link>
-
-      <div className="rail-label">Claude</div>
-      <div className="conn">
-        <span className={`dot ${key.data ? 'ok' : 'bad'}`} />
-        <b>Claude key</b>
-        <small>{key.data?.set ? 'your key' : 'Glyphh’s key'}</small>
-      </div>
-      <Link className="btn wide" to="/settings/claude-key">
-        Claude key settings
-      </Link>
     </div>
   );
 }
@@ -146,9 +114,7 @@ function Account() {
             <span className="acc-ava big">{initial}</span>
             <div>
               <b>{me?.name ?? name}</b>
-              <small>
-                {me ? `${me.plan.name} plan · ${me.org.name}` : ''}
-              </small>
+              <small>{me ? `${me.plan.name} plan · ${me.org.name}` : ''}</small>
             </div>
           </div>
           <hr />
@@ -171,9 +137,9 @@ function Account() {
   );
 }
 
-type Props = BotsProps & { tab: RailTab; onTab: (t: RailTab) => void; onConnection: (c: Connection) => void; connection: string | null; open: boolean };
+type Props = BotsProps & { tab: RailTab; onTab: (t: RailTab) => void; onConnection: (id: string | null) => void; onCatalog: (open: boolean) => void; open: boolean };
 
-export function Rail({ tab, onTab, onConnection, connection, open, ...bots }: Props) {
+export function Rail({ tab, onTab, onConnection, onCatalog, open, ...bots }: Props) {
   return (
     <aside className={`rail left ${open ? 'open' : ''}`} aria-label="Bots and connections">
       <div className="tabs" role="tablist" aria-label="Rail">
@@ -184,7 +150,7 @@ export function Rail({ tab, onTab, onConnection, connection, open, ...bots }: Pr
           Connections
         </button>
       </div>
-      {tab === 'bots' ? <Bots {...bots} /> : <Connections onOpen={onConnection} open={connection} />}
+      {tab === 'bots' ? <Bots {...bots} /> : <Connections onOpen={onConnection} onCatalog={onCatalog} />}
       <Account />
     </aside>
   );

@@ -37,7 +37,7 @@ export function InstallRrotor() {
       <div className={styles.ways}>
         <div className={styles.way}>
           <h3 className={styles.wayTitle}>From Claude Code</h3>
-          <p className={styles.text}>Add the glyphh plugin, then ask Claude to “install rrotor”. Its rrotor skill pulls the image, makes a local token and connects Claude Code.</p>
+          <p className={styles.text}>Add the glyphh plugin, then ask Claude to “install rrotor”. The plugin pulls the image, makes a local token and connects Claude Code.</p>
           <CopyField value="/plugin marketplace add glyphh-ai/glyphh" label="marketplace command" />
           <CopyField value="/plugin install glyphh@glyphh" label="plugin command" />
         </div>

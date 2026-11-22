@@ -13,10 +13,9 @@ export const ICON = {
   edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
   recents: 'M12 7v5l3 2M21 12a9 9 0 1 1-3-6.7M21 4v5h-5',
   logOut: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-  // The platform's own panels: every decision, the gates in Ada, the tools.
+  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.35-4.35',
+  // The platform's own panel: every decision.
   decisions: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',
-  gates: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9',
-  tools: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
   menu: 'M3 6h18M3 12h18M3 18h18',
   bots: 'M5 6.5a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM15 6.5a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM10 16.5a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM8.5 8l2.5 6.6M15.5 8 13 14.6M9 6.5h6',
 } as const;

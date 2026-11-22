@@ -1,0 +1,32 @@
+/* A bot's turn (turn/TurnBody.tsx): only what the Glyphh Bot app's stylesheet (glyphh-bot.css) does not already have.
+   The fold, the tool lines, the file cards, the attachment chips, the markdown and its images are the app's own. */
+
+/* what happened, in a sentence; and what the bot takes, when the task did not fit it */
+.gb .tsaid { margin: 0; max-width: 720px; color: var(--text-2); font: 400 14px/1.55 var(--sans); }
+.gb .tsaid.bad { color: var(--text); }
+.gb .tsaid.thint { padding: 10px 14px; border: 1px solid var(--hair); border-left: 2px solid var(--rail); border-radius: var(--radius); background: var(--surface); color: var(--text-3); font-size: 13.5px; }
+
+/* the fold's inside: the lines, what each step found, Raw */
+.gb .tsteps.open .tfold { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; max-width: 720px; }
+.gb .tsteps.open .tfold .tools { margin-top: 0; }
+.gb .tsteps .traw { align-self: flex-start; }
+.gb .tsteps .tfound { display: block; margin-bottom: 4px; font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
+
+/* images its steps brought back, side by side */
+.gb .tshots { display: flex; flex-wrap: wrap; gap: 8px; }
+.gb .tshots a { display: block; }
+.gb .tshots .mdimg { margin: 0; max-height: 260px; max-width: min(100%, 360px); }
+
+/* a link card is the app's file card, as a link */
+.gb a.tcard { text-decoration: none; color: inherit; }
+.gb .tfiles { margin-bottom: 0; }
+.gb a.att { text-decoration: none; color: inherit; }
+.gb span.att { cursor: default; }
+
+/* an MCP App, inline in its frame */
+.gb .tapp { max-width: 640px; border: 1px solid var(--hair); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.gb .tapp-head { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); background: var(--surface-2); }
+.gb .tapp-head .kind { flex: none; display: grid; place-items: center; min-width: 30px; height: 20px; padding: 0 4px; border-radius: 5px; background: var(--surface-3); color: var(--text-3); font: 600 9px var(--mono); letter-spacing: 0.06em; }
+.gb .tapp-head b { font: 500 12.5px var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gb .tapp iframe { display: block; width: 100%; border: 0; background: #000; color-scheme: dark; }
+.gb .tapp-note { margin: 0; padding: 14px; color: var(--text-3); font: 400 12px var(--mono); }
