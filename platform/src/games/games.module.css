@@ -14,6 +14,7 @@
 }
 
 .gameCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -50,6 +51,25 @@
 
 .cardTitle a:hover {
   text-decoration: underline;
+}
+
+/* The whole card opens the game; its other links stay their own. */
+.whole::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.gameCard:hover {
+  border-color: var(--text-secondary);
+}
+
+.gameCard .site,
+.gameCard .pending a,
+.gameCard .open {
+  position: relative;
+  z-index: 1;
 }
 
 .site,

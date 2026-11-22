@@ -143,12 +143,15 @@ export type Summary = {
   playersAre: string;
   new24: number | null;
   active24: number | null;
+  /** What new24 and active24 count in this game. */
+  labels: [string, string];
   revenue: Revenue | null;
   /** What waits for a person: levels to review, reports, failed jobs. */
   pending: Array<{ label: string; count: number; tab: string }>;
 };
 
 type Day = { d: string; revenue?: number };
+const PLAYED: [string, string] = ['New today', 'Played today'];
 type Obj = Record<string, any>;
 
 /** Today and the six days before it (UTC), from a game's last 14 days, day by day. */
@@ -176,6 +179,7 @@ export async function summary(game: Game, fetcher: typeof fetch, now: () => numb
       playersAre: 'devices',
       new24: o.players24 ?? null,
       active24: o.active24 ?? null,
+      labels: PLAYED,
       revenue: { ...fromDays(stats.days ?? [], today), d30: null, all: o.revenue ?? null },
       pending: [{ label: 'Levels to review', count: queue.waiting ?? 0, tab: 'review' }],
     };
@@ -187,6 +191,7 @@ export async function summary(game: Game, fetcher: typeof fetch, now: () => numb
       playersAre: 'devices',
       new24: o.players24 ?? null,
       active24: o.active24 ?? null,
+      labels: PLAYED,
       revenue: null,
       pending: [{ label: 'Open reports', count: o.reportsOpen ?? 0, tab: 'reports' }],
     };
@@ -199,6 +204,7 @@ export async function summary(game: Game, fetcher: typeof fetch, now: () => numb
       playersAre: 'devices',
       new24: o.players24 ?? null,
       active24: o.active24 ?? null,
+      labels: PLAYED,
       revenue: { ...fromDays(x.days ?? [], today), d30: null, all: o.revenue ?? null },
       pending: [
         { label: 'Waiting for a decision', count: o.queue ?? 0, tab: 'queue' },
@@ -211,8 +217,9 @@ export async function summary(game: Game, fetcher: typeof fetch, now: () => numb
   return {
     players: day.accounts ?? null,
     playersAre: 'accounts',
-    new24: null,
-    active24: null,
+    new24: day.recent?.made ?? null,
+    active24: day.recent?.opened ?? null,
+    labels: ['Made today', 'Opened today'],
     revenue: { today: cents(day.recent?.revenue_usd), d7: cents(week.recent?.revenue_usd), d30: cents(month.recent?.revenue_usd), all: cents(day.all_time?.revenue_usd) },
     pending: [
       { label: 'Open reports', count: day.open_reports ?? 0, tab: 'reports' },

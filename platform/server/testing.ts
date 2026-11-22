@@ -139,7 +139,7 @@ export const gameAnswers: Record<string, Answers> = {
   carol: {
     admin_overview: (args: Record<string, unknown>) => ({
       days: args.days,
-      recent: { revenue_usd: args.days === 1 ? 4.99 : args.days === 7 ? 19.96 : 49.9, made: 3 },
+      recent: { revenue_usd: args.days === 1 ? 4.99 : args.days === 7 ? 19.96 : 49.9, made: 3, opened: 11 },
       all_time: { revenue_usd: 120.5 },
       accounts: 64,
       open_reports: 2,

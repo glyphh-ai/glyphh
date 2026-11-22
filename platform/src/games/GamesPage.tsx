@@ -73,7 +73,9 @@ function GameCard({ game }: { game: GameRow }) {
         <img src={game.icon} alt="" width={40} height={40} className={styles.icon} />
         <div className={styles.gameName}>
           <h2 className={styles.cardTitle}>
-            <Link to={`/admin/games/${game.id}`}>{game.name}</Link>
+            <Link to={`/admin/games/${game.id}`} className={styles.whole}>
+              {game.name}
+            </Link>
           </h2>
           <a href={game.site} target="_blank" rel="noreferrer" className={styles.site}>
             {game.site.replace(/^https:\/\//, '')}
@@ -91,11 +93,11 @@ function GameCard({ game }: { game: GameRow }) {
               <dd>{count(s.players)}</dd>
             </div>
             <div>
-              <dt>New today</dt>
+              <dt>{s.labels[0]}</dt>
               <dd>{count(s.new24)}</dd>
             </div>
             <div>
-              <dt>Played today</dt>
+              <dt>{s.labels[1]}</dt>
               <dd>{count(s.active24)}</dd>
             </div>
           </dl>

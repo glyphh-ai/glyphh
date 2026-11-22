@@ -19,6 +19,7 @@ export const overview: Overview = {
         playersAre: 'devices',
         new24: 214,
         active24: 1_032,
+        labels: ['New today', 'Played today'],
         revenue: { today: 297, d7: 2_574, d30: null, all: 48_312 },
         pending: [{ label: 'Levels to review', count: 3, tab: 'review' }],
       },
@@ -31,7 +32,7 @@ export const overview: Overview = {
       connected: true,
       health: { ok: true, build: 'af3a39fca3', ms: 90 },
       error: null,
-      summary: { players: 2_311, playersAre: 'devices', new24: 41, active24: 187, revenue: null, pending: [{ label: 'Open reports', count: 0, tab: 'reports' }] },
+      summary: { players: 2_311, playersAre: 'devices', new24: 41, active24: 187, labels: ['New today', 'Played today'], revenue: null, pending: [{ label: 'Open reports', count: 0, tab: 'reports' }] },
     },
     {
       id: 'mahj',

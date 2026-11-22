@@ -13,6 +13,7 @@ export type Summary = {
   playersAre: string;
   new24: number | null;
   active24: number | null;
+  labels: [string, string];
   revenue: Revenue | null;
   pending: Array<{ label: string; count: number; tab: string }>;
 };

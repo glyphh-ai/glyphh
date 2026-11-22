@@ -112,11 +112,11 @@ describe('GET /api/games/overview', () => {
       id: 'frank',
       health: { ok: true, build: 'build-frank' },
       error: null,
-      summary: { players: 1200, new24: 30, active24: 80, revenue: { today: 99, d7: 297, d30: null, all: 4500 }, pending: [{ label: 'Levels to review', count: 2, tab: 'review' }] },
+      summary: { players: 1200, new24: 30, active24: 80, labels: ['New today', 'Played today'], revenue: { today: 99, d7: 297, d30: null, all: 4500 }, pending: [{ label: 'Levels to review', count: 2, tab: 'review' }] },
     });
     expect(crabby.summary).toMatchObject({ players: 300, revenue: null, pending: [{ label: 'Open reports', count: 3 }] });
     expect(mahj.summary).toMatchObject({ revenue: { today: 999, d7: 999, all: 2997 }, pending: [{ count: 5 }, { count: 1 }] });
-    expect(carol.summary).toMatchObject({ players: 64, playersAre: 'accounts', revenue: { today: 499, d7: 1996, d30: 4990, all: 12050 }, pending: [{ count: 2 }, { count: 1 }] });
+    expect(carol.summary).toMatchObject({ players: 64, playersAre: 'accounts', new24: 3, active24: 11, labels: ['Made today', 'Opened today'], revenue: { today: 499, d7: 1996, d30: 4990, all: 12050 }, pending: [{ count: 2 }, { count: 1 }] });
   });
 
   it('shows a game that is down or not connected beside the others', async () => {
