@@ -8,6 +8,7 @@ import { useUrlSearch } from '@/components/SearchPaged';
 import { PageHeader } from '@/layout/PageHeader/PageHeader';
 import { ago, plural } from '@/lib/format';
 import { Button, EmptyState, Skeleton, Tabs, TextField } from '@/ui';
+import { BotMaker } from './BotMaker';
 import { NewBotDialog } from './NewBotDialog';
 import { botPath, CatTile, RunChip } from './parts';
 import cs from '../connections/connections.module.css';
@@ -45,7 +46,7 @@ function BotCard({ bot }: { bot: Bot }) {
   return (
     <li>
       <Link to={botPath(bot.slug)} className={styles.card} aria-labelledby={title}>
-        <CatTile look={bot.look} busy={bot.last_run?.status === 'running'} />
+        <CatTile look={bot.look} mascot={bot.mascot} busy={bot.last_run?.status === 'running'} />
         <div className={styles.cardBody}>
           <h2 id={title} className={styles.name}>
             {bot.name}
@@ -91,7 +92,7 @@ function TemplateCard({ template, have }: { template: BotTemplate; have: boolean
 }
 
 /** The org's bots the server finds for what is typed (`GET /v1/bots?q=`). */
-function Yours({ q, onMake }: { q: string; onMake: () => void }) {
+function Yours({ q, onMake, onAi }: { q: string; onMake: () => void; onAi: () => void }) {
   const found = useBotSearch(q.trim());
   const shown = found.data;
   if (found.error) return <ApiErrorNotice error={found.error} />;
@@ -114,10 +115,13 @@ function Yours({ q, onMake }: { q: string; onMake: () => void }) {
             <Button variant="secondary" icon="plus" onClick={onMake}>
               Make one
             </Button>
+            <Button variant="secondary" icon="sparkle" onClick={onAi}>
+              Create with AI
+            </Button>
           </span>
         }
       >
-        Add a ready-made bot, or make one and tell it what to do.
+        Add a ready-made bot, make one yourself, or describe it and let AI make it.
       </EmptyState>
     );
   if (shown.length === 0)
@@ -174,6 +178,11 @@ export function BotsPage() {
   const search = useUrlSearch();
   const [params] = useSearchParams();
   const [making, setMaking] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const withAi = () => {
+    setMaking(false);
+    setAsking(true);
+  };
   const view: View = params.get('tab') === 'browse' ? 'browse' : 'yours';
   const have = useMemo(() => new Set((bots.data ?? []).map((b) => b.name)), [bots.data]);
 
@@ -183,9 +192,14 @@ export function BotsPage() {
         title="Bots"
         description="Bots that do recurring work for you: Claude where judgment is needed, gates that learn from your answers, and only the tools you allow."
         actions={
-          <Button variant="primary" icon="plus" onClick={() => setMaking(true)}>
-            New bot
-          </Button>
+          <>
+            <Button variant="secondary" icon="sparkle" onClick={withAi}>
+              Create with AI
+            </Button>
+            <Button variant="primary" icon="plus" onClick={() => setMaking(true)}>
+              New bot
+            </Button>
+          </>
         }
       />
       <div className={cs.toolbar}>
@@ -201,9 +215,10 @@ export function BotsPage() {
       </div>
       <ApiErrorNotice error={bots.error} />
       <div className={cs.panel} role="tabpanel" id={`panel-${view}`} aria-labelledby={`tab-${view}`}>
-        {view === 'yours' ? <Yours q={search.q} onMake={() => setMaking(true)} /> : <Browse q={search.q} have={have} />}
+        {view === 'yours' ? <Yours q={search.q} onMake={() => setMaking(true)} onAi={withAi} /> : <Browse q={search.q} have={have} />}
       </div>
-      <NewBotDialog open={making} onClose={() => setMaking(false)} />
+      <NewBotDialog open={making} onClose={() => setMaking(false)} onAi={withAi} />
+      {asking && <BotMaker open onClose={() => setAsking(false)} />}
     </div>
   );
 }

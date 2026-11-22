@@ -98,24 +98,80 @@ describe('the Bots page', () => {
     const dialog = await screen.findByRole('dialog');
     const make = within(dialog).getByRole('button', { name: 'Make bot' });
     expect(make).toBeDisabled();
-    const before = dialog.querySelector('svg')!.innerHTML;
+    const mascot = within(dialog).getByRole('group', { name: 'Mascot' });
+    const tile = () => mascot.querySelector('svg.cat-svg')!.innerHTML;
+    const before = tile();
     let shuffled = false;
     for (let i = 0; i < 10 && !shuffled; i++) {
-      await user.click(within(dialog).getByRole('button', { name: 'Shuffle' }));
-      shuffled = dialog.querySelector('svg')!.innerHTML !== before;
+      await user.click(within(mascot).getByRole('button', { name: 'Shuffle' }));
+      shuffled = tile() !== before;
     }
     expect(shuffled).toBe(true);
     await user.type(within(dialog).getByLabelText('Name'), 'Lead sorter');
     await user.type(within(dialog).getByLabelText('What it is for'), 'Sorts new leads.');
     await user.type(within(dialog).getByLabelText('Instructions'), 'Sort each lead.');
-    expect(await within(dialog).findByRole('radio', { name: 'Claude Sonnet 5.5' })).toBeChecked();
-    await user.click(within(dialog).getByRole('radio', { name: 'Claude Haiku 5.5' }));
+    const model = within(dialog).getByRole('combobox', { name: 'Model' });
+    await waitFor(() => expect(model).toHaveValue('claude-sonnet-5-5'));
+    await user.selectOptions(model, 'claude-haiku-5-5');
     await user.click(make);
     expect(await screen.findByRole('heading', { name: 'Lead sorter', level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/bots/lead-sorter');
-    expect(fake.state.bodies[0]).toMatchObject({ name: 'Lead sorter', summary: 'Sorts new leads.', instructions: 'Sort each lead.', model: 'claude-haiku-5-5' });
+    expect(fake.state.bodies[0]).toMatchObject({
+      name: 'Lead sorter',
+      summary: 'Sorts new leads.',
+      instructions: 'Sort each lead.',
+      model: 'claude-haiku-5-5',
+      permission_mode: 'ask',
+      voice: '',
+      spec: { loop: [{ id: 'work' }] },
+    });
     expect(Object.keys((fake.state.bodies[0] as { look: object }).look).sort()).toEqual(['accessory', 'extra', 'eye', 'head', 'pose', 'tail']);
   });
+
+  it('creates a bot with AI: a chat that asks, drafts the bot as a card, connects what it needs and makes it', async () => {
+    const fake = on({ bots: [], connections: [] });
+    const { user, router } = renderApp('/bots');
+    await user.click(await screen.findByRole('button', { name: 'Create with AI' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Create with AI' });
+    const chat = within(dialog).getByRole('list', { name: 'Conversation' });
+    expect(chat).toHaveTextContent('Tell me what you want a bot to do');
+    const create = within(dialog).getByRole('button', { name: 'Create bot' });
+    expect(create).toBeDisabled();
+    const box = within(dialog).getByRole('textbox', { name: 'Message' });
+    await user.type(box, 'Post urgent support email to Slack{Enter}');
+    expect(within(chat).getByText('Post urgent support email to Slack')).toBeInTheDocument();
+    expect(await within(chat).findByText('Which Slack channel should the urgent ones go to?')).toBeInTheDocument();
+    expect(box).toHaveValue('');
+    await user.type(box, '#support');
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
+    const card = await within(chat).findByRole('listitem', { name: 'Draft: Support triage' });
+    expect(card).toHaveTextContent('Posts the urgent support email to Slack.');
+    expect(card).toHaveTextContent('Claude Sonnet 5.5 · 4 steps · 1 gate · 1 skill');
+    expect(fake.state.bodies.at(-1)).toMatchObject({ messages: [{ role: 'user' }, { role: 'assistant' }, { role: 'user', content: '#support' }] });
+    // Neither app is connected: Create waits until both are.
+    const apps = within(card).getByRole('list', { name: 'Apps it needs' });
+    expect(within(apps).getAllByRole('button', { name: 'Connect' })).toHaveLength(2);
+    expect(create).toBeDisabled();
+
+    vi.spyOn(window, 'open').mockReturnValue({ closed: false, close: () => undefined } as unknown as Window);
+    for (const n of [1, 2]) {
+      await user.click(within(apps).getAllByRole('button', { name: 'Connect' })[0]!);
+      await waitFor(() => expect(within(apps).getAllByText('Connected')).toHaveLength(n), { timeout: 5000 });
+    }
+    expect(fake.state.seen).toEqual(expect.arrayContaining(['link gmail', 'link slack']));
+    await user.click(within(within(card).getByRole('list', { name: 'Glyphh cats' })).getByRole('button', { name: 'Rio' }));
+    await user.click(create);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/bots/support-triage'));
+    expect(fake.state.bodies.at(-1)).toMatchObject({
+      name: 'Support triage',
+      look: { head: 'round', accessory: 'glasses' },
+      connections: [
+        { connection_id: 'c-gmail', tools: ['gmail-find-email'] },
+        { connection_id: 'c-slack', tools: ['slack-send-message'] },
+      ],
+    });
+    expect(fake.state.bodies.at(-1)).not.toHaveProperty('apps');
+  }, 15_000);
 
   it('says when the name is taken', async () => {
     on();

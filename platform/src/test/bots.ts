@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { Bot, BotKey, BotModels, BotRun, Connection, ConnectionTool, ConnectorApp, Permission } from '@/api/bots';
+import type { Bot, BotDraft, BotKey, BotModels, BotRun, BotVoices, Connection, ConnectionTool, ConnectorApp, DraftReply, Permission, Said } from '@/api/bots';
 import type { BotTemplate } from '@/api/botTemplates';
 import { apiError } from './server';
 
@@ -164,6 +164,44 @@ export const waiting = (given: Partial<BotRun> = {}): BotRun => ({
   ...given,
 });
 
+export const botVoices: BotVoices = {
+  samples: false,
+  voices: [
+    { id: 'af_heart', name: 'Heart', accent: 'American', gender: 'female', default: true },
+    { id: 'af_bella', name: 'Bella', accent: 'American', gender: 'female', default: false },
+    { id: 'am_michael', name: 'Michael', accent: 'American', gender: 'male', default: false },
+    { id: 'bf_emma', name: 'Emma', accent: 'British', gender: 'female', default: false },
+    { id: 'bm_george', name: 'George', accent: 'British', gender: 'male', default: false },
+  ],
+};
+
+/** A mascot as the server sends one back: black-and-white shapes only. */
+export const drawnMascot =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path d="M40 60 L70 20 L90 55 L120 55 L140 20 L165 60 C180 110 160 170 100 175 C40 170 20 110 40 60 Z" fill="#0b0a0f" stroke="#ffffff" stroke-width="12" stroke-linejoin="round" /><circle cx="80" cy="105" r="16" fill="#ffffff" /><circle cx="84" cy="102" r="7" fill="#0b0a0f" /><circle cx="125" cy="105" r="16" fill="#ffffff" /><circle cx="129" cy="102" r="7" fill="#0b0a0f" /><path d="M60 40 L100 8 L140 40 Z" fill="#ffffff" /></svg>';
+
+export const drafted = (given: Partial<BotDraft> = {}): BotDraft => ({
+  name: 'Support triage',
+  summary: 'Posts the urgent support email to Slack.',
+  look: { head: 'spiky', tail: 'bolt', eye: 'big', extra: 'antenna', accessory: 'headphones', pose: 'lean' },
+  mascot: '',
+  instructions: 'You read support email and write short Slack posts for the team.',
+  model: 'claude-sonnet-5-5',
+  spec: { touches: 'sends', loop: [{ id: 'mail' }, { id: 'urgency', gate: 'urgency' }, { id: 'post' }, { id: 'slack' }], gates: { urgency: {} } },
+  skills: { 'urgent-post': 'One block per ticket.' },
+  apps: [
+    { app: 'gmail', tools: ['gmail-find-email'] },
+    { app: 'slack', tools: ['slack-send-message'] },
+  ],
+  connections: [],
+  ...given,
+});
+
+/** A question first, then the bot drafted. */
+export const makerTurns = (): DraftReply[] => [
+  { reply: 'Which Slack channel should the urgent ones go to?', draft: null, problems: [], missing_apps: [] },
+  { reply: 'Here is your bot. It asks you about each ticket at first and learns which are urgent.', draft: drafted(), problems: [], missing_apps: [] },
+];
+
 const slugOf = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 type Options = {
@@ -176,6 +214,8 @@ type Options = {
   off?: boolean;
   /** Problems the server finds in every spec it is given (422). */
   problems?: string[];
+  /** The bot maker's turns, in order (the last again once they run out). */
+  maker?: DraftReply[];
 };
 
 export function botsFake({
@@ -186,6 +226,7 @@ export function botsFake({
   key = { set: false, hint: '', set_at: null, glyphh_key: true },
   off = false,
   problems = [],
+  maker = makerTurns(),
 }: Options = {}) {
   const state = {
     bots: structuredClone(bots),
@@ -197,6 +238,7 @@ export function botsFake({
     pending: [] as Connection[],
     seen: [] as string[],
     bodies: [] as unknown[],
+    turns: 0,
   };
   let next = 1;
   const off503 = () => apiError(503, 'E_UNAVAILABLE', 'Connections are not set up.', { reason: 'pipedream_off' });
@@ -213,6 +255,19 @@ export function botsFake({
 
   const handlers = [
     http.get(v1('/bots/models'), () => HttpResponse.json(botModels)),
+    http.get(v1('/bots/voices'), () => HttpResponse.json(botVoices)),
+    http.post(v1('/bots/draft'), async ({ request }) => {
+      const body = (await request.json()) as { messages: Said[]; draft: BotDraft | null };
+      state.bodies.push(body);
+      state.seen.push(`draft ${body.messages.length}`);
+      const turn = maker[Math.min(state.turns++, maker.length - 1)]!;
+      return HttpResponse.json(turn);
+    }),
+    http.post(v1('/bots/mascot'), async ({ request }) => {
+      const { prompt } = (await request.json()) as { prompt: string };
+      state.seen.push(`mascot ${prompt}`);
+      return HttpResponse.json({ mascot: drawnMascot });
+    }),
     http.get(v1('/bots'), ({ request }) => {
       // As the server: words of its name, slug or summary.
       const q = (new URL(request.url).searchParams.get('q') ?? '').toLowerCase().trim();

@@ -2,7 +2,8 @@ import { useId, useState, type TextareaHTMLAttributes } from 'react';
 import { Link } from 'react-router';
 import { useAnswerRun, useCancelRun, type Answer, type BotRun, type BotSpec, type RunStatus } from '@/api/bots';
 import { Cat } from '@/bots/cat/Cat';
-import { randomLook, type Look } from '@/bots/cat/look';
+import type { Look } from '@/bots/cat/look';
+import { mascotSrc } from '@/bots/cat/mascots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ago, dollars, stamp } from '@/lib/format';
 import { Button, Chip, type ChipTone } from '@/ui';
@@ -40,24 +41,18 @@ export function LoopSteps({ spec }: { spec: BotSpec }) {
   );
 }
 
-/** A bot's cat on its ink tile. */
-export function CatTile({ look, size = 56, busy, label }: { look: Look | null | undefined; size?: number; busy?: boolean; label?: string }) {
+type TileProps = { look: Look | null | undefined; mascot?: string | null; size?: number; busy?: boolean; label?: string };
+
+/** A bot's face on its ink tile: its own drawn mascot when it has one (as an image, so nothing in it runs), else its cat. */
+export function CatTile({ look, mascot, size = 56, busy, label }: TileProps) {
   return (
     <span className={styles.catTile}>
-      <Cat look={look} size={size} busy={busy} label={label} />
+      {mascot ? (
+        <img src={mascotSrc(mascot)} width={size} height={size} alt={label ?? ''} className={styles.mascotImg} />
+      ) : (
+        <Cat look={look} size={size} busy={busy} label={label} />
+      )}
     </span>
-  );
-}
-
-/** The cat, with Shuffle for another. */
-export function CatPicker({ look, onChange }: { look: Look; onChange: (look: Look) => void }) {
-  return (
-    <div className={styles.row}>
-      <CatTile look={look} size={72} label="The bot's cat" />
-      <Button variant="secondary" size="sm" onClick={() => onChange(randomLook())}>
-        Shuffle
-      </Button>
-    </div>
   );
 }
 
