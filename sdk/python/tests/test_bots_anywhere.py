@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 import pytest
 
 from conftest import FakeAda, write_bot
-from glyphh.bots import ApiClaude, Bot, BotError, Claude, Runner, from_env, priced
+from glyphh.bots import EFFORTS, ApiClaude, Bot, BotError, Claude, Runner, effort_for, from_env, priced
 from glyphh.bots.claude import DEFAULT_MODEL
 
 ITEM_SPEC = {
@@ -197,7 +197,24 @@ def test_the_bot_command_uses_the_api_when_rrotor_says(monkeypatch):
     got = from_env()
     assert isinstance(got, ApiClaude) and got.model == "claude-sonnet-5-5"
     monkeypatch.delenv("GLYPHH_BOT_MODEL")
-    assert from_env().model == DEFAULT_MODEL
+    assert from_env().model == DEFAULT_MODEL and from_env().effort is None
+    monkeypatch.setenv("GLYPHH_BOT_EFFORT", "high")
+    assert from_env().effort == "high"
+
+
+def test_api_claude_sends_the_effort_when_the_steps_model_takes_it():
+    api = FakeApi()
+    claude = ApiClaude(client=api, model="sonnet", effort="high")
+    assert claude.answer("a", {"prompt": "be brief"}, "hi").text == "the sum"
+    assert api.asked[0]["output_config"] == {"effort": "high"} and api.asked[0]["thinking"] == {"type": "adaptive"}
+    claude.answer("a", {"prompt": "", "model": "claude-haiku-4-5"}, "hi")  # a model that takes none: asked without
+    ApiClaude(client=api).answer("a", {}, "hi")  # no effort given: the model's own
+    ApiClaude(client=api, effort="extreme").answer("a", {}, "hi")  # not a level: left out, never failed
+    assert ["output_config" in asked for asked in api.asked] == [True, False, False, False]
+    assert EFFORTS == ("low", "medium", "high", "xhigh", "max")
+    assert [effort_for("claude-opus-5-5", e) for e in EFFORTS] == list(EFFORTS)
+    assert effort_for("claude-haiku-5-5", "max") == "max" and effort_for("someone-else", "high") is None
+    assert effort_for("claude-opus-5-5", None) is None
 
 
 def test_claude_p_reports_its_tokens(fake_claude):

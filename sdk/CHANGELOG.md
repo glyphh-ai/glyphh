@@ -2,6 +2,19 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.15.0 — 2026-11-22
+
+A bot's effort: how hard Claude works on its agent steps. Python only; the TypeScript package carries the version
+unchanged.
+
+- `ApiClaude(..., effort=None)`: one of `EFFORTS` (`low`, `medium`, `high`, `xhigh`, `max`), sent with each agent
+  step's request as the Claude API's `output_config: {"effort": ...}`. It is sent only when the step's model takes
+  it (`EFFORT_MODELS`: Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 take all five; `effort_for(model, effort)` says);
+  for any other model, or with no effort given, the request goes as before and the model's own default holds. A
+  step never fails over its effort.
+- `glyphh bot` on the Claude API (`GLYPHH_BOT_CLAUDE=api`) takes it from `GLYPHH_BOT_EFFORT`.
+- `Claude` (`claude -p`) is unchanged: it takes no effort.
+
 ## 3.14.0 — 2026-11-22
 
 A bot says in its own words why a run ended early, and what it takes. Python only; the TypeScript package carries

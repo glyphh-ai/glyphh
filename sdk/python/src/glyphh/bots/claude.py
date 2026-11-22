@@ -22,6 +22,15 @@ MODELS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "cl
 #: Anthropic's prices, US dollars per million tokens (input, output), for the spend limits' count.
 PRICES = {"claude-opus-5-5": (4.0, 20.0), "claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-5-5": (0.1, 0.5)}
 DEFAULT_MODEL = "claude-opus-5-5"
+#: How hard Claude works on a step: the Claude API's `output_config.effort`, lowest to highest.
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+#: The models that take an effort, and the levels each takes. A model not here is asked without one.
+EFFORT_MODELS = {"claude-opus-5-5": EFFORTS, "claude-sonnet-5-5": EFFORTS, "claude-haiku-5-5": EFFORTS}
+
+
+def effort_for(model: str, effort: Optional[str]) -> Optional[str]:
+    """The effort a request to this model carries: `effort` when the model takes it, else None (left out)."""
+    return effort if effort in EFFORT_MODELS.get(model, ()) else None
 
 
 @dataclass
@@ -43,12 +52,15 @@ def priced(model: str, input_tokens: int, output_tokens: int) -> float:
 class ApiClaude:
     """Agent steps over the Claude API, on the person's own Anthropic API key (`api_key`, else ANTHROPIC_API_KEY):
     they pay Anthropic for the tokens themselves. `model` is the default (agent.md's `model` wins); `client` is an
-    `anthropic.Anthropic` (a fake in tests). Needs the `anthropic` package (`pip install glyphh[api]`)."""
+    `anthropic.Anthropic` (a fake in tests). `effort` (one of EFFORTS) is how hard Claude works on each step: sent
+    as the API's `output_config.effort` when the step's model takes it, left out otherwise (None, the default: the
+    model's own). Needs the `anthropic` package (`pip install glyphh[api]`)."""
 
     def __init__(self, api_key: Optional[str] = None, model: str = DEFAULT_MODEL, client: Any = None,
-                 max_tokens: int = 16000) -> None:
+                 max_tokens: int = 16000, effort: Optional[str] = None) -> None:
         self.model = MODELS.get(model, model)
         self.max_tokens = max_tokens
+        self.effort = effort
         if client is None:
             key = api_key or os.environ.get("ANTHROPIC_API_KEY")
             if not key:
@@ -69,6 +81,8 @@ class ApiClaude:
         """One agent step: the agent's prompt as the system prompt, the step's prompt as the one message (no tools,
         so one turn is all there is)."""
         model = MODELS.get(str(definition.get("model") or ""), str(definition.get("model") or "")) or self.model
+        effort = effort_for(model, self.effort)
+        more: Dict[str, Any] = {"output_config": {"effort": effort}} if effort else {}
         try:
             with self.client.messages.stream(
                 model=model,
@@ -77,6 +91,7 @@ class ApiClaude:
                 messages=[{"role": "user", "content": prompt}],
                 thinking={"type": "adaptive"},
                 timeout=float(seconds),
+                **more,
             ) as stream:
                 message = stream.get_final_message()
         except Exception as e:  # noqa: BLE001  the API's errors (key, rate, overload) fail the step, said plainly
@@ -93,9 +108,10 @@ class ApiClaude:
 
 def from_env() -> "Claude | ApiClaude":
     """The Claude a bot command uses: the Claude API on ANTHROPIC_API_KEY when GLYPHH_BOT_CLAUDE is `api` (rrotor
-    sets it), else `claude -p`."""
+    sets it; GLYPHH_BOT_MODEL its model, GLYPHH_BOT_EFFORT its effort), else `claude -p`."""
     if os.environ.get("GLYPHH_BOT_CLAUDE") == "api":
-        return ApiClaude(model=os.environ.get("GLYPHH_BOT_MODEL") or DEFAULT_MODEL)
+        effort = os.environ.get("GLYPHH_BOT_EFFORT") or None
+        return ApiClaude(model=os.environ.get("GLYPHH_BOT_MODEL") or DEFAULT_MODEL, effort=effort)
     return Claude()
 
 
