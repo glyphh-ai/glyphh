@@ -1,17 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import { connectionsOff, useConnections, useConnectionTools, useScopeBot, type Bot, type Connection } from '@/api/bots';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  connectionsOff,
+  connectionToolsQuery,
+  useConnections,
+  useConnectionTools,
+  useScopeBot,
+  useSetPermissions,
+  type Bot,
+  type Connection,
+} from '@/api/bots';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
-import { PERMISSIONS } from '@/api/connections';
+import { permissionChanges } from '@/api/connections';
+import { ToolPermissions } from '@/bots/tools/ToolPermissions';
 import { plural } from '@/lib/format';
-import { Button, Card, EmptyState, LoadingCard, Select, TextField, useToast } from '@/ui';
+import { Button, Card, EmptyState, LoadingCard, Select, useToast } from '@/ui';
 import { InClaude } from './ada';
 import styles from './bots.module.css';
 import look from './look.module.css';
 
 type Scope = { connection_id: string; tools: string[] };
 
-/** One connection on the bot: its tools as checkboxes, with search and all or none. */
+/**
+ * One connection on the bot: its tools as claude.ai's tool permissions, a switch each (off: the bot never uses it) and
+ * the hand for one that waits for approval, which is the connection's own setting, kept on the server for every bot.
+ */
 function ConnectionScope({
   scope,
   connection,
@@ -26,19 +40,26 @@ function ConnectionScope({
   onRemove: () => void;
 }) {
   const tools = useConnectionTools(scope.connection_id);
-  const [q, setQ] = useState('');
+  const permissions = useSetPermissions(scope.connection_id);
   const chosen = new Set(scope.tools);
-  const shown = useMemo(() => {
-    const words = q.trim().toLowerCase();
-    return (tools.data ?? []).filter((t) => !words || `${t.name} ${t.key} ${t.description ?? ''}`.toLowerCase().includes(words));
-  }, [tools.data, q]);
   const title = connection?.label ? `${appName} · ${connection.label}` : appName;
+  const list = tools.data ?? [];
+  const on = list.filter((t) => chosen.has(t.key) && t.permission !== 'deny');
 
-  const toggle = (key: string) => onChange(chosen.has(key) ? scope.tools.filter((k) => k !== key) : [...scope.tools, key]);
-  const all = () => onChange([...new Set([...scope.tools, ...shown.map((t) => t.key)])]);
-  const none = () => {
-    const hidden = new Set(shown.map((t) => t.key));
-    onChange(scope.tools.filter((k) => !hidden.has(k)));
+  const put = (keys: string[], ask: boolean | 'unblock') => {
+    const changed = permissionChanges(list, keys, (t) =>
+      ask === 'unblock' ? (t.permission === 'deny' ? 'ask' : null) : t.permission === 'deny' ? null : ask ? 'ask' : 'allow',
+    );
+    if (Object.keys(changed).length > 0) permissions.mutate(changed);
+  };
+  const onSwitch = (keys: string[], next: boolean) => {
+    if (next) {
+      onChange([...new Set([...scope.tools, ...keys])]);
+      put(keys, 'unblock'); // a tool blocked for every bot is let back, needing approval
+    } else {
+      const off = new Set(keys);
+      onChange(scope.tools.filter((k) => !off.has(k)));
+    }
   };
 
   return (
@@ -47,11 +68,9 @@ function ConnectionScope({
         <div className={styles.spread}>
           <div className={styles.row}>
             {connection?.app_icon && <img src={connection.app_icon} alt="" className={styles.icon} />}
-            <div>
+            <div className={styles.grow}>
               <h2 className={styles.name}>{title}</h2>
-              <span className={styles.muted}>
-                {tools.data ? `${scope.tools.length} of ${plural(tools.data.length, 'tool')} allowed` : `${plural(scope.tools.length, 'tool')} allowed`}
-              </span>
+              <span className={styles.muted}>{tools.data ? `${on.length} of ${plural(list.length, 'tool')} on` : `${plural(scope.tools.length, 'tool')} on`}</span>
             </div>
           </div>
           <Button variant="ghost" size="sm" icon="trash" onClick={onRemove}>
@@ -59,47 +78,22 @@ function ConnectionScope({
           </Button>
         </div>
         {tools.isPending && <LoadingCard />}
-        <ApiErrorNotice error={tools.error} />
-        {tools.data && tools.data.length > 0 && (
-          <>
-            <div className={styles.row}>
-              <div className={styles.grow}>
-                <TextField label="Search tools" value={q} onChange={(e) => setQ(e.target.value)} />
-              </div>
-              <Button variant="secondary" size="sm" onClick={all} disabled={shown.length === 0}>
-                Select all
-              </Button>
-              <Button variant="secondary" size="sm" onClick={none} disabled={shown.length === 0}>
-                Select none
-              </Button>
-            </div>
-            {shown.length === 0 ? (
-              <p className={styles.muted}>No tool matches “{q.trim()}”.</p>
-            ) : (
-              <ul className={styles.tools} aria-label={`${title} tools`}>
-                {shown.map((t) => (
-                  <li key={t.key}>
-                    <label className={styles.tool}>
-                      <input type="checkbox" checked={chosen.has(t.key)} onChange={() => toggle(t.key)} />
-                      <span>
-                        <span className={styles.toolName}>{t.name}</span>{' '}
-                        {t.permission !== 'allow' && (
-                          <span className={`${look.pill} ${look.pillSmall} ${t.permission === 'deny' ? '' : look.pillOn}`}>{PERMISSIONS[t.permission]}</span>
-                        )}
-                        {t.description && <span className={`${styles.muted} ${styles.block}`}>{t.description}</span>}
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+        <ApiErrorNotice error={tools.error ?? permissions.error} />
+        {list.length > 0 && (
+          <ToolPermissions
+            label={`${title} tools`}
+            tools={list}
+            busy={permissions.isPending}
+            isOn={(t) => chosen.has(t.key) && t.permission !== 'deny'}
+            onSwitch={onSwitch}
+            onApproval={put}
+          />
         )}
         {tools.data?.length === 0 && <p className={styles.muted}>This app has no tools.</p>}
         {connection && (
           <p className={styles.muted}>
-            A tool that needs approval makes the bot wait for you in Approvals; a blocked one it never uses.{' '}
-            <Link to={`/connections/${encodeURIComponent(connection.app)}?tab=tools`}>Change {appName}’s permissions</Link>
+            A tool off is one the bot never uses; the hand makes it wait for you in Approvals, for every bot on {appName}.{' '}
+            <Link to={`/connections/${encodeURIComponent(connection.app)}?tab=tools`}>All of {appName}’s permissions</Link>
           </p>
         )}
       </section>
@@ -108,25 +102,30 @@ function ConnectionScope({
 }
 
 /**
- * The tools the bot may use, per connection: add one of the org's connections, then tick the tools it may call.
- * A tool not ticked is one the bot never sees; one ticked still keeps the org's permission for it (needs approval or
- * blocked), shown beside it.
+ * The tools the bot may use, per connection: add one of the org's connections (every tool of it on), then switch off
+ * the ones it should never use.
  */
 export function ToolsTab({ bot }: { bot: Bot }) {
   const toast = useToast();
+  const queries = useQueryClient();
   const connections = useConnections();
   const scopeBot = useScopeBot(bot.slug);
   const [scopes, setScopes] = useState<Scope[]>(() => bot.connections.map((c) => ({ connection_id: c.connection_id, tools: [...c.tools] })));
   const [adding, setAdding] = useState('');
+  const [fetching, setFetching] = useState(false);
   const names = new Map(bot.connections.map((c) => [c.connection_id, c.app_name]));
   const byId = new Map((connections.data ?? []).map((c) => [c.id, c]));
   const free = (connections.data ?? []).filter((c) => !scopes.some((s) => s.connection_id === c.id));
   const pick = adding || free[0]?.id || '';
 
   const set = (id: string, tools: string[]) => setScopes((all) => all.map((s) => (s.connection_id === id ? { ...s, tools } : s)));
-  const add = () => {
+  const add = async () => {
     if (!pick) return;
-    setScopes((all) => [...all, { connection_id: pick, tools: [] }]);
+    setFetching(true);
+    // All its tools on, as claude.ai turns on a connector's tools; any it cannot read yet the card shows as an error.
+    const tools = await queries.fetchQuery(connectionToolsQuery(pick)).catch(() => []);
+    setFetching(false);
+    setScopes((all) => (all.some((s) => s.connection_id === pick) ? all : [...all, { connection_id: pick, tools: tools.filter((t) => t.permission !== 'deny').map((t) => t.key) }]));
     setAdding('');
   };
   const save = () => scopeBot.mutate(scopes, { onSuccess: () => toast.show(`${bot.name}’s tools are saved.`) });
@@ -155,7 +154,7 @@ export function ToolsTab({ bot }: { bot: Bot }) {
         </EmptyState>
       )}
       {free.length > 0 && (
-        <div className={styles.row}>
+        <div className={styles.addRow}>
           <div className={styles.grow}>
             <Select
               label="Add a connection"
@@ -164,7 +163,7 @@ export function ToolsTab({ bot }: { bot: Bot }) {
               options={free.map((c) => ({ value: c.id, label: c.label ? `${c.app_name} · ${c.label}` : c.app_name }))}
             />
           </div>
-          <Button variant="secondary" icon="plus" onClick={add}>
+          <Button variant="secondary" icon="plus" loading={fetching} onClick={() => void add()}>
             Add
           </Button>
         </div>

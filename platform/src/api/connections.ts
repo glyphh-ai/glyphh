@@ -58,5 +58,26 @@ export function byApp(connections: Connection[]): ConnectedApp[] {
 const READS = /(^|[-_ ])(get|list|find|search|read|lookup|retrieve|fetch|query|download|export)([-_ ]|$)/i;
 export const readsOnly = (tool: ConnectionTool) => READS.test(tool.key) || READS.test(tool.name);
 
-/** What the org's bots may do with a tool, as the person reads it; a tool never set needs approval. */
-export const PERMISSIONS: Record<Permission, string> = { allow: 'Always allow', ask: 'Needs approval', deny: 'Blocked' };
+/**
+ * The section a tool sits in, as claude.ai's tool permissions group them: its MCP hints when it has them (readOnlyHint,
+ * destructiveHint), otherwise the verb in its key or name.
+ */
+export type ToolKind = 'read' | 'write';
+export function toolKind(tool: ConnectionTool): ToolKind {
+  const hints = tool.annotations;
+  if (hints?.readOnlyHint === true) return 'read';
+  if (hints?.readOnlyHint === false || hints?.destructiveHint === true) return 'write';
+  return readsOnly(tool) ? 'read' : 'write';
+}
+
+/** The permission each named tool changes to, only those that change; none for a tool `to` leaves alone. */
+export function permissionChanges(tools: ConnectionTool[], keys: string[], to: (t: ConnectionTool) => Permission | null): Record<string, Permission> {
+  const byKey = new Map(tools.map((t) => [t.key, t]));
+  return Object.fromEntries(
+    keys.flatMap((k) => {
+      const t = byKey.get(k);
+      const p = t ? to(t) : null;
+      return t && p && p !== t.permission ? [[k, p]] : [];
+    }),
+  );
+}

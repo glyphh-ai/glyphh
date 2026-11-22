@@ -125,8 +125,23 @@ describe('a bot’s page', () => {
   it('draws a mascot from words in Settings, and saves it', async () => {
     const fake = on();
     const { user } = renderApp('/bots/inbox-helper?tab=settings');
-    await user.type(await screen.findByLabelText('Describe a new one'), 'a cat in a party hat');
-    await user.click(screen.getByRole('button', { name: 'Draw it' }));
+    const mascot = await screen.findByRole('group', { name: 'Mascot' });
+    // Describe a new one sits beside Shuffle; the words and the drawing live in a modal, not under the cats.
+    const buttons = within(mascot).getAllByRole('button').map((b) => b.textContent);
+    expect(buttons.slice(-2)).toEqual(['Shuffle', 'Describe a new one']);
+    expect(screen.queryByLabelText('Describe it')).not.toBeInTheDocument();
+    await user.click(within(mascot).getByRole('button', { name: 'Describe a new one' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Describe a new mascot' });
+    expect(within(dialog).getByRole('button', { name: 'Draw it' })).toBeDisabled();
+    await user.type(within(dialog).getByLabelText('Describe it'), 'a cat in a party hat');
+    await user.click(within(dialog).getByRole('button', { name: 'Draw it' }));
+    expect(await within(dialog).findByRole('img', { name: 'The new mascot' })).toBeInTheDocument();
+    // Not on the bot until Use it; Try again draws once more from the same words.
+    expect(screen.queryByRole('img', { name: 'Its own mascot' })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(fake.state.seen.filter((s) => s === 'mascot a cat in a party hat')).toHaveLength(2));
+    await user.click(await within(dialog).findByRole('button', { name: 'Use it' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     const drawn = await screen.findByRole('img', { name: 'Its own mascot' });
     expect(drawn.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
     expect(fake.state.seen).toContain('mascot a cat in a party hat');
@@ -134,40 +149,57 @@ describe('a bot’s page', () => {
     await waitFor(() => expect(fake.state.bodies[0]).toMatchObject({ mascot: expect.stringContaining('<svg') }));
   });
 
-  it('scopes the tools per connection: adds a connection, ticks its tools with search and all or none, and saves', async () => {
+  it('scopes the tools per connection as claude.ai’s tool permissions: sections, switches, the approval hand, search, and saves', async () => {
     const fake = on();
     const { user } = renderApp('/bots/inbox-helper?tab=tools');
     const gmail = await screen.findByRole('region', { name: 'Gmail · chris@example.com' });
-    const list = await within(gmail).findByRole('list', { name: 'Gmail · chris@example.com tools' });
-    expect(within(list).getByRole('checkbox', { name: /Find email/ })).toBeChecked();
-    expect(within(list).getByRole('checkbox', { name: /Send email/ })).not.toBeChecked();
-    // The org's own permission for each tool shows beside it.
-    expect(within(list).getByRole('checkbox', { name: /Send email/ }).closest('label')).toHaveTextContent('Needs approval');
-    expect(within(list).getByRole('checkbox', { name: /Find email/ }).closest('label')).not.toHaveTextContent('Needs approval');
-    expect(within(gmail).getByRole('link', { name: 'Change Gmail’s permissions' })).toHaveAttribute('href', '/connections/gmail?tab=tools');
-    expect(gmail).toHaveTextContent('1 of 3 tools allowed');
+    const tools = await within(gmail).findByRole('group', { name: 'Gmail · chris@example.com tools' });
+    expect(gmail).toHaveTextContent('1 of 3 tools on');
+    expect(within(gmail).getByRole('link', { name: 'All of Gmail’s permissions' })).toHaveAttribute('href', '/connections/gmail?tab=tools');
+    // Sections fold; opened, a line per tool with a switch, no description or pill printed.
+    const reads = within(tools).getByRole('region', { name: 'Read-only tools' });
+    const writes = within(tools).getByRole('region', { name: 'Write/delete tools' });
+    await user.click(within(reads).getByRole('button', { name: /Read-only tools/ }));
+    await user.click(within(writes).getByRole('button', { name: /Write\/delete tools/ }));
+    expect(within(reads).getByRole('switch', { name: 'Find email' })).toBeChecked();
+    expect(within(writes).getByRole('switch', { name: 'Send email' })).not.toBeChecked();
+    expect(gmail).not.toHaveTextContent('Sends an email.');
+    expect(gmail).not.toHaveTextContent('Needs approval');
+    // The org's permission is the small hand: Send email asks, Find email does not; off, it cannot be set.
+    expect(within(reads).getByRole('button', { name: 'Approval for Find email' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(writes).getByRole('button', { name: 'Approval for Send email' })).toBeDisabled();
 
     await user.type(within(gmail).getByLabelText('Search tools'), 'send');
-    expect(within(list).getAllByRole('checkbox')).toHaveLength(1);
-    await user.click(within(gmail).getByRole('button', { name: 'Select all' }));
-    expect(gmail).toHaveTextContent('2 of 3 tools allowed');
+    expect(within(tools).queryByRole('region', { name: 'Read-only tools' })).not.toBeInTheDocument();
+    expect(within(tools).getAllByRole('switch').map((s) => s.getAttribute('aria-label'))).toEqual(['All write/delete tools', 'Send email']);
+    await user.click(within(tools).getByRole('switch', { name: 'Send email' }));
+    expect(gmail).toHaveTextContent('2 of 3 tools on');
+    // Its approval is the connection's, saved at once for every bot.
+    await user.click(within(tools).getByRole('button', { name: 'Approval for Send email' }));
+    await waitFor(() => expect(within(tools).getByRole('button', { name: 'Approval for Send email' })).toHaveAttribute('aria-pressed', 'false'));
+    expect(fake.state.bodies[0]).toEqual({ 'gmail-send-email': 'allow' });
     await user.clear(within(gmail).getByLabelText('Search tools'));
-    await user.click(within(gmail).getByRole('checkbox', { name: /Find email/ }));
-    expect(gmail).toHaveTextContent('1 of 3 tools allowed');
+    await user.click(within(gmail).getByRole('button', { name: /Read-only tools/ }));
+    await user.click(within(gmail).getByRole('switch', { name: 'Find email' }));
+    expect(gmail).toHaveTextContent('1 of 3 tools on');
 
-    // Slack is the one connection not on the bot yet.
+    // Slack is the one connection not on the bot yet; added, every tool of it is on.
     const add = screen.getByLabelText('Add a connection');
     expect(within(add).getAllByRole('option').map((o) => o.textContent)).toEqual(['Slack']);
     await user.click(screen.getByRole('button', { name: 'Add' }));
     const slack = await screen.findByRole('region', { name: 'Slack' });
     expect(screen.queryByLabelText('Add a connection')).not.toBeInTheDocument();
-    await user.click(await within(slack).findByRole('button', { name: 'Select all' }));
-    await user.click(within(slack).getByRole('button', { name: 'Select none' }));
-    await user.click(within(slack).getByRole('checkbox', { name: /Send message/ }));
+    await waitFor(() => expect(slack).toHaveTextContent('1 of 1 tool on'));
+    // The section's switch turns the whole section off and on.
+    await user.click(within(slack).getByRole('switch', { name: 'All write/delete tools' }));
+    expect(slack).toHaveTextContent('0 of 1 tool on');
+    await user.click(within(slack).getByRole('switch', { name: 'All write/delete tools' }));
+    expect(slack).toHaveTextContent('1 of 1 tool on');
+    expect(screen.queryByRole('button', { name: /Select (all|none)/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save tools' }));
     expect(await screen.findByText('Inbox helper’s tools are saved.')).toBeInTheDocument();
-    expect(fake.state.bodies[0]).toEqual([
+    expect(fake.state.bodies.at(-1)).toEqual([
       { connection_id: 'c-gmail', tools: ['gmail-send-email'] },
       { connection_id: 'c-slack', tools: ['slack-send-message'] },
     ]);

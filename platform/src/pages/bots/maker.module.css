@@ -259,3 +259,10 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* Shuffle and Describe a new one, side by side at the end of the cats. */
+.crewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

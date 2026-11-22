@@ -20,7 +20,15 @@ export type Connection = {
   created_at: string;
 };
 export type ConnectorApp = { slug: string; name: string; description: string | null; icon: string | null };
-export type ConnectionTool = { key: string; name: string; description: string | null; permission: Permission };
+/** A tool's MCP hints (readOnlyHint, destructiveHint), when the server sends them; it does not yet. */
+export type ToolAnnotations = { readOnlyHint?: boolean; destructiveHint?: boolean; openWorldHint?: boolean };
+export type ConnectionTool = {
+  key: string;
+  name: string;
+  description: string | null;
+  permission: Permission;
+  annotations?: ToolAnnotations | null;
+};
 export type BotConnection = { connection_id: string; app: string; app_name: string; tools: string[] };
 /** `dispatched`: sent to the org's rrotor the bot runs on, running there until its result comes back. */
 export type RunStatus = 'queued' | 'running' | 'dispatched' | 'needs_input' | 'done' | 'failed' | 'skipped';
@@ -236,12 +244,13 @@ export const useBotKey = () => useQuery({ queryKey: botKeys.key, queryFn: () => 
 
 export const useConnections = () =>
   useQuery({ queryKey: botKeys.connections, queryFn: async () => (await api.get<{ connections: Connection[] }>('/connections')).connections });
-export const useConnectionTools = (id: string) =>
-  useQuery({
-    queryKey: botKeys.tools(id),
-    queryFn: async () => (await api.get<{ tools: ConnectionTool[] }>(`/connections/${encodeURIComponent(id)}/tools`)).tools,
-    staleTime: 5 * 60_000,
-  });
+/** A connection's tools as a query, for a hook or for fetching them on the spot (a connection added to a bot). */
+export const connectionToolsQuery = (id: string) => ({
+  queryKey: botKeys.tools(id),
+  queryFn: async () => (await api.get<{ tools: ConnectionTool[] }>(`/connections/${encodeURIComponent(id)}/tools`)).tools,
+  staleTime: 5 * 60_000,
+});
+export const useConnectionTools = (id: string) => useQuery(connectionToolsQuery(id));
 
 // Writes
 

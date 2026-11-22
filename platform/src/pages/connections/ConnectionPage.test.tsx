@@ -71,22 +71,56 @@ describe('an app’s page', () => {
     await user.click(screen.getByRole('tab', { name: 'Tools' }));
     const reads = await screen.findByRole('region', { name: 'Read-only tools' });
     const writes = screen.getByRole('region', { name: 'Write/delete tools' });
-    expect(within(reads).getAllByRole('listitem').map((t) => t.textContent)).toEqual([expect.stringContaining('Find email')]);
+    // Folded, as claude.ai shows them, each with its count; opened, one line per tool and no description printed.
+    expect(within(writes).queryByRole('listitem')).not.toBeInTheDocument();
+    expect(writes).toHaveTextContent('2');
+    await user.click(within(reads).getByRole('button', { name: /Read-only tools/ }));
+    await user.click(within(writes).getByRole('button', { name: /Write\/delete tools/ }));
+    expect(within(reads).getAllByRole('listitem').map((t) => t.textContent)).toEqual(['Find email']);
     expect(within(writes).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(reads).getByLabelText('Find email')).toHaveValue('allow');
-    // Never set: it needs approval.
-    expect(within(writes).getByLabelText('Send email')).toHaveValue('ask');
-    expect(within(writes).getByLabelText('All write/delete tools')).toHaveValue('ask');
-    await user.selectOptions(within(writes).getByLabelText('Delete email'), 'deny');
-    await waitFor(() => expect(within(writes).getByLabelText('All write/delete tools')).toHaveValue('mixed'));
-    await waitFor(() => expect(within(writes).getByLabelText('All write/delete tools')).toBeEnabled());
-    await user.selectOptions(within(writes).getByLabelText('All write/delete tools'), 'deny');
-    await waitFor(() => expect(within(writes).getByLabelText('Send email')).toHaveValue('deny'));
-    expect(fake.state.bodies).toEqual([{ 'gmail-delete-email': 'deny' }, { 'gmail-send-email': 'deny', 'gmail-delete-email': 'deny' }]);
-    expect(fake.state.connections[0]!.permissions).toEqual({ 'gmail-find-email': 'allow', 'gmail-delete-email': 'deny', 'gmail-send-email': 'deny' });
+    expect(screen.queryByText('Sends an email.')).not.toBeInTheDocument();
+    expect(within(writes).getByText('Send email')).toHaveAttribute('title', 'Sends an email.');
+    // All on; Find email always allowed, the others never set and so needing approval.
+    for (const name of ['Find email', 'Send email', 'Delete email']) expect(screen.getByRole('switch', { name })).toBeChecked();
+    expect(within(reads).getByRole('button', { name: 'Approval for Find email' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(writes).getByRole('button', { name: 'Approval for Send email' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(writes).getByRole('button', { name: 'Approval for all write/delete tools' })).toHaveAttribute('aria-pressed', 'true');
+
+    // Off is blocked on the server; its approval goes quiet.
+    await user.click(within(writes).getByRole('switch', { name: 'Delete email' }));
+    await waitFor(() => expect(within(writes).getByRole('switch', { name: 'Delete email' })).not.toBeChecked());
+    await waitFor(() => expect(within(writes).getByRole('switch', { name: 'Delete email' })).toBeEnabled());
+    expect(within(writes).getByRole('button', { name: 'Approval for Delete email' })).toBeDisabled();
+    expect(within(writes).getByRole('switch', { name: 'All write/delete tools' })).not.toBeChecked();
+    // Send email allowed without asking, then the whole read-only section asked about.
+    await user.click(within(writes).getByRole('button', { name: 'Approval for Send email' }));
+    await waitFor(() => expect(within(writes).getByRole('button', { name: 'Approval for Send email' })).toHaveAttribute('aria-pressed', 'false'));
+    await waitFor(() => expect(within(reads).getByRole('button', { name: 'Approval for all read-only tools' })).toBeEnabled());
+    await user.click(within(reads).getByRole('button', { name: 'Approval for all read-only tools' }));
+    await waitFor(() => expect(within(reads).getByRole('button', { name: 'Approval for Find email' })).toHaveAttribute('aria-pressed', 'true'));
+    // The section's switch turns every tool of it back on, needing approval.
+    await waitFor(() => expect(within(writes).getByRole('switch', { name: 'All write/delete tools' })).toBeEnabled());
+    await user.click(within(writes).getByRole('switch', { name: 'All write/delete tools' }));
+    await waitFor(() => expect(within(writes).getByRole('switch', { name: 'Delete email' })).toBeChecked());
+    expect(fake.state.bodies).toEqual([
+      { 'gmail-delete-email': 'deny' },
+      { 'gmail-send-email': 'allow' },
+      { 'gmail-find-email': 'ask' },
+      { 'gmail-delete-email': 'ask' },
+    ]);
+    expect(fake.state.connections[0]!.permissions).toEqual({ 'gmail-find-email': 'ask', 'gmail-send-email': 'allow', 'gmail-delete-email': 'ask' });
     expect(screen.queryByText(/kept in this browser/)).not.toBeInTheDocument();
+
+    // Search finds tools across the sections, opening them; a section with none goes. No Select all or none.
     await user.click(within(writes).getByRole('button', { name: /Write\/delete tools/ }));
     expect(within(writes).queryByRole('listitem')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Search tools'), 'delete');
+    expect(screen.queryByRole('region', { name: 'Read-only tools' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Write/delete tools' })).getAllByRole('listitem').map((t) => t.textContent)).toEqual(['Delete email']);
+    await user.clear(screen.getByLabelText('Search tools'));
+    await user.type(screen.getByLabelText('Search tools'), 'nothing like it');
+    expect(screen.getByText('No tool matches “nothing like it”.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Select/ })).not.toBeInTheDocument();
   });
 
   it('removes the last account and goes back to Connections', async () => {

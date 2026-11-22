@@ -124,6 +124,10 @@ const paths = {
   ),
   moon: <path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z" />,
   moonFilled: <path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z" fill="currentColor" />,
+  // Needs approval: a raised hand, as claude.ai's tool permissions show it.
+  hand: (
+    <path d="M18 11V6a2 2 0 00-4 0M14 10V4a2 2 0 00-4 0v2M10 10.5V6a2 2 0 00-4 0v8M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 012.8-2.8L7 15" />
+  ),
   alert: (
     <>
       <circle cx="12" cy="12" r="9" />
