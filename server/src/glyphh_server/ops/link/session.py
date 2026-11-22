@@ -150,7 +150,7 @@ async def _read(ctx: Context, runtime: Runtime, link: Link, clock: Clock) -> Non
 async def _apply(ctx: Context, runtime: Runtime, link: Link, message: Inbound) -> bool:
     """Answer or record one message; False once the link is closed because it could not be recorded. An event
     (Passed) is acked and kept nowhere; a deployed app makes its catalogue row; a run's result goes to the run it
-    answers (ctx.landed, ops/bots/remote.py: a bot's or a swarm's), once."""
+    answers (ctx.landed, ops/bots/remote.py: a bot's or a project's), once."""
     if isinstance(message, Ping | Pong | Ack):
         if isinstance(message, Ping):
             await link.send(Pong())

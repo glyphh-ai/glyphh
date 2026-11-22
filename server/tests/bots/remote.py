@@ -1,4 +1,4 @@
-"""Bots and swarms on the org's rrotors, under test: the server reached at an https address (a rrotor reaches it only
+"""Bots and projects on the org's rrotors, under test: the server reached at an https address (a rrotor reaches it only
 so), its link hub faked (what is sent to a rrotor kept, the rrotor linked or not), a rrotor of the org online, and
 its results handed in as its link would hand them (app.state.bots.landed)."""
 
@@ -60,7 +60,7 @@ async def rrotor_fixture(engine: AsyncEngine) -> AsyncIterator[OnRrotor]:
     async for s in serve(REMOTE, FakePipedream()):
         hub = FakeHub()
         s.app.state.bots.remote.hub = hub
-        s.app.state.bots.swarms.hub = hub
+        s.app.state.bots.projects.hub = hub
         yield OnRrotor(s, hub)
 
 

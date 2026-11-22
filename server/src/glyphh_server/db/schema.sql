@@ -571,9 +571,11 @@ CREATE TABLE IF NOT EXISTS bot_keys (
     FOREIGN KEY(set_by) REFERENCES users (id) ON DELETE SET NULL
 );
 
--- swarms, swarm_runs, swarm_turns, github_keys: a crew of the org's bots taking turns on one GitHub repo on one of
--- its rrotors, each turn a pull request (docs/specs/bots.md, 10); the org's GitHub token (sealed) the turns use
-CREATE TABLE IF NOT EXISTS swarms (
+-- projects, project_runs, project_turns, run_marks: a crew of the org's bots, in no order, on one GitHub repo and a
+-- set of instructions, taking turns one at a time on Glyphh cloud or one of its rrotors, each turn a pull request
+-- (docs/specs/bots.md, 10); a person's pinned and archived runs in their recents. They were swarms, swarm_runs,
+-- swarm_turns (0023_projects.sql); github_keys, the org's pasted GitHub token, is dropped there.
+CREATE TABLE IF NOT EXISTS projects (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID NOT NULL,
     created_by UUID,
@@ -582,28 +584,36 @@ CREATE TABLE IF NOT EXISTS swarms (
     repo_url TEXT NOT NULL,
     base_branch TEXT DEFAULT 'main' NOT NULL,
     members JSONB DEFAULT '[]'::jsonb NOT NULL,
-    rounds INTEGER DEFAULT 1 NOT NULL,
     review TEXT DEFAULT 'each_turn' NOT NULL,
-    runs_on UUID NOT NULL,
+    runs_on UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    instructions TEXT DEFAULT '' NOT NULL,
+    instructions_path TEXT DEFAULT 'PROJECT.md' NOT NULL,
+    turn_mode TEXT DEFAULT 'wait' NOT NULL,
+    orchestrator UUID,
+    max_turns INTEGER DEFAULT 30 NOT NULL,
+    max_spend_cents INTEGER,
+    narrate BOOLEAN DEFAULT false NOT NULL,
+    github_installation_id BIGINT,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE CASCADE,
-    CONSTRAINT swarms_review CHECK (review IN ('each_turn', 'auto'))
+    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL,
+    FOREIGN KEY(orchestrator) REFERENCES bots (id) ON DELETE SET NULL,
+    CONSTRAINT projects_review CHECK (review IN ('each_turn', 'end')),
+    CONSTRAINT projects_turn_mode CHECK (turn_mode IN ('wait', 'orchestrator'))
 );
-CREATE UNIQUE INDEX IF NOT EXISTS swarms_one_slug ON swarms (org_id, slug);
+CREATE UNIQUE INDEX IF NOT EXISTS projects_one_slug ON projects (org_id, slug);
 
-CREATE TABLE IF NOT EXISTS swarm_runs (
+CREATE TABLE IF NOT EXISTS project_runs (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID NOT NULL,
-    swarm_id UUID NOT NULL,
+    project_id UUID NOT NULL,
     user_id UUID,
     task TEXT NOT NULL,
     status TEXT DEFAULT 'running' NOT NULL,
     members JSONB DEFAULT '[]'::jsonb NOT NULL,
-    rounds INTEGER NOT NULL,
     review TEXT NOT NULL,
     rrotor_id UUID,
     stamp TEXT NOT NULL,
@@ -611,22 +621,33 @@ CREATE TABLE IF NOT EXISTS swarm_runs (
     error TEXT DEFAULT '' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     finished_at TIMESTAMP WITH TIME ZONE,
+    turn_mode TEXT DEFAULT 'wait' NOT NULL,
+    max_turns INTEGER DEFAULT 30 NOT NULL,
+    max_spend_cents INTEGER,
+    ended TEXT DEFAULT '' NOT NULL,
+    work_branch TEXT,
+    pr_url TEXT,
+    number INTEGER,
+    on_cloud BOOLEAN DEFAULT false NOT NULL,
+    machine TEXT,
+    model TEXT,
+    effort TEXT,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(swarm_id) REFERENCES swarms (id) ON DELETE CASCADE,
+    FOREIGN KEY(project_id) REFERENCES projects (id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL,
     FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE SET NULL,
-    CONSTRAINT swarm_runs_status CHECK (status IN ('running', 'needs_input', 'done', 'failed'))
+    CONSTRAINT project_runs_status CHECK (status IN ('running', 'needs_input', 'done', 'failed'))
 );
-CREATE INDEX IF NOT EXISTS swarm_runs_newest ON swarm_runs (swarm_id, created_at);
-CREATE UNIQUE INDEX IF NOT EXISTS swarm_runs_one_live ON swarm_runs (swarm_id) WHERE status IN ('running', 'needs_input');
+CREATE INDEX IF NOT EXISTS project_runs_newest ON project_runs (project_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS project_runs_one_live ON project_runs (project_id)
+    WHERE status IN ('running', 'needs_input');
 
-CREATE TABLE IF NOT EXISTS swarm_turns (
+CREATE TABLE IF NOT EXISTS project_turns (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID NOT NULL,
     run_id UUID NOT NULL,
     n INTEGER NOT NULL,
-    round INTEGER NOT NULL,
     bot_id UUID,
     bot_slug TEXT NOT NULL,
     bot_name TEXT NOT NULL,
@@ -644,26 +665,32 @@ CREATE TABLE IF NOT EXISTS swarm_turns (
     remote_seq BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     finished_at TIMESTAMP WITH TIME ZONE,
+    picked_by TEXT DEFAULT 'wait' NOT NULL,
+    why TEXT DEFAULT '' NOT NULL,
+    input_tokens BIGINT DEFAULT 0 NOT NULL,
+    output_tokens BIGINT DEFAULT 0 NOT NULL,
+    cost_micros BIGINT DEFAULT 0 NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(run_id) REFERENCES swarm_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(run_id) REFERENCES project_runs (id) ON DELETE CASCADE,
     FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE SET NULL,
-    CONSTRAINT swarm_turns_status CHECK (status IN ('running', 'open', 'unchanged', 'merging', 'merged', 'conflict',
-        'rejecting', 'rejected', 'failed', 'cancelled'))
+    CONSTRAINT project_turns_status CHECK (status IN ('picking', 'running', 'open', 'unchanged', 'merging', 'merged',
+        'conflict', 'rejecting', 'rejected', 'failed', 'cancelled'))
 );
-CREATE UNIQUE INDEX IF NOT EXISTS swarm_turns_of_run ON swarm_turns (run_id, n);
-CREATE INDEX IF NOT EXISTS swarm_turns_call ON swarm_turns (call_id);
+CREATE UNIQUE INDEX IF NOT EXISTS project_turns_of_run ON project_turns (run_id, n);
+CREATE INDEX IF NOT EXISTS project_turns_call ON project_turns (call_id);
+CREATE UNIQUE INDEX IF NOT EXISTS project_turns_one_out ON project_turns (run_id)
+    WHERE status IN ('picking', 'running', 'merging', 'rejecting');
 
-CREATE TABLE IF NOT EXISTS github_keys (
+CREATE TABLE IF NOT EXISTS run_marks (
+    user_id UUID NOT NULL,
+    run_id UUID NOT NULL,
     org_id UUID NOT NULL,
-    token TEXT NOT NULL,
-    hint TEXT NOT NULL,
-    login TEXT NOT NULL,
-    set_by UUID,
-    set_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (org_id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(set_by) REFERENCES users (id) ON DELETE SET NULL
+    pinned BOOLEAN DEFAULT false NOT NULL,
+    archived BOOLEAN DEFAULT false NOT NULL,
+    PRIMARY KEY (user_id, run_id),
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
 
 -- nodes
@@ -919,22 +946,22 @@ ALTER TABLE bot_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bot_keys FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON bot_keys;
 CREATE POLICY tenant ON bot_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE swarms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE swarms FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON swarms;
-CREATE POLICY tenant ON swarms USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE swarm_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE swarm_runs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON swarm_runs;
-CREATE POLICY tenant ON swarm_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE swarm_turns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE swarm_turns FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON swarm_turns;
-CREATE POLICY tenant ON swarm_turns USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE github_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE github_keys FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON github_keys;
-CREATE POLICY tenant ON github_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON projects;
+CREATE POLICY tenant ON projects USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE project_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_runs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON project_runs;
+CREATE POLICY tenant ON project_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE project_turns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_turns FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON project_turns;
+CREATE POLICY tenant ON project_turns USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE run_marks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE run_marks FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON run_marks;
+CREATE POLICY tenant ON run_marks USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;

@@ -1,6 +1,9 @@
 """The Glyphh GitHub App, as the App itself: a JWT signed with its private key (RS256), then GitHub's App API. Fails
 closed: anything but a good answer is GitHub being unavailable, and an installation GitHub doesn't know is not found.
-Tests fake GitHub at the HTTP layer; nothing here ever runs against a real App in tests."""
+It finds the installation that covers a repo, and mints an installation's tokens: each for one repo, for one hour, with
+only the permissions asked (READ for a person's own repo; TURN for a project's turn: its branch pushed, its pull
+request opened, merged or closed; LOOK to read a repo's branches and who may push to it). Tests fake GitHub at the
+HTTP layer; nothing here ever runs against a real App in tests."""
 
 import base64
 import json
@@ -22,6 +25,13 @@ API: str = "https://api.github.com"
 # GitHub refuses a JWT that lives over 10 minutes, and allows for clock drift by issuing it a minute early.
 JWT_TTL: int = 540
 JWT_SKEW: int = 60
+READ: dict[str, str] = {"contents": "read"}
+TURN: dict[str, str] = {"contents": "write", "pull_requests": "write", "metadata": "read"}
+LOOK: dict[str, str] = {"metadata": "read"}
+GONE: tuple[int, ...] = (404, 422)
+MISSING: str = (
+    "Glyphh's GitHub App is not installed on {repo}: install it there (or add the repo to it), then try again."
+)
 
 
 def load_key(settings: Settings) -> rsa.RSAPrivateKey | None:
@@ -56,6 +66,11 @@ class GitHubApp:
         if key is None or not settings.github_app_configured:
             raise Unavailable("GitHub isn't set up on this server.", reason="github_off")
         self.http, self.app_id, self.key = http, settings.github_app_id, key
+        self.install_url: str = settings.github_app_install_url
+
+    def missing(self, repo: str) -> NotFound:
+        """The App is not on that repo: said with the link that installs it."""
+        return NotFound(MISSING.format(repo=repo), reason="github_app_missing", install_url=self.install_url, repo=repo)
 
     async def call(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
         headers = {
@@ -65,7 +80,7 @@ class GitHubApp:
         }
         try:
             res = await self.http.request(method, f"{API}{path}", json=body, headers=headers)
-            if res.status_code == httpx.codes.NOT_FOUND:
+            if res.status_code in GONE:  # 422: a token asked for a repo the installation does not cover
                 raise NotFound("GitHub knows no such installation of Glyphh's App.", reason="github_installation")
             res.raise_for_status()
             return res.json()
@@ -76,7 +91,22 @@ class GitHubApp:
     async def installation(self, installation_id: int) -> dict[str, Any]:
         return await self.call("GET", f"/app/installations/{installation_id}")
 
-    async def repo_token(self, installation_id: int, repo_name: str) -> dict[str, Any]:
-        """A token for this one repo, read-only on its contents, for one hour."""
-        body = {"repositories": [repo_name], "permissions": {"contents": "read"}}
+    async def repo_token(
+        self, installation_id: int, repo_name: str | None, permissions: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        """A token for this one repo (none: every repo the installation covers), for one hour: read-only on its
+        contents unless other permissions are asked."""
+        body: dict[str, Any] = {"permissions": permissions or READ}
+        body |= {"repositories": [repo_name]} if repo_name else {}
         return await self.call("POST", f"/app/installations/{installation_id}/access_tokens", body)
+
+    async def covering(self, repo: str) -> int:
+        """The installation that covers the repo (`owner/name`); not found, with the install link, when none does."""
+        try:
+            return int((await self.call("GET", f"/repos/{repo}/installation"))["id"])
+        except NotFound as err:
+            raise self.missing(repo) from err
+
+    async def login(self, account_id: str) -> str:
+        """A GitHub account's login, by its id."""
+        return str((await self.call("GET", f"/user/{account_id}"))["login"])

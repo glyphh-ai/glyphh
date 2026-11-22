@@ -29,9 +29,9 @@ from glyphh_server.mcp.tools import (
     connections,
     grants,
     people,
+    projects,
     runtime,
     self_hosted,
-    swarms,
     templates,
     tokens,
 )
@@ -46,14 +46,14 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 # person's own: listed by `listing`) waits on a worker too.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
-DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | swarms.DETACHED
+DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | projects.DETACHED
 MINE: str = "glyphh_"
 _BOTS = (*bots.TOOLS, *bot_maker.TOOLS, *bot_runs.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
-_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS)
+_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS, *projects.TOOLS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
-# rrotor's: its runtime keys, self-hosted runtimes and offline licences, the org's apps, and its swarms (they run on
-# its rrotors): offered only while GLYPHH_RROTOR is on, the default.
-RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS, *swarms.TOOLS)}
+# rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only while
+# GLYPHH_RROTOR is on, the default. (A project runs on Glyphh cloud too, so its tools are always offered.)
+RROTOR: dict[str, Tool] = {t.name: t for t in (*runtime.TOOLS, *self_hosted.TOOLS, *apps.TOOLS)}
 HOSTED: dict[str, Tool] = {t.name: t for t in tokens.TOOLS}  # docs/specs/tokens.md, while GLYPHH_LLM is on
 
 
@@ -85,8 +85,14 @@ def _detached(ctx: Context, name: str) -> bool:
     return name in DETACHED or name not in available(ctx)
 
 
+def named(params: dict[str, Any]) -> str:
+    """The tool a call names; a project's tool by the name it had as a swarm's is that tool."""
+    name = str(params.get("name", ""))
+    return projects.WAS.get(name, name)
+
+
 def detached(ctx: Context, method: str, params: dict[str, Any]) -> bool:
-    return method == "tools/call" and _detached(ctx, params.get("name", ""))
+    return method == "tools/call" and _detached(ctx, named(params))
 
 
 async def _found(ctx: Context, name: str) -> Tool | None:
@@ -117,7 +123,7 @@ def refused(err: GlyphhError) -> dict[str, Any]:
 
 
 async def call(ctx: Context, params: dict[str, Any]) -> dict[str, Any]:
-    tool = await _found(ctx, params.get("name", ""))
+    tool = await _found(ctx, named(params))
     if tool is None:
         raise RpcError(INVALID_PARAMS, f"There is no tool {params.get('name')!r}.")
     try:

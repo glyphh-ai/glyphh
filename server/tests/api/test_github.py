@@ -97,6 +97,18 @@ async def test_someone_elses_installation_is_never_recorded(
     assert res["code"] == "E_CONFLICT" and "another Glyphh account" in res["message"]
 
 
+async def test_an_installation_on_a_github_organisation_is_nobodys_own(
+    engine: AsyncEngine, client: httpx.AsyncClient, github_app: FakeGitHubApp
+) -> None:
+    ada, _ = await _with_github(engine)
+    orgs = _id()
+    github_app.install(orgs, _id(), "acme")
+    github_app.installations[orgs]["type"] = "Organization"
+    done = await _back(client, await _to_github(client, ada.headers), orgs)
+    assert went(done) == ("/github", {"installed": "acme"})  # installed, and recorded for no one
+    assert (await client.get("/v1/github/installations", headers=ada.headers)).json() == []
+
+
 async def test_install_steps_that_are_not_right_are_refused(
     engine: AsyncEngine, client: httpx.AsyncClient, github_app: FakeGitHubApp
 ) -> None:

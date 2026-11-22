@@ -30,7 +30,7 @@ from glyphh_server.ops.bots.views import (
     ScopesIn,
     WrongIn,
 )
-from glyphh_server.ops.swarms import runs as swarm_runs
+from glyphh_server.ops.projects import runs as project_runs
 
 router = APIRouter(tags=["bots"])
 
@@ -88,9 +88,9 @@ async def install_template(slug: str, body: templates.InstallIn, who: Caller, co
 @router.get("/v1/bot-approvals", operation_id="listBotApprovals")
 async def list_approvals(caller: Caller, conn: Conn) -> Runs:
     """The org's approvals queue: every run of its bots waiting on the person (a gate unsure, an approval, a tool its
-    connection asks about) and every swarm's pull request waiting for a merge or a no (kind swarm), oldest first;
-    POST /v1/bot-runs/{id}/answer answers a bot's, POST /v1/swarm-runs/{id}/answer a swarm's."""
-    return Runs(runs=await swarm_runs.queue(conn))
+    connection asks about) and every project's pull request waiting for a merge or a no (kind project), oldest
+    first; POST /v1/bot-runs/{id}/answer answers a bot's, POST /v1/project-runs/{id}/answer a project's."""
+    return Runs(runs=await project_runs.queue(conn))
 
 
 @router.get("/v1/bot-key", operation_id="getBotKey")

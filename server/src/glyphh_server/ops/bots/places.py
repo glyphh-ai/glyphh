@@ -3,7 +3,7 @@ rrotors: a local one (on someone's computer, named by its install) or a self-hos
 the org's are offered or taken (the rrotors its people own, as row-level security shows them; a local one whose
 install was signed out is gone). `linked` is whether it holds its link to Glyphh right now (its state, set at its
 hello and its link's close, ops/link/presence.py): a run of a bot on a rrotor is sent there over that link
-(ops/bots/remote.py), refused while the rrotor is offline. A swarm runs on one of these rrotors too."""
+(ops/bots/remote.py), refused while the rrotor is offline. A project runs on one of these places too."""
 
 import uuid
 from typing import Literal

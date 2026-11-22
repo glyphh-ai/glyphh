@@ -155,8 +155,10 @@ class RunView(BaseModel):
     cost_micros: int = Field(description="Its tokens' charge, microdollars (the markup alone on the org's own key)")
     own_key: bool = Field(description="Its agent steps ran on the org's own Anthropic key")
     runs_on: uuid.UUID | None = Field(None, description="The org's rrotor it ran on; none for Glyphh cloud")
-    kind: Literal["bot", "swarm"] = Field("bot", description="In the approvals queue: a bot's run, or a swarm's")
-    swarm_slug: str | None = Field(None, description="A swarm's run: its swarm (POST /v1/swarm-runs/{id}/answer)")
+    kind: Literal["bot", "project"] = Field("bot", description="In the approvals queue: a bot's run, or a project's")
+    project_slug: str | None = Field(
+        None, description="A project's run: its project (POST /v1/project-runs/{id}/answer)"
+    )
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None

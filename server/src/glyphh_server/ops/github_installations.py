@@ -38,9 +38,13 @@ async def github_account(conn: AsyncConnection, user_id: uuid.UUID) -> str:
 
 
 async def record(conn: AsyncConnection, app: GitHubApp, user_id: uuid.UUID, installation_id: int) -> str:
-    """Record the person's installation, once GitHub confirms it is on their own account. Answers its login."""
+    """Record the person's installation, once GitHub confirms it is on their own account. Answers its login. One on
+    a GitHub organisation is nobody's own: it is not recorded (its repos are connected one by one, each where the
+    person may push: ops/projects/github.py), and its login is answered all the same."""
     mine = await github_account(conn, user_id)
     account = (await app.installation(installation_id))["account"]
+    if account.get("type") == "Organization":
+        return str(account["login"])
     if str(account["id"]) != mine:
         raise Forbidden("That installation is not on the GitHub account you sign in with.", reason="not_yours")
     values = {"user_id": user_id, "installation_id": installation_id, "account_login": account["login"]}

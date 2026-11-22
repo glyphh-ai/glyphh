@@ -39,7 +39,7 @@ async def _taken(remote: Remote, runtime: Runtime, msg: Ran) -> tuple[bool, Any]
 
 
 async def landed(remote: Remote, runtime: Runtime, msg: Ran) -> bool:
-    """The result kept on the bot run it answers; False when no bot run has its id (a swarm's, then)."""
+    """The result kept on the bot run it answers; False when no bot run has its id (a project's step's, then)."""
     mine, run = await _taken(remote, runtime, msg)
     if run is None:
         if mine:

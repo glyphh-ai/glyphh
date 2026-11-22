@@ -36,7 +36,7 @@ def now() -> datetime:
 
 
 def view(run: Any, slug: str) -> RunView:
-    fields = RunView.model_fields.keys() - {"bot_slug", "question", "runs_on", "kind", "swarm_slug"}
+    fields = RunView.model_fields.keys() - {"bot_slug", "question", "runs_on", "kind", "project_slug"}
     asked = Question(**run.question) if run.question else None
     return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **{k: getattr(run, k) for k in fields})
 

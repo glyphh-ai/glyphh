@@ -7,8 +7,8 @@ is closed 4426 (`upgrade_needed`). The protocol 2 names leave once no rrotor of 
 
 The link carries licensing, the catalogue of apps and Glyphh's own programs' runs: the hello, the welcome (the org's
 licence key, a self-hosted runtime's licence and keys, its apps, the org's reviewer groups), `keys`, `app` after each
-review (docs/specs/apps.md), rrotor's `usage` and `deployed`; and `call`, `continue`, `cancel` down for a bot's or a
-swarm's run on the rrotor (glyphh_bot, glyphh_swarm: docs/specs/bots.md, 9), each answered by numbered `result`s up
+review (docs/specs/apps.md), rrotor's `usage` and `deployed`; and `call`, `continue`, `cancel` down for a bot's run or a
+project's step on the rrotor (glyphh_bot, glyphh_swarm: docs/specs/bots.md, 9), each answered by numbered `result`s up
 (ops/bots/remote.py keeps them). An `event` is acked and kept nowhere. Every message is checked here; anything the
 models refuse is unreadable, logged and skipped, and the link stays. `usage` and `result` carry `seq`, one rising
 counter per runtime: each is acked by its `id` and applied once, so a replay after a reconnect is never doubled."""

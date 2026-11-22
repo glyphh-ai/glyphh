@@ -1,5 +1,5 @@
 """Glyphh's own programs called on one of the org's rrotors over its link (docs/specs/bots.md, 9 and 10): glyphh_bot
-for a bot's run, glyphh_swarm for a swarm's turns. The rrotor must be the org's and hold its link right now (its
+for a bot's run, glyphh_swarm for a project's steps. The rrotor must be the org's and hold its link right now (its
 state, ops/link/presence.py), else the run is refused saying so; a call must fit in one message of the link (rrotor
 takes LINK_MAX bytes), else it is refused before it is sent. Its version is left to the rrotor (null: the one active
 there, its built-in). A message the hub cannot deliver (no process holds the link) is said by False."""

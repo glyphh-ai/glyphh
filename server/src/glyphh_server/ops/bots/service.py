@@ -4,7 +4,7 @@ queued). Started, a run is committed queued before its task begins, so its page 
 that waited on the person is queued again and carries on. The agent steps run on the org's own Anthropic key when it
 has set one, else on Glyphh's; billed by tokens through the meter on either (ops/bots/prices.py); with neither, a
 run is refused. A bot set to run on one of the org's rrotors runs there (ops/bots/remote.py), its results back over
-the link (`landed`, a swarm's too: ops/swarms/service.py, held here as `swarms`).
+the link (`landed`, a project's steps' too: ops/projects/service.py, held here as `projects`).
 At the server's start, the runs this machine was running when it stopped are failed."""
 
 import asyncio
@@ -29,7 +29,7 @@ from glyphh_server.ops.bots.views import RunView, WrongIn
 from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Ran
-from glyphh_server.ops.swarms.service import Swarms
+from glyphh_server.ops.projects.service import Projects
 
 log = logging.getLogger("glyphh.bots")
 
@@ -40,12 +40,13 @@ class Bots(Goes):
         self.gate = asyncio.Semaphore(settings.bot_runs_at_once)
         self.tasks: set[asyncio.Task[None]] = set()
         self.remote = Remote(self, hub)
-        self.swarms = Swarms(engine_, settings, hub, http)
+        self.projects = Projects(self, hub, http)
 
     async def recover(self) -> int:
         """At the server's start; without the database, the server starts anyway (health says it is degraded)."""
         try:
             cut = await runs.recover(self.engine, runs.machine())
+            cut += await self.projects.recover(runs.machine())
         except Exception:
             log.exception("could not fail the bot runs cut off by a restart")
             return 0
@@ -116,9 +117,9 @@ class Bots(Goes):
                 await runs.failed(self.engine, org_id, run_id, f"The run failed: {type(err).__name__}: {err}")
 
     async def landed(self, runtime: Runtime, msg: Ran) -> None:
-        """A result over a rrotor's link: a bot run's, else a swarm turn's."""
+        """A result over a rrotor's link: a bot run's, else a project's step's."""
         if not await remote_out.landed(self.remote, runtime, msg):
-            await self.swarms.landed(runtime, msg)
+            await self.projects.landed(runtime, msg)
 
     async def wrong(self, who: Principal, run_id: uuid.UUID, body: WrongIn) -> dict[str, Any]:
         """A gate decided the run (or one item of it) wrong: what it should have said, learned as a precedent."""
@@ -142,8 +143,10 @@ class Bots(Goes):
         """Every run started here, finished (the tests')."""
         while self.tasks:
             await asyncio.gather(*list(self.tasks), return_exceptions=True)
+        await self.projects.wait()
 
     async def close(self) -> None:
         for task in list(self.tasks):
             task.cancel()
         await asyncio.gather(*list(self.tasks), return_exceptions=True)
+        await self.projects.close()
