@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { botsFake } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
@@ -10,14 +10,11 @@ function on(given?: Parameters<typeof botsFake>[0]) {
 }
 
 describe('the Claude key settings', () => {
-  it('explains both bills, saves a key showing only its end, and removes it', async () => {
+  it('saves a key showing only its end, and removes it, saying nothing of how it is billed', async () => {
     const fake = on();
     const { user } = renderApp('/settings/claude-key');
     expect(await screen.findByRole('heading', { name: 'Claude key', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/Glyphh bills the 20% markup only/)).toBeInTheDocument();
-    expect(screen.getByText(/at Anthropic’s rate plus 20%/)).toBeInTheDocument();
-    const glyphh = screen.getByText('Glyphh’s key').closest('li')!;
-    await waitFor(() => expect(glyphh).toHaveTextContent('In use'));
+    expect(screen.queryByText(/billed|markup|20%/)).not.toBeInTheDocument();
 
     const field = await screen.findByLabelText('Claude API key');
     expect(field).toHaveAttribute('type', 'password');
@@ -29,7 +26,6 @@ describe('the Claude key settings', () => {
     await user.click(screen.getByRole('button', { name: 'Save key' }));
     expect(await screen.findByText('Key ending 1234')).toBeInTheDocument();
     expect(screen.queryByText(/abcd1234/)).not.toBeInTheDocument();
-    expect(screen.getByText('Your own key').closest('li')).toHaveTextContent('In use');
 
     await user.click(screen.getByRole('button', { name: 'Remove' }));
     const dialog = await screen.findByRole('dialog');
