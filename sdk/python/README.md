@@ -229,6 +229,27 @@ and state it holds, `HttpProgram(url, token)` calls the bot's tools at the host 
 bearer token, answered `{result}` or `{error}`), and `RunResult.to_result()` / `from_result()` carry the run as
 rrotor's `Result`.
 
+## Your org's hosted bots
+
+The bots Glyphh hosts for your org (in its cloud, or on one of your rrotors) are `HostedBots`, on the same API key
+as Ada (GLYPHH_API_KEY, or `glyphh login`'s), at the Glyphh API (https://api.glyphh.ai; GLYPHH_API_URL moves it):
+
+```python
+from glyphh import HostedBots
+
+bots = HostedBots()                                   # or Ada().bots
+bots.list("inbox")                                    # search the org's bots
+run = bots.run("inbox-cat", "lunch on Friday?", wait=True)   # waits until it ends or asks the person
+if run.waiting:                                       # run.question: a gate unsure, or an approval (run.approval)
+    run = bots.answer(run, "yes", wait=True)
+bots.approvals()                                      # every run waiting on the person
+bots.wrong(run, "skip", gate="worth")                 # a gate called it wrong: learned as a precedent
+bots.install("news-brief")                            # one of the templates Glyphh ships (bots.templates())
+```
+
+From a shell: `glyphh bots list|get|run|runs|status|answer|cancel|wrong|approvals|gates|templates|template|install`
+(`glyphh bot ...` stays the bots on this machine).
+
 ## Your local runtime: programs and CLIs
 
 `Runtime` is a client for rrotor, the runtime you install on your own machine (a Docker image, bound to

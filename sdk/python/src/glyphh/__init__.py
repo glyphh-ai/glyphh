@@ -1,6 +1,8 @@
 """Ada for Python: your models in Ada Cloud (https://ada.glyphh.ai), called with an API key. And `Runtime`: your
-local rrotor, the runtime you install that hosts your programs and CLIs (glyphh.runtime)."""
+local rrotor, the runtime you install that hosts your programs and CLIs (glyphh.runtime). And `HostedBots`: your
+org's bots that Glyphh hosts, on the same API key (glyphh.hosted)."""
 
+from .hosted import DEFAULT_API_URL, BotInfo, BotRun, BotTemplate, HostedBot, HostedBots
 from .client import (
     DEFAULT_URL,
     FINAL,
@@ -101,6 +103,12 @@ from .runtime import (
 )
 
 __all__ = [
+    "DEFAULT_API_URL",
+    "BotInfo",
+    "BotRun",
+    "BotTemplate",
+    "HostedBot",
+    "HostedBots",
     "DEFAULT_RUNTIME_URL",
     "Approval",
     "Cli",
@@ -192,4 +200,4 @@ __all__ = [
     "VersionGoneError",
     "VersionMissingError",
 ]
-__version__ = "3.12.0"
+__version__ = "3.13.0"

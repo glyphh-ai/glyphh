@@ -830,6 +830,11 @@ export class Ada {
     return this.#seq;
   }
 
+  /** The org's hosted bots, on this client's key and transport (the Glyphh API: GLYPHH_API_URL, else https://api.glyphh.ai). */
+  get bots(): HostedBots {
+    return new HostedBots({ key: this.#key, transport: this.#send, retryDeadline: this.retryDeadline, clock: this.#clock });
+  }
+
   /**
    * One request, sent again while it may be and the deadline allows. `read`: safe to send again (a GET by default);
    * a write with an `idempotencyKey` is safe too.
@@ -1362,6 +1367,257 @@ export class AdaModel {
       return { ...r, data: job.result };
     }
     return r;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Your org's hosted Glyphh bots: the bots Glyphh runs for you (in its cloud, or on one of your rrotors), over the
+// Glyphh API at https://api.glyphh.ai with the same API key Ada takes. List and search them, run one on an input and
+// wait for it, answer what a run asks (a gate unsure, an approval), cancel it, say a gate called it wrong, read the
+// approvals queue, and install a bot from the templates Glyphh ships.
+//
+//     const bots = new HostedBots();                     // GLYPHH_API_KEY; https://api.glyphh.ai
+//     let run = await bots.run("inbox-cat", "lunch on Friday?", { wait: true });
+//     if (run.status === "needs_input") run = await bots.answer(run, "yes", { wait: true });
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Where the Glyphh API answers. GLYPHH_API_URL moves it, e.g. to a local server under test. */
+export const DEFAULT_API_URL = "https://api.glyphh.ai";
+/** A run still going. Any other status has stopped: `needs_input` waits on the person; done, failed, skipped ended. */
+export const GOING: readonly string[] = ["queued", "running", "dispatched"];
+/** Seconds waiting for a run lasts before it throws (the run goes on). */
+export const RUN_TIMEOUT = 1800;
+
+export type BotRunStatus = "queued" | "running" | "dispatched" | "needs_input" | "done" | "failed" | "skipped";
+
+/** A bot as the API answers it (`GET /v1/bots/{slug}`). */
+export interface BotInfo {
+  id: string;
+  slug: string;
+  name: string;
+  summary: string;
+  spec: Data;
+  model: string;
+  permission_mode: string;
+  connections: Data[];
+  schedule_summary: string;
+  /** One of the org's rrotors it runs on; null for Glyphh's cloud. */
+  runs_on: string | null;
+  last_run: Data | null;
+  [more: string]: unknown;
+}
+
+/** What a run waiting on the person asks. `step` and `approval` from servers that say so. */
+export interface BotQuestion {
+  question: string;
+  options: string[];
+  batch?: Data[] | null;
+  answer_with?: string | null;
+  step?: string | null;
+  /** It waits on a yes or a no before a step acts. */
+  approval?: boolean;
+}
+
+/** One run of a bot (`GET /v1/bot-runs/{id}`). */
+export interface BotRun {
+  id: string;
+  bot_slug: string;
+  status: BotRunStatus;
+  input: string;
+  output: string;
+  error: string;
+  log: string[];
+  data: Data;
+  question: BotQuestion | null;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros: number;
+  runs_on?: string | null;
+  kind?: "bot" | "swarm";
+  [more: string]: unknown;
+}
+
+/** A bot template Glyphh ships. */
+export interface BotTemplate {
+  slug: string;
+  name: string;
+  summary: string;
+  /** The services it needs a connection to. */
+  apps: string[];
+  tools: string[];
+  gates: string[];
+  [more: string]: unknown;
+}
+
+export interface HostedBotsOptions extends Omit<AdaOptions, "url" | "readYourWrites" | "onWarning"> {
+  /** The Glyphh API's address; else GLYPHH_API_URL, or https://api.glyphh.ai. */
+  url?: string;
+}
+
+export interface RunWaitOptions {
+  /** Wait until the run ends or asks the person (default false). */
+  wait?: boolean;
+  /** Seconds; default 1800. */
+  timeout?: number;
+  /** The longest pause between two looks, seconds; default 2. */
+  poll?: number;
+  /** Gets the run each time it is looked at. */
+  onProgress?: (run: BotRun) => void;
+}
+
+const runId = (run: BotRun | string) => (typeof run === "string" ? run : run.id);
+const query = (q?: string) => (q ? `?q=${encodeURIComponent(q)}` : "");
+
+/**
+ * Your org's hosted bots, for one API key (the one Ada takes). Reads are sent again while the API is unreachable for
+ * a moment; a run, an answer, a cancel or an install is sent once.
+ */
+export class HostedBots {
+  readonly url: string;
+  readonly #api: Ada;
+  readonly #clock: { now(): number; sleep(seconds: number): Promise<void> };
+
+  constructor(options: HostedBotsOptions = {}) {
+    const url = options.url ?? env("GLYPHH_API_URL") ?? DEFAULT_API_URL;
+    this.#api = new Ada({ ...options, url, readYourWrites: false });
+    this.url = this.#api.url;
+    this.#clock = options.clock ?? realClock;
+  }
+
+  #get<T>(path: string): Promise<T> {
+    return this.#api.call<T>("GET", path);
+  }
+
+  #post<T>(path: string, body: unknown = {}): Promise<T> {
+    return this.#api.call<T>("POST", path, body, false);
+  }
+
+  // bots
+
+  /** The org's bots by name; with `q`, those whose name, slug or summary has every one of its words. */
+  async list(q?: string): Promise<BotInfo[]> {
+    return (await this.#get<{ bots: BotInfo[] }>(`/v1/bots${query(q)}`)).bots;
+  }
+
+  search(q: string): Promise<BotInfo[]> {
+    return this.list(q);
+  }
+
+  get(slug: string): Promise<BotInfo> {
+    return this.#get(`/v1/bots/${q(slug)}`);
+  }
+
+  /** One bot by its slug, to run and read (no request until it is used). */
+  bot(slug: string): HostedBot {
+    return new HostedBot(this, slug);
+  }
+
+  /** What the bot's gates have learned: per gate its precedents, how often it asked, how often it was right. */
+  async gates(slug: string): Promise<Data> {
+    return (await this.#get<{ gates: Data }>(`/v1/bots/${q(slug)}/gates`)).gates;
+  }
+
+  // runs
+
+  /** A run of the bot on `input`, queued in the background; with `wait`, waited for until it ends or asks. */
+  async run(slug: string, input = "", options: RunWaitOptions = {}): Promise<BotRun> {
+    const made = await this.#post<BotRun>(`/v1/bots/${q(slug)}/runs`, { input });
+    return options.wait ? this.wait(made, options) : made;
+  }
+
+  /** The bot's runs, the newest first (the last 50). */
+  async runs(slug: string): Promise<BotRun[]> {
+    return (await this.#get<{ runs: BotRun[] }>(`/v1/bots/${q(slug)}/runs`)).runs;
+  }
+
+  getRun(run: BotRun | string): Promise<BotRun> {
+    return this.#get(`/v1/bot-runs/${q(runId(run))}`);
+  }
+
+  /** Wait for a run to stop going: it ended, or waits on the person. Past `timeout`, AdaTimeoutError (it goes on). */
+  async wait(run: BotRun | string, options: RunWaitOptions = {}): Promise<BotRun> {
+    let current = typeof run === "string" ? await this.getRun(run) : run;
+    const timeout = options.timeout ?? RUN_TIMEOUT;
+    const deadline = this.#clock.now() + timeout;
+    let pause = 0.25;
+    for (;;) {
+      options.onProgress?.(current);
+      if (!GOING.includes(current.status)) return current;
+      if (this.#clock.now() + pause > deadline) {
+        throw new AdaTimeoutError(
+          "E_TIMEOUT",
+          `Run ${current.id} of ${current.bot_slug} is still ${current.status} after ${timeout} s; it goes on: wait for it again by its id.`,
+          0,
+          { run_id: current.id },
+        );
+      }
+      await this.#clock.sleep(pause);
+      pause = Math.min(options.poll ?? POLL, pause * 2);
+      current = await this.getRun(current.id);
+    }
+  }
+
+  /**
+   * The run that waits on the person, answered: one of its question's options (an approval: yes or no); for a batch,
+   * `N=option` for each item (`rest=option`), or a map. InvalidError when it does not fit (the run still waits).
+   */
+  async answer(run: BotRun | string, answer: string | string[] | Record<string, string>, options: RunWaitOptions = {}): Promise<BotRun> {
+    const carried = await this.#post<BotRun>(`/v1/bot-runs/${q(runId(run))}/answer`, { answer });
+    return options.wait ? this.wait(carried, options) : carried;
+  }
+
+  /** The run that waits on the person (or is out on its rrotor), ended. */
+  cancel(run: BotRun | string): Promise<BotRun> {
+    return this.#post(`/v1/bot-runs/${q(runId(run))}/cancel`);
+  }
+
+  /** A gate called the run (or one item, by its key) wrong: what it should have said, learned as a precedent. */
+  wrong(run: BotRun | string, outcome: string, options: { gate?: string; item?: string } = {}): Promise<Data> {
+    return this.#post(`/v1/bot-runs/${q(runId(run))}/wrong`, drop({ outcome, gate: options.gate, item: options.item }));
+  }
+
+  /** The org's approvals queue, oldest first: every run waiting on the person (and swarms' pull requests: kind swarm). */
+  async approvals(): Promise<BotRun[]> {
+    return (await this.#get<{ runs: BotRun[] }>("/v1/bot-approvals")).runs;
+  }
+
+  // the templates Glyphh ships
+
+  async templates(q?: string): Promise<BotTemplate[]> {
+    return (await this.#get<{ templates: BotTemplate[] }>(`/v1/bot-templates${query(q)}`)).templates;
+  }
+
+  template(slug: string): Promise<BotTemplate> {
+    return this.#get(`/v1/bot-templates/${q(slug)}`);
+  }
+
+  /** The org's own bot copied from the template (InvalidError, reason connections, naming the apps to connect first). */
+  install(slug: string, options: { name?: string } = {}): Promise<BotInfo> {
+    return this.#post(`/v1/bot-templates/${q(slug)}/install`, drop({ name: options.name }));
+  }
+}
+
+/** One of the org's hosted bots by its slug (`HostedBots.bot`). */
+export class HostedBot {
+  constructor(
+    readonly bots: HostedBots,
+    readonly slug: string,
+  ) {}
+
+  info(): Promise<BotInfo> {
+    return this.bots.get(this.slug);
+  }
+
+  run(input = "", options: RunWaitOptions = {}): Promise<BotRun> {
+    return this.bots.run(this.slug, input, options);
+  }
+
+  runs(): Promise<BotRun[]> {
+    return this.bots.runs(this.slug);
+  }
+
+  gates(): Promise<Data> {
+    return this.bots.gates(this.slug);
   }
 }
 

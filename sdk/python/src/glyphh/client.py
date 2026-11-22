@@ -16,7 +16,10 @@ import warnings
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .hosted import HostedBots
 
 from .errors import (
     AdaDeprecationWarning,
@@ -630,6 +633,14 @@ class Ada:
         self._noticed: Set[str] = set()
         #: Ada's versions: `ada.versions()`.
         self.ada = AdaReleases(self)
+
+    @property
+    def bots(self) -> "HostedBots":
+        """The org's hosted bots, on this client's key and transport (glyphh.hosted.HostedBots: the Glyphh API at
+        GLYPHH_API_URL, else https://api.glyphh.ai)."""
+        from .hosted import HostedBots
+
+        return HostedBots(key=self.key, transport=self._send, retry_deadline=self.retry_deadline)
 
     @property
     def cluster_seq(self) -> int:
